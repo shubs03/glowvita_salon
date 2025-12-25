@@ -1,0 +1,62 @@
+export type AppointmentStatus = 
+  | 'temp-locked'
+  | 'scheduled' 
+  | 'confirmed' 
+  | 'in_progress' 
+  | 'completed' 
+  | 'partially-completed' 
+  | 'completed without payment' 
+  | 'cancelled' 
+  | 'no_show';
+
+export interface ServiceItem {
+  service: string;
+  serviceName: string;
+  staff: string;
+  staffName: string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  amount: number;
+  _id?: string;
+}
+
+export interface Appointment {
+  id?: string;
+  _id?: string;
+  client: string;
+  clientName: string;
+  clientPhone?: string;
+  service: string;
+  serviceName: string;
+  services?: ServiceItem[];  // Multiple services
+  staff: string;  // This should be a MongoDB ObjectId
+  staffName: string;
+  date: Date | string;
+  startTime: string;
+  endTime: string;
+  duration: number;
+  notes: string;
+  status: AppointmentStatus;
+  amount: number;
+  discount: number;
+  tax: number;
+  totalAmount: number;
+  paymentStatus?: string;
+  mode?: 'online' | 'offline'; // Booking mode
+  createdAt?: string;
+  updatedAt?: string;
+  serviceItems?: ServiceItem[];
+  paymentMethod?: string;
+  platformFee?: number;
+  serviceTax?: number;
+  discountAmount?: number;
+  finalAmount?: number;
+  payment?: {
+    paid?: number;
+    paymentMode?: string;
+    paymentStatus?: string;
+    paymentMethod?: string;
+    [key: string]: any;
+  };
+}

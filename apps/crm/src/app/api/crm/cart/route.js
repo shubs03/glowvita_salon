@@ -2,12 +2,12 @@
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import CartModel from '@repo/lib/models/Vendor/Cart.model';
-import { authMiddlewareCrm } from '@/middlewareCrm';
+import { withSubscriptionCheck } from '@/middlewareCrm';
 
 await _db();
 
 // GET: Fetch the vendor's cart
-export const GET = authMiddlewareCrm(async (req) => {
+export const GET = withSubscriptionCheck(async (req) => {
   try {
     const vendorId = req.user.userId || req.user._id;
     console.log("Fetching cart for vendor:", vendorId);
@@ -29,7 +29,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 }, ['vendor']);
 
 // POST: Add an item to the cart or update quantity if it exists (Optimized)
-export const POST = authMiddlewareCrm(async (req) => {
+export const POST = withSubscriptionCheck(async (req) => {
   try {
     const vendorId = req.user.userId || req.user._id;
     const item = await req.json();
@@ -78,7 +78,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 
 
 // PUT: Update item quantity in the cart
-export const PUT = authMiddlewareCrm(async (req) => {
+export const PUT = withSubscriptionCheck(async (req) => {
   try {
     const vendorId = req.user.userId || req.user._id;
     const { productId, quantity } = await req.json();
@@ -118,7 +118,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
 
 
 // DELETE: Remove an item from the cart
-export const DELETE = authMiddlewareCrm(async (req) => {
+export const DELETE = withSubscriptionCheck(async (req) => {
   try {
     const vendorId = req.user.userId || req.user._id;
     const { productId } = await req.json();

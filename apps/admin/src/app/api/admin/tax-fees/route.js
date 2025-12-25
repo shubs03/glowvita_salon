@@ -96,7 +96,7 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
   } finally {
     session.endSession();
   }
-}, ["superadmin", "admin"]);
+}, ["superadmin", "admin", "supplier"]);
 
 // POST create new tax fee settings
 export const POST = authMiddlewareAdmin(async (req) => {

@@ -3,14 +3,14 @@ import ClientModel from '@repo/lib/models/Vendor/Client.model';
 import UserModel from '@repo/lib/models/user';
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import _db from '@repo/lib/db';
-import { authMiddlewareCrm } from '@/middlewareCrm';
+import { withSubscriptionCheck } from '@/middlewareCrm';
 import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
 
 await _db();
 
 // GET - Fetch all clients for a vendor or a single client by ID
 // GET - Fetch all clients for a vendor (both offline and online)
-export const GET = authMiddlewareCrm(async (req) => {
+export const GET = withSubscriptionCheck(async (req) => {
     try {
         const vendorId = req.user.userId.toString();
         const url = new URL(req.url);
@@ -173,7 +173,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 }, ['vendor', 'supplier']);
 
 // POST - Create a new client
-export const POST = authMiddlewareCrm(async (req) => {
+export const POST = withSubscriptionCheck(async (req) => {
     try {
         const vendorId = (req.user.userId || req.user._id).toString();
         const body = await req.json();
@@ -273,7 +273,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 }, ['vendor', 'supplier']);
 
 // PUT - Update an existing client
-export const PUT = authMiddlewareCrm(async (req) => {
+export const PUT = withSubscriptionCheck(async (req) => {
     try {
         const vendorId = (req.user.userId || req.user._id).toString();
         const body = await req.json();
@@ -418,7 +418,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
 }, ['vendor', 'supplier']);
 
 // DELETE - Delete a client
-export const DELETE = authMiddlewareCrm(async (req) => {
+export const DELETE = withSubscriptionCheck(async (req) => {
     try {
         const vendorId = (req.user.userId || req.user._id).toString();
         const body = await req.json();

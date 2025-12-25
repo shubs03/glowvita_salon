@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from '@repo/store/hooks';
-import { setUserAuth } from '@repo/store/slices/userAuthSlice';
+import { setUserAuth } from '@repo/store/slices/Web/userAuthSlice';
 import { Button } from '@repo/ui/button';
 
 export default function TestAuthPersistence() {

@@ -13,7 +13,7 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Skeleton } from '@repo/ui/skeleton';
 import { useDispatch } from 'react-redux';
-import { clearCart } from '@repo/store';
+import { clearCart } from '@repo/store/slices/cartSlice';
 import { useRouter } from 'next/navigation';
 
 interface CartItem {

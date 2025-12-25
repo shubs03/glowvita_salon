@@ -45,6 +45,7 @@ import {
   LocateIcon,
   Mail,
   Wallet,
+  AlertCircle,
 } from "lucide-react";
 import {
   Dialog,
@@ -63,9 +64,9 @@ import {
   useGetPublicVendorOffersQuery,
   useGetPublicVendorWorkingHoursQuery,
   useGetPublicVendorServicesQuery,
-  useAddToClientCartMutation,
   useGetSalonReviewsQuery,
-} from "@repo/store/api";
+  useAddToClientCartMutation,
+} from "@repo/store/services/api";
 import { useAppDispatch } from "@repo/store/hooks";
 import { addToCart, setCurrentUser } from "@repo/store/slices/cartSlice";
 import { useAuth } from "@/hooks/useAuth";
@@ -148,7 +149,7 @@ const StaffDisplay = ({
             <Image
               src={
                 member.image ||
-                `https://placehold.co/128x128/e2e8f0/64748b?text=${(member.name || "Staff").charAt(0)}`
+                `https://placehold.co/128x128/png?text=${(member.name || "Staff").charAt(0)}`
               }
               alt={member.name || "Staff Member"}
               fill
@@ -207,11 +208,10 @@ const StarRating = ({ rating }: { rating: number }) => {
       {[1, 2, 3, 4, 5].map((star) => (
         <Star
           key={star}
-          className={`h-4 w-4 ${
-            star <= rating
-              ? "text-yellow-400 fill-yellow-400"
-              : "text-muted-foreground"
-          }`}
+          className={`h-4 w-4 ${star <= rating
+            ? "text-yellow-400 fill-yellow-400"
+            : "text-muted-foreground"
+            }`}
         />
       ))}
     </div>
@@ -331,15 +331,16 @@ const defaultSalon = {
   phone: "",
   description: "",
   mission: "",
-  images: ["https://placehold.co/1200x800/e2e8f0/64748b?text=Loading..."],
+  images: ["https://placehold.co/1200x800/png?text=Loading..."],
 };
 
-const ProductCard = ({ product, onBuyNow, onAddToCart, vendorId, vendorName }: { 
-  product: any; 
-  onBuyNow: (product: any) => void; 
+const ProductCard = ({ product, onBuyNow, onAddToCart, vendorId, vendorName, isSubscriptionExpired = false }: {
+  product: any;
+  onBuyNow: (product: any) => void;
   onAddToCart: (product: any) => void;
   vendorId: string;
   vendorName: string;
+  isSubscriptionExpired?: boolean;
 }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -357,7 +358,7 @@ const ProductCard = ({ product, onBuyNow, onAddToCart, vendorId, vendorName }: {
               'Content-Type': 'application/json',
             },
           });
-          
+
           if (response.ok) {
             const data = await response.json();
             setIsLiked(data.isInWishlist);
@@ -374,7 +375,7 @@ const ProductCard = ({ product, onBuyNow, onAddToCart, vendorId, vendorName }: {
 
   const handleWishlistToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!isAuthenticated) {
       toast.error("Please login to add items to wishlist");
       router.push("/client-login");
@@ -385,7 +386,7 @@ const ProductCard = ({ product, onBuyNow, onAddToCart, vendorId, vendorName }: {
       setIsLoading(true);
       const url = isLiked ? `/api/client/wishlist/${product.id}/remove` : '/api/client/wishlist';
       const method = isLiked ? 'DELETE' : 'POST';
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -476,28 +477,40 @@ const ProductCard = ({ product, onBuyNow, onAddToCart, vendorId, vendorName }: {
             <Button
               size="sm"
               variant="outline"
-              className="w-full text-xs lg:mr-3"
+              className={`w-full text-xs lg:mr-3 ${isSubscriptionExpired ? 'opacity-50' : ''}`}
               onClick={(e) => {
                 e.stopPropagation();
-                onBuyNow(product);
+                if (!isSubscriptionExpired) {
+                  onBuyNow(product);
+                }
               }}
+              disabled={isSubscriptionExpired}
             >
-              Buy Now
+              {isSubscriptionExpired ? 'Unavailable' : 'Buy Now'}
             </Button>
 
             <Button
               size="sm"
               variant="outline"
-              className="w-fit text-xs"
+              className={`w-fit text-xs ${isSubscriptionExpired ? 'opacity-50' : ''}`}
               onClick={(e) => {
                 e.stopPropagation();
-                onAddToCart(product);
+                if (!isSubscriptionExpired) {
+                  onAddToCart(product);
+                }
               }}
+              disabled={isSubscriptionExpired}
             >
               <ShoppingCart className="h-4 w-4" />
             </Button>
           </div>
         </div>
+
+        {isSubscriptionExpired && (
+          <p className="text-xs text-red-600 mt-2 text-center">
+            Not available at the moment
+          </p>
+        )}
       </div>
     </Card>
   );
@@ -599,10 +612,10 @@ export default function SalonDetailsPage() {
     if (salonReviews.length === 0) {
       return { averageRating: 0, totalReviews: 0 };
     }
-    
+
     const totalRating = salonReviews.reduce((sum: number, review: any) => sum + (review.rating || 0), 0);
     const averageRating = totalRating / salonReviews.length;
-    
+
     return {
       averageRating: parseFloat(averageRating.toFixed(1)),
       totalReviews: salonReviews.length
@@ -638,6 +651,21 @@ export default function SalonDetailsPage() {
     return defaultSalon;
   }, [vendorData, reviewMetrics]);
 
+  // Check if vendor's subscription is expired
+  const isSubscriptionExpired = useMemo(() => {
+    if (!vendorData || !vendorData.subscription) return false;
+
+    const subscription = vendorData.subscription;
+    const now = new Date();
+    const endDate = subscription.endDate ? new Date(subscription.endDate) : null;
+
+    // Check if subscription status is Expired or if endDate has passed
+    const isStatusExpired = subscription.status?.toLowerCase() === 'expired';
+    const isDateExpired = endDate ? endDate <= now : false;
+
+    return isStatusExpired || isDateExpired;
+  }, [vendorData]);
+
   const salonProducts = useMemo(() => {
     if (!productsData?.products) return [];
 
@@ -651,7 +679,7 @@ export default function SalonDetailsPage() {
       image:
         p.image ||
         p.productImage ||
-        "https://placehold.co/320x224/e2e8f0/64748b?text=Product",
+        "https://placehold.co/320x224/png?text=Product",
       vendorId: id, // Always use the salon ID from URL params as vendorId
       vendorName: vendorData?.businessName || "Unknown Vendor",
       category: p.category || "Beauty Products",
@@ -668,6 +696,14 @@ export default function SalonDetailsPage() {
   }, [salon.images]);
 
   const handleBookNow = (service?: any) => {
+    // Check if subscription is expired
+    if (isSubscriptionExpired) {
+      toast.error('Booking Unavailable', {
+        description: 'This salon is currently not available for bookings. Please check back later.',
+      });
+      return;
+    }
+
     // Store selected service in sessionStorage for the booking flow
     if (service) {
       sessionStorage.setItem("selectedService", JSON.stringify(service));
@@ -713,7 +749,7 @@ export default function SalonDetailsPage() {
         };
 
         await addToCartAPI(cartItem).unwrap();
-        
+
         // Show success toast
         toast.success(`${product.name} added to cart!`, {
           description: `You can view all items in your cart.`,
@@ -1269,7 +1305,11 @@ export default function SalonDetailsPage() {
               </section>
 
               {/* Services Section */}
-              <ServicesSection vendorId={id} onBookNow={handleBookNow} />
+              <ServicesSection
+                vendorId={id}
+                onBookNow={handleBookNow}
+                isSubscriptionExpired={isSubscriptionExpired}
+              />
 
               <section id="products">
                 <h2 className="text-4xl font-bold mb-2">
@@ -1281,13 +1321,14 @@ export default function SalonDetailsPage() {
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {salonProducts.length > 0 ? (
                     salonProducts.map((product: any) => (
-                      <ProductCard 
-                        key={product.id} 
-                        product={product} 
-                        onBuyNow={handleBuyNow} 
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        onBuyNow={handleBuyNow}
                         onAddToCart={handleAddToCart}
                         vendorId={id}
                         vendorName={vendorData?.businessName || "Unknown Vendor"}
+                        isSubscriptionExpired={isSubscriptionExpired}
                       />
                     ))
                   ) : (
@@ -1388,7 +1429,7 @@ export default function SalonDetailsPage() {
                   <CardFooter>
                     {showReviewForm ? (
                       <div className="w-full">
-                        <ReviewForm 
+                        <ReviewForm
                           entityId={vendorData?._id || ''}
                           entityType="salon"
                           onSubmitSuccess={() => {
@@ -1396,8 +1437,8 @@ export default function SalonDetailsPage() {
                             refetchReviews();
                           }}
                         />
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           className="w-full mt-4"
                           onClick={() => setShowReviewForm(false)}
                         >
@@ -1405,8 +1446,8 @@ export default function SalonDetailsPage() {
                         </Button>
                       </div>
                     ) : (
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         className="w-full"
                         onClick={() => setShowReviewForm(true)}
                       >
@@ -1463,9 +1504,19 @@ export default function SalonDetailsPage() {
                     size="lg"
                     className="w-full rounded-sm"
                     onClick={() => handleBookNow()}
+                    disabled={isSubscriptionExpired}
                   >
-                    Book Now
+                    {isSubscriptionExpired ? 'Salon Unavailable' : 'Book Now'}
                   </Button>
+
+                  {isSubscriptionExpired && (
+                    <div className="mt-2 bg-red-50 border border-red-200 rounded-lg p-2 flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-red-700">
+                        This salon is not available for bookings at the moment
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 

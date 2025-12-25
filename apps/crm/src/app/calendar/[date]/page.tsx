@@ -18,7 +18,7 @@ import { format, parseISO, isSameDay, addMinutes, parse, isWithinInterval, addDa
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 // Types
-type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'completed without payment' | 'partially-completed';
 
 type Appointment = {
   id?: string;
@@ -63,8 +63,8 @@ import NewAppointmentForm from '../components/NewAppointmentForm';
 import AppointmentDetailView from '../../../components/AppointmentDetailView';
 
 // Store
-import { 
-  selectAllAppointments, 
+import {
+  selectAllAppointments,
   selectSelectedAppointment,
   setSelectedAppointment,
 } from '@repo/store/slices/appointmentSlice';
@@ -75,42 +75,42 @@ import { selectBlockedTimes } from '@repo/store/slices/blockTimeSlice';
 // Helper function to parse time string (e.g., "09:00AM" or "09:00") to hours and minutes
 const parseTimeString = (timeStr: string): [number, number] => {
   if (!timeStr) return [0, 0];
-  
+
   try {
     // Remove all whitespace and convert to uppercase
     const cleanTime = timeStr.replace(/\s+/g, '').toUpperCase();
-    
+
     // Check if time has AM/PM
     const hasAM = cleanTime.includes('AM');
     const hasPM = cleanTime.includes('PM');
     const hasPeriod = hasAM || hasPM;
-    
+
     // Extract the time part (without AM/PM)
     const timePart = hasPeriod ? cleanTime.replace(/[AP]M$/, '') : cleanTime;
-    
+
     // Split by colon or period
     const parts = timePart.split(/[:.]/);
     if (parts.length < 1 || parts.length > 2) {
       console.warn('Invalid time format (splitting failed):', timeStr);
       return [0, 0];
     }
-    
+
     // Parse hours and minutes
     let hours = parseInt(parts[0], 10);
     const minutes = parts[1] ? parseInt(parts[1], 10) : 0;
-    
+
     // Handle 12-hour format
     if (hasPeriod) {
       if (hasPM && hours < 12) hours += 12;
       if (hasAM && hours === 12) hours = 0;
     }
-    
+
     // Validate values
     if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
       console.warn('Invalid time values:', timeStr, { hours, minutes });
       return [0, 0];
     }
-    
+
     // Debug log for time parsing
     if (process.env.NODE_ENV !== 'production') {
       console.log('Parsed time:', {
@@ -124,7 +124,7 @@ const parseTimeString = (timeStr: string): [number, number] => {
         output: `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
       });
     }
-    
+
     return [hours, minutes];
   } catch (error) {
     console.error('Error parsing time string:', timeStr, error);
@@ -143,16 +143,16 @@ const formatDateForAPI = (date: Date): string => {
 // Move date validation outside the component
 function validateAndParseDate(dateString: any): { isValid: boolean; date?: Date; dayName?: string } {
   if (!dateString || typeof dateString !== 'string') return { isValid: false };
-  
+
   const [year, month, day] = dateString.split('-').map(Number);
   if (isNaN(year) || isNaN(month) || isNaN(day)) return { isValid: false };
-  
+
   // Create date in local timezone to avoid timezone shift
   const date = new Date(year, month - 1, day);
   const isValid = date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
-  
+
   if (!isValid) return { isValid: false };
-  
+
   return {
     isValid: true,
     date,
@@ -165,7 +165,7 @@ export default function DailySchedulePage() {
   const params = useParams();
   const dispatch = useAppDispatch();
   const { role } = useCrmAuth();
-  
+
   // State
   const [showBlockTimeModal, setShowBlockTimeModal] = useState(false);
   const [isNewAppointmentOpen, setIsNewAppointmentOpen] = useState(false);
@@ -174,21 +174,21 @@ export default function DailySchedulePage() {
   const [selectedStaff, setSelectedStaff] = useState('All Staff');
   const [cancelReason, setCancelReason] = useState('');
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<{date: Date; time: string} | null>(null);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<{ date: Date; time: string } | null>(null);
 
   // RTK Query hooks
   const [createAppointment] = glowvitaApi.useCreateAppointmentMutation();
   const [updateAppointment] = glowvitaApi.useUpdateAppointmentMutation();
   const [deleteAppointment] = glowvitaApi.useDeleteAppointmentMutation();
   const [updateAppointmentStatus] = glowvitaApi.useUpdateAppointmentStatusMutation();
-  
+
   // Extract and validate date
   const { date: dateString } = params || {};
   const { isValid, date: selectedDate, dayName } = validateAndParseDate(dateString);
-  
+
   // Get appointments from Redux store
   const allAppointments = useSelector(selectAllAppointments);
-  
+
   // Fetch appointments for the selected date range using RTK Query
   // For doctors, we might need to filter appointments by doctor ID
   const { data: appointmentsData, isLoading: isLoadingAppointments, refetch: refetchAppointments } = glowvitaApi.useGetAppointmentsQuery(
@@ -239,28 +239,28 @@ export default function DailySchedulePage() {
         paymentMethod: appt.paymentMethod || 'Pay at Salon',
       }));
   }, [appointmentsData]);
-  
+
   // Filter appointments for the selected staff and date
   const filteredAppointments = useMemo(() => {
     if (!appointments || !Array.isArray(appointments)) return [];
     if (!selectedDate) return [];
-    
+
     return appointments.filter(appointment => {
       // Filter by date
       if (!isSameDay(new Date(appointment.date), selectedDate)) return false;
-      
+
       // For doctors, we might want to show all appointments regardless of staff filter
       // or handle staff filtering differently
       if (role === 'doctor') {
         // Doctors see all their appointments
         return true;
       }
-      
+
       // Filter by staff if a specific staff is selected (vendor behavior)
       if (selectedStaff !== 'All Staff' && appointment.staffName !== selectedStaff) {
         return false;
       }
-      
+
       return true;
     });
   }, [appointments, selectedDate, selectedStaff, role]);
@@ -270,10 +270,10 @@ export default function DailySchedulePage() {
     const toastId = toast.loading('Saving appointment...');
     try {
       setIsLoading(true);
-      
+
       // Always use the selected date from the URL for the appointment
       const appointmentDate = selectedDate || new Date();
-      
+
       // Format the appointment data with timezone-safe date
       const formattedData = {
         ...appointmentData,
@@ -295,14 +295,14 @@ export default function DailySchedulePage() {
         await createAppointment(formattedData);
         toast.success('Appointment created successfully');
       }
-      
+
       // Refresh appointments
       await refetchAppointments();
-      
+
       // Close the form
       setIsNewAppointmentOpen(false);
       setSelectedAppointment(null);
-      
+
     } catch (error: any) {
       console.error('Error saving appointment:', error);
       toast.error('Failed to save appointment', {
@@ -317,7 +317,7 @@ export default function DailySchedulePage() {
   // Handle appointment status update
   const handleUpdateStatus = async (status: string, reason: string = '') => {
     if (!selectedAppointment?._id) return;
-    
+
     try {
       setIsLoading(true);
       await updateAppointmentStatus({
@@ -325,7 +325,7 @@ export default function DailySchedulePage() {
         status,
         cancellationReason: status === 'cancelled' ? reason : undefined
       });
-      
+
       toast.success('Appointment status updated successfully');
       await refetchAppointments();
       setShowCancelDialog(false);
@@ -344,7 +344,7 @@ export default function DailySchedulePage() {
   // Handle appointment deletion
   const handleDeleteAppointment = async (id: string) => {
     if (!id) return;
-    
+
     if (window.confirm('Are you sure you want to delete this appointment?')) {
       try {
         setIsLoading(true);
@@ -373,7 +373,7 @@ export default function DailySchedulePage() {
   const handleCreateNewAppointment = useCallback((appointmentData: any) => {
     // If we have a time slot selected, use its date
     const appointmentDate = selectedTimeSlot?.date || selectedDate || new Date();
-    
+
     // Format the appointment data
     const newAppointment = {
       ...appointmentData,
@@ -382,7 +382,7 @@ export default function DailySchedulePage() {
       endTime: appointmentData.endTime || '10:00',
       status: 'scheduled'
     };
-    
+
     // Open the form with the new appointment data
     setSelectedAppointment(newAppointment);
     setIsNewAppointmentOpen(true);
@@ -413,13 +413,13 @@ export default function DailySchedulePage() {
   // Handle date change from the DayScheduleView
   const handleDateChange = useCallback((newDate: Date) => {
     if (!newDate || !(newDate instanceof Date)) return;
-    
+
     // Format the new date to YYYY-MM-DD for the URL
     const year = newDate.getFullYear();
     const month = String(newDate.getMonth() + 1).padStart(2, '0');
     const day = String(newDate.getDate()).padStart(2, '0');
     const dateString = `${year}-${month}-${day}`;
-    
+
     // Navigate to the new date
     router.push(`/calendar/${dateString}`);
   }, [router]);
@@ -432,12 +432,12 @@ export default function DailySchedulePage() {
   // Handle time slot click
   const handleTimeSlotClick = (time: string) => {
     if (!selectedDate) return;
-    
+
     // Parse the time string to 24-hour format
     const [hours, minutes] = parseTimeString(time);
     const slotDate = new Date(selectedDate);
     slotDate.setHours(hours, minutes, 0, 0);
-    
+
     setSelectedTimeSlot({
       date: slotDate,
       time: time
@@ -446,23 +446,23 @@ export default function DailySchedulePage() {
   };
 
   // Fetch working hours - use doctor endpoint for doctors, vendor endpoint for others
-  const { data: workingHoursData, isLoading: isLoadingWorkingHours, error: workingHoursError } = role === 'doctor' 
+  const { data: workingHoursData, isLoading: isLoadingWorkingHours, error: workingHoursError } = role === 'doctor'
     ? glowvitaApi.useGetCrmDoctorWorkingHoursQuery(undefined, { skip: !selectedDate })
     : glowvitaApi.useGetWorkingHoursQuery(
-        selectedDate ? formatDateForAPI(selectedDate) : '',
-        { skip: !selectedDate }
-      );
+      selectedDate ? formatDateForAPI(selectedDate) : '',
+      { skip: !selectedDate }
+    );
 
   // Fetch staff data - for doctors, we might want to show only the doctor themselves
   const { data: staffData = [], isLoading: isLoadingStaff, error: staffError } = glowvitaApi.useGetStaffQuery(undefined, {
     refetchOnMountOrArgChange: true,
     skip: role === 'doctor' // Doctors don't need staff data in the same way vendors do
   });
-  
+
   // For doctors, we might want to create a pseudo-staff entry for themselves
   const doctorStaffData = useMemo(() => {
     if (role !== 'doctor' || !workingHoursData) return [];
-    
+
     // Create a staff-like object for the doctor
     return [{
       _id: 'doctor-self',
@@ -507,10 +507,10 @@ export default function DailySchedulePage() {
   const staffList = useMemo(() => {
     // For doctors, use the doctorStaffData instead of regular staff data
     const sourceData = role === 'doctor' ? doctorStaffData : staffData;
-    
+
     if (!sourceData || !Array.isArray(sourceData)) return [];
-    
-    return sourceData.map((staff: any) => ({
+
+    const transformed = sourceData.map((staff: any) => ({
       id: staff._id || staff.id,
       name: staff.fullName || staff.name,
       position: staff.position || '',
@@ -550,6 +550,44 @@ export default function DailySchedulePage() {
       endTime: staff.endTime || '18:00',
       timezone: staff.timezone || 'Asia/Kolkata'
     }));
+
+    // Add "Any Professional" as the first column for unassigned appointments
+    const anyProfessional = {
+      id: 'Any Professional', // Matches staffName in the example
+      name: 'Any Professional',
+      position: 'Shared Pool',
+      isActive: true,
+      isAvailable: true,
+      isCurrentlyAvailable: true,
+      workingHours: {
+        startTime: '08:00',
+        endTime: '22:00',
+        startHour: 8,
+        endHour: 22
+      },
+      mondayAvailable: true,
+      tuesdayAvailable: true,
+      wednesdayAvailable: true,
+      thursdayAvailable: true,
+      fridayAvailable: true,
+      saturdayAvailable: true,
+      sundayAvailable: true,
+      mondaySlots: [],
+      tuesdaySlots: [],
+      wednesdaySlots: [],
+      thursdaySlots: [],
+      fridaySlots: [],
+      saturdaySlots: [],
+      sundaySlots: [],
+      hasWeekdayAvailability: true,
+      hasWeekendAvailability: true,
+      blockedTimes: [],
+      startTime: '08:00',
+      endTime: '22:00',
+      timezone: 'Asia/Kolkata'
+    };
+
+    return [anyProfessional, ...transformed];
   }, [staffData, doctorStaffData, role]);
 
   // Debug: Log the response structure
@@ -561,7 +599,7 @@ export default function DailySchedulePage() {
     if (workingHoursError) {
       console.error('Working Hours API Error:', workingHoursError);
     }
-    
+
     // Debug: Log staff data
     console.log('Staff Data:', staffData);
     console.log('Staff List (transformed):', staffList);
@@ -580,7 +618,7 @@ export default function DailySchedulePage() {
       console.log('No working hours data available, using defaults');
       return defaultHours;
     }
-    
+
     // Handle doctor working hours structure (different from vendor)
     let workingHoursArray = [];
     if (role === 'doctor') {
@@ -590,7 +628,7 @@ export default function DailySchedulePage() {
       // Vendor working hours are in workingHours property
       workingHoursArray = workingHoursData.workingHours || [];
     }
-    
+
     if (!Array.isArray(workingHoursArray)) {
       console.log('Working hours is not an array, using defaults');
       return defaultHours;
@@ -598,13 +636,13 @@ export default function DailySchedulePage() {
 
     // Find the day - convert dayName to match API format (Monday, Tuesday, etc.)
     const targetDay = dayName ? dayName.charAt(0).toUpperCase() + dayName.slice(1) : '';
-    
+
     const found = workingHoursArray.find(
       (dayData: any) => dayData.day === targetDay
     );
-    
+
     console.log('Working hours for', targetDay, ':', found || 'Not found, using defaults');
-    
+
     // For doctors, isOpen property indicates if the day is working
     if (role === 'doctor') {
       return {
@@ -613,47 +651,47 @@ export default function DailySchedulePage() {
         isWorking: found?.isOpen !== false // Default to true if isOpen is not explicitly false
       };
     }
-    
+
     return found || defaultHours;
   }, [workingHoursData, dayName, role]);
-  
+
   // Get blocked times for the selected date with proper timezone handling
   const blockedTimes = useSelector((state: any) => {
     if (!selectedDate) return [];
-    
+
     return (state?.blockTime?.blockedTimes || []).filter((block: any) => {
       if (!block?.date) return false;
-      
+
       // Create date objects in local timezone for comparison
       const blockDate = new Date(block.date);
-      
+
       // Compare year, month, and date parts only
       return blockDate.getFullYear() === selectedDate.getFullYear() &&
-             blockDate.getMonth() === selectedDate.getMonth() &&
-             blockDate.getDate() === selectedDate.getDate();
+        blockDate.getMonth() === selectedDate.getMonth() &&
+        blockDate.getDate() === selectedDate.getDate();
     });
   });
-  
+
   // Handle status change from AppointmentDetailView
   const handleStatusChange = useCallback(async (newStatus: string, cancellationReason?: string) => {
     if (!selectedAppointment) return;
-    
+
     try {
       setIsLoading(true);
-      
+
       // Call the updateAppointmentStatus mutation
       await updateAppointmentStatus({
         id: selectedAppointment._id || selectedAppointment.id,
         status: newStatus,
         cancellationReason: cancellationReason || (newStatus === 'cancelled' ? 'No reason provided' : undefined)
       }).unwrap();
-      
+
       // Show success message
       toast.success(`Appointment ${newStatus} successfully`);
-      
+
       // Close the detail view
       setSelectedAppointment(null);
-      
+
     } catch (error: any) {
       console.error('Error updating appointment status:', error);
       toast.error(`Failed to ${newStatus} appointment`, {
@@ -711,17 +749,17 @@ export default function DailySchedulePage() {
         ...updatedAppointment,
         date: formatDateForAPI(new Date(selectedAppointment.date)),
       }).unwrap();
-      
+
       toast.success('Payment collected successfully', {
         description: `₹${paymentData.amount.toFixed(2)} received via ${paymentData.paymentMethod}`
       });
-      
+
       // Refresh appointments to show updated payment status
       await refetchAppointments();
-      
+
       // Close the appointment detail view
       setSelectedAppointment(null);
-      
+
     } catch (error: any) {
       console.error('Error processing payment:', error);
       toast.error('Failed to process payment', {
@@ -742,7 +780,7 @@ export default function DailySchedulePage() {
       }
 
       console.log('Updating appointment with data:', updatedAppointment);
-      
+
       // Format the data for the API
       const updateData = {
         id: appointmentId,
@@ -757,17 +795,17 @@ export default function DailySchedulePage() {
       };
 
       console.log('Sending update request with data:', updateData);
-      
+
       // For partial updates, we should ensure we're not missing required fields
       // If this is just a status update, make sure we include all required fields
       const result = await updateAppointment(updateData).unwrap();
-      
+
       console.log('Update successful, refreshing appointments...');
       await refetchAppointments();
-      
+
       toast.success('Appointment updated successfully');
       return result;
-      
+
     } catch (error: any) {
       console.error('Error updating appointment:', error);
       toast.error('Failed to update appointment', {
@@ -789,7 +827,7 @@ export default function DailySchedulePage() {
       }
 
       console.log('Rescheduling appointment with data:', appointmentData);
-      
+
       // Format the data for the API
       const rescheduleData = {
         id: appointmentId,
@@ -803,16 +841,16 @@ export default function DailySchedulePage() {
       };
 
       console.log('Sending reschedule request with data:', rescheduleData);
-      
+
       // For rescheduling, ensure all required fields are preserved
       const result = await updateAppointment(rescheduleData).unwrap();
-      
+
       console.log('Reschedule successful, refreshing appointments...');
       await refetchAppointments();
-      
+
       toast.success('Appointment rescheduled successfully');
       return result;
-      
+
     } catch (error: any) {
       console.error('Error rescheduling appointment:', error);
       toast.error('Failed to reschedule appointment', {
@@ -835,15 +873,15 @@ export default function DailySchedulePage() {
   return (
     <div className="container mx-auto p-6 max-w-7xl">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-5">
-        <Button 
-          variant="ghost" 
-          onClick={handleBackClick} 
+        <Button
+          variant="ghost"
+          onClick={handleBackClick}
           className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full px-5 py-3 text-gray-800 dark:text-gray-200 font-bold text-lg shadow-sm"
         >
           <ChevronLeft className="mr-3 h-5 w-5" />
           Back to Calendar
         </Button>
-        
+
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
           <div className="flex items-center gap-4">
             {role !== 'doctor' && (
@@ -861,9 +899,9 @@ export default function DailySchedulePage() {
                 </SelectContent>
               </Select>
             )}
-            
-            <Button 
-              onClick={handleNewAppointment} 
+
+            <Button
+              onClick={handleNewAppointment}
               className="rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-extrabold shadow-xl hover:shadow-2xl transition-all duration-300 px-6 py-3 text-base"
             >
               <Plus className="mr-3 h-5 w-5" />
@@ -891,40 +929,40 @@ export default function DailySchedulePage() {
               const startTime = dayWorkingHours?.startTime || '09:00';
               const endTime = dayWorkingHours?.endTime || '18:00';
               const isWorking = dayWorkingHours?.isWorking !== false;
-              
+
               // Parse start and end times
               const [startHour, startMinute] = parseTimeString(startTime);
               const [endHour, endMinute] = parseTimeString(endTime);
-              
+
               // Create date objects in local timezone
               const startDate = new Date(selectedDate);
               startDate.setHours(startHour, startMinute, 0, 0);
-              
+
               const endDate = new Date(selectedDate);
               endDate.setHours(endHour, endMinute, 0, 0);
-              
+
               // Handle case where end time is on the next day
               if (endDate <= startDate) {
                 endDate.setDate(endDate.getDate() + 1);
               }
-              
+
               const slots = [];
               let current = new Date(startDate);
               const slotDuration = 30; // minutes
-              
+
               // Generate slots every 30 minutes within working hours
               while (current < endDate) {
                 const hours = current.getHours();
                 const minutes = current.getMinutes();
-                
+
                 // Format time in 24-hour format for internal use (HH:MM)
                 const time24 = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-                
+
                 // Format time in 12-hour format for display (h:MM AM/PM)
                 const displayHours = hours % 12 || 12;
                 const period = hours >= 12 ? 'PM' : 'AM';
                 const formattedTime = `${displayHours}:${String(minutes).padStart(2, '0')}${period}`;
-                
+
                 slots.push({
                   id: `${formatDateForAPI(selectedDate)}-${time24}`,
                   time: time24, // Internal: 24-hour format (HH:MM)
@@ -933,11 +971,11 @@ export default function DailySchedulePage() {
                   staffId: 'default',
                   date: new Date(current) // Store the exact date object for this slot
                 });
-                
+
                 // Move to next time slot
                 current = new Date(current.getTime() + slotDuration * 60000);
               }
-              
+
               console.log('Generated time slots:', {
                 date: selectedDate.toISOString().split('T')[0],
                 startTime: startTime,
@@ -948,9 +986,9 @@ export default function DailySchedulePage() {
                 firstSlot: slots[0],
                 lastSlot: slots[slots.length - 1] || 'No slots'
               });
-              
+
               return slots;
-              
+
             } catch (error) {
               console.error('Error generating time slots:', error);
               // Fallback to default time slots if there's an error
@@ -974,8 +1012,8 @@ export default function DailySchedulePage() {
         />
       </div>
 
-      <Dialog 
-        open={isNewAppointmentOpen} 
+      <Dialog
+        open={isNewAppointmentOpen}
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             setIsNewAppointmentOpen(false);
@@ -1056,16 +1094,16 @@ export default function DailySchedulePage() {
               />
             </div>
             <div className="flex justify-end space-x-4 pt-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowCancelDialog(false)}
                 disabled={isLoading}
                 className="rounded-full border-gray-300 dark:border-gray-600 px-6 py-3 text-base font-bold"
               >
                 No, Keep It
               </Button>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={() => handleUpdateStatus('cancelled', cancelReason)}
                 disabled={isLoading || !cancelReason.trim()}
                 className="rounded-full px-6 py-3 text-base font-bold"

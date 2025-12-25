@@ -2,8 +2,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useDispatch } from 'react-redux';
-import { useUpdateVendorDocumentStatusMutation, useGetAdminUsersQuery } from '@repo/store/api';
+import { useDispatch, useSelector } from 'react-redux';
+import { useUpdateVendorDocumentStatusMutation, useGetAdminUsersQuery, useGetSubscriptionPlansQuery } from '@repo/store/api';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@repo/ui/tabs';
@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@repo/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
 import { Badge } from '@repo/ui/badge';
-import { Trash2, UploadCloud, CheckCircle2, Users, Eye, EyeOff, Map, X, FileText, Clock } from 'lucide-react';
+import { Trash2, UploadCloud, CheckCircle2, Users, Eye, EyeOff, Map, X, FileText, Clock, RefreshCw } from 'lucide-react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../packages/config/config';
@@ -23,10 +23,29 @@ import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../packages/config/config';
 // Mapbox access token
 const MAPBOX_TOKEN = NEXT_PUBLIC_MAPBOX_API_KEY;
 
+interface SubscriptionPlan {
+  _id: string;
+  name: string;
+  price: number;
+  discountedPrice?: number;
+  duration: number;
+  durationType: string;
+}
+
+interface SubscriptionHistoryItem {
+  plan: SubscriptionPlan | string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  archivedAt: string;
+}
+
 interface Subscription {
   startDate: string;
   endDate: string;
-  package: string;
+  plan?: SubscriptionPlan | string; // Changed from package to plan to match backend
+  status?: string; // Added status
+  history?: SubscriptionHistoryItem[]; // Added history
   isActive: boolean;
 }
 
@@ -52,7 +71,7 @@ interface Document {
 
 // Update type definitions
 export type SalonCategory = 'unisex' | 'men' | 'women';
-type SubCategory = 'shop' | 'shop-at-home' | 'onsite';
+type SubCategory = 'at-salon' | 'at-home' | 'custom-location';
 
 export interface Vendor {
   _id?: string;
@@ -134,15 +153,15 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
   // Initialize Mapbox when modal opens
   useEffect(() => {
     if (!isMapOpen || !MAPBOX_TOKEN) return;
-    
+
     const initMap = () => {
       if (!mapContainer.current) return;
-      
+
       mapboxgl.accessToken = MAPBOX_TOKEN;
-      
+
       // Clean up existing map
       if (map.current) map.current.remove();
-      
+
       // Create new map
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
@@ -150,52 +169,52 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
         center: formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599],
         zoom: formData.location ? 15 : 5
       });
-      
+
       // Remove existing marker
       if (marker.current) marker.current.remove();
-      
+
       // Add marker if location exists
       if (formData.location) {
         marker.current = new mapboxgl.Marker({ draggable: true, color: '#3B82F6' })
           .setLngLat([formData.location.lng, formData.location.lat])
           .addTo(map.current);
-          
+
         marker.current.on('dragend', () => {
           const lngLat = marker.current!.getLngLat();
           setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
           fetchAddress([lngLat.lng, lngLat.lat]);
         });
       }
-      
+
       // Handle map clicks
       map.current.on('click', (e: mapboxgl.MapLayerMouseEvent) => {
         const { lng, lat } = e.lngLat;
         setFormData(prev => ({ ...prev, location: { lat, lng } }));
-        
+
         // Remove existing marker and add new one
         if (marker.current) marker.current.remove();
         if (map.current) {
           marker.current = new mapboxgl.Marker({ draggable: true, color: '#3B82F6' })
             .setLngLat([lng, lat])
             .addTo(map.current);
-            
+
           marker.current.on('dragend', () => {
             const lngLat = marker.current!.getLngLat();
             setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
             fetchAddress([lngLat.lng, lngLat.lat]);
           });
         }
-        
+
         fetchAddress([lng, lat]);
       });
-      
+
       // Resize map after load
       map.current.on('load', () => setTimeout(() => map.current?.resize(), 100));
     };
-    
+
     // Initialize with a small delay to ensure DOM is ready
     const timeoutId = setTimeout(initMap, 100);
-    
+
     // Cleanup function
     return () => {
       clearTimeout(timeoutId);
@@ -203,13 +222,13 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
       if (marker.current) marker.current.remove();
     };
   }, [isMapOpen]);
-  
+
   // Resize map when modal is fully opened
   useEffect(() => {
     if (isMapOpen && map.current) {
       setTimeout(() => {
-        if(map.current) {
-            map.current.resize();
+        if (map.current) {
+          map.current.resize();
         }
       }, 300);
     }
@@ -221,7 +240,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
       setSearchResults([]);
       return;
     }
-    
+
     try {
       const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&country=IN&types=place,locality,neighborhood,address`);
       const data = await response.json();
@@ -231,21 +250,21 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
       setSearchResults([]);
     }
   };
-  
+
   // Fetch address details based on coordinates
   const fetchAddress = async (coordinates: [number, number]) => {
     if (!MAPBOX_TOKEN) return;
-    
+
     try {
       const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${coordinates[0]},${coordinates[1]}.json?access_token=${MAPBOX_TOKEN}&types=place,locality,neighborhood,address`);
       const data = await response.json();
-      
+
       if (data.features && data.features.length > 0) {
         const address = data.features[0].place_name;
         const context = data.features[0].context || [];
         const state = context.find((c: any) => c.id.includes('region'))?.text || '';
         const city = context.find((c: any) => c.id.includes('place'))?.text || '';
-        
+
         setFormData(prev => ({
           ...prev,
           address,
@@ -257,13 +276,13 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
       console.error('Error fetching address:', error);
     }
   };
-  
+
   // Handle selection of a search result
   const handleSearchResultSelect = (result: any) => {
     const coordinates = result.geometry.coordinates;
     const newLocation = { lat: coordinates[1], lng: coordinates[0] };
     const state = result.context?.find((c: any) => c.id.includes('region'))?.text;
-    
+
     setFormData(prev => ({
       ...prev,
       location: newLocation,
@@ -271,17 +290,17 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
       state: state || prev.state,
       city: result.context?.find((c: any) => c.id.includes('place'))?.text || prev.city,
     }));
-    
+
     // Update map
     if (map.current) {
       map.current.setCenter(coordinates);
       map.current.setZoom(15);
       setTimeout(() => map.current?.resize(), 100);
     }
-    
+
     // Update marker
     if (marker.current) marker.current.setLngLat(coordinates);
-    
+
     // Clear search
     setSearchResults([]);
     setSearchQuery('');
@@ -312,9 +331,9 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
   ];
 
   const subCategories: { id: SubCategory; label: string }[] = [
-    { id: 'shop', label: 'Shop' },
-    { id: 'shop-at-home', label: 'Shop at Home' },
-    { id: 'onsite', label: 'Onsite' },
+    { id: 'at-salon', label: 'At Salon' },
+    { id: 'at-home', label: 'At Home' },
+    { id: 'custom-location', label: 'Custom Location' },
   ];
 
   return (
@@ -326,9 +345,9 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
             <div className="flex items-center gap-6">
               <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-gray-200">
                 {formData.profileImage ? (
-                  <img 
-                    src={formData.profileImage} 
-                    alt="Profile" 
+                  <img
+                    src={formData.profileImage}
+                    alt="Profile"
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       console.log('Profile image failed to load in VendorEditForm:', formData.profileImage);
@@ -352,11 +371,11 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
                     </svg>
                     {formData.profileImage ? 'Change Photo' : 'Upload Photo'}
                   </span>
-                  <input 
-                    id="profileImage" 
-                    type="file" 
-                    accept="image/jpeg,image/png,image/gif" 
-                    className="hidden" 
+                  <input
+                    id="profileImage"
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif"
+                    className="hidden"
                     onChange={handleImageUpload}
                   />
                 </Label>
@@ -364,26 +383,26 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
               </div>
             </div>
           </div>
-          
+
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Business Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="businessName">Business Name <span className="text-red-500">*</span></Label>
-                <Input 
-                  id="businessName" 
-                  name="businessName" 
-                  value={formData.businessName || ''} 
-                  onChange={handleInputChange} 
-                  className={errors.businessName ? 'border-red-500' : ''} 
+                <Input
+                  id="businessName"
+                  name="businessName"
+                  value={formData.businessName || ''}
+                  onChange={handleInputChange}
+                  className={errors.businessName ? 'border-red-500' : ''}
                 />
                 {errors.businessName && <p className="text-sm text-red-500 mt-1">{errors.businessName}</p>}
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="category">Salon Category <span className="text-red-500">*</span></Label>
-                <Select 
-                  value={formData.category || ''} 
+                <Select
+                  value={formData.category || ''}
                   onValueChange={(value) => setFormData(prev => ({ ...prev, category: value as SalonCategory }))}
                 >
                   <SelectTrigger className={errors.category ? 'border-red-500' : ''}>
@@ -399,13 +418,13 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
                 </Select>
                 {errors.category && <p className="text-sm text-red-500 mt-1">{errors.category}</p>}
               </div>
-              
+
               <div className="space-y-2">
                 <Label>Sub Categories <span className="text-red-500">*</span></Label>
                 <div className={`space-y-2 p-3 rounded-md ${errors.subCategories ? 'border border-red-200 bg-red-50' : ''}`}>
                   {subCategories.map((subCat: any) => (
                     <div key={subCat.id} className="flex items-center space-x-2">
-                      <Checkbox 
+                      <Checkbox
                         id={subCat.id}
                         checked={formData.subCategories.includes(subCat.id)}
                         onCheckedChange={(checked) => handleCheckboxChange('subCategories', subCat.id, checked as boolean)}
@@ -421,30 +440,30 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
                 </div>
                 {errors.subCategories && <p className="text-sm text-red-500 mt-1">{errors.subCategories}</p>}
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="website">Website URL</Label>
-                <Input 
-                  id="website" 
-                  name="website" 
-                  type="url" 
+                <Input
+                  id="website"
+                  name="website"
+                  type="url"
                   placeholder="https://example.com"
-                  value={formData.website || ''} 
-                  onChange={handleInputChange} 
+                  value={formData.website || ''}
+                  onChange={handleInputChange}
                   className={errors.website ? 'border-red-500' : ''}
                 />
                 {errors.website && <p className="text-sm text-red-500 mt-1">{errors.website}</p>}
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="description">Business Description</Label>
-              <Textarea 
-                id="description" 
-                name="description" 
+              <Textarea
+                id="description"
+                name="description"
                 rows={3}
-                value={formData.description || ''} 
-                onChange={handleInputChange} 
+                value={formData.description || ''}
+                onChange={handleInputChange}
                 placeholder="Tell us about your business..."
                 className={errors.description ? 'border-red-500' : ''}
               />
@@ -476,24 +495,24 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
               {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}
             </div>
           </div>
-          
+
           {!isEditMode && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 <div className="space-y-2">
-                    <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
-                    <div className="relative">
-                        <Input id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password || ''} onChange={handleInputChange} required className={errors.password ? 'border-red-500' : ''} />
-                        <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
-                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                    </div>
-                     {errors.password && <p className="text-sm text-red-500 mt-1">{errors.password}</p>}
+              <div className="space-y-2">
+                <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+                <div className="relative">
+                  <Input id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password || ''} onChange={handleInputChange} required className={errors.password ? 'border-red-500' : ''} />
+                  <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
                 </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password <span className="text-red-500">*</span></Label>
-                    <Input id="confirmPassword" name="confirmPassword" type="password" value={formData.confirmPassword || ''} onChange={handleInputChange} required className={errors.confirmPassword ? 'border-red-500' : ''} />
-                     {errors.confirmPassword && <p className="text-sm text-red-500 mt-1">{errors.confirmPassword}</p>}
-                </div>
+                {errors.password && <p className="text-sm text-red-500 mt-1">{errors.password}</p>}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password <span className="text-red-500">*</span></Label>
+                <Input id="confirmPassword" name="confirmPassword" type="password" value={formData.confirmPassword || ''} onChange={handleInputChange} required className={errors.confirmPassword ? 'border-red-500' : ''} />
+                {errors.confirmPassword && <p className="text-sm text-red-500 mt-1">{errors.confirmPassword}</p>}
+              </div>
             </div>
           )}
 
@@ -523,14 +542,14 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-                <Label htmlFor="state">State <span className="text-red-500">*</span></Label>
-                <Input id="state" name="state" value={formData.state || ''} onChange={handleInputChange} className={errors.state ? 'border-red-500' : ''} />
-                {errors.state && <p className="text-sm text-red-500 mt-1">{errors.state}</p>}
+              <Label htmlFor="state">State <span className="text-red-500">*</span></Label>
+              <Input id="state" name="state" value={formData.state || ''} onChange={handleInputChange} className={errors.state ? 'border-red-500' : ''} />
+              {errors.state && <p className="text-sm text-red-500 mt-1">{errors.state}</p>}
             </div>
             <div className="space-y-2">
-                <Label htmlFor="city">City <span className="text-red-500">*</span></Label>
-                <Input id="city" name="city" value={formData.city || ''} onChange={handleInputChange} className={errors.city ? 'border-red-500' : ''} />
-                {errors.city && <p className="text-sm text-red-500 mt-1">{errors.city}</p>}
+              <Label htmlFor="city">City <span className="text-red-500">*</span></Label>
+              <Input id="city" name="city" value={formData.city || ''} onChange={handleInputChange} className={errors.city ? 'border-red-500' : ''} />
+              {errors.city && <p className="text-sm text-red-500 mt-1">{errors.city}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="pincode">Pincode <span className="text-red-500">*</span></Label>
@@ -580,19 +599,19 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
                 </div>
               )}
             </div>
-            
+
             {formData.location && (
               <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
                 <strong>Selected Location:</strong> {formData.location?.lat.toFixed(6)}, {formData.location?.lng.toFixed(6)}
               </div>
             )}
-            
+
             <div className="relative border rounded-lg overflow-hidden" style={{ height: '300px' }}>
-              <div 
-                ref={mapContainer} 
+              <div
+                ref={mapContainer}
                 className="w-full h-full"
               />
-              
+
               {!MAPBOX_TOKEN && (
                 <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
                   <div className="text-center">
@@ -602,14 +621,14 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
                 </div>
               )}
             </div>
-            
+
             <div className="text-xs text-gray-500 space-y-1">
               <p>• Click anywhere on the map to place the marker</p>
               <p>• Drag the marker to adjust the location</p>
               <p>• Use the search box to find specific places</p>
             </div>
           </div>
-          
+
           <DialogFooter className="mt-4">
             <Button type="button" variant="outline" onClick={() => setIsMapOpen(false)}>
               Cancel
@@ -627,23 +646,225 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
   );
 };
 
-const SubscriptionTab = ({ formData, handleInputChange, errors }: { formData: Vendor, handleInputChange: any, errors: any }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Subscription Information</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <p>Subscription management functionality would be implemented here.</p>
-    </CardContent>
-  </Card>
-);
+const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { formData: Vendor, handleInputChange: any, errors: any, onSuccess?: () => void }) => {
+  const [isRenewModalOpen, setIsRenewModalOpen] = useState(false);
+  const [selectedRenewalPlan, setSelectedRenewalPlan] = useState<string | null>(null);
+  const [isRenewing, setIsRenewing] = useState(false);
+  const { data: plans = [], isLoading: plansLoading } = useGetSubscriptionPlansQuery(undefined);
+  // Get token for manual fetch
+  // Note: We need to access the store state safely. 
+  // Since we can't easily use useSelector inside this sub-component if it's not wrapped properly or to keep it simple, 
+  // we'll try to get it from local storage or assume the parent context/store is available if we lift state.
+  // Actually, we are in a component rendered by VendorEditForm which is inside a provider likely.
+  // We can use useSelector.
+  const token = useSelector((state: any) => state.adminAuth?.token);
+
+
+  const handleRenewClick = () => {
+    setIsRenewModalOpen(true);
+  };
+
+  const submitRenewal = async () => {
+    if (!formData._id || !selectedRenewalPlan) {
+      toast.error("Please select a plan");
+      return;
+    }
+
+    try {
+      setIsRenewing(true);
+      const response = await fetch('/api/admin/subscription-renewal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || ''}`
+        },
+        body: JSON.stringify({
+          vendorId: formData._id,
+          planId: selectedRenewalPlan,
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        toast.success("Subscription renewed successfully!");
+        setIsRenewModalOpen(false);
+        if (onSuccess) onSuccess();
+      } else {
+        throw new Error(data.message || "Failed to renew");
+      }
+    } catch (error: any) {
+      console.error("Renewal error:", error);
+      toast.error(error.message || "Failed to renew subscription");
+    } finally {
+      setIsRenewing(false);
+    }
+  };
+
+  const currentPlanName = formData.subscription?.plan && typeof formData.subscription.plan === 'object'
+    ? (formData.subscription.plan as any).name
+    : "No Active Plan";
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Current Subscription</CardTitle>
+          <Button type="button" onClick={handleRenewClick} size="sm">
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Renew Subscription
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Plan Details */}
+            <div className="space-y-4">
+              <div>
+                <Label className="text-muted-foreground">Current Plan</Label>
+                <div className="text-xl font-bold flex items-center gap-2">
+                  {currentPlanName}
+                  <Badge variant={formData.subscription?.status === 'Active' ? 'default' : 'destructive'}>
+                    {formData.subscription?.status || 'Inactive'}
+                  </Badge>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground">Start Date</Label>
+                  <div className="font-medium">
+                    {formData.subscription?.startDate
+                      ? new Date(formData.subscription.startDate).toLocaleDateString()
+                      : '-'}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">End Date</Label>
+                  <div className="font-medium">
+                    {formData.subscription?.endDate
+                      ? new Date(formData.subscription.endDate).toLocaleDateString()
+                      : '-'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Status / Expiry Info */}
+            <div className="bg-muted/30 p-4 rounded-lg flex flex-col justify-center items-center text-center">
+              {formData.subscription?.endDate && (
+                (() => {
+                  const now = new Date();
+                  const end = new Date(formData.subscription.endDate);
+                  const diffTime = end.getTime() - now.getTime();
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                  if (diffDays > 0) return (
+                    <>
+                      <span className="text-3xl font-bold text-green-600">{diffDays}</span>
+                      <span className="text-sm text-muted-foreground">Days Remaining</span>
+                    </>
+                  );
+                  else return (
+                    <>
+                      <span className="text-3xl font-bold text-red-600">{Math.abs(diffDays)}</span>
+                      <span className="text-sm text-muted-foreground">Days Overdue</span>
+                    </>
+                  );
+                })()
+              )}
+              {!formData.subscription?.endDate && <span className="text-muted-foreground">No duration info</span>}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* History Timeline */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5" /> Subscription History
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {formData.subscription?.history && formData.subscription.history.length > 0 ? (
+            <div className="relative border-l-2 border-muted ml-3 pl-6 space-y-6">
+              {formData.subscription.history.slice().reverse().map((item, idx) => (
+                <div key={idx} className="relative">
+                  <span className="absolute -left-[31px] top-1 h-4 w-4 rounded-full bg-muted border-2 border-background" />
+                  <div className="space-y-1">
+                    <p className="font-medium">
+                      {typeof item.plan === 'object' ? (item.plan as any).name : 'Plan'}
+                      <span className="ml-2 text-xs text-muted-foreground border px-1 rounded">
+                        {item.status}
+                      </span>
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-center py-4">No subscription history available</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Renew Modal */}
+      <Dialog open={isRenewModalOpen} onOpenChange={setIsRenewModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Renew Subscription</DialogTitle>
+            <DialogDescription>Select a plan to renew this vendor's subscription.</DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-1 gap-4">
+              {plansLoading ? (
+                <p>Loading plans...</p>
+              ) : (
+                plans.map((plan: any) => (
+                  <div
+                    key={plan._id}
+                    className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedRenewalPlan === plan._id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:border-primary/50'}`}
+                    onClick={() => setSelectedRenewalPlan(plan._id)}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold">{plan.name}</span>
+                      <span className="font-bold">₹{plan.discountedPrice || plan.price}</span>
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {plan.duration} {plan.durationType}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRenewModalOpen(false)}>Cancel</Button>
+            <Button type="button" onClick={submitRenewal} disabled={isRenewing || !selectedRenewalPlan}>
+              {isRenewing ? (
+                <>
+                  <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Renewing...
+                </>
+              ) : 'Confirm Renewal'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
 
 // Add GalleryTab component for view-only mode
 const GalleryTab = ({ vendor }: { vendor: Vendor | null }) => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  
+
   if (!vendor) return <div>No vendor data available</div>;
-  
+
   const openPreview = (src: string) => {
     setPreviewImage(src);
   };
@@ -670,8 +891,8 @@ const GalleryTab = ({ vendor }: { vendor: Vendor | null }) => {
                   onClick={() => openPreview(src)}
                 />
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <Button 
-                    variant="secondary" 
+                  <Button
+                    variant="secondary"
                     size="icon"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -687,14 +908,14 @@ const GalleryTab = ({ vendor }: { vendor: Vendor | null }) => {
         ) : (
           <p className="text-center text-muted-foreground py-4">No images uploaded yet</p>
         )}
-        
+
         {/* Image Preview Modal */}
         {previewImage && (
           <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closePreview}>
             <div className="relative max-w-4xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
-              <Button 
-                variant="secondary" 
-                size="icon" 
+              <Button
+                variant="secondary"
+                size="icon"
                 className="absolute -top-12 right-0"
                 onClick={closePreview}
               >
@@ -721,7 +942,7 @@ const GalleryTab = ({ vendor }: { vendor: Vendor | null }) => {
 // Add BankDetailsTab component for view-only mode
 const BankDetailsTab = ({ vendor }: { vendor: Vendor | null }) => {
   if (!vendor) return <div>No vendor data available</div>;
-  
+
   return (
     <Card>
       <CardHeader>
@@ -732,29 +953,29 @@ const BankDetailsTab = ({ vendor }: { vendor: Vendor | null }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label>Account Holder Name</Label>
-            <Input 
-              value={vendor.bankDetails?.accountHolder || ''} 
+            <Input
+              value={vendor.bankDetails?.accountHolder || ''}
               readOnly
             />
           </div>
           <div className="space-y-2">
             <Label>Account Number</Label>
-            <Input 
-              value={vendor.bankDetails?.accountNumber || ''} 
+            <Input
+              value={vendor.bankDetails?.accountNumber || ''}
               readOnly
             />
           </div>
           <div className="space-y-2">
             <Label>Bank Name</Label>
-            <Input 
-              value={vendor.bankDetails?.bankName || ''} 
+            <Input
+              value={vendor.bankDetails?.bankName || ''}
               readOnly
             />
           </div>
           <div className="space-y-2">
             <Label>IFSC Code</Label>
-            <Input 
-              value={vendor.bankDetails?.ifscCode || ''} 
+            <Input
+              value={vendor.bankDetails?.ifscCode || ''}
               readOnly
             />
           </div>
@@ -771,9 +992,9 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
   const [selectedDocumentType, setSelectedDocumentType] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [updateDocumentStatus] = useUpdateVendorDocumentStatusMutation();
-  
+
   if (!vendor) return <div>No vendor data available</div>;
-  
+
   const openDocumentPreview = (src: string, type: string) => {
     setPreviewDocument({ src, type });
   };
@@ -839,7 +1060,7 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
         status: 'approved',
         rejectionReason: ''
       }).unwrap();
-      
+
       // Add toast notification for successful approval
       const documentLabel = documentTypes.find(d => d.key === docType)?.label || docType;
       toast.success(`${documentLabel} approved successfully`);
@@ -859,7 +1080,7 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
   // Handle confirm rejection
   const handleConfirmRejection = async () => {
     if (!selectedDocumentType) return;
-    
+
     try {
       await updateDocumentStatus({
         vendorId: vendor._id!,
@@ -867,11 +1088,11 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
         status: 'rejected',
         rejectionReason
       }).unwrap();
-      
+
       // Add toast notification for successful rejection
       const documentLabel = documentTypes.find(d => d.key === selectedDocumentType)?.label || selectedDocumentType;
       toast.success(`${documentLabel} rejected successfully`);
-      
+
       setIsRejectionModalOpen(false);
       setSelectedDocumentType(null);
       setRejectionReason('');
@@ -895,7 +1116,7 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
             const docValue = getDocumentValue(key);
             const docStatus = getDocumentStatus(key);
             const rejectionReasonText = getRejectionReason(key);
-            
+
             return (
               <div key={key} className="border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
@@ -928,8 +1149,8 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
                     {docValue ? (
                       <>
                         {docStatus !== 'pending' && getStatusBadge(docStatus)}
-                        <Button 
-                          variant="ghost" 
+                        <Button
+                          variant="ghost"
                           size="icon"
                           onClick={() => openDocumentPreview(docValue as string, key)}
                         >
@@ -937,17 +1158,17 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
                         </Button>
                         {docStatus === 'pending' && (
                           <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                            <Button
+                              variant="outline"
+                              size="sm"
                               className="h-8 px-2 text-xs"
                               onClick={() => handleApproveDocument(key)}
                             >
                               Approve
                             </Button>
-                            <Button 
-                              variant="destructive" 
-                              size="sm" 
+                            <Button
+                              variant="destructive"
+                              size="sm"
                               className="h-8 px-2 text-xs"
                               onClick={() => handleRejectDocument(key)}
                             >
@@ -961,7 +1182,7 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
                     )}
                   </div>
                 </div>
-                
+
                 {/* Display rejection reason if document is rejected */}
                 {docStatus === 'rejected' && rejectionReasonText && (
                   <div className="mt-3 p-3 bg-red-50 rounded-md border border-red-200">
@@ -969,7 +1190,7 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
                     <p className="text-sm text-red-700">{rejectionReasonText}</p>
                   </div>
                 )}
-                
+
                 {/* Display admin rejection reason if document is rejected */}
                 {docStatus === 'rejected' && vendor.documents && typeof vendor.documents === 'object' && (vendor.documents as any)[`${key}AdminRejectionReason`] && (
                   <div className="mt-3 p-3 bg-red-50 rounded-md border border-red-200">
@@ -981,14 +1202,14 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
             );
           })}
         </div>
-        
+
         {/* Document Preview Modal */}
         {previewDocument && (
           <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={closeDocumentPreview}>
             <div className="relative max-w-4xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
-              <Button 
-                variant="secondary" 
-                size="icon" 
+              <Button
+                variant="secondary"
+                size="icon"
                 className="absolute -top-12 right-0"
                 onClick={closeDocumentPreview}
               >
@@ -1015,7 +1236,7 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
             </div>
           </div>
         )}
-        
+
         {/* Rejection Reason Modal */}
         <Dialog open={isRejectionModalOpen} onOpenChange={setIsRejectionModalOpen}>
           <DialogContent>
@@ -1039,8 +1260,8 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
               <Button variant="outline" onClick={() => setIsRejectionModalOpen(false)}>
                 Cancel
               </Button>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={handleConfirmRejection}
                 disabled={!rejectionReason.trim()}
               >
@@ -1058,19 +1279,19 @@ const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => {
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Fetch offline clients (existing implementation)
   useEffect(() => {
     const fetchClients = async () => {
       if (!vendor?._id) return;
-      
+
       try {
         setLoading(true);
-        
+
         // Get admin auth state from localStorage (same approach used in the app)
         const adminAuthState = typeof window !== 'undefined' ? localStorage.getItem('adminAuthState') : null;
         let token = null;
-        
+
         if (adminAuthState) {
           try {
             const parsedState = JSON.parse(adminAuthState);
@@ -1079,13 +1300,13 @@ const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => {
             console.error('Error parsing admin auth state:', e);
           }
         }
-        
+
         if (!token) {
           setError('Authentication required');
           setLoading(false);
           return;
         }
-        
+
         const response = await fetch(`/api/admin/clients?vendorId=${vendor._id}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -1093,7 +1314,7 @@ const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => {
           }
         });
         const data = await response.json();
-        
+
         if (data.success) {
           setClients(data.data || []);
         } else {
@@ -1109,7 +1330,7 @@ const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => {
 
     fetchClients();
   }, [vendor]);
-  
+
   // Fetch online users using Redux hook
   const { data: onlineUsers = [], isLoading: onlineUsersLoading, error: onlineUsersError } = useGetAdminUsersQuery(
     vendor?._id ? { vendorId: vendor._id } : { vendorId: '' },
@@ -1168,7 +1389,7 @@ const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => {
             <h3 className="text-lg font-semibold">Offline Clients</h3>
             <Badge className="bg-blue-100 text-blue-800">{clients.length} clients</Badge>
           </div>
-          
+
           {clients.length === 0 ? (
             <p className="text-center py-4 text-muted-foreground">No offline clients found for this vendor</p>
           ) : (
@@ -1187,9 +1408,9 @@ const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => {
                       <td className="py-2 px-4">
                         <div className="flex items-center gap-2">
                           {client.profilePicture ? (
-                            <img 
-                              src={client.profilePicture} 
-                              alt={client.fullName} 
+                            <img
+                              src={client.profilePicture}
+                              alt={client.fullName}
                               className="w-8 h-8 rounded-full object-cover"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
@@ -1212,17 +1433,17 @@ const ClientsTab = ({ vendor }: { vendor: Vendor | null }) => {
             </div>
           )}
         </div>
-        
+
         {/* Horizontal line separator */}
         <div className="my-8 border-t border-gray-200"></div>
-        
+
         {/* Online Users */}
         <div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold">Online Users</h3>
             <Badge className="bg-green-100 text-green-800">{onlineUsers.length} users</Badge>
           </div>
-          
+
           {onlineUsersLoading ? (
             <p className="text-center py-4 text-muted-foreground">Loading online users...</p>
           ) : onlineUsersError ? (
@@ -1273,26 +1494,26 @@ interface VendorEditFormProps {
 }
 
 const getInitialFormData = (): Vendor => ({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    businessName: '',
-    category: '',
-    subCategories: [],
-    description: '',
-    profileImage: '',
-    website: '',
-    state: '',
-    city: '',
-    pincode: '',
-    address: '',
-    password: '',
-    confirmPassword: '',
-    subscription: { startDate: '', endDate: '', package: '', isActive: false },
-    gallery: [],
-    documents: [],
-    location: null
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+  businessName: '',
+  category: '',
+  subCategories: [],
+  description: '',
+  profileImage: '',
+  website: '',
+  state: '',
+  city: '',
+  pincode: '',
+  address: '',
+  password: '',
+  confirmPassword: '',
+  subscription: { startDate: '', endDate: '', plan: '', isActive: false },
+  gallery: [],
+  documents: [],
+  location: null
 });
 
 export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }: VendorEditFormProps) {
@@ -1302,8 +1523,8 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }:
 
   useEffect(() => {
     if (isOpen) {
-        setFormData(vendor ? { ...getInitialFormData(), ...vendor } : getInitialFormData());
-        setErrors({});
+      setFormData(vendor ? { ...getInitialFormData(), ...vendor } : getInitialFormData());
+      setErrors({});
     }
   }, [vendor, isOpen]);
 
@@ -1327,14 +1548,14 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }:
     const newErrors: Partial<Record<keyof Vendor, string>> = {};
     let isValid = true;
     for (const field of requiredFields) {
-        if (!formData[field as keyof typeof formData]) {
-            newErrors[field] = 'This field is required';
-            isValid = false;
-        }
+      if (!formData[field as keyof typeof formData]) {
+        newErrors[field] = 'This field is required';
+        isValid = false;
+      }
     }
     if (!isEditMode && !formData.password) {
-        newErrors.password = "Password is required for new vendors";
-        isValid = false;
+      newErrors.password = "Password is required for new vendors";
+      isValid = false;
     }
     setErrors(newErrors);
     return isValid;
@@ -1344,13 +1565,13 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }:
     e.preventDefault();
     if (validateForm() && formData) {
       const submissionData = { ...formData };
-      
+
       // When creating a new vendor, don't send up _id or id fields.
       if (!isEditMode) {
         delete submissionData._id;
         delete submissionData.id;
       }
-      
+
       onSubmit(submissionData);
     }
   };
@@ -1375,7 +1596,7 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }:
               <TabsTrigger value="clients">Clients</TabsTrigger>
             </TabsList>
             <TabsContent value="personal" className="mt-4">
-              <PersonalInformationTab 
+              <PersonalInformationTab
                 formData={formData}
                 handleInputChange={handleInputChange}
                 handleCheckboxChange={handleCheckboxChange}
@@ -1386,9 +1607,9 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }:
             </TabsContent>
             <TabsContent value="subscription">
               {isEditMode ? (
-                <SubscriptionTab formData={vendor} handleInputChange={handleInputChange} errors={errors} />
+                <SubscriptionTab formData={vendor} handleInputChange={handleInputChange} errors={errors} onSuccess={onSuccess} />
               ) : (
-                <SubscriptionTab formData={formData} handleInputChange={handleInputChange} errors={errors} />
+                <SubscriptionTab formData={formData} handleInputChange={handleInputChange} errors={errors} onSuccess={onSuccess} />
               )}
             </TabsContent>
             <TabsContent value="gallery">

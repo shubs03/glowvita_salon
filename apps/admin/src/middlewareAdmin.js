@@ -4,6 +4,7 @@ import AdminUserModel from "@repo/lib/models/admin/AdminUser";
 import _db from "@repo/lib/db";
 import { JWT_SECRET_ADMIN } from "@repo/config/config";
 
+
 export function authMiddlewareAdmin(handler, allowedRoles = []) {
   return async (req, ctx) => {
     await _db();

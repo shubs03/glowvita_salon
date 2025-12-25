@@ -129,7 +129,7 @@ export const POST = authMiddlewareAdmin(
     }
     if (
       !subCategories.every((sc) =>
-        ["shop", "shop-at-home", "onsite"].includes(sc)
+        ["at-salon", "at-home", "custom-location"].includes(sc)
       )
     ) {
       return Response.json(
@@ -444,7 +444,7 @@ export const PUT = authMiddlewareAdmin(
     }
     if (
       !subCategories.every((sc) =>
-        ["shop", "shop-at-home", "onsite"].includes(sc)
+        ["at-salon", "at-home", "custom-location"].includes(sc)
       )
     ) {
       return Response.json(

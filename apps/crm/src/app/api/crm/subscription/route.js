@@ -26,21 +26,23 @@ export const POST = authMiddlewareCrm(async (req) => {
   try {
     await _db();
     const { planId, userType } = await req.json();
-    const userId = req.user._id;
+    const userId = req.user.userId || req.user._id;
+
+    console.log('Change Plan Request:', { planId, userType, userId });
 
     if (!planId) {
-      return NextResponse.json({ 
-        success: false, 
-        message: "Plan ID is required" 
+      return NextResponse.json({
+        success: false,
+        message: "Plan ID is required"
       }, { status: 400 });
     }
 
     // Get the new plan details
     const newPlan = await SubscriptionPlanModel.findById(planId);
     if (!newPlan || !newPlan.isAvailableForPurchase || newPlan.status !== 'Active') {
-      return NextResponse.json({ 
-        success: false, 
-        message: "Selected plan is not available" 
+      return NextResponse.json({
+        success: false,
+        message: "Selected plan is not available"
       }, { status: 400 });
     }
 
@@ -48,16 +50,16 @@ export const POST = authMiddlewareCrm(async (req) => {
     const UserModel = getUserModel(userType);
     const user = await UserModel.findById(userId);
     if (!user) {
-      return NextResponse.json({ 
-        success: false, 
-        message: "User not found" 
+      return NextResponse.json({
+        success: false,
+        message: "User not found"
       }, { status: 404 });
     }
 
     // Calculate new subscription dates
     const startDate = new Date();
     const endDate = new Date();
-    
+
     switch (newPlan.durationType) {
       case 'days':
         endDate.setDate(endDate.getDate() + newPlan.duration);
@@ -99,18 +101,18 @@ export const POST = authMiddlewareCrm(async (req) => {
 
     await user.save();
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: "Subscription plan changed successfully",
       data: user.subscription
     }, { status: 200 });
 
   } catch (error) {
     console.error('Error changing subscription plan:', error);
-    return NextResponse.json({ 
-      success: false, 
-      message: "Failed to change subscription plan", 
-      error: error.message 
+    return NextResponse.json({
+      success: false,
+      message: "Failed to change subscription plan",
+      error: error.message
     }, { status: 500 });
   }
 }, ['vendor', 'supplier', 'doctor', 'staff']);

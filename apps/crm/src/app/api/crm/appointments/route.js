@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import AppointmentModel from "../../../../../../../packages/lib/src/models/Appointment/Appointment.model";
 import _db from '@repo/lib/db';
 import ClientModel from '@repo/lib/models/Vendor/Client.model';
-import { authMiddlewareCrm } from '@/middlewareCrm';
+import { withSubscriptionCheck } from '@/middlewareCrm';
 
 await _db();
 
@@ -33,7 +33,7 @@ const extractAppointmentId = (url, params) => {
 };
 
 // Handle both GET /api/crm/appointments and GET /api/crm/appointments/[id]
-export const GET = authMiddlewareCrm(async (req, { params }) => {
+export const GET = withSubscriptionCheck(async (req, { params }) => {
     try {
         console.log('GET request - params:', params);
         console.log('GET request - req.user:', req.user);
@@ -97,7 +97,7 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
 }, ['vendor']);
 
 // POST a new appointment
-export const POST = authMiddlewareCrm(async (req) => {
+export const POST = withSubscriptionCheck(async (req) => {
     try {
         const vendorId = req.user.userId.toString();
         const body = await req.json();
@@ -175,7 +175,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 }, ['vendor']);
 
 // Handle PUT /api/crm/appointments/[id] (update)
-export const PUT = authMiddlewareCrm(async (req, { params }) => {
+export const PUT = withSubscriptionCheck(async (req, { params }) => {
     try {
         const vendorId = req.user.userId;
         const appointmentId = params?.id;
@@ -268,7 +268,7 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
 });
 
 // DELETE an appointment
-export const DELETE = authMiddlewareCrm(async (req, { params }) => {
+export const DELETE = withSubscriptionCheck(async (req, { params }) => {
     try {
         console.log('=== DELETE REQUEST START ===');
         const vendorId = req.user.userId;
@@ -319,7 +319,7 @@ export const DELETE = authMiddlewareCrm(async (req, { params }) => {
 }, ['vendor']);
 
 // PATCH /api/crm/appointments - Update appointment status
-export const PATCH = authMiddlewareCrm(async (req, { params }) => {
+export const PATCH = withSubscriptionCheck(async (req, { params }) => {
     try {
         const vendorId = req.user.userId;
         const body = await req.json();

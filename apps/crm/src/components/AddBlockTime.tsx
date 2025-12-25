@@ -84,8 +84,7 @@ const AddBlockTime: React.FC<AddBlockTimeProps> = ({
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
-  // Check if status is 'loading' (string) or 1 (LOADING enum value)
-  const isLoading = status === 'loading' || status === 1;
+  const isLoading = status === 'loading';
 
   // Update selected staff when prop changes
   useEffect(() => {

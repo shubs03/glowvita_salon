@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useGetMeQuery } from '@repo/store/api';
-import { setUserAuth, clearUserAuth } from '@repo/store/slices/userAuthSlice';
+import { setUserAuth, clearUserAuth } from '@repo/store/slices/Web/userAuthSlice';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';

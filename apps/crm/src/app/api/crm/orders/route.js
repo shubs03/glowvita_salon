@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import OrderModel from '@repo/lib/models/Vendor/Order.model';
 import { authMiddlewareCrm } from '@/middlewareCrm';
+import mongoose from 'mongoose';
 
 await _db();
 
@@ -78,16 +79,72 @@ export const PATCH = authMiddlewareCrm(async (req) => {
       return NextResponse.json({ message: "Order ID and status are required" }, { status: 400 });
     }
 
-    const order = await OrderModel.findById(orderId);
+    // Try to find order by _id first (MongoDB ID)
+    // Only use findById if orderId is a valid MongoDB ObjectId
+    let order = null;
+    
+    // Check if orderId is a valid MongoDB ObjectId format
+    if (mongoose.Types.ObjectId.isValid(orderId)) {
+      console.log("orderId is a valid MongoDB ObjectId, attempting findById");
+      order = await OrderModel.findById(orderId);
+      console.log("Found order by _id:", order ? "Yes" : "No");
+      if (order) {
+        console.log("Order found by _id:", order._id, order.orderId);
+      }
+    } else {
+      console.log("orderId is not a valid MongoDB ObjectId, skipping findById");
+    }
+    
+    // If not found, try to find by the human-readable orderId field
+    if (!order) {
+      console.log("Attempting to find order by orderId field");
+      order = await OrderModel.findOne({ orderId: orderId });
+      console.log("Found order by orderId field:", order ? "Yes" : "No");
+      if (order) {
+        console.log("Order found by orderId field:", order._id, order.orderId);
+      }
+    }
+    
+    // Log the order details if found
+    if (order) {
+      console.log("Order details:", {
+        _id: order._id,
+        orderId: order.orderId,
+        supplierId: order.supplierId,
+        vendorId: order.vendorId,
+        customerId: order.customerId,
+        status: order.status
+      });
+    }
+    
     if (!order) {
       return NextResponse.json({ message: "Order not found" }, { status: 404 });
     }
 
     // Security check: Only the seller (supplier or vendor) can update the order status
-    const isSeller = (role === 'supplier' && order.supplierId.equals(userId)) || 
-                     (role === 'vendor' && order.vendorId.equals(userId) && order.customerId);
+    let isAuthorized = false;
+    
+    // Helper function to safely compare IDs
+    const compareIds = (id1, id2) => {
+      if (!id1 || !id2) return false;
+      // Convert both to strings for comparison
+      return id1.toString() === id2.toString();
+    };
+    
+    if (role === 'supplier') {
+      // Suppliers can update orders where they are the supplier
+      isAuthorized = compareIds(order.supplierId, userId);
+    } else if (role === 'vendor') {
+      // Vendors can update:
+      // 1. Orders they placed (where they are the vendorId)
+      // 2. Orders they received (where they are the customerId) - for customer orders
+      const isB2BOrderTheyPlaced = compareIds(order.vendorId, userId);
+      const isB2COrderForCustomer = compareIds(order.customerId, userId);
+      
+      isAuthorized = isB2BOrderTheyPlaced || isB2COrderForCustomer;
+    }
 
-    if (!isSeller) {
+    if (!isAuthorized) {
       return NextResponse.json({ message: "You are not authorized to update this order" }, { status: 403 });
     }
 
@@ -101,6 +158,7 @@ export const PATCH = authMiddlewareCrm(async (req) => {
     });
 
     await order.save();
+    
     return NextResponse.json(order, { status: 200 });
 
   } catch (error) {

@@ -1,7 +1,7 @@
 
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
-import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
+import { clearCrmAuth, handleSubscriptionExpired } from "@repo/store/slices/crmAuthSlice";
 import { NEXT_PUBLIC_ADMIN_URL, NEXT_PUBLIC_CRM_URL, NEXT_PUBLIC_WEB_URL } from "@repo/config/config";
 
 // Function to get base URLs with intelligent fallbacks for production
@@ -87,7 +87,15 @@ const baseQuery = async (args, api, extraOptions) => {
   }
 
   const baseUrl = API_BASE_URLS[targetService];
-  const fullUrl = `${baseUrl}${requestUrl}`;
+
+  // Cache-busting for all GET requests on the client-side to avoid hydration errors
+  let fullUrl = `${baseUrl}${requestUrl}`;
+  const method = (typeof args === 'object' && args.method) ? args.method.toUpperCase() : 'GET';
+
+  if (method === 'GET' && typeof window !== 'undefined') {
+    const separator = fullUrl.includes('?') ? '&' : '?';
+    fullUrl += `${separator}_t=${new Date().getTime()}`;
+  }
 
   const dynamicFetch = fetchBaseQuery({
     baseUrl: "", // We're already building the full URL
@@ -107,6 +115,14 @@ const baseQuery = async (args, api, extraOptions) => {
       api,
       extraOptions
     );
+
+    // Handle 401 Unauthorized
+    // Handle 403 Forbidden (Subscription Expired)
+    if (result.error?.status === 403) {
+      api.dispatch(handleSubscriptionExpired());
+      // Force a refetch of the profile to ensure the UI updates with the latest user data
+      api.dispatch(glowvitaApi.endpoints.getProfile.initiate(undefined, { forceRefetch: true }));
+    }
 
     // Handle 401 Unauthorized
     if (result.error?.status === 401) {
@@ -139,13 +155,26 @@ export const glowvitaApi = createApi({
     "SupplierProducts", "CrmOrder", "SupplierProfile", "Cart", "ClientCart",
     "PublicVendors", "PublicVendorServices", "PublicVendorStaff",
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
-    "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
+    "PublicVendorProducts", "PublicServices", "PublicCategories", "WorkingHours", "ClientOrder", "Patient", "Appointment",
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder","DoctorReviews",
-    "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport", "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport"
+    "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
+     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport","SupplierReports","Products"
   ],
 
   endpoints: (builder) => ({
+    getProfile: builder.query({
+      query: () => `/crm/auth/profile`,
+      providesTags: ['User'],
+    }),
+
+    refreshToken: builder.mutation({
+      query: () => ({
+        url: `/crm/auth/refresh`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['User'],
+    }),
 
     // SMS Templates Endpoints
     getSmsTemplates: builder.query({
@@ -277,7 +306,10 @@ export const glowvitaApi = createApi({
 
     // Public Vendors for landing page
     getPublicVendors: builder.query({
-      query: () => ({ url: "/vendors", method: "GET" }),
+      query: () => ({
+        url: `/vendors`,
+        method: "GET"
+      }),
       providesTags: ["PublicVendors"],
       transformResponse: (response) => response,
     }),
@@ -286,6 +318,41 @@ export const glowvitaApi = createApi({
     getPublicProducts: builder.query({
       query: () => ({ url: "/products", method: "GET" }),
       providesTags: ["PublicProducts"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Services Endpoint
+    getPublicServices: builder.query({
+      query: (params = {}) => {
+        const { categoryId, limit, page } = params;
+        const queryParams = new URLSearchParams();
+
+        if (categoryId) {
+          queryParams.append('categoryId', categoryId);
+        }
+
+        if (limit) {
+          queryParams.append('limit', limit.toString());
+        }
+
+        if (page) {
+          queryParams.append('page', page.toString());
+        }
+
+        const queryString = queryParams.toString();
+        return {
+          url: `/services${queryString ? `?${queryString}` : ''}`,
+          method: "GET"
+        };
+      },
+      providesTags: ["PublicServices"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public Categories Endpoint
+    getPublicCategories: builder.query({
+      query: () => ({ url: "/categories", method: "GET" }),
+      providesTags: ["PublicCategories"],
       transformResponse: (response) => response,
     }),
 
@@ -312,10 +379,10 @@ export const glowvitaApi = createApi({
 
     // Product Questions - Submit a new question (Web)
     submitProductQuestion: builder.mutation({
-      query: ({ productId, question }) => ({ 
-        url: `/products/questions/${productId}`, 
-        method: "POST", 
-        body: { productId, question } 
+      query: ({ productId, question }) => ({
+        url: `/products/questions/${productId}`,
+        method: "POST",
+        body: { productId, question }
       }),
       invalidatesTags: (result, error, { productId }) => [{ type: "ProductQuestions", id: productId }],
     }),
@@ -329,10 +396,10 @@ export const glowvitaApi = createApi({
 
     // Product Reviews - Submit a new review (Web)
     submitProductReview: builder.mutation({
-      query: ({ productId, rating, comment }) => ({ 
-        url: `/products/reviews/${productId}`, 
-        method: "POST", 
-        body: { productId, rating, comment } 
+      query: ({ productId, rating, comment }) => ({
+        url: `/products/reviews/${productId}`,
+        method: "POST",
+        body: { productId, rating, comment }
       }),
       invalidatesTags: (result, error, { productId }) => [{ type: "ProductReviews", id: productId }],
     }),
@@ -692,7 +759,7 @@ export const glowvitaApi = createApi({
         "Vendor",
       ],
     }),
-    
+
     // Add new endpoint for updating vendor document status
     updateVendorDocumentStatus: builder.mutation({
       query: ({ vendorId, documentType, status, rejectionReason }) => ({
@@ -766,13 +833,18 @@ export const glowvitaApi = createApi({
       providesTags: ["SubscriptionPlan"],
     }),
 
+    getCrmSubscriptionPlans: builder.query({
+      query: () => ({ url: "/crm/subscription/plans", method: "GET" }),
+      providesTags: ["SubscriptionPlan"],
+    }),
+
     createSubscriptionPlan: builder.mutation({
       query: (plan) => ({
         url: "/admin/subscription-plans",
         method: "POST",
         body: plan,
       }),
-      invalidatesTags: ["SubscriptionPlan"],
+      invalidatesTags: ["SubscriptionPlan", "Vendor"],
     }),
 
     updateSubscriptionPlan: builder.mutation({
@@ -792,7 +864,16 @@ export const glowvitaApi = createApi({
         url: `/admin/subscription-plans?id=${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["SubscriptionPlan"],
+      invalidatesTags: ["SubscriptionPlan", "Vendor"],
+    }),
+
+    renewPlan: builder.mutation({
+      query: (data) => ({
+        url: "/admin/subscription-renewal",
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Vendor"],
     }),
 
     // Supplier Endpoints
@@ -1029,7 +1110,6 @@ export const glowvitaApi = createApi({
         params.append('limit', limit.toString());
         return { url: `/admin/users?${params.toString()}`, method: "GET" };
       },
-      providesTags: ["User"],
       transformResponse: (response) => (response && response.success ? response.data || [] : []),
     }),
 
@@ -1180,7 +1260,7 @@ export const glowvitaApi = createApi({
 
     // Product Approval
     // Removed old combined product approval endpoints - using separate vendor/supplier endpoints now
-    
+
     // Vendor Product Approval (separate from general product approval)
     getVendorProductApprovals: builder.query({
       query: () => ({ url: "/admin/product-approval/vendor", method: "GET" }),
@@ -1191,7 +1271,7 @@ export const glowvitaApi = createApi({
       query: () => ({ url: "/admin/product-approval/supplier", method: "GET" }),
       providesTags: ["Product"],
     }),
-    
+
     // Update Vendor Product Status
     updateVendorProductStatus: builder.mutation({
       query: ({ productId, status }) => ({
@@ -1201,7 +1281,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Product", "CrmProducts"],
     }),
-    
+
     // Update Supplier Product Status
     updateSupplierProductStatus: builder.mutation({
       query: ({ productId, status }) => ({
@@ -1266,8 +1346,8 @@ export const glowvitaApi = createApi({
 
     // Products endpoints
     getCrmProducts: builder.query({
-      query: ({ vendorId } = {}) => ({ 
-        url: "/crm/products", 
+      query: ({ vendorId } = {}) => ({
+        url: "/crm/products",
         method: "GET",
         params: vendorId ? { vendorId } : {}
       }),
@@ -1283,9 +1363,9 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["CrmProducts"],
     }),
     deleteCrmProduct: builder.mutation({
-      query: (data) => ({ 
-        url: "/crm/products", 
-        method: "DELETE", 
+      query: (data) => ({
+        url: "/crm/products",
+        method: "DELETE",
         body: typeof data === 'object' && data.id ? data : { id: data }
       }),
       invalidatesTags: ["CrmProducts"],
@@ -1300,28 +1380,54 @@ export const glowvitaApi = createApi({
 
     // CRM Product Questions - Answer a question
     answerProductQuestion: builder.mutation({
-      query: ({ questionId, answer, isPublished }) => ({ 
-        url: `/crm/product-questions/${questionId}`, 
-        method: "PATCH", 
-        body: { answer, isPublished } 
+      query: ({ questionId, answer, isPublished }) => ({
+        url: `/crm/product-questions/${questionId}`,
+        method: "PATCH",
+        body: { answer, isPublished }
       }),
       invalidatesTags: ["CrmProductQuestions"],
     }),
 
     // CRM Product Questions - Delete a question
     deleteProductQuestion: builder.mutation({
-      query: (questionId) => ({ 
-        url: `/crm/product-questions/${questionId}`, 
+      query: (questionId) => ({
+        url: `/crm/product-questions/${questionId}`,
         method: "DELETE"
       }),
       invalidatesTags: ["CrmProductQuestions"],
     }),
 
+    // Supplier Product Questions - Get all questions for supplier's products
+    getSupplierProductQuestions: builder.query({
+      query: (filter = 'all') => ({ url: `/crm/supplier/product-questions?filter=${filter}`, method: "GET" }),
+      providesTags: ["SupplierProductQuestions"],
+      transformResponse: (response) => response,
+    }),
+
+    // Supplier Product Questions - Answer a question
+    answerSupplierProductQuestion: builder.mutation({
+      query: ({ questionId, answer, isPublished }) => ({
+        url: `/crm/supplier/product-questions`,
+        method: "PATCH",
+        body: { questionId, answer, isPublished }
+      }),
+      invalidatesTags: ["SupplierProductQuestions"],
+    }),
+
+    // Supplier Product Questions - Delete a question
+    deleteSupplierProductQuestion: builder.mutation({
+      query: (questionId) => ({
+        url: `/crm/supplier/product-questions?questionId=${questionId}`,
+        method: "DELETE"
+      }),
+      invalidatesTags: ["SupplierProductQuestions"],
+    }),
+
     // CRM Reviews - Get all reviews for vendor's products/services/salons
     getCrmReviews: builder.query({
-      query: ({ filter = 'all', entityType = 'all' }) => ({ 
-        url: `/crm/reviews?filter=${filter}&entityType=${entityType}`, 
-        method: "GET" 
+      query: ({ filter = 'all', entityType = 'all' }) => ({
+        url: `/crm/reviews?filter=${filter}&entityType=${entityType}`,
+        method: "GET"
       }),
       providesTags: ["CrmReviews"],
       transformResponse: (response) => response,
@@ -1329,10 +1435,10 @@ export const glowvitaApi = createApi({
 
     // CRM Reviews - Approve/Reject a review
     approveReview: builder.mutation({
-      query: ({ reviewId, isApproved }) => ({ 
-        url: `/crm/reviews/${reviewId}`, 
-        method: "PATCH", 
-        body: { isApproved } 
+      query: ({ reviewId, isApproved }) => ({
+        url: `/crm/reviews/${reviewId}`,
+        method: "PATCH",
+        body: { isApproved }
       }),
       invalidatesTags: ["CrmReviews"],
     }),
@@ -1373,7 +1479,7 @@ export const glowvitaApi = createApi({
       query: (id) => `/crm/supplier-profile/${id}`,
       providesTags: (result, error, id) => [{ type: 'SupplierProfile', id }],
     }),
-    
+
     // Add new endpoint for getting current supplier's profile
     getCurrentSupplierProfile: builder.query({
       query: () => ({ url: "/crm/supplier-profile", method: "GET" }),
@@ -1389,7 +1495,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Supplier"],
     }),
-    
+
     // Orders
     getCrmOrders: builder.query({
       query: () => ({ url: '/crm/orders' }),
@@ -1413,6 +1519,14 @@ export const glowvitaApi = createApi({
       query: () => ({ url: '/crm/client-orders' }),
       providesTags: ['CrmClientOrder'],
     }),
+    updateCrmClientOrder: builder.mutation({
+      query: ({ orderId, ...updateData }) => ({
+        url: '/crm/client-orders',
+        method: 'PATCH',
+        body: { orderId, ...updateData },
+      }),
+      invalidatesTags: ['CrmClientOrder'],
+    }),
 
     // shipping charge endpoints
     getShippingConfig: builder.query({
@@ -1425,7 +1539,7 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["ShippingCharge"],
       transformResponse: (response) => response.data || response,
     }),
-    
+
     // Public shipping config endpoint
     getPublicShippingConfig: builder.query({
       query: () => ({ url: "/shipping", method: "GET" }),
@@ -1443,7 +1557,7 @@ export const glowvitaApi = createApi({
       query: (category) => ({ url: "/crm/product-categories", method: "POST", body: category }),
       invalidatesTags: ["ProductCategory"],
     }),
-    
+
     // Block Time Endpoints
     getBlockedTimes: builder.query({
       query: (staffId) => ({ url: `/crm/block-time/${staffId}`, method: 'GET' }),
@@ -1639,12 +1753,12 @@ export const glowvitaApi = createApi({
 
     //subscription renewal
     changePlan: builder.mutation({
-      query: (data) => ({ url: `/crm/subscription/change-plan`, method: "POST", body: data }),
-      invalidatesTags: ["SubscriptionPlan"],
+      query: (data) => ({ url: `/crm/subscription`, method: "POST", body: data }),
+      invalidatesTags: ["SubscriptionPlan", "Vendor", "User"],
     }),
     renewPlan: builder.mutation({
       query: (data) => ({ url: `/crm/subscription/renew`, method: "POST", body: data }),
-      invalidatesTags: ["SubscriptionPlan"],
+      invalidatesTags: ["SubscriptionPlan", "Vendor", "User"],
     }),
 
     // CRM SMS Packages Endpoints
@@ -1680,8 +1794,8 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Vendor"],
     }),
     getSmsPurchaseHistory: builder.query({
-      query: (params) => ({ 
-        url: "/crm/sms-purchase", 
+      query: (params) => ({
+        url: "/crm/sms-purchase",
         method: "GET",
         params
       }),
@@ -1917,7 +2031,7 @@ export const glowvitaApi = createApi({
     verifyPayment: builder.mutation({
       query: (verificationData) => ({ url: "/payments/verify", method: "POST", body: verificationData }),
     }),
-    
+
     // Public Appointment Endpoints
     getPublicAppointments: builder.query({
       query: ({ vendorId, staffId, date, startDate, endDate, userId }) => {
@@ -1930,10 +2044,10 @@ export const glowvitaApi = createApi({
         if (userId) params.append('userId', userId);
         // Add cache buster
         params.append('_t', Date.now().toString());
-        
-        return { 
-          url: `/appointments?${params.toString()}`, 
-          method: "GET" 
+
+        return {
+          url: `/appointments?${params.toString()}`,
+          method: "GET"
         };
       },
       providesTags: (result, error, arg) => [
@@ -1955,8 +2069,130 @@ export const glowvitaApi = createApi({
           await queryFulfilled;
           // Invalidate all appointment queries
           dispatch(glowvitaApi.util.invalidateTags(['PublicAppointments']));
-        } catch {}
+        } catch { }
       },
+    }),
+
+
+
+    // Confirm Booking Mutation (uses main booking endpoint)
+    confirmBooking: builder.mutation({
+      query: (confirmationData) => ({
+        url: "/booking/confirm",
+        method: "POST",
+        body: confirmationData
+      }),
+      invalidatesTags: ['PublicAppointments'],
+    }),
+
+    // Acquire slot lock for preventing concurrent bookings
+    acquireSlotLock: builder.mutation({
+      query: (lockData) => ({
+        url: "/booking/lock",
+        method: "POST",
+        body: lockData
+      }),
+      invalidatesTags: ['AvailableSlots'],
+      async onQueryStarted(lockData, { dispatch, queryFulfilled }) {
+        try {
+          const { data } = await queryFulfilled;
+          // Optimistic update: remove locked slot from cache
+          dispatch(
+            api.util.updateQueryData('getAvailableSlots',
+              { vendorId: lockData.vendorId, date: lockData.date },
+              (draft) => {
+                return draft.filter(slot => slot.startTime !== lockData.startTime);
+              }
+            )
+          );
+        } catch { }
+      },
+    }),
+
+    // Release slot lock
+    releaseSlotLock: builder.mutation({
+      query: ({ lockToken }) => ({
+        url: "/booking/release-lock",
+        method: "POST",
+        body: { lockToken }
+      }),
+      invalidatesTags: ['AvailableSlots'],
+    }),
+
+    // Get available slots with caching
+    getAvailableSlots: builder.query({
+      query: ({ vendorId, staffId, serviceIds, date, isHomeService, location }) => {
+        const params = new URLSearchParams({
+          vendorId,
+          staffId: staffId || 'any',
+          ...(serviceIds && { serviceIds: Array.isArray(serviceIds) ? serviceIds.join(',') : serviceIds }),
+          date: date,
+          isHomeService: isHomeService?.toString() || 'false',
+          ...(location?.lat && { lat: location.lat.toString() }),
+          ...(location?.lng && { lng: location.lng.toString() })
+        });
+        return {
+          url: `/booking/slots?${params.toString()}`,
+          method: "GET"
+        };
+      },
+      providesTags: ['AvailableSlots'],
+      keepUnusedDataFor: 180, // 3 minutes cache
+    }),
+
+
+    // Lock Wedding Package Mutation
+    lockWeddingPackage: builder.mutation({
+      query: (lockData) => ({ 
+        url: "/scheduling/wedding-package", 
+        method: "POST", 
+        body: lockData 
+      }),
+    }),
+
+    // Public Wedding Packages Endpoint
+    getPublicVendorWeddingPackages: builder.query({
+      query: (vendorId) => ({ url: `/wedding-packages/vendor/${vendorId}`, method: "GET" }),
+      providesTags: ["PublicVendorWeddingPackages"],
+      transformResponse: (response) => {
+        console.log("🔍 Redux transformResponse - raw response:", response);
+        console.log("🔍 Redux transformResponse - first package keys:", response?.data?.[0] ? Object.keys(response.data[0]) : "no data");
+        return response;
+      },
+    }),
+
+    // CRM Wedding Packages Endpoints
+    getVendorWeddingPackages: builder.query({
+      query: (vendorId) => ({ url: `/crm/wedding-packages`, method: "GET" }),
+      providesTags: ["VendorWeddingPackages"],
+      transformResponse: (response) => response,
+    }),
+
+    createWeddingPackage: builder.mutation({
+      query: (packageData) => ({
+        url: "/crm/wedding-packages",
+        method: "POST",
+        body: packageData,
+      }),
+      invalidatesTags: ["VendorWeddingPackages", "PublicVendorWeddingPackages"],
+    }),
+
+    updateWeddingPackage: builder.mutation({
+      query: ({ packageId, ...packageData }) => ({
+        url: `/crm/wedding-packages`,
+        method: "PUT",
+        body: { packageId, ...packageData },
+      }),
+      invalidatesTags: ["VendorWeddingPackages", "PublicVendorWeddingPackages"],
+    }),
+
+    deleteWeddingPackage: builder.mutation({
+      query: (packageId) => ({
+        url: `/crm/wedding-packages`,
+        method: "DELETE",
+        body: { packageId },
+      }),
+      invalidatesTags: ["VendorWeddingPackages", "PublicVendorWeddingPackages"],
     }),
 
     // Payment Collection Endpoint
@@ -1968,7 +2204,7 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ['Appointments'],
     }),
-    
+
     // Payment Collections Endpoint
     getPaymentCollections: builder.query({
       query: (appointmentId) => ({
@@ -1978,15 +2214,308 @@ export const glowvitaApi = createApi({
       providesTags: ['PaymentCollections'],
     }),
 
+    // Admin Reports - Supplier Product Reviews
+    getSupplierProductReviewsReport: builder.query({
+      query: () => ({
+        url: "/admin/reports/supplier-product-reviews",
+        method: "GET"
+      }),
+      providesTags: ["AdminReports"],
+      transformResponse: (response) => response,
+    }),
+
+    // Supplier Reports - CRM Panel
+    // Total Orders Report
+    getSupplierTotalOrdersReport: builder.query({
+      query: () => ({
+        url: "/crm/reports/supplier/total-orders",
+        method: "GET"
+      }),
+      providesTags: ["SupplierReports"],
+      transformResponse: (response) => response,
+    }),
+
+    // Pending Orders Report
+    getSupplierPendingOrdersReport: builder.query({
+      query: () => ({
+        url: "/crm/reports/supplier/pending-orders",
+        method: "GET"
+      }),
+      providesTags: ["SupplierReports"],
+      transformResponse: (response) => response,
+    }),
+
+    // Completed Orders Report
+    getSupplierCompletedOrdersReport: builder.query({
+      query: () => ({
+        url: "/crm/reports/supplier/completed-orders",
+        method: "GET"
+      }),
+      providesTags: ["SupplierReports"],
+      transformResponse: (response) => response,
+    }),
+
+    // Confirmed Orders Report
+    getSupplierConfirmedOrdersReport: builder.query({
+      query: () => ({
+        url: "/crm/reports/supplier/confirmed-orders",
+        method: "GET"
+      }),
+      providesTags: ["SupplierReports"],
+      transformResponse: (response) => response,
+    }),
+
+    // Platform Collections Report
+    getSupplierPlatformCollectionsReport: builder.query({
+      query: () => ({
+        url: "/crm/reports/supplier/platform-collections",
+        method: "GET"
+      }),
+      providesTags: ["SupplierReports"],
+      transformResponse: (response) => response,
+    }),
+
+    // Product Sales Report
+    getSupplierProductSalesReport: builder.query({
+      query: () => ({
+        url: "/crm/reports/supplier/product-sales",
+        method: "GET"
+      }),
+      providesTags: ["SupplierReports"],
+      transformResponse: (response) => response,
+    }),
+
+    // Appointment Report Endpoints
+    getAllAppointmentsReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'yesterday') && startDate && endDate) {
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        }
+        // Add additional filter parameters
+        if (client) params.append('client', client);
+        if (service) params.append('service', service);
+        if (staff) params.append('staff', staff);
+        if (status) params.append('status', status);
+        if (bookingType) params.append('bookingType', bookingType);
+        return { url: `/crm/vendor/reports/all-appointments?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Appointments"],
+    }),    getSummaryByServiceReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'yesterday') && startDate && endDate) {
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        }
+        // Add additional filter parameters
+        if (client) params.append('client', client);
+        if (service) params.append('service', service);
+        if (staff) params.append('staff', staff);
+        if (status) params.append('status', status);
+        if (bookingType) params.append('bookingType', bookingType);
+        return { url: `/crm/vendor/reports/summary-by-service?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Appointments"],
+    }),    getCompletedAppointmentsReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'yesterday') && startDate && endDate) {
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        }
+        // Add additional filter parameters
+        if (client) params.append('client', client);
+        if (service) params.append('service', service);
+        if (staff) params.append('staff', staff);
+        if (status) params.append('status', status);
+        if (bookingType) params.append('bookingType', bookingType);
+        return { url: `/crm/vendor/reports/completed-appointments?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Appointments"],
+    }),
+    getCancelledAppointmentsReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'yesterday') && startDate && endDate) {
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        }
+        // Add additional filter parameters
+        if (client) params.append('client', client);
+        if (service) params.append('service', service);
+        if (staff) params.append('staff', staff);
+        if (status) params.append('status', status);
+        if (bookingType) params.append('bookingType', bookingType);
+        return { url: `/crm/vendor/reports/cancelled-appointments?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Appointments"],
+    }),
+    
+    // Sales Report Endpoints
+    getSalesByServiceReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'yesterday') && startDate && endDate) {
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        }
+        // Add additional filter parameters
+        if (client) params.append('client', client);
+        if (service) params.append('service', service);
+        if (staff) params.append('staff', staff);
+        if (status) params.append('status', status);
+        if (bookingType) params.append('bookingType', bookingType);
+        return { url: `/crm/vendor/reports/sales-by-service?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Appointments"],
+    }),
+    getSalesByCustomerReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'yesterday') && startDate && endDate) {
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        }
+        // Add additional filter parameters
+        if (client) params.append('client', client);
+        if (service) params.append('service', service);
+        if (staff) params.append('staff', staff);
+        if (status) params.append('status', status);
+        if (bookingType) params.append('bookingType', bookingType);
+        return { url: `/crm/vendor/reports/sales-by-customer?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Appointments"],
+    }),
+    
+    // Product Summary Report
+    getProductSummaryReport: builder.query({
+      query: ({ product, category, brand, status, isActive }) => {
+        const params = new URLSearchParams();
+        // Add filter parameters
+        if (product) params.append('product', product);
+        if (category) params.append('category', category);
+        if (brand) params.append('brand', brand);
+        if (status) params.append('status', status);
+        if (isActive !== undefined) params.append('isActive', isActive);
+        return { url: `/crm/vendor/reports/product-summary?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Products"],
+    }),
+    
+    // Inventory/Stock Report
+    getInventoryStockReport: builder.query({
+      query: ({ product, category, brand }) => {
+        const params = new URLSearchParams();
+        // Add filter parameters
+        if (product) params.append('product', product);
+        if (category) params.append('category', category);
+        if (brand) params.append('brand', brand);
+        return { url: `/crm/vendor/reports/inventory-stock?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Products"],
+    }),
+    
+    // Sales by Product Report
+    getSalesByProductReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, product, customer, status, category, brand }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'yesterday') && startDate && endDate) {
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        }
+        // Add additional filter parameters
+        if (product) params.append('product', product);
+        if (customer) params.append('customer', customer);
+        if (status) params.append('status', status);
+        if (category) params.append('category', category);
+        if (brand) params.append('brand', brand);
+        return { url: `/crm/vendor/reports/sales-by-product?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Products"],
+    }),
+    
+    // Category-wise Product Report
+    getCategoryWiseProductReport: builder.query({
+      query: ({ product, category, brand }) => {
+        const params = new URLSearchParams();
+        // Add filter parameters
+        if (product) params.append('product', product);
+        if (category) params.append('category', category);
+        if (brand) params.append('brand', brand);
+        return { url: `/crm/vendor/reports/category-wise-product?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Products"],
+    }),
+    
+    // Unique Values for Appointment Filters
+    getUniqueClients: builder.query({
+      query: () => ({
+        url: '/crm/vendor/reports/unique-clients',
+        method: 'GET'
+      }),
+      providesTags: ["Appointments"]
+    }),
+    getUniqueServices: builder.query({
+      query: () => ({
+        url: '/crm/vendor/reports/unique-services',
+        method: 'GET'
+      }),
+      providesTags: ["Appointments"]
+    }),
+    getUniqueStaff: builder.query({
+      query: () => ({
+        url: '/crm/vendor/reports/unique-staff',
+        method: 'GET'
+      }),
+      providesTags: ["Appointments"]
+    }),
+
+    // Unique product attributes for reports
+    getUniqueProductNames: builder.query({
+      query: () => ({
+        url: '/crm/vendor/reports/unique-product-names',
+        method: 'GET'
+      }),
+      providesTags: ["CrmProducts"]
+    }),
+
+    getUniqueBrands: builder.query({
+      query: () => ({
+        url: '/crm/vendor/reports/unique-brands',
+        method: 'GET'
+      }),
+      providesTags: ["CrmProducts"]
+    }),
+
+    getUniqueCategories: builder.query({
+      query: () => ({
+        url: '/crm/vendor/reports/unique-categories',
+        method: 'GET'
+      }),
+      providesTags: ["CrmProducts"]
+    }),
   }),
 });
 
 export const {
- 
+  useGetProfileQuery,
+  useRefreshTokenMutation,
+
   // Web App
   useGetMeQuery,
   useGetPublicVendorsQuery,
   useGetPublicProductsQuery,
+  useGetPublicServicesQuery,
+  useGetPublicCategoriesQuery,
   useGetPublicVendorProductsQuery,
   useGetPublicProductByIdQuery,
   useGetProductQuestionsQuery,
@@ -2049,6 +2578,7 @@ export const {
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
   useGetSubscriptionPlansQuery,
+  useGetCrmSubscriptionPlansQuery,
   useCreateSubscriptionPlanMutation,
   useUpdateSubscriptionPlanMutation,
   useDeleteSubscriptionPlanMutation,
@@ -2144,6 +2674,7 @@ export const {
   useCreateCrmOrderMutation,
   useUpdateCrmOrderMutation,
   useGetCrmClientOrdersQuery,
+  useUpdateCrmClientOrderMutation,
   useGetShippingConfigQuery,
   useUpdateShippingConfigMutation,
   useGetPublicShippingConfigQuery,
@@ -2192,14 +2723,19 @@ export const {
   useSaveCustomizedTemplateMutation,
   usePurchaseSmsPackageMutation,
   useGetSmsPurchaseHistoryQuery,
-  
+
   // New endpoint for fetching all vendor products
   useGetAllVendorProductsQuery,
-  
+
   // New endpoints for vendor product operations
   useUpdateVendorProductMutation,
   useDeleteVendorProductMutation,
   useCreateVendorProductMutation,
+
+  useGetSupplierProductQuestionsQuery,
+  useAnswerSupplierProductQuestionMutation,
+  useDeleteSupplierProductQuestionMutation,
+
   // Cart Endpoints (CRM)
   useGetCartQuery,
   useAddToCartMutation,
@@ -2231,7 +2767,7 @@ export const {
   useGetBlockedTimesQuery,
   useCreateBlockTimeMutation,
   useDeleteBlockTimeMutation,
-  
+
   // Billing Endpoints
   useCreateBillingMutation,
   useGetBillingRecordsQuery,
@@ -2243,7 +2779,7 @@ export const {
   useCreatePatientMutation,
   useUpdatePatientMutation,
   useDeletePatientMutation,
-  
+
   // Consultation Hooks (Physical & Video)
   useGetConsultationsQuery,
   useGetBookedSlotsQuery,
@@ -2251,14 +2787,60 @@ export const {
   useCreateConsultationMutation,
   useUpdateConsultationMutation,
   useCancelConsultationMutation,
-  
+
   // Public Appointment Hooks
   useGetPublicAppointmentsQuery,
   useCreatePublicAppointmentMutation,
-  
+  // Slot Lock Mutation
+  useAcquireSlotLockMutation,
+  // Confirm Booking Mutation
+  useConfirmBookingMutation,
+  // Lock Wedding Package Mutation
+  useLockWeddingPackageMutation,
+  // Public Wedding Packages Hook
+  useGetPublicVendorWeddingPackagesQuery,
+  // CRM Wedding Packages Hooks
+  useGetVendorWeddingPackagesQuery,
+  useCreateWeddingPackageMutation,
+  useUpdateWeddingPackageMutation,
+  useDeleteWeddingPackageMutation,
+
+
   // Payment Collection Hook
   useCollectPaymentMutation,
+
   
+  // Appointment Report Hooks
+  useGetAllAppointmentsReportQuery,
+  useGetSummaryByServiceReportQuery,
+  useGetCompletedAppointmentsReportQuery,
+  useGetCancelledAppointmentsReportQuery,
+  // Sales Report Hooks
+  useGetSalesByServiceReportQuery,
+  useGetSalesByCustomerReportQuery,
+  // Product Report Hooks
+  useGetProductSummaryReportQuery,
+  useGetSalesByProductReportQuery,
+  useGetInventoryStockReportQuery,
+  useGetCategoryWiseProductReportQuery,
+  useGetUniqueClientsQuery,
+  useGetUniqueServicesQuery,
+  useGetUniqueStaffQuery,
+  useGetUniqueProductNamesQuery,
+  useGetUniqueBrandsQuery,
+  useGetUniqueCategoriesQuery,
+  
+  // Payment Collection Hook
+  useCollectPaymentMutation,  
   // Payment Collections Hook
   useGetPaymentCollectionsQuery,
+  useGetSupplierProductReviewsReportQuery,
+
+  // Supplier Report Hooks
+  useGetSupplierTotalOrdersReportQuery,
+  useGetSupplierPendingOrdersReportQuery,
+  useGetSupplierCompletedOrdersReportQuery,
+  useGetSupplierConfirmedOrdersReportQuery,
+  useGetSupplierPlatformCollectionsReportQuery,
+  useGetSupplierProductSalesReportQuery,
 } = glowvitaApi;

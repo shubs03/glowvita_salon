@@ -27,7 +27,8 @@ const superDataSchema = new mongoose.Schema({
       'disease',
       'supplier',
       'expenseType',
-      'paymentMode' // Added payment mode
+      'paymentMode', // Added payment mode
+      'duration' // Added duration for service duration values
     ],
   },
   parentId: {

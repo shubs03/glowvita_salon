@@ -8,17 +8,18 @@ import {
   CardHeader,
 } from "@repo/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import { useGetPublicVendorServicesQuery } from "@repo/store/api";
-import { Loader2 } from "lucide-react";
+import { useGetPublicVendorServicesQuery } from "@repo/store/services/api";
+import { Loader2, AlertCircle } from "lucide-react";
 
 interface ServicesSectionProps {
   vendorId: string;
   onBookNow: (service?: any) => void;
+  isSubscriptionExpired?: boolean;
 }
 
-const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow }) => {
+const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, isSubscriptionExpired = false }) => {
   const [activeServiceTab, setActiveServiceTab] = useState("All");
-  
+
   // Fetch services dynamically from API
   const { data: servicesData, isLoading: servicesLoading, error: servicesError } = useGetPublicVendorServicesQuery(vendorId);
   // Process services data
@@ -30,7 +31,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow }
         duration: service.duration || 60,
         category: service.category?.name || service.category || "Other",
         description: service.description || "",
-        image: service.image || "https://placehold.co/200x200/e2e8f0/64748b?text=" + (service.name || "Service").replace(/\s/g, '+')
+        image: service.image || "https://placehold.co/200x200/png?text=" + (service.name || "Service").replace(/\s/g, '+')
       }));
     }
     return [];
@@ -75,8 +76,8 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow }
   const ErrorState = () => (
     <div className="text-center py-8">
       <p className="text-muted-foreground">Unable to load services. Please try again later.</p>
-      <Button 
-        variant="outline" 
+      <Button
+        variant="outline"
         className="mt-4"
         onClick={() => window.location.reload()}
       >
@@ -84,7 +85,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow }
       </Button>
     </div>
   );
-  
+
   return (
     <section id="services">
       <h2 className="text-4xl font-bold mb-2">Services Offered</h2>
@@ -114,6 +115,18 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow }
           </Tabs>
         </CardHeader>
         <CardContent className="space-y-4 pt-0">
+          {/* Subscription Expired Warning */}
+          {isSubscriptionExpired && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-semibold text-red-900 mb-1">Salon Currently Unavailable</h4>
+                <p className="text-sm text-red-700">
+                  This salon is not accepting bookings at the moment. Please check back later or contact them directly.
+                </p>
+              </div>
+            </div>
+          )}
           {servicesLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin mr-2" />
@@ -140,10 +153,11 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow }
                   <p className="font-semibold">
                     ₹{service.price.toFixed(2)}
                   </p>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="mt-1" 
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className={`mt-1 ${isSubscriptionExpired ? 'opacity-50' : ''}`}
+                    disabled={isSubscriptionExpired}
                     onClick={() => {
                       // Store complete service data in sessionStorage
                       const serviceData = {
@@ -159,7 +173,7 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow }
                       onBookNow(service);
                     }}
                   >
-                    Book
+                    {isSubscriptionExpired ? 'Unavailable' : 'Book'}
                   </Button>
                 </div>
               </div>

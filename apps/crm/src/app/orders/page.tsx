@@ -12,7 +12,7 @@ import { Input } from '@repo/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Search, FileDown, Truck, Package, ShoppingCart, User, CheckCircle, Clock, Eye, Edit, XCircle, MapPin, Calendar, Mail, Phone, Building } from 'lucide-react';
 import Image from 'next/image';
-import { useGetCrmOrdersQuery, useUpdateCrmOrderMutation, useGetCrmClientOrdersQuery } from '@repo/store/api';
+import { useGetCrmOrdersQuery, useUpdateCrmOrderMutation, useGetCrmClientOrdersQuery, useUpdateCrmClientOrderMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { OrderStatusTimeline } from '@/components/OrderStatusTimeline';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
@@ -49,7 +49,7 @@ type Order = {
 
 export default function OrdersPage() {
   const { user, role } = useCrmAuth();
-  const defaultTab = role === 'supplier' ? 'customer-orders' : (role === 'vendor' ? 'customer-orders' : 'my-purchases');
+  const defaultTab = role === 'supplier' ? 'received-orders' : (role === 'vendor' ? 'customer-orders' : 'my-purchases');
   const [activeTab, setActiveTab] = useState(defaultTab);
   
   // For suppliers, we need to fetch different types of orders based on the active tab
@@ -83,6 +83,7 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [updateOrder, { isLoading: isUpdatingStatus }] = useUpdateCrmOrderMutation();
+  const [updateClientOrder] = useUpdateCrmClientOrderMutation();
   const [trackingInfo, setTrackingInfo] = useState({ trackingNumber: '', courier: '' });
   const [isShipModalOpen, setIsShipModalOpen] = useState(false);
   const [orderToShip, setOrderToShip] = useState<Order | null>(null);
@@ -97,40 +98,47 @@ export default function OrdersPage() {
   const { customerOrders, myPurchases, receivedOrders, onlineCustomerOrders } = useMemo(() => {
     if (!ordersData) return { customerOrders: [], myPurchases: [], receivedOrders: [], onlineCustomerOrders: [] };
     
-    const customerOrders = ordersData.filter((o: Order) => o.vendorId === user?._id && o.customerName);
-    const myPurchases = ordersData.filter((o: Order) => o.vendorId === user?._id && o.supplierId);
-    const receivedOrders = ordersData.filter((o: Order) => o.supplierId === user?._id);
+    const customerOrders = ordersData.filter((o: Order) => o.vendorId?.toString() === user?._id && o.customerName);
+    const myPurchases = ordersData.filter((o: Order) => o.vendorId?.toString() === user?._id && o.supplierId);
+    const receivedOrders = ordersData.filter((o: Order) => o.supplierId?.toString() === user?._id);
     
     // Transform ClientOrder data to match our Order type
-    const transformedOnlineOrders = (clientOrdersData || []).map((clientOrder: any) => {
-      // Transform items from ClientOrder format to OrderItem format
-      const transformedItems = (clientOrder.items || []).map((item: any) => ({
-        productId: item.productId || '',
-        productName: item.name || 'Unknown Product',
-        productImage: item.image || 'https://placehold.co/80x80.png',
-        quantity: item.quantity || 0,
-        price: item.price || 0
-      }));
-      
-      // Create an Order object from ClientOrder data
-      return {
-        _id: clientOrder._id || '',
-        orderId: undefined, // ClientOrder doesn't have this field
-        items: transformedItems,
-        customerName: 'Online Customer', // ClientOrder has userId but not customer name
-        customerEmail: undefined,
-        vendorId: clientOrder.vendorId || '',
-        supplierId: undefined,
-        totalAmount: clientOrder.totalAmount || 0,
-        status: clientOrder.status || 'Pending',
-        shippingAddress: clientOrder.shippingAddress || '',
-        createdAt: clientOrder.createdAt || new Date().toISOString(),
-        trackingNumber: clientOrder.trackingNumber,
-        courier: undefined,
-        cancellationReason: clientOrder.cancellationReason, // Add cancellation reason
-        userId: clientOrder.userId // To identify as online order
-      };
-    });
+    const transformedOnlineOrders = (clientOrdersData || [])
+      .map((clientOrder: any) => {
+        // Transform items from ClientOrder format to OrderItem format
+        const transformedItems = (clientOrder.items || []).map((item: any) => ({
+          productId: item.productId || '',
+          productName: item.name || 'Unknown Product',
+          productImage: item.image || 'https://placehold.co/80x80.png',
+          quantity: item.quantity || 0,
+          price: item.price || 0
+        }));
+        
+        // Create an Order object from ClientOrder data
+        // Skip orders without a valid _id to prevent phantom orders
+        if (!clientOrder._id) {
+          return null;
+        }
+        
+        return {
+          _id: clientOrder._id,
+          orderId: undefined, // ClientOrder doesn't have this field
+          items: transformedItems,
+          customerName: 'Online Customer', // ClientOrder has userId but not customer name
+          customerEmail: undefined,
+          vendorId: clientOrder.vendorId || '',
+          supplierId: undefined,
+          totalAmount: clientOrder.totalAmount || 0,
+          status: clientOrder.status || 'Pending',
+          shippingAddress: clientOrder.shippingAddress || '',
+          createdAt: clientOrder.createdAt || new Date().toISOString(),
+          trackingNumber: clientOrder.trackingNumber,
+          courier: undefined,
+          cancellationReason: clientOrder.cancellationReason, // Add cancellation reason
+          userId: clientOrder.userId // To identify as online order
+        };
+      })
+      .filter((order: any) => order !== null); // Filter out null values
     
     return { 
       customerOrders, 
@@ -191,13 +199,36 @@ export default function OrdersPage() {
   };
 
   const handleUpdateStatus = async (orderId: string, status: Order['status']) => {
+    // Validate that the order exists before trying to update it
+    const orderExists = [...receivedOrders, ...customerOrders, ...myPurchases, ...onlineCustomerOrders].some(
+      (o: Order) => o._id === orderId
+    );
+    
+    if (!orderExists) {
+      toast.error("Order not found. Please refresh the page and try again.");
+      refetch();
+      return;
+    }
+    
+    // Check if this is an online customer order (has userId field)
+    const isOnlineOrder = onlineCustomerOrders.some((o: Order) => o._id === orderId);
+    
     if (status === 'Shipped') {
-        const order = receivedOrders.find((o: Order) => o._id === orderId);
+        // Look for the order in all collections
+        const order = [...receivedOrders, ...customerOrders, ...myPurchases, ...onlineCustomerOrders].find(
+            (o: Order) => o._id === orderId
+        );
         setOrderToShip(order || null);
         setIsShipModalOpen(true);
     } else {
         try {
-            await updateOrder({ orderId, status }).unwrap();
+            if (isOnlineOrder) {
+                // Use client order update mutation for online orders
+                await updateClientOrder({ orderId, status }).unwrap();
+            } else {
+                // Use regular order update mutation for vendor orders
+                await updateOrder({ orderId, status }).unwrap();
+            }
             toast.success(`Order status updated to ${status}.`);
             refetch();
         } catch (error) {
@@ -208,13 +239,41 @@ export default function OrdersPage() {
 
   const handleShipOrder = async () => {
     if (!orderToShip) return;
+    
+    // Validate that the order exists before trying to update it
+    const orderExists = [...receivedOrders, ...customerOrders, ...myPurchases, ...onlineCustomerOrders].some(
+      (o: Order) => o._id === orderToShip._id
+    );
+    
+    if (!orderExists) {
+      toast.error("Order not found. Please refresh the page and try again.");
+      refetch();
+      setIsShipModalOpen(false);
+      setOrderToShip(null);
+      return;
+    }
+    
+    // Check if this is an online customer order (has userId field)
+    const isOnlineOrder = onlineCustomerOrders.some((o: Order) => o._id === orderToShip._id);
+    
     try {
-        await updateOrder({ 
-            orderId: orderToShip._id, 
-            status: 'Shipped',
-            trackingNumber: trackingInfo.trackingNumber,
-            courier: trackingInfo.courier
-        }).unwrap();
+        if (isOnlineOrder) {
+            // Use client order update mutation for online orders
+            await updateClientOrder({ 
+                orderId: orderToShip._id, 
+                status: 'Shipped',
+                trackingNumber: trackingInfo.trackingNumber,
+                courier: trackingInfo.courier
+            }).unwrap();
+        } else {
+            // Use regular order update mutation for vendor orders
+            await updateOrder({ 
+                orderId: orderToShip._id, 
+                status: 'Shipped',
+                trackingNumber: trackingInfo.trackingNumber,
+                courier: trackingInfo.courier
+            }).unwrap();
+        }
         toast.success(`Order ${orderToShip.orderId} marked as shipped.`);
         refetch();
         setIsShipModalOpen(false);
@@ -225,18 +284,23 @@ export default function OrdersPage() {
     }
   };
 
-  const getNextStatus = (currentStatus: Order['status']) => {
-    const statuses: Order['status'][] = ['Pending', 'Processing', 'Packed', 'Shipped', 'Delivered'];
-    const currentIndex = statuses.indexOf(currentStatus);
-    return currentIndex < statuses.length - 1 ? statuses[currentIndex + 1] : null;
-  };
-  
   const isLoadingAll = isLoading || isClientOrdersLoading;
   const isErrorAny = isError || isClientOrdersError;
 
   const isOnlineOrder = (order: Order) => {
     // Online orders from ClientOrder model will have a userId field
     return !!order.userId;
+  };
+
+  const getNextStatus = (currentStatus: Order['status'], order: Order) => {
+    // Different status flows for different order types
+    const vendorOrderStatuses: Order['status'][] = ['Pending', 'Processing', 'Packed', 'Shipped', 'Delivered'];
+    const clientOrderStatuses: Order['status'][] = ['Pending', 'Processing', 'Shipped', 'Delivered'];
+    
+    // Use appropriate status flow based on order type
+    const statuses = isOnlineOrder(order) ? clientOrderStatuses : vendorOrderStatuses;
+    const currentIndex = statuses.indexOf(currentStatus);
+    return currentIndex < statuses.length - 1 ? statuses[currentIndex + 1] : null;
   };
 
   const renderOrderTable = (orders: Order[]) => (
@@ -458,10 +522,10 @@ export default function OrdersPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          {role === 'supplier' && order.status && getNextStatus(order.status) && (
+                          {role === 'supplier' && order.status && getNextStatus(order.status, order) && (
                             <Button 
                               size="sm" 
-                              onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status)!)} 
+                              onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status, order)!)} 
                               disabled={isUpdatingStatus}
                               className="rounded-lg bg-gradient-to-r from-primary to-primary/80 h-8 px-2 text-xs"
                             >
@@ -471,7 +535,7 @@ export default function OrdersPage() {
                                 <>
                                   <Edit className="mr-1 h-3 w-3" />
                                   <span className="hidden sm:inline">
-                                    {`Mark as ${getNextStatus(order.status)}`}
+                                    {`Mark as ${getNextStatus(order.status, order)}`}
                                   </span>
                                 </>
                               )}
@@ -569,10 +633,10 @@ export default function OrdersPage() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {role === 'supplier' && order.status && getNextStatus(order.status) && (
+                        {role === 'supplier' && order.status && getNextStatus(order.status, order) && (
                           <Button 
                             size="sm" 
-                            onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status)!)} 
+                            onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status, order)!)} 
                             disabled={isUpdatingStatus}
                             className="rounded-lg bg-gradient-to-r from-primary to-primary/80 h-8 px-2 text-xs"
                           >
@@ -582,7 +646,7 @@ export default function OrdersPage() {
                               <>
                                 <Edit className="mr-1 h-3 w-3" />
                                 <span className="hidden sm:inline">
-                                  {`Mark as ${getNextStatus(order.status)}`}
+                                  {`Mark as ${getNextStatus(order.status, order)}`}
                                 </span>
                               </>
                             )}

@@ -17,21 +17,21 @@ import { useSelector, useDispatch } from 'react-redux';
 import { useAppDispatch } from '@repo/store/hooks';
 import { selectSelectedAppointment, setSelectedAppointment } from '@repo/store/slices/appointmentSlice';
 import AddBlockTime from '@/components/AddBlockTime';
-import { 
-  reset, 
-  selectBlockedTimes, 
-  selectBlockedTimesByStaffAndDate, 
-  selectBlockTimeStatus, 
+import {
+  reset,
+  selectBlockedTimes,
+  selectBlockedTimesByStaffAndDate,
+  selectBlockTimeStatus,
   selectBlockTimeError,
   fetchBlockTimes,
-  removeBlockTime 
+  removeBlockTime
 } from '@repo/store/slices/blockTimeSlice';
 import { glowvitaApi } from '@repo/store/api';
 import { startOfDay, endOfDay, isSameDay } from 'date-fns';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 // Define valid statuses from the AppointmentModel
-const validStatuses = ['confirmed','cancelled'];
+const validStatuses = ['confirmed', 'cancelled'];
 const staffMembers = ['All Staff'];
 
 interface CancelAppointmentDialogProps {
@@ -121,7 +121,7 @@ export default function CalendarPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { role } = useCrmAuth();
-  
+
   // Fetch blocked times when component mounts
   useEffect(() => {
     dispatch(fetchBlockTimes());
@@ -160,11 +160,11 @@ export default function CalendarPage() {
       date: currentDate,
     })
   );
-  
+
   const blockTimeStatus = useSelector(selectBlockTimeStatus);
   const blockTimeError = useSelector(selectBlockTimeError);
   const today = new Date();
-  
+
   // Handle block time success/error
   useEffect(() => {
     if (blockTimeStatus === 'succeeded' && isBlockingTime) {
@@ -268,7 +268,7 @@ export default function CalendarPage() {
       toast.success(`Clinic is now ${newAvailability ? 'OPEN' : 'CLOSED'}`);
       return;
     }
-    
+
     // For vendors/staff, open the appointment form
     dispatch(setSelectedAppointment(null));
     setIsEditing(false);
@@ -296,18 +296,24 @@ export default function CalendarPage() {
     async (appointmentData: Appointment) => {
       try {
         console.log('📝 Form submission - received data:', appointmentData);
-        
+
         // Prepare the appointment data
         let dataToSubmit = { ...appointmentData };
-        
+
         // If creating a new appointment, ensure the date is properly formatted
         if (!isEditing) {
           // For new appointments, preserve the date from the form data
           // The form should already have the correct date set
           console.log('📝 Creating new appointment with date:', dataToSubmit.date);
         }
-        
+
         if (isEditing && selectedAppointment) {
+          // If editing a cancelled appointment, reset status to confirmed
+          const currentStatus = selectedAppointment.status || selectedAppointment.status;
+          if (currentStatus === 'cancelled' || currentStatus === 'missed') {
+            dataToSubmit.status = 'confirmed';
+          }
+
           // For updates, use the original ID
           const updateData = {
             ...dataToSubmit,
@@ -323,19 +329,18 @@ export default function CalendarPage() {
           await createAppointment(dataToSubmit).unwrap();
           toast.success('Appointment created successfully');
         }
-        
+
         // Close modal and reset state
         setIsModalOpen(false);
         setIsEditing(false);
         dispatch(setSelectedAppointment(null));
-        
+
         // Refresh the appointments list
         await refetch();
       } catch (error: any) {
         console.error('Error saving appointment:', error);
         toast.error(
-          `Failed to ${isEditing ? 'update' : 'create'} appointment: ${
-            error?.data?.message || error.message || 'Unknown error'
+          `Failed to ${isEditing ? 'update' : 'create'} appointment: ${error?.data?.message || error.message || 'Unknown error'
           }`
         );
       }
@@ -369,16 +374,16 @@ export default function CalendarPage() {
       toast.error('No appointment selected');
       return;
     }
-    
+
     try {
       setIsCancelling(true);
-      
+
       await updateAppointmentStatus({
         id: selectedAppointmentId,
         status: 'cancelled',
         cancellationReason: reason
       }).unwrap();
-      
+
       toast.success('Appointment cancelled successfully');
       setShowCancelDialog(false);
       setCancelReason('');
@@ -479,8 +484,8 @@ export default function CalendarPage() {
                   isToday
                     ? 'bg-blue-600 text-white'
                     : isSelected
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-700'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'text-gray-700'
                 )}
               >
                 {day}
@@ -499,30 +504,30 @@ export default function CalendarPage() {
                     return false;
                   }
                 }) && (
-                  <div 
-                    className="w-full h-6 mt-1 relative"
-                    title="This time is blocked"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const block = blockedTimes.find((block: any) => {
-                        try {
-                          const blockDate = new Date(block.date);
-                          return (
-                            blockDate.getDate() === day &&
-                            blockDate.getMonth() === currentDate.getMonth() &&
-                            blockDate.getFullYear() === currentDate.getFullYear()
-                          );
-                        } catch {
-                          return false;
+                    <div
+                      className="w-full h-6 mt-1 relative"
+                      title="This time is blocked"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const block = blockedTimes.find((block: any) => {
+                          try {
+                            const blockDate = new Date(block.date);
+                            return (
+                              blockDate.getDate() === day &&
+                              blockDate.getMonth() === currentDate.getMonth() &&
+                              blockDate.getFullYear() === currentDate.getFullYear()
+                            );
+                          } catch {
+                            return false;
+                          }
+                        });
+
+                        if (block && confirm('Do you want to unblock this time?')) {
+                          dispatch(removeBlockTime(block.id || block._id));
                         }
-                      });
-                      
-                      if (block && confirm('Do you want to unblock this time?')) {
-                        dispatch(removeBlockTime(block.id || block._id));
-                      }
-                    }}
-                  />
-                )}
+                      }}
+                    />
+                  )}
                 <div className="flex flex-wrap justify-center gap-1">
                   {appointmentsForDay.slice(0, 3).map((appt) => (
                     <div
@@ -551,13 +556,13 @@ export default function CalendarPage() {
     dispatch(setSelectedAppointment(null));
   };
 
-interface AppointmentMenuProps {
-  appointment: Appointment;
-  onView: () => void;
-  onEdit: () => void;
-  onDelete?: () => void;
-  onCancel?: () => void;
-}
+  interface AppointmentMenuProps {
+    appointment: Appointment;
+    onView: () => void;
+    onEdit: () => void;
+    onDelete?: () => void;
+    onCancel?: () => void;
+  }
 
   const AppointmentMenu: React.FC<AppointmentMenuProps> = ({ appointment, onView, onEdit, onDelete, onCancel }) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -580,6 +585,7 @@ interface AppointmentMenuProps {
 
     const handleStatusChange = async (status: string) => {
       if (status === 'cancelled') {
+        setSelectedAppointmentId((appointment.id || appointment._id) ?? null);
         dispatch(setSelectedAppointment(appointment));
         setShowCancelDialog(true);
         setShowStatusMenu(false);
@@ -632,7 +638,7 @@ interface AppointmentMenuProps {
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </button>
-              
+
               <div className="relative">
                 <button
                   className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
@@ -647,11 +653,11 @@ interface AppointmentMenuProps {
                   </div>
                   <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showStatusMenu ? 'rotate-180' : ''}`} />
                 </button>
-                
+
                 {showStatusMenu && (
                   <div className="absolute left-0 right-0 mt-1 w-full bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-30">
                     <div className="py-1">
-                      {['confirmed','cancelled'].map((status) => (
+                      {['confirmed', 'cancelled'].map((status) => (
                         <button
                           key={status}
                           onClick={(e) => {
@@ -662,12 +668,12 @@ interface AppointmentMenuProps {
                           className={cn(
                             'w-full text-left px-4 py-2 text-sm flex items-center transition-colors',
                             status === 'cancelled' || status === 'no-show'
-                              ? 'text-red-600 hover:bg-red-50' 
+                              ? 'text-red-600 hover:bg-red-50'
                               : status === 'completed'
-                              ? 'text-green-600 hover:bg-green-50'
-                              : status === 'confirmed'
-                              ? 'text-blue-600 hover:bg-blue-50'
-                              : 'text-yellow-600 hover:bg-yellow-50',
+                                ? 'text-green-600 hover:bg-green-50'
+                                : status === 'confirmed'
+                                  ? 'text-blue-600 hover:bg-blue-50'
+                                  : 'text-yellow-600 hover:bg-yellow-50',
                             isUpdatingStatus && 'opacity-50 cursor-not-allowed'
                           )}
                         >
@@ -707,35 +713,57 @@ interface AppointmentMenuProps {
 
   useEffect(() => {
     const checkAndMarkMissedAppointments = async () => {
-      if (!appointmentsData?.data) return;
+      if (!appointmentsData || !Array.isArray(appointmentsData)) return;
 
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Set to start of today
+      const now = new Date();
+      const currentHours = now.getHours();
+      const currentMinutes = now.getMinutes();
+      const currentTimeInMinutes = currentHours * 60 + currentMinutes;
 
-      const appointmentsToUpdate = appointmentsData.data.filter((appointment: any) => {
+      const appointmentsToUpdate = appointmentsData.filter((appointment: any) => {
         // Skip if already marked as completed, cancelled, or missed
-        if (['completed', 'cancelled', 'missed'].includes(appointment.status)) {
+        // Also skip 'partially-completed' as it indicates a payment has started
+        if (['completed', 'cancelled', 'missed', 'partially-completed'].includes(appointment.status)) {
           return false;
         }
 
         const appointmentDate = new Date(appointment.date);
+        const isToday = isSameDay(appointmentDate, now);
+
+        if (isToday && appointment.startTime) {
+          const [hours, minutes] = appointment.startTime.split(':').map(Number);
+          const startTimeInMinutes = hours * 60 + minutes;
+
+          // Check if more than 30 minutes past start time
+          if (currentTimeInMinutes > startTimeInMinutes + 30) {
+            return true;
+          }
+        }
+
         appointmentDate.setHours(0, 0, 0, 0);
+        const startOfToday = new Date(now);
+        startOfToday.setHours(0, 0, 0, 0);
 
         // Check if appointment date is before today
-        return appointmentDate < today;
+        return appointmentDate < startOfToday;
       });
 
       // Update all eligible appointments in parallel
       if (appointmentsToUpdate.length > 0) {
         try {
           await Promise.all(
-            appointmentsToUpdate.map((appointment: any) =>
-              updateAppointmentStatus({
-                id: appointment.id,
-                status: 'missed',
-                cancellationReason: 'Automatically marked as missed - appointment date has passed'
-              }).unwrap()
-            )
+            appointmentsToUpdate.map((appointment: any) => {
+              const apptDate = new Date(appointment.date);
+              const isToday = isSameDay(apptDate, now);
+
+              return updateAppointmentStatus({
+                id: appointment._id || appointment.id,
+                status: isToday ? 'cancelled' : 'missed',
+                cancellationReason: isToday
+                  ? 'Automatically cancelled - 30 minutes past start time without completion'
+                  : 'Automatically marked as missed - appointment date has passed'
+              }).unwrap();
+            })
           );
           // Refetch to update the UI
           refetch();
@@ -773,8 +801,8 @@ interface AppointmentMenuProps {
                 onClick={handleNewAppointment}
                 className={cn(
                   "transition-colors",
-                  isClinicAvailable 
-                    ? "bg-green-600 hover:bg-green-700" 
+                  isClinicAvailable
+                    ? "bg-green-600 hover:bg-green-700"
                     : "bg-red-600 hover:bg-red-700"
                 )}
               >
@@ -901,7 +929,7 @@ interface AppointmentMenuProps {
                           }}
                         />
                       </div>
-                      
+
                       <div className="flex items-start justify-between">
                         {/* Time and Status */}
                         <div className="flex items-center">
@@ -920,17 +948,17 @@ interface AppointmentMenuProps {
                                 appointment.status === 'completed'
                                   ? 'bg-green-100 text-green-800'
                                   : appointment.status === 'cancelled'
-                                  ? 'bg-red-100 text-red-800'
-                                  : appointment.status === 'no_show'
-                                  ? 'bg-gray-100 text-gray-800'
-                                  : 'bg-blue-100 text-blue-800'
+                                    ? 'bg-red-100 text-red-800'
+                                    : appointment.status === 'no_show'
+                                      ? 'bg-gray-100 text-gray-800'
+                                      : 'bg-blue-100 text-blue-800'
                               )}
                             >
                               {appointment.status?.charAt(0).toUpperCase() + appointment.status?.slice(1) || 'Scheduled'}
                             </span>
                           </div>
                         </div>
-                        
+
                         {/* Price */}
                         <div className="text-right">
                           <p className="text-sm font-medium text-gray-500">Total</p>
@@ -939,18 +967,18 @@ interface AppointmentMenuProps {
                           </p>
                         </div>
                       </div>
-                      
+
                       <div className="mt-3">
                         <h4 className="text-base font-medium text-gray-900">
                           {appointment.clientName || 'No Name'}
                         </h4>
-                        
+
                         <div className="mt-1 text-sm text-gray-600">
                           {/* Show multi-service or single service */}
                           {(() => {
                             const appt = appointment as any;
                             const isMulti = appt.isMultiService || (appt.serviceItems && appt.serviceItems.length > 1);
-                            
+
                             if (isMulti) {
                               return (
                                 <div className="space-y-1">
@@ -997,9 +1025,9 @@ interface AppointmentMenuProps {
                               )}>
                                 <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                                   {(appointment as any).mode === 'online' ? (
-                                    <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z"/>
+                                    <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z" />
                                   ) : (
-                                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+                                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
                                   )}
                                 </svg>
                                 {(appointment as any).mode === 'online' ? 'Web Booking' : 'Offline Booking'}
@@ -1008,13 +1036,13 @@ interface AppointmentMenuProps {
                           )}
                         </div>
                       </div>
-                      
+
                       {appointment.notes && (
                         <div className="mt-3 pt-3 border-t border-gray-100">
                           <p className="text-sm text-gray-600 line-clamp-2">
                             <span className="font-medium text-gray-700">Notes: </span>
-                            {appointment.notes.includes('Appointment cancelled:') 
-                              ? appointment.notes.split('Appointment cancelled:')[1].trim() 
+                            {appointment.notes.includes('Appointment cancelled:')
+                              ? appointment.notes.split('Appointment cancelled:')[1].trim()
                               : appointment.notes.split(' - ').pop()}
                           </p>
                         </div>
@@ -1043,7 +1071,7 @@ interface AppointmentMenuProps {
           </Card>
         </div>
       </div>
-      
+
       {isModalOpen && (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1091,7 +1119,7 @@ interface AppointmentMenuProps {
           </DialogContent>
         </Dialog>
       )}
-      
+
       <Dialog open={isBlockTimeModalOpen} onOpenChange={setIsBlockTimeModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -1108,8 +1136,8 @@ interface AppointmentMenuProps {
           </div>
         </DialogContent>
       </Dialog>
-      
-      <CancelAppointmentDialog 
+
+      <CancelAppointmentDialog
         open={showCancelDialog}
         onOpenChange={setShowCancelDialog}
         onCancel={(reason) => handleCancelAppointment(reason)}

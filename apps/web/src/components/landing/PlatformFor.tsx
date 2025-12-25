@@ -1,24 +1,51 @@
-
 "use client";
 
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { cn } from "@repo/ui/cn";
 import { Sparkles, ArrowRight } from "lucide-react";
-import { Badge } from '@repo/ui/badge';
+import { useGetPublicCategoriesQuery, useGetPublicServicesQuery } from "@repo/store/services/api";
+import { Button } from "@repo/ui/button";
+import { useSalonFilter } from "./SalonFilterContext";
+
+interface CategoryItem {
+  _id: string;
+  name: string;
+  imageUrl?: string;
+}
+
+interface ServiceItem {
+  _id: string;
+  name: string;
+  category?: {
+    _id: string;
+    name: string;
+  } | null;
+  imageUrl?: string;
+}
 
 const PlatformForCard = ({
   title,
   imageUrl,
   hint,
+  onClick,
+  itemId,
+  isSelected
 }: {
   title: string;
   imageUrl: string;
   hint: string;
+  onClick?: (id: string) => void;
+  itemId: string;
+  isSelected?: boolean;
 }) => (
-  <a
-    className="relative inline-block h-48 w-72 md:h-56 md:w-80 shrink-0 overflow-hidden rounded-lg transition-all duration-500 hover:shadow-2xl hover:shadow-primary/25 group border-2 border-border/30 hover:border-primary/50 hover-lift bg-gradient-to-br from-background to-primary/5"
-    href="#"
+  <div
+    className={`relative inline-block h-48 w-72 md:h-56 md:w-80 shrink-0 overflow-hidden rounded-lg transition-all duration-500 hover:shadow-2xl group border-2 ${
+      isSelected 
+        ? "border-primary shadow-lg shadow-primary/25" 
+        : "border-border/30 hover:border-primary/50"
+    } hover-lift bg-gradient-to-br from-background to-primary/5 cursor-pointer`}
+    onClick={() => onClick && onClick(itemId)}
   >
     <Image
       className="size-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110 filter group-hover:brightness-110"
@@ -43,53 +70,65 @@ const PlatformForCard = ({
 
     {/* Hover overlay */}
     <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-  </a>
+  </div>
 );
 
-const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
-  const items = [
-    {
-      title: "Hair Salons",
-      imageUrl: "https://placehold.co/320x224.png",
-      hint: "modern hair salon interior",
-    },
-    {
-      title: "Nail Studios",
-      imageUrl: "https://placehold.co/320x224.png",
-      hint: "elegant nail salon",
-    },
-    {
-      title: "Barber Shops",
-      imageUrl: "https://placehold.co/320x224.png",
-      hint: "contemporary barber shop",
-    },
-    {
-      title: "Beauty Spas",
-      imageUrl: "https://placehold.co/320x224.png",
-      hint: "luxury spa treatment room",
-    },
-    {
-      title: "Wellness Centers",
-      imageUrl: "https://placehold.co/320x224.png",
-      hint: "modern wellness center",
-    },
-    {
-      title: "Bridal Boutiques",
-      imageUrl: "https://placehold.co/320x224.png",
-      hint: "bridal makeup studio",
-    },
-  ];
+const PlatformForMarquee = ({ 
+  items,
+  rtl = false,
+  onItemClick,
+  selectedItems
+}: { 
+  items: (CategoryItem | ServiceItem)[];
+  rtl?: boolean;
+  onItemClick?: (id: string) => void;
+  selectedItems?: string[];
+}) => {
+  // Duplicate items for seamless marquee effect
+  const duplicatedItems = [...items, ...items];
+  
   return (
     <div className="w-full overflow-hidden">
       <div
-        className={`pt-5 flex w-fit items-start space-x-6 md:space-x-8 ${rtl ? "animate-slide-rtl" : "animate-slide"} hover:[animation-play-state:paused]`}
+        className={`pt-5 flex w-fit items-start space-x-6 md:space-x-8 ${rtl ? "animate-marquee-reverse" : "animate-marquee"} hover:pause-marquee cursor-grab active:cursor-grabbing select-none`}
+        style={{ transition: 'transform 0.1s ease-out' }}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          const slider = e.currentTarget;
+          const startX = e.pageX - slider.offsetLeft;
+          const scrollLeft = slider.scrollLeft;
+          
+          // Pause the animation while dragging
+          slider.style.animationPlayState = 'paused';
+          
+          const mouseMoveHandler = (moveEvent: MouseEvent) => {
+            const x = moveEvent.pageX - slider.offsetLeft;
+            const walk = (x - startX) * 2;
+            slider.scrollLeft = scrollLeft - walk;
+          };
+          
+          const mouseUpHandler = () => {
+            document.removeEventListener('mousemove', mouseMoveHandler);
+            document.removeEventListener('mouseup', mouseUpHandler);
+            // Resume the animation after dragging with a slight delay for smoothness
+            setTimeout(() => {
+              slider.style.animationPlayState = 'running';
+            }, 100);
+          };
+          
+          document.addEventListener('mousemove', mouseMoveHandler);
+          document.addEventListener('mouseup', mouseUpHandler);
+        }}
       >
-        {[...items, ...items].map((item, index) => (
+        {duplicatedItems.map((item, index) => (
           <PlatformForCard
-            key={`${item.title}-${index}`}
-            title={item.title}
-            imageUrl={item.imageUrl}
-            hint={item.hint}
+            key={`${item._id}-${index}`}
+            itemId={item._id}
+            title={item.name}
+            imageUrl={item.imageUrl || "https://placehold.co/320x224.png"}
+            hint={item.name.toLowerCase()}
+            onClick={onItemClick}
+            isSelected={selectedItems?.includes(item._id)}
           />
         ))}
       </div>
@@ -99,6 +138,33 @@ const PlatformForMarquee = ({ rtl = false }: { rtl?: boolean }) => {
 
 export function PlatformFor() {
   const [isVisible, setIsVisible] = useState(false);
+  const { 
+    selectedCategories, 
+    selectedServices, 
+    addCategory, 
+    removeCategory, 
+    addService, 
+    removeService,
+    clearFilters 
+  } = useSalonFilter();
+  
+  // Fetch categories and services
+  const { data: CategoriesData, isLoading: categoriesLoading } = useGetPublicCategoriesQuery(undefined);
+  const { data: ServicesData, isLoading: servicesLoading } = useGetPublicServicesQuery({});
+
+  // Extract and prepare data for marquees
+  const categoryItems = CategoriesData?.categories?.map((category: any) => ({
+    _id: category._id,
+    name: category.name,
+    imageUrl: `https://placehold.co/320x224/7e22ce/ffffff?text=${encodeURIComponent(category.name)}`
+  })) || [];
+
+  const serviceItems = ServicesData?.services?.slice(0, 10).map((service: any) => ({
+    _id: service._id,
+    name: service.name,
+    category: service.category,
+    imageUrl: `https://placehold.co/320x224/db2777/ffffff?text=${encodeURIComponent(service.name)}`
+  })) || [];
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -119,6 +185,26 @@ export function PlatformFor() {
         }
     };
   }, []);
+
+  // Handle category click - toggle selection
+  const handleCategoryClick = (categoryId: string) => {
+    if (selectedCategories.includes(categoryId)) {
+      removeCategory(categoryId);
+    } else {
+      addCategory(categoryId);
+      // Clear services when a new category is selected to avoid conflicts
+      // setSelectedServices([]);
+    }
+  };
+
+  // Handle service click - toggle selection
+  const handleServiceClick = (serviceId: string) => {
+    if (selectedServices.includes(serviceId)) {
+      removeService(serviceId);
+    } else {
+      addService(serviceId);
+    }
+  };
 
   return (
     <section
@@ -155,11 +241,33 @@ export function PlatformFor() {
           )}
         >
           <div className="relative w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
-            <PlatformForMarquee />
+            <PlatformForMarquee 
+              items={categoryItems} 
+              onItemClick={handleCategoryClick} 
+              selectedItems={selectedCategories}
+            />
           </div>
           <div className="relative w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,white_10%,white_90%,transparent)]">
-            <PlatformForMarquee rtl={true} />
+            <PlatformForMarquee 
+              items={serviceItems} 
+              rtl={true} 
+              onItemClick={handleServiceClick} 
+              selectedItems={selectedServices}
+            />
           </div>
+          
+          {/* Filter Controls */}
+          {(selectedCategories.length > 0 || selectedServices.length > 0) && (
+            <div className="flex justify-center mt-6">
+              <Button
+                onClick={clearFilters}
+                variant="outline"
+                size="sm"
+              >
+                Clear All Filters
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </section>

@@ -15,20 +15,20 @@ await _db();
 const generateReferralCode = async (name, ModelToCheck) => {
   let referralCode;
   let isUnique = false;
-  
+
   while (!isUnique) {
     const namePrefix = name.substring(0, 3).toUpperCase();
     const randomNumbers = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     referralCode = `${namePrefix}${randomNumbers}`;
-    
+
     // Check uniqueness across all models
     const existingVendor = await VendorModel.findOne({ referralCode });
     const existingDoctor = await DoctorModel.findOne({ referralCode });
     const existingSupplier = await SupplierModel.findOne({ referralCode });
-    
+
     isUnique = !existingVendor && !existingDoctor && !existingSupplier;
   }
-  
+
   return referralCode;
 };
 
@@ -58,26 +58,20 @@ export async function POST(request) {
 
     for (const roleInfo of userRoles) {
       const foundUser = await roleInfo.model.findOne({ email }).select(roleInfo.selectFields);
-      if (foundUser) {
-        user = foundUser;
-        userType = roleInfo.type;
-        Model = roleInfo.model;
-        permissions = foundUser.permissions || [];
-        break;
+      if (foundUser && foundUser.password) {
+        const isMatch = await bcrypt.compare(password, foundUser.password);
+        if (isMatch) {
+          user = foundUser;
+          userType = roleInfo.type;
+          Model = roleInfo.model;
+          permissions = foundUser.permissions || [];
+          break;
+        }
       }
     }
-    
-    if (!user) {
-      return NextResponse.json({ success: false, error: "User not found" }, { status: 401 });
-    }
-    
-    if (!user.password) {
-      return NextResponse.json({ success: false, error: "Authentication failed for this user." }, { status: 401 });
-    }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return NextResponse.json({ success: false, error: "Incorrect password" }, { status: 401 });
+    if (!user) {
+      return NextResponse.json({ success: false, error: "Invalid credentials" }, { status: 401 });
     }
 
     // Generate referralCode for users who don't have one

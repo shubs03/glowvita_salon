@@ -604,7 +604,17 @@ const reportsData: ReportCategory[] = [
                 title: "Cancellations",
                 description: "Analysis of cancelled bookings and reasons.",
                 details: "Identify patterns and reduce cancellation rates."
-            }
+            },
+            {
+                title: "Supplier & Inventory Report",
+                description: "Track supplier performance and product sales.",
+                details: "Manage inventory and supplier relationships."
+            },
+            {
+                title: "Supplier Product Reviews Report",
+                description: "Comprehensive report on all reviews for supplier products.",
+                details: "View product ratings, review counts, and best-selling supplier products."
+            },
         ]
     },
     {

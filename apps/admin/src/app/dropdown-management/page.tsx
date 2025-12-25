@@ -182,8 +182,8 @@ const DropdownManager = ({
             {items.map((item: DropdownItem, index: number) => (
                 <div key={item._id} className="group flex items-center gap-2 bg-secondary/50 hover:bg-secondary p-2 rounded-md transition-colors">
                     <div className="flex-grow">
-                        <p className="font-medium">{item.name}</p>
-                         {type !== 'supplier' && item.description && (
+                        <p className="font-medium">{type === 'duration' ? `${item.name} minutes` : item.name}</p>
+                         {type !== 'supplier' && type !== 'duration' && item.description && (
                             <p className="text-sm text-muted-foreground">
                                 {type === 'socialPlatform' ? (
                                     <a href={item.description} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
@@ -228,8 +228,21 @@ const DropdownManager = ({
               </DialogHeader>
               <div className="grid gap-4 py-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Name</Label>
-                  <Input id="name" name="name" defaultValue={currentItem?.name || ''} required />
+                  <Label htmlFor="name">{type === 'duration' ? 'Duration (minutes)' : 'Name'}</Label>
+                  {type === 'duration' ? (
+                    <Input 
+                      id="name" 
+                      name="name" 
+                      type="number"
+                      min="1"
+                      step="1"
+                      defaultValue={currentItem?.name || ''} 
+                      placeholder="e.g., 15, 30, 45, 60"
+                      required 
+                    />
+                  ) : (
+                    <Input id="name" name="name" defaultValue={currentItem?.name || ''} required />
+                  )}
                 </div>
                  <div className="space-y-2">
                     {type === 'socialPlatform' ? (
@@ -237,7 +250,7 @@ const DropdownManager = ({
                             <Label htmlFor="link">Profile Link</Label>
                             <Input id="link" name="link" type="url" defaultValue={currentItem?.description || ''} placeholder="https://example.com/profile"/>
                         </>
-                    ) : (
+                    ) : type !== 'duration' && (
                         <>
                             <Label htmlFor="description">Description</Label>
                             <Textarea id="description" name="description" defaultValue={currentItem?.description || ''} />
@@ -1120,6 +1133,7 @@ export default function DropdownManagementPage() {
         { key: 'documentType', title: 'Document Types', description: 'Manage types of documents required for verification.', tab: 'general' },
         { key: 'expenseType', title: 'Expense Types', description: 'Manage types of expenses for tracking and reporting.', tab: 'general' },
         { key: 'paymentMode', title: 'Payment Modes', description: 'Manage payment methods for transactions.', tab: 'general' },
+        { key: 'duration', title: 'Duration Values', description: 'Manage predefined duration values (in minutes) for services.', tab: 'general' },
         { key: 'designation', title: 'Admin Designations', description: 'Manage the list of available staff designations.', tab: 'admin' },
         { key: 'smsType', title: 'SMS Template Types', description: 'Manage types for SMS templates.', tab: 'marketing' },
         { key: 'socialPlatform', title: 'Social Media Platforms', description: 'Manage platforms for social posts.', tab: 'marketing' },

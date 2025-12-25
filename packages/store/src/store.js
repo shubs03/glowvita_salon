@@ -28,7 +28,7 @@ import calendarAppointmentReducer from './slices/calendarAppointmentSlice.js';
 import cartReducer from './slices/cartSlice.js';
 import smsTemplateSlice from './slices/smsTemplateSlice.js';
 import patientReducer from './slices/patientSlice.js';
-import staffAvailabilityServiceReducer from './slices/staffAvailabilityService';
+import staffAvailabilityReducer from './slices/staffAvailabilitySlice.js';
 
 // Import localStorage cleanup utility
 import './utils/localStorage-cleanup.js';
@@ -61,7 +61,7 @@ const appReducer = combineReducers({
   order: orderReducer,
   calendarAppointments: calendarAppointmentReducer,
   cart: cartReducer,
-  staffAvailabilityService: staffAvailabilityServiceReducer,
+  staffAvailability: staffAvailabilityReducer,
 
   smsTemplates: smsTemplateSlice,
   patients: patientReducer,

@@ -30,12 +30,12 @@ const doctorSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
-  doctorType: { 
+  doctorType: {
     type: String,
     required: true,
     enum: ['Physician', 'Surgeon'],
   },
-  specialties: [{ 
+  specialties: [{
     type: String,
     required: true,
     trim: true,
@@ -87,7 +87,7 @@ const doctorSchema = new mongoose.Schema({
     },
     status: {
       type: String,
-      enum: ["Active", "Expired"],
+      enum: ["Active", "Expired", "Pending"],
       default: "Active",
     },
     startDate: {
@@ -202,9 +202,62 @@ const doctorSchema = new mongoose.Schema({
   },
 });
 
-doctorSchema.virtual('specialization').get(function() {
-    return this.specialties?.[0] || '';
+// Pre-save middleware to auto-update subscription status based on endDate
+doctorSchema.pre('save', function (next) {
+  if (this.subscription && this.subscription.endDate) {
+    const now = new Date();
+    const endDate = new Date(this.subscription.endDate);
+
+    // Auto-update status to Expired if endDate has passed
+    if (endDate <= now && this.subscription.status !== 'Expired') {
+      this.subscription.status = 'Expired';
+    }
+  }
+
+  this.updatedAt = new Date();
+  next();
 });
+
+// Instance method to get normalized subscription data
+doctorSchema.methods.getSubscriptionData = function () {
+  if (!this.subscription) {
+    return {
+      status: 'Expired',
+      isExpired: true,
+      endDate: null,
+      plan: null
+    };
+  }
+
+  const now = new Date();
+  const endDate = this.subscription.endDate ? new Date(this.subscription.endDate) : null;
+  const isExpired = !endDate || endDate <= now || this.subscription.status?.toLowerCase() === 'expired';
+
+  return {
+    status: isExpired ? 'Expired' : this.subscription.status,
+    isExpired,
+    endDate: this.subscription.endDate,
+    startDate: this.subscription.startDate,
+    plan: this.subscription.plan
+  };
+};
+
+// Static method for optimized subscription queries
+doctorSchema.statics.findByIdWithSubscription = function (id) {
+  return this.findById(id)
+    .select('subscription status email name')
+    .populate('subscription.plan', 'name duration price')
+    .lean();
+};
+
+doctorSchema.virtual('specialization').get(function () {
+  return this.specialties?.[0] || '';
+});
+
+// Indexes for performance
+doctorSchema.index({ 'subscription.status': 1, 'subscription.endDate': 1 });
+doctorSchema.index({ email: 1 });
+doctorSchema.index({ status: 1 });
 
 const DoctorModel = mongoose.models.Doctor || mongoose.model("Doctor", doctorSchema);
 

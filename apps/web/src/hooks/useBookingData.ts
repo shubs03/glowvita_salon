@@ -1,15 +1,11 @@
-/**
- * Custom hooks for fetching dynamic booking data
- * These hooks provide salon-specific data for the booking flow
- */
-
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { 
   useGetPublicVendorServicesQuery, 
   useGetPublicVendorStaffQuery, 
-  useGetPublicVendorStaffByServiceQuery, // Add this import
+  useGetPublicVendorStaffByServiceQuery,
   useGetPublicVendorWorkingHoursQuery,
-  useGetPublicVendorsQuery 
+  useGetPublicVendorsQuery,
+  useGetPublicVendorWeddingPackagesQuery
 } from '@repo/store/api';
 
 export interface TimeSlot {
@@ -28,7 +24,27 @@ export interface Service {
   category: string;
   image?: string;
   description?: string;
-  staff?: string[]; // Add staff array to track which staff provide this service
+  staff?: string[];
+  homeService?: {
+    available: boolean;
+    charges: number | null;
+  };
+  weddingService?: {
+    available: boolean;
+    charges: number | null;
+  };
+  isAddon?: boolean;
+  quantity?: number; // Add quantity field for wedding package customization
+  // Enhanced properties for wedding package services
+  serviceHomeService?: {
+    available: boolean;
+    charges: number | null;
+  };
+  serviceWeddingService?: {
+    available: boolean;
+    charges: number | null;
+  };
+  serviceIsAddon?: boolean;
 }
 
 export interface StaffMember {
@@ -38,7 +54,6 @@ export interface StaffMember {
   image?: string;
   specialties?: string[];
   rating?: number;
-  // Add availability information
   mondayAvailable?: boolean;
   tuesdayAvailable?: boolean;
   wednesdayAvailable?: boolean;
@@ -54,7 +69,6 @@ export interface StaffMember {
     endTime: string;
     reason?: string;
   }>;
-  // Add time slots for each day
   mondaySlots?: TimeSlot[];
   tuesdaySlots?: TimeSlot[];
   wednesdaySlots?: TimeSlot[];
@@ -81,15 +95,33 @@ export interface SalonInfo {
   phone?: string;
 }
 
-// New interface for service-staff assignment
 export interface ServiceStaffAssignment {
   service: Service;
   staff: StaffMember | null;
 }
 
-// Helper function to convert duration string to minutes
+export interface WeddingPackage {
+  id: string;
+  _id?: string;
+  name: string;
+  description: string;
+  services: Array<{
+    serviceId: string;
+    serviceName: string;
+    quantity: number;
+    staffRequired: boolean;
+  }>;
+  totalPrice: number;
+  discountedPrice?: number | null;
+  duration: number;
+  staffCount?: number;
+  assignedStaff?: Array<string | { _id: string; name: string }>;
+  image?: string;
+  status: string;
+  isActive: boolean;
+}
+
 export const convertDurationToMinutes = (duration: string | number): number => {
-  // Handle different duration formats
   if (typeof duration === 'string') {
     const match = duration.match(/(\d+)\s*(min|hour|hours)/);
     if (!match) return 60; // default to 60 minutes
@@ -100,65 +132,69 @@ export const convertDurationToMinutes = (duration: string | number): number => {
     if (unit === 'min') return value;
     if (unit === 'hour' || unit === 'hours') return value * 60;
   } else if (typeof duration === 'number') {
-    // If duration is already a number, assume it's in minutes
     return duration;
   }
   
   return 60; // default to 60 minutes
 };
 
-// Helper function to calculate total duration for multiple services
 export const calculateTotalDuration = (services: Service[]): number => {
   return services.reduce((total, service) => {
     return total + convertDurationToMinutes(service.duration);
   }, 0);
 };
 
-// Helper function to validate staff-service compatibility
 export const isStaffCompatibleWithService = (staff: StaffMember, service: Service): boolean => {
-  // If service has no staff array, all staff are compatible
   if (!service.staff || service.staff.length === 0) {
     return true;
   }
   
-  // Check if staff member ID is in the service's staff array
   const isIdMatch = service.staff.includes(staff.id);
-  // Check if staff member name is in the service's staff array
   const isNameMatch = service.staff.includes(staff.name);
   
   return isIdMatch || isNameMatch;
 };
 
-// Helper function to validate all staff-service assignments
 export const validateServiceStaffAssignments = (assignments: ServiceStaffAssignment[]): boolean => {
-  return assignments.every(assignment => {
-    // If no staff assigned, it's valid ("Any Professional")
-    if (!assignment.staff) {
-      return true;
+  // Check if all assignments have valid data
+  const isValid = assignments.every(assignment => {
+    // Validate service exists
+    if (!assignment.service || !assignment.service.id) {
+      console.warn('Invalid service in assignment:', assignment);
+      return false;
     }
     
-    // Check if assigned staff is compatible with the service
-    return isStaffCompatibleWithService(assignment.staff, assignment.service);
+    // Staff can be null ("Any Professional"), but if provided, must be valid
+    if (assignment.staff !== null) {
+      if (!assignment.staff || !assignment.staff.id) {
+        console.warn('Invalid staff in assignment:', assignment);
+        return false;
+      }
+      
+      // Check staff compatibility with service
+      if (!isStaffCompatibleWithService(assignment.staff, assignment.service)) {
+        console.warn('Staff not compatible with service:', assignment);
+        return false;
+      }
+    }
+    
+    return true;
   });
+  
+  return isValid;
 };
 
-// Helper function to find overlapping availability for multiple staff members
 export const findOverlappingAvailability = (assignments: ServiceStaffAssignment[], date: Date, workingHours: WorkingHours[]): string[] => {
-  // If all assignments are for "Any Professional", use vendor working hours
   const allAnyProfessional = assignments.every(assignment => !assignment.staff);
   if (allAnyProfessional) {
     return [];
   }
   
-  // If only one staff member assigned, use their availability
   const assignedStaff = assignments.filter(assignment => assignment.staff);
   if (assignedStaff.length === 1) {
     return [];
   }
   
-  // For multiple staff members, find overlapping availability
-  // This is a simplified implementation - in a real app, you would implement
-  // a more sophisticated algorithm to find overlapping time slots
   return [];
 };
 
@@ -171,7 +207,6 @@ export const useSalonServices = (salonId: string) => {
   const services = useMemo((): Service[] => {
     if (!rawServices) return [];
     
-    // Handle different possible response structures
     let servicesArray: any[] = [];
     
     if (rawServices.data && Array.isArray(rawServices.data)) {
@@ -184,7 +219,6 @@ export const useSalonServices = (salonId: string) => {
       return [];
     }
     
-    // Ensure we always return an array
     if (!Array.isArray(servicesArray)) {
       return [];
     }
@@ -201,7 +235,10 @@ export const useSalonServices = (salonId: string) => {
         category: service.category || 'General',
         image: service.image || `https://picsum.photos/seed/${service.serviceName}/200/200`,
         description: service.description,
-        staff: service.staff || [] // Include staff array if available
+        staff: service.staff || [],
+        homeService: service.homeService || { available: false, charges: null },
+        weddingService: service.weddingService || { available: false, charges: null },
+        isAddon: service.category?.toLowerCase().includes('addon') || false
       };
     });
   }, [rawServices]);
@@ -236,6 +273,78 @@ export const useSalonServices = (salonId: string) => {
   };
 };
 
+export const useWeddingPackages = (salonId: string) => {
+  const { data: rawPackages, isLoading, error } = useGetPublicVendorWeddingPackagesQuery(salonId);
+  
+  // Helper function to process wedding packages regardless of input format
+  const processWeddingPackages = (packages: any[]): WeddingPackage[] => {
+    if (!Array.isArray(packages)) {
+      return [];
+    }
+        
+    return packages.map((pkg: any): WeddingPackage => {
+      // Process services properly
+      const processedServices = Array.isArray(pkg.services) 
+        ? pkg.services.map((service: any) => ({
+            serviceId: service.serviceId || service._id || service.id || '',
+            serviceName: service.serviceName || service.name || '',
+            quantity: service.quantity || 1,
+            staffRequired: service.staffRequired !== undefined ? service.staffRequired : true
+          })) 
+        : [];
+          
+      return {
+        id: pkg.id || pkg._id || '',
+        _id: pkg._id || pkg.id || '',
+        name: pkg.name || '',
+        description: pkg.description || '',
+        services: processedServices,
+        totalPrice: pkg.totalPrice || 0,
+        discountedPrice: pkg.discountedPrice !== undefined ? pkg.discountedPrice : null,
+        duration: pkg.duration || 0,
+        image: pkg.image || '',
+        status: pkg.status || 'approved',
+        isActive: pkg.isActive !== undefined ? pkg.isActive : true,
+        staffCount: pkg.staffCount || 1,
+        assignedStaff: pkg.assignedStaff || []
+      };
+    });
+  };
+      
+  const weddingPackages = useMemo((): WeddingPackage[] => {
+    if (!rawPackages) {
+      return [];
+    }
+    
+    // Handle different response formats from the API
+    if (rawPackages.hasOwnProperty('success') && rawPackages.success) {
+      // Format: { success: true, weddingPackages: [...] }
+      if (Array.isArray(rawPackages.weddingPackages)) {
+        return processWeddingPackages(rawPackages.weddingPackages);
+      }
+    } else if (rawPackages.hasOwnProperty('weddingPackages')) {
+      // Format: { weddingPackages: [...] }
+      if (Array.isArray(rawPackages.weddingPackages)) {
+        return processWeddingPackages(rawPackages.weddingPackages);
+      }
+    } else if (Array.isArray(rawPackages)) {
+      // Format: [...]
+      return processWeddingPackages(rawPackages);
+    } else if (rawPackages.data && Array.isArray(rawPackages.data)) {
+      // Format: { data: [...] }
+      return processWeddingPackages(rawPackages.data);
+    }
+    
+    return [];
+  }, [rawPackages]);
+
+  return {
+    weddingPackages,
+    isLoading,
+    error
+  };
+};
+
 /**
  * Hook to fetch salon staff with formatted data for the booking flow
  * Filtered by service if provided
@@ -243,10 +352,8 @@ export const useSalonServices = (salonId: string) => {
 export const useSalonStaff = (salonId: string, serviceId?: string) => {
   console.log('useSalonStaff - Called with:', { salonId, serviceId });
   
-  // Use the service-specific endpoint only if we have a valid serviceId
   const shouldUseServiceSpecificEndpoint = !!(serviceId && serviceId.trim() !== '');
   
-  // Use the service-specific endpoint if serviceId is provided and valid
   const { data: rawStaff, isLoading, error } = shouldUseServiceSpecificEndpoint
     ? useGetPublicVendorStaffByServiceQuery({ vendorId: salonId, serviceId: serviceId! })
     : useGetPublicVendorStaffQuery(salonId);
@@ -254,7 +361,6 @@ export const useSalonStaff = (salonId: string, serviceId?: string) => {
   const staff = useMemo(() => {
     if (!rawStaff) return [];
     
-    // Handle different possible response structures
     let staffArray = [];
     
     if (rawStaff.data && Array.isArray(rawStaff.data)) {
@@ -267,7 +373,6 @@ export const useSalonStaff = (salonId: string, serviceId?: string) => {
       return [];
     }
     
-    // Ensure we always return an array
     if (!Array.isArray(staffArray)) {
       return [];
     }
@@ -315,10 +420,8 @@ export const useSalonWorkingHours = (salonId: string) => {
     
     console.log('useSalonWorkingHours - Raw data:', rawWorkingHours);
     
-    // Handle the structure returned by the public working hours API
     let workingHoursData = null;
     
-    // Prioritize workingHours over workingHoursArray since workingHours has the correct data
     if (rawWorkingHours.data && Array.isArray(rawWorkingHours.data.workingHours) && rawWorkingHours.data.workingHours.length > 0) {
       workingHoursData = rawWorkingHours.data.workingHours;
     } else if (rawWorkingHours.data && Array.isArray(rawWorkingHours.data.workingHoursArray) && rawWorkingHours.data.workingHoursArray.length > 0) {
@@ -337,9 +440,7 @@ export const useSalonWorkingHours = (salonId: string) => {
       return [];
     }
     
-    // Transform the working hours data from the API format to the format expected by Step3_TimeSlot
     const transformedHours = workingHoursData.map((dayHours: any): WorkingHours => {
-      // Handle the new format from the working hours API
       if (!dayHours.isOpen || !dayHours.open || !dayHours.close) {
         return {
           dayOfWeek: dayHours.day,
@@ -349,7 +450,6 @@ export const useSalonWorkingHours = (salonId: string) => {
         };
       }
       
-      // The API now returns times in 24-hour format directly
       const startTime = dayHours.open;
       const endTime = dayHours.close;
       
@@ -361,7 +461,6 @@ export const useSalonWorkingHours = (salonId: string) => {
       };
     });
     
-    // Ensure we always return an array
     return Array.isArray(transformedHours) ? transformedHours : [];
   }, [rawWorkingHours]);
 
@@ -381,7 +480,6 @@ export const useSalonInfo = (salonId: string) => {
   const salonInfo = useMemo(() => {
     if (!rawSalonData) return null;
     
-    // Handle different possible response structures
     let vendorsArray = [];
     
     if (rawSalonData.data && Array.isArray(rawSalonData.data)) {
@@ -395,7 +493,6 @@ export const useSalonInfo = (salonId: string) => {
       return null;
     }
     
-    // Ensure we always work with an array
     if (!Array.isArray(vendorsArray)) {
       return null;
     }
@@ -431,16 +528,59 @@ export const useBookingData = (salonId: string, serviceId?: string) => {
   const staffQuery = useSalonStaff(salonId, serviceId); // Pass serviceId to filter staff
   const workingHoursQuery = useSalonWorkingHours(salonId);
   const salonInfoQuery = useSalonInfo(salonId);
-
+  const weddingPackagesQuery = useWeddingPackages(salonId);
+  
+  // Debug logging
+  console.log('useBookingData - weddingPackagesQuery:', weddingPackagesQuery);
+  console.log('useBookingData - weddingPackagesQuery.weddingPackages:', weddingPackagesQuery.weddingPackages);
+  console.log('useBookingData - weddingPackagesQuery.weddingPackages length:', weddingPackagesQuery.weddingPackages?.length);
+  console.log('useBookingData - weddingPackagesQuery.isLoading:', weddingPackagesQuery.isLoading);
+  console.log('useBookingData - weddingPackagesQuery.error:', weddingPackagesQuery.error);
+  console.log('useBookingData - weddingPackagesQuery type:', typeof weddingPackagesQuery.weddingPackages);
+  console.log('useBookingData - weddingPackagesQuery is array:', Array.isArray(weddingPackagesQuery.weddingPackages));
+  
   const isLoading = servicesQuery.isLoading || 
                    staffQuery.isLoading || 
                    workingHoursQuery.isLoading || 
-                   salonInfoQuery.isLoading;
+                   salonInfoQuery.isLoading ||
+                   weddingPackagesQuery.isLoading;
 
   const error = servicesQuery.error || 
                staffQuery.error || 
                workingHoursQuery.error || 
-               salonInfoQuery.error;
+               salonInfoQuery.error ||
+               weddingPackagesQuery.error;
+  
+  console.log('useBookingData - Final wedding packages:', weddingPackagesQuery.weddingPackages);
+  console.log('useBookingData - weddingPackagesQuery.weddingPackages type:', typeof weddingPackagesQuery.weddingPackages);
+  console.log('useBookingData - weddingPackagesQuery.weddingPackages is array:', Array.isArray(weddingPackagesQuery.weddingPackages));
+  
+  // Ensure weddingPackages is always an array
+  const weddingPackages = Array.isArray(weddingPackagesQuery.weddingPackages) 
+    ? weddingPackagesQuery.weddingPackages 
+    : [];
+  
+  // Additional validation to ensure we have valid packages
+  const validWeddingPackages = weddingPackages.filter(pkg => pkg && (pkg.id || pkg._id || pkg.name));
+  
+  console.log('useBookingData - Processed wedding packages:', weddingPackages);
+  
+  console.log('useBookingData - Final wedding packages (ensured array):', validWeddingPackages);
+  console.log('useBookingData - Final wedding packages length:', validWeddingPackages.length);
+  console.log('useBookingData - Final wedding packages type:', typeof validWeddingPackages);
+  
+  // Log individual packages
+  if (validWeddingPackages && validWeddingPackages.length > 0) {
+    validWeddingPackages.forEach((pkg, index) => {
+      console.log(`useBookingData - Package ${index}:`, pkg);
+      console.log(`useBookingData - Package ${index} keys:`, Object.keys(pkg));
+      console.log(`useBookingData - Package ${index} id:`, pkg.id);
+      console.log(`useBookingData - Package ${index} _id:`, pkg._id);
+      console.log(`useBookingData - Package ${index} name:`, pkg.name);
+    });
+  } else {
+    console.log('useBookingData - No wedding packages found or empty array');
+  }
   
   return {
     services: servicesQuery.services,
@@ -449,6 +589,7 @@ export const useBookingData = (salonId: string, serviceId?: string) => {
     staff: staffQuery.staff,
     workingHours: workingHoursQuery.workingHours,
     salonInfo: salonInfoQuery.salonInfo,
+    weddingPackages: validWeddingPackages,
     isLoading,
     error
   };

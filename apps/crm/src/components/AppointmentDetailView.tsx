@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@repo/ui/button";
@@ -69,7 +69,7 @@ interface Appointment {
   endTime: string;
   duration: number;
   notes: string;
-  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'pending';
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'pending' | 'completed without payment' | 'partially-completed';
   amount: number;
   discount: number;
   tax: number;
@@ -77,11 +77,11 @@ interface Appointment {
   paymentStatus?: string;
   createdAt?: string;
   updatedAt?: string;
-  
+
   // Multi-service appointment properties
   isMultiService?: boolean;
   serviceItems?: ServiceItem[];
-  
+
   // Additional properties used in this component
   payment?: PaymentDetails;
   vendorId?: string;
@@ -102,7 +102,7 @@ interface ClientAppointment {
   id: string;
   date: Date;
   service: string;
-  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed' | 'completed without payment' | 'partially-completed';
   staffName: string;
   amount: number;
   startTime?: string;
@@ -124,7 +124,7 @@ export function AppointmentDetailView({
   const [activeTab, setActiveTab] = useState('details');
   const [clientHistory, setClientHistory] = useState<ClientAppointment[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [activeHistoryFilter, setActiveHistoryFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed'>('all');
+  const [activeHistoryFilter, setActiveHistoryFilter] = useState<'all' | 'pending' | 'confirmed' | 'completed' | 'cancelled' | 'missed' | 'completed without payment' | 'partially-completed'>('all');
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCollectingPayment, setIsCollectingPayment] = useState(false);
@@ -142,7 +142,7 @@ export function AppointmentDetailView({
     notes: ''
   });
   const [collectPayment, { isLoading: isCollectingPaymentLoading }] = useCollectPaymentMutation();
-  
+
   // Add the missing isStatusChanging state
   const [isStatusChanging, setIsStatusChanging] = useState(false);
 
@@ -176,7 +176,7 @@ export function AppointmentDetailView({
   const defaultFormValues = useMemo(() => {
     // Map 'pending' status to 'scheduled' since NewAppointmentForm doesn't support 'pending'
     const status = liveAppointment.status === 'pending' ? 'scheduled' : liveAppointment.status;
-    
+
     return {
       ...appointment,
       date: appointment.date instanceof Date ? appointment.date : new Date(appointment.date),
@@ -235,8 +235,8 @@ export function AppointmentDetailView({
           ...data,
           // Ensure date is a Date object
           date: data.date instanceof Date ? data.date : new Date(data.date),
-          // Preserve the original status unless explicitly changed
-          status: appointment.status,
+          // Reset status to confirmed on reschedule
+          status: 'confirmed',
         };
 
         await onRescheduleAppointment(updatedAppointment);
@@ -262,7 +262,7 @@ export function AppointmentDetailView({
     const toastId = toast.loading('Saving appointment...');
     try {
       console.log('Starting form submission with data:', { formData, appointment });
-      
+
       const appointmentId = appointment?._id || appointment?.id || '';
       if (!appointmentId) {
         console.error('Appointment ID is missing in handleFormSubmit');
@@ -270,7 +270,7 @@ export function AppointmentDetailView({
       }
 
       setIsSaving(true);
-      
+
       // Format date safely
       const formatDate = (date: any) => {
         if (!date) return appointment?.date;
@@ -291,7 +291,7 @@ export function AppointmentDetailView({
         staffName: formData.staffName || appointment?.staffName,
         startTime: formData.startTime || appointment?.startTime,
         endTime: formData.endTime || appointment?.endTime,
-        status: formData.status || appointment?.status || 'scheduled',
+        status: formData.status || (appointment.status === 'cancelled' ? 'confirmed' : appointment.status) || 'scheduled',
         notes: formData.notes || appointment?.notes || '',
         amount: formData.amount || appointment?.amount || 0,
         discount: formData.discount || appointment?.discount || 0,
@@ -309,7 +309,7 @@ export function AppointmentDetailView({
 
       // Close the detail view
       onClose();
-      
+
     } catch (error) {
       console.error('Error in handleFormSubmit:', error);
       toast.error('Failed to save appointment', {
@@ -333,21 +333,21 @@ export function AppointmentDetailView({
 
   // Calculate total amount - prioritize finalAmount, then totalAmount, then amount (from liveAppointment)
   const totalAmount = (liveAppointment as any).finalAmount || (liveAppointment as any).totalAmount || payment.total || (liveAppointment as any).amount || 0;
-  
+
   // Use override first, then amountPaid from appointment, then fallback to payment.paid
   const paidAmount = overridePayment?.amountPaid !== undefined
     ? Number(overridePayment.amountPaid)
     : (liveAppointment as any).amountPaid !== undefined
       ? parseFloat((liveAppointment as any).amountPaid)
       : (payment.paid ? parseFloat(payment.paid as any) : 0);
-    
+
   // Calculate remaining amount - prefer override, then appointment, else compute
   const remainingAmount = overridePayment?.amountRemaining !== undefined
     ? Number(overridePayment.amountRemaining)
     : (liveAppointment as any).amountRemaining !== undefined
       ? parseFloat((liveAppointment as any).amountRemaining)
       : Math.max(0, totalAmount - paidAmount);
-  
+
   // Resolve payment history to display
   const displayPaymentHistory = useMemo(() => {
     const hist = overridePaymentHistory ?? (liveAppointment as any)?.paymentHistory ?? [];
@@ -368,7 +368,7 @@ export function AppointmentDetailView({
   console.log('payment.paid:', payment.paid);
   console.log('calculated remainingAmount:', remainingAmount);
   console.log('=== END APPOINTMENT PAYMENT DATA ===');
-  
+
   // Update paymentData when remainingAmount changes
   useEffect(() => {
     setPaymentData(prev => ({
@@ -376,7 +376,7 @@ export function AppointmentDetailView({
       amount: remainingAmount
     }));
   }, [remainingAmount]);
-  
+
   // Ensure paymentData is updated when appointment data changes
   useEffect(() => {
     setPaymentData(prev => ({
@@ -396,7 +396,7 @@ export function AppointmentDetailView({
       const mapStatus = (s: any): ClientAppointment['status'] => {
         const status = String(s || '').toLowerCase();
         if (status === 'confirmed') return 'confirmed';
-        if (status === 'completed') return 'completed';
+        if (status === 'completed' || status === 'completed without payment') return 'completed';
         if (status === 'cancelled') return 'cancelled';
         if (status === 'no_show' || status === 'no-show' || status === 'missed') return 'missed';
         return 'pending';
@@ -443,30 +443,30 @@ export function AppointmentDetailView({
   }, [appointmentsList, appointment, activeHistoryFilter]);
 
   // Function to update appointment status
-  const updateAppointmentStatus = (appointmentId: string, newStatus: 'pending' | 'completed' | 'cancelled' | 'missed') => {
+  const updateAppointmentStatus = (appointmentId: string, newStatus: 'pending' | 'completed' | 'cancelled' | 'missed' | 'completed without payment' | 'partially-completed') => {
     setPendingStatus(newStatus);
     setShowStatusConfirm(true);
   };
 
   const confirmStatusUpdate = () => {
     if (!pendingStatus) return;
-    
-    const newStatus = pendingStatus as 'pending' | 'completed' | 'cancelled' | 'missed';
-    
+
+    const newStatus = pendingStatus as 'pending' | 'completed' | 'cancelled' | 'missed' | 'completed without payment' | 'partially-completed';
+
     // Update local state
-    setClientHistory(prevHistory => 
-      prevHistory.map(appt => 
-        appt.id === appointment._id 
-          ? { ...appt, status: newStatus } 
+    setClientHistory(prevHistory =>
+      prevHistory.map(appt =>
+        appt.id === appointment._id
+          ? { ...appt, status: newStatus }
           : appt
       )
     );
-    
+
     // Call the onStatusChange prop if provided
     if (onStatusChange) {
       onStatusChange(newStatus);
     }
-    
+
     // Close the confirmation dialog
     setShowStatusConfirm(false);
     setPendingStatus(null);
@@ -486,15 +486,14 @@ export function AppointmentDetailView({
           <Button variant="outline" onClick={() => setShowStatusConfirm(false)}>
             Cancel
           </Button>
-          <Button 
-            variant="default" 
+          <Button
+            variant="default"
             onClick={confirmStatusUpdate}
-            className={`${
-              pendingStatus === 'completed' ? 'bg-green-600 hover:bg-green-700' :
+            className={`${(pendingStatus === 'completed' || pendingStatus === 'completed without payment') ? 'bg-green-600 hover:bg-green-700' :
               pendingStatus === 'cancelled' ? 'bg-red-600 hover:bg-red-700' :
-              pendingStatus === 'missed' ? 'bg-purple-600 hover:bg-purple-700' :
-              'bg-blue-600 hover:bg-blue-700'
-            }`}
+                pendingStatus === 'missed' ? 'bg-purple-600 hover:bg-purple-700' :
+                  'bg-blue-600 hover:bg-blue-700'
+              }`}
           >
             Confirm {pendingStatus}
           </Button>
@@ -507,10 +506,10 @@ export function AppointmentDetailView({
   if (!payment.total && totalAmount > 0) {
     payment.total = totalAmount;
   }
-  
+
   const statusColors = {
     confirmed: 'bg-green-100 text-green-800',
-    }
+  }
 
   // Format date for display
   const formatAppointmentDate = (date: Date) => {
@@ -521,12 +520,17 @@ export function AppointmentDetailView({
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'completed':
+      case 'completed without payment':
         return 'bg-green-100 text-green-800 border-green-200';
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-200';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'partially-completed':
+      case 'in_progress':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'missed':
+      case 'no_show':
         return 'bg-purple-100 text-purple-800 border-purple-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -542,17 +546,19 @@ export function AppointmentDetailView({
       case 'scheduled':
         return [
           { value: 'confirmed', label: 'Confirm Appointment' },
+          { value: 'completed without payment', label: 'Completed without payment' },
           ...commonOptions
         ];
       case 'pending':
         return [
           { value: 'scheduled', label: 'Mark as Scheduled' },
           { value: 'confirmed', label: 'Confirm Appointment' },
+          { value: 'completed without payment', label: 'Completed without payment' },
           ...commonOptions
         ];
       case 'confirmed':
         return [
-          { value: 'completed', label: 'Mark as Completed' },
+          { value: 'completed without payment', label: 'Completed without payment' },
           ...commonOptions
         ];
       default:
@@ -567,14 +573,14 @@ export function AppointmentDetailView({
   const handleStatusChange = useCallback(async (newStatus: string) => {
     const toastId = toast.loading('Updating status...');
     if (!appointment || !onStatusChange) return;
-    
+
     if (newStatus === 'cancelled') {
       // Show cancellation dialog instead of immediately changing status
       setPendingStatus(newStatus);
       setShowCancelDialog(true);
       return;
     }
-    
+
     setIsStatusChanging(true);
     try {
       // Call the parent's status change handler with the new status
@@ -594,7 +600,7 @@ export function AppointmentDetailView({
   const handleConfirmCancel = useCallback(async () => {
     const toastId = toast.loading('Cancelling appointment...');
     if (!pendingStatus || !onStatusChange) return;
-    
+
     setIsStatusChanging(true);
     try {
       // Call the parent's status change handler with the cancellation reason
@@ -709,7 +715,7 @@ export function AppointmentDetailView({
       }
 
       // Success toast
-      let successMessage = `Payment of ₹${paymentData.amount.toFixed(2)} received via ${paymentData.paymentMethod}`;
+      let successMessage = `Payment of â‚¹${paymentData.amount.toFixed(2)} received via ${paymentData.paymentMethod}`;
       if (updatedAppointmentData?.status && appointment.status !== updatedAppointmentData.status) {
         successMessage += ` and appointment marked as ${updatedAppointmentData.status}`;
       }
@@ -739,7 +745,7 @@ export function AppointmentDetailView({
         transactionId: (result?.paymentCollection?.paymentHistory || []).slice(-1)[0]?.transactionId || null,
       };
       const backendHistory = updatedAppointmentData?.paymentHistory || result?.paymentCollection?.paymentHistory || [];
-      setOverridePaymentHistory(Array.isArray(backendHistory) && backendHistory.length > 0 
+      setOverridePaymentHistory(Array.isArray(backendHistory) && backendHistory.length > 0
         ? backendHistory
         : [newHistoryEntry, ...((overridePaymentHistory as any[]) || ((liveAppointment as any)?.paymentHistory || []))]);
 
@@ -769,15 +775,15 @@ export function AppointmentDetailView({
       )}
       {(isEditing || isRescheduling) && (
         <div className="flex space-x-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={handleCancelEdit}
             disabled={isSaving}
           >
             Cancel
           </Button>
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             form="appointment-form"
             disabled={isSaving}
           >
@@ -816,7 +822,7 @@ export function AppointmentDetailView({
   return (
     <>
       {renderStatusConfirmDialog()}
-      
+
       <Dialog open={!!appointment} onOpenChange={(open) => {
         // Only call onClose when the dialog is being closed by the user
         if (!open && onClose) {
@@ -824,32 +830,32 @@ export function AppointmentDetailView({
         }
       }}>
         <DialogContent className="sm:max-w-[800px] max-h-[90vh] h-auto overflow-y-scroll p-0 scrollbar-hidden">
-            <DialogHeader className="px-6 pt-6 pb-4 border-b">
-              <div className="flex justify-between items-start">
-                <div>
-                  <DialogTitle className="text-xl font-semibold text-foreground">Appointment Details</DialogTitle>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {appointment.clientName} • {format(new Date(appointment.date), 'MMM d, yyyy')} • {appointment.startTime}
-                  </p>
-                </div>
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <div className="flex justify-between items-start">
+              <div>
+                <DialogTitle className="text-xl font-semibold text-foreground">Appointment Details</DialogTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {appointment.clientName} â€¢ {format(new Date(appointment.date), 'MMM d, yyyy')} â€¢ {appointment.startTime}
+                </p>
               </div>
-            </DialogHeader>
+            </div>
+          </DialogHeader>
 
-          <Tabs 
-            value={activeTab} 
+          <Tabs
+            value={activeTab}
             onValueChange={setActiveTab}
             className="w-full"
           >
             <TabsList className="w-full justify-start rounded-none border-b bg-transparent px-6 py-0 h-12">
-              <TabsTrigger 
-                value="details" 
+              <TabsTrigger
+                value="details"
                 className="relative h-12 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-4 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
               >
                 <User className="mr-2 h-4 w-4" />
                 Details
               </TabsTrigger>
-              <TabsTrigger 
-                value="history" 
+              <TabsTrigger
+                value="history"
                 className="relative h-12 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-4 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
               >
                 <History className="mr-2 h-4 w-4" />
@@ -864,35 +870,35 @@ export function AppointmentDetailView({
 
             <TabsContent value="details" className="p-6 pt-4 space-y-4">
               <div className="flex flex-col sm:flex-row justify-between gap-3">
-              <div className="w-full flex flex-col sm:flex-row gap-3">
-                {(remainingAmount > 0 && (overridePayment?.paymentStatus ?? (liveAppointment as any).paymentStatus) !== 'completed') && (
-                  <Button 
-                    variant="outline" 
+                <div className="w-full flex flex-col sm:flex-row gap-3">
+                  {(remainingAmount > 0 && (overridePayment?.paymentStatus ?? (liveAppointment as any).paymentStatus) !== 'completed') && (
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      onClick={() => {
+                        // When opening the payment form, set the amount to the remaining balance
+                        if (!isCollectingPayment) {
+                          setPaymentData(prev => ({
+                            ...prev,
+                            amount: remainingAmount
+                          }));
+                        }
+                        setIsCollectingPayment(!isCollectingPayment);
+                      }}
+                    >
+                      <DollarSign className="w-4 h-4 mr-2" />
+                      {isCollectingPayment ? 'Hide Payment' : 'Collect Payment'}
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
                     className="w-full sm:w-auto"
-                    onClick={() => {
-                      // When opening the payment form, set the amount to the remaining balance
-                      if (!isCollectingPayment) {
-                        setPaymentData(prev => ({
-                          ...prev,
-                          amount: remainingAmount
-                        }));
-                      }
-                      setIsCollectingPayment(!isCollectingPayment);
-                    }}
+                    onClick={() => setIsRescheduling(true)}
                   >
-                    <DollarSign className="w-4 h-4 mr-2" />
-                    {isCollectingPayment ? 'Hide Payment' : 'Collect Payment'}
+                    <CalendarPlus className="w-4 h-4 mr-2" />
+                    Reschedule
                   </Button>
-                )}
-                <Button 
-                  variant="outline" 
-                  className="w-full sm:w-auto"
-                  onClick={() => setIsRescheduling(true)}
-                >
-                  <CalendarPlus className="w-4 h-4 mr-2" />
-                  Reschedule
-                </Button>
-                <div className="w-full sm:w-[200px] hidden">
+                  {/* <div className="w-full sm:w-[200px]">
                   <Select 
                     value={appointment.status || "scheduled"}
                     onValueChange={handleStatusChange}
@@ -914,733 +920,773 @@ export function AppointmentDetailView({
                       ))}
                     </SelectContent>
                   </Select>
+                </div> */}
+                  <div className="w-full sm:w-[200px]">
+                    <Select
+                      value={appointment.status || "scheduled"}
+                      onValueChange={handleStatusChange}
+                      disabled={isStatusChanging}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getStatusOptions(appointment.status || 'scheduled').map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </div>
-              </div>
 
-            {/* Payment Collection Form */}
-            {isCollectingPayment && (
-              <div className="bg-background p-5 rounded-lg border-2 border-muted">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-lg flex items-center text-foreground">
-                    <DollarSign className="w-5 h-5 mr-2 text-foreground" />
-                    Payment Collection
-                  </h3>
-                  {appointment.payment?.bookingSource && (
-                    <Badge variant="outline" className="text-xs font-medium">
-                      {appointment.payment.bookingSource === 'web' ? '🌐 Online Booking' : 
-                       appointment.payment.bookingSource === 'phone' ? '📞 Phone Booking' : 
-                       '🚶 Walk-in'}
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Booking Source & Payment Mode Info */}
-                {appointment.payment?.bookingSource === 'web' && (
-                  <div className="mb-4 p-3 bg-muted rounded-lg border border-muted">
-                    <div className="flex items-start gap-2">
-                      <div className="p-1.5 bg-foreground rounded-md mt-0.5">
-                        <svg className="w-4 h-4 text-background" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-foreground">
-                          Online Booking {appointment.payment?.paymentMode === 'online' ? '- Paid Online' : '- Pay at Salon'}
-                        </p>
-                        <p className="text-xs text-foreground/80 mt-0.5">
-                          {appointment.payment?.paymentMode === 'online' 
-                            ? 'Customer has already paid online. Verify payment status before service.' 
-                            : 'Customer selected "Pay at Salon" option. Collect payment now.'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="space-y-4">
-                  {/* Payment Breakdown */}
-                  <div className="bg-background p-4 rounded-lg border shadow-sm">
-                    <h4 className="text-sm font-semibold mb-3 text-foreground">Payment Breakdown</h4>
-                    
-                    <div className="space-y-2 text-sm">
-                      {/* Service Amount */}
-                      <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Service Amount</span>
-                        <span className="font-medium">₹{appointment.amount?.toFixed(2) || '0.00'}</span>
-                      </div>
-
-                      {/* Discount Amount (from appointment root) */}
-                      {(appointment as any).discountAmount > 0 && (
-                        <div className="flex justify-between items-center text-foreground">
-                          <span>Discount Applied</span>
-                          <span className="font-medium">-₹{((appointment as any).discountAmount)?.toFixed(2) || '0.00'}</span>
-                        </div>
-                      )}
-
-                      {/* Offer/Discount Applied (from payment object) */}
-                      {appointment.payment?.offer && (
-                        <div className="flex justify-between items-center text-foreground">
-                          <div className="flex items-center gap-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                            </svg>
-                            <span>Offer ({appointment.payment.offer.code})</span>
-                          </div>
-                          <span className="font-medium">-₹{appointment.payment.offer.discountAmount?.toFixed(2) || '0.00'}</span>
-                        </div>
-                      )}
-
-                      {/* Regular Discount */}
-                      {appointment.discount > 0 && (
-                        <div className="flex justify-between items-center text-foreground">
-                          <span>Discount</span>
-                          <span className="font-medium">-₹{appointment.discount.toFixed(2)}</span>
-                        </div>
-                      )}
-
-                      {/* Service Tax (from appointment root) */}
-                      {(appointment as any).serviceTax && (appointment as any).serviceTax > 0 && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Service Tax (GST)</span>
-                          <span className="font-medium">₹{((appointment as any).serviceTax)?.toFixed(2) || '0.00'}</span>
-                        </div>
-                      )}
-
-                      {/* Service Tax (from payment object - fallback) */}
-                      {!((appointment as any).serviceTax) && appointment.payment?.serviceTax && appointment.payment.serviceTax > 0 && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Service Tax (GST)</span>
-                          <span className="font-medium">₹{appointment.payment.serviceTax.toFixed(2)}</span>
-                        </div>
-                      )}
-
-                      {/* Platform Fee (from appointment root) */}
-                      {(appointment as any).platformFee && (appointment as any).platformFee > 0 && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Platform Fee</span>
-                          <span className="font-medium">₹{((appointment as any).platformFee)?.toFixed(2) || '0.00'}</span>
-                        </div>
-                      )}
-
-                      {/* Platform Fee (from payment object - fallback) */}
-                      {!((appointment as any).platformFee) && appointment.payment?.platformFee && appointment.payment.platformFee > 0 && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-muted-foreground">Platform Fee</span>
-                          <span className="font-medium">₹{appointment.payment.platformFee.toFixed(2)}</span>
-                        </div>
-                      )}
-
-                      <div className="border-t pt-2 mt-2">
-                        <div className="flex justify-between items-center font-semibold text-base">
-                          <span>Total Amount</span>
-                          <span className="text-foreground">₹{((appointment as any).finalAmount || appointment.totalAmount)?.toFixed(2) || '0.00'}</span>
-                        </div>
-                      </div>
-
-                      {/* Payment Method (from appointment root) */}
-                      {(appointment as any).paymentMethod && (
-                        <div className="flex justify-between items-center py-2 px-3 bg-muted rounded-lg">
-                          <span className="text-sm font-medium text-foreground">Payment Method:</span>
-                          <span className="text-sm font-semibold text-foreground">{(appointment as any).paymentMethod}</span>
-                        </div>
-                      )}
-
-                      {/* Payment Status (from appointment root) */}
-                      {(appointment as any).paymentStatus && (
-                        <div className="flex justify-between items-center py-2 px-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
-                          <span className="text-sm font-medium text-purple-900 dark:text-purple-100">Payment Status:</span>
-                          <span className={`text-sm font-semibold capitalize ${
-                            (appointment as any).paymentStatus === 'completed' ? 'text-green-700 dark:text-green-300' :
-                            (appointment as any).paymentStatus === 'pending' ? 'text-yellow-700 dark:text-yellow-300' :
-                            'text-red-700 dark:text-red-300'
-                          }`}>
-                            {(appointment as any).paymentStatus}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Amount Paid (from appointment root) */}
-                      <div className="flex justify-between items-center py-2 px-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
-                        <span className="text-sm font-medium text-green-900 dark:text-green-100">Amount Paid:</span>
-                        <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                          ₹{paidAmount.toFixed(2)}
-                        </span>
-                      </div>
-
-                      {/* Amount Remaining (from appointment root) */}
-                      <div className="flex justify-between items-center py-2 px-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
-                        <span className="text-sm font-medium text-orange-900 dark:text-orange-100">Amount Remaining:</span>
-                        <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
-                          ₹{remainingAmount.toFixed(2)}
-                        </span>
-                      </div>
-
-                      {/* Amount Already Paid */}
-                      {(appointment.payment?.paid ?? 0) > 0 && (
-                        <div className="flex justify-between items-center text-foreground">
-                          <div className="flex items-center gap-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span>Amount Paid {appointment.payment?.paymentMode === 'online' ? '(Online)' : ''}</span>
-                          </div>
-                          <span className="font-medium">₹{(appointment.payment?.paid ?? 0).toFixed(2)}</span>
-                        </div>
-                      )}
-
-                      {/* Remaining Amount */}
-                      <div className="border-t pt-2 mt-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-semibold text-base">Amount to Collect</span>
-                          <span className="text-xl font-bold text-foreground">
-                            ₹{remainingAmount.toFixed(2)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
+              {/* Payment Collection Form */}
+              {isCollectingPayment && (
+                <div className="bg-background p-5 rounded-lg border-2 border-muted">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-semibold text-lg flex items-center text-foreground">
+                      <DollarSign className="w-5 h-5 mr-2 text-foreground" />
+                      Payment Collection
+                    </h3>
+                    {appointment.payment?.bookingSource && (
+                      <Badge variant="outline" className="text-xs font-medium">
+                        {appointment.payment.bookingSource === 'web' ? 'ðŸŒ Online Booking' :
+                          appointment.payment.bookingSource === 'phone' ? 'ðŸ“ž Phone Booking' :
+                            'ðŸš¶ Walk-in'}
+                      </Badge>
+                    )}
                   </div>
 
-                  {/* Payment Collection Details */}
-                  <div className="bg-background p-4 rounded-lg border shadow-sm mt-4">
-                    <h4 className="text-sm font-semibold mb-3 text-foreground">Payment Collection Details</h4>
-                    
-                    {/* Debug Information - Remove this in production */}
-                    
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between items-center py-2 px-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-                        <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Total Amount</span>
-                        <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                          ₹{((appointment as any).finalAmount || appointment.totalAmount || 0).toFixed(2)}
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between items-center py-2 px-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
-                        <span className="text-sm font-medium text-green-900 dark:text-green-100">Amount Paid</span>
-                        <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                          ₹{paidAmount.toFixed(2)}
-                        </span>
-                      </div>
-                      
-                      <div className="flex justify-between items-center py-2 px-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
-                        <span className="text-sm font-medium text-orange-900 dark:text-orange-100">Amount Remaining</span>
-                        <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
-                          ₹{remainingAmount.toFixed(2)}
-                        </span>
-                      </div>
-                      
-                      {/* Payment Status */}
-                      <div className={`flex justify-between items-center py-2 px-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg`}>
-                        <span className="text-sm font-medium text-purple-900 dark:text-purple-100">Payment Status</span>
-                        <span className={`text-sm font-semibold ${
-                          (overridePayment?.paymentStatus ?? (appointment as any).paymentStatus) === 'completed' ? 'text-green-700 dark:text-green-300' :
-                          (overridePayment?.paymentStatus ?? (appointment as any).paymentStatus) === 'pending' ? 'text-yellow-700 dark:text-yellow-300' :
-                          'text-red-700 dark:text-red-300'
-                        }`}>
-                          {/* Map backend payment status to user-friendly terms */}
-                          {(() => {
-                            const status = overridePayment?.paymentStatus ?? (appointment as any).paymentStatus;
-                            const amountPaid = Number(paidAmount || 0) || 0;
-                            const totalAmount = Number((appointment as any).finalAmount ?? appointment.totalAmount ?? 0) || 0;
-                            
-                            switch (status) {
-                              case 'completed': return 'PAID';
-                              case 'pending': 
-                                if (amountPaid > 0 && totalAmount > 0) {
-                                  return `PARTIAL (₹${amountPaid.toFixed(2)})`;
-                                }
-                                return 'UNPAID';
-                              default: return status.toUpperCase();
-                            }
-                          })()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Collect Payment Amount */}
-                  {remainingAmount > 0 && (
-                    <>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Collecting Amount (Manual Entry)</label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground font-medium">₹</span>
-                          <Input 
-                            type="number" 
-                            value={paymentData.amount}
-                            onChange={(e) => {
-                              const value = parseFloat(e.target.value) || 0;
-                              // Allow any positive value for manual entry
-                              setPaymentData(prev => ({
-                                ...prev,
-                                amount: value >= 0 ? value : 0
-                              }));
-                            }}
-                            className="pl-7 text-lg font-semibold"
-                            min="0"
-                            step="0.01"
-                            placeholder="Enter amount to collect"
-                          />
-                        </div>
-                        <div className="flex justify-between items-center mt-1.5">
-                          <p className="text-xs text-foreground/80">
-                            Remaining Balance: ₹{remainingAmount.toFixed(2)}
-                          </p>
-                          {paymentData.amount !== remainingAmount && remainingAmount > 0 && (
-                            <button
-                              onClick={() => setPaymentData(prev => ({ ...prev, amount: remainingAmount }))}
-                              className="text-xs text-foreground font-medium hover:opacity-80"
-                            >
-                              Set to Remaining
-                            </button>
-                          )}
-                        </div>
-                        {paymentData.amount > remainingAmount && (
-                          <p className="text-xs text-foreground/80 mt-1 flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            Amount exceeds remaining balance by ₹{(paymentData.amount - remainingAmount).toFixed(2)}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Payment Methods */}
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Payment Method</label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          <button
-                            onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'cash' }))}
-                            className={`p-3 rounded-lg border-2 transition-all ${
-                              paymentData.paymentMethod === 'cash'
-                                ? 'border-foreground bg-muted'
-                                : 'border-muted hover:border-foreground/50'
-                            }`}
-                          >
-                            <Wallet className={`w-6 h-6 mx-auto mb-1 ${
-                              paymentData.paymentMethod === 'cash' ? 'text-foreground' : 'text-foreground/60'
-                            }`} />
-                            <p className="text-xs font-medium">Cash</p>
-                          </button>
-
-                          <button
-                            onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'card' }))}
-                            className={`p-3 rounded-lg border-2 transition-all ${
-                              paymentData.paymentMethod === 'card'
-                                ? 'border-foreground bg-muted'
-                                : 'border-muted hover:border-foreground/50'
-                            }`}
-                          >
-                            <CreditCard className={`w-6 h-6 mx-auto mb-1 ${
-                              paymentData.paymentMethod === 'card' ? 'text-foreground' : 'text-foreground/60'
-                            }`} />
-                            <p className="text-xs font-medium">Card</p>
-                          </button>
-
-                          <button
-                            onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'upi' }))}
-                            className={`p-3 rounded-lg border-2 transition-all ${
-                              paymentData.paymentMethod === 'upi'
-                                ? 'border-foreground bg-muted'
-                                : 'border-muted hover:border-foreground/50'
-                            }`}
-                          >
-                            <Smartphone className={`w-6 h-6 mx-auto mb-1 ${
-                              paymentData.paymentMethod === 'upi' ? 'text-foreground' : 'text-foreground/60'
-                            }`} />
-                            <p className="text-xs font-medium">UPI</p>
-                          </button>
-
-                          <button
-                            onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'netbanking' }))}
-                            className={`p-3 rounded-lg border-2 transition-all ${
-                              paymentData.paymentMethod === 'netbanking'
-                                ? 'border-foreground bg-muted'
-                                : 'border-muted hover:border-foreground/50'
-                            }`}
-                          >
-                            <svg className={`w-6 h-6 mx-auto mb-1 ${
-                              paymentData.paymentMethod === 'netbanking' ? 'text-foreground' : 'text-foreground/60'
-                            }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                            </svg>
-                            <p className="text-xs font-medium">Net Banking</p>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* UPI QR Code Section */}
-                      {paymentData.paymentMethod === 'upi' && (
-                        <div className="bg-muted p-4 rounded-lg border-2 border-dashed border-muted">
-                          <div className="flex flex-col items-center">
-                            <div className="bg-background p-3 rounded-lg shadow-md mb-3">
-                              {/* Placeholder for QR Code - You can integrate a QR code generator library */}
-                              <div className="w-48 h-48 bg-muted rounded flex items-center justify-center">
-                                <div className="text-center">
-                                  <Smartphone className="w-12 h-12 mx-auto mb-2 text-foreground" />
-                                  <p className="text-xs text-foreground/80">QR Code</p>
-                                  <p className="text-xs text-foreground/80">Scan to Pay</p>
-                                </div>
-                              </div>
-                            </div>
-                            <p className="text-sm font-medium text-center">Scan QR code to pay ₹{paymentData.amount.toFixed(2)}</p>
-                            <p className="text-xs text-foreground/80 mt-1">Or enter UPI ID manually</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Payment Notes */}
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">Transaction Notes (Optional)</label>
-                        <Textarea
-                          placeholder="Add payment reference, transaction ID, or any notes..."
-                          value={paymentData.notes}
-                          onChange={(e) => setPaymentData(prev => ({
-                            ...prev,
-                            notes: e.target.value
-                          }))}
-                          rows={2}
-                          className="resize-none"
-                        />
-                      </div>
-
-                      {/* Action Buttons */}
-                      <div className="flex gap-2 pt-2">
-                        <Button 
-                          variant="outline" 
-                          onClick={() => setIsCollectingPayment(false)}
-                          className="flex-1"
-                        >
-                          Cancel
-                        </Button>
-                        <Button 
-                          onClick={handlePaymentSubmit}
-                          disabled={paymentData.amount <= 0 || isCollectingPaymentLoading}
-                          className="flex-1 bg-foreground hover:bg-foreground/90 text-background"
-                        >
-                          {isCollectingPaymentLoading ? (
-                            <>
-                              <svg className="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                              </svg>
-                              Processing...
-                            </>
-                          ) : (
-                            <>
-                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                              </svg>
-                              Confirm Payment ₹{paymentData.amount.toFixed(2)}
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Already Paid Message */}
-                  {remainingAmount <= 0 && (
-                    <div className="bg-muted p-4 rounded-lg border-2 border-muted">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-foreground rounded-full">
-                          <svg className="w-6 h-6 text-background" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  {/* Booking Source & Payment Mode Info */}
+                  {appointment.payment?.bookingSource === 'web' && (
+                    <div className="mb-4 p-3 bg-muted rounded-lg border border-muted">
+                      <div className="flex items-start gap-2">
+                        <div className="p-1.5 bg-foreground rounded-md mt-0.5">
+                          <svg className="w-4 h-4 text-background" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         </div>
-                        <div>
-                          <p className="font-semibold text-foreground">Payment Complete</p>
-                          <p className="text-sm text-foreground/80">Full payment of ₹{appointment.totalAmount?.toFixed(2)} has been received.</p>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-foreground">
+                            Online Booking {appointment.payment?.paymentMode === 'online' ? '- Paid Online' : '- Pay at Salon'}
+                          </p>
+                          <p className="text-xs text-foreground/80 mt-0.5">
+                            {appointment.payment?.paymentMode === 'online'
+                              ? 'Customer has already paid online. Verify payment status before service.'
+                              : 'Customer selected "Pay at Salon" option. Collect payment now.'}
+                          </p>
                         </div>
                       </div>
                     </div>
                   )}
+
+                  <div className="space-y-4">
+                    {/* Payment Breakdown */}
+                    <div className="bg-background p-4 rounded-lg border shadow-sm">
+                      <h4 className="text-sm font-semibold mb-3 text-foreground">Payment Breakdown</h4>
+
+                      <div className="space-y-2 text-sm">
+                        {/* Service Amount */}
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Service Amount</span>
+                          <span className="font-medium">â‚¹{appointment.amount?.toFixed(2) || '0.00'}</span>
+                        </div>
+
+                        {/* Discount Amount (from appointment root) */}
+                        {(appointment as any).discountAmount > 0 && (
+                          <div className="flex justify-between items-center text-foreground">
+                            <span>Discount Applied</span>
+                            <span className="font-medium">-â‚¹{((appointment as any).discountAmount)?.toFixed(2) || '0.00'}</span>
+                          </div>
+                        )}
+
+                        {/* Offer/Discount Applied (from payment object) */}
+                        {appointment.payment?.offer && (
+                          <div className="flex justify-between items-center text-foreground">
+                            <div className="flex items-center gap-1">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                              </svg>
+                              <span>Offer ({appointment.payment.offer.code})</span>
+                            </div>
+                            <span className="font-medium">-â‚¹{appointment.payment.offer.discountAmount?.toFixed(2) || '0.00'}</span>
+                          </div>
+                        )}
+
+                        {/* Regular Discount */}
+                        {appointment.discount > 0 && (
+                          <div className="flex justify-between items-center text-foreground">
+                            <span>Discount</span>
+                            <span className="font-medium">-â‚¹{appointment.discount.toFixed(2)}</span>
+                          </div>
+                        )}
+
+                        {/* Service Tax (from appointment root) */}
+                        {(appointment as any).serviceTax && (appointment as any).serviceTax > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Service Tax (GST)</span>
+                            <span className="font-medium">â‚¹{((appointment as any).serviceTax)?.toFixed(2) || '0.00'}</span>
+                          </div>
+                        )}
+
+                        {/* Service Tax (from payment object - fallback) */}
+                        {!((appointment as any).serviceTax) && appointment.payment?.serviceTax && appointment.payment.serviceTax > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Service Tax (GST)</span>
+                            <span className="font-medium">â‚¹{appointment.payment.serviceTax.toFixed(2)}</span>
+                          </div>
+                        )}
+
+                        {/* Platform Fee (from appointment root) */}
+                        {(appointment as any).platformFee && (appointment as any).platformFee > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Platform Fee</span>
+                            <span className="font-medium">â‚¹{((appointment as any).platformFee)?.toFixed(2) || '0.00'}</span>
+                          </div>
+                        )}
+
+                        {/* Platform Fee (from payment object - fallback) */}
+                        {!((appointment as any).platformFee) && appointment.payment?.platformFee && appointment.payment.platformFee > 0 && (
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">Platform Fee</span>
+                            <span className="font-medium">â‚¹{appointment.payment.platformFee.toFixed(2)}</span>
+                          </div>
+                        )}
+
+                        <div className="border-t pt-2 mt-2">
+                          <div className="flex justify-between items-center font-semibold text-base">
+                            <span>Total Amount</span>
+                            <span className="text-foreground">â‚¹{((appointment as any).finalAmount || appointment.totalAmount)?.toFixed(2) || '0.00'}</span>
+                          </div>
+                        </div>
+
+                        {/* Payment Method (from appointment root) */}
+                        {(appointment as any).paymentMethod && (
+                          <div className="flex justify-between items-center py-2 px-3 bg-muted rounded-lg">
+                            <span className="text-sm font-medium text-foreground">Payment Method:</span>
+                            <span className="text-sm font-semibold text-foreground">{(appointment as any).paymentMethod}</span>
+                          </div>
+                        )}
+
+                        {/* Payment Status (from appointment root) */}
+                        {(appointment as any).paymentStatus && (
+                          <div className="flex justify-between items-center py-2 px-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
+                            <span className="text-sm font-medium text-purple-900 dark:text-purple-100">Payment Status:</span>
+                            <span className={`text-sm font-semibold capitalize ${(appointment as any).paymentStatus === 'completed' ? 'text-green-700 dark:text-green-300' :
+                              (appointment as any).paymentStatus === 'pending' ? 'text-yellow-700 dark:text-yellow-300' :
+                                'text-red-700 dark:text-red-300'
+                              }`}>
+                              {(appointment as any).paymentStatus}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Amount Paid (from appointment root) */}
+                        <div className="flex justify-between items-center py-2 px-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                          <span className="text-sm font-medium text-green-900 dark:text-green-100">Amount Paid:</span>
+                          <span className="text-sm font-semibold text-green-700 dark:text-green-300">
+                            â‚¹{paidAmount.toFixed(2)}
+                          </span>
+                        </div>
+
+                        {/* Amount Remaining (from appointment root) */}
+                        <div className="flex justify-between items-center py-2 px-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
+                          <span className="text-sm font-medium text-orange-900 dark:text-orange-100">Amount Remaining:</span>
+                          <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                            â‚¹{remainingAmount.toFixed(2)}
+                          </span>
+                        </div>
+
+                        {/* Amount Already Paid */}
+                        {(appointment.payment?.paid ?? 0) > 0 && (
+                          <div className="flex justify-between items-center text-foreground">
+                            <div className="flex items-center gap-1">
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              <span>Amount Paid {appointment.payment?.paymentMode === 'online' ? '(Online)' : ''}</span>
+                            </div>
+                            <span className="font-medium">â‚¹{(appointment.payment?.paid ?? 0).toFixed(2)}</span>
+                          </div>
+                        )}
+
+                        {/* Remaining Amount */}
+                        <div className="border-t pt-2 mt-2">
+                          <div className="flex justify-between items-center">
+                            <span className="font-semibold text-base">Amount to Collect</span>
+                            <span className="text-xl font-bold text-foreground">
+                              â‚¹{remainingAmount.toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Payment Collection Details */}
+                    <div className="bg-background p-4 rounded-lg border shadow-sm mt-4">
+                      <h4 className="text-sm font-semibold mb-3 text-foreground">Payment Collection Details</h4>
+
+                      {/* Debug Information - Remove this in production */}
+
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between items-center py-2 px-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                          <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Total Amount</span>
+                          <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
+                            â‚¹{((appointment as any).finalAmount || appointment.totalAmount || 0).toFixed(2)}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center py-2 px-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                          <span className="text-sm font-medium text-green-900 dark:text-green-100">Amount Paid</span>
+                          <span className="text-sm font-semibold text-green-700 dark:text-green-300">
+                            â‚¹{paidAmount.toFixed(2)}
+                          </span>
+                        </div>
+
+                        <div className="flex justify-between items-center py-2 px-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
+                          <span className="text-sm font-medium text-orange-900 dark:text-orange-100">Amount Remaining</span>
+                          <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                            â‚¹{remainingAmount.toFixed(2)}
+                          </span>
+                        </div>
+
+                        {/* Payment Status */}
+                        <div className={`flex justify-between items-center py-2 px-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg`}>
+                          <span className="text-sm font-medium text-purple-900 dark:text-purple-100">Payment Status</span>
+                          <span className={`text-sm font-semibold ${(overridePayment?.paymentStatus ?? (appointment as any).paymentStatus) === 'completed' ? 'text-green-700 dark:text-green-300' :
+                            (overridePayment?.paymentStatus ?? (appointment as any).paymentStatus) === 'pending' ? 'text-yellow-700 dark:text-yellow-300' :
+                              'text-red-700 dark:text-red-300'
+                            }`}>
+                            {/* Map backend payment status to user-friendly terms */}
+                            {(() => {
+                              const status = overridePayment?.paymentStatus ?? (appointment as any).paymentStatus;
+                              const amountPaid = Number(paidAmount || 0) || 0;
+                              const totalAmount = Number((appointment as any).finalAmount ?? appointment.totalAmount ?? 0) || 0;
+
+                              switch (status) {
+                                case 'completed': return 'PAID';
+                                case 'pending':
+                                  if (amountPaid > 0 && totalAmount > 0) {
+                                    return `PARTIAL (â‚¹${amountPaid.toFixed(2)})`;
+                                  }
+                                  return 'UNPAID';
+                                default: return status.toUpperCase();
+                              }
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Collect Payment Amount */}
+                    {remainingAmount > 0 && (
+                      <>
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Collecting Amount (Manual Entry)</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground font-medium">â‚¹</span>
+                            <Input
+                              type="number"
+                              value={paymentData.amount}
+                              onChange={(e) => {
+                                const value = parseFloat(e.target.value) || 0;
+                                // Allow any positive value for manual entry
+                                setPaymentData(prev => ({
+                                  ...prev,
+                                  amount: value >= 0 ? value : 0
+                                }));
+                              }}
+                              className="pl-7 text-lg font-semibold"
+                              min="0"
+                              step="0.01"
+                              placeholder="Enter amount to collect"
+                            />
+                          </div>
+                          <div className="flex justify-between items-center mt-1.5">
+                            <p className="text-xs text-foreground/80">
+                              Remaining Balance: â‚¹{remainingAmount.toFixed(2)}
+                            </p>
+                            {paymentData.amount !== remainingAmount && remainingAmount > 0 && (
+                              <button
+                                onClick={() => setPaymentData(prev => ({ ...prev, amount: remainingAmount }))}
+                                className="text-xs text-foreground font-medium hover:opacity-80"
+                              >
+                                Set to Remaining
+                              </button>
+                            )}
+                          </div>
+                          {paymentData.amount > remainingAmount && (
+                            <p className="text-xs text-foreground/80 mt-1 flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                              Amount exceeds remaining balance by â‚¹{(paymentData.amount - remainingAmount).toFixed(2)}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Payment Methods */}
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Payment Method</label>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            <button
+                              onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'cash' }))}
+                              className={`p-3 rounded-lg border-2 transition-all ${paymentData.paymentMethod === 'cash'
+                                ? 'border-foreground bg-muted'
+                                : 'border-muted hover:border-foreground/50'
+                                }`}
+                            >
+                              <Wallet className={`w-6 h-6 mx-auto mb-1 ${paymentData.paymentMethod === 'cash' ? 'text-foreground' : 'text-foreground/60'
+                                }`} />
+                              <p className="text-xs font-medium">Cash</p>
+                            </button>
+
+                            <button
+                              onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'card' }))}
+                              className={`p-3 rounded-lg border-2 transition-all ${paymentData.paymentMethod === 'card'
+                                ? 'border-foreground bg-muted'
+                                : 'border-muted hover:border-foreground/50'
+                                }`}
+                            >
+                              <CreditCard className={`w-6 h-6 mx-auto mb-1 ${paymentData.paymentMethod === 'card' ? 'text-foreground' : 'text-foreground/60'
+                                }`} />
+                              <p className="text-xs font-medium">Card</p>
+                            </button>
+
+                            <button
+                              onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'upi' }))}
+                              className={`p-3 rounded-lg border-2 transition-all ${paymentData.paymentMethod === 'upi'
+                                ? 'border-foreground bg-muted'
+                                : 'border-muted hover:border-foreground/50'
+                                }`}
+                            >
+                              <Smartphone className={`w-6 h-6 mx-auto mb-1 ${paymentData.paymentMethod === 'upi' ? 'text-foreground' : 'text-foreground/60'
+                                }`} />
+                              <p className="text-xs font-medium">UPI</p>
+                            </button>
+
+                            <button
+                              onClick={() => setPaymentData(prev => ({ ...prev, paymentMethod: 'netbanking' }))}
+                              className={`p-3 rounded-lg border-2 transition-all ${paymentData.paymentMethod === 'netbanking'
+                                ? 'border-foreground bg-muted'
+                                : 'border-muted hover:border-foreground/50'
+                                }`}
+                            >
+                              <svg className={`w-6 h-6 mx-auto mb-1 ${paymentData.paymentMethod === 'netbanking' ? 'text-foreground' : 'text-foreground/60'
+                                }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                              </svg>
+                              <p className="text-xs font-medium">Net Banking</p>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* UPI QR Code Section */}
+                        {paymentData.paymentMethod === 'upi' && (
+                          <div className="bg-muted p-4 rounded-lg border-2 border-dashed border-muted">
+                            <div className="flex flex-col items-center">
+                              <div className="bg-background p-3 rounded-lg shadow-md mb-3">
+                                {/* Placeholder for QR Code - You can integrate a QR code generator library */}
+                                <div className="w-48 h-48 bg-muted rounded flex items-center justify-center">
+                                  <div className="text-center">
+                                    <Smartphone className="w-12 h-12 mx-auto mb-2 text-foreground" />
+                                    <p className="text-xs text-foreground/80">QR Code</p>
+                                    <p className="text-xs text-foreground/80">Scan to Pay</p>
+                                  </div>
+                                </div>
+                              </div>
+                              <p className="text-sm font-medium text-center">Scan QR code to pay â‚¹{paymentData.amount.toFixed(2)}</p>
+                              <p className="text-xs text-foreground/80 mt-1">Or enter UPI ID manually</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Payment Notes */}
+                        <div>
+                          <label className="text-sm font-medium mb-2 block">Transaction Notes (Optional)</label>
+                          <Textarea
+                            placeholder="Add payment reference, transaction ID, or any notes..."
+                            value={paymentData.notes}
+                            onChange={(e) => setPaymentData(prev => ({
+                              ...prev,
+                              notes: e.target.value
+                            }))}
+                            rows={2}
+                            className="resize-none"
+                          />
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsCollectingPayment(false)}
+                            className="flex-1"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={handlePaymentSubmit}
+                            disabled={paymentData.amount <= 0 || isCollectingPaymentLoading}
+                            className="flex-1 bg-foreground hover:bg-foreground/90 text-background"
+                          >
+                            {isCollectingPaymentLoading ? (
+                              <>
+                                <svg className="w-4 h-4 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Confirm Payment â‚¹{paymentData.amount.toFixed(2)}
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Already Paid Message */}
+                    {remainingAmount <= 0 && (
+                      <div className="bg-muted p-4 rounded-lg border-2 border-muted">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-foreground rounded-full">
+                            <svg className="w-6 h-6 text-background" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-foreground">Payment Complete</p>
+                            <p className="text-sm text-foreground/80">Full payment of â‚¹{appointment.totalAmount?.toFixed(2)} has been received.</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
-            
-            {/* Payment History */}
-            <div className="bg-background p-4 rounded-lg border shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <History className="w-4 h-4" /> Payment History
-                </h4>
-                {displayPaymentHistory.length > 0 && (
-                  <span className="text-xs text-muted-foreground">{displayPaymentHistory.length} entr{displayPaymentHistory.length === 1 ? 'y' : 'ies'}</span>
+              )}
+
+              {/* Payment History */}
+              <div className="bg-background p-4 rounded-lg border shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <History className="w-4 h-4" /> Payment History
+                  </h4>
+                  {displayPaymentHistory.length > 0 && (
+                    <span className="text-xs text-muted-foreground">{displayPaymentHistory.length} entr{displayPaymentHistory.length === 1 ? 'y' : 'ies'}</span>
+                  )}
+                </div>
+
+                {displayPaymentHistory.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No payments recorded yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {displayPaymentHistory.map((p: any, idx: number) => {
+                      const when = p.paymentDate || p.date;
+                      const dateStr = when ? format(new Date(when), 'MMM d, yyyy h:mm a') : '';
+                      return (
+                        <div key={idx} className="flex items-start justify-between p-3 rounded-lg border bg-card/50">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-semibold text-foreground">â‚¹{Number(p.amount || 0).toFixed(2)}</span>
+                              <span className="text-xs text-muted-foreground">â€¢ {String(p.paymentMethod || 'cash').toUpperCase()}</span>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">{dateStr}</div>
+                            {(p.notes || p.transactionId) && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {p.notes && <span className="mr-2">{p.notes}</span>}
+                                {p.transactionId && <span className="font-mono">Txn: {p.transactionId}</span>}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
 
-              {displayPaymentHistory.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No payments recorded yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {displayPaymentHistory.map((p: any, idx: number) => {
-                    const when = p.paymentDate || p.date;
-                    const dateStr = when ? format(new Date(when), 'MMM d, yyyy h:mm a') : '';
-                    return (
-                      <div key={idx} className="flex items-start justify-between p-3 rounded-lg border bg-card/50">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-semibold text-foreground">₹{Number(p.amount || 0).toFixed(2)}</span>
-                            <span className="text-xs text-muted-foreground">• {String(p.paymentMethod || 'cash').toUpperCase()}</span>
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-0.5">{dateStr}</div>
-                          {(p.notes || p.transactionId) && (
-                            <div className="text-xs text-muted-foreground mt-1">
-                              {p.notes && <span className="mr-2">{p.notes}</span>}
-                              {p.transactionId && <span className="font-mono">Txn: {p.transactionId}</span>}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Client & Service Info */}
-            <div className="bg-gradient-to-br from-background/50 to-muted/20 p-3 sm:p-4 rounded-lg border">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-5">
-                  <div className="bg-background p-3 rounded-lg border shadow-sm">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <User className="h-5 w-5 text-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Client</p>
-                        <p className="text-lg font-semibold text-foreground">{appointment.clientName}</p>
-                      </div>
-                    </div>
+              <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Cancel Appointment</DialogTitle>
+                    <DialogDescription>Provide a reason to cancel this appointment.</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-3">
+                    <Label htmlFor="cancelReason">Reason</Label>
+                    <Textarea
+                      id="cancelReason"
+                      value={cancellationReason}
+                      onChange={(e) => setCancellationReason(e.target.value)}
+                      placeholder="Enter cancellation reason"
+                      rows={3}
+                    />
                   </div>
-                  
-                  {/* Show single service or multi-service header */}
-                  {!(appointment.isMultiService || (appointment.serviceItems && appointment.serviceItems.length > 1)) ? (
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setShowCancelDialog(false)} disabled={isStatusChanging}>Close</Button>
+                    <Button variant="destructive" onClick={handleConfirmCancel} disabled={isStatusChanging || !cancellationReason.trim()}>Confirm Cancel</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+              {/* Client & Service Info */}
+              <div className="bg-gradient-to-br from-background/50 to-muted/20 p-3 sm:p-4 rounded-lg border">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-5">
                     <div className="bg-background p-3 rounded-lg border shadow-sm">
                       <div className="flex items-center space-x-3">
                         <div className="p-2 bg-primary/10 rounded-lg">
-                          <Scissors className="h-5 w-5 text-foreground" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Service</p>
-                          <p className="text-lg font-semibold text-foreground">
-                            {appointment.serviceName || 'No service specified'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="bg-background p-3 rounded-lg border shadow-sm">
-                      <div className="flex items-center space-x-3 mb-3">
-                        <div className="p-2 bg-primary/10 rounded-lg">
-                          <ClipboardList className="h-5 w-5 text-foreground" />
+                          <User className="h-5 w-5 text-foreground" />
                         </div>
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Services</p>
-                          <p className="text-lg font-semibold text-foreground">
-                            Multi-Service ({appointment.serviceItems?.length || 0} Services)
-                          </p>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Client</p>
+                          <p className="text-lg font-semibold text-foreground">{appointment.clientName}</p>
                         </div>
                       </div>
-                      
-                      {/* Display all service items */}
-                      {appointment.serviceItems && appointment.serviceItems.length > 0 && (
-                        <div className="space-y-2 mt-3">
-                          {appointment.serviceItems.map((item: ServiceItem, index: number) => (
-                            <div key={item._id || index} className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-muted">
-                              <div className="flex-1">
-                                <div className="font-medium text-sm">{item.serviceName}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {item.staffName} • {item.startTime} - {item.endTime} ({item.duration} min)
+                    </div>
+
+                    {/* Show single service or multi-service header */}
+                    {!(appointment.isMultiService || (appointment.serviceItems && appointment.serviceItems.length > 1)) ? (
+                      <div className="bg-background p-3 rounded-lg border shadow-sm">
+                        <div className="flex items-center space-x-3">
+                          <div className="p-2 bg-primary/10 rounded-lg">
+                            <Scissors className="h-5 w-5 text-foreground" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Service</p>
+                            <p className="text-lg font-semibold text-foreground">
+                              {appointment.serviceName || 'No service specified'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="bg-background p-3 rounded-lg border shadow-sm">
+                        <div className="flex items-center space-x-3 mb-3">
+                          <div className="p-2 bg-primary/10 rounded-lg">
+                            <ClipboardList className="h-5 w-5 text-foreground" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Services</p>
+                            <p className="text-lg font-semibold text-foreground">
+                              Multi-Service ({appointment.serviceItems?.length || 0} Services)
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Display all service items */}
+                        {appointment.serviceItems && appointment.serviceItems.length > 0 && (
+                          <div className="space-y-2 mt-3">
+                            {appointment.serviceItems.map((item: ServiceItem, index: number) => (
+                              <div key={item._id || index} className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-muted">
+                                <div className="flex-1">
+                                  <div className="font-medium text-sm">{item.serviceName}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {item.staffName} â€¢ {item.startTime} - {item.endTime} ({item.duration} min)
+                                  </div>
+                                </div>
+                                <div className="text-right ml-2">
+                                  <div className="font-semibold text-sm">â‚¹{item.amount?.toFixed(2) || '0.00'}</div>
                                 </div>
                               </div>
-                              <div className="text-right ml-2">
-                                <div className="font-semibold text-sm">₹{item.amount?.toFixed(2) || '0.00'}</div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  <div className="bg-background p-3 rounded-lg border shadow-sm">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <UserCheck className="h-5 w-5 text-foreground" />
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Staff</p>
-                        <p className="text-lg font-semibold text-foreground">{appointment.staffName}</p>
+                    )}
+
+                    <div className="bg-background p-3 rounded-lg border shadow-sm">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <UserCheck className="h-5 w-5 text-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Staff</p>
+                          <p className="text-lg font-semibold text-foreground">{appointment.staffName}</p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="space-y-5">
-                  <div className="bg-background p-3 rounded-lg border shadow-sm">
-                    <div className="flex items-center space-x-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <Calendar className="h-5 w-5 text-foreground" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Date & Time</p>
-                        <div className="space-y-1">
-                          <p className="text-lg font-semibold text-foreground">
-                            {format(new Date(appointment.date), 'EEEE, MMMM d, yyyy')}
-                          </p>
-                          <div className="flex items-center text-foreground/80">
-                            <Clock className="h-4 w-4 mr-1.5 text-foreground" />
-                            <span>{appointment.startTime} - {appointment.endTime}</span>
-                            <span className="ml-2 text-xs text-muted-foreground">({appointment.duration} min)</span>
+                  <div className="space-y-5">
+                    <div className="bg-background p-3 rounded-lg border shadow-sm">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <Calendar className="h-5 w-5 text-foreground" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Date & Time</p>
+                          <div className="space-y-1">
+                            <p className="text-lg font-semibold text-foreground">
+                              {format(new Date(appointment.date), 'EEEE, MMMM d, yyyy')}
+                            </p>
+                            <div className="flex items-center text-foreground/80">
+                              <Clock className="h-4 w-4 mr-1.5 text-foreground" />
+                              <span>{appointment.startTime} - {appointment.endTime}</span>
+                              <span className="ml-2 text-xs text-muted-foreground">({appointment.duration} min)</span>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="bg-background p-3 rounded-lg border shadow-sm">
-                    <div className="flex items-center space-x-3">
-                      <div className={`p-2 rounded-lg ${
-                        appointment.status === 'confirmed' ? 'bg-blue-100 dark:bg-blue-900/30' :
-                        appointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
-                        appointment.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30' : 
-                        'bg-red-100 dark:bg-red-900/30'
-                      }`}>
-                        <div className={`h-5 w-5 rounded-full flex items-center justify-center ${
-                          appointment.status === 'confirmed' ? 'text-blue-600 dark:text-blue-400' :
-                          appointment.status === 'pending' ? 'text-yellow-600 dark:text-yellow-400' :
-                          appointment.status === 'completed' ? 'text-green-600 dark:text-green-400' : 
-                          'text-red-600 dark:text-red-400'
-                        }`}>
-                          <div className={`h-2.5 w-2.5 rounded-full ${
-                            appointment.status === 'confirmed' ? 'bg-blue-500' :
-                            appointment.status === 'pending' ? 'bg-yellow-500' :
-                            appointment.status === 'completed' ? 'bg-green-500' : 'bg-red-500'
-                          }`} />
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Appointment Status</p>
-                        <div className="flex items-center space-x-2">
-                          <span className="text-lg font-semibold text-foreground capitalize">
-                            {appointment.status.replace(/-/g, ' ')}
-                          </span>
-                          <Badge 
-                            variant="outline" 
-                            className={`px-2 py-0.5 text-xs font-medium ${
-                              appointment.status === 'completed' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
-                              appointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200' :
-                              appointment.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200' :
-                              'bg-gray-100 dark:bg-gray-900/50 text-gray-800 dark:text-gray-200'
-                            } border-0`}
-                          >
-                            {appointment.status.toUpperCase()}
-                          </Badge>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {appointment.notes && (
+
                     <div className="bg-background p-3 rounded-lg border shadow-sm">
-                      <div className="flex items-start space-x-3">
-                        <div className="p-2 bg-primary/10 rounded-lg mt-0.5">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground">
-                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
-                            <polyline points="14 2 14 8 20 8"></polyline>
-                            <rect width="8" height="2" x="8" y="12" rx="1"></rect>
-                            <rect width="8" height="2" x="8" y="16" rx="1"></rect>
-                            <path d="M10 6h1v4"></path>
-                            <path d="M14 6h1v4"></path>
-                            <path d="M10 9h1v4"></path>
-                          </svg>
+                      <div className="flex items-center space-x-3">
+                        <div className={`p-2 rounded-lg ${(appointment.status === 'confirmed' || appointment.status === 'in_progress') ? 'bg-blue-100 dark:bg-blue-900/30' :
+                          appointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
+                            appointment.status === 'partially-completed' ? 'bg-indigo-100 dark:bg-indigo-900/30' :
+                              appointment.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30' :
+                                appointment.status === 'completed without payment' ? 'bg-green-100 dark:bg-green-900/30' :
+                                  appointment.status === 'no_show' ? 'bg-purple-100 dark:bg-purple-900/30' :
+                                    'bg-red-100 dark:bg-red-900/30'
+                          }`}>
+                          <div className={`h-5 w-5 rounded-full flex items-center justify-center ${(appointment.status === 'confirmed' || appointment.status === 'in_progress') ? 'text-blue-600 dark:text-blue-400' :
+                            appointment.status === 'pending' ? 'text-yellow-600 dark:text-yellow-400' :
+                              appointment.status === 'partially-completed' ? 'text-indigo-600 dark:text-indigo-400' :
+                                appointment.status === 'completed' ? 'text-green-600 dark:text-green-400' :
+                                  appointment.status === 'completed without payment' ? 'text-green-600 dark:text-green-400' :
+                                    appointment.status === 'no_show' ? 'text-purple-600 dark:text-purple-400' :
+                                      'text-red-600 dark:text-red-400'
+                            }`}>
+                            <div className={`h-2.5 w-2.5 rounded-full ${(appointment.status === 'confirmed' || appointment.status === 'in_progress') ? 'bg-blue-500' :
+                              appointment.status === 'pending' ? 'bg-yellow-500' :
+                                appointment.status === 'partially-completed' ? 'bg-indigo-500' :
+                                  appointment.status === 'completed' ? 'bg-green-500' :
+                                    appointment.status === 'completed without payment' ? 'bg-green-500' :
+                                      appointment.status === 'no_show' ? 'bg-purple-500' : 'bg-red-500'
+                              }`} />
+                          </div>
                         </div>
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Notes</p>
-                          <p className="text-foreground/90">{appointment.notes}</p>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Appointment Status</p>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-lg font-semibold text-foreground capitalize">
+                              {appointment.status.replace(/-/g, ' ')}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className={`px-2 py-0.5 text-xs font-medium ${appointment.status === 'completed' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
+                                appointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200' :
+                                  appointment.status === 'partially-completed' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
+                                    appointment.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200' :
+                                      appointment.status === 'confirmed' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
+                                        appointment.status === 'in_progress' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
+                                          appointment.status === 'completed without payment' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
+                                            appointment.status === 'no_show' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200' :
+                                              'bg-gray-100 dark:bg-gray-900/50 text-gray-800 dark:text-gray-200'
+                                } border-0`}
+                            >
+                              {appointment.status.toUpperCase()}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  )}
-                </div>
-              </div>
-            </div>
 
-            {/* Payment Details */}
-            <div className="border-t pt-4">
-              <h4 className="text-sm font-medium mb-3">Payment Details</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Service Amount:</span>
-                  <span>₹{Number(((liveAppointment as any)?.amount ?? appointment.amount) || 0).toFixed(2)}</span>
-                </div>
-                
-                {appointment.discount && appointment.discount > 0 && (
-                  <div className="flex justify-between text-green-600 dark:text-green-400">
-                    <span>Discount:</span>
-                    <span>-₹{appointment.discount.toFixed(2)}</span>
+                    {appointment.notes && (
+                      <div className="bg-background p-3 rounded-lg border shadow-sm">
+                        <div className="flex items-start space-x-3">
+                          <div className="p-2 bg-primary/10 rounded-lg mt-0.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-foreground">
+                              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                              <polyline points="14 2 14 8 20 8"></polyline>
+                              <rect width="8" height="2" x="8" y="12" rx="1"></rect>
+                              <rect width="8" height="2" x="8" y="16" rx="1"></rect>
+                              <path d="M10 6h1v4"></path>
+                              <path d="M14 6h1v4"></path>
+                              <path d="M10 9h1v4"></path>
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Notes</p>
+                            <p className="text-foreground/90">{appointment.notes}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-                
-                <div className="flex justify-between font-medium pt-2 border-t mt-2">
-                  <span>Total Amount:</span>
-                  <span>₹{Number(totalAmount || (liveAppointment as any)?.totalAmount || appointment.totalAmount || 0).toFixed(2)}</span>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount Paid:</span>
-                  <span>₹{paidAmount.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Amount Remaining:</span>
-                  <span>₹{remainingAmount.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm mt-2">
-                  <span className="text-muted-foreground">Payment Status:</span>
-                  <span className="capitalize">
-                    {(() => {
-                      const status = (overridePayment?.paymentStatus ?? (liveAppointment as any)?.paymentStatus ?? 'pending') as string;
-                      if (status === 'completed') return 'paid';
-                      if (status === 'pending') return paidAmount > 0 ? `partial (₹${paidAmount.toFixed(2)})` : 'unpaid';
-                      if (status === 'partial') return `partial (₹${paidAmount.toFixed(2)})`;
-                      return status;
-                    })()}
-                  </span>
                 </div>
               </div>
-            </div>
-            
-            {/* Actions */}
-            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
-              <Button variant="outline" onClick={onClose}>
-                Close
-              </Button>
-              <div className="flex flex-wrap gap-2">
-                {/* Invoice Button */}
-                <Button 
-                  variant="outline"
-                  className="gap-2 bg-white hover:bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
-                  onClick={() => {
-                    // TODO: Implement invoice generation
-                    console.log('Generate invoice for', appointment._id);
-                  }}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
-                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <rect width="8" height="2" x="8" y="12" rx="1"></rect>
-                    <rect width="8" height="2" x="8" y="16" rx="1"></rect>
-                    <path d="M10 6h1v4"></path>
-                    <path d="M14 6h1v4"></path>
-                    <path d="M10 9h1v4"></path>
-                  </svg>
-                  Invoice
-                </Button>
 
-                {/* Collect Payment Button */}
-                {/* {remainingAmount > 0 && (
+              {/* Payment Details */}
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium mb-3">Payment Details</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Service Amount:</span>
+                    <span>â‚¹{Number(((liveAppointment as any)?.amount ?? appointment.amount) || 0).toFixed(2)}</span>
+                  </div>
+
+                  {appointment.discount && appointment.discount > 0 && (
+                    <div className="flex justify-between text-green-600 dark:text-green-400">
+                      <span>Discount:</span>
+                      <span>-â‚¹{appointment.discount.toFixed(2)}</span>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between font-medium pt-2 border-t mt-2">
+                    <span>Total Amount:</span>
+                    <span>â‚¹{Number(totalAmount || (liveAppointment as any)?.totalAmount || appointment.totalAmount || 0).toFixed(2)}</span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Amount Paid:</span>
+                    <span>â‚¹{paidAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Amount Remaining:</span>
+                    <span>â‚¹{remainingAmount.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm mt-2">
+                    <span className="text-muted-foreground">Payment Status:</span>
+                    <span className="capitalize">
+                      {(() => {
+                        const status = (overridePayment?.paymentStatus ?? (liveAppointment as any)?.paymentStatus ?? 'pending') as string;
+                        if (status === 'completed') return 'paid';
+                        if (status === 'pending') return paidAmount > 0 ? `partial (â‚¹${paidAmount.toFixed(2)})` : 'unpaid';
+                        if (status === 'partial') return `partial (â‚¹${paidAmount.toFixed(2)})`;
+                        return status;
+                      })()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
+                <Button variant="outline" onClick={onClose}>
+                  Close
+                </Button>
+                <div className="flex flex-wrap gap-2">
+                  {/* Invoice Button */}
+                  <Button
+                    variant="outline"
+                    className="gap-2 bg-white hover:bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
+                    onClick={() => {
+                      // TODO: Implement invoice generation
+                      console.log('Generate invoice for', appointment._id);
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <rect width="8" height="2" x="8" y="12" rx="1"></rect>
+                      <rect width="8" height="2" x="8" y="16" rx="1"></rect>
+                      <path d="M10 6h1v4"></path>
+                      <path d="M14 6h1v4"></path>
+                      <path d="M10 9h1v4"></path>
+                    </svg>
+                    Invoice
+                  </Button>
+
+                  {/* Collect Payment Button */}
+                  {/* {remainingAmount > 0 && (
                   <Button 
                     variant="outline"
                     className="gap-2 bg-green-50 hover:bg-green-100 text-green-700 border-green-200 dark:bg-green-900/20 dark:hover:bg-green-900/30 dark:text-green-300 dark:border-green-800"
@@ -1654,8 +1700,8 @@ export function AppointmentDetailView({
                   </Button>
                 )} */}
 
-                {renderActionButtons()}
-              </div>
+                  {renderActionButtons()}
+                </div>
               </div>
             </TabsContent>
 
@@ -1668,11 +1714,10 @@ export function AppointmentDetailView({
                     <button
                       key={filter}
                       onClick={() => setActiveHistoryFilter(filter as any)}
-                      className={`px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap ${
-                        activeHistoryFilter === filter
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:bg-muted'
-                      }`}
+                      className={`px-3 py-1.5 text-sm font-medium rounded-md whitespace-nowrap ${activeHistoryFilter === filter
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-muted'
+                        }`}
                     >
                       {filter.charAt(0).toUpperCase() + filter.slice(1)}
                       {filter !== 'all' && (
@@ -1705,8 +1750,8 @@ export function AppointmentDetailView({
                 ) : (
                   <div className="space-y-4">
                     {clientHistory.map((appt) => (
-                      <div 
-                        key={appt.id} 
+                      <div
+                        key={appt.id}
                         className="p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
                         onClick={() => {
                           if (onOpenAppointment) {
@@ -1726,7 +1771,7 @@ export function AppointmentDetailView({
                               {appt.service}
                             </h4>
                             <p className="text-sm text-muted-foreground">
-                              {format(appt.date, 'MMM d, yyyy')} • {appt.startTime}
+                              {format(appt.date, 'MMM d, yyyy')} â€¢ {appt.startTime}
                             </p>
                           </div>
                           <Badge variant={appt.status === 'completed' ? 'default' : 'secondary'}>
@@ -1839,8 +1884,8 @@ export function AppointmentDetailView({
             </div>
           </div>
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setShowCancelDialog(false);
                 setCancellationReason('');
@@ -1849,7 +1894,7 @@ export function AppointmentDetailView({
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleConfirmCancel}
               disabled={isStatusChanging || !cancellationReason.trim()}
               variant="destructive"

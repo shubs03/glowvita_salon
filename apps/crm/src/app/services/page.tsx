@@ -60,7 +60,8 @@ import {
   useDeleteVendorServicesMutation,
   useGetServicesQuery,
   useCreateServiceMutation,
-  useGetStaffQuery
+  useGetStaffQuery,
+  useGetSuperDataQuery
 } from "@repo/store/api";
 import Image from "next/image";
 import { Skeleton } from "@repo/ui/skeleton";
@@ -286,6 +287,15 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   } = useGetServicesQuery(undefined);
 
   const { data: staffList = [], isLoading: staffLoading } = useGetStaffQuery(VENDOR_ID, { skip: !VENDOR_ID });
+
+  // Fetch duration values from dropdown management
+  const { data: superData = [] } = useGetSuperDataQuery(undefined);
+  const durationValues = useMemo(() => {
+    return superData.filter((item: any) => item.type === 'duration').map((item: any) => ({
+      value: item.name,
+      label: `${item.name} minutes`
+    }));
+  }, [superData]);
 
   const [createVendorServices, { isLoading: isCreating }] = useCreateVendorServicesMutation();
   const [updateVendorServices, { isLoading: isUpdating }] = useUpdateVendorServicesMutation();
@@ -590,14 +600,25 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
         </div>
         <div className="space-y-2">
           <Label htmlFor="duration">Duration (minutes)</Label>
-          <Input
-            id="duration"
-            name="duration"
-            type="number"
-            placeholder="e.g., 60"
-            value={formData.duration || ""}
-            onChange={handleInputChange}
-          />
+          <Select
+            value={String(formData.duration || "")}
+            onValueChange={(value) => handleSelectChange("duration", value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select duration" />
+            </SelectTrigger>
+            <SelectContent>
+              {durationValues.length > 0 ? (
+                durationValues.map((duration: any) => (
+                  <SelectItem key={duration.value} value={duration.value}>
+                    {duration.label}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="60">60 minutes (default)</SelectItem>
+              )}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="gender">Gender</Label>

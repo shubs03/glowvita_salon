@@ -3,22 +3,7 @@ import { Button } from "@repo/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Calendar, Clock, Scissors, User, DollarSign, Info, X, Edit, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-
-type Appointment = {
-  _id?: string;
-  clientName: string;
-  serviceName: string;
-  staffName: string;
-  date: Date | string;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  amount: number;
-  discount: number;
-  totalAmount: number;
-  status: string;
-  notes?: string;
-};
+import { Appointment, ServiceItem } from '../../../../../../packages/types/src/appointment';
 
 interface AppointmentDetailCardProps {
   appointment: Appointment;
@@ -96,18 +81,45 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-500 flex items-center">
               <User className="h-4 w-4 mr-2" />
-              Service & Staff
+              {appointment.serviceItems?.length ? 'Services & Staff' : 'Service & Staff'}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center text-sm">
-              <Scissors className="h-4 w-4 mr-2 text-gray-400" />
-              {appointment.serviceName}
-            </div>
-            <div className="flex items-center text-sm mt-2">
-              <User className="h-4 w-4 mr-2 text-gray-400" />
-              {appointment.staffName}
-            </div>
+          <CardContent className="space-y-4">
+            {appointment.serviceItems?.length ? (
+              <div className="space-y-4">
+                {appointment.serviceItems.map((item: ServiceItem, index: number) => (
+                  <div key={item._id || index} className="border-b pb-3 last:border-b-0 last:pb-0 last:mb-0">
+                    <div className="flex items-center text-sm">
+                      <Scissors className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                      <div>
+                        <div className="font-medium">{item.serviceName}</div>
+                        <div className="text-gray-600 text-xs mt-1">
+                          {item.startTime} - {item.endTime} • {item.duration} min
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center text-sm mt-2 ml-6">
+                      <User className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
+                      <span className="text-gray-700">{item.staffName}</span>
+                    </div>
+                    <div className="text-right text-sm font-medium mt-1">
+                      ₹{item.amount.toFixed(2)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center text-sm">
+                  <Scissors className="h-4 w-4 mr-2 text-gray-400" />
+                  {appointment.serviceName}
+                </div>
+                <div className="flex items-center text-sm mt-2">
+                  <User className="h-4 w-4 mr-2 text-gray-400" />
+                  {appointment.staffName}
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 

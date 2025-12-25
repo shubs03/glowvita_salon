@@ -17,47 +17,14 @@ import { startOfDay, endOfDay } from 'date-fns';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import { AppointmentDetailCard } from './components/AppointmentDetailCard';
+import { Appointment, AppointmentStatus } from '../../../../../packages/types/src/appointment';
 
 const NewAppointmentForm = dynamic(
   () => import('../calendar/components/NewAppointmentForm'),
   { ssr: false }
 );
 
-type Appointment = {
-  _id?: string;
-  id?: string;
-  client: string;
-  clientName: string;
-  service: string;
-  serviceName: string;
-  staff: string;
-  staffName: string;
-  date: Date | string;
-  startTime: string;
-  endTime: string;
-  duration: number;
-  notes?: string;
-  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
-  amount: number;
-  discount: number;
-  tax?: number;
-  totalAmount: number;
-  paymentStatus?: string;
-  paymentMethod?: string;
-  platformFee?: number;
-  serviceTax?: number;
-  discountAmount?: number;
-  finalAmount?: number;
-  payment?: {
-    paid?: number;
-    paymentMode?: string;
-    paymentStatus?: string;
-    paymentMethod?: string;
-    [key: string]: any;
-  };
-  createdAt?: string;
-  updatedAt?: string;
-};
+
 
 export default function AppointmentsPage() {
   const dispatch = useAppDispatch();
@@ -120,7 +87,7 @@ export default function AppointmentsPage() {
     return appointments.filter(appt => 
       (appt.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
        appt.service?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (statusFilter === 'all' || appt.status === statusFilter)
+      (statusFilter === 'all' || appt.status === statusFilter || (statusFilter === 'completed without payment' && appt.status === 'completed without payment'))
     );
   }, [appointments, searchTerm, statusFilter]);
 
@@ -235,6 +202,10 @@ export default function AppointmentsPage() {
 
   // Format status for display
   const formatStatus = (status: string) => {
+    // Handle the special case for 'completed without payment'
+    if (status === 'completed without payment') {
+      return 'Completed Without Payment';
+    }
     return status.split('_').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
@@ -280,7 +251,7 @@ export default function AppointmentsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
-                  {appointments.filter(a => a.status === 'completed').length}
+                  {appointments.filter(a => a.status === 'completed' || a.status === 'completed without payment').length}
                 </div>
                 <p className="text-xs text-muted-foreground">Successfully completed</p>
               </CardContent>
@@ -321,6 +292,7 @@ export default function AppointmentsPage() {
                   <SelectItem value="confirmed">Confirmed</SelectItem>
                   <SelectItem value="in_progress">In Progress</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="completed without payment">Completed without payment</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
@@ -339,7 +311,7 @@ export default function AppointmentsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Client</TableHead>
-                        <TableHead>Service</TableHead>
+                        <TableHead>Services</TableHead>
                         <TableHead>Staff</TableHead>
                         <TableHead>Date & Time</TableHead>
                         <TableHead>Duration</TableHead>
@@ -385,9 +357,44 @@ export default function AppointmentsPage() {
                           
                           return (
                           <TableRow key={appointment._id}>
-                            <TableCell className="font-medium">{appointment.clientName}</TableCell>
-                            <TableCell>{appointment.serviceName}</TableCell>
-                            <TableCell>{appointment.staffName}</TableCell>
+                            <TableCell className="font-medium">
+                              {appointment.clientName}
+                              <div className="text-xs text-muted-foreground">
+                                {appointment.clientPhone || 'No phone'}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {appointment.serviceItems?.length > 0 ? (
+                                <div className="space-y-1">
+                                  {appointment.serviceItems.map((item: any, idx: number) => (
+                                    <div key={idx} className="text-sm">
+                                      {item.serviceName}
+                                      {appointment.serviceItems.length > 1 && ` (${item.duration} min)`}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-sm">
+                                  {appointment.serviceName}
+                                  {appointment.duration && ` (${appointment.duration} min)`}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {appointment.serviceItems?.length > 0 ? (
+                                <div className="space-y-1">
+                                  {appointment.serviceItems.map((item: any, idx: number) => (
+                                    <div key={idx} className="text-sm">
+                                      {item.staffName}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-sm">
+                                  {appointment.staffName}
+                                </div>
+                              )}
+                            </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <CalendarCheck className="h-4 w-4 text-gray-500" />
@@ -445,6 +452,7 @@ export default function AppointmentsPage() {
                               <div className="flex items-center gap-2">
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                   appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                  appointment.status === 'completed without payment' ? 'bg-orange-100 text-orange-800' :
                                   appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
                                   appointment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                                   appointment.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
@@ -576,7 +584,10 @@ export default function AppointmentsPage() {
               </div>
             ) : (
               <NewAppointmentForm
-                defaultValues={selectedAppointment || undefined}
+                defaultValues={selectedAppointment ? {
+                  ...selectedAppointment,
+                  status: selectedAppointment.status as 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'partially-completed' | 'completed without payment' | 'cancelled' | 'no_show' | undefined
+                } : undefined}
                 isEditing={modalType === 'edit'}
                 onSubmit={handleFormSubmit}
                 onCancel={handleCloseModal}
