@@ -142,6 +142,7 @@ export const glowvitaApi = createApi({
     "PublicVendorProducts", "WorkingHours", "ClientOrder","Patient","Appointment",
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder","DoctorReviews",
+    "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport", "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport"
   ],
 
   endpoints: (builder) => ({
@@ -1032,6 +1033,131 @@ export const glowvitaApi = createApi({
       transformResponse: (response) => (response && response.success ? response.data || [] : []),
     }),
 
+    // Admin Dashboard Endpoint
+    getAdminDashboardStats: builder.query({
+      query: (params) => ({ 
+        url: "/admin/dashboard", 
+        method: "GET",
+        params: params || {}
+      }),
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    // Booking Summary Reports Endpoints
+    getSellingServicesReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/booking-summary/selling-services",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["SellingServicesReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    getTotalBookingsReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/booking-summary/total-bookings",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["TotalBookingsReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    getCompletedBookingsReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/booking-summary/completed-bookings",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["CompletedBookingsReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    getCancellationReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/booking-summary/cancellation",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["CancellationReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    getSalesBySalonReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/booking-summary/sales-by-salon",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["SalesBySalonReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    getSalesByProductsReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/booking-summary/sales-by-products",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["SalesByProductsReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    // Consolidated Sales Report
+    getConsolidatedSalesReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/Financial-Reports/salesreport",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["ConsolidatedSalesReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+    
+    // Subscription Report
+    getSubscriptionReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/Financial-Reports/subscription-report",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["SubscriptionReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+    
+    // Marketing Campaign Report
+    getMarketingCampaignReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/marketing-reports/campaigns",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["MarketingCampaignReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    // Sales by Brand Report
+    getSalesByBrandReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/product-reports/sales-by-brand",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["SalesByBrandReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    // Sales by Category Report
+    getSalesByCategoryReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/product-reports/sales-by-category",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["SalesByCategoryReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
     // Admin Product Categories 
 
     getAdminProductCategories: builder.query({
@@ -1967,6 +2093,18 @@ export const {
   // useUpdateProductStatusMutation,  // Removed old combined product approval hook
   useGetAdminClientsQuery,
   useGetAdminUsersQuery,
+  useGetAdminDashboardStatsQuery,
+  useGetSellingServicesReportQuery,
+  useGetTotalBookingsReportQuery,
+  useGetCompletedBookingsReportQuery,
+  useGetCancellationReportQuery,
+  useGetSalesBySalonReportQuery,
+  useGetSalesByProductsReportQuery,
+  useGetSalesByBrandReportQuery,
+  useGetSalesByCategoryReportQuery,
+  useGetConsolidatedSalesReportQuery,
+  useGetSubscriptionReportQuery,
+  useGetMarketingCampaignReportQuery,
 
   // Vendor Product Approval Hooks
   useGetVendorProductApprovalsQuery,
