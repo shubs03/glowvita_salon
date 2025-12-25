@@ -2830,8 +2830,6 @@ export const {
   useGetUniqueBrandsQuery,
   useGetUniqueCategoriesQuery,
   
-  // Payment Collection Hook
-  useCollectPaymentMutation,  
   // Payment Collections Hook
   useGetPaymentCollectionsQuery,
   useGetSupplierProductReviewsReportQuery,
