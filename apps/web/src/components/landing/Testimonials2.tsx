@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 
 const Testimonials2 = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(true);
 
   const testimonials = [
     {
@@ -41,100 +42,92 @@ const Testimonials2 = () => {
     setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
   };
 
+  // Auto-rotate testimonials
+  useEffect(() => {
+    if (!isAutoPlaying) return;
+    
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % testimonials.length);
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [isAutoPlaying]);
+
   return (
-    <section className="py-16 px-6 lg:px-8 max-w-6xl mx-auto bg-background">
+    <section className="py-16 px-6 lg:px-8 max-w-7xl mx-auto bg-background pb-24">
       {/* Section Header */}
-      <div className="mb-12">
+      <div className="mb-12 text-start">
         <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
           What Our Customers Say
         </h2>
         <p className="text-muted-foreground mt-3 max-w-2xl text-sm">
-          Real experiences from our valued customers
+          Real experiences from our valued customers 
         </p>
       </div>
 
       {/* Testimonials Container */}
-      <div className="relative">
-        {/* Compact Purple Background Card */}
-        <div className="bg-gradient-to-br from-primary via-primary to-primary/90 rounded-2xl p-6 md:p-8 shadow-xl relative overflow-hidden">
+      <div className="relative max-w-6xl mx-auto">
+        {/* Static Background Card */}
+        <div className="bg-gradient-to-br from-primary/80 via-primary/90 to-primary/70 rounded-3xl p-10 md:p-16 shadow-2xl relative overflow-visible z-0 border border-primary/20">
+
+        <p className="text-center text-primary-foreground/90 font-serif text-lg md:text-xl italic mb-6 max-w-2xl mx-auto">
+          Discover beauty experiences tailored just for you. Our platform connects you with premium salons and skilled professionals who prioritize your satisfaction.
+        </p>
+
           {/* Decorative Elements */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-primary-foreground/5 rounded-full -translate-y-16 translate-x-16"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary-foreground/5 rounded-full translate-y-12 -translate-x-12"></div>
+          <div className="absolute top-0 right-0 w-40 h-40 bg-primary-foreground/10 rounded-full -translate-y-20 translate-x-20 blur-xl"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary-foreground/10 rounded-full translate-y-16 -translate-x-16 blur-xl"></div>
+          <div className="absolute top-1/3 left-1/4 w-24 h-24 bg-primary-foreground/5 rounded-full blur-xl"></div>
 
-          {/* Testimonial Card */}
-          <div className="bg-background rounded-xl p-6 md:p-8 shadow-2xl relative">
-            {/* Quote Icon */}
-            <div className="absolute -top-3 -left-3 w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-lg">
-              <Quote className="w-5 h-5 text-primary-foreground" />
-            </div>
+          {/* Animated Testimonial Card - positioned to extend outside the outer card */}
+          <div className="relative z-10 -mt-30 -mb-24 transition-all duration-700 ease-in-out">
+            <div className="bg-background rounded-2xl p-6 md:p-10 shadow-2xl relative transform  transition-transform duration-300">
+              {/* Quote Icon */}
+              <div className="absolute -top-5 -left-5 w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-xl z-20">
+                <Quote className="w-5 h-5 text-primary-foreground" />
+              </div>
 
-            {/* Content */}
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              {/* Profile Section */}
-              <div className="flex-shrink-0 text-center md:text-left">
-                <div className="relative inline-block">
-                  <div className="w-20 h-20 rounded-full overflow-hidden ring-4 ring-primary/20 shadow-lg">
-                    <img
-                      src={testimonials[currentIndex].image}
-                      alt={testimonials[currentIndex].name}
-                      className="w-full h-full object-cover"
-                    />
+              <div className="absolute -bottom-5 -right-5 w-12 h-12 bg-primary rounded-full flex items-center justify-center shadow-xl z-20">
+                <Quote className="w-5 h-5 text-primary-foreground" />
+              </div>
+
+              {/* Content */}
+              <div className="flex flex-col md:flex-row items-center gap-8 pt-6">
+                {/* Profile Section */}
+                <div className="flex-shrink-0 text-center md:text-left">
+                  <div className="relative inline-block">
+                    <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-primary/30 shadow-xl mx-auto md:mx-0">
+                      <img
+                        src={testimonials[currentIndex].image}
+                        alt={testimonials[currentIndex].name}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+
                   </div>
-                  <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full border-2 border-background"></div>
+                  <h4 className="text-xl font-bold text-foreground mt-4">
+                    {testimonials[currentIndex].name}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    {testimonials[currentIndex].role}
+                  </p>
                 </div>
-                <h4 className="text-lg font-bold text-foreground mt-3">
-                  {testimonials[currentIndex].name}
-                </h4>
-                <p className="text-xs text-muted-foreground">
-                  {testimonials[currentIndex].role}
-                </p>
-              </div>
 
-              {/* Divider for Desktop */}
-              <div className="hidden md:block w-px h-24 bg-border"></div>
+                {/* Divider for Desktop */}
+                <div className="hidden md:block w-px h-28 bg-gradient-to-b from-transparent via-primary/30 to-transparent"></div>
 
-              {/* Text Content */}
-              <div className="flex-1">
-                <p className="text-muted-foreground text-sm md:text-base leading-relaxed italic">
-                  "{testimonials[currentIndex].text}"
-                </p>
+                {/* Text Content */}
+                <div className="flex-1 text-center md:text-left">
+                  <p className="text-muted-foreground text-base md:text-lg leading-relaxed italic">
+                    "{testimonials[currentIndex].text}"
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Compact Pagination */}
-          <div className="flex justify-center items-center gap-3 mt-5">
-            <button
-              onClick={prevTestimonial}
-              className="w-8 h-8 bg-primary-foreground/20 hover:bg-primary-foreground/30 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-sm"
-              aria-label="Previous testimonial"
-            >
-              <ChevronLeft className="w-4 h-4 text-primary-foreground" />
-            </button>
 
-            <div className="flex gap-1.5">
-              {testimonials.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentIndex(index)}
-                  className={`h-1.5 rounded-full transition-all duration-300 ${
-                    index === currentIndex
-                      ? 'w-6 bg-primary-foreground'
-                      : 'w-1.5 bg-primary-foreground/40 hover:bg-primary-foreground/60'
-                  }`}
-                  aria-label={`Go to testimonial ${index + 1}`}
-                />
-              ))}
-            </div>
-
-            <button
-              onClick={nextTestimonial}
-              className="w-8 h-8 bg-primary-foreground/20 hover:bg-primary-foreground/30 rounded-full flex items-center justify-center transition-all duration-300 backdrop-blur-sm"
-              aria-label="Next testimonial"
-            >
-              <ChevronRight className="w-4 h-4 text-primary-foreground" />
-            </button>
-          </div>
         </div>
       </div>
     </section>
