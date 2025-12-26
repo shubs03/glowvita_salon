@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Search,
   MapPin,
@@ -7,12 +7,52 @@ import {
   Droplets,
   Star,
 } from "lucide-react";
+import { useGetPublicCategoriesQuery } from "@repo/store/services/api";
 
 const Hepurplection2 = () => {
   const [serviceName, setServiceName] = useState("");
   const [address, setAddress] = useState("");
 
-  const services = [
+  const { data: categoriesData, isLoading, error } = useGetPublicCategoriesQuery(undefined);
+
+  // Transform categories to match the marquee format
+  const categories = useMemo(() => {
+    if (!categoriesData?.categories || !Array.isArray(categoriesData.categories)) {
+      return [];
+    }
+
+    // Define icon mapping for common categories
+    const iconMap: Record<string, any> = {
+      "hair": Scissors,
+      "nail": Scissors,
+      "spa": Sparkles,
+      "makeup": Star,
+      "skin": Droplets,
+      "skincare": Droplets,
+      "beauty": Sparkles,
+    };
+
+    return categoriesData.categories.map((category: any) => {
+      const categoryName = category.name.toLowerCase();
+      
+      // Find an appropriate icon based on category name
+      let icon = Scissors; // default icon
+      for (const [key, iconComponent] of Object.entries(iconMap)) {
+        if (categoryName.includes(key)) {
+          icon = iconComponent;
+          break;
+        }
+      }
+      
+      return {
+        icon,
+        label: category.name,
+      };
+    });
+  }, [categoriesData]);
+
+  // Use fallback hardcoded services if categories are not available
+  const services = categories.length > 0 ? categories : [
     { icon: Scissors, label: "Nail Salon" },
     { icon: Scissors, label: "Hair Salon" },
     { icon: Sparkles, label: "Spa" },
@@ -106,18 +146,58 @@ const Hepurplection2 = () => {
 
           {/* Marquee */}
           <div className="flex gap-3 animate-marquee hover:[animation-play-state:paused]">
-            {[...services, ...services].map((service, index) => {
-              const Icon = service.icon;
-              return (
-                <button
-                  key={index}
-                  className="bg-white bg-opacity-10 backdrop-blur-sm hover:border-white hover:bg-opacity-20 border border-purple-950 border-opacity-30 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2 whitespace-nowrap flex-shrink-0"
+            {isLoading ? (
+              // Loading state - show skeleton items
+              Array.from({ length: 6 }).map((_, index) => (
+                <div
+                  key={`skeleton-${index}`}
+                  className="bg-white bg-opacity-10 backdrop-blur-sm border border-purple-950 border-opacity-30 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2 whitespace-nowrap flex-shrink-0 animate-pulse"
                 >
-                  <Icon className="w-4 h-4" />
-                  {service.label}
-                </button>
-              );
-            })}
+                  <div className="w-4 h-4 bg-gray-300 rounded-full" />
+                  <div className="h-4 bg-gray-300 rounded w-16" />
+                </div>
+              ))
+            ) : error ? (
+              // Error state - show fallback hardcoded services
+              [...[
+                { icon: Scissors, label: "Nail Salon" },
+                { icon: Scissors, label: "Hair Salon" },
+                { icon: Sparkles, label: "Spa" },
+                { icon: Star, label: "MakeUp" },
+                { icon: Droplets, label: "Skin Care" },
+              ], ...[
+                { icon: Scissors, label: "Nail Salon" },
+                { icon: Scissors, label: "Hair Salon" },
+                { icon: Sparkles, label: "Spa" },
+                { icon: Star, label: "MakeUp" },
+                { icon: Droplets, label: "Skin Care" },
+              ]].map((service, index) => {
+                const Icon = service.icon;
+                return (
+                  <button
+                    key={`error-${index}`}
+                    className="bg-white bg-opacity-10 backdrop-blur-sm hover:border-white hover:bg-opacity-20 border border-purple-950 border-opacity-30 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2 whitespace-nowrap flex-shrink-0"
+                  >
+                    <Icon className="w-4 h-4" />
+                    {service.label}
+                  </button>
+                );
+              })
+            ) : (
+              // Success state - show dynamic categories
+              [...services, ...services].map((service, index) => {
+                const Icon = service.icon;
+                return (
+                  <button
+                    key={index}
+                    className="bg-white bg-opacity-10 backdrop-blur-sm hover:border-white hover:bg-opacity-20 border border-purple-950 border-opacity-30 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2 whitespace-nowrap flex-shrink-0"
+                  >
+                    <Icon className="w-4 h-4" />
+                    {service.label}
+                  </button>
+                );
+              })
+            )}
           </div>
 
           {/* Right Fade - More Subtle */}

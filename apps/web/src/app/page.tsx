@@ -30,6 +30,7 @@ import OffersSection2 from "@/components/landing/OffersSection2";
 import WhyChooseUs from "@/components/landing/WhyChooseUs";
 import Testimonials2 from "@/components/landing/Testimonials2";
 import { SalonFilterProvider } from "@/components/landing/SalonFilterContext";
+import WhereToGo from "@/components/landing/WhereToDo";
 
 
 // Inline ProductCard component
@@ -376,8 +377,12 @@ export default function HomePage() {
       <main className="flex-grow">
         <HeroSection2 />
         <OffersSection2 />
+        <WhereToGo />
         <WhyChooseUs/>
         <Testimonials2 />
+
+
+
         <HeroSection />
         <PlatformFor />
         <SalonsSection />

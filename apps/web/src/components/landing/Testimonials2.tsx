@@ -55,13 +55,16 @@ const Testimonials2 = () => {
 
   return (
     <section className="py-16 px-6 lg:px-8 max-w-7xl mx-auto bg-background pb-24">
+
       {/* Section Header */}
-      <div className="mb-12 text-start">
-        <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
-          What Our Customers Say
-        </h2>
-        <p className="text-muted-foreground mt-3 max-w-2xl text-sm">
-          Real experiences from our valued customers 
+      <div className="mb-16">
+        <div className="flex items-center gap-4 mb-4">
+          <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
+            What Our Customers Say
+          </h2>
+        </div>
+        <p className="text-muted-foreground max-w-2xl">
+          Real experiences from our valued customers who have transformed their beauty and wellness journeys with us.
         </p>
       </div>
 
