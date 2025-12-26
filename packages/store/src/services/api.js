@@ -157,8 +157,9 @@ export const glowvitaApi = createApi({
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
     "PublicVendorProducts", "PublicServices", "PublicCategories", "WorkingHours", "ClientOrder", "Patient", "Appointment",
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
-    "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
-    "SupplierReports",
+    "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder","DoctorReviews",
+    "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
+     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport","SupplierReports","Products"
   ],
 
   endpoints: (builder) => ({
@@ -1112,6 +1113,131 @@ export const glowvitaApi = createApi({
       transformResponse: (response) => (response && response.success ? response.data || [] : []),
     }),
 
+    // Admin Dashboard Endpoint
+    getAdminDashboardStats: builder.query({
+      query: (params) => ({ 
+        url: "/admin/dashboard", 
+        method: "GET",
+        params: params || {}
+      }),
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    // Booking Summary Reports Endpoints
+    getSellingServicesReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/booking-summary/selling-services",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["SellingServicesReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    getTotalBookingsReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/booking-summary/total-bookings",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["TotalBookingsReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    getCompletedBookingsReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/booking-summary/completed-bookings",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["CompletedBookingsReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    getCancellationReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/booking-summary/cancellation",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["CancellationReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    getSalesBySalonReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/booking-summary/sales-by-salon",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["SalesBySalonReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    getSalesByProductsReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/booking-summary/sales-by-products",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["SalesByProductsReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    // Consolidated Sales Report
+    getConsolidatedSalesReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/Financial-Reports/salesreport",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["ConsolidatedSalesReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+    
+    // Subscription Report
+    getSubscriptionReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/Financial-Reports/subscription-report",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["SubscriptionReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+    
+    // Marketing Campaign Report
+    getMarketingCampaignReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/marketing-reports/campaigns",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["MarketingCampaignReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    // Sales by Brand Report
+    getSalesByBrandReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/product-reports/sales-by-brand",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["SalesByBrandReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    // Sales by Category Report
+    getSalesByCategoryReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/product-reports/sales-by-category",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["SalesByCategoryReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
     // Admin Product Categories 
 
     getAdminProductCategories: builder.query({
@@ -2159,6 +2285,224 @@ export const glowvitaApi = createApi({
       transformResponse: (response) => response,
     }),
 
+    // Appointment Report Endpoints
+    getAllAppointmentsReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'yesterday') && startDate && endDate) {
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        }
+        // Add additional filter parameters
+        if (client) params.append('client', client);
+        if (service) params.append('service', service);
+        if (staff) params.append('staff', staff);
+        if (status) params.append('status', status);
+        if (bookingType) params.append('bookingType', bookingType);
+        return { url: `/crm/vendor/reports/all-appointments?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Appointments"],
+    }),    getSummaryByServiceReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'yesterday') && startDate && endDate) {
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        }
+        // Add additional filter parameters
+        if (client) params.append('client', client);
+        if (service) params.append('service', service);
+        if (staff) params.append('staff', staff);
+        if (status) params.append('status', status);
+        if (bookingType) params.append('bookingType', bookingType);
+        return { url: `/crm/vendor/reports/summary-by-service?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Appointments"],
+    }),    getCompletedAppointmentsReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'yesterday') && startDate && endDate) {
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        }
+        // Add additional filter parameters
+        if (client) params.append('client', client);
+        if (service) params.append('service', service);
+        if (staff) params.append('staff', staff);
+        if (status) params.append('status', status);
+        if (bookingType) params.append('bookingType', bookingType);
+        return { url: `/crm/vendor/reports/completed-appointments?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Appointments"],
+    }),
+    getCancelledAppointmentsReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'yesterday') && startDate && endDate) {
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        }
+        // Add additional filter parameters
+        if (client) params.append('client', client);
+        if (service) params.append('service', service);
+        if (staff) params.append('staff', staff);
+        if (status) params.append('status', status);
+        if (bookingType) params.append('bookingType', bookingType);
+        return { url: `/crm/vendor/reports/cancelled-appointments?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Appointments"],
+    }),
+    
+    // Sales Report Endpoints
+    getSalesByServiceReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'yesterday') && startDate && endDate) {
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        }
+        // Add additional filter parameters
+        if (client) params.append('client', client);
+        if (service) params.append('service', service);
+        if (staff) params.append('staff', staff);
+        if (status) params.append('status', status);
+        if (bookingType) params.append('bookingType', bookingType);
+        return { url: `/crm/vendor/reports/sales-by-service?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Appointments"],
+    }),
+    getSalesByCustomerReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'yesterday') && startDate && endDate) {
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        }
+        // Add additional filter parameters
+        if (client) params.append('client', client);
+        if (service) params.append('service', service);
+        if (staff) params.append('staff', staff);
+        if (status) params.append('status', status);
+        if (bookingType) params.append('bookingType', bookingType);
+        return { url: `/crm/vendor/reports/sales-by-customer?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Appointments"],
+    }),
+    
+    // Product Summary Report
+    getProductSummaryReport: builder.query({
+      query: ({ product, category, brand, status, isActive }) => {
+        const params = new URLSearchParams();
+        // Add filter parameters
+        if (product) params.append('product', product);
+        if (category) params.append('category', category);
+        if (brand) params.append('brand', brand);
+        if (status) params.append('status', status);
+        if (isActive !== undefined) params.append('isActive', isActive);
+        return { url: `/crm/vendor/reports/product-summary?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Products"],
+    }),
+    
+    // Inventory/Stock Report
+    getInventoryStockReport: builder.query({
+      query: ({ product, category, brand }) => {
+        const params = new URLSearchParams();
+        // Add filter parameters
+        if (product) params.append('product', product);
+        if (category) params.append('category', category);
+        if (brand) params.append('brand', brand);
+        return { url: `/crm/vendor/reports/inventory-stock?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Products"],
+    }),
+    
+    // Sales by Product Report
+    getSalesByProductReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, product, customer, status, category, brand }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'yesterday') && startDate && endDate) {
+          params.append('startDate', startDate.toISOString());
+          params.append('endDate', endDate.toISOString());
+        }
+        // Add additional filter parameters
+        if (product) params.append('product', product);
+        if (customer) params.append('customer', customer);
+        if (status) params.append('status', status);
+        if (category) params.append('category', category);
+        if (brand) params.append('brand', brand);
+        return { url: `/crm/vendor/reports/sales-by-product?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Products"],
+    }),
+    
+    // Category-wise Product Report
+    getCategoryWiseProductReport: builder.query({
+      query: ({ product, category, brand }) => {
+        const params = new URLSearchParams();
+        // Add filter parameters
+        if (product) params.append('product', product);
+        if (category) params.append('category', category);
+        if (brand) params.append('brand', brand);
+        return { url: `/crm/vendor/reports/category-wise-product?${params.toString()}`, method: "GET" };
+      },
+      providesTags: ["Products"],
+    }),
+    
+    // Unique Values for Appointment Filters
+    getUniqueClients: builder.query({
+      query: () => ({
+        url: '/crm/vendor/reports/unique-clients',
+        method: 'GET'
+      }),
+      providesTags: ["Appointments"]
+    }),
+    getUniqueServices: builder.query({
+      query: () => ({
+        url: '/crm/vendor/reports/unique-services',
+        method: 'GET'
+      }),
+      providesTags: ["Appointments"]
+    }),
+    getUniqueStaff: builder.query({
+      query: () => ({
+        url: '/crm/vendor/reports/unique-staff',
+        method: 'GET'
+      }),
+      providesTags: ["Appointments"]
+    }),
+
+    // Unique product attributes for reports
+    getUniqueProductNames: builder.query({
+      query: () => ({
+        url: '/crm/vendor/reports/unique-product-names',
+        method: 'GET'
+      }),
+      providesTags: ["CrmProducts"]
+    }),
+
+    getUniqueBrands: builder.query({
+      query: () => ({
+        url: '/crm/vendor/reports/unique-brands',
+        method: 'GET'
+      }),
+      providesTags: ["CrmProducts"]
+    }),
+
+    getUniqueCategories: builder.query({
+      query: () => ({
+        url: '/crm/vendor/reports/unique-categories',
+        method: 'GET'
+      }),
+      providesTags: ["CrmProducts"]
+    }),
   }),
 });
 
@@ -2279,6 +2623,18 @@ export const {
   // useUpdateProductStatusMutation,  // Removed old combined product approval hook
   useGetAdminClientsQuery,
   useGetAdminUsersQuery,
+  useGetAdminDashboardStatsQuery,
+  useGetSellingServicesReportQuery,
+  useGetTotalBookingsReportQuery,
+  useGetCompletedBookingsReportQuery,
+  useGetCancellationReportQuery,
+  useGetSalesBySalonReportQuery,
+  useGetSalesByProductsReportQuery,
+  useGetSalesByBrandReportQuery,
+  useGetSalesByCategoryReportQuery,
+  useGetConsolidatedSalesReportQuery,
+  useGetSubscriptionReportQuery,
+  useGetMarketingCampaignReportQuery,
 
   // Vendor Product Approval Hooks
   useGetVendorProductApprovalsQuery,
@@ -2453,6 +2809,27 @@ export const {
   // Payment Collection Hook
   useCollectPaymentMutation,
 
+  
+  // Appointment Report Hooks
+  useGetAllAppointmentsReportQuery,
+  useGetSummaryByServiceReportQuery,
+  useGetCompletedAppointmentsReportQuery,
+  useGetCancelledAppointmentsReportQuery,
+  // Sales Report Hooks
+  useGetSalesByServiceReportQuery,
+  useGetSalesByCustomerReportQuery,
+  // Product Report Hooks
+  useGetProductSummaryReportQuery,
+  useGetSalesByProductReportQuery,
+  useGetInventoryStockReportQuery,
+  useGetCategoryWiseProductReportQuery,
+  useGetUniqueClientsQuery,
+  useGetUniqueServicesQuery,
+  useGetUniqueStaffQuery,
+  useGetUniqueProductNamesQuery,
+  useGetUniqueBrandsQuery,
+  useGetUniqueCategoriesQuery,
+  
   // Payment Collections Hook
   useGetPaymentCollectionsQuery,
   useGetSupplierProductReviewsReportQuery,
