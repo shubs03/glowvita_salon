@@ -324,6 +324,26 @@ const FilterModal = ({
   const uniqueStaff = staffData?.data || [];
   const uniqueProducts = productsData?.data || [];
 
+  // Limit displayed filter options to 5 with scroll for the rest
+  const renderFilterOptions = (options: string[], showAll: boolean = false) => {
+    // Ensure options is an array and not a single value
+    const validOptions = Array.isArray(options) ? options.filter(opt => typeof opt === 'string' && opt) : [];
+    
+    if (showAll || validOptions.length <= 5) {
+      return validOptions.map((option, index) => (
+        <SelectItem key={index} value={option}>{option}</SelectItem>
+      ));
+    }
+    
+    return (
+      <div className="max-h-40 overflow-y-auto">
+        {validOptions.map((option, index) => (
+          <SelectItem key={index} value={option}>{option}</SelectItem>
+        ))}
+      </div>
+    );
+  };
+
   const handleApply = () => {
     const filters: FilterParams = { 
       startDate: startDate || undefined, 
@@ -355,7 +375,7 @@ const FilterModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Filters</DialogTitle>
           <DialogDescription>
@@ -427,9 +447,7 @@ const FilterModal = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
-                    {uniqueClients.map((clientName: string, index: number) => (
-                      <SelectItem key={index} value={clientName}>{clientName}</SelectItem>
-                    ))}
+                    {renderFilterOptions(uniqueClients)}
                   </SelectContent>
                 </Select>
               </div>
@@ -444,9 +462,7 @@ const FilterModal = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
-                    {uniqueServices.map((serviceName: string, index: number) => (
-                      <SelectItem key={index} value={serviceName}>{serviceName}</SelectItem>
-                    ))}
+                    {renderFilterOptions(uniqueServices)}
                   </SelectContent>
                 </Select>
               </div>
@@ -461,9 +477,7 @@ const FilterModal = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
-                    {uniqueStaff.map((staffName: string, index: number) => (
-                      <SelectItem key={index} value={staffName}>{staffName}</SelectItem>
-                    ))}
+                    {renderFilterOptions(uniqueStaff)}
                   </SelectContent>
                 </Select>
               </div>
@@ -496,9 +510,7 @@ const FilterModal = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All</SelectItem>
-                    {uniqueProducts.map((productName: string, index: number) => (
-                      <SelectItem key={index} value={productName}>{productName}</SelectItem>
-                    ))}
+                    {renderFilterOptions(uniqueProducts)}
                   </SelectContent>
                 </Select>
               </div>
