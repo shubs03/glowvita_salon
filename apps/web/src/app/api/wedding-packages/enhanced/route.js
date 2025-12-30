@@ -18,12 +18,12 @@ export const OPTIONS = async () => {
 export const GET = async (request) => {
   try {
     await _db();
-    
+
     const { searchParams } = new URL(request.url);
     const vendorId = searchParams.get('vendorId');
     const packageId = searchParams.get('packageId');
     const isActive = searchParams.get('isActive');
-    
+
     // Validate required parameters
     if (!vendorId) {
       return new Response(JSON.stringify({ error: 'Vendor ID is required' }), {
@@ -31,25 +31,25 @@ export const GET = async (request) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     let query = { vendorId };
-    
+
     if (packageId) {
       query._id = packageId;
     }
-    
+
     if (isActive !== null) {
       query.isActive = isActive === 'true';
     }
-    
+
     const weddingPackages = await EnhancedWeddingPackageModel.find(query)
       .sort({ createdAt: -1 });
-    
+
     // Populate service details for each package
     const populatedPackages = await Promise.all(weddingPackages.map(async (pkg) => {
       return await pkg.populateEnhancedServiceDetails();
     }));
-    
+
     return new Response(JSON.stringify({
       success: true,
       weddingPackages: populatedPackages,
@@ -60,9 +60,9 @@ export const GET = async (request) => {
     });
   } catch (error) {
     console.error("Error fetching enhanced wedding packages:", error);
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: 'Failed to fetch wedding packages',
-      message: error.message 
+      message: error.message
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -74,7 +74,7 @@ export const GET = async (request) => {
 export const POST = async (request) => {
   try {
     await _db();
-    
+
     const body = await request.json();
     const {
       name,
@@ -92,7 +92,7 @@ export const POST = async (request) => {
       depositAmount = 0,
       cancellationPolicy = "Standard 24-hour notice required for cancellations"
     } = body;
-    
+
     // Validate required parameters
     if (!name || !description || !vendorId || !services.length || totalPrice === undefined) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -100,7 +100,7 @@ export const POST = async (request) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     // Validate services
     for (const service of services) {
       if (!service.serviceId || !service.serviceName) {
@@ -110,7 +110,7 @@ export const POST = async (request) => {
         });
       }
     }
-    
+
     // Create enhanced wedding package
     const weddingPackage = new EnhancedWeddingPackageModel({
       name,
@@ -128,25 +128,25 @@ export const POST = async (request) => {
       depositAmount,
       cancellationPolicy
     });
-    
+
     const savedPackage = await weddingPackage.save();
-    
+
     // Populate service details
     const populatedPackage = await savedPackage.populateEnhancedServiceDetails();
-    
-    return new Response(JSON.stringify({ 
+
+    return new Response(JSON.stringify({
       success: true,
-      message: "Enhanced wedding package created successfully", 
-      weddingPackage: populatedPackage 
+      message: "Enhanced wedding package created successfully",
+      weddingPackage: populatedPackage
     }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
     console.error("Error creating enhanced wedding package:", error);
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: 'Failed to create wedding package',
-      message: error.message 
+      message: error.message
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -158,50 +158,50 @@ export const POST = async (request) => {
 export const PUT = async (request) => {
   try {
     await _db();
-    
+
     const body = await request.json();
     const {
       packageId,
       ...updateData
     } = body;
-    
+
     if (!packageId) {
       return new Response(JSON.stringify({ error: 'Package ID is required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     // Update the package
     const updatedPackage = await EnhancedWeddingPackageModel.findByIdAndUpdate(
       packageId,
       { ...updateData, updatedAt: new Date() },
       { new: true, runValidators: true }
     );
-    
+
     if (!updatedPackage) {
       return new Response(JSON.stringify({ error: 'Wedding package not found' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     // Populate service details
     const populatedPackage = await updatedPackage.populateEnhancedServiceDetails();
-    
-    return new Response(JSON.stringify({ 
+
+    return new Response(JSON.stringify({
       success: true,
-      message: "Enhanced wedding package updated successfully", 
-      weddingPackage: populatedPackage 
+      message: "Enhanced wedding package updated successfully",
+      weddingPackage: populatedPackage
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
     console.error("Error updating enhanced wedding package:", error);
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: 'Failed to update wedding package',
-      message: error.message 
+      message: error.message
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -213,38 +213,38 @@ export const PUT = async (request) => {
 export const DELETE = async (request) => {
   try {
     await _db();
-    
+
     const { searchParams } = new URL(request.url);
     const packageId = searchParams.get('packageId');
-    
+
     if (!packageId) {
       return new Response(JSON.stringify({ error: 'Package ID is required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     const deletedPackage = await EnhancedWeddingPackageModel.findByIdAndDelete(packageId);
-    
+
     if (!deletedPackage) {
       return new Response(JSON.stringify({ error: 'Wedding package not found' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
-    return new Response(JSON.stringify({ 
+
+    return new Response(JSON.stringify({
       success: true,
-      message: "Enhanced wedding package deleted successfully" 
+      message: "Enhanced wedding package deleted successfully"
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
     console.error("Error deleting enhanced wedding package:", error);
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: 'Failed to delete wedding package',
-      message: error.message 
+      message: error.message
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
@@ -252,54 +252,54 @@ export const DELETE = async (request) => {
   }
 };
 
-// POST: Apply customizations to a wedding package
-export const POST_CUSTOMIZE = async (request) => {
+// PATCH: Apply customizations to a wedding package
+export const PATCH = async (request) => {
   try {
     await _db();
-    
+
     const body = await request.json();
     const {
       packageId,
       customizedServices
     } = body;
-    
+
     if (!packageId || !customizedServices) {
       return new Response(JSON.stringify({ error: 'Package ID and customized services are required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     // Find the package
     const weddingPackage = await EnhancedWeddingPackageModel.findById(packageId);
-    
+
     if (!weddingPackage) {
       return new Response(JSON.stringify({ error: 'Wedding package not found' }), {
         status: 404,
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
+
     // Apply customizations
     const customizedPackage = weddingPackage.applyCustomizations(customizedServices);
     await customizedPackage.save();
-    
+
     // Populate service details
     const populatedPackage = await customizedPackage.populateEnhancedServiceDetails();
-    
-    return new Response(JSON.stringify({ 
+
+    return new Response(JSON.stringify({
       success: true,
-      message: "Customizations applied successfully", 
-      weddingPackage: populatedPackage 
+      message: "Customizations applied successfully",
+      weddingPackage: populatedPackage
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (error) {
     console.error("Error applying customizations to wedding package:", error);
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: 'Failed to apply customizations',
-      message: error.message 
+      message: error.message
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

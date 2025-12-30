@@ -22,28 +22,28 @@ interface PriceBreakdown {
 }
 
 interface BookingSummaryProps {
-    selectedServices: Service[];
-    selectedStaff: StaffMember | null;
-    selectedDate: Date;
-    selectedTime: string | null;
-    onNextStep: () => void;
-    currentStep: number;
-    isMobileFooter?: boolean;
-    salonInfo?: SalonInfo | null;
-    serviceStaffAssignments?: ServiceStaffAssignment[]; // For multi-service bookings
-    priceBreakdown?: PriceBreakdown | null;
-    weddingPackage?: any;
-    weddingPackageMode?: 'default' | 'customized' | null;
-    customizedPackageServices?: Service[];
-    onEditPackage?: () => void; // New prop for editing wedding package
+  selectedServices: Service[];
+  selectedStaff: StaffMember | null;
+  selectedDate: Date;
+  selectedTime: string | null;
+  onNextStep: () => void;
+  currentStep: number;
+  isMobileFooter?: boolean;
+  salonInfo?: SalonInfo | null;
+  serviceStaffAssignments?: ServiceStaffAssignment[]; // For multi-service bookings
+  priceBreakdown?: PriceBreakdown | null;
+  weddingPackage?: any;
+  weddingPackageMode?: 'default' | 'customized' | null;
+  customizedPackageServices?: Service[];
+  onEditPackage?: () => void; // New prop for editing wedding package
 }
 
-export function BookingSummary({ 
-  selectedServices, 
-  selectedStaff, 
-  selectedDate, 
-  selectedTime, 
-  onNextStep, 
+export function BookingSummary({
+  selectedServices,
+  selectedStaff,
+  selectedDate,
+  selectedTime,
+  onNextStep,
   currentStep,
   isMobileFooter = false,
   salonInfo,
@@ -54,132 +54,132 @@ export function BookingSummary({
   customizedPackageServices,
   onEditPackage
 }: BookingSummaryProps) {
-    const [isExpanded, setIsExpanded] = useState(false);
-    
-    // Calculate totals - handle wedding package pricing
-    const subtotal = weddingPackage 
-      ? (weddingPackage.discountedPrice || weddingPackage.totalPrice || 0)
-      : (priceBreakdown?.subtotal ?? selectedServices.reduce((acc, service) => {
-          const price = service.discountedPrice !== null && service.discountedPrice !== undefined ? 
-            service.discountedPrice : 
-            (service.price || 0);
-          return acc + parseFloat(String(price) || '0');
-        }, 0));
-    
-    const total = priceBreakdown?.finalTotal ?? subtotal;
+  const [isExpanded, setIsExpanded] = useState(false);
 
-    // Use provided salon info or fallback
-    const currentSalonInfo = salonInfo || {
-        name: "Salon",
-        rating: "4.5",
-        reviews: 0,
-        address: "Loading address...",
-        image: "https://picsum.photos/seed/salon/400/400"
-    };
-    
-    const stepDetails = [
-      { 
-        step: 1, 
-        label: weddingPackage ? 'Select Time' : 'Select Staff', 
-        enabled: weddingPackage ? true : selectedServices.length > 0 
-      },
-      { 
-        step: 2, 
-        label: 'Find a Time', 
-        enabled: serviceStaffAssignments && serviceStaffAssignments.length > 0 
-          ? serviceStaffAssignments.every(a => a.staff !== undefined) 
-          : (weddingPackage ? true : !!selectedStaff)
-      },
-      { step: 3, label: 'Select Location', enabled: !!selectedTime },
-      { step: 4, label: 'Confirm Booking', enabled: true }, // Enabled on step 4
-    ];
-    
-    const nextStepInfo = stepDetails.find(s => s.step === currentStep);
-    const buttonLabel = nextStepInfo?.label || 'Continue';
+  // Calculate totals - handle wedding package pricing
+  const subtotal = weddingPackage
+    ? (weddingPackage.discountedPrice || weddingPackage.totalPrice || 0)
+    : (priceBreakdown?.subtotal ?? selectedServices.reduce((acc, service) => {
+      const price = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+        service.discountedPrice :
+        (service.price || 0);
+      return acc + parseFloat(String(price) || '0');
+    }, 0));
 
-    if (isMobileFooter) {
-        return (
-            <div className={cn(
-                "bg-background/80 backdrop-blur-sm border-t transition-all duration-300",
-                isExpanded ? "h-96" : "h-24"
-            )}>
-                <div className="p-4 flex flex-col h-full">
-                    {isExpanded && (
-                         <div className="overflow-y-auto no-scrollbar flex-grow space-y-3 pb-4">
-                            <div className="flex items-center gap-4">
-                                <Image 
-                                    src={currentSalonInfo.image || "https://picsum.photos/seed/salon/400/400"} 
-                                    alt={currentSalonInfo.name} 
-                                    width={48} 
-                                    height={48} 
-                                    className="rounded-lg shadow-md" 
-                                    data-ai-hint="salon exterior" 
-                                />
-                                <div>
-                                    <h4 className="font-bold text-base">{currentSalonInfo.name}</h4>
-                                    <p className="text-sm text-muted-foreground">{currentSalonInfo.address}</p>
-                                </div>
-                            </div>
-                            <Separator />
-                            {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
-                                serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
-                                    <div key={assignment.service.id} className="flex justify-between items-center text-sm">
-                                        <span className="line-clamp-2">{assignment.service.name}</span>
-                                        <span className="font-medium">₹{assignment.service.price}</span>
-                                    </div>
-                                ))
-                            ) : (
-                                selectedServices.map((service: Service) => (
-                                    <div key={service.id} className="flex justify-between items-center text-sm">
-                                        <span className="line-clamp-2">{service.name}</span>
-                                        <span className="font-medium">₹{service.price}</span>
-                                    </div>
-                                ))
-                            )}
-                            {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
-                                serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
-                                    <p key={assignment.service.id} className="text-sm">With: <span className="font-medium">{assignment.staff?.name || 'Any Professional'}</span></p>
-                                ))
-                            ) : (
-                                selectedStaff && <p className="text-sm">With: <span className="font-medium">{selectedStaff.name}</span></p>
-                            )}
-                            {selectedTime && <p className="text-sm">On: <span className="font-medium">{format(selectedDate, 'MMM d')} at {selectedTime}</span></p>}
-                         </div>
-                    )}
-                    <div className="flex items-center justify-between mt-auto">
-                        <div>
-                             <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-1">
-                                <span className="text-lg font-bold">₹{total.toFixed(2)}</span>
-                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                            </button>
-                            <p className="text-xs text-muted-foreground">Total (incl. tax)</p>
-                        </div>
-                        <Button 
-                            className="w-40 h-12" 
-                            size="lg" 
-                            disabled={!nextStepInfo?.enabled} 
-                            onClick={onNextStep}
-                        >
-                            {buttonLabel}
-                        </Button>
-                    </div>
+  const total = priceBreakdown?.finalTotal ?? subtotal;
+
+  // Use provided salon info or fallback
+  const currentSalonInfo = salonInfo || {
+    name: "Salon",
+    rating: "4.5",
+    reviews: 0,
+    address: "Loading address...",
+    image: "https://picsum.photos/seed/salon/400/400"
+  };
+
+  const stepDetails = [
+    {
+      step: 1,
+      label: weddingPackage ? 'Select Time' : 'Select Staff',
+      enabled: weddingPackage ? true : selectedServices.length > 0
+    },
+    {
+      step: 2,
+      label: 'Find a Time',
+      enabled: serviceStaffAssignments && serviceStaffAssignments.length > 0
+        ? serviceStaffAssignments.every(a => a.staff !== undefined)
+        : (weddingPackage ? true : !!selectedStaff)
+    },
+    { step: 3, label: 'Select Location', enabled: !!selectedTime },
+    { step: 4, label: 'Confirm Booking', enabled: true }, // Enabled on step 4
+  ];
+
+  const nextStepInfo = stepDetails.find(s => s.step === currentStep);
+  const buttonLabel = nextStepInfo?.label || 'Continue';
+
+  if (isMobileFooter) {
+    return (
+      <div className={cn(
+        "bg-background/80 backdrop-blur-sm border-t transition-all duration-300",
+        isExpanded ? "h-96" : "h-24"
+      )}>
+        <div className="p-4 flex flex-col h-full">
+          {isExpanded && (
+            <div className="overflow-y-auto no-scrollbar flex-grow space-y-3 pb-4">
+              <div className="flex items-center gap-4">
+                <Image
+                  src={currentSalonInfo.image || "https://picsum.photos/seed/salon/400/400"}
+                  alt={currentSalonInfo.name}
+                  width={48}
+                  height={48}
+                  className="rounded-lg shadow-md"
+                  data-ai-hint="salon exterior"
+                />
+                <div>
+                  <h4 className="font-bold text-base">{currentSalonInfo.name}</h4>
+                  <p className="text-sm text-muted-foreground">{currentSalonInfo.address}</p>
                 </div>
+              </div>
+              <Separator />
+              {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
+                serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
+                  <div key={assignment.service.id} className="flex justify-between items-center text-sm">
+                    <span className="line-clamp-2">{assignment.service.name}</span>
+                    <span className="font-medium">₹{assignment.service.price}</span>
+                  </div>
+                ))
+              ) : (
+                selectedServices.map((service: Service) => (
+                  <div key={service.id} className="flex justify-between items-center text-sm">
+                    <span className="line-clamp-2">{service.name}</span>
+                    <span className="font-medium">₹{service.price}</span>
+                  </div>
+                ))
+              )}
+              {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
+                serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
+                  <p key={assignment.service.id} className="text-sm">With: <span className="font-medium">{assignment.staff?.name || 'Any Professional'}</span></p>
+                ))
+              ) : (
+                selectedStaff && <p className="text-sm">With: <span className="font-medium">{selectedStaff.name}</span></p>
+              )}
+              {selectedTime && <p className="text-sm">On: <span className="font-medium">{format(selectedDate, 'MMM d')} at {selectedTime}</span></p>}
             </div>
-        );
-    }
+          )}
+          <div className="flex items-center justify-between mt-auto">
+            <div>
+              <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-1">
+                <span className="text-lg font-bold">₹{total.toFixed(2)}</span>
+                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+              </button>
+              <p className="text-xs text-muted-foreground">Total (incl. tax)</p>
+            </div>
+            <Button
+              className="w-40 h-12"
+              size="lg"
+              disabled={!nextStepInfo?.enabled}
+              onClick={onNextStep}
+            >
+              {buttonLabel}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Card className="shadow-2xl shadow-primary/10 border-border/50 bg-background rounded-2xl flex flex-col max-h-[calc(100vh-8rem)]">
       <CardHeader className="p-6 border-b flex-shrink-0">
         <div className="flex items-center gap-4">
           <div className="relative">
-            <Image 
-              src={currentSalonInfo.image || "https://picsum.photos/seed/salon/400/400"} 
-              alt={currentSalonInfo.name} 
-              width={64} 
-              height={64} 
-              className="rounded-lg shadow-md border-2 border-background" 
-              data-ai-hint="salon exterior" 
+            <Image
+              src={currentSalonInfo.image || "https://picsum.photos/seed/salon/400/400"}
+              alt={currentSalonInfo.name}
+              width={64}
+              height={64}
+              className="rounded-lg shadow-md border-2 border-background"
+              data-ai-hint="salon exterior"
             />
           </div>
           <div>
@@ -194,7 +194,7 @@ export function BookingSummary({
       <CardContent className="p-6 space-y-4 flex-grow overflow-y-auto no-scrollbar">
         <div className="space-y-3">
           <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2"><Info className="h-4 w-4" />Your Booking Details</h4>
-          
+
           {/* Show Wedding Package or Regular Services */}
           {weddingPackage ? (
             <div className="p-4 bg-rose-50 border-2 border-rose-200 rounded-lg">
@@ -211,13 +211,13 @@ export function BookingSummary({
                   <p className="text-xs text-rose-700 mt-1">{weddingPackage.description}</p>
                 </div>
               </div>
-              
+
               <div className="space-y-2 border-t border-rose-200 pt-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-rose-700">Services Included:</span>
                   <span className="font-semibold text-rose-900">
-                    {weddingPackageMode === 'customized' && customizedPackageServices 
-                      ? customizedPackageServices.length 
+                    {weddingPackageMode === 'customized' && customizedPackageServices
+                      ? customizedPackageServices.length
                       : weddingPackage.services?.length || 0}
                   </span>
                 </div>
@@ -237,7 +237,7 @@ export function BookingSummary({
                   <div className="text-sm">
                     <span className="text-rose-700">Available Staff:</span>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {weddingPackage.assignedStaff.slice(0, 3).map((staff, idx) => (
+                      {weddingPackage.assignedStaff.slice(0, 3).map((staff: any, idx: number) => (
                         <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-rose-100 text-rose-700">
                           {typeof staff === 'string' ? staff : staff.name}
                         </span>
@@ -259,51 +259,51 @@ export function BookingSummary({
           ) : (
             <div className="p-3 bg-secondary/50 rounded-md">
               <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-md"><Scissors className="h-4 w-4 text-primary" /></div>
-                  <div>
-                      <p className="text-xs text-muted-foreground">Services</p>
-                      <p className="font-medium text-sm">
-                          {selectedServices.length > 0 ? selectedServices.map(s => s.name).join(', ') : 'No services selected'}
-                      </p>
-                  </div>
+                <div className="p-2 bg-primary/10 rounded-md"><Scissors className="h-4 w-4 text-primary" /></div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Services</p>
+                  <p className="font-medium text-sm">
+                    {selectedServices.length > 0 ? selectedServices.map(s => s.name).join(', ') : 'No services selected'}
+                  </p>
+                </div>
               </div>
             </div>
           )}
-          
+
           <div className="p-3 bg-secondary/50 rounded-md">
             <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-md"><User className="h-4 w-4 text-primary" /></div>
-                <div>
-                    <p className="text-xs text-muted-foreground">Professional(s)</p>
-                    {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
-                        <div className="space-y-1">
-                            {serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
-                                <p key={assignment.service.id} className="font-medium text-sm">
-                                    {assignment.service.name}: {assignment.staff?.name || 'Any Professional'}
-                                </p>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="font-medium text-sm">{selectedStaff?.name || 'Any Professional'}</p>
-                    )}
-                </div>
+              <div className="p-2 bg-primary/10 rounded-md"><User className="h-4 w-4 text-primary" /></div>
+              <div>
+                <p className="text-xs text-muted-foreground">Professional(s)</p>
+                {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
+                  <div className="space-y-1">
+                    {serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
+                      <p key={assignment.service.id} className="font-medium text-sm">
+                        {assignment.service.name}: {assignment.staff?.name || 'Any Professional'}
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="font-medium text-sm">{selectedStaff?.name || 'Any Professional'}</p>
+                )}
+              </div>
             </div>
           </div>
-          
+
           <div className="p-3 bg-secondary/50 rounded-md">
             <div className="flex items-center gap-3">
-                <div className="p-2 bg-primary/10 rounded-md"><Calendar className="h-4 w-4 text-primary" /></div>
-                <div>
-                    <p className="text-xs text-muted-foreground">Date & Time</p>
-                    <p className="font-medium text-sm">
-                        {format(selectedDate, 'EEEE, MMM d')}
-                        {selectedTime ? ` at ${selectedTime}` : ', no time selected'}
-                    </p>
-                </div>
+              <div className="p-2 bg-primary/10 rounded-md"><Calendar className="h-4 w-4 text-primary" /></div>
+              <div>
+                <p className="text-xs text-muted-foreground">Date & Time</p>
+                <p className="font-medium text-sm">
+                  {format(selectedDate, 'EEEE, MMM d')}
+                  {selectedTime ? ` at ${selectedTime}` : ', no time selected'}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-        
+
         <Separator className="my-4" />
 
         {/* Price Breakdown Section */}
@@ -311,43 +311,43 @@ export function BookingSummary({
           <h4 className="font-semibold text-sm text-muted-foreground flex items-center gap-2">
             <Tag className="h-4 w-4" />Price Breakdown
           </h4>
-          
+
           <div className="bg-secondary/30 rounded-lg p-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Subtotal</span>
               <span>₹{subtotal.toFixed(2)}</span>
             </div>
-            
+
             {priceBreakdown && priceBreakdown.discountAmount > 0 && (
               <div className="flex justify-between text-sm text-green-600">
                 <span className="text-muted-foreground">Discount</span>
                 <span>-₹{priceBreakdown.discountAmount.toFixed(2)}</span>
               </div>
             )}
-            
+
             {priceBreakdown && priceBreakdown.platformFee > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Platform Fee</span>
                 <span>₹{priceBreakdown.platformFee.toFixed(2)}</span>
               </div>
             )}
-            
+
             {priceBreakdown && priceBreakdown.serviceTax > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">GST</span>
                 <span>₹{priceBreakdown.serviceTax.toFixed(2)}</span>
               </div>
             )}
-            
+
             {priceBreakdown && priceBreakdown.vendorServiceTax > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Vendor Service Tax</span>
                 <span>₹{priceBreakdown.vendorServiceTax.toFixed(2)}</span>
               </div>
             )}
-            
+
             <Separator className="my-2" />
-            
+
             <div className="flex justify-between font-semibold">
               <span>Total Amount</span>
               <span className="text-primary">₹{total.toFixed(2)}</span>
@@ -359,9 +359,9 @@ export function BookingSummary({
         {weddingPackage && currentStep === 1 ? (
           <div className="w-full space-y-3">
             {onEditPackage && (
-              <Button 
-                className="w-full h-12 text-base" 
-                size="lg" 
+              <Button
+                className="w-full h-12 text-base"
+                size="lg"
                 variant="outline"
                 onClick={onEditPackage}
               >
@@ -369,10 +369,10 @@ export function BookingSummary({
                 Edit Package
               </Button>
             )}
-            <Button 
-              className="w-full h-12 text-base group" 
-              size="lg" 
-              disabled={!nextStepInfo?.enabled} 
+            <Button
+              className="w-full h-12 text-base group"
+              size="lg"
+              disabled={!nextStepInfo?.enabled}
               onClick={onNextStep}
             >
               {buttonLabel}
@@ -380,14 +380,14 @@ export function BookingSummary({
             </Button>
           </div>
         ) : (
-          <Button 
-            className="w-full h-12 text-base group" 
-            size="lg" 
-            disabled={!nextStepInfo?.enabled} 
+          <Button
+            className="w-full h-12 text-base group"
+            size="lg"
+            disabled={!nextStepInfo?.enabled}
             onClick={onNextStep}
           >
-              {buttonLabel}
-              <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+            {buttonLabel}
+            <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
           </Button>
         )}
       </CardFooter>
