@@ -4,13 +4,6 @@ require('dotenv').config({ path: '../../.env' });
 const nextConfig = {
   output: 'standalone',
   env: {
-    JWT_SECRET: process.env.JWT_SECRET,
-    JWT_SECRET_USER: process.env.JWT_SECRET_USER,
-    JWT_SECRET_ADMIN: process.env.JWT_SECRET_ADMIN,
-    JWT_SECRET_VENDOR: process.env.JWT_SECRET_VENDOR,
-    JWT_SECRET_DOCTOR: process.env.JWT_SECRET_DOCTOR,
-    JWT_SECRET_SUPPLIER: process.env.JWT_SECRET_SUPPLIER,
-    // Add other environment variables as needed
   },
   async headers() {
     return [
@@ -46,6 +39,22 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
+      dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    // This helps with external image failures
+    unoptimized: false, // Keep optimization, but handle errors
+    minimumCacheTTL: 60,
+  },
+
+    // Suppress specific image optimization errors in development
+  webpack: (config, { dev, isServer }) => {
+    if (dev && !isServer) {
+      config.infrastructureLogging = {
+        level: 'error',
+      };
+    }
+    return config;
   },
 };
 
