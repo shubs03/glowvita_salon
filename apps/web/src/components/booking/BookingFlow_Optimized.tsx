@@ -13,10 +13,10 @@ import { toast } from 'react-toastify';
 import { GoogleMapSelector } from '@/components/GoogleMapSelector';
 
 // Memoized wrapper for Step 2 with service data
-const Step2WithServiceData = memo(({ 
-  selectedStaff, 
-  onSelectStaff, 
-  currentStep, 
+const Step2WithServiceData = memo(({
+  selectedStaff,
+  onSelectStaff,
+  currentStep,
   setCurrentStep,
   salonId,
   selectedService,
@@ -33,7 +33,7 @@ const Step2WithServiceData = memo(({
   weddingPackage?: WeddingPackage | null;
 }) => {
   const serviceStaffData = useBookingData(salonId, selectedService.id);
-  
+
   return (
     <Step2_Staff
       selectedStaff={selectedStaff}
@@ -52,7 +52,7 @@ const Step2WithServiceData = memo(({
 Step2WithServiceData.displayName = 'Step2WithServiceData';
 
 // Memoized wrapper for Step 3 with service data
-const Step3WithServiceData = memo(({ 
+const Step3WithServiceData = memo(({
   selectedDate,
   onSelectDate,
   selectedTime,
@@ -86,7 +86,7 @@ const Step3WithServiceData = memo(({
   homeServiceLocation?: any;
 }) => {
   const serviceStaffData = useBookingData(salonId, selectedService?.id);
-  
+
   return (
     <Step3_TimeSlot
       selectedDate={selectedDate}
@@ -141,12 +141,12 @@ const LocationCapture = memo(({
         {homeServiceOption === 'home' ? 'Home Service Location' : 'Location Reference'}
       </h3>
       <p className="text-sm text-blue-700 mb-4">
-        {homeServiceOption === 'home' 
+        {homeServiceOption === 'home'
           ? 'Please provide your address where the service will be provided.'
           : 'Mark the location on the map for reference (optional).'
         }
       </p>
-      
+
       <div className="space-y-4">
         {/* Address Input Fields */}
         <div>
@@ -162,7 +162,7 @@ const LocationCapture = memo(({
             required={isRequired}
           />
         </div>
-        
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">City {isRequired && '*'}</label>
@@ -175,7 +175,7 @@ const LocationCapture = memo(({
               required={isRequired}
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">State {isRequired && '*'}</label>
             <input
@@ -188,7 +188,7 @@ const LocationCapture = memo(({
             />
           </div>
         </div>
-        
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Pincode {isRequired && '*'}</label>
@@ -201,7 +201,7 @@ const LocationCapture = memo(({
               required={isRequired}
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Landmark (Optional)</label>
             <input
@@ -261,6 +261,7 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
   const [isWeddingService, setIsWeddingService] = useState(false);
   const [showPackageCustomizer, setShowPackageCustomizer] = useState(false);
   const [homeServiceOption, setHomeServiceOption] = useState<'home' | 'salon' | null>(null);
+  const [bookingMode, setBookingMode] = useState<'salon' | 'home'>('salon');
   const [homeServiceLocation, setHomeServiceLocation] = useState<{
     address?: string;
     city?: string;
@@ -278,7 +279,7 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
   const handleSelectService = useCallback((service: Service) => {
     setSelectedServices([service]);
     setSelectedService(service);
-    
+
     const serviceOption = (service as any).selectedServiceOption;
     if (serviceOption) {
       setHomeServiceOption(serviceOption);
@@ -287,16 +288,16 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
       const isHome = !!(service.homeService?.available || service.serviceHomeService?.available);
       setIsHomeService(isHome);
     }
-    
+
     const isWedding = !!(service.weddingService?.available || service.serviceWeddingService?.available);
     setIsWeddingService(isWedding);
-    
+
     setTimeout(() => setCurrentStep(2), 100);
   }, []);
 
   const handleSelectWeddingPackage = useCallback((pkg: WeddingPackage | null) => {
     setSelectedWeddingPackage(pkg);
-    
+
     if (pkg === null) {
       setSelectedServices([]);
       setSelectedService(null);
@@ -304,7 +305,7 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
       setIsWeddingService(false);
       return;
     }
-    
+
     setSelectedServices([]);
     setSelectedService(null);
     setIsHomeService(false);
@@ -346,7 +347,7 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
         `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
       );
       const data = await response.json();
-      
+
       if (data.results && data.results[0]) {
         const location = data.results[0].geometry.location;
         setHomeServiceLocation(prev => ({
@@ -372,12 +373,12 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
       setCurrentStep(2);
       return;
     }
-    
+
     if (currentStep === 2) {
       // For home services, validate and geocode
       if (isHomeService && homeServiceOption === 'home') {
-        if (!homeServiceLocation || !homeServiceLocation.address || !homeServiceLocation.city || 
-            !homeServiceLocation.state || !homeServiceLocation.pincode) {
+        if (!homeServiceLocation || !homeServiceLocation.address || !homeServiceLocation.city ||
+          !homeServiceLocation.state || !homeServiceLocation.pincode) {
           toast.error("Please provide complete address details for home service");
           return;
         }
@@ -396,7 +397,7 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
       setCurrentStep(3);
       return;
     }
-    
+
     if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -412,9 +413,9 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
         homeServiceLocation
       });
     }
-  }, [currentStep, selectedServices, selectedWeddingPackage, customizedWeddingPackage, isHomeService, 
-      homeServiceOption, homeServiceLocation, selectedStaff, selectedDate, selectedTime, baseData.salonInfo, 
-      isWeddingService, onBookingComplete, geocodeAddress]);
+  }, [currentStep, selectedServices, selectedWeddingPackage, customizedWeddingPackage, isHomeService,
+    homeServiceOption, homeServiceLocation, selectedStaff, selectedDate, selectedTime, baseData.salonInfo,
+    isWeddingService, onBookingComplete, geocodeAddress]);
 
   const handleBack = useCallback(() => {
     if (currentStep > 1) {
@@ -442,8 +443,8 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
       default:
         return false;
     }
-  }, [currentStep, selectedServices, selectedService, selectedWeddingPackage, showPackageCustomizer, 
-      customizedWeddingPackage, isHomeService, selectedStaff, selectedDate, selectedTime]);
+  }, [currentStep, selectedServices, selectedService, selectedWeddingPackage, showPackageCustomizer,
+    customizedWeddingPackage, isHomeService, selectedStaff, selectedDate, selectedTime]);
 
   // Reset staff when service changes
   useEffect(() => {
@@ -467,6 +468,8 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
           weddingPackages={baseData.weddingPackages}
           onWeddingPackageSelect={handleSelectWeddingPackage}
           selectedWeddingPackage={selectedWeddingPackage}
+          bookingMode={bookingMode}
+          setBookingMode={setBookingMode}
         />
       )}
 

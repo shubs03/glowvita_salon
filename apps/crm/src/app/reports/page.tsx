@@ -10,11 +10,11 @@ import { Input } from '@repo/ui/input';
 import { Skeleton } from "@repo/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
-import { 
-  useGetAppointmentsQuery, 
-  useGetClientsQuery, 
-  useGetCrmProductsQuery, 
-  useGetExpensesQuery, 
+import {
+  useGetAppointmentsQuery,
+  useGetClientsQuery,
+  useGetCrmProductsQuery,
+  useGetExpensesQuery,
   useGetCrmOrdersQuery,
   useGetCrmReferralsQuery,
   useGetCrmCampaignsQuery,
@@ -26,7 +26,7 @@ import {
   useGetSupplierCompletedOrdersReportQuery,
   useGetSupplierPlatformCollectionsReportQuery,
   useGetSupplierProductSalesReportQuery
-} from '@repo/store/services/api';import { toast } from 'sonner';
+} from '@repo/store/services/api'; import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,6 +76,7 @@ interface SupplierOrder {
 // Define role-specific reports
 const roleSpecificReports: Record<string, ReportCategory[]> = {
   admin: [
+    {
       category: "Financial Reports",
       reports: [
         {
@@ -84,6 +85,9 @@ const roleSpecificReports: Record<string, ReportCategory[]> = {
           details: "Includes profit, loss, and settlement data.",
           type: "sales"
         },
+        {
+          title: "Customer Demographics Report",
+          description: "Insights into your customer base, including age, gender, and location.",
           details: "Understand your audience to tailor your services.",
           type: "customer-demographics"
         },
@@ -104,7 +108,7 @@ const roleSpecificReports: Record<string, ReportCategory[]> = {
           description: "Track supplier performance and product sales.",
           details: "Manage inventory and supplier relationships.",
           type: "supplier-inventory"
-        },
+        }
       ]
     },
     {
@@ -285,7 +289,7 @@ const roleSpecificReports: Record<string, ReportCategory[]> = {
           type: "supplier-revenue"
         }
       ]
-    },    {
+    }, {
       category: "Marketing & Engagement",
       reports: [
         {
@@ -306,7 +310,7 @@ const roleSpecificReports: Record<string, ReportCategory[]> = {
 };
 
 // Role-specific dashboard statistics
-const roleSpecificStats: Record<string, Array<{title: string, icon: React.ReactNode, value: string, change: string}>> = {
+const roleSpecificStats: Record<string, Array<{ title: string, icon: React.ReactNode, value: string, change: string }>> = {
   admin: [
     { title: "Total Sales", icon: <DollarSign className="h-4 w-4 text-muted-foreground" />, value: "$1,250,345", change: "+12% from last month" },
     { title: "Active Users", icon: <Users className="h-4 w-4 text-muted-foreground" />, value: "15,234", change: "+8% from last month" },
@@ -394,7 +398,7 @@ const generateSalesReportData = (appointments: any[], orders: any[]) => {
       order.status || "Completed"
     ])
   ];
-  
+
   return { headers, rows };
 };
 
@@ -408,7 +412,7 @@ const generateAppointmentsReportData = (appointments: any[]) => {
     appointment.status || "Scheduled",
     appointment.notes || ""
   ]);
-  
+
   return { headers, rows };
 };
 
@@ -421,7 +425,7 @@ const generateProductSalesReportData = (products: any[], orders: any[]) => {
     `$${Math.floor(Math.random() * 1000) + 200}.00`,
     product.stock || 0
   ]);
-  
+
   return { headers, rows };
 };
 
@@ -431,7 +435,7 @@ const generateInventoryReportData = (products: any[]) => {
     const stock = product.stock || 0;
     const reorderLevel = product.reorderLevel || 20;
     const status = stock < reorderLevel ? "Low Stock" : "In Stock";
-    
+
     return [
       product.productName || "Product",
       product.category || "General",
@@ -440,24 +444,24 @@ const generateInventoryReportData = (products: any[]) => {
       status
     ];
   });
-  
+
   return { headers, rows };
 };
 
 // Add supplier orders report data generator
 const generateSupplierOrdersReportData = (orders: SupplierOrder[], taxFeeSettings?: any) => {
   // Add platform fee column to headers if tax settings are available
-  const headers = taxFeeSettings && taxFeeSettings.productPlatformFeeEnabled 
+  const headers = taxFeeSettings && taxFeeSettings.productPlatformFeeEnabled
     ? ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Platform Fee", "Status", "Date"]
     : ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Status", "Date"];
-    
+
   const rows = orders.slice(0, 10).map(order => {
     // Calculate total quantity
     const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
-    
+
     // Get product names
     const productNames = order.items.map(item => item.productName).join(", ");
-    
+
     // Calculate platform fee if tax settings are available
     let platformFee = 0;
     if (taxFeeSettings && taxFeeSettings.productPlatformFeeEnabled) {
@@ -466,7 +470,7 @@ const generateSupplierOrdersReportData = (orders: SupplierOrder[], taxFeeSetting
         ? (orderAmount * taxFeeSettings.productPlatformFee) / 100
         : taxFeeSettings.productPlatformFee;
     }
-    
+
     // Return row data with or without platform fee based on availability
     if (taxFeeSettings && taxFeeSettings.productPlatformFeeEnabled) {
       return [
@@ -491,37 +495,37 @@ const generateSupplierOrdersReportData = (orders: SupplierOrder[], taxFeeSetting
       ];
     }
   });
-  
+
   return { headers, rows };
 };
 
 // Add supplier revenue report data generator
 const generateSupplierRevenueReportData = (orders: SupplierOrder[], selectedMonth: string | null = null) => {
   // Filter orders by selected month if provided
-  const filteredOrders = selectedMonth 
+  const filteredOrders = selectedMonth
     ? orders.filter(order => {
-        const orderDate = new Date(order.createdAt);
-        const orderMonth = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
-        return orderMonth === selectedMonth;
-      })
+      const orderDate = new Date(order.createdAt);
+      const orderMonth = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
+      return orderMonth === selectedMonth;
+    })
     : orders;
-  
+
   // Group orders by date
   const dailyRevenue: Record<string, { count: number; revenue: number }> = {};
-  
+
   filteredOrders.forEach(order => {
     const date = new Date(order.createdAt);
     // Format date as YYYY-MM-DD for consistent grouping
     const dateString = date.toISOString().split('T')[0];
-    
+
     if (!dailyRevenue[dateString]) {
       dailyRevenue[dateString] = { count: 0, revenue: 0 };
     }
-    
+
     dailyRevenue[dateString].count += 1;
     dailyRevenue[dateString].revenue += order.totalAmount;
   });
-  
+
   // Convert to array and sort by date (newest first)
   const revenueData = Object.entries(dailyRevenue)
     .map(([dateString, data]) => ({
@@ -533,14 +537,14 @@ const generateSupplierRevenueReportData = (orders: SupplierOrder[], selectedMont
       // Sort by date descending (newest first)
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
-  
+
   const headers = ["Date", "Orders Count", "Total Revenue"];
   const rows = revenueData.map(data => [
     new Date(data.date).toLocaleDateString(),
     data.orders.toString(),
     `₹${data.revenue.toFixed(2)}`
   ]);
-  
+
   return { headers, rows };
 };
 
@@ -551,10 +555,10 @@ const generateOffersReportData = (offers: any[]) => {
   const activeOffers = offers.filter(offer => offer.status === 'Active').length;
   const expiredOffers = offers.filter(offer => offer.status === 'Expired').length;
   const scheduledOffers = offers.filter(offer => offer.status === 'Scheduled').length;
-  
+
   // Calculate total redemptions and estimated value
   const totalRedemptions = offers.reduce((sum, offer) => sum + (offer.redeemed || 0), 0);
-  
+
   // Estimate total discount value
   const totalDiscountValue = offers.reduce((sum, offer) => {
     if (offer.type === 'fixed') {
@@ -564,12 +568,12 @@ const generateOffersReportData = (offers: any[]) => {
       return sum + (1000 * (offer.value / 100) * (offer.redeemed || 0));
     }
   }, 0);
-  
+
   // Top 5 most redeemed offers
   const topOffers = [...offers]
     .sort((a, b) => (b.redeemed || 0) - (a.redeemed || 0))
     .slice(0, 5);
-  
+
   // Prepare headers and rows for the detailed report
   const headers = ["Offer Code", "Type", "Value", "Status", "Start Date", "Expiry Date", "Redemptions", "Est. Value"];
   const rows = offers.map(offer => [
@@ -580,19 +584,21 @@ const generateOffersReportData = (offers: any[]) => {
     offer.startDate ? new Date(offer.startDate).toLocaleDateString() : 'N/A',
     offer.expires ? new Date(offer.expires).toLocaleDateString() : 'No Expiry',
     offer.redeemed || 0,
-    offer.type === 'percentage' 
-      ? `₹${(1000 * (offer.value / 100) * (offer.redeemed || 0)).toFixed(2)}` 
+    offer.type === 'percentage'
+      ? `₹${(1000 * (offer.value / 100) * (offer.redeemed || 0)).toFixed(2)}`
       : `₹${(offer.value * (offer.redeemed || 0)).toFixed(2)}`
   ]);
-  
-  return { headers, rows, summary: {
-    totalOffers,
-    activeOffers,
-    expiredOffers,
-    scheduledOffers,
-    totalRedemptions,
-    totalDiscountValue
-  }};
+
+  return {
+    headers, rows, summary: {
+      totalOffers,
+      activeOffers,
+      expiredOffers,
+      scheduledOffers,
+      totalRedemptions,
+      totalDiscountValue
+    }
+  };
 };
 
 // Add referrals report data generator
@@ -602,7 +608,7 @@ const generateReferralsReportData = (referrals: any[]) => {
   const pendingReferrals = referrals.filter(referral => referral.status === 'Pending').length;
   const completedReferrals = referrals.filter(referral => referral.status === 'Completed').length;
   const paidReferrals = referrals.filter(referral => referral.status === 'Bonus Paid').length;
-  
+
   // Calculate total earnings
   const totalEarnings = referrals
     .filter(referral => referral.status === 'Completed' || referral.status === 'Bonus Paid')
@@ -610,7 +616,7 @@ const generateReferralsReportData = (referrals: any[]) => {
       const bonusValue = parseFloat(referral.bonus.replace('₹', '').replace(',', ''));
       return sum + (isNaN(bonusValue) ? 0 : bonusValue);
     }, 0);
-  
+
   // Prepare headers and rows for the detailed report
   const headers = ["Referral ID", "Referral Type", "Referred Person", "Date", "Status", "Bonus"];
   const rows = referrals.map(referral => [
@@ -621,14 +627,16 @@ const generateReferralsReportData = (referrals: any[]) => {
     referral.status,
     referral.bonus
   ]);
-  
-  return { headers, rows, summary: {
-    totalReferrals,
-    pendingReferrals,
-    completedReferrals,
-    paidReferrals,
-    totalEarnings
-  }};
+
+  return {
+    headers, rows, summary: {
+      totalReferrals,
+      pendingReferrals,
+      completedReferrals,
+      paidReferrals,
+      totalEarnings
+    }
+  };
 };
 
 // Add supplier product sales report data generator
@@ -641,7 +649,7 @@ const generateSupplierProductSalesReportData = (data: any) => {
 
   // Prepare headers
   const headers = ["Product Name", "Price", "Stock", "Category", "Units Sold", "Revenue", "Orders"];
-  
+
   // Prepare rows
   const rows = products.map((product: any) => [
     product.productName || "N/A",
@@ -652,7 +660,7 @@ const generateSupplierProductSalesReportData = (data: any) => {
     `₹${product.totalRevenue?.toFixed(2) || "0.00"}`,
     product.orderCount?.toString() || "0"
   ]);
-  
+
   return { headers, rows, summary };
 };
 
@@ -707,6 +715,158 @@ const getReportDataByType = (reportType: string, data: any, selectedMonth: strin
   }
 };
 
+const generateMonthOptions = () => {
+  const options = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+    options.push({ value, label });
+  }
+  return options;
+};
+
+// Preview components for specific report types
+const OffersReportPreview = ({ reportData }: { reportData: any }) => {
+  const { summary } = reportData;
+  if (!summary) return <ReportPreviewTable reportType="offers" reportData={reportData} />;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-primary/5">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Offers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.totalOffers}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-green-50">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Offers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{summary.activeOffers}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-blue-50">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Redemptions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{summary.totalRedemptions}</div>
+          </CardContent>
+        </Card>
+      </div>
+      <ReportPreviewTable reportType="offers" reportData={reportData} />
+    </div>
+  );
+};
+
+const ReferralsReportPreview = ({ reportData }: { reportData: any }) => {
+  const { summary } = reportData;
+  if (!summary) return <ReportPreviewTable reportType="referrals" reportData={reportData} />;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-primary/5">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Referrals</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.totalReferrals}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-green-50">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Earnings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">₹{summary.totalEarnings.toLocaleString()}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-blue-50">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Completed Referrals</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{summary.completedReferrals}</div>
+          </CardContent>
+        </Card>
+      </div>
+      <ReportPreviewTable reportType="referrals" reportData={reportData} />
+    </div>
+  );
+};
+
+const SupplierTotalOrdersReportPreview = ({ reportData }: { reportData: any }) => (
+  <ReportPreviewTable reportType="supplier-total-orders" reportData={reportData} />
+);
+
+const SupplierPendingOrdersReportPreview = ({ reportData }: { reportData: any }) => (
+  <ReportPreviewTable reportType="supplier-pending-orders" reportData={reportData} />
+);
+
+const SupplierConfirmedOrdersReportPreview = ({ reportData }: { reportData: any }) => (
+  <ReportPreviewTable reportType="supplier-confirmed-orders" reportData={reportData} />
+);
+
+const SupplierCompletedOrdersReportPreview = ({ reportData }: { reportData: any }) => (
+  <ReportPreviewTable reportType="supplier-completed-orders" reportData={reportData} />
+);
+
+const SupplierPlatformCollectionsReportPreview = ({ reportData }: { reportData: any }) => (
+  <ReportPreviewTable reportType="platform-collections" reportData={reportData} />
+);
+
+const SupplierProductSalesReportPreview = ({ reportData }: { reportData: any }) => {
+  const { summary } = reportData;
+  if (!summary) return <ReportPreviewTable reportType="supplier-product-sales" reportData={reportData} />;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-primary/5">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Products</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.totalProducts || 0}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-green-50">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">₹{summary.totalRevenue?.toLocaleString() || 0}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-blue-50">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Units Sold</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{summary.totalUnitsSold || 0}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-orange-50">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{summary.totalOrders || 0}</div>
+          </CardContent>
+        </Card>
+      </div>
+      <ReportPreviewTable reportType="supplier-product-sales" reportData={reportData} />
+    </div>
+  );
+};
+
 // ReportPreviewTable component
 const ReportPreviewTable = ({ reportType, reportData }: { reportType: string; reportData: ReportData }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -717,9 +877,9 @@ const ReportPreviewTable = ({ reportType, reportData }: { reportType: string; re
   const filteredRows = useMemo(() => {
     if (!reportData?.rows) return [];
     if (!searchTerm) return reportData.rows;
-    
-    return reportData.rows.filter(row => 
-      row.some(cell => 
+
+    return reportData.rows.filter(row =>
+      row.some(cell =>
         cell && cell.toString().toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
@@ -773,14 +933,14 @@ const ReportPreviewTable = ({ reportType, reportData }: { reportType: string; re
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
+
         {/* Pagination Controls */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-muted-foreground">
             Rows per page:
           </span>
-          <Select 
-            value={itemsPerPage.toString()} 
+          <Select
+            value={itemsPerPage.toString()}
             onValueChange={(value) => {
               setItemsPerPage(parseInt(value));
               setCurrentPage(1); // Reset to first page when changing items per page
@@ -798,7 +958,7 @@ const ReportPreviewTable = ({ reportType, reportData }: { reportType: string; re
           </Select>
         </div>
       </div>
-      
+
       {/* Table */}
       <div className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
@@ -818,71 +978,117 @@ const ReportPreviewTable = ({ reportType, reportData }: { reportType: string; re
                       {cell}
                     </TableCell>
                   ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={(reportData.headers || []).length} className="text-center py-8 text-muted-foreground">
+                  No matching results found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Pagination Controls */}
+      {
+        totalPages > 1 && (
+          <div className="flex items-center justify-between px-2">
+            <div className="text-sm text-muted-foreground">
+              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredRows.length)} of {filteredRows.length} results
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
+              </Button>
+              <div className="text-sm font-medium">
+                Page {currentPage} of {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )
+      }
+    </div >
+  );
 };
 
 export default function ReportsPage() {
   const { user, role, isLoading: isAuthLoading } = useCrmAuth();
   const userRole = role || user?.role || 'admin'; // Default to admin if no role found
-  
+
   // Fetch data based on user role
-  const { data: appointmentsData, isLoading: isAppointmentsLoading } = useGetAppointmentsQuery(undefined, { 
-    skip: userRole !== 'doctor' && userRole !== 'vendor' 
+  const { data: appointmentsData, isLoading: isAppointmentsLoading } = useGetAppointmentsQuery(undefined, {
+    skip: userRole !== 'doctor' && userRole !== 'vendor'
   });
-  
-  const { data: clientsData, isLoading: isClientsLoading } = useGetClientsQuery({}, { 
-    skip: userRole !== 'vendor' 
+
+  const { data: clientsData, isLoading: isClientsLoading } = useGetClientsQuery({}, {
+    skip: userRole !== 'vendor'
   });
-  
-  const { data: productsData, isLoading: isProductsLoading } = useGetCrmProductsQuery({}, { 
-    skip: userRole !== 'supplier' && userRole !== 'vendor' 
+
+  const { data: productsData, isLoading: isProductsLoading } = useGetCrmProductsQuery({}, {
+    skip: userRole !== 'supplier' && userRole !== 'vendor'
   });
-  
-  const { data: expensesData, isLoading: isExpensesLoading } = useGetExpensesQuery(undefined, { 
-    skip: userRole !== 'vendor' 
+
+  const { data: expensesData, isLoading: isExpensesLoading } = useGetExpensesQuery(undefined, {
+    skip: userRole !== 'vendor'
   });
-  
-  const { data: ordersData, isLoading: isOrdersLoading } = useGetCrmOrdersQuery(user?._id || '', { 
+
+  const { data: ordersData, isLoading: isOrdersLoading } = useGetCrmOrdersQuery(user?._id || '', {
     skip: !user?._id
   });
-  
-  const { data: referralsData, isLoading: isReferralsLoading } = useGetCrmReferralsQuery(undefined, { 
-    skip: userRole !== 'vendor' && userRole !== 'supplier'
-  });
-  
-  const { data: campaignsData, isLoading: isCampaignsLoading } = useGetCrmCampaignsQuery({}, { 
-    skip: userRole !== 'vendor' 
-  });
-  
-  const { data: clientOrdersData, isLoading: isClientOrdersLoading } = useGetCrmClientOrdersQuery(undefined, { 
+
+  const { data: referralsData, isLoading: isReferralsLoading } = useGetCrmReferralsQuery(undefined, {
     skip: userRole !== 'vendor' && userRole !== 'supplier'
   });
 
-  const { data: offersData, isLoading: isOffersLoading } = useGetOffersQuery({}, { 
+  const { data: campaignsData, isLoading: isCampaignsLoading } = useGetCrmCampaignsQuery({}, {
+    skip: userRole !== 'vendor'
+  });
+
+  const { data: clientOrdersData, isLoading: isClientOrdersLoading } = useGetCrmClientOrdersQuery(undefined, {
+    skip: userRole !== 'vendor' && userRole !== 'supplier'
+  });
+
+  const { data: offersData, isLoading: isOffersLoading } = useGetOffersQuery({}, {
     skip: userRole !== 'vendor' && userRole !== 'admin' && userRole !== 'supplier'
   });
 
   // Supplier report queries
-  const { data: supplierTotalOrdersData, isLoading: isSupplierTotalOrdersLoading } = useGetSupplierTotalOrdersReportQuery(undefined, { 
+  const { data: supplierTotalOrdersData, isLoading: isSupplierTotalOrdersLoading } = useGetSupplierTotalOrdersReportQuery(undefined, {
     skip: userRole !== 'supplier'
   });
 
-  const { data: supplierPendingOrdersData, isLoading: isSupplierPendingOrdersLoading } = useGetSupplierPendingOrdersReportQuery(undefined, { 
+  const { data: supplierPendingOrdersData, isLoading: isSupplierPendingOrdersLoading } = useGetSupplierPendingOrdersReportQuery(undefined, {
     skip: userRole !== 'supplier'
   });
 
-  const { data: supplierConfirmedOrdersData, isLoading: isSupplierConfirmedOrdersLoading } = useGetSupplierConfirmedOrdersReportQuery(undefined, { 
+  const { data: supplierConfirmedOrdersData, isLoading: isSupplierConfirmedOrdersLoading } = useGetSupplierConfirmedOrdersReportQuery(undefined, {
     skip: userRole !== 'supplier'
   });
 
-  const { data: supplierCompletedOrdersData, isLoading: isSupplierCompletedOrdersLoading } = useGetSupplierCompletedOrdersReportQuery(undefined, { 
+  const { data: supplierCompletedOrdersData, isLoading: isSupplierCompletedOrdersLoading } = useGetSupplierCompletedOrdersReportQuery(undefined, {
     skip: userRole !== 'supplier'
   });
 
-  const { data: supplierPlatformCollectionsData, isLoading: isSupplierPlatformCollectionsLoading } = useGetSupplierPlatformCollectionsReportQuery(undefined, { 
+  const { data: supplierPlatformCollectionsData, isLoading: isSupplierPlatformCollectionsLoading } = useGetSupplierPlatformCollectionsReportQuery(undefined, {
     skip: userRole !== 'supplier'
   });
 
-  const { data: supplierProductSalesData, isLoading: isSupplierProductSalesLoading } = useGetSupplierProductSalesReportQuery(undefined, { 
+  const { data: supplierProductSalesData, isLoading: isSupplierProductSalesLoading } = useGetSupplierProductSalesReportQuery(undefined, {
     skip: userRole !== 'supplier'
   });
 
@@ -923,7 +1129,7 @@ export default function ReportsPage() {
     }
     setIsModalOpen(true);
   };
-  
+
   // Export to CSV
   const exportToCSV = (reportType: string, reportTitle: string) => {
     try {
@@ -943,31 +1149,31 @@ export default function ReportsPage() {
         supplierConfirmedOrders: supplierConfirmedOrdersData,
         supplierCompletedOrders: supplierCompletedOrdersData,
         supplierPlatformCollections: supplierPlatformCollectionsData
-      };      
+      };
       const reportData = getReportDataByType(reportType, allData, reportType === "supplier-revenue" ? selectedMonth : null);
       const headers = (reportData.headers || []).join(',');
       const rows = reportData.rows ? reportData.rows.map((row: any[]) => row.map((cell: any) => `"${cell}"`).join(',')).join('\n') : '';
       const csvContent = `${headers}\n${rows}`;
-      
+
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
-      
+
       link.setAttribute('href', url);
       link.setAttribute('download', `${reportTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
       link.style.visibility = 'hidden';
-      
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast.success('Report exported successfully as CSV');
     } catch (error) {
       console.error('CSV export error:', error);
       toast.error('Failed to export report as CSV');
     }
   };
-  
+
   // Export to Excel (CSV format with .xlsx extension for simplicity)
   const exportToExcel = (reportType: string, reportTitle: string) => {
     try {
@@ -988,31 +1194,31 @@ export default function ReportsPage() {
         supplierCompletedOrders: supplierCompletedOrdersData,
         supplierPlatformCollections: supplierPlatformCollectionsData,
       };
-      
+
       const reportData = getReportDataByType(reportType, allData, reportType === "supplier-revenue" ? selectedMonth : null);
       const headers = (reportData.headers || []).join('\t');
       const rows = reportData.rows ? reportData.rows.map((row: any[]) => row.join('\t')).join('\n') : '';
       const excelContent = `${headers}\n${rows}`;
-      
+
       const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
       const link = document.createElement('a');
       const url = URL.createObjectURL(blob);
-      
+
       link.setAttribute('href', url);
       link.setAttribute('download', `${reportTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xls`);
       link.style.visibility = 'hidden';
-      
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       toast.success('Report exported successfully as Excel');
     } catch (error) {
       console.error('Excel export error:', error);
       toast.error('Failed to export report as Excel');
     }
   };
-  
+
   // Export to PDF
   const exportToPDF = async (reportType: string, reportTitle: string) => {
     try {
@@ -1033,38 +1239,38 @@ export default function ReportsPage() {
         supplierCompletedOrders: supplierCompletedOrdersData,
         supplierPlatformCollections: supplierPlatformCollectionsData,
       };
-      
+
       const reportData = getReportDataByType(reportType, allData, reportType === "supplier-revenue" ? selectedMonth : null);
-      
+
       // Dynamically import html2pdf only on client side
       const html2pdfModule = await import('html2pdf.js');
       const html2pdf = html2pdfModule.default;
-      
+
       // Create a temporary HTML element for PDF generation
       const element = document.createElement('div');
       element.innerHTML = `
-        <div style="padding: 20px; font-family: Arial, sans-serif;">
-          <h2 style="text-align: center; margin-bottom: 20px;">${reportTitle}</h2>
-          <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr>
-                ${(reportData.headers || []).map(header => `<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">${header}</th>`).join('')}
-              </tr>
-            </thead>
-            <tbody>
-              ${(reportData.rows || []).map((row: any[], rowIndex: number) => `
+                  <div style="padding: 20px; font-family: Arial, sans-serif;">
+                    <h2 style="text-align: center; margin-bottom: 20px;">${reportTitle}</h2>
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <thead>
+                        <tr>
+                          ${(reportData.headers || []).map(header => `<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">${header}</th>`).join('')}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${(reportData.rows || []).map((row: any[], rowIndex: number) => `
                 <tr key="${rowIndex}">
                   ${row.map((cell: any) => `<td style="border: 1px solid #ddd; padding: 8px;">${cell}</td>`).join('')}
                 </tr>
               `).join('')}
-            </tbody>
-          </table>
-          <p style="margin-top: 20px; text-align: right; font-size: 12px; color: #666;">
-            Generated on ${new Date().toLocaleDateString()}
-          </p>
-        </div>
-      `;
-      
+                      </tbody>
+                    </table>
+                    <p style="margin-top: 20px; text-align: right; font-size: 12px; color: #666;">
+                      Generated on ${new Date().toLocaleDateString()}
+                    </p>
+                  </div>
+                  `;
+
       const pdfOptions: any = {
         margin: 10,
         filename: `${reportTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
@@ -1072,7 +1278,7 @@ export default function ReportsPage() {
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
       };
-      
+
       await html2pdf().set(pdfOptions).from(element).save();
       toast.success('Report exported successfully as PDF');
     } catch (error) {
@@ -1108,37 +1314,37 @@ export default function ReportsPage() {
   // Get report data for preview
   const previewReportData = useMemo(() => {
     if (!selectedReport) return sampleReportData["sales"];
-    
+
     // For supplier total orders, return the raw data directly
     if (selectedReport.type === "supplier-total-orders") {
       return supplierTotalOrdersData;
     }
-    
+
     // For supplier platform collections, return the raw data directly
     if (selectedReport.type === "platform-collections") {
       return supplierPlatformCollectionsData;
     }
-    
+
     // For supplier pending orders, return the raw data directly
     if (selectedReport.type === "supplier-pending-orders") {
       return supplierPendingOrdersData;
     }
-    
+
     // For supplier confirmed orders, return the raw data directly
     if (selectedReport.type === "supplier-confirmed-orders") {
       return supplierConfirmedOrdersData;
     }
-    
+
     // For supplier completed orders, return the raw data directly
     if (selectedReport.type === "supplier-completed-orders") {
       return supplierCompletedOrdersData;
     }
-    
+
     // For supplier product sales, return the raw data directly
     if (selectedReport.type === "supplier-product-sales") {
       return supplierProductSalesData;
     }
-    
+
     const allData = {
       appointments: appointmentsData,
       clients: clientsData,
@@ -1155,13 +1361,13 @@ export default function ReportsPage() {
       supplierCompletedOrders: supplierCompletedOrdersData,
       supplierPlatformCollections: supplierPlatformCollectionsData,
     };
-    
+
     // For supplier revenue report, pass the selected month
     if (selectedReport.type === "supplier-revenue") {
       const supplierOrders = (allData.orders || []).filter((order: SupplierOrder) => order.supplierId);
       return generateSupplierRevenueReportData(supplierOrders, selectedMonth);
     }
-    
+
     return getReportDataByType(selectedReport.type, allData);
   }, [selectedReport, appointmentsData, clientsData, productsData, expensesData, ordersData, referralsData, campaignsData, clientOrdersData, offersData, supplierTotalOrdersData, supplierPendingOrdersData, supplierConfirmedOrdersData, supplierCompletedOrdersData, supplierPlatformCollectionsData, selectedMonth]);
   if (isLoading || isAuthLoading) {
@@ -1306,7 +1512,7 @@ export default function ReportsPage() {
           </div>
         )}
       </div>
-      
+
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto no-scrollbar">
           <DialogHeader>
@@ -1385,7 +1591,7 @@ export default function ReportsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Global styles to hide scrollbars while maintaining functionality */}
       <style jsx global>{`
         .no-scrollbar::-webkit-scrollbar {
