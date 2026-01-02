@@ -78,6 +78,7 @@ import { calculateBookingAmount, validateOfferCode } from '@repo/lib/utils';
 import { toast } from 'sonner';
 import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
 import { GoogleMapSelector } from '@/components/GoogleMapSelector';
+import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from "@repo/config/config";
 
 // Add a custom hook to fetch tax fee settings
 const useTaxFeeSettings = () => {
@@ -187,11 +188,8 @@ function BookingPageContent() {
 
   // Wrapper to handle mode switching with cleanup
   const handleBookingModeChange = (mode: 'salon' | 'home') => {
-    console.log(`=== Switching booking mode to: ${mode} ===`);
-    console.log('Is wedding package:', !!selectedWeddingPackage);
-    console.log('Is authenticated:', isAuthenticated);
-    console.log('Selected Time:', selectedTime);
-
+    console.log(`=== Switching booking mode to: ${mode} at step ${currentStep} ===`);
+    
     setBookingMode(mode);
 
     if (mode === 'salon') {
@@ -206,25 +204,13 @@ function BookingPageContent() {
         lat: undefined,
         lng: undefined
       });
-
-      // For salon mode, just validate time is selected
-      if (selectedWeddingPackage && !selectedTime) {
-        toast.error('Please select a time slot first');
-        setCurrentStep(3); // Go back to time selection
-        return;
-      }
-
-      // User will click "Continue to Confirmation" button to proceed
-      console.log('Salon mode selected. User can now click Continue to Confirmation');
     } else if (mode === 'home') {
-      // For wedding venue mode, validate time and open map selector
-      if (!selectedTime) {
-        toast.error('Please select a time slot first');
-        setCurrentStep(3); // Go back to time selection
-        return;
+      // For home mode, we only open the map automatically if we are already at the location step (Step 4 for weddings)
+      // For regular services, the location modal is triggered by an effect in Step 3
+      if (currentStep === 4 && selectedWeddingPackage) {
+        console.log('Opening map selector for wedding venue');
+        setShowMapSelector(true);
       }
-      console.log('Opening map selector for wedding venue');
-      setShowMapSelector(true);
     }
   };
 
@@ -508,19 +494,36 @@ function BookingPageContent() {
 
     toast.success('Location saved successfully!');
 
-    // After setting location, proceed to confirmation
-    setIsConfirmationModalOpen(true);
+    // After setting location, if we have a time selected, try to proceed
+    if (selectedTime) {
+      if (isAuthenticated) {
+        setIsConfirmationModalOpen(true);
+      } else {
+        // Save booking data to sessionStorage before redirecting to login
+        const bookingData = {
+          selectedServices,
+          serviceStaffAssignments,
+          selectedStaff,
+          selectedDate: selectedDate.toISOString(),
+          selectedTime,
+          salonId,
+          homeServiceLocation: locationData
+        };
+        sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+        router.push(`/client-login?redirect=/book/${salonId}`);
+      }
+    }
 
-    console.log("=== LOCATION SUBMISSION COMPLETE ===");
   };
-
+  
   const handleAddressDetailsFetched = (locationData: HomeServiceLocation) => {
     console.log("✅ Address details fetched - setting location data");
     console.log("Setting homeServiceLocation to:", locationData);
 
     // Ensure coordinates are present before setting state
+    let finalLocation = locationData;
     if (locationData.lat !== undefined && locationData.lng !== undefined) {
-      const finalLocation = {
+      finalLocation = {
         ...locationData,
         coordinates: {
           lat: Number(locationData.lat),
@@ -534,8 +537,25 @@ function BookingPageContent() {
     setShowLocationModal(false);
     setShowMapSelector(false); // Reset map selector state
 
-    // After setting location, proceed to confirmation
-    setIsConfirmationModalOpen(true);
+    // After setting location, if we have a time selected, try to proceed
+    if (selectedTime) {
+      if (isAuthenticated) {
+        setIsConfirmationModalOpen(true);
+      } else {
+        // Save booking data to sessionStorage before redirecting to login
+        const bookingData = {
+          selectedServices,
+          serviceStaffAssignments,
+          selectedStaff,
+          selectedDate: selectedDate.toISOString(),
+          selectedTime,
+          salonId,
+          homeServiceLocation: finalLocation
+        };
+        sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+        router.push(`/client-login?redirect=/book/${salonId}`);
+      }
+    }
 
     console.log("=== LOCATION SUBMISSION COMPLETE ===");
   };
@@ -546,7 +566,7 @@ function BookingPageContent() {
       console.log("Fetching address details for:", { lat, lng });
 
       // Check if we have the Google Maps API key
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      const apiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
       if (!apiKey) {
         toast.error('Google Maps API key is not configured. Please contact support.');
         console.error('Google Maps API key is missing');
@@ -603,7 +623,26 @@ function BookingPageContent() {
           setHomeServiceLocation(locationData as any);
           setShowLocationModal(false);
           setShowMapSelector(false); // Reset map selector state
-          setCurrentStep(3);
+          
+          // After setting location, if we have a time selected, try to proceed
+          if (selectedTime) {
+            if (isAuthenticated) {
+              setIsConfirmationModalOpen(true);
+            } else {
+                // Save booking data to sessionStorage before redirecting to login
+                const bookingData = {
+                  selectedServices,
+                  serviceStaffAssignments,
+                  selectedStaff,
+                  selectedDate: selectedDate.toISOString(),
+                  selectedTime,
+                  salonId,
+                  homeServiceLocation: locationData
+                };
+                sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+                router.push(`/client-login?redirect=/book/${salonId}`);
+            }
+          }
         } else {
           toast.error('Could not fetch complete address details. Please try again or enter manually.');
           console.log("❌ Incomplete address data fetched:", addressData);
@@ -843,17 +882,19 @@ function BookingPageContent() {
 
   // Check if any selected service is a home service and show location modal if needed
   useEffect(() => {
-    // Don't auto-trigger location modal for wedding packages - they have dedicated Step 4
+    // Disabled auto-trigger for location modal in Step 3.
+    // Location is now requested when clicking 'Continue' from Step 3 for better UX.
+    /*
     if (selectedWeddingPackage) {
       return;
     }
 
-    // Simplified Map Logic: Only show if we are in Home Mode for regular services
     const requiresLocation = bookingMode === 'home';
 
     if (requiresLocation && currentStep === 3 && !homeServiceLocation) {
       setShowLocationModal(true);
     }
+    */
   }, [selectedServices, currentStep, homeServiceLocation, bookingMode, selectedWeddingPackage]);
 
   // Ensure service-staff assignments are properly initialized when selectedServices change
@@ -2667,8 +2708,20 @@ function BookingPageContent() {
             } as any;
           } else {
             // Single service
+            if (selectedServices.length === 0) {
+              console.warn('Step3 Rendering: No services selected for single service flow');
+              return (
+                <div className="w-full py-12 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <AlertCircle className="h-8 w-8 text-destructive" />
+                    <p className="text-muted-foreground">No services selected. Please go back and select a service.</p>
+                    <Button onClick={() => setCurrentStep(1)}>Go to Step 1</Button>
+                  </div>
+                </div>
+              );
+            }
             const service = selectedServices[0];
-            const duration = convertDurationToMinutes(service.duration);
+            const duration = convertDurationToMinutes(service?.duration || 0);
             totalDuration = duration || 0;
             serviceForTimeSlot = service;
           }

@@ -11,6 +11,7 @@ import { Service, StaffMember, WeddingPackage } from '@/hooks/useBookingData';
 import { Heart, Scissors, MapPin, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { GoogleMapSelector } from '@/components/GoogleMapSelector';
+import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '@repo/config/config';
 
 // Memoized wrapper for Step 2 with service data
 const Step2WithServiceData = memo(({
@@ -344,7 +345,7 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
     try {
       const fullAddress = `${address}, ${city}, ${state}, ${pincode}`;
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
       );
       const data = await response.json();
 
