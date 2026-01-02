@@ -4142,7 +4142,7 @@ function BookingPageContent() {
               <Label htmlFor="date">Date</Label>
               <DatePicker
                 selected={selectedDate}
-                onChange={(date) => date && setSelectedDate(date)}
+                onChange={(date: Date | null) => date && setSelectedDate(date)}
                 className="w-full"
               />
             </div>
