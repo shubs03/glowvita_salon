@@ -314,6 +314,12 @@ export const glowvitaApi = createApi({
       transformResponse: (response) => response,
     }),
 
+    getPublicVendorById: builder.query({
+      query: (vendorId) => ({ url: `/vendors/${vendorId}`, method: "GET" }),
+      providesTags: (result, error, vendorId) => [{ type: "PublicVendor", id: vendorId }],
+      transformResponse: (response) => response,
+    }),
+
     // Public Products for landing page
     getPublicProducts: builder.query({
       query: () => ({ url: "/products", method: "GET" }),
@@ -2513,6 +2519,7 @@ export const {
   // Web App
   useGetMeQuery,
   useGetPublicVendorsQuery,
+  useGetPublicVendorByIdQuery,
   useGetPublicProductsQuery,
   useGetPublicServicesQuery,
   useGetPublicCategoriesQuery,
