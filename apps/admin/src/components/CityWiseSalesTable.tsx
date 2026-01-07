@@ -8,8 +8,12 @@ import { useState } from "react";
 interface CitySalesData {
   city: string;
   totalBusinesses: number;
+  totalServiceAmount: number;
+  totalProductAmount: number;
   servicePlatformFees: number;
   productPlatformFees: number;
+  serviceTax: number;
+  productTax: number;
   subscriptionAmount: number;
   smsAmount: number;
   totalRevenue: number;
@@ -99,12 +103,17 @@ export function CityWiseSalesTable({ data, isLoading, filterType, filterValue }:
             <TableHeader>
               <TableRow>
                 <TableHead className="whitespace-nowrap">City</TableHead>
-                <TableHead className="whitespace-nowrap">Total Businesses</TableHead>
+                <TableHead className="whitespace-nowrap">Total Business</TableHead>
+                <TableHead className="whitespace-nowrap">Total Revenue (₹)</TableHead>
+                <TableHead className="whitespace-nowrap">No of Businesses</TableHead>
+                <TableHead className="whitespace-nowrap">Total Service Amount (₹)</TableHead>
+                <TableHead className="whitespace-nowrap">Total Product Amount (₹)</TableHead>
                 <TableHead className="whitespace-nowrap">Service Platform Fees (₹)</TableHead>
                 <TableHead className="whitespace-nowrap">Product Platform Fees (₹)</TableHead>
+                <TableHead className="whitespace-nowrap">Service Tax (₹)</TableHead>
+                <TableHead className="whitespace-nowrap">Product Tax/GST (₹)</TableHead>
                 <TableHead className="whitespace-nowrap">Subscription Amount (₹)</TableHead>
                 <TableHead className="whitespace-nowrap">SMS Amount (₹)</TableHead>
-                <TableHead className="whitespace-nowrap">Total Revenue (₹)</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -112,17 +121,22 @@ export function CityWiseSalesTable({ data, isLoading, filterType, filterValue }:
                 displayData.map((item, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">{item.city}</TableCell>
+                    <TableCell className="font-bold">{formatCurrency(item.totalServiceAmount + item.totalProductAmount + item.servicePlatformFees + item.productPlatformFees + item.serviceTax + item.productTax + item.subscriptionAmount + item.smsAmount)}</TableCell>
+                    <TableCell className="font-bold">{formatCurrency(item.servicePlatformFees + item.productPlatformFees + item.subscriptionAmount + item.smsAmount)}</TableCell>
                     <TableCell>{item.totalBusinesses}</TableCell>
+                    <TableCell>{formatCurrency(item.totalServiceAmount)}</TableCell>
+                    <TableCell>{formatCurrency(item.totalProductAmount)}</TableCell>
                     <TableCell>{formatCurrency(item.servicePlatformFees)}</TableCell>
                     <TableCell>{formatCurrency(item.productPlatformFees)}</TableCell>
+                    <TableCell>{formatCurrency(item.serviceTax)}</TableCell>
+                    <TableCell>{formatCurrency(item.productTax)}</TableCell>
                     <TableCell>{formatCurrency(item.subscriptionAmount)}</TableCell>
                     <TableCell>{formatCurrency(item.smsAmount)}</TableCell>
-                    <TableCell className="font-bold">{formatCurrency(item.totalRevenue)}</TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">
+                  <TableCell colSpan={10} className="text-center">
                     No city-wise sales data available
                   </TableCell>
                 </TableRow>

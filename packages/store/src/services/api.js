@@ -1256,6 +1256,50 @@ export const glowvitaApi = createApi({
       providesTags: ["SalesByCategoryReport"],
       transformResponse: (response) => (response && response.success ? response.data : {}),
     }),
+    
+    // Vendor Payable Report
+    getVendorPayableReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/settlementreport/vendor-payable",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["VendorPayableReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+    
+    // Vendor Payout Settlement Report
+    getVendorPayoutSettlementReport: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/settlementreport/vendor-payout",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["VendorPayoutSettlementReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+    
+    // Vendor Payout Settlement Report Product
+    getVendorPayoutSettlementReportProduct: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/settlementreport/vendor-payout-product",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["VendorPayoutSettlementReportProduct"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+    
+    // Vendor Payable to Admin Report Product
+    getVendorPayableReportProduct: builder.query({
+      query: (params) => ({ 
+        url: "/admin/reports/settlementreport/vendor-payable-product",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["VendorPayableReportProduct"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
     // Admin Product Categories 
 
     getAdminProductCategories: builder.query({
@@ -2837,6 +2881,10 @@ export const {
   // Sales Report Hooks
   useGetSalesByServiceReportQuery,
   useGetSalesByCustomerReportQuery,
+  useGetVendorPayableReportQuery,
+  useGetVendorPayoutSettlementReportQuery,
+  useGetVendorPayoutSettlementReportProductQuery,
+  useGetVendorPayableReportProductQuery,
   // Product Report Hooks
   useGetProductSummaryReportQuery,
   useGetSalesByProductReportQuery,
