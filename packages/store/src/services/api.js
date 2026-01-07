@@ -306,11 +306,29 @@ export const glowvitaApi = createApi({
 
     // Public Vendors for landing page
     getPublicVendors: builder.query({
-      query: () => ({
-        url: `/vendors`,
-        method: "GET"
-      }),
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        
+        // Only append truthy parameters
+        if (params.serviceName) queryParams.append("serviceName", params.serviceName);
+        if (params.city) queryParams.append("city", params.city);
+        if (params.categoryIds) queryParams.append("categoryIds", params.categoryIds);
+        if (params.limit) queryParams.append("limit", params.limit.toString());
+        if (params.offset) queryParams.append("offset", params.offset.toString());
+
+        const queryString = queryParams.toString();
+        return {
+          url: `/vendors${queryString ? `?${queryString}` : ""}`,
+          method: "GET",
+        };
+      },
       providesTags: ["PublicVendors"],
+      transformResponse: (response) => response,
+    }),
+
+    getPublicVendorById: builder.query({
+      query: (vendorId) => ({ url: `/vendors/${vendorId}`, method: "GET" }),
+      providesTags: (result, error, vendorId) => [{ type: "PublicVendor", id: vendorId }],
       transformResponse: (response) => response,
     }),
 
@@ -2557,6 +2575,7 @@ export const {
   // Web App
   useGetMeQuery,
   useGetPublicVendorsQuery,
+  useGetPublicVendorByIdQuery,
   useGetPublicProductsQuery,
   useGetPublicServicesQuery,
   useGetPublicCategoriesQuery,

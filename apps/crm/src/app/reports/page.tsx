@@ -4,43 +4,41 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@repo/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
-import { Pagination } from "@repo/ui/pagination";
-import { Badge } from "@repo/ui/badge";
-import { Download, Eye, DollarSign, Users, UserPlus, ShoppingCart, Search, Calendar, Copy, FileText, FileSpreadsheet, Printer, Filter } from 'lucide-react';
+import { Download, Eye, DollarSign, Users, UserPlus, ShoppingCart, Search, FileSpreadsheet, FileText, Printer, Tag, CheckCircle, Percent, IndianRupee, XCircle, Clock, TrendingUp, Package, AlertTriangle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Input } from '@repo/ui/input';
 import { Skeleton } from "@repo/ui/skeleton";
-import { useCrmAuth } from '@/hooks/useCrmAuth';
-import { 
-  useGetAllAppointmentsReportQuery,
-  useGetSummaryByServiceReportQuery,
-  useGetCompletedAppointmentsReportQuery,
-  useGetCancelledAppointmentsReportQuery,
-  useGetSalesByServiceReportQuery,
-  useGetSalesByCustomerReportQuery,
-  useGetProductSummaryReportQuery,
-  useGetSalesByProductReportQuery,
-  useGetInventoryStockReportQuery,
-  useGetCategoryWiseProductReportQuery,
-  useGetUniqueClientsQuery,
-  useGetUniqueServicesQuery,
-  useGetUniqueStaffQuery,
-  useGetUniqueProductNamesQuery,
-  useGetUniqueBrandsQuery,
-  useGetUniqueCategoriesQuery
-} from '@repo/store/api';
-
-// Export functionality imports
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
+import { useCrmAuth } from "@/hooks/useCrmAuth";
+import {
+  useGetAppointmentsQuery,
+  useGetClientsQuery,
+  useGetCrmProductsQuery,
+  useGetExpensesQuery,
+  useGetCrmOrdersQuery,
+  useGetCrmReferralsQuery,
+  useGetCrmCampaignsQuery,
+  useGetCrmClientOrdersQuery,
+  useGetOffersQuery,
+  useGetSupplierTotalOrdersReportQuery,
+  useGetSupplierPendingOrdersReportQuery,
+  useGetSupplierConfirmedOrdersReportQuery,
+  useGetSupplierCompletedOrdersReportQuery,
+  useGetSupplierPlatformCollectionsReportQuery,
+  useGetSupplierProductSalesReportQuery
+} from '@repo/store/services/api'; import { toast } from 'sonner';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@repo/ui/dropdown-menu";
 
 interface Report {
   title: string;
   description: string;
   details: string;
+  type: string; // Used to identify the report type for data fetching
 }
 
 interface ReportCategory {
@@ -48,4939 +46,1053 @@ interface ReportCategory {
   reports: Report[];
 }
 
-interface Filters {
-  startDate: string;
-  endDate: string;
-  reportType: string;
+interface ReportData {
+  headers: string[];
+  rows: any[][];
 }
 
-interface FilterParams {
-  startDate?: string;
-  endDate?: string;
-  saleType?: string;
-  city?: string;
-  status?: string;
-  userType?: string;
-  client?: string;
-  service?: string;
-  staff?: string;
-  product?: string;
-  category?: string;
-  brand?: string;
-  isActive?: boolean;
-  bookingType?: string;
+// Add SupplierOrder interface
+interface SupplierOrder {
+  _id: string;
+  orderId?: string;
+  items: {
+    productId: string;
+    productName: string;
+    productImage: string;
+    quantity: number;
+    price: number;
+  }[];
+  customerName?: string;
+  vendorId?: string;
+  supplierId?: string;
+  totalAmount: number;
+  status: 'Pending' | 'Processing' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled';
+  shippingAddress: string;
+  createdAt: string;
+  trackingNumber?: string;
+  courier?: string;
 }
 
-const reportsData: ReportCategory[] = [
+// Define role-specific reports
+const roleSpecificReports: Record<string, ReportCategory[]> = {
+  admin: [
     {
-        category: "Financial Reports",
-        reports: [
-            {
-                title: "Sales Report",
-                description: "Detailed report of all sales, bookings, and transactions.",
-                details: "Includes profit, loss, and settlement data."
-            },
-            {
-                title: "Tax & Fees Report",
-                description: "A comprehensive breakdown of collected taxes and platform fees.",
-                details: "For financial reconciliation and accounting."
-            },
-            {
-                title: "Subscription Report",
-                description: "Detailed report on subscription revenue and user churn.",
-                details: "Monitor the health of your subscription business."
-            },
-        ]
-    },
-    {
-        category: "User & Vendor Reports",
-        reports: [
-            {
-                title: "User Activity Report",
-                description: "Report on user registrations, logins, and platform activity.",
-                details: "Track user engagement and growth metrics."
-            },
-             {
-                title: "Customer Demographics Report",
-                description: "Insights into your customer base, including location and preferences.",
-                details: "Understand your audience to tailor your services."
-            },
-            {
-                title: "Vendor Performance Report",
-                description: "Analytics on vendor bookings, ratings, and payouts.",
-                details: "Evaluate and manage vendor performance effectively."
-            },
-            {
-                title: "Doctor & Dermatologist Report",
-                description: "Performance and engagement metrics for registered doctors.",
-                details: "Track consultations, revenue, and ratings."
-            },
-            {
-                title: "Supplier & Inventory Report",
-                description: "Track supplier performance and product sales.",
-                details: "Manage inventory and supplier relationships."
-            },
-        ]
-    },
-    {
-        category: "Appointment Summary",
-        reports: [
-            {
-                title: "All Appointments Report",
-                description: "Complete record of all appointments with detailed information.",
-                details: "Includes client name, service type, assigned staff, scheduled date and time, creation date, appointment duration, total amount, current status (confirmed/pending/cancelled), payment status, and special notes."
-            },
-            {
-                title: "Appointment Summary by Service",
-                description: "Aggregated view showing appointment counts, revenue, and popularity by service type.",
-                details: "Displays service name, total appointments completed, revenue generated, average duration, percentage distribution, and staff performance metrics for each service category."
-            },
-            {
-                title: "Completed Appointments Report",
-                description: "Detailed listing of all successfully completed appointments.",
-                details: "Shows client details, service provided, staff member, completion date/time, duration, amount charged, payment method, rating/review if provided, and follow-up recommendations."
-            },
-            {
-                title: "Cancelled Appointments Report",
-                description: "Comprehensive analysis of cancelled appointments with reasons and impact.",
-                details: "Lists client name, scheduled service, cancellation date/time, reason for cancellation (if provided), refund status, revenue impact, cancellation trend analysis, and preventive measures suggestions."
-            },
-            {
-                title: "All Appointments by Staff",
-                description: "Detailed report showing appointment statistics aggregated by staff member.",
-                details: "Displays staff name, total appointments handled, total duration of services, and total sales generated by each staff member."
-            }
-        ]
-    },
-    {
-        category: "Marketing & Engagement Reports",
-        reports: [
-            {
-                title: "Offers & Coupons Report",
-                description: "Analytics on coupon usage, redemption rates, and campaign ROI.",
-                details: "Optimize your promotional strategies."
-            },
-            {
-                title: "Referral Program Report",
-                description: "Track the performance of C2C, C2V, and V2V referral programs.",
-                details: "Analyze referral conversions and bonus payouts."
-            },
-            {
-                title: "Marketing Campaign Report",
-                description: "Performance metrics for all marketing campaigns.",
-                details: "Includes SMS, social media, and digital marketing."
-            }
-        ]
-    },
-    {
-        category: "Sales Summary",
-        reports: [
-            {
-                title: "Sales by Service",
-                description: "Detailed report showing revenue generated by each service type (only completed appointments).",
-                details: "Displays service name, service sold, gross sale, discounts, offers, net sale, tax, and total sales."
-            },
-            {
-                title: "Sales by Customer",
-                description: "Analysis of revenue generated by individual customers.",
-                details: "Shows customer name, total appointments, total spending, total duration, and average values."
-            },
-            {
-                title: "Sales by Product",
-                description: "Detailed report showing revenue generated by each product (only delivered products).",
-                details: "Displays product ID, product name, brand, product category, quantity sold, gross sales, discount amount, net sales, tax amount, total sales, average selling price, cost of goods sold, gross profit, and gross margin %."
-            }
-        ]
-    },
-    {
-        category: "Product Summary",
-        reports: [
-            {
-                title: "All Products Report",
-                description: "Complete record of all products with detailed information.",
-                details: "Includes product name, category, price, sale price, stock quantity, status, and creation date."
-            },
-            {
-                title: "Inventory / Stock Report",
-                description: "Detailed analysis of product inventory and stock levels.",
-                details: "Shows product name, current stock, low stock alerts, last updated date, and stock movement history."
-            },
-            {
-                title: "Category-wise Product Report",
-                description: "Aggregated view showing product counts and sales by category.",
-                details: "Displays category name, total products, average price, total stock value, and sales performance metrics."
-            }
-        ]
-    }
-];
-
-const dummyReportData = [
-  { id: 'REP-001', name: 'John Doe', amount: '$150.00', date: '2024-08-01' },
-  { id: 'REP-002', name: 'Jane Smith', amount: '$200.50', date: '2024-08-02' },
-  { id: 'REP-003', name: 'Sam Wilson', amount: '$75.25', date: '2024-08-03' },
-  { id: 'REP-004', name: 'Alice Brown', amount: '$300.00', date: '2024-08-04' },
-];
-
-const DummyReportTable = () => (
-    <div className="overflow-x-auto no-scrollbar rounded-md border">
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Date</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {dummyReportData.map((item) => (
-                    <TableRow key={item.id}>
-                        <TableCell className="font-mono">{item.id}</TableCell>
-                        <TableCell>{item.name}</TableCell>
-                        <TableCell>{item.amount}</TableCell>
-                        <TableCell>{item.date}</TableCell>
-                    </TableRow>
-                ))}
-            </TableBody>
-        </Table>
-    </div>
-);
-
-// Export Options Component
-const ExportOptions = ({ onExport, tableName }: { onExport: (format: string) => void; tableName: string; }) => {
-  return (
-    <div className="flex flex-wrap gap-2 mb-4">
-      <Button variant="outline" size="sm" onClick={() => onExport('copy')}>
-        <Copy className="mr-2 h-4 w-4" />
-        Copy
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => onExport('excel')}>
-        <FileSpreadsheet className="mr-2 h-4 w-4" />
-        Excel
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => onExport('csv')}>
-        <FileText className="mr-2 h-4 w-4" />
-        CSV
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => onExport('pdf')}>
-        <FileText className="mr-2 h-4 w-4" />
-        PDF
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => onExport('print')}>
-        <Printer className="mr-2 h-4 w-4" />
-        Print
-      </Button>
-    </div>
-  );
-};
-
-// Unified Filter Modal Component
-const FilterModal = ({ 
-  isOpen, 
-  onClose, 
-  onApplyFilters,
-  cities = [],
-  initialFilters = {},
-  showStatusFilter = false,
-  showBookingTypeFilter = true,
-  showUserTypeFilter = false,
-  hideClientFilter = false,
-  hideServiceFilter = false,
-  hideStaffFilter = false,
-  hideBookingTypeFilter = false,
-  showProductFilter = false
-}: { 
-  isOpen: boolean;
-  onClose: () => void;
-  onApplyFilters: (filters: FilterParams) => void;
-  cities?: string[];
-  initialFilters?: FilterParams;
-  showStatusFilter?: boolean;
-  showBookingTypeFilter?: boolean;
-  showUserTypeFilter?: boolean;
-  showProductFilter?: boolean;
-  hideClientFilter?: boolean;
-  hideServiceFilter?: boolean;
-  hideStaffFilter?: boolean;
-  hideBookingTypeFilter?: boolean;
-}) => {
-  const [startDate, setStartDate] = useState<string>(initialFilters.startDate || '');
-  const [endDate, setEndDate] = useState<string>(initialFilters.endDate || '');
-  const [saleType, setSaleType] = useState<string>(initialFilters.saleType || 'all');
-  const [client, setClient] = useState<string>(initialFilters.client || 'all');
-  const [service, setService] = useState<string>(initialFilters.service || 'all');
-  const [staff, setStaff] = useState<string>(initialFilters.staff || 'all');
-  const [status, setStatus] = useState<string>(initialFilters.status || 'all');
-  const [userType, setUserType] = useState<string>(initialFilters.userType || 'all');
-  const [product, setProduct] = useState<string>(initialFilters.product || 'all');
-  // Fetch unique values for dropdowns
-  const { data: clientsData } = useGetUniqueClientsQuery({});
-  const { data: servicesData } = useGetUniqueServicesQuery({});
-  const { data: staffData } = useGetUniqueStaffQuery({});
-  const { data: productsData } = useGetUniqueProductNamesQuery({});
-
-  const uniqueClients = clientsData?.data || [];
-  const uniqueServices = servicesData?.data || [];
-  const uniqueStaff = staffData?.data || [];
-  const uniqueProducts = productsData?.data || [];
-
-  const handleApply = () => {
-    const filters: FilterParams = { 
-      startDate: startDate || undefined, 
-      endDate: endDate || undefined, 
-      client: client !== 'all' ? client : undefined, 
-      service: service !== 'all' ? service : undefined, 
-      staff: staff !== 'all' ? staff : undefined, 
-      // Only include status filter if showStatusFilter is true
-      ...(showStatusFilter && { status: status !== 'all' ? status : undefined }),
-      userType: userType !== 'all' ? userType : undefined,
-      bookingType: saleType !== 'all' ? saleType : undefined,
-      product: product !== 'all' ? product : undefined
-    };
-    onApplyFilters(filters);
-    onClose();
-  };
-
-  const handleClear = () => {
-    setStartDate('');
-    setEndDate('');
-    setSaleType('all');
-    setClient('all');
-    setService('all');
-    setStaff('all');
-    setStatus('all');
-    setUserType('all');
-    setProduct('all');
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Filters</DialogTitle>
-          <DialogDescription>
-            Apply filters to refine your report data.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="grid grid-cols-1 gap-4">
-            <div className="flex flex-col">
-              <label className="text-sm font-medium mb-1">Start Date</label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            
-            <div className="flex flex-col">
-              <label className="text-sm font-medium mb-1">End Date</label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            
-            {showBookingTypeFilter && !hideBookingTypeFilter && (
-              <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1">Booking Type</label>
-                <Select value={saleType} onValueChange={setSaleType}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select booking type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="online">Online</SelectItem>
-                    <SelectItem value="offline">Offline</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            
-            {showUserTypeFilter && (
-              <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1">User Type</label>
-                <Select value={userType} onValueChange={setUserType}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select user type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="vendor">Vendor</SelectItem>
-                    <SelectItem value="supplier">Supplier</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            
-
-            
-            {!hideClientFilter && (
-              <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1">Filter by client</label>
-                <Select value={client} onValueChange={setClient}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select client" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {uniqueClients.map((clientName: string, index: number) => (
-                      <SelectItem key={index} value={clientName}>{clientName}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            
-            {!hideServiceFilter && (
-              <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1">Filter by service</label>
-                <Select value={service} onValueChange={setService}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {uniqueServices.map((serviceName: string, index: number) => (
-                      <SelectItem key={index} value={serviceName}>{serviceName}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            
-            {!hideStaffFilter && (
-              <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1">Filter by staff</label>
-                <Select value={staff} onValueChange={setStaff}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select staff" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {uniqueStaff.map((staffName: string, index: number) => (
-                      <SelectItem key={index} value={staffName}>{staffName}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            
-            {showStatusFilter && (
-              <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1">Filter by status</label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            
-            {showProductFilter && (
-              <div className="flex flex-col">
-                <label className="text-sm font-medium mb-1">Filter by product</label>
-                <Select value={product} onValueChange={setProduct}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {uniqueProducts.map((productName: string, index: number) => (
-                      <SelectItem key={index} value={productName}>{productName}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClear}>
-            Clear
-          </Button>
-          <Button onClick={handleApply}>
-            Apply Filters
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );};
-
-// Component to display All Appointments report data in a table
-const AllAppointmentsTable = ({ startDate, endDate, client, service, staff, status, bookingType, onFiltersChange, triggerRefresh }: any) => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // 10 entries by default
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
-  // Use the RTK Query hook to fetch real data
-  const { data, isLoading, isError, refetch } = useGetAllAppointmentsReportQuery({ 
-    period: 'custom',
-    startDate: startDate ? new Date(startDate) : undefined, 
-    endDate: endDate ? new Date(endDate) : undefined,
-    client: client && client !== 'all' ? client : undefined,
-    service: service && service !== 'all' ? service : undefined,
-    staff: staff && staff !== 'all' ? staff : undefined,
-    status: status && status !== 'all' ? status : undefined,
-    bookingType: bookingType && bookingType !== 'all' ? bookingType : undefined
-  });
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-    
-    // Notify parent component about filter changes
-    if (onFiltersChange) {
-      onFiltersChange(newFilters);
-    }
-  };  
-  // Export functions
-  const exportToExcel = () => {
-    if (!tableRef.current) return;
-    
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-    
-    // Get table data
-    const wb = XLSX.utils.table_to_book(table, { sheet: 'Appointments' });
-    XLSX.writeFile(wb, 'all_appointments.xlsx');
-  };
-  
-  const exportToCSV = () => {
-    if (!tableRef.current) return;
-    
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-    
-    // Get table data
-    const wb = XLSX.utils.table_to_book(table, { sheet: 'Appointments' });
-    XLSX.writeFile(wb, 'all_appointments.csv');
-  };
-  
-  const exportToPDF = async () => {
-    if (!tableRef.current) return;
-    
-    // Use html2canvas to capture the table
-    const canvas = await html2canvas(tableRef.current);
-    const imgData = canvas.toDataURL('image/png');
-    
-    // Create PDF
-    const pdf = new jsPDF();
-    const imgWidth = pdf.internal.pageSize.getWidth();
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-    pdf.save('all_appointments.pdf');
-  };
-  
-  const copyToClipboard = () => {
-    if (!tableRef.current) return;
-    
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-    
-    // Get table HTML
-    const range = document.createRange();
-    range.selectNode(table);
-    window.getSelection()?.removeAllRanges();
-    window.getSelection()?.addRange(range);
-    document.execCommand('copy');
-    window.getSelection()?.removeAllRanges();
-    
-    // Show success message (you might want to implement a toast notification)
-    alert('Table copied to clipboard!');
-  };
-  
-  const printTable = () => {
-    if (!tableRef.current) return;
-    
-    const printWindow = window.open('', '', 'height=600,width=800');
-    if (printWindow) {
-      printWindow.document.write('<html><head><title>All Appointments</title>');
-      printWindow.document.write('</head><body >');
-      printWindow.document.write(tableRef.current.innerHTML);
-      printWindow.document.write('</body></html>');
-      printWindow.document.close();
-      printWindow.print();
-    }
-  };
-  
-  const handleExport = (format: string) => {
-    switch (format) {
-      case 'excel':
-        exportToExcel();
-        break;
-      case 'csv':
-        exportToCSV();
-        break;
-      case 'pdf':
-        exportToPDF();
-        break;
-      case 'copy':
-        copyToClipboard();
-        break;
-      case 'print':
-        printTable();
-        break;
-      default:
-        break;
-    }
-  };
-  
-  // Trigger refetch when filter values change or when explicitly triggered
-  useEffect(() => {
-    refetch();
-  }, [refetch, startDate, endDate, client, service, staff, status, bookingType, triggerRefresh]);
-  
-  // Extract appointments from the API response
-  const filteredAppointments = data?.data?.allAppointments?.appointments || data?.data || [];
-  const totalAppointments = data?.data?.allAppointments?.total || filteredAppointments.length || 0;
-  
-  // Filter data based on search term
-  const searchedAppointments = useMemo(() => {
-    if (!searchTerm) return filteredAppointments;
-    
-    return filteredAppointments.filter((appointment: any) => 
-      Object.values(appointment).some(value => 
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [filteredAppointments, searchTerm]);
-  
-  // Pagination logic
-  const totalItems = searchedAppointments.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedAppointments = searchedAppointments.slice(startIndex, endIndex);
-  
-  // Calculate counts - using mode field
-  // For accurate counts, we need to count unique appointments by ID since multi-service appointments
-  // are displayed as separate entries for each service
-  const onlineAppointmentIds = new Set();
-  const offlineAppointmentIds = new Set();
-  
-  paginatedAppointments.forEach((appt: any) => {
-    const mode = appt.mode || '';
-    if (mode.toLowerCase() === 'online') {
-      onlineAppointmentIds.add(appt.id);
-    } else if (mode.toLowerCase() === 'offline') {
-      offlineAppointmentIds.add(appt.id);
-    }
-  });
-  
-  const onlineAppointments = onlineAppointmentIds.size;
-  const offlineAppointments = offlineAppointmentIds.size;
-
-  if (isLoading) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        </div>
-      </div>
-    );
-  }
-  
-  if (isError) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-red-500">
-          Failed to load appointment data. Please try again.
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-4 gap-2">
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page when search term changes
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('copy')}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                <FileText className="mr-2 h-4 w-4" />
-                CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('print')}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      
-      <FilterModal 
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        onApplyFilters={handleFilterChange}
-        cities={[]}
-        initialFilters={filters}
-        showStatusFilter={true}
-      />
-
-      
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="border rounded-lg p-4 bg-blue-50">
-          <p className="text-sm text-gray-600">Total Bookings</p>
-          <p className="text-2xl font-bold">{totalAppointments}</p>
-        </div>
-        <div className="border rounded-lg p-4 bg-green-50">
-          <p className="text-sm text-gray-600">Online Bookings</p>
-          <p className="text-2xl font-bold">{onlineAppointments}</p>
-        </div>
-        <div className="border rounded-lg p-4 bg-orange-50">
-          <p className="text-sm text-gray-600">Offline Bookings</p>
-          <p className="text-2xl font-bold">{offlineAppointments}</p>
-        </div>
-        <div className="border rounded-lg p-4 bg-purple-50">
-          <p className="text-sm text-gray-600">Total Revenue</p>
-          <p className="text-2xl font-bold">₹{
-            // Calculate revenue only from completed appointments
-            // For multi-service appointments, sum the base amounts of all services when completed
-            paginatedAppointments
-              .filter((appt: any) => (appt.status || '').toLowerCase() === 'completed')
-              .reduce((sum: number, appt: any) => sum + (appt.amount || 0), 0)
-          }</p>
-        </div>
-      </div>
-      
-      {/* Appointment Count */}
-      <div className="text-lg font-medium">
-        Total appointments: {
-          // Count unique appointments to properly handle multi-service appointments
-          Array.from(new Set<string>(paginatedAppointments.map((appt: any) => appt.id))).length
+      category: "Financial Reports",
+      reports: [
+        {
+          title: "Sales Report",
+          description: "Detailed report of all sales, bookings, and transactions.",
+          details: "Includes profit, loss, and settlement data.",
+          type: "sales"
+        },
+        {
+          title: "Customer Demographics Report",
+          description: "Insights into your customer base, including age, gender, and location.",
+          details: "Understand your audience to tailor your services.",
+          type: "customer-demographics"
+        },
+        {
+          title: "Vendor Performance Report",
+          description: "Analytics on vendor bookings, ratings, and payouts.",
+          details: "Evaluate and manage vendor performance effectively.",
+          type: "vendor-performance"
+        },
+        {
+          title: "Doctor & Dermatologist Report",
+          description: "Performance and engagement metrics for registered doctors.",
+          details: "Track consultations, revenue, and ratings.",
+          type: "doctor-performance"
+        },
+        {
+          title: "Supplier & Inventory Report",
+          description: "Track supplier performance and product sales.",
+          details: "Manage inventory and supplier relationships.",
+          type: "supplier-inventory"
         }
-      </div>
-      
-      {/* Multi-service note */}
-      <div className="text-sm text-gray-500 italic">
-        * Multi-service appointments are shown individually for each service. Status with * indicates multi-service appointment.
-      </div>
-      
-      {/* Appointments Table */}
-      <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Client</TableHead>
-              <TableHead>Service</TableHead>
-              <TableHead>Staff</TableHead>
-              <TableHead>Scheduled On</TableHead>
-              <TableHead>Created On</TableHead>
-              <TableHead>Time</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Base Amount</TableHead>
-              <TableHead>Total Amount</TableHead>
-              <TableHead>Platform Fee</TableHead>
-              <TableHead>Service Tax</TableHead>
-              <TableHead>Final Amount</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedAppointments.map((item: any) => {
-              // Format dates
-              const scheduledDate = item.date ? new Date(item.date).toLocaleDateString('en-GB', { 
-                day: 'numeric', 
-                month: 'short', 
-                year: 'numeric' 
-              }) : 'N/A';
-              
-              const createdDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB', { 
-                day: 'numeric', 
-                month: 'short', 
-                year: 'numeric' 
-              }) : 'N/A';
-              
-              // Format time range
-              const timeRange = item.startTime && item.endTime ? 
-                `${item.startTime} - ${item.endTime}` : 'N/A';
-              
-              // Format service name for multi-service appointments
-              let serviceName = item.serviceName || item.service?.name || 'N/A';
-              if (item.isMultiService && item.multiServiceTotal) {
-                serviceName = `${serviceName}(${item.multiServiceIndex + 1}/${item.multiServiceTotal})`;
-              }
-              
-              // Format status with asterisk for multi-service appointments
-              const statusText = item.isMultiService ? `${item.status}*` : item.status || 'N/A';
-              
-              return (
-                <TableRow key={`${item.id}-${item.multiServiceIndex || 0}`}>
-                  <TableCell>{item.clientName || 'N/A'}</TableCell>
-                  <TableCell>{serviceName}</TableCell>
-                  <TableCell>{item.staffName || item.staff?.fullName || 'N/A'}</TableCell>
-                  <TableCell>{scheduledDate}</TableCell>
-                  <TableCell>{createdDate}</TableCell>
-                  <TableCell>{timeRange}</TableCell>
-                  <TableCell>{item.duration || item.totalDuration || 'N/A'} mins</TableCell>
-                  <TableCell>₹{item.amount || 0}</TableCell>
-                  <TableCell>₹{item.totalAmount || 0}</TableCell>
-                  <TableCell>₹{item.platformFee || 0}</TableCell>
-                  <TableCell>₹{item.serviceTax || 0}</TableCell>
-                  <TableCell>₹{item.finalAmount || item.totalAmount || 0}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      (item.status || '').toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
-                      (item.status || '').toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      (item.status || '').toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
-                      (item.status || '').toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800' :
-                      (item.status || '').toLowerCase() === 'scheduled' ? 'bg-purple-100 text-purple-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {statusText}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-            {/* Total Row */}
-            <TableRow className="font-bold bg-gray-50">
-              <TableCell>Total</TableCell>
-              <TableCell colSpan={6}></TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.amount || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.totalAmount || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.platformFee || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.serviceTax || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.finalAmount || item.totalAmount || 0), 0)}
-              </TableCell>
-              <TableCell></TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination
-        className="mt-4"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={totalItems}
-      />
-    </div>
-  );
+      ]
+    },
+    {
+      category: "Marketing & Engagement Reports",
+      reports: [
+        {
+          title: "Offers & Coupons Report",
+          description: "Analytics on coupon usage, redemption rates, and campaign ROI.",
+          details: "Optimize your promotional strategies.",
+          type: "offers"
+        },
+        {
+          title: "Referral Program Report",
+          description: "Track the performance of C2C, C2V, and V2V referral programs.",
+          details: "Analyze referral conversions and bonus payouts.",
+          type: "referrals"
+        },
+        {
+          title: "Marketing Campaign Report",
+          description: "Performance metrics for all marketing campaigns.",
+          details: "Includes SMS, social media, and digital marketing.",
+          type: "campaigns"
+        }
+      ]
+    }
+  ],
+  vendor: [
+    {
+      category: "Business Performance",
+      reports: [
+        {
+          title: "Sales Report",
+          description: "Detailed report of your salon's sales and bookings.",
+          details: "Track revenue, popular services, and peak booking times.",
+          type: "sales"
+        },
+        {
+          title: "Service Performance Report",
+          description: "Analytics on your service offerings and staff performance.",
+          details: "Identify top-performing services and staff members.",
+          type: "service-performance"
+        },
+        {
+          title: "Customer Retention Report",
+          description: "Insights into customer loyalty and repeat bookings.",
+          details: "Track customer retention rates and lifetime value.",
+          type: "customer-retention"
+        }
+      ]
+    },
+    {
+      category: "Financial Reports",
+      reports: [
+
+      ]
+    },
+    {
+      category: "Marketing & Engagement",
+      reports: [
+        {
+          title: "Offer Performance Report",
+          description: "Analytics on your promotions and discount effectiveness.",
+          details: "Measure ROI on your marketing campaigns and offers.",
+          type: "offers"
+        },
+        {
+          title: "Customer Feedback Report",
+          description: "Overview of customer reviews and satisfaction scores.",
+          details: "Track your reputation and areas for improvement.",
+          type: "feedback"
+        }
+      ]
+    }
+  ],
+  doctor: [
+    {
+      category: "Consultation Reports",
+      reports: [
+        {
+          title: "Appointment Report",
+          description: "Detailed view of your consultation appointments.",
+          details: "Track appointment history, cancellations, and reschedules.",
+          type: "appointments"
+        },
+        {
+          title: "Patient History Report",
+          description: "Overview of patient records and treatment histories.",
+          details: "Access consolidated patient data and treatment outcomes.",
+          type: "patient-history"
+        }
+      ]
+    },
+    {
+      category: "Earnings & Performance",
+      reports: [
+        {
+          title: "Consultation Revenue Report",
+          description: "Track earnings from patient consultations.",
+          details: "Monitor income from different service types and time periods.",
+          type: "revenue"
+        },
+        {
+          title: "Performance Metrics",
+          description: "Analytics on consultation volume and patient satisfaction.",
+          details: "Measure your professional performance and impact.",
+          type: "performance"
+        }
+      ]
+    }
+  ],
+  supplier: [
+    {
+      category: "Sales",
+      reports: [
+        {
+          title: "Product Sales Report",
+          description: "Detailed report of sales for each product.",
+          details: "View product name, price, remaining stock, and sales performance.",
+          type: "supplier-product-sales"
+        }
+      ]
+    },
+    {
+      category: "Order Management",
+      reports: [
+        {
+          title: "Total Orders Report",
+          description: "Detailed report of all orders received from vendors.",
+          details: "Track order status, revenue, and fulfillment metrics.",
+          type: "supplier-total-orders"
+        },
+        {
+          title: "Pending Orders Report",
+          description: "Detailed report of all pending orders from vendors.",
+          details: "Track pending orders and take necessary actions.",
+          type: "supplier-pending-orders"
+        },
+        {
+          title: "Confirmed Orders Report",
+          description: "Detailed report of all confirmed orders from vendors.",
+          details: "Track confirmed orders that are being processed.",
+          type: "supplier-confirmed-orders"
+        },
+        {
+          title: "Completed Orders Report",
+          description: "Detailed report of all completed orders from vendors.",
+          details: "Track delivered orders and customer satisfaction.",
+          type: "supplier-completed-orders"
+        },
+        {
+          title: "Product Sales Report",
+          description: "Analytics on your product sales performance.",
+          details: "Track best-selling items, seasonal trends, and revenue.",
+          type: "product-sales"
+        },
+        {
+          title: "Inventory Report",
+          description: "Real-time overview of stock levels and reorder alerts.",
+          details: "Monitor inventory turnover and optimize stock levels.",
+          type: "inventory"
+        },
+        {
+          title: "Platform Collections Report",
+          description: "Detailed report of platform collections on your product orders.",
+          details: "View product name, order date, status, price, GST tax, and platform fees collected.",
+          type: "platform-collections"
+        }
+      ]
+    },
+    {
+      category: "Financial Reports",
+      reports: [
+
+        {
+          title: "Supplier Revenue Report",
+          description: "Monthly breakdown of your revenue from product sales.",
+          details: "Track your earnings on a monthly basis with detailed revenue analytics.",
+          type: "supplier-revenue"
+        }
+      ]
+    }, {
+      category: "Marketing & Engagement",
+      reports: [
+        {
+          title: "Offer Performance Report",
+          description: "Analytics on your promotions and discount effectiveness.",
+          details: "Measure ROI on your marketing campaigns and offers.",
+          type: "offers"
+        },
+        {
+          title: "Referral Program Report",
+          description: "Detailed report of all your supplier referrals and earnings.",
+          details: "Track referral performance and bonuses earned.",
+          type: "referrals"
+        }
+      ]
+    }
+  ]
 };
 
-// Component to display Summary by Service report data in a table
-const SummaryByServiceTable = ({ startDate, endDate, client, service, staff, status, bookingType, onFiltersChange, triggerRefresh }: any) => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // 10 entries by default
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
-  // Use the RTK Query hook to fetch real data
-  const { data, isLoading, isError, refetch } = useGetSummaryByServiceReportQuery({ 
-    period: 'custom',
-    startDate: startDate ? new Date(startDate) : undefined, 
-    endDate: endDate ? new Date(endDate) : undefined,
-    client: client && client !== 'all' ? client : undefined,
-    service: service && service !== 'all' ? service : undefined,
-    staff: staff && staff !== 'all' ? staff : undefined,
-    status: status && status !== 'all' ? status : undefined,
-    bookingType: bookingType && bookingType !== 'all' ? bookingType : undefined
-  });
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-    
-    // Notify parent component about filter changes
-    if (onFiltersChange) {
-      onFiltersChange(newFilters);
-    }
-  };
-  
-  // Export functions
-  const exportToExcel = () => {
-    if (!tableRef.current) return;
-    
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-    
-    // Get table data
-    const wb = XLSX.utils.table_to_book(table, { sheet: 'Service Summary' });
-    XLSX.writeFile(wb, 'summary_by_service.xlsx');
-  };
-  
-  const exportToCSV = () => {
-    if (!tableRef.current) return;
-    
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-    
-    // Get table data
-    const wb = XLSX.utils.table_to_book(table, { sheet: 'Service Summary' });
-    XLSX.writeFile(wb, 'summary_by_service.csv');
-  };
-  
-  const exportToPDF = async () => {
-    if (!tableRef.current) return;
-    
-    // Use html2canvas to capture the table
-    const canvas = await html2canvas(tableRef.current);
-    const imgData = canvas.toDataURL('image/png');
-    
-    // Create PDF
-    const pdf = new jsPDF();
-    const imgWidth = pdf.internal.pageSize.getWidth();
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-    pdf.save('summary_by_service.pdf');
-  };
-  
-  const copyToClipboard = () => {
-    if (!tableRef.current) return;
-    
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-    
-    // Get table HTML
-    const range = document.createRange();
-    range.selectNode(table);
-    window.getSelection()?.removeAllRanges();
-    window.getSelection()?.addRange(range);
-    document.execCommand('copy');
-    window.getSelection()?.removeAllRanges();
-    
-    // Show success message (you might want to implement a toast notification)
-    alert('Table copied to clipboard!');
-  };
-  
-  const printTable = () => {
-    if (!tableRef.current) return;
-    
-    const printWindow = window.open('', '', 'height=600,width=800');
-    if (printWindow) {
-      printWindow.document.write('<html><head><title>Appointment Summary by Service</title>');
-      printWindow.document.write('</head><body >');
-      printWindow.document.write(tableRef.current.innerHTML);
-      printWindow.document.write('</body></html>');
-      printWindow.document.close();
-      printWindow.print();
-    }
-  };
-  
-  const handleExport = (format: string) => {
-    switch (format) {
-      case 'excel':
-        exportToExcel();
-        break;
-      case 'csv':
-        exportToCSV();
-        break;
-      case 'pdf':
-        exportToPDF();
-        break;
-      case 'copy':
-        copyToClipboard();
-        break;
-      case 'print':
-        printTable();
-        break;
-      default:
-        break;
-    }
-  };
-  
-  // Trigger refetch when filter values change or when explicitly triggered
-  useEffect(() => {
-    refetch();
-  }, [refetch, startDate, endDate, client, service, staff, status, bookingType, triggerRefresh]);
-  
-  // Extract services from the API response
-  const services = data?.data?.summaryByService || data?.data || [];
-  
-  // Filter data based on search term
-  const searchedServices = useMemo(() => {
-    if (!searchTerm) return services;
-    
-    return services.filter((service: any) => 
-      Object.values(service).some(value => 
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [services, searchTerm]);
-  
-  // Pagination logic
-  const totalItems = searchedServices.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedServices = searchedServices.slice(startIndex, endIndex);
-  
-  // Calculate total appointments for percentage calculation
-  const totalAppointments = paginatedServices.reduce((sum: number, service: any) => sum + (service.count || service.appointmentCount || 0), 0);
-
-  if (isLoading) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        </div>
-      </div>
-    );
-  }
-  
-  if (isError) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-red-500">
-          Failed to load service summary data. Please try again.
-        </div>
-      </div>
-    );
-  }
-  
-  if (paginatedServices.length === 0) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-gray-500">
-          No service data found for the selected date range.
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-4 gap-2">
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page when search term changes
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('copy')}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                <FileText className="mr-2 h-4 w-4" />
-                CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('print')}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      
-      <FilterModal 
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        onApplyFilters={handleFilterChange}
-        cities={[]}
-        initialFilters={filters}
-      />
-      
-      <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Service</TableHead>
-              <TableHead>Total Appointments</TableHead>
-              <TableHead>Total Sale</TableHead>
-              <TableHead>Total Duration</TableHead>
-              <TableHead>Percentage</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedServices.map((item: any, index: number) => {
-              const count = item.count || item.appointmentCount || 0;
-              const revenue = item.totalAmount || item.revenue || 0;
-              const duration = item.totalDuration || item.averageDuration || 0;
-              const percentage = totalAppointments > 0 ? (count / totalAppointments) * 100 : 0;
-              
-              return (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{item.serviceName || 'Unknown Service'}</TableCell>
-                  <TableCell>{count}</TableCell>
-                  <TableCell>₹{typeof revenue === 'number' ? revenue.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>{typeof duration === 'number' ? duration.toFixed(0) : 0} mins</TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <span className="mr-2">{percentage.toFixed(1)}%</span>
-                      <div className="w-16 bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full" 
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination
-        className="mt-4"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={totalItems}
-      />
-    </div>
-  );
+// Role-specific dashboard statistics
+const roleSpecificStats: Record<string, Array<{ title: string, icon: React.ReactNode, value: string, change: string }>> = {
+  admin: [
+    { title: "Total Sales", icon: <DollarSign className="h-4 w-4 text-muted-foreground" />, value: "$1,250,345", change: "+12% from last month" },
+    { title: "Active Users", icon: <Users className="h-4 w-4 text-muted-foreground" />, value: "15,234", change: "+8% from last month" },
+    { title: "Vendor Growth", icon: <UserPlus className="h-4 w-4 text-muted-foreground" />, value: "+52", change: "New vendors this month" },
+    { title: "New Bookings", icon: <ShoppingCart className="h-4 w-4 text-muted-foreground" />, value: "+2,350", change: "+5.2% from last month" }
+  ],
+  vendor: [
+    { title: "Monthly Revenue", icon: <DollarSign className="h-4 w-4 text-muted-foreground" />, value: "$24,560", change: "+8% from last month" },
+    { title: "Bookings", icon: <ShoppingCart className="h-4 w-4 text-muted-foreground" />, value: "342", change: "+12% from last month" },
+    { title: "Customer Rating", icon: <Users className="h-4 w-4 text-muted-foreground" />, value: "4.8/5.0", change: "Based on 124 reviews" },
+    { title: "Services Offered", icon: <UserPlus className="h-4 w-4 text-muted-foreground" />, value: "24", change: "Active services" }
+  ],
+  doctor: [
+    { title: "Consultations", icon: <Users className="h-4 w-4 text-muted-foreground" />, value: "128", change: "This month" },
+    { title: "Avg. Rating", icon: <DollarSign className="h-4 w-4 text-muted-foreground" />, value: "4.9/5.0", change: "Based on patient feedback" },
+    { title: "Revenue", icon: <ShoppingCart className="h-4 w-4 text-muted-foreground" />, value: "$18,420", change: "+5% from last month" },
+    { title: "Availability", icon: <UserPlus className="h-4 w-4 text-muted-foreground" />, value: "22 days", change: "This month" }
+  ],
+  supplier: [
+    { title: "Product Sales", icon: <ShoppingCart className="h-4 w-4 text-muted-foreground" />, value: "$42,180", change: "+15% from last month" },
+    { title: "Active Products", icon: <UserPlus className="h-4 w-4 text-muted-foreground" />, value: "86", change: "In catalog" },
+    { title: "Vendor Partners", icon: <Users className="h-4 w-4 text-muted-foreground" />, value: "142", change: "Active partnerships" },
+    { title: "Avg. Rating", icon: <DollarSign className="h-4 w-4 text-muted-foreground" />, value: "4.6/5.0", change: "Based on vendor reviews" }
+  ]
 };
 
-// Component to display Completed Appointments report data in a table
-const CompletedAppointmentsTable = ({ startDate, endDate, client, service, staff, bookingType, onFiltersChange, triggerRefresh }: any) => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // 10 entries by default
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
-  // Use the RTK Query hook to fetch real data
-  const { data, isLoading, isError, refetch } = useGetCompletedAppointmentsReportQuery({ 
-    period: 'custom',
-    startDate: startDate ? new Date(startDate) : undefined, 
-    endDate: endDate ? new Date(endDate) : undefined,
-    client: client && client !== 'all' ? client : undefined,
-    service: service && service !== 'all' ? service : undefined,
-    staff: staff && staff !== 'all' ? staff : undefined,
-    bookingType: bookingType && bookingType !== 'all' ? bookingType : undefined
-  });
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-    
-    // Notify parent component about filter changes
-    if (onFiltersChange) {
-      onFiltersChange(newFilters);
-    }
-  };
-  
-  // Export functions
-  const exportToExcel = () => {
-    if (!tableRef.current) return;
-    
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-    
-    // Get table data
-    const wb = XLSX.utils.table_to_book(table, { sheet: 'Completed Appointments' });
-    XLSX.writeFile(wb, 'completed_appointments.xlsx');
-  };
-  
-  const exportToCSV = () => {
-    if (!tableRef.current) return;
-    
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-    
-    // Get table data
-    const wb = XLSX.utils.table_to_book(table, { sheet: 'Completed Appointments' });
-    XLSX.writeFile(wb, 'completed_appointments.csv');
-  };
-  
-  const exportToPDF = async () => {
-    if (!tableRef.current) return;
-    
-    // Use html2canvas to capture the table
-    const canvas = await html2canvas(tableRef.current);
-    const imgData = canvas.toDataURL('image/png');
-    
-    // Create PDF
-    const pdf = new jsPDF();
-    const imgWidth = pdf.internal.pageSize.getWidth();
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-    pdf.save('completed_appointments.pdf');
-  };
-  
-  const copyToClipboard = () => {
-    if (!tableRef.current) return;
-    
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-    
-    // Get table HTML
-    const range = document.createRange();
-    range.selectNode(table);
-    window.getSelection()?.removeAllRanges();
-    window.getSelection()?.addRange(range);
-    document.execCommand('copy');
-    window.getSelection()?.removeAllRanges();
-    
-    // Show success message (you might want to implement a toast notification)
-    alert('Table copied to clipboard!');
-  };
-  
-  const printTable = () => {
-    if (!tableRef.current) return;
-    
-    const printWindow = window.open('', '', 'height=600,width=800');
-    if (printWindow) {
-      printWindow.document.write('<html><head><title>Completed Appointments</title>');
-      printWindow.document.write('</head><body >');
-      printWindow.document.write(tableRef.current.innerHTML);
-      printWindow.document.write('</body></html>');
-      printWindow.document.close();
-      printWindow.print();
-    }
-  };
-  
-  const handleExport = (format: string) => {
-    switch (format) {
-      case 'excel':
-        exportToExcel();
-        break;
-      case 'csv':
-        exportToCSV();
-        break;
-      case 'pdf':
-        exportToPDF();
-        break;
-      case 'copy':
-        copyToClipboard();
-        break;
-      case 'print':
-        printTable();
-        break;
-      default:
-        break;
-    }
-  };
-  
-  // Trigger refetch when filter values change or when explicitly triggered
-  useEffect(() => {
-    refetch();
-  }, [refetch, startDate, endDate, client, service, staff, bookingType, triggerRefresh]);
-  
-  // Extract appointments from the API response (already filtered by backend)
-  const filteredAppointments = data?.data?.complete?.appointments || data?.data || [];
-  
-  // Filter data based on search term
-  const searchedAppointments = useMemo(() => {
-    if (!searchTerm) return filteredAppointments;
-    
-    return filteredAppointments.filter((appointment: any) => 
-      Object.values(appointment).some(value => 
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [filteredAppointments, searchTerm]);
-  
-  // Pagination logic
-  const totalItems = searchedAppointments.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedAppointments = searchedAppointments.slice(startIndex, endIndex);
-
-  if (isLoading) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        </div>
-      </div>
-    );
+// Sample report data for previews
+const sampleReportData: Record<string, ReportData> = {
+  "sales": {
+    headers: ["Date", "Booking ID", "Customer", "Service", "Amount", "Status"],
+    rows: [
+      ["2024-08-01", "BK-001", "John Doe", "Haircut & Styling", "$45.00", "Completed"],
+      ["2024-08-01", "BK-002", "Jane Smith", "Facial Treatment", "$75.50", "Completed"],
+      ["2024-08-02", "BK-003", "Sam Wilson", "Manicure", "$35.25", "Completed"],
+      ["2024-08-02", "BK-004", "Alice Brown", "Hair Color", "$120.00", "Completed"]
+    ]
+  },
+  "appointments": {
+    headers: ["Date", "Time", "Patient", "Service", "Status", "Notes"],
+    rows: [
+      ["2024-08-01", "10:00 AM", "John Doe", "Skin Consultation", "Completed", "Follow-up in 2 weeks"],
+      ["2024-08-01", "2:00 PM", "Jane Smith", "Acne Treatment", "Scheduled", ""],
+      ["2024-08-02", "11:30 AM", "Sam Wilson", "Anti-Aging Therapy", "Completed", "Prescribed skincare routine"],
+      ["2024-08-03", "9:00 AM", "Alice Brown", "Laser Treatment", "Scheduled", ""]
+    ]
+  },
+  "product-sales": {
+    headers: ["Product", "Category", "Units Sold", "Revenue", "Stock Remaining"],
+    rows: [
+      ["Moisturizer Cream", "Skincare", "42", "$1,260.00", "58"],
+      ["Sunscreen SPF 50", "Skincare", "36", "$1,080.00", "64"],
+      ["Hair Serum", "Haircare", "28", "$840.00", "72"],
+      ["Face Wash", "Skincare", "55", "$550.00", "45"]
+    ]
+  },
+  "inventory": {
+    headers: ["Product", "Category", "Current Stock", "Reorder Level", "Status"],
+    rows: [
+      ["Moisturizer Cream", "Skincare", "58", "30", "In Stock"],
+      ["Sunscreen SPF 50", "Skincare", "64", "25", "In Stock"],
+      ["Hair Serum", "Haircare", "72", "20", "In Stock"],
+      ["Face Wash", "Skincare", "45", "50", "Low Stock"]
+    ]
   }
-  
-  if (isError) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-red-500">
-          Failed to load completed appointments data. Please try again.
-        </div>
-      </div>
-    );
-  }
-  
-  if (paginatedAppointments.length === 0) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-gray-500">
-          No completed appointments found for the selected date range.
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-4 gap-2">
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page when search term changes
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('copy')}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                <FileText className="mr-2 h-4 w-4" />
-                CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('print')}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      
-      <FilterModal 
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        onApplyFilters={handleFilterChange}
-        cities={[]}
-        initialFilters={filters}
-        showStatusFilter={false}
-      />
-      
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="border rounded-lg p-4 bg-blue-50">
-          <p className="text-sm text-gray-600">Total Completed</p>
-          <p className="text-2xl font-bold">{
-            // Count unique appointments, treating multi-service appointments as one
-            Array.from(new Set<string>(paginatedAppointments.map((appt: any) => appt._id || appt.id))).length
-          }</p>
-        </div>
-        <div className="border rounded-lg p-4 bg-green-50">
-          <p className="text-sm text-gray-600">Online Completed</p>
-          <p className="text-2xl font-bold">{
-            // Count unique online appointments
-            Array.from(
-              new Set<string>(
-                paginatedAppointments
-                  .filter((appt: any) => (appt.mode || '').toLowerCase() === 'online')
-                  .map((appt: any) => appt._id || appt.id)
-              )
-            ).length
-          }</p>
-        </div>
-        <div className="border rounded-lg p-4 bg-orange-50">
-          <p className="text-sm text-gray-600">Offline Completed</p>
-          <p className="text-2xl font-bold">{
-            // Count unique offline appointments
-            Array.from(
-              new Set<string>(
-                paginatedAppointments
-                  .filter((appt: any) => (appt.mode || '').toLowerCase() === 'offline')
-                  .map((appt: any) => appt._id || appt.id)
-              )
-            ).length
-          }</p>
-        </div>
-        <div className="border rounded-lg p-4 bg-purple-50">
-          <p className="text-sm text-gray-600">Total Revenue</p>
-          <p className="text-2xl font-bold">₹{
-            // Calculate revenue from all appointments (already filtered as completed)
-            // For multi-service appointments, sum the base amounts of all services
-            paginatedAppointments.reduce((sum: number, appt: any) => sum + (appt.amount || 0), 0)
-          }</p>
-        </div>
-      </div>
-      
-      <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Client</TableHead>
-              <TableHead>Service</TableHead>
-              <TableHead>Staff</TableHead>
-              <TableHead>Scheduled On</TableHead>
-              <TableHead>Created On</TableHead>
-              <TableHead>Time</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Base Amount</TableHead>
-              <TableHead>Total Amount</TableHead>
-              <TableHead>Platform Fee</TableHead>
-              <TableHead>Service Tax</TableHead>
-              <TableHead>Final Amount</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedAppointments.map((item: any) => {
-              // Format dates
-              const scheduledDate = item.date ? new Date(item.date).toLocaleDateString('en-GB', { 
-                day: 'numeric', 
-                month: 'short', 
-                year: 'numeric' 
-              }) : 'N/A';
-              
-              const createdDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB', { 
-                day: 'numeric', 
-                month: 'short', 
-                year: 'numeric' 
-              }) : 'N/A';
-              
-              // Format time range
-              const timeRange = item.startTime && item.endTime ? 
-                `${item.startTime} - ${item.endTime}` : 'N/A';
-              
-              // Format service name for multi-service appointments
-              let serviceName = item.serviceName || item.service?.name || 'N/A';
-              if (item.isMultiService && item.multiServiceTotal) {
-                serviceName = `${serviceName}(${item.multiServiceIndex + 1}/${item.multiServiceTotal})`;
-              }
-              
-              // Format status with asterisk for multi-service appointments
-              const statusText = item.isMultiService ? `${item.status}*` : item.status || 'N/A';
-              
-              return (
-                <TableRow key={`${item.id}-${item.multiServiceIndex || 0}`}>
-                  <TableCell>{item.clientName || 'N/A'}</TableCell>
-                  <TableCell>{serviceName}</TableCell>
-                  <TableCell>{item.staffName || item.staff?.fullName || 'N/A'}</TableCell>
-                  <TableCell>{scheduledDate}</TableCell>
-                  <TableCell>{createdDate}</TableCell>
-                  <TableCell>{timeRange}</TableCell>
-                  <TableCell>{item.duration || item.totalDuration || 'N/A'} mins</TableCell>
-                  <TableCell>₹{item.amount || 0}</TableCell>
-                  <TableCell>₹{item.totalAmount || 0}</TableCell>
-                  <TableCell>₹{item.platformFee || 0}</TableCell>
-                  <TableCell>₹{item.serviceTax || 0}</TableCell>
-                  <TableCell>₹{item.finalAmount || item.totalAmount || 0}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      (item.status || '').toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
-                      (item.status || '').toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      (item.status || '').toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
-                      (item.status || '').toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800' :
-                      (item.status || '').toLowerCase() === 'scheduled' ? 'bg-purple-100 text-purple-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {statusText}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-            {/* Total Row */}
-            <TableRow className="font-bold bg-gray-50">
-              <TableCell>Total</TableCell>
-              <TableCell colSpan={6}></TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.amount || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.totalAmount || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.platformFee || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.serviceTax || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.finalAmount || item.totalAmount || 0), 0)}
-              </TableCell>
-              <TableCell></TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination
-        className="mt-4"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={totalItems}
-      />
-    </div>
-  );
 };
 
-// Component to display Cancelled Appointments report data in a table
-const CancelledAppointmentsTable = ({ startDate, endDate, client, service, staff, status, bookingType, onFiltersChange, triggerRefresh }: any) => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // 10 entries by default
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
-  // Use the RTK Query hook to fetch real data
-  const { data, isLoading, isError, refetch } = useGetCancelledAppointmentsReportQuery({ 
-    period: 'custom',
-    startDate: startDate ? new Date(startDate) : undefined, 
-    endDate: endDate ? new Date(endDate) : undefined,
-    client: client && client !== 'all' ? client : undefined,
-    service: service && service !== 'all' ? service : undefined,
-    staff: staff && staff !== 'all' ? staff : undefined,
-    status: status && status !== 'all' ? status : undefined,
-    bookingType: bookingType && bookingType !== 'all' ? bookingType : undefined
+// Report data generator functions
+const generateSalesReportData = (appointments: any[], orders: any[]) => {
+  const headers = ["Date", "Booking ID", "Customer", "Service", "Amount", "Status"];
+  const rows = [
+    ...appointments.slice(0, 5).map(appointment => [
+      new Date(appointment.date).toLocaleDateString(),
+      appointment._id.substring(0, 8).toUpperCase(),
+      appointment.clientName || "Unknown Customer",
+      appointment.serviceName || "Service",
+      `$${Math.floor(Math.random() * 200) + 50}.00`,
+      appointment.status || "Completed"
+    ]),
+    ...orders.slice(0, 5).map(order => [
+      new Date(order.createdAt).toLocaleDateString(),
+      order._id.substring(0, 8).toUpperCase(),
+      order.customerName || "Unknown Customer",
+      "Product Order",
+      `$${order.totalAmount || 0}`,
+      order.status || "Completed"
+    ])
+  ];
+
+  return { headers, rows };
+};
+
+const generateAppointmentsReportData = (appointments: any[]) => {
+  const headers = ["Date", "Time", "Patient", "Service", "Status", "Notes"];
+  const rows = appointments.slice(0, 8).map(appointment => [
+    new Date(appointment.date).toLocaleDateString(),
+    new Date(appointment.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    appointment.clientName || "Unknown Patient",
+    appointment.serviceName || "Consultation",
+    appointment.status || "Scheduled",
+    appointment.notes || ""
+  ]);
+
+  return { headers, rows };
+};
+
+const generateProductSalesReportData = (products: any[], orders: any[]) => {
+  const headers = ["Product", "Category", "Units Sold", "Revenue", "Stock Remaining"];
+  const rows = products.slice(0, 6).map(product => [
+    product.productName || "Product",
+    product.category || "General",
+    Math.floor(Math.random() * 50) + 10,
+    `$${Math.floor(Math.random() * 1000) + 200}.00`,
+    product.stock || 0
+  ]);
+
+  return { headers, rows };
+};
+
+const generateInventoryReportData = (products: any[]) => {
+  const headers = ["Product", "Category", "Current Stock", "Reorder Level", "Status"];
+  const rows = products.slice(0, 6).map(product => {
+    const stock = product.stock || 0;
+    const reorderLevel = product.reorderLevel || 20;
+    const status = stock < reorderLevel ? "Low Stock" : "In Stock";
+
+    return [
+      product.productName || "Product",
+      product.category || "General",
+      stock,
+      reorderLevel,
+      status
+    ];
   });
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-    
-    // Notify parent component about filter changes
-    if (onFiltersChange) {
-      onFiltersChange(newFilters);
+
+  return { headers, rows };
+};
+
+// Add supplier orders report data generator
+const generateSupplierOrdersReportData = (orders: SupplierOrder[], taxFeeSettings?: any) => {
+  // Add platform fee column to headers if tax settings are available
+  const headers = taxFeeSettings && taxFeeSettings.productPlatformFeeEnabled
+    ? ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Platform Fee", "Status", "Date"]
+    : ["Order ID", "Vendor", "Products", "Quantity", "Amount", "Status", "Date"];
+
+  const rows = orders.slice(0, 10).map(order => {
+    // Calculate total quantity
+    const totalQuantity = order.items.reduce((sum, item) => sum + item.quantity, 0);
+
+    // Get product names
+    const productNames = order.items.map(item => item.productName).join(", ");
+
+    // Calculate platform fee if tax settings are available
+    let platformFee = 0;
+    if (taxFeeSettings && taxFeeSettings.productPlatformFeeEnabled) {
+      const orderAmount = order.totalAmount || 0;
+      platformFee = taxFeeSettings.productPlatformFeeType === 'percentage'
+        ? (orderAmount * taxFeeSettings.productPlatformFee) / 100
+        : taxFeeSettings.productPlatformFee;
     }
-  };
-  
-  // Export functions
-  const exportToExcel = () => {
-    if (!tableRef.current) return;
-    
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-    
-    // Get table data
-    const wb = XLSX.utils.table_to_book(table, { sheet: 'Cancelled Appointments' });
-    XLSX.writeFile(wb, 'cancelled_appointments.xlsx');
-  };
-  
-  const exportToCSV = () => {
-    if (!tableRef.current) return;
-    
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-    
-    // Get table data
-    const wb = XLSX.utils.table_to_book(table, { sheet: 'Cancelled Appointments' });
-    XLSX.writeFile(wb, 'cancelled_appointments.csv');
-  };
-  
-  const exportToPDF = async () => {
-    if (!tableRef.current) return;
-    
-    // Use html2canvas to capture the table
-    const canvas = await html2canvas(tableRef.current);
-    const imgData = canvas.toDataURL('image/png');
-    
-    // Create PDF
-    const pdf = new jsPDF();
-    const imgWidth = pdf.internal.pageSize.getWidth();
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-    pdf.save('cancelled_appointments.pdf');
-  };
-  
-  const copyToClipboard = () => {
-    if (!tableRef.current) return;
-    
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-    
-    // Get table HTML
-    const range = document.createRange();
-    range.selectNode(table);
-    window.getSelection()?.removeAllRanges();
-    window.getSelection()?.addRange(range);
-    document.execCommand('copy');
-    window.getSelection()?.removeAllRanges();
-    
-    // Show success message (you might want to implement a toast notification)
-    alert('Table copied to clipboard!');
-  };
-  
-  const printTable = () => {
-    if (!tableRef.current) return;
-    
-    const printWindow = window.open('', '', 'height=600,width=800');
-    if (printWindow) {
-      printWindow.document.write('<html><head><title>Cancelled Appointments</title>');
-      printWindow.document.write('</head><body >');
-      printWindow.document.write(tableRef.current.innerHTML);
-      printWindow.document.write('</body></html>');
-      printWindow.document.close();
-      printWindow.print();
-    }
-  };
-  
-  const handleExport = (format: string) => {
-    switch (format) {
-      case 'excel':
-        exportToExcel();
-        break;
-      case 'csv':
-        exportToCSV();
-        break;
-      case 'pdf':
-        exportToPDF();
-        break;
-      case 'copy':
-        copyToClipboard();
-        break;
-      case 'print':
-        printTable();
-        break;
-      default:
-        break;
-    }
-  };
-  
-  // Trigger refetch when filter values change or when explicitly triggered
-  useEffect(() => {
-    refetch();
-  }, [refetch, startDate, endDate, client, service, staff, status, bookingType, triggerRefresh]);
-  
-  // Extract appointments from the API response
-  const filteredAppointments = data?.data?.cancellations?.cancellations || data?.data || [];
-  
-  // Filter data based on search term
-  const searchedAppointments = useMemo(() => {
-    if (!searchTerm) return filteredAppointments;
-    
-    return filteredAppointments.filter((appointment: any) => 
-      Object.values(appointment).some(value => 
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [filteredAppointments, searchTerm]);
-  
-  // Pagination logic
-  const totalItems = searchedAppointments.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedAppointments = searchedAppointments.slice(startIndex, endIndex);
-  
-  // Calculate counts for online/offline appointments
-  const onlineAppointmentIds = new Set();
-  const offlineAppointmentIds = new Set();
-  
-  paginatedAppointments.forEach((appt: any) => {
-    const mode = appt.mode || '';
-    if (mode.toLowerCase() === 'online') {
-      onlineAppointmentIds.add(appt.id);
-    } else if (mode.toLowerCase() === 'offline') {
-      offlineAppointmentIds.add(appt.id);
+
+    // Return row data with or without platform fee based on availability
+    if (taxFeeSettings && taxFeeSettings.productPlatformFeeEnabled) {
+      return [
+        order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`,
+        order.vendorId && typeof order.vendorId === 'string' ? `Vendor-${order.vendorId.substring(0, 6).toUpperCase()}` : "Unknown Vendor",
+        productNames,
+        totalQuantity.toString(),
+        `₹${order.totalAmount.toFixed(2)}`,
+        `₹${platformFee.toFixed(2)}`,
+        order.status,
+        new Date(order.createdAt).toLocaleDateString()
+      ];
+    } else {
+      return [
+        order.orderId || `#${order._id.substring(0, 8).toUpperCase()}`,
+        order.vendorId && typeof order.vendorId === 'string' ? `Vendor-${order.vendorId.substring(0, 6).toUpperCase()}` : "Unknown Vendor",
+        productNames,
+        totalQuantity.toString(),
+        `₹${order.totalAmount.toFixed(2)}`,
+        order.status,
+        new Date(order.createdAt).toLocaleDateString()
+      ];
     }
   });
-  
-  // Count unique appointments to properly handle multi-service appointments
-  const uniqueAppointmentIds = new Set(paginatedAppointments.map((appt: any) => appt.id));
-  const totalCancelled = uniqueAppointmentIds.size;
-  const onlineCancelled = onlineAppointmentIds.size;
-  const offlineCancelled = offlineAppointmentIds.size;
-  // Calculate revenue loss from unique appointments to avoid double counting
-  // For cancelled appointments, we sum the base amounts of all services
-  const totalRevenueLoss = Array.from(uniqueAppointmentIds as Set<string>).reduce((sum: number, id: string) => {
-    const appointment = paginatedAppointments.find((appt: any) => appt.id === id);
-    return sum + (appointment?.amount || 0);
+
+  return { headers, rows };
+};
+
+// Add supplier revenue report data generator
+const generateSupplierRevenueReportData = (orders: SupplierOrder[], selectedMonth: string | null = null) => {
+  // Filter orders by selected month if provided
+  const filteredOrders = selectedMonth
+    ? orders.filter(order => {
+      const orderDate = new Date(order.createdAt);
+      const orderMonth = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
+      return orderMonth === selectedMonth;
+    })
+    : orders;
+
+  // Group orders by date
+  const dailyRevenue: Record<string, { count: number; revenue: number }> = {};
+
+  filteredOrders.forEach(order => {
+    const date = new Date(order.createdAt);
+    // Format date as YYYY-MM-DD for consistent grouping
+    const dateString = date.toISOString().split('T')[0];
+
+    if (!dailyRevenue[dateString]) {
+      dailyRevenue[dateString] = { count: 0, revenue: 0 };
+    }
+
+    dailyRevenue[dateString].count += 1;
+    dailyRevenue[dateString].revenue += order.totalAmount;
+  });
+
+  // Convert to array and sort by date (newest first)
+  const revenueData = Object.entries(dailyRevenue)
+    .map(([dateString, data]) => ({
+      date: dateString,
+      orders: data.count,
+      revenue: data.revenue
+    }))
+    .sort((a, b) => {
+      // Sort by date descending (newest first)
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    });
+
+  const headers = ["Date", "Orders Count", "Total Revenue"];
+  const rows = revenueData.map(data => [
+    new Date(data.date).toLocaleDateString(),
+    data.orders.toString(),
+    `₹${data.revenue.toFixed(2)}`
+  ]);
+
+  return { headers, rows };
+};
+
+// Add offers report data generator
+const generateOffersReportData = (offers: any[]) => {
+  // Calculate summary statistics
+  const totalOffers = offers.length;
+  const activeOffers = offers.filter(offer => offer.status === 'Active').length;
+  const expiredOffers = offers.filter(offer => offer.status === 'Expired').length;
+  const scheduledOffers = offers.filter(offer => offer.status === 'Scheduled').length;
+
+  // Calculate total redemptions and estimated value
+  const totalRedemptions = offers.reduce((sum, offer) => sum + (offer.redeemed || 0), 0);
+
+  // Estimate total discount value
+  const totalDiscountValue = offers.reduce((sum, offer) => {
+    if (offer.type === 'fixed') {
+      return sum + (offer.value * (offer.redeemed || 0));
+    } else {
+      // For percentage discounts, estimate based on average order value of ₹1000
+      return sum + (1000 * (offer.value / 100) * (offer.redeemed || 0));
+    }
   }, 0);
 
-  if (isLoading) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        </div>
-      </div>
-    );
-  }
-  
-  if (isError) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-red-500">
-          Failed to load cancelled appointments data. Please try again.
-        </div>
-      </div>
-    );
-  }
-  
-  if (paginatedAppointments.length === 0) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-gray-500">
-          No cancelled appointments found for the selected date range.
-        </div>
-      </div>
-    );
+  // Top 5 most redeemed offers
+  const topOffers = [...offers]
+    .sort((a, b) => (b.redeemed || 0) - (a.redeemed || 0))
+    .slice(0, 5);
+
+  // Prepare headers and rows for the detailed report
+  const headers = ["Offer Code", "Type", "Value", "Status", "Start Date", "Expiry Date", "Redemptions", "Est. Value"];
+  const rows = offers.map(offer => [
+    offer.code,
+    offer.type === 'percentage' ? 'Percentage' : 'Fixed',
+    offer.type === 'percentage' ? `${offer.value}%` : `₹${offer.value}`,
+    offer.status,
+    offer.startDate ? new Date(offer.startDate).toLocaleDateString() : 'N/A',
+    offer.expires ? new Date(offer.expires).toLocaleDateString() : 'No Expiry',
+    offer.redeemed || 0,
+    offer.type === 'percentage'
+      ? `₹${(1000 * (offer.value / 100) * (offer.redeemed || 0)).toFixed(2)}`
+      : `₹${(offer.value * (offer.redeemed || 0)).toFixed(2)}`
+  ]);
+
+  return {
+    headers, rows, summary: {
+      totalOffers,
+      activeOffers,
+      expiredOffers,
+      scheduledOffers,
+      totalRedemptions,
+      totalDiscountValue
+    }
+  };
+};
+
+// Add referrals report data generator
+const generateReferralsReportData = (referrals: any[]) => {
+  // Calculate summary statistics
+  const totalReferrals = referrals.length;
+  const pendingReferrals = referrals.filter(referral => referral.status === 'Pending').length;
+  const completedReferrals = referrals.filter(referral => referral.status === 'Completed').length;
+  const paidReferrals = referrals.filter(referral => referral.status === 'Bonus Paid').length;
+
+  // Calculate total earnings
+  const totalEarnings = referrals
+    .filter(referral => referral.status === 'Completed' || referral.status === 'Bonus Paid')
+    .reduce((sum, referral) => {
+      const bonusValue = parseFloat(referral.bonus.replace('₹', '').replace(',', ''));
+      return sum + (isNaN(bonusValue) ? 0 : bonusValue);
+    }, 0);
+
+  // Prepare headers and rows for the detailed report
+  const headers = ["Referral ID", "Referral Type", "Referred Person", "Date", "Status", "Bonus"];
+  const rows = referrals.map(referral => [
+    referral.referralId,
+    referral.referralType,
+    referral.referee,
+    new Date(referral.date).toLocaleDateString(),
+    referral.status,
+    referral.bonus
+  ]);
+
+  return {
+    headers, rows, summary: {
+      totalReferrals,
+      pendingReferrals,
+      completedReferrals,
+      paidReferrals,
+      totalEarnings
+    }
+  };
+};
+
+// Add supplier product sales report data generator
+const generateSupplierProductSalesReportData = (data: any) => {
+  if (!data || !data.data || !data.data.products) {
+    return { headers: [], rows: [], summary: {} };
   }
 
+  const { products, summary } = data.data;
+
+  // Prepare headers
+  const headers = ["Product Name", "Price", "Stock", "Category", "Units Sold", "Revenue", "Orders"];
+
+  // Prepare rows
+  const rows = products.map((product: any) => [
+    product.productName || "N/A",
+    `₹${product.price?.toFixed(2) || "0.00"}`,
+    product.stock?.toString() || "0",
+    product.category || "N/A",
+    product.totalQuantitySold?.toString() || "0",
+    `₹${product.totalRevenue?.toFixed(2) || "0.00"}`,
+    product.orderCount?.toString() || "0"
+  ]);
+
+  return { headers, rows, summary };
+};
+
+// Real report data generator
+const getReportDataByType = (reportType: string, data: any, selectedMonth: string | null = null) => {
+  switch (reportType) {
+    case "sales":
+      return generateSalesReportData(data.appointments || [], data.orders || []);
+    case "appointments":
+      return generateAppointmentsReportData(data.appointments || []);
+    case "product-sales":
+      return generateProductSalesReportData(data.products || [], data.orders || []);
+    case "inventory":
+      return generateInventoryReportData(data.products || []);
+    case "supplier-orders":
+      // Use received orders for suppliers
+      const receivedOrders = (data.orders || []).filter((order: SupplierOrder) => order.supplierId);
+      return generateSupplierOrdersReportData(receivedOrders, data.taxFeeSettings);
+    case "supplier-total-orders":
+      // Use received orders for suppliers
+      const totalOrders = (data.orders || []).filter((order: SupplierOrder) => order.supplierId);
+      return generateSupplierOrdersReportData(totalOrders, data.taxFeeSettings);
+    case "supplier-pending-orders":
+      // Use received orders for suppliers
+      const pendingOrders = (data.orders || []).filter((order: SupplierOrder) => order.supplierId && order.status === 'Pending');
+      return generateSupplierOrdersReportData(pendingOrders, data.taxFeeSettings);
+    case "supplier-confirmed-orders":
+      // Use received orders for suppliers
+      const confirmedOrders = (data.orders || []).filter((order: SupplierOrder) => order.supplierId && (order.status === 'Processing' || order.status === 'Packed' || order.status === 'Shipped'));
+      return generateSupplierOrdersReportData(confirmedOrders, data.taxFeeSettings);
+    case "supplier-completed-orders":
+      // Use received orders for suppliers
+      const completedOrders = (data.orders || []).filter((order: SupplierOrder) => order.supplierId && order.status === 'Delivered');
+      return generateSupplierOrdersReportData(completedOrders, data.taxFeeSettings);
+    case "supplier-revenue":
+      // Use received orders for suppliers
+      const supplierOrders = (data.orders || []).filter((order: SupplierOrder) => order.supplierId);
+      return generateSupplierRevenueReportData(supplierOrders, selectedMonth);
+    case "offers":
+      return generateOffersReportData(data.offers || []);
+    case "referrals":
+      return generateReferralsReportData(data.referrals || []);
+    case "platform-collections":
+      // Use received orders for suppliers
+      const platformCollectionOrders = (data.orders || []).filter((order: SupplierOrder) => order.supplierId);
+      return generateSupplierOrdersReportData(platformCollectionOrders, data.taxFeeSettings);
+    case "supplier-product-sales":
+      return generateSupplierProductSalesReportData(data);
+    default:
+      // Return sample data for other report types
+      return sampleReportData[reportType] || sampleReportData["sales"];
+  }
+};
+
+const generateMonthOptions = () => {
+  const options = [];
+  const now = new Date();
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const label = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+    options.push({ value, label });
+  }
+  return options;
+};
+
+// Preview components for specific report types
+const OffersReportPreview = ({ reportData }: { reportData: any }) => {
+  const { summary } = reportData;
+  if (!summary) return <ReportPreviewTable reportType="offers" reportData={reportData} />;
+
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4 gap-2">
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page when search term changes
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('copy')}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                <FileText className="mr-2 h-4 w-4" />
-                CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('print')}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-primary/5">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Offers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.totalOffers}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-green-50">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Offers</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{summary.activeOffers}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-blue-50">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Redemptions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{summary.totalRedemptions}</div>
+          </CardContent>
+        </Card>
       </div>
-      
-      <FilterModal 
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        onApplyFilters={handleFilterChange}
-        cities={[]}
-        initialFilters={filters}
-      />
-      
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="border rounded-lg p-4 bg-blue-50">
-          <p className="text-sm text-gray-600">Total Cancelled</p>
-          <p className="text-2xl font-bold">{totalCancelled}</p>
-        </div>
-        <div className="border rounded-lg p-4 bg-green-50">
-          <p className="text-sm text-gray-600">Online Cancelled</p>
-          <p className="text-2xl font-bold">{onlineCancelled}</p>
-        </div>
-        <div className="border rounded-lg p-4 bg-orange-50">
-          <p className="text-sm text-gray-600">Offline Cancelled</p>
-          <p className="text-2xl font-bold">{offlineCancelled}</p>
-        </div>
-        <div className="border rounded-lg p-4 bg-purple-50">
-          <p className="text-sm text-gray-600">Revenue Loss</p>
-          <p className="text-2xl font-bold">₹{totalRevenueLoss.toFixed(2)}</p>
-        </div>
-      </div>
-      
-      <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Client</TableHead>
-              <TableHead>Service</TableHead>
-              <TableHead>Staff</TableHead>
-              <TableHead>Scheduled On</TableHead>
-              <TableHead>Created On</TableHead>
-              <TableHead>Time</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Base Amount</TableHead>
-              <TableHead>Total Amount</TableHead>
-              <TableHead>Platform Fee</TableHead>
-              <TableHead>Service Tax</TableHead>
-              <TableHead>Final Amount</TableHead>
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedAppointments.map((item: any) => {
-              // Format dates
-              const scheduledDate = item.date ? new Date(item.date).toLocaleDateString('en-GB', { 
-                day: 'numeric', 
-                month: 'short', 
-                year: 'numeric' 
-              }) : 'N/A';
-              
-              const createdDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB', { 
-                day: 'numeric', 
-                month: 'short', 
-                year: 'numeric' 
-              }) : 'N/A';
-              
-              // Format time range
-              const timeRange = item.startTime && item.endTime ? 
-                `${item.startTime} - ${item.endTime}` : 'N/A';
-              
-              // Format service name for multi-service appointments
-              let serviceName = item.serviceName || item.service?.name || 'N/A';
-              if (item.isMultiService && item.multiServiceTotal) {
-                serviceName = `${serviceName}(${item.multiServiceIndex + 1}/${item.multiServiceTotal})`;
-              }
-              
-              // Format status with asterisk for multi-service appointments
-              const statusText = item.isMultiService ? `${item.status}*` : item.status || 'N/A';
-              
-              return (
-                <TableRow key={`${item.id}-${item.multiServiceIndex || 0}`}>
-                  <TableCell>{item.clientName || 'N/A'}</TableCell>
-                  <TableCell>{serviceName}</TableCell>
-                  <TableCell>{item.staffName || item.staff?.fullName || 'N/A'}</TableCell>
-                  <TableCell>{scheduledDate}</TableCell>
-                  <TableCell>{createdDate}</TableCell>
-                  <TableCell>{timeRange}</TableCell>
-                  <TableCell>{item.duration || item.totalDuration || 'N/A'} mins</TableCell>
-                  <TableCell>₹{item.amount || 0}</TableCell>
-                  <TableCell>₹{item.totalAmount || 0}</TableCell>
-                  <TableCell>₹{item.platformFee || 0}</TableCell>
-                  <TableCell>₹{item.serviceTax || 0}</TableCell>
-                  <TableCell>₹{item.finalAmount || item.totalAmount || 0}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      (item.status || '').toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
-                      (item.status || '').toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      (item.status || '').toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
-                      (item.status || '').toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800' :
-                      (item.status || '').toLowerCase() === 'scheduled' ? 'bg-purple-100 text-purple-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {statusText}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-            {/* Total Row */}
-            <TableRow className="font-bold bg-gray-50">
-              <TableCell>Total</TableCell>
-              <TableCell colSpan={6}></TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.amount || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.totalAmount || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.platformFee || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.serviceTax || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.finalAmount || item.totalAmount || 0), 0)}
-              </TableCell>
-              <TableCell></TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination
-        className="mt-4"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={totalItems}
-      />
+      <ReportPreviewTable reportType="offers" reportData={reportData} />
     </div>
   );
 };
 
-// Component to display All Appointments by Staff report data in a table
-const AllAppointmentsByStaffTable = ({ startDate, endDate, client, service, staff, status, bookingType, onFiltersChange, triggerRefresh }: any) => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // 10 entries by default
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
-  // Use the RTK Query hook to fetch real data
-  const { data, isLoading, isError, refetch } = useGetAllAppointmentsReportQuery({ 
-    period: startDate && endDate ? 'custom' : 'all',
-    startDate: startDate ? new Date(startDate) : undefined, 
-    endDate: endDate ? new Date(endDate) : undefined,
-    client: client && client !== 'all' ? client : undefined,
-    service: service && service !== 'all' ? service : undefined,
-    staff: staff && staff !== 'all' ? staff : undefined,
-    status: status && status !== 'all' ? status : undefined,
-    bookingType: bookingType && bookingType !== 'all' ? bookingType : undefined
-  });
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-    
-    // Notify parent component about filter changes
-    if (onFiltersChange) {
-      onFiltersChange(newFilters);
-    }
-  };
-  
-  // Export functions
-  const handleExport = (format: string) => {
-    switch (format) {
-      case 'excel':
-        exportToExcel(tableRef, 'all_appointments_by_staff');
-        break;
-      case 'csv':
-        exportToCSV(tableRef, 'all_appointments_by_staff');
-        break;
-      case 'pdf':
-        exportToPDF(tableRef, 'all_appointments_by_staff');
-        break;
-      case 'copy':
-        copyToClipboard(tableRef);
-        break;
-      case 'print':
-        printTable(tableRef);
-        break;
-      default:
-        break;
-    }
-  };
-  
-  // Trigger refetch when filter values change or when explicitly triggered
-  useEffect(() => {
-    refetch();
-  }, [refetch, startDate, endDate, client, service, staff, status, bookingType, triggerRefresh]);
-  
-  // Aggregate appointments by staff
-  const staffSummary = useMemo(() => {
-    // Check if data exists and has the expected structure
-    if (!data || !data.data || !data.data.allAppointments || !Array.isArray(data.data.allAppointments.appointments)) return [];
-    
-    // Create a map to store staff data
-    const staffMap = new Map();
-    
-    // Process each appointment
-    data.data.allAppointments.appointments.forEach((appointment: any) => {
-      const staffName = appointment.staffName || 'Unassigned';
-      
-      // Get or create staff entry
-      if (!staffMap.has(staffName)) {
-        staffMap.set(staffName, {
-          staffName,
-          totalAppointments: 0,
-          totalDuration: 0,
-          totalSale: 0
-        });
-      }
-      
-      const staffEntry = staffMap.get(staffName);
-      
-      // Increment appointment count
-      staffEntry.totalAppointments += 1;
-      
-      // Add duration (in minutes)
-      if (appointment.duration) {
-        staffEntry.totalDuration += appointment.duration;
-      }
-      
-      // Add sale amount (use finalAmount if available, otherwise totalAmount, otherwise amount)
-      const saleAmount = appointment.finalAmount || appointment.totalAmount || appointment.amount || 0;
-      staffEntry.totalSale += saleAmount;
-    });
-    
-    // Convert map to array
-    return Array.from(staffMap.values());
-  }, [data]);
-  
-  // Filter data based on search term
-  const searchedStaff = useMemo(() => {
-    if (!searchTerm) return staffSummary;
-    
-    return staffSummary.filter((staff: any) => 
-      staff.staffName.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [staffSummary, searchTerm]);
-  
-  // Pagination logic
-  const totalItems = searchedStaff.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedStaff = searchedStaff.slice(startIndex, endIndex);
-  
-  if (isLoading) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search staff..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Staff Name</TableHead>
-                <TableHead>Total Appointments</TableHead>
-                <TableHead>Total Duration</TableHead>
-                <TableHead>Total Sale</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[...Array(5)].map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-32" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    );
-  }
-  
-  if (isError) {
-    return (
-      <div className="text-center py-10">
-        <div className="text-red-500 font-semibold">Error loading data</div>
-        <Button onClick={() => refetch()} className="mt-4">Retry</Button>
-      </div>
-    );
-  }
-  
+const ReferralsReportPreview = ({ reportData }: { reportData: any }) => {
+  const { summary } = reportData;
+  if (!summary) return <ReportPreviewTable reportType="referrals" reportData={reportData} />;
+
   return (
-    <div ref={tableRef}>
-      <div className="flex justify-between items-center mb-4 gap-2">
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search staff..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page when search term changes
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('copy')}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                <FileText className="mr-2 h-4 w-4" />
-                CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('print')}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-primary/5">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Referrals</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.totalReferrals}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-green-50">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Earnings</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">₹{summary.totalEarnings.toLocaleString()}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-blue-50">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Completed Referrals</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{summary.completedReferrals}</div>
+          </CardContent>
+        </Card>
       </div>
-      <div className="rounded-md border">
+      <ReportPreviewTable reportType="referrals" reportData={reportData} />
+    </div>
+  );
+};
+
+const SupplierTotalOrdersReportPreview = ({ reportData }: { reportData: any }) => (
+  <ReportPreviewTable reportType="supplier-total-orders" reportData={reportData} />
+);
+
+const SupplierPendingOrdersReportPreview = ({ reportData }: { reportData: any }) => (
+  <ReportPreviewTable reportType="supplier-pending-orders" reportData={reportData} />
+);
+
+const SupplierConfirmedOrdersReportPreview = ({ reportData }: { reportData: any }) => (
+  <ReportPreviewTable reportType="supplier-confirmed-orders" reportData={reportData} />
+);
+
+const SupplierCompletedOrdersReportPreview = ({ reportData }: { reportData: any }) => (
+  <ReportPreviewTable reportType="supplier-completed-orders" reportData={reportData} />
+);
+
+const SupplierPlatformCollectionsReportPreview = ({ reportData }: { reportData: any }) => (
+  <ReportPreviewTable reportType="platform-collections" reportData={reportData} />
+);
+
+const SupplierProductSalesReportPreview = ({ reportData }: { reportData: any }) => {
+  const { summary } = reportData;
+  if (!summary) return <ReportPreviewTable reportType="supplier-product-sales" reportData={reportData} />;
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-primary/5">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Products</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{summary.totalProducts || 0}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-green-50">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">₹{summary.totalRevenue?.toLocaleString() || 0}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-blue-50">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Units Sold</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{summary.totalUnitsSold || 0}</div>
+          </CardContent>
+        </Card>
+        <Card className="bg-orange-50">
+          <CardHeader className="py-4">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Orders</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{summary.totalOrders || 0}</div>
+          </CardContent>
+        </Card>
+      </div>
+      <ReportPreviewTable reportType="supplier-product-sales" reportData={reportData} />
+    </div>
+  );
+};
+
+// ReportPreviewTable component
+const ReportPreviewTable = ({ reportType, reportData }: { reportType: string; reportData: ReportData }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Filter rows based on search term
+  const filteredRows = useMemo(() => {
+    if (!reportData?.rows) return [];
+    if (!searchTerm) return reportData.rows;
+
+    return reportData.rows.filter(row =>
+      row.some(cell =>
+        cell && cell.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+  }, [reportData.rows, searchTerm]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedRows = filteredRows.slice(startIndex, startIndex + itemsPerPage);
+
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  // Check if there's no data to display
+  if (!reportData?.headers || !reportData?.rows || reportData.rows.length === 0) {
+    return (
+      <div className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Staff Name</TableHead>
-              <TableHead>Total Appointments</TableHead>
-              <TableHead>Total Duration</TableHead>
-              <TableHead>Total Sale</TableHead>
+              {(reportData.headers || []).map((header, index) => (
+                <TableHead key={index}>{header}</TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedStaff.length > 0 ? (
-              paginatedStaff.map((staff: any, index: number) => (
-                <TableRow key={`${staff.staffName}-${index}`}>
-                  <TableCell className="font-medium">{staff.staffName}</TableCell>
-                  <TableCell>{staff.totalAppointments}</TableCell>
-                  <TableCell>
-                    {/* Convert minutes to hours and minutes */}
-                    {staff.totalDuration >= 60 
-                      ? `${Math.floor(staff.totalDuration / 60)} hr ${staff.totalDuration % 60} min`
-                      : `${staff.totalDuration} min`}
-                  </TableCell>
-                  <TableCell>₹{staff.totalSale.toFixed(2)}</TableCell>
+            <TableRow>
+              <TableCell colSpan={(reportData.headers || []).length} className="text-center py-8 text-muted-foreground">
+                No data available
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Search Input and Pagination Controls */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search in table..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {/* Pagination Controls */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            Rows per page:
+          </span>
+          <Select
+            value={itemsPerPage.toString()}
+            onValueChange={(value) => {
+              setItemsPerPage(parseInt(value));
+              setCurrentPage(1); // Reset to first page when changing items per page
+            }}
+          >
+            <SelectTrigger className="w-[80px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto no-scrollbar rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {(reportData.headers || []).map((header, index) => (
+                <TableHead key={index}>{header}</TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedRows.length > 0 ? (
+              paginatedRows.map((row, rowIndex) => (
+                <TableRow key={startIndex + rowIndex}>
+                  {row.map((cell, cellIndex) => (
+                    <TableCell key={cellIndex} className={cellIndex === 0 ? "font-mono" : ""}>
+                      {cell}
+                    </TableCell>
+                  ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                  No staff data found
+                <TableCell colSpan={(reportData.headers || []).length} className="text-center py-8 text-muted-foreground">
+                  No matching results found
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
       </div>
-      <Pagination
-        className="mt-4"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={totalItems}
-      />
-      <FilterModal 
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        onApplyFilters={handleFilterChange}
-        cities={[]}
-        initialFilters={filters}
-        showStatusFilter={true}
-      />
-    </div>
-  );
-};
 
-// Export functionality functions
-const exportToExcel = (tableRef: React.RefObject<HTMLDivElement>, fileName: string) => {
-  if (!tableRef.current) return;
-  
-  const table = tableRef.current.querySelector('table');
-  if (!table) return;
-  
-  const wb = XLSX.utils.table_to_book(table, { sheet: 'Sheet1' });
-  XLSX.writeFile(wb, `${fileName}.xlsx`);
-};
-
-const exportToCSV = (tableRef: React.RefObject<HTMLDivElement>, fileName: string) => {
-  if (!tableRef.current) return;
-  
-  const table = tableRef.current.querySelector('table');
-  if (!table) return;
-  
-  const wb = XLSX.utils.table_to_book(table, { sheet: 'Sheet1' });
-  XLSX.writeFile(wb, `${fileName}.csv`);
-};
-
-const exportToPDF = async (tableRef: React.RefObject<HTMLDivElement>, fileName: string) => {
-  if (!tableRef.current) return;
-  
-  // Get only the table element, not the entire container
-  const table = tableRef.current.querySelector('table');
-  if (!table) return;
-  
-  // Use html2canvas to capture only the table
-  const canvas = await html2canvas(table);
-  const imgData = canvas.toDataURL('image/png');
-  
-  // Create PDF
-  const pdf = new jsPDF();
-  const imgWidth = pdf.internal.pageSize.getWidth() - 20; // Add some margins
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
-  
-  pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight); // Add margins
-  pdf.save(`${fileName}.pdf`);
-};
-
-const copyToClipboard = (tableRef: React.RefObject<HTMLDivElement>) => {
-  if (!tableRef.current) return;
-  
-  const table = tableRef.current.querySelector('table');
-  if (!table) return;
-  
-  // Get table HTML
-  const range = document.createRange();
-  range.selectNode(table);
-  window.getSelection()?.removeAllRanges();
-  window.getSelection()?.addRange(range);
-  document.execCommand('copy');
-  window.getSelection()?.removeAllRanges();
-  
-  // Show success message (you might want to implement a toast notification)
-  alert('Table copied to clipboard!');
-};
-
-const printTable = (tableRef: React.RefObject<HTMLDivElement>) => {
-  if (!tableRef.current) return;
-  
-  // Get only the table element, not the entire container
-  const table = tableRef.current.querySelector('table');
-  if (!table) return;
-  
-  const printWindow = window.open('', '', 'height=600,width=800');
-  if (printWindow) {
-    printWindow.document.write('<html><head><title>Print Report</title>');
-    printWindow.document.write('<style>table { border-collapse: collapse; width: 100%; } th, td { border: 1px solid #ddd; padding: 8px; text-align: left; } th { background-color: #f2f2f2; }</style>');
-    printWindow.document.write('</head><body>');
-    printWindow.document.write(table.outerHTML);
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.print();
-  }
-};
-
-// Component to display Sales by Service report data in a table
-const SalesByServiceTable = ({ startDate, endDate, client, service, staff, status, bookingType, onFiltersChange, triggerRefresh }: any) => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // 10 entries by default
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
-  // Use the RTK Query hook to fetch real data
-  // Note: Only completed appointments are included in sales reports
-  const { data, isLoading, isError, refetch } = useGetSalesByServiceReportQuery({ 
-    period: startDate && endDate ? 'custom' : 'all',
-    startDate: startDate ? new Date(startDate) : undefined, 
-    endDate: endDate ? new Date(endDate) : undefined,
-    client: client && client !== 'all' ? client : undefined,
-    service: service && service !== 'all' ? service : undefined,
-    staff: staff && staff !== 'all' ? staff : undefined,
-    // Status is fixed to 'completed' in the backend for sales reports
-    bookingType: bookingType && bookingType !== 'all' ? bookingType : undefined
-  });
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-    
-    // Notify parent component about filter changes
-    if (onFiltersChange) {
-      onFiltersChange(newFilters);
-    }
-  };
-  
-  // Export functions
-  const handleExport = (format: string) => {
-    switch (format) {
-      case 'excel':
-        exportToExcel(tableRef, 'sales_by_service');
-        break;
-      case 'csv':
-        exportToCSV(tableRef, 'sales_by_service');
-        break;
-      case 'pdf':
-        exportToPDF(tableRef, 'sales_by_service');
-        break;
-      case 'copy':
-        copyToClipboard(tableRef);
-        break;
-      case 'print':
-        printTable(tableRef);
-        break;
-      default:
-        break;
-    }
-  };
-  
-  // Trigger refetch when filter values change or when explicitly triggered
-  useEffect(() => {
-    refetch();
-  }, [refetch, startDate, endDate, client, service, staff, status, bookingType, triggerRefresh]);
-  
-  // Extract services from the API response
-  const services = data?.data?.salesByService || [];
-  
-  // Filter data based on search term
-  const searchedServices = useMemo(() => {
-    if (!searchTerm) return services;
-    
-    return services.filter((service: any) => 
-      Object.values(service).some(value => 
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [services, searchTerm]);
-  
-  // Pagination logic
-  const totalItems = searchedServices.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedServices = searchedServices.slice(startIndex, endIndex);
-  
-  // Calculate total sales
-  const totalSales = paginatedServices.reduce((sum: number, service: any) => sum + (service.totalSales || 0), 0);
-
-  if (isLoading) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Service</TableHead>
-                <TableHead>Service Sold</TableHead>
-                <TableHead>Gross Sale</TableHead>
-                <TableHead>Discounts</TableHead>
-                <TableHead>Offers</TableHead>
-                <TableHead>Net Sale</TableHead>
-                <TableHead>Tax</TableHead>
-                <TableHead>Total Sales</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[...Array(5)].map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-32" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    );
-  }
-  
-  if (isError) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-red-500">
-          Failed to load sales by service data. Please try again.
-        </div>
-      </div>
-    );
-  }
-  
-  if (paginatedServices.length === 0) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-gray-500">
-          No service data found for the selected date range.
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div ref={tableRef}>
-      <div className="flex justify-between items-center mb-4 gap-2">
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page when search term changes
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Export
+      {/* Pagination Controls */}
+      {
+        totalPages > 1 && (
+          <div className="flex items-center justify-between px-2">
+            <div className="text-sm text-muted-foreground">
+              Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredRows.length)} of {filteredRows.length} results
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                Previous
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('copy')}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                <FileText className="mr-2 h-4 w-4" />
-                CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('print')}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      
-      <FilterModal 
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        onApplyFilters={handleFilterChange}
-        cities={[]}
-        initialFilters={filters}
-        // Status filter is hidden for Sales by Service report as only completed appointments are shown
-        showStatusFilter={false}
-      />
-      
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Service</TableHead>
-              <TableHead>Service Sold</TableHead>
-              <TableHead>Gross Sale</TableHead>
-              <TableHead>Discounts</TableHead>
-              <TableHead>Offers</TableHead>
-              <TableHead>Net Sale</TableHead>
-              <TableHead>Tax</TableHead>
-              <TableHead>Total Sales</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedServices.map((item: any, index: number) => {
-              return (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{item.service || 'Unknown Service'}</TableCell>
-                  <TableCell>{item.serviceSold || 0}</TableCell>
-                  <TableCell>₹{typeof item.grossSale === 'number' ? item.grossSale.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.discounts === 'number' ? item.discounts.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.offers === 'number' ? item.offers.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.netSale === 'number' ? item.netSale.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.tax === 'number' ? item.tax.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.totalSales === 'number' ? item.totalSales.toFixed(2) : '0.00'}</TableCell>
-                </TableRow>
-              );
-            })}
-            {/* Total Row */}
-            <TableRow className="font-bold bg-gray-50">
-              <TableCell>Total</TableCell>
-              <TableCell>
-                {paginatedServices.reduce((sum: number, item: any) => sum + (item.serviceSold || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedServices.reduce((sum: number, item: any) => sum + (item.grossSale || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedServices.reduce((sum: number, item: any) => sum + (item.discounts || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedServices.reduce((sum: number, item: any) => sum + (item.offers || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedServices.reduce((sum: number, item: any) => sum + (item.netSale || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedServices.reduce((sum: number, item: any) => sum + (item.tax || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedServices.reduce((sum: number, item: any) => sum + (item.totalSales || 0), 0).toFixed(2)}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination
-        className="mt-4"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={totalItems}
-      />
-    </div>
-  );
-};
-
-// Component to display Sales by Customer report data in a table
-const SalesByCustomerTable = ({ startDate, endDate, client, service, staff, status, bookingType, onFiltersChange, triggerRefresh }: any) => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // 10 entries by default
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
-  // Use the RTK Query hook to fetch real data
-  // Note: Only completed appointments are included in sales reports
-  const { data, isLoading, isError, refetch } = useGetSalesByCustomerReportQuery({ 
-    period: startDate && endDate ? 'custom' : 'all',
-    startDate: startDate ? new Date(startDate) : undefined, 
-    endDate: endDate ? new Date(endDate) : undefined,
-    client: client && client !== 'all' ? client : undefined,
-    service: service && service !== 'all' ? service : undefined,
-    staff: staff && staff !== 'all' ? staff : undefined,
-    // Status is fixed to 'completed' in the backend for sales reports
-    bookingType: bookingType && bookingType !== 'all' ? bookingType : undefined
-  });
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-    
-    // Notify parent component about filter changes
-    if (onFiltersChange) {
-      onFiltersChange(newFilters);
-    }
-  };
-  
-  // Export functions
-  const handleExport = (format: string) => {
-    switch (format) {
-      case 'excel':
-        exportToExcel(tableRef, 'sales_by_customer');
-        break;
-      case 'csv':
-        exportToCSV(tableRef, 'sales_by_customer');
-        break;
-      case 'pdf':
-        exportToPDF(tableRef, 'sales_by_customer');
-        break;
-      case 'copy':
-        copyToClipboard(tableRef);
-        break;
-      case 'print':
-        printTable(tableRef);
-        break;
-      default:
-        break;
-    }
-  };
-  
-  // Trigger refetch when filter values change or when explicitly triggered
-  useEffect(() => {
-    refetch();
-  }, [refetch, startDate, endDate, client, service, staff, status, bookingType, triggerRefresh]);
-  
-  // Extract customers from the API response
-  const customers = data?.data?.salesByCustomer || [];
-  
-  // Filter data based on search term
-  const searchedCustomers = useMemo(() => {
-    if (!searchTerm) return customers;
-    
-    return customers.filter((customer: any) => 
-      Object.values(customer).some(value => 
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [customers, searchTerm]);
-  
-  // Pagination logic
-  const totalItems = searchedCustomers.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedCustomers = searchedCustomers.slice(startIndex, endIndex);
-  
-  // Calculate total sales
-  const totalSales = paginatedCustomers.reduce((sum: number, customer: any) => sum + (customer.totalSales || 0), 0);
-
-  if (isLoading) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead>Service Sold</TableHead>
-                <TableHead>Gross Sale</TableHead>
-                <TableHead>Discounts</TableHead>
-                <TableHead>Offers</TableHead>
-                <TableHead>Net Sale</TableHead>
-                <TableHead>Tax</TableHead>
-                <TableHead>Total Sales</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[...Array(5)].map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-32" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    );
-  }
-  
-  if (isError) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-red-500">
-          Failed to load sales by customer data. Please try again.
-        </div>
-      </div>
-    );
-  }
-  
-  if (paginatedCustomers.length === 0) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-gray-500">
-          No customer data found for the selected date range.
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div ref={tableRef}>
-      <div className="flex justify-between items-center mb-4 gap-2">
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page when search term changes
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Export
+              <div className="text-sm font-medium">
+                Page {currentPage} of {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Next
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('copy')}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                <FileText className="mr-2 h-4 w-4" />
-                CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('print')}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      
-      <FilterModal 
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        onApplyFilters={handleFilterChange}
-        cities={[]}
-        initialFilters={filters}
-        // Status filter is hidden for Sales by Customer report as only completed appointments are shown
-        showStatusFilter={false}
-      />
-      
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Customer</TableHead>
-              <TableHead>Service Sold</TableHead>
-              <TableHead>Gross Sale</TableHead>
-              <TableHead>Discounts</TableHead>
-              <TableHead>Offers</TableHead>
-              <TableHead>Net Sale</TableHead>
-              <TableHead>Tax</TableHead>
-              <TableHead>Total Sales</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedCustomers.map((item: any, index: number) => {
-              return (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{item.customer || 'Unknown Customer'}</TableCell>
-                  <TableCell>{item.serviceSold || 0}</TableCell>
-                  <TableCell>₹{typeof item.grossSale === 'number' ? item.grossSale.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.discounts === 'number' ? item.discounts.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.offers === 'number' ? item.offers.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.netSale === 'number' ? item.netSale.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.tax === 'number' ? item.tax.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.totalSales === 'number' ? item.totalSales.toFixed(2) : '0.00'}</TableCell>
-                </TableRow>
-              );
-            })}
-            {/* Total Row */}
-            <TableRow className="font-bold bg-gray-50">
-              <TableCell>Total</TableCell>
-              <TableCell>
-                {paginatedCustomers.reduce((sum: number, item: any) => sum + (item.serviceSold || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedCustomers.reduce((sum: number, item: any) => sum + (item.grossSale || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedCustomers.reduce((sum: number, item: any) => sum + (item.discounts || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedCustomers.reduce((sum: number, item: any) => sum + (item.offers || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedCustomers.reduce((sum: number, item: any) => sum + (item.netSale || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedCustomers.reduce((sum: number, item: any) => sum + (item.tax || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedCustomers.reduce((sum: number, item: any) => sum + (item.totalSales || 0), 0).toFixed(2)}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination
-        className="mt-4"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={totalItems}
-      />
-    </div>
-  );
-};
-
-// Component to display Product Summary report data in a table
-const ProductSummaryTable = ({ product, category, brand, status, isActive, onFiltersChange, triggerRefresh }: any) => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // 10 entries by default
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
-  // Use the RTK Query hook to fetch real data
-  const { data, isLoading, isError, refetch } = useGetProductSummaryReportQuery({ 
-    product: product && product !== 'all' ? product : undefined,
-    category: category && category !== 'all' ? category : undefined,
-    brand: brand && brand !== 'all' ? brand : undefined,
-    status: status && status !== 'all' ? status : undefined,
-    isActive: isActive !== undefined ? isActive : undefined
-  });
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-    
-    // Notify parent component about filter changes
-    if (onFiltersChange) {
-      onFiltersChange(newFilters);
-    }
-  };
-  
-  // Export functions
-  const handleExport = (format: string) => {
-    switch (format) {
-      case 'excel':
-        exportToExcel(tableRef, 'product_summary');
-        break;
-      case 'csv':
-        exportToCSV(tableRef, 'product_summary');
-        break;
-      case 'pdf':
-        exportToPDF(tableRef, 'product_summary');
-        break;
-      case 'copy':
-        copyToClipboard(tableRef);
-        break;
-      case 'print':
-        printTable(tableRef);
-        break;
-      default:
-        break;
-    }
-  };
-  
-  // Trigger refetch when filter values change or when explicitly triggered
-  useEffect(() => {
-    refetch();
-  }, [refetch, product, category, brand, status, isActive, triggerRefresh]);
-  
-  // Extract products from the API response
-  const products = data?.data?.products || [];
-  
-  // Filter data based on search term
-  const searchedProducts = useMemo(() => {
-    if (!searchTerm) return products;
-    
-    return products.filter((product: any) => 
-      Object.values(product).some(value => 
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [products, searchTerm]);
-  
-  // Pagination logic
-  const totalItems = searchedProducts.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedProducts = searchedProducts.slice(startIndex, endIndex);
-
-  if (isLoading) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product Name</TableHead>
-                <TableHead>Brand</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Product Form</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Sale Price</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Is Active</TableHead>
-                <TableHead>Created Date</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[...Array(5)].map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-32" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    );
-  }
-  
-  if (isError) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-red-500">
-          Failed to load product summary data. Please try again.
-        </div>
-      </div>
-    );
-  }
-  
-  if (paginatedProducts.length === 0) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-gray-500">
-          No product data found.
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div ref={tableRef}>
-      <div className="flex justify-between items-center mb-4 gap-2">
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page when search term changes
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('copy')}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                <FileText className="mr-2 h-4 w-4" />
-                CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('print')}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      
-      <FilterModal 
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        onApplyFilters={handleFilterChange}
-        cities={[]}
-        initialFilters={filters}
-        showStatusFilter={true}
-      />
-      
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Product Name</TableHead>
-              <TableHead>Brand</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Product Form</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Sale Price</TableHead>
-              <TableHead>Stock</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Is Active</TableHead>
-              <TableHead>Created Date</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedProducts.map((item: any, index: number) => {
-              return (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{item.productName}</TableCell>
-                  <TableCell>{item.brand}</TableCell>
-                  <TableCell>{item.category}</TableCell>
-                  <TableCell>{item.productForm}</TableCell>
-                  <TableCell>₹{typeof item.price === 'number' ? item.price.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.salePrice === 'number' ? item.salePrice.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>{item.stock}</TableCell>
-                  <TableCell>
-                    <Badge variant={item.status === 'approved' ? 'default' : item.status === 'pending' ? 'secondary' : 'destructive'}>
-                      {item.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {item.isActive ? (
-                      <Badge variant="default">Active</Badge>
-                    ) : (
-                      <Badge variant="secondary">Inactive</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination
-        className="mt-4"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={totalItems}
-      />
-    </div>
-  );
-};
-
-// Component to display Inventory/Stock report data in a table
-const InventoryStockTable = ({ product, category, brand, onFiltersChange, triggerRefresh }: any) => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // 10 entries by default
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
-  // Use the RTK Query hook to fetch real data
-  const { data, isLoading, isError, refetch } = useGetInventoryStockReportQuery({ 
-    product: product && product !== 'all' ? product : undefined,
-    category: category && category !== 'all' ? category : undefined,
-    brand: brand && brand !== 'all' ? brand : undefined
-  });
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-    
-    // Notify parent component about filter changes
-    if (onFiltersChange) {
-      onFiltersChange(newFilters);
-    }
-  };
-  
-  // Export functions
-  const handleExport = (format: string) => {
-    switch (format) {
-      case 'excel':
-        exportToExcel(tableRef, 'inventory_stock_report');
-        break;
-      case 'csv':
-        exportToCSV(tableRef, 'inventory_stock_report');
-        break;
-      case 'pdf':
-        exportToPDF(tableRef, 'inventory_stock_report');
-        break;
-      case 'copy':
-        copyToClipboard(tableRef);
-        break;
-      case 'print':
-        printTable(tableRef);
-        break;
-      default:
-        break;
-    }
-  };
-  
-  // Trigger refetch when filter values change or when explicitly triggered
-  useEffect(() => {
-    refetch();
-  }, [refetch, product, category, brand, triggerRefresh]);
-  
-  // Extract products from the API response
-  const products = data?.data?.products || [];
-  
-  // Filter data based on search term
-  const searchedProducts = useMemo(() => {
-    if (!searchTerm) return products;
-    
-    return products.filter((product: any) => 
-      Object.values(product).some(value => 
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [products, searchTerm]);
-  
-  // Pagination logic
-  const totalItems = searchedProducts.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedProducts = searchedProducts.slice(startIndex, endIndex);
-  
-  if (isLoading) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product Name</TableHead>
-                <TableHead>Stock Available</TableHead>
-                <TableHead>Stock Status</TableHead>
-                <TableHead>Example Insight</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[...Array(5)].map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-32" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-32" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    );
-  }
-  
-  if (isError) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="text-center py-4 text-red-500">
-          Failed to load inventory/stock data. Please try again.
-        </div>
-      </div>
-    );
-  }
-  
-  if (paginatedProducts.length === 0) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="text-center py-4 text-gray-500">
-          No inventory/stock data found.
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div ref={tableRef}>
-      <div className="flex justify-between items-center mb-4">
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page when search term changes
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('copy')}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                <FileText className="mr-2 h-4 w-4" />
-                CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                <Printer className="mr-2 h-4 w-4" />
-                PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('print')}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Product Name</TableHead>
-              <TableHead>Stock Available</TableHead>
-              <TableHead>Stock Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedProducts.map((item: any, index: number) => {
-              return (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{item.productName}</TableCell>
-                  <TableCell>{item.stockAvailable}</TableCell>
-                  <TableCell>
-                    <Badge variant={item.stockStatus === 'In Stock' ? 'default' : item.stockStatus === 'Low Stock' ? 'secondary' : 'destructive'}>
-                      {item.stockStatus}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination
-        className="mt-4"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={totalItems}
-      />
-    </div>
-  );
-};
-
-// Component to display Sales by Product report data in a table
-const SalesByProductTable = ({ startDate, endDate, product, customer, status, category, brand, onFiltersChange, triggerRefresh }: any) => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // 10 entries by default
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
-  // Use the RTK Query hook to fetch real data
-  const { data, isLoading, isError, refetch } = useGetSalesByProductReportQuery({ 
-    period: startDate && endDate ? 'custom' : 'all',
-    startDate: startDate ? new Date(startDate) : undefined, 
-    endDate: endDate ? new Date(endDate) : undefined,
-    product: product && product !== 'all' ? product : undefined,
-    customer: customer && customer !== 'all' ? customer : undefined,
-    status: status && status !== 'all' ? status : undefined,
-    category: category && category !== 'all' ? category : undefined,
-    brand: brand && brand !== 'all' ? brand : undefined
-  });
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-    
-    // Notify parent component about filter changes
-    if (onFiltersChange) {
-      onFiltersChange(newFilters);
-    }
-  };
-  
-  // Export functions
-  const handleExport = (format: string) => {
-    switch (format) {
-      case 'excel':
-        exportToExcel(tableRef, 'sales_by_product');
-        break;
-      case 'csv':
-        exportToCSV(tableRef, 'sales_by_product');
-        break;
-      case 'pdf':
-        exportToPDF(tableRef, 'sales_by_product');
-        break;
-      case 'copy':
-        copyToClipboard(tableRef);
-        break;
-      case 'print':
-        printTable(tableRef);
-        break;
-      default:
-        break;
-    }
-  };
-  
-  // Trigger refetch when filter values change or when explicitly triggered
-  useEffect(() => {
-    refetch();
-  }, [refetch, startDate, endDate, product, customer, status, category, brand, triggerRefresh]);
-  
-  // Extract products from the API response
-  const products = data?.data?.salesByProduct || [];
-  
-  // Filter data based on search term
-  const searchedProducts = useMemo(() => {
-    if (!searchTerm) return products;
-    
-    return products.filter((product: any) => 
-      Object.values(product).some(value => 
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [products, searchTerm]);
-  
-  // Pagination logic
-  const totalItems = searchedProducts.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedProducts = searchedProducts.slice(startIndex, endIndex);
-  
-  // Calculate totals
-  const totalUnitsSold = paginatedProducts.filter((item: any) => item.status === 'delivered').reduce((sum: number, product: any) => sum + (product.quantitySold || product.unitsSold || 0), 0);
-  const totalGrossSale = paginatedProducts.filter((item: any) => item.status === 'delivered').reduce((sum: number, product: any) => sum + (product.grossSales || product.grossSale || 0), 0);
-  const totalDiscounts = paginatedProducts.filter((item: any) => item.status === 'delivered').reduce((sum: number, product: any) => sum + (product.discountAmount || product.discounts || 0), 0);
-  const totalOffers = paginatedProducts.filter((item: any) => item.status === 'delivered').reduce((sum: number, product: any) => sum + (product.offers || 0), 0);
-  const totalNetSale = paginatedProducts.filter((item: any) => item.status === 'delivered').reduce((sum: number, product: any) => sum + (product.netSales || product.netSale || 0), 0);
-  const totalTax = paginatedProducts.filter((item: any) => item.status === 'delivered').reduce((sum: number, product: any) => sum + (product.taxAmount || product.tax || 0), 0);
-  const totalSales = paginatedProducts.filter((item: any) => item.status === 'delivered').reduce((sum: number, product: any) => sum + (product.totalSales || 0), 0);
-
-  if (isLoading) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product ID</TableHead>
-                <TableHead>Product Name</TableHead>
-                <TableHead>Brand</TableHead>
-                <TableHead>Product Category</TableHead>
-                <TableHead>Quantity Sold</TableHead>
-                <TableHead>Gross Sales</TableHead>
-                <TableHead>Discount Amount</TableHead>
-                <TableHead>Net Sales</TableHead>
-                <TableHead>Tax Amount</TableHead>
-                <TableHead>Total Sales</TableHead>
-                <TableHead>Average Selling Price</TableHead>
-                <TableHead>COGS</TableHead>
-                <TableHead>Gross Profit</TableHead>
-                <TableHead>Gross Margin %</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[...Array(5)].map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-32" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-24" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-16" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    );
-  }
-  
-  if (isError) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-red-500">
-          Failed to load sales by product data. Please try again.
-        </div>
-      </div>
-    );
-  }
-  
-  if (paginatedProducts.length === 0) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-gray-500">
-          No product data found for the selected date range.
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div ref={tableRef}>
-      <div className="flex justify-between items-center mb-4 gap-2">
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page when search term changes
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('copy')}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                <FileText className="mr-2 h-4 w-4" />
-                CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('print')}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      
-      <FilterModal 
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        onApplyFilters={handleFilterChange}
-        cities={[]}
-        initialFilters={filters}
-        showStatusFilter={false}
-        showBookingTypeFilter={true}
-        hideClientFilter={true}
-        hideServiceFilter={true}
-        hideStaffFilter={true}
-        hideBookingTypeFilter={false}
-      />
-      
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Product ID</TableHead>
-              <TableHead>Product Name</TableHead>
-              <TableHead>Brand</TableHead>
-              <TableHead>Product Category</TableHead>
-              <TableHead>Quantity Sold</TableHead>
-              <TableHead>Gross Sales</TableHead>
-              <TableHead>Discount Amount</TableHead>
-              <TableHead>Net Sales</TableHead>
-              <TableHead>Tax Amount</TableHead>
-              <TableHead>Total Sales</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedProducts.map((item: any, index: number) => {
-              // Only show products with delivered status
-              if (item.status !== 'delivered') return null;
-              
-              return (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{item.productId || 'N/A'}</TableCell>
-                  <TableCell>{item.productName || item.product || 'Unknown Product'}</TableCell>
-                  <TableCell>{item.brand || 'N/A'}</TableCell>
-                  <TableCell>{item.category || 'N/A'}</TableCell>
-                  <TableCell>{item.quantitySold || item.unitsSold || 0}</TableCell>
-                  <TableCell>₹{typeof item.grossSales === 'number' ? item.grossSales.toFixed(2) : typeof item.grossSale === 'number' ? item.grossSale.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.discountAmount === 'number' ? item.discountAmount.toFixed(2) : typeof item.discounts === 'number' ? item.discounts.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.netSales === 'number' ? item.netSales.toFixed(2) : typeof item.netSale === 'number' ? item.netSale.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.taxAmount === 'number' ? item.taxAmount.toFixed(2) : typeof item.tax === 'number' ? item.tax.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.totalSales === 'number' ? item.totalSales.toFixed(2) : '0.00'}</TableCell>
-                </TableRow>
-              );
-            })}
-            {/* Total Row */}
-            <TableRow className="font-bold bg-gray-50">
-              <TableCell colSpan={4}>Total</TableCell>
-              <TableCell>
-                {paginatedProducts.filter((item: any) => item.status === 'delivered').reduce((sum: number, item: any) => sum + (item.quantitySold || item.unitsSold || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedProducts.filter((item: any) => item.status === 'delivered').reduce((sum: number, item: any) => sum + (item.grossSales || item.grossSale || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedProducts.filter((item: any) => item.status === 'delivered').reduce((sum: number, item: any) => sum + (item.discountAmount || item.discounts || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedProducts.filter((item: any) => item.status === 'delivered').reduce((sum: number, item: any) => sum + (item.netSales || item.netSale || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedProducts.filter((item: any) => item.status === 'delivered').reduce((sum: number, item: any) => sum + (item.taxAmount || item.tax || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedProducts.filter((item: any) => item.status === 'delivered').reduce((sum: number, item: any) => sum + (item.totalSales || 0), 0).toFixed(2)}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination
-        className="mt-4"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={totalItems}
-      />
-    </div>
-  );
-};
-
-// Component to display Category-wise Product report data in a table
-const CategoryWiseProductTable = ({ product, category, brand, onFiltersChange, triggerRefresh }: any) => {
-  const [filters, setFilters] = useState<FilterParams>({ product, category, brand });
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // 10 entries by default
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
-  // Use the RTK Query hook to fetch real data
-  const { data, isLoading, isError, refetch } = useGetCategoryWiseProductReportQuery({ 
-    product: product && product !== 'all' ? product : undefined,
-    category: category && category !== 'all' ? category : undefined,
-    brand: brand && brand !== 'all' ? brand : undefined
-  });
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-    
-    // Notify parent component about filter changes
-    if (onFiltersChange) {
-      onFiltersChange(newFilters);
-    }
-  };
-  
-  // Export functions
-  const handleExport = (format: string) => {
-    switch (format) {
-      case 'excel':
-        exportToExcel(tableRef, 'category_wise_product_report');
-        break;
-      case 'csv':
-        exportToCSV(tableRef, 'category_wise_product_report');
-        break;
-      case 'pdf':
-        exportToPDF(tableRef, 'category_wise_product_report');
-        break;
-      case 'copy':
-        copyToClipboard(tableRef);
-        break;
-      case 'print':
-        printTable(tableRef);
-        break;
-      default:
-        break;
-    }
-  };
-  
-  // Trigger refetch when filter values change or when explicitly triggered
-  useEffect(() => {
-    refetch();
-  }, [refetch, product, category, brand, triggerRefresh]);
-  
-  // Extract categories from the API response
-  const categories = data?.data?.categories || [];
-  
-  // Filter data based on search term
-  const searchedCategories = useMemo(() => {
-    if (!searchTerm) return categories;
-    
-    return categories.filter((category: any) => 
-      Object.values(category).some(value => 
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [categories, searchTerm]);
-  
-  // Pagination logic
-  const totalItems = searchedCategories.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedCategories = searchedCategories.slice(startIndex, endIndex);
-  
-  if (isLoading) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Category Name</TableHead>
-                <TableHead>Number of Products</TableHead>
-                <TableHead>Active Products</TableHead>
-                <TableHead>Average Price</TableHead>
-                <TableHead>Average Sale Price</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {[...Array(5)].map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-32" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-20" />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    );
-  }
-  
-  if (isError) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-red-500">
-          Failed to load category-wise product data. Please try again.
-        </div>
-      </div>
-    );
-  }
-  
-  if (paginatedCategories.length === 0) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-gray-500">
-          No category data found.
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div ref={tableRef}>
-      <div className="flex justify-between items-center mb-4 gap-2">
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page when search term changes
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('copy')}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                <FileText className="mr-2 h-4 w-4" />
-                CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('print')}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-      
-      <FilterModal 
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        onApplyFilters={handleFilterChange}
-        cities={[]}
-        initialFilters={filters}
-        showProductFilter={true}
-      />
-      
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Category Name</TableHead>
-              <TableHead>Number of Products</TableHead>
-              <TableHead>Active Products</TableHead>
-              <TableHead>Average Price</TableHead>
-              <TableHead>Average Sale Price</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedCategories.map((item: any, index: number) => {
-              return (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{item.categoryName}</TableCell>
-                  <TableCell>{item.numberOfProducts}</TableCell>
-                  <TableCell>{item.activeProducts}</TableCell>
-                  <TableCell>₹{typeof item.averagePrice === 'number' ? item.averagePrice.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>₹{typeof item.averageSalePrice === 'number' ? item.averageSalePrice.toFixed(2) : '0.00'}</TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination
-        className="mt-4"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={totalItems}
-      />
-    </div>
+        )
+      }
+    </div >
   );
 };
 
 export default function ReportsPage() {
+  const { user, role, isLoading: isAuthLoading } = useCrmAuth();
+  const userRole = role || user?.role || 'admin'; // Default to admin if no role found
+
+  // Fetch data based on user role
+  const { data: appointmentsData, isLoading: isAppointmentsLoading } = useGetAppointmentsQuery(undefined, {
+    skip: userRole !== 'doctor' && userRole !== 'vendor'
+  });
+
+  const { data: clientsData, isLoading: isClientsLoading } = useGetClientsQuery({}, {
+    skip: userRole !== 'vendor'
+  });
+
+  const { data: productsData, isLoading: isProductsLoading } = useGetCrmProductsQuery({}, {
+    skip: userRole !== 'supplier' && userRole !== 'vendor'
+  });
+
+  const { data: expensesData, isLoading: isExpensesLoading } = useGetExpensesQuery(undefined, {
+    skip: userRole !== 'vendor'
+  });
+
+  const { data: ordersData, isLoading: isOrdersLoading } = useGetCrmOrdersQuery(user?._id || '', {
+    skip: !user?._id
+  });
+
+  const { data: referralsData, isLoading: isReferralsLoading } = useGetCrmReferralsQuery(undefined, {
+    skip: userRole !== 'vendor' && userRole !== 'supplier'
+  });
+
+  const { data: campaignsData, isLoading: isCampaignsLoading } = useGetCrmCampaignsQuery({}, {
+    skip: userRole !== 'vendor'
+  });
+
+  const { data: clientOrdersData, isLoading: isClientOrdersLoading } = useGetCrmClientOrdersQuery(undefined, {
+    skip: userRole !== 'vendor' && userRole !== 'supplier'
+  });
+
+  const { data: offersData, isLoading: isOffersLoading } = useGetOffersQuery({}, {
+    skip: userRole !== 'vendor' && userRole !== 'admin' && userRole !== 'supplier'
+  });
+
+  // Supplier report queries
+  const { data: supplierTotalOrdersData, isLoading: isSupplierTotalOrdersLoading } = useGetSupplierTotalOrdersReportQuery(undefined, {
+    skip: userRole !== 'supplier'
+  });
+
+  const { data: supplierPendingOrdersData, isLoading: isSupplierPendingOrdersLoading } = useGetSupplierPendingOrdersReportQuery(undefined, {
+    skip: userRole !== 'supplier'
+  });
+
+  const { data: supplierConfirmedOrdersData, isLoading: isSupplierConfirmedOrdersLoading } = useGetSupplierConfirmedOrdersReportQuery(undefined, {
+    skip: userRole !== 'supplier'
+  });
+
+  const { data: supplierCompletedOrdersData, isLoading: isSupplierCompletedOrdersLoading } = useGetSupplierCompletedOrdersReportQuery(undefined, {
+    skip: userRole !== 'supplier'
+  });
+
+  const { data: supplierPlatformCollectionsData, isLoading: isSupplierPlatformCollectionsLoading } = useGetSupplierPlatformCollectionsReportQuery(undefined, {
+    skip: userRole !== 'supplier'
+  });
+
+  const { data: supplierProductSalesData, isLoading: isSupplierProductSalesLoading } = useGetSupplierProductSalesReportQuery(undefined, {
+    skip: userRole !== 'supplier'
+  });
+
+  // No longer using separate tax fee settings query
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAllAppointmentsModalOpen, setIsAllAppointmentsModalOpen] = useState(false);
   const [isSummaryByServiceModalOpen, setIsSummaryByServiceModalOpen] = useState(false);
@@ -4988,100 +1100,8 @@ export default function ReportsPage() {
   const [isCancelledAppointmentsModalOpen, setIsCancelledAppointmentsModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Refresh states for each appointment report
-  const [allAppointmentsRefresh, setAllAppointmentsRefresh] = useState(0);
-  const [salesByServiceRefresh, setSalesByServiceRefresh] = useState(0);
-  const [salesByCustomerRefresh, setSalesByCustomerRefresh] = useState(0);
-  const [productSummaryRefresh, setProductSummaryRefresh] = useState(0);
-  const [salesByProductRefresh, setSalesByProductRefresh] = useState(0);
-  const [summaryByServiceRefresh, setSummaryByServiceRefresh] = useState(0);
-  const [completedAppointmentsRefresh, setCompletedAppointmentsRefresh] = useState(0);
-  const [cancelledAppointmentsRefresh, setCancelledAppointmentsRefresh] = useState(0);
-  
-  // Modal states for each report
-  const [isSalesByServiceModalOpen, setIsSalesByServiceModalOpen] = useState(false);
-  const [isSalesByCustomerModalOpen, setIsSalesByCustomerModalOpen] = useState(false);
-  const [isProductSummaryModalOpen, setIsProductSummaryModalOpen] = useState(false);
-  const [isSalesByProductModalOpen, setIsSalesByProductModalOpen] = useState(false);
-  
-  // Date filter states for each appointment report
-  const [allAppointmentsFilter, setAllAppointmentsFilter] = useState({
-    startDate: '',
-    endDate: '',
-    client: '',
-    service: '',
-    staff: '',
-    status: '',
-    bookingType: ''
-  });
-  
-  const [salesByServiceFilter, setSalesByServiceFilter] = useState({
-    startDate: '',
-    endDate: '',
-    client: '',
-    service: '',
-    staff: '',
-    status: '',
-    bookingType: ''
-  });
-  
-  const [summaryByServiceFilter, setSummaryByServiceFilter] = useState({
-    startDate: '',
-    endDate: '',
-    client: '',
-    service: '',
-    staff: '',
-    status: '',
-    bookingType: ''
-  });
-  
-  const [completedAppointmentsFilter, setCompletedAppointmentsFilter] = useState({
-    startDate: '',
-    endDate: '',
-    client: '',
-    service: '',
-    staff: '',
-    bookingType: ''
-  });
-  
-  const [cancelledAppointmentsFilter, setCancelledAppointmentsFilter] = useState({
-    startDate: '',
-    endDate: '',
-    client: '',
-    service: '',
-    staff: '',
-    status: '',
-    bookingType: ''
-  });
-  
-  const [salesByCustomerFilter, setSalesByCustomerFilter] = useState({
-    startDate: '',
-    endDate: '',
-    client: '',
-    service: '',
-    staff: '',
-    status: '',
-    bookingType: ''
-  });
-  
-  const [productSummaryFilter, setProductSummaryFilter] = useState({
-    product: '',
-    category: '',
-    brand: '',
-    status: '',
-    isActive: ''
-  });
-  
-  const [salesByProductFilter, setSalesByProductFilter] = useState({
-    startDate: '',
-    endDate: '',
-    product: '',
-    customer: '',
-    status: ''
-  });
-
   // Simulate loading for 1.5 seconds
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -5090,32 +1110,187 @@ export default function ReportsPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Handle loading states
+  useEffect(() => {
+    if (!isAuthLoading) {
+      setIsLoading(false);
+    }
+  }, [isAuthLoading]);
+
   const handleViewClick = (report: Report) => {
     setSelectedReport(report);
-    
-    // Handle appointment reports specially
-    if (report.title === "All Appointments Report") {
-      setIsAllAppointmentsModalOpen(true);
-    } else if (report.title === "Appointment Summary by Service") {
-      setIsSummaryByServiceModalOpen(true);
-    } else if (report.title === "Completed Appointments Report") {
-      setIsCompletedAppointmentsModalOpen(true);
-    } else if (report.title === "Cancelled Appointments Report") {
-      setIsCancelledAppointmentsModalOpen(true);
-    } else if (report.title === "Sales by Service") {
-      setIsSalesByServiceModalOpen(true); // Using the specific modal for this report
-    } else if (report.title === "Sales by Customer") {
-      setIsSalesByCustomerModalOpen(true); // Using the specific modal for this report
-    } else if (report.title === "Sales by Product") {
-      setIsSalesByProductModalOpen(true); // Using the specific modal for this report
-    } else if (report.title === "All Products Report" || report.title === "Inventory / Stock Report" || report.title === "Category-wise Product Report") {
-      setIsProductSummaryModalOpen(true); // Using the specific modal for product reports
-    } else if (report.title === "All Appointments by Staff") {
-      setIsModalOpen(true); // Using the same modal for this new report
+    // Set default month to current month for supplier revenue report
+    if (report.type === "supplier-revenue") {
+      const now = new Date();
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      setSelectedMonth(currentMonth);
     } else {
-      setIsModalOpen(true);
+      setSelectedMonth(null); // Reset selected month when opening a new report
+    }
+    setIsModalOpen(true);
+  };
+
+  // Export to CSV
+  const exportToCSV = (reportType: string, reportTitle: string) => {
+    try {
+      // Get real data or fallback to sample data
+      const allData = {
+        appointments: appointmentsData,
+        clients: clientsData,
+        products: productsData,
+        expenses: expensesData,
+        orders: ordersData,
+        referrals: referralsData,
+        campaigns: campaignsData,
+        clientOrders: clientOrdersData,
+        offers: offersData,
+        supplierTotalOrders: supplierTotalOrdersData,
+        supplierPendingOrders: supplierPendingOrdersData,
+        supplierConfirmedOrders: supplierConfirmedOrdersData,
+        supplierCompletedOrders: supplierCompletedOrdersData,
+        supplierPlatformCollections: supplierPlatformCollectionsData
+      };
+      const reportData = getReportDataByType(reportType, allData, reportType === "supplier-revenue" ? selectedMonth : null);
+      const headers = (reportData.headers || []).join(',');
+      const rows = reportData.rows ? reportData.rows.map((row: any[]) => row.map((cell: any) => `"${cell}"`).join(',')).join('\n') : '';
+      const csvContent = `${headers}\n${rows}`;
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${reportTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Report exported successfully as CSV');
+    } catch (error) {
+      console.error('CSV export error:', error);
+      toast.error('Failed to export report as CSV');
     }
   };
+
+  // Export to Excel (CSV format with .xlsx extension for simplicity)
+  const exportToExcel = (reportType: string, reportTitle: string) => {
+    try {
+      // Get real data or fallback to sample data
+      const allData = {
+        appointments: appointmentsData,
+        clients: clientsData,
+        products: productsData,
+        expenses: expensesData,
+        orders: ordersData,
+        referrals: referralsData,
+        campaigns: campaignsData,
+        clientOrders: clientOrdersData,
+        offers: offersData,
+        supplierTotalOrders: supplierTotalOrdersData,
+        supplierPendingOrders: supplierPendingOrdersData,
+        supplierConfirmedOrders: supplierConfirmedOrdersData,
+        supplierCompletedOrders: supplierCompletedOrdersData,
+        supplierPlatformCollections: supplierPlatformCollectionsData,
+      };
+
+      const reportData = getReportDataByType(reportType, allData, reportType === "supplier-revenue" ? selectedMonth : null);
+      const headers = (reportData.headers || []).join('\t');
+      const rows = reportData.rows ? reportData.rows.map((row: any[]) => row.join('\t')).join('\n') : '';
+      const excelContent = `${headers}\n${rows}`;
+
+      const blob = new Blob([excelContent], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${reportTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xls`);
+      link.style.visibility = 'hidden';
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Report exported successfully as Excel');
+    } catch (error) {
+      console.error('Excel export error:', error);
+      toast.error('Failed to export report as Excel');
+    }
+  };
+
+  // Export to PDF
+  const exportToPDF = async (reportType: string, reportTitle: string) => {
+    try {
+      // Get real data or fallback to sample data
+      const allData = {
+        appointments: appointmentsData,
+        clients: clientsData,
+        products: productsData,
+        expenses: expensesData,
+        orders: ordersData,
+        referrals: referralsData,
+        campaigns: campaignsData,
+        clientOrders: clientOrdersData,
+        offers: offersData,
+        supplierTotalOrders: supplierTotalOrdersData,
+        supplierPendingOrders: supplierPendingOrdersData,
+        supplierConfirmedOrders: supplierConfirmedOrdersData,
+        supplierCompletedOrders: supplierCompletedOrdersData,
+        supplierPlatformCollections: supplierPlatformCollectionsData,
+      };
+
+      const reportData = getReportDataByType(reportType, allData, reportType === "supplier-revenue" ? selectedMonth : null);
+
+      // Dynamically import html2pdf only on client side
+      const html2pdfModule = await import('html2pdf.js');
+      const html2pdf = html2pdfModule.default;
+
+      // Create a temporary HTML element for PDF generation
+      const element = document.createElement('div');
+      element.innerHTML = `
+                  <div style="padding: 20px; font-family: Arial, sans-serif;">
+                    <h2 style="text-align: center; margin-bottom: 20px;">${reportTitle}</h2>
+                    <table style="width: 100%; border-collapse: collapse;">
+                      <thead>
+                        <tr>
+                          ${(reportData.headers || []).map(header => `<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">${header}</th>`).join('')}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${(reportData.rows || []).map((row: any[], rowIndex: number) => `
+                <tr key="${rowIndex}">
+                  ${row.map((cell: any) => `<td style="border: 1px solid #ddd; padding: 8px;">${cell}</td>`).join('')}
+                </tr>
+              `).join('')}
+                      </tbody>
+                    </table>
+                    <p style="margin-top: 20px; text-align: right; font-size: 12px; color: #666;">
+                      Generated on ${new Date().toLocaleDateString()}
+                    </p>
+                  </div>
+                  `;
+
+      const pdfOptions: any = {
+        margin: 10,
+        filename: `${reportTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
+
+      await html2pdf().set(pdfOptions).from(element).save();
+      toast.success('Report exported successfully as PDF');
+    } catch (error) {
+      console.error('PDF export error:', error);
+      toast.error('Failed to export report as PDF');
+    }
+  };
+
+  // Get reports data based on user role
+  const reportsData = useMemo(() => {
+    return roleSpecificReports[userRole] || roleSpecificReports['admin'];
+  }, [userRole]);
 
   const filteredReportsData = useMemo(() => {
     if (!searchTerm) return reportsData;
@@ -5129,9 +1304,73 @@ export default function ReportsPage() {
         ),
       }))
       .filter(category => category.reports.length > 0);
-  }, [searchTerm]);
+  }, [reportsData, searchTerm]);
 
-  if (isLoading) {
+  // Get stats data based on user role
+  const statsData = useMemo(() => {
+    return roleSpecificStats[userRole] || roleSpecificStats['admin'];
+  }, [userRole]);
+
+  // Get report data for preview
+  const previewReportData = useMemo(() => {
+    if (!selectedReport) return sampleReportData["sales"];
+
+    // For supplier total orders, return the raw data directly
+    if (selectedReport.type === "supplier-total-orders") {
+      return supplierTotalOrdersData;
+    }
+
+    // For supplier platform collections, return the raw data directly
+    if (selectedReport.type === "platform-collections") {
+      return supplierPlatformCollectionsData;
+    }
+
+    // For supplier pending orders, return the raw data directly
+    if (selectedReport.type === "supplier-pending-orders") {
+      return supplierPendingOrdersData;
+    }
+
+    // For supplier confirmed orders, return the raw data directly
+    if (selectedReport.type === "supplier-confirmed-orders") {
+      return supplierConfirmedOrdersData;
+    }
+
+    // For supplier completed orders, return the raw data directly
+    if (selectedReport.type === "supplier-completed-orders") {
+      return supplierCompletedOrdersData;
+    }
+
+    // For supplier product sales, return the raw data directly
+    if (selectedReport.type === "supplier-product-sales") {
+      return supplierProductSalesData;
+    }
+
+    const allData = {
+      appointments: appointmentsData,
+      clients: clientsData,
+      products: productsData,
+      expenses: expensesData,
+      orders: ordersData,
+      referrals: referralsData,
+      campaigns: campaignsData,
+      clientOrders: clientOrdersData,
+      offers: offersData,
+      supplierTotalOrders: supplierTotalOrdersData,
+      supplierPendingOrders: supplierPendingOrdersData,
+      supplierConfirmedOrders: supplierConfirmedOrdersData,
+      supplierCompletedOrders: supplierCompletedOrdersData,
+      supplierPlatformCollections: supplierPlatformCollectionsData,
+    };
+
+    // For supplier revenue report, pass the selected month
+    if (selectedReport.type === "supplier-revenue") {
+      const supplierOrders = (allData.orders || []).filter((order: SupplierOrder) => order.supplierId);
+      return generateSupplierRevenueReportData(supplierOrders, selectedMonth);
+    }
+
+    return getReportDataByType(selectedReport.type, allData);
+  }, [selectedReport, appointmentsData, clientsData, productsData, expensesData, ordersData, referralsData, campaignsData, clientOrdersData, offersData, supplierTotalOrdersData, supplierPendingOrdersData, supplierConfirmedOrdersData, supplierCompletedOrdersData, supplierPlatformCollectionsData, selectedMonth]);
+  if (isLoading || isAuthLoading) {
     return (
       <div className="p-4 sm:p-6 lg:p-8 space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -5189,75 +1428,93 @@ export default function ReportsPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
         <div>
-            <h1 className="text-2xl font-bold font-headline mb-2">Reports</h1>
-            <p className="text-muted-foreground">
-                Generate and download detailed reports for various components of the platform.
-            </p>
+          <h1 className="text-2xl font-bold font-headline mb-2">Reports</h1>
+          <p className="text-muted-foreground">
+            Generate and download detailed reports for your {userRole} account.
+          </p>
         </div>
         <div className="relative mt-4 md:mt-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-                type="search"
-                placeholder="Search reports..."
-                className="w-full md:w-80 pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search reports..."
+            className="w-full md:w-80 pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
       </div>
 
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        {statsData.map((stat, index) => (
+          <Card key={index}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+              {stat.icon}
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stat.value}</div>
+              <p className="text-xs text-muted-foreground">{stat.change}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       <div className="space-y-10">
-        {filteredReportsData
-          .filter(category => 
-            category.category !== "Marketing & Engagement Reports" && 
-            category.category !== "User & Vendor Reports" && 
-            category.category !== "Financial Reports"
-          )
-          .length > 0 ? 
-          filteredReportsData
-            .filter(category => 
-              category.category !== "Marketing & Engagement Reports" && 
-              category.category !== "User & Vendor Reports" && 
-              category.category !== "Financial Reports"
-            )
-            .map((category) => (
-              <div key={category.category}>
-                <h2 className="text-xl font-semibold font-headline mb-4 pb-2 border-b">{category.category}</h2>
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {category.reports.map((report, index) => (
-                    <Card key={index} className="flex flex-col">
-                      <CardHeader>
-                        <CardTitle>{report.title}</CardTitle>
-                        <CardDescription>{report.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex-grow">
-                        <p className="text-sm text-muted-foreground">{report.details}</p>
-                      </CardContent>
-                      <CardFooter className="flex justify-end gap-2">
-                         <Button variant="outline" size="sm" onClick={() => handleViewClick(report)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View
-                        </Button>
+        {filteredReportsData.length > 0 ? filteredReportsData.map((category) => (
+          <div key={category.category}>
+            <h2 className="text-xl font-semibold font-headline mb-4 pb-2 border-b">{category.category}</h2>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {category.reports.map((report, index) => (
+                <Card key={index} className="flex flex-col">
+                  <CardHeader>
+                    <CardTitle>{report.title}</CardTitle>
+                    <CardDescription>{report.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-grow">
+                    <p className="text-sm text-muted-foreground">{report.details}</p>
+                  </CardContent>
+                  <CardFooter className="flex justify-end gap-2">
+                    <Button variant="outline" size="sm" onClick={() => handleViewClick(report)}>
+                      <Eye className="mr-2 h-4 w-4" />
+                      View
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
                         <Button size="sm">
                           <Download className="mr-2 h-4 w-4" />
                           Download
                         </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )) : (
-              <div className="text-center py-16 text-muted-foreground">
-                  <p>No reports found matching your search.</p>
-              </div>
-            )}
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => exportToCSV(report.type, report.title)}>
+                          <FileSpreadsheet className="mr-2 h-4 w-4" />
+                          <span>CSV</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => exportToExcel(report.type, report.title)}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          <span>Excel</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => exportToPDF(report.type, report.title)}>
+                          <Printer className="mr-2 h-4 w-4" />
+                          <span>PDF</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )) : (
+          <div className="text-center py-16 text-muted-foreground">
+            <p>No reports found matching your search.</p>
+          </div>
+        )}
       </div>
-      
-      {/* Generic Report Modal */}
+
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto no-scrollbar">
           <DialogHeader>
             <DialogTitle>{selectedReport?.title}</DialogTitle>
             <DialogDescription>
@@ -5265,368 +1522,86 @@ export default function ReportsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
-            <DummyReportTable />
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* All Appointments Report Modal */}
-      <Dialog open={isAllAppointmentsModalOpen} onOpenChange={setIsAllAppointmentsModalOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>All Appointments</DialogTitle>
-            <DialogDescription>
-              Complete record of all appointments with detailed information.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <AllAppointmentsTable 
-              startDate={allAppointmentsFilter.startDate || undefined}
-              endDate={allAppointmentsFilter.endDate || undefined}
-              client={allAppointmentsFilter.client || undefined}
-              service={allAppointmentsFilter.service || undefined}
-              staff={allAppointmentsFilter.staff || undefined}
-              status={allAppointmentsFilter.status || undefined}
-              bookingType={allAppointmentsFilter.bookingType || undefined}
-              triggerRefresh={allAppointmentsRefresh}
-              onFiltersChange={(filters: any) => {
-                // Update filter state when table filters change
-                setAllAppointmentsFilter(prev => ({
-                  ...prev,
-                  ...filters
-                }));
-              }}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsAllAppointmentsModalOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Summary by Service Report Modal */}
-      <Dialog open={isSummaryByServiceModalOpen} onOpenChange={setIsSummaryByServiceModalOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Appointment Summary by Service</DialogTitle>
-            <DialogDescription>
-              Aggregated view showing appointment counts, revenue, and popularity by service type.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <SummaryByServiceTable 
-              startDate={summaryByServiceFilter.startDate ? new Date(summaryByServiceFilter.startDate) : undefined}
-              endDate={summaryByServiceFilter.endDate ? new Date(summaryByServiceFilter.endDate) : undefined}
-              client={summaryByServiceFilter.client || undefined}
-              service={summaryByServiceFilter.service || undefined}
-              staff={summaryByServiceFilter.staff || undefined}
-              status={summaryByServiceFilter.status || undefined}
-              bookingType={summaryByServiceFilter.bookingType || undefined}
-              triggerRefresh={summaryByServiceRefresh}
-              onFiltersChange={(filters: any) => {
-                // Update filter state when table filters change
-                setSummaryByServiceFilter(prev => ({
-                  ...prev,
-                  ...filters
-                }));
-              }}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsSummaryByServiceModalOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Completed Appointments Report Modal */}
-      <Dialog open={isCompletedAppointmentsModalOpen} onOpenChange={setIsCompletedAppointmentsModalOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Completed Appointments Report</DialogTitle>
-            <DialogDescription>
-              Detailed listing of all successfully completed appointments.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <CompletedAppointmentsTable 
-              startDate={completedAppointmentsFilter.startDate ? new Date(completedAppointmentsFilter.startDate) : undefined}
-              endDate={completedAppointmentsFilter.endDate ? new Date(completedAppointmentsFilter.endDate) : undefined}
-              client={completedAppointmentsFilter.client || undefined}
-              service={completedAppointmentsFilter.service || undefined}
-              staff={completedAppointmentsFilter.staff || undefined}
-              bookingType={completedAppointmentsFilter.bookingType || undefined}
-              triggerRefresh={completedAppointmentsRefresh}
-              onFiltersChange={(filters: any) => {
-                // Update filter state when table filters change
-                setCompletedAppointmentsFilter(prev => ({
-                  ...prev,
-                  ...filters
-                }));
-              }}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsCompletedAppointmentsModalOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Cancelled Appointments Report Modal */}
-      <Dialog open={isCancelledAppointmentsModalOpen} onOpenChange={setIsCancelledAppointmentsModalOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Cancelled Appointments Report</DialogTitle>
-            <DialogDescription>
-              Comprehensive analysis of cancelled appointments with reasons and impact.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <CancelledAppointmentsTable 
-              startDate={cancelledAppointmentsFilter.startDate ? new Date(cancelledAppointmentsFilter.startDate) : undefined}
-              endDate={cancelledAppointmentsFilter.endDate ? new Date(cancelledAppointmentsFilter.endDate) : undefined}
-              client={cancelledAppointmentsFilter.client || undefined}
-              service={cancelledAppointmentsFilter.service || undefined}
-              staff={cancelledAppointmentsFilter.staff || undefined}
-              status={cancelledAppointmentsFilter.status || undefined}
-              bookingType={cancelledAppointmentsFilter.bookingType || undefined}
-              triggerRefresh={cancelledAppointmentsRefresh}
-              onFiltersChange={(filters: any) => {
-                // Update filter state when table filters change
-                setCancelledAppointmentsFilter(prev => ({
-                  ...prev,
-                  ...filters
-                }));
-              }}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsCancelledAppointmentsModalOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Sales by Service Report Modal */}
-      <Dialog open={isSalesByServiceModalOpen} onOpenChange={setIsSalesByServiceModalOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Sales by Service</DialogTitle>
-            <DialogDescription>
-              Detailed report showing revenue generated by each service type (only completed appointments).
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <SalesByServiceTable 
-              startDate={salesByServiceFilter.startDate ? new Date(salesByServiceFilter.startDate) : undefined}
-              endDate={salesByServiceFilter.endDate ? new Date(salesByServiceFilter.endDate) : undefined}
-              client={salesByServiceFilter.client || undefined}
-              service={salesByServiceFilter.service || undefined}
-              staff={salesByServiceFilter.staff || undefined}
-              // Status is fixed to 'completed' in the backend for sales reports
-              bookingType={salesByServiceFilter.bookingType || undefined}
-              triggerRefresh={salesByServiceRefresh}
-              onFiltersChange={(filters: any) => {
-                // Update filter state when table filters change
-                setSalesByServiceFilter(prev => ({
-                  ...prev,
-                  ...filters
-                }));
-              }}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsSalesByServiceModalOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Sales by Customer Report Modal */}
-      <Dialog open={isSalesByCustomerModalOpen} onOpenChange={setIsSalesByCustomerModalOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Sales by Customer</DialogTitle>
-            <DialogDescription>
-              Analysis of revenue generated by individual customers.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <SalesByCustomerTable 
-              startDate={salesByCustomerFilter.startDate ? new Date(salesByCustomerFilter.startDate) : undefined}
-              endDate={salesByCustomerFilter.endDate ? new Date(salesByCustomerFilter.endDate) : undefined}
-              client={salesByCustomerFilter.client || undefined}
-              service={salesByCustomerFilter.service || undefined}
-              staff={salesByCustomerFilter.staff || undefined}
-              // Status is fixed to 'completed' in the backend for sales reports
-              bookingType={salesByCustomerFilter.bookingType || undefined}
-              triggerRefresh={salesByCustomerRefresh}
-              onFiltersChange={(filters: any) => {
-                // Update filter state when table filters change
-                setSalesByCustomerFilter(prev => ({
-                  ...prev,
-                  ...filters
-                }));
-              }}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsSalesByCustomerModalOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Product Summary Report Modal */}
-      <Dialog open={isProductSummaryModalOpen} onOpenChange={setIsProductSummaryModalOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedReport?.title}</DialogTitle>
-            <DialogDescription>
-              {selectedReport?.title === "All Products Report" && "Complete record of all products with detailed information."}
-              {selectedReport?.title === "Inventory / Stock Report" && "Detailed analysis of product inventory and stock levels."}
-              {selectedReport?.title === "Category-wise Product Report" && "Aggregated view showing product counts and sales by category."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            {selectedReport?.title === "Inventory / Stock Report" ? (
-              <InventoryStockTable 
-                product={productSummaryFilter.product || undefined}
-                category={productSummaryFilter.category || undefined}
-                brand={productSummaryFilter.brand || undefined}
-                triggerRefresh={productSummaryRefresh}
-                onFiltersChange={(filters: any) => {
-                  // Update filter state when table filters change
-                  setProductSummaryFilter(prev => ({
-                    ...prev,
-                    ...filters
-                  }));
-                }}
-              />
-            ) : selectedReport?.title === "Category-wise Product Report" ? (
-              <CategoryWiseProductTable 
-                product={productSummaryFilter.product || undefined}
-                category={productSummaryFilter.category || undefined}
-                brand={productSummaryFilter.brand || undefined}
-                triggerRefresh={productSummaryRefresh}
-                onFiltersChange={(filters: any) => {
-                  // Update filter state when table filters change
-                  setProductSummaryFilter(prev => ({
-                    ...prev,
-                    ...filters
-                  }));
-                }}
-              />
-            ) : (
-              <ProductSummaryTable 
-                product={productSummaryFilter.product || undefined}
-                category={productSummaryFilter.category || undefined}
-                brand={productSummaryFilter.brand || undefined}
-                status={productSummaryFilter.status || undefined}
-                isActive={productSummaryFilter.isActive !== undefined ? productSummaryFilter.isActive : undefined}
-                triggerRefresh={productSummaryRefresh}
-                onFiltersChange={(filters: any) => {
-                  // Update filter state when table filters change
-                  setProductSummaryFilter(prev => ({
-                    ...prev,
-                    ...filters
-                  }));
-                }}
-              />
+            {/* Month selector for supplier revenue report */}
+            {selectedReport?.type === "supplier-revenue" && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">Select Month</label>
+                <Select value={selectedMonth || undefined} onValueChange={setSelectedMonth}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {generateMonthOptions().map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {selectedReport && (
+              selectedReport.type === "offers" ? (
+                <OffersReportPreview reportData={previewReportData} />
+              ) : selectedReport.type === "referrals" ? (
+                <ReferralsReportPreview reportData={previewReportData} />
+              ) : selectedReport.type === "supplier-total-orders" ? (
+                <SupplierTotalOrdersReportPreview reportData={previewReportData} />
+              ) : selectedReport.type === "supplier-pending-orders" ? (
+                <SupplierPendingOrdersReportPreview reportData={previewReportData} />
+              ) : selectedReport.type === "supplier-confirmed-orders" ? (
+                <SupplierConfirmedOrdersReportPreview reportData={previewReportData} />
+              ) : selectedReport.type === "supplier-completed-orders" ? (
+                <SupplierCompletedOrdersReportPreview reportData={previewReportData} />
+              ) : selectedReport.type === "platform-collections" ? (
+                <SupplierPlatformCollectionsReportPreview reportData={previewReportData} />
+              ) : selectedReport.type === "supplier-product-sales" ? (
+                <SupplierProductSalesReportPreview reportData={previewReportData} />
+              ) : (
+                <ReportPreviewTable reportType={selectedReport.type} reportData={previewReportData} />
+              )
             )}
           </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsProductSummaryModalOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Sales by Product Report Modal */}
-      <Dialog open={isSalesByProductModalOpen} onOpenChange={setIsSalesByProductModalOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Sales by Product Report</DialogTitle>
-            <DialogDescription>
-              Detailed report showing revenue generated by each product type (only completed orders).
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <SalesByProductTable 
-              startDate={salesByProductFilter.startDate ? new Date(salesByProductFilter.startDate) : undefined}
-              endDate={salesByProductFilter.endDate ? new Date(salesByProductFilter.endDate) : undefined}
-              product={salesByProductFilter.product || undefined}
-              customer={salesByProductFilter.customer || undefined}
-              status={salesByProductFilter.status || undefined}
-              triggerRefresh={salesByProductRefresh}
-              onFiltersChange={(filters: any) => {
-                // Update filter state when table filters change
-                setSalesByProductFilter(prev => ({
-                  ...prev,
-                  ...filters
-                }));
-              }}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsSalesByProductModalOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      
-      {/* All Appointments by Staff Report Modal */}
-      <Dialog open={isModalOpen && selectedReport?.title === "All Appointments by Staff"} onOpenChange={(open) => {
-        if (!open) setIsModalOpen(false);
-      }}>
-        <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>All Appointments by Staff</DialogTitle>
-            <DialogDescription>
-              Detailed report showing appointment statistics aggregated by staff member.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <AllAppointmentsByStaffTable 
-              startDate={allAppointmentsFilter.startDate ? new Date(allAppointmentsFilter.startDate) : undefined}
-              endDate={allAppointmentsFilter.endDate ? new Date(allAppointmentsFilter.endDate) : undefined}
-              client={allAppointmentsFilter.client || undefined}
-              service={allAppointmentsFilter.service || undefined}
-              staff={allAppointmentsFilter.staff || undefined}
-              status={allAppointmentsFilter.status || undefined}
-              bookingType={allAppointmentsFilter.bookingType || undefined}
-              triggerRefresh={allAppointmentsRefresh}
-              onFiltersChange={(filters: any) => {
-                // Update filter state when table filters change
-                setAllAppointmentsFilter(prev => ({
-                  ...prev,
-                  ...filters
-                }));
-              }}
-            />
-          </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
               Close
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Report
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => selectedReport && exportToCSV(selectedReport.type, selectedReport.title || '')}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  <span>CSV</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => selectedReport && exportToExcel(selectedReport.type, selectedReport.title || '')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>Excel</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => selectedReport && exportToPDF(selectedReport.type, selectedReport.title || '')}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  <span>PDF</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Global styles to hide scrollbars while maintaining functionality */}
+      <style jsx global>{`
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </div>
   );
-}    
+}

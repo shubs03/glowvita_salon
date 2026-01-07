@@ -1,12 +1,11 @@
 import _db from "@repo/lib/db";
-import VendorModel from "@repo/lib/models/Vendor.model";
 import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
-import CategoryModel from "@repo/lib/models/admin/Category.model";
+import mongoose from "mongoose";
 
 const setCorsHeaders = (response) => {
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   return response;
 };
 
@@ -14,85 +13,144 @@ export const OPTIONS = async () => {
   return setCorsHeaders(new Response(null, { status: 200 }));
 };
 
-export const GET = async () => {
+export const GET = async (request) => {
   try {
     const db = await _db();
     if (!db) {
       return setCorsHeaders(
-        Response.json({ success: false, message: "Service unavailable", vendors: [] }, { status: 503 })
+        Response.json(
+          { success: false, message: "Service unavailable", vendors: [] },
+          { status: 503 }
+        )
       );
     }
 
-    // ✅ Clean and efficient query for approved vendors
-    const vendors = await VendorModel.find(
-      { status: "Approved" },
-      {
-        businessName: 1,
-        firstName: 1,
-        lastName: 1,
-        city: 1,
-        state: 1,
-        category: 1,
-        subCategories: 1,
-        profileImage: 1,
-        description: 1,
-        createdAt: 1,
-        subscription: 1, // Include subscription data for expiry check
-      }
-    )
-      .lean()
-      .limit(10) // safe to increase
-      .maxTimeMS(2000) // increased timeout
-      .exec();
+    const { searchParams } = new URL(request.url);
 
-    // Get vendor IDs for fetching services
-    const vendorIds = vendors.map(vendor => vendor._id);
+    const serviceName = searchParams.get("serviceName")?.trim() || "";
+    const city = searchParams.get("city")?.trim();
+    const categoryIdsStr = searchParams.get("categoryIds");
+    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const offset = parseInt(searchParams.get("offset") || "0", 10);
 
-    // Fetch services for all vendors in one query
-    const vendorServices = await VendorServicesModel.find({
-      vendor: { $in: vendorIds },
-      "services.status": "approved"
-    }).populate('services.category', 'name');
+    /* ---------------- Parse Category IDs safely ---------------- */
+    let categoryIds = [];
+    if (categoryIdsStr) {
+      categoryIds = categoryIdsStr
+        .split(",")
+        .map((id) => id.trim())
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id));
+    }
 
-    // Create a map of vendor ID to services for easy lookup
-    const servicesMap = {};
-    vendorServices.forEach(vendorService => {
-      servicesMap[vendorService.vendor.toString()] = vendorService.services
-        .filter(service => service.status === 'approved')
-        .map(service => ({
-          _id: service._id,
-          name: service.name,
-          category: service.category ? {
-            _id: service.category._id,
-            name: service.category.name
-          } : null,
-          price: service.price,
-          duration: service.duration,
-          description: service.description
-        }));
+    /* ---------------- Aggregation Pipeline ---------------- */
+    const pipeline = [];
+
+    /* 1️⃣ Join vendors */
+    pipeline.push({
+      $lookup: {
+        from: "vendors",
+        localField: "vendor",
+        foreignField: "_id",
+        as: "vendorData",
+      },
     });
 
-    // Attach services to each vendor
-    const vendorsWithServices = vendors.map(vendor => ({
-      ...vendor,
-      services: servicesMap[vendor._id.toString()] || []
-    }));
+    pipeline.push({ $unwind: "$vendorData" });
 
-    // Fetch all categories for reference
-    const categories = await CategoryModel.find({});
+    /* 2️⃣ Vendor-level filtering (STRICT) */
+    pipeline.push({
+      $match: {
+        "vendorData.status": "Approved",
+        ...(city && city !== "Current Location" && {
+          "vendorData.city": city, // EXACT match (no regex leakage)
+        }),
+      },
+    });
+
+    /* 3️⃣ Unwind services */
+    pipeline.push({ $unwind: "$services" });
+
+    /* 4️⃣ STRICT service filtering */
+    pipeline.push({
+      $match: {
+        "services.status": "approved",
+        ...(categoryIds.length > 0 && {
+          "services.category": { $in: categoryIds },
+        }),
+        ...(serviceName && {
+          $or: [
+            { "services.name": { $regex: new RegExp(serviceName, "i") } },
+            { "vendorData.businessName": { $regex: new RegExp(serviceName, "i") } },
+          ],
+        }),
+      },
+    });
+
+    /* 5️⃣ Populate category */
+    pipeline.push({
+      $lookup: {
+        from: "categories",
+        localField: "services.category",
+        foreignField: "_id",
+        as: "services.category",
+      },
+    });
+
+    pipeline.push({
+      $unwind: {
+        path: "$services.category",
+        preserveNullAndEmptyArrays: true,
+      },
+    });
+
+    /* 6️⃣ Regroup vendors */
+    pipeline.push({
+      $group: {
+        _id: "$vendorData._id",
+        businessName: { $first: "$vendorData.businessName" },
+        firstName: { $first: "$vendorData.firstName" },
+        lastName: { $first: "$vendorData.lastName" },
+        city: { $first: "$vendorData.city" },
+        state: { $first: "$vendorData.state" },
+        category: { $first: "$vendorData.category" },
+        subCategories: { $first: "$vendorData.subCategories" },
+        profileImage: { $first: "$vendorData.profileImage" },
+        description: { $first: "$vendorData.description" },
+        createdAt: { $first: "$vendorData.createdAt" },
+        subscription: { $first: "$vendorData.subscription" },
+        services: { $push: "$services" },
+      },
+    });
+
+    /* 7️⃣ Safety net: remove vendors with NO services */
+    pipeline.push({
+      $match: {
+        services: { $ne: [] },
+      },
+    });
+
+    /* 8️⃣ Sort + Pagination */
+    pipeline.push({ $sort: { createdAt: -1 } });
+    pipeline.push({ $skip: offset });
+    pipeline.push({ $limit: limit });
+
+    const vendors = await VendorServicesModel.aggregate(pipeline).exec();
 
     return setCorsHeaders(
       Response.json({
         success: true,
-        vendors: vendorsWithServices,
-        categories: categories,
-        count: vendorsWithServices.length,
+        vendors,
+        count: vendors.length,
       })
     );
   } catch (error) {
-    console.error("Error fetching public vendors:", error);
+    console.error("Vendor search error:", error);
     return setCorsHeaders(
-      Response.json({ success: false, message: "Failed to fetch vendors", vendors: [], categories: [] }, { status: 500 })
+      Response.json(
+        { success: false, message: "Internal server error", vendors: [] },
+        { status: 500 }
+      )
     );
   }
 };

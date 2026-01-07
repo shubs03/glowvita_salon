@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@repo/lib/db';
 import User from '@repo/lib/models/user';
-import { hashPassword, createJwt } from '@repo/lib/auth';
+import { createJwt } from '@repo/lib/auth';
+import { hashPassword } from '@repo/lib/hashing';
 import { cookies } from 'next/headers';
 import { ReferralModel, C2CSettingsModel } from '@repo/lib/models/admin/Reffer';
 
@@ -9,17 +10,17 @@ import { ReferralModel, C2CSettingsModel } from '@repo/lib/models/admin/Reffer';
 const generateReferralCode = async (firstName, lastName) => {
   // Generate base code with first 3 letters of first name and last name
   const baseCode = `${firstName.substring(0, 3)}${lastName.substring(0, 3)}`.toUpperCase();
-  
+
   // Add random 3-digit number
   const randomNum = Math.floor(100 + Math.random() * 900); // Generates number between 100-999
   let referralCode = `${baseCode}${randomNum}`;
-  
+
   // Check if code exists and generate unique one
   while (await User.findOne({ refferalCode: referralCode })) {
     const newRandomNum = Math.floor(100 + Math.random() * 900);
     referralCode = `${baseCode}${newRandomNum}`;
   }
-  
+
   return referralCode;
 };
 
@@ -102,7 +103,7 @@ export async function POST(req) {
             lat: parseFloat(location.lat),
             lng: parseFloat(location.lng)
           };
-        } 
+        }
         // If location is a string, try to parse it
         else if (typeof location === 'string') {
           const parsedLocation = JSON.parse(location);
@@ -139,7 +140,7 @@ export async function POST(req) {
       await user.save();
     } catch (saveError) {
       console.error('User save error:', saveError);
-      
+
       // Handle MongoDB duplicate key errors
       if (saveError.code === 11000) {
         const errorMessage = saveError.message;
@@ -148,13 +149,13 @@ export async function POST(req) {
         } else if (errorMessage.includes('mobileNo')) {
           return NextResponse.json({ message: 'User already registered with this mobile number' }, { status: 409 });
         } else {
-          return NextResponse.json({ 
+          return NextResponse.json({
             message: 'User already registered with this information'
           }, { status: 409 });
         }
       }
-      
-      return NextResponse.json({ 
+
+      return NextResponse.json({
         message: 'Internal server error. Please try again later.'
       }, { status: 500 });
     }
@@ -188,22 +189,22 @@ export async function POST(req) {
         // Don't fail the signup if referral creation fails
       }
     }
-    
+
     let token;
     try {
       token = await createJwt({ userId: user._id.toString(), role: user.role, email: user.emailAddress });
     } catch (tokenError) {
       console.error('Token creation error:', tokenError);
       // Still return success since user was created, just without token
-      return NextResponse.json({ 
-        message: 'User created successfully', 
-        user: { 
-          id: user._id, 
+      return NextResponse.json({
+        message: 'User created successfully',
+        user: {
+          id: user._id,
           email: user.emailAddress,
           firstName: user.firstName,
           lastName: user.lastName,
           location: user.location
-        } 
+        }
       }, { status: 201 });
     }
 
@@ -220,19 +221,19 @@ export async function POST(req) {
       // Continue without setting cookie
     }
 
-    return NextResponse.json({ 
-      message: 'User created successfully', 
-      user: { 
-        id: user._id, 
+    return NextResponse.json({
+      message: 'User created successfully',
+      user: {
+        id: user._id,
         email: user.emailAddress,
         firstName: user.firstName,
         lastName: user.lastName,
         location: user.location
-      } 
+      }
     }, { status: 201 });
   } catch (error) {
     console.error('Unhandled signup error:', error);
-    
+
     // Handle MongoDB duplicate key errors
     if (error.code === 11000) {
       const errorMessage = error.message;
@@ -241,13 +242,13 @@ export async function POST(req) {
       } else if (errorMessage.includes('mobileNo')) {
         return NextResponse.json({ message: 'User already registered with this mobile number' }, { status: 409 });
       } else {
-        return NextResponse.json({ 
+        return NextResponse.json({
           message: 'User already registered with this information'
         }, { status: 409 });
       }
     }
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       message: 'Internal server error. Please try again later.'
     }, { status: 500 });
   }
