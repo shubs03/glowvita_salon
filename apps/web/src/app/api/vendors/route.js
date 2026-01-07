@@ -1,13 +1,11 @@
 import _db from "@repo/lib/db";
-import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
 import mongoose from "mongoose";
-import CategoryModel from "@repo/lib/models/admin/Category.model";
 
 const setCorsHeaders = (response) => {
-  response.headers.set('Access-Control-Allow-Origin', '*');
-  response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   return response;
 };
 
@@ -20,99 +18,93 @@ export const GET = async (request) => {
     const db = await _db();
     if (!db) {
       return setCorsHeaders(
-        Response.json({ success: false, message: "Service unavailable", vendors: [] }, { status: 503 })
+        Response.json(
+          { success: false, message: "Service unavailable", vendors: [] },
+          { status: 503 }
+        )
       );
     }
 
     const { searchParams } = new URL(request.url);
-    const serviceName = searchParams.get('serviceName')?.trim() || "";
-    const city = searchParams.get('city');
-    const categoryIdsStr = searchParams.get('categoryIds');
-    const serviceIdsStr = searchParams.get('serviceIds');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const offset = parseInt(searchParams.get('offset') || '0');
 
-    const categoryIds = categoryIdsStr ? categoryIdsStr.split(',').filter(id => id.trim() !== '').map(id => new mongoose.Types.ObjectId(id)) : [];
-    const serviceIds = serviceIdsStr ? serviceIdsStr.split(',').filter(id => id.trim() !== '').map(id => new mongoose.Types.ObjectId(id)) : [];
+    const serviceName = searchParams.get("serviceName")?.trim() || "";
+    const city = searchParams.get("city")?.trim();
+    const categoryIdsStr = searchParams.get("categoryIds");
+    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const offset = parseInt(searchParams.get("offset") || "0", 10);
 
-    // Base query for VendorServices
-    let matchStage = { "services.status": "approved" };
-
-    // Apply strict filtering if any filter is provided
-    const hasFilter = serviceName !== "" || categoryIds.length > 0 || serviceIds.length > 0;
-    
-    // Aggregation Pipeline
-    const pipeline = [];
-
-    // Step 1: Filter VendorServices documents efficiently
-    // If we have categoryIds or serviceIds, we can match at the top level first to prune documents
-    if (categoryIds.length > 0 || serviceIds.length > 0 || serviceName) {
-      const filterConditions = [];
-      if (categoryIds.length > 0) filterConditions.push({ "services.category": { $in: categoryIds } });
-      if (serviceIds.length > 0) filterConditions.push({ "services._id": { $in: serviceIds } });
-      if (serviceName) filterConditions.push({ "services.name": { $regex: new RegExp(serviceName, 'i') } });
-      
-      pipeline.push({ $match: { $or: filterConditions } });
+    /* ---------------- Parse Category IDs safely ---------------- */
+    let categoryIds = [];
+    if (categoryIdsStr) {
+      categoryIds = categoryIdsStr
+        .split(",")
+        .map((id) => id.trim())
+        .filter((id) => mongoose.Types.ObjectId.isValid(id))
+        .map((id) => new mongoose.Types.ObjectId(id));
     }
 
-    // Step 2: Join with Vendor data
+    /* ---------------- Aggregation Pipeline ---------------- */
+    const pipeline = [];
+
+    /* 1️⃣ Join vendors */
     pipeline.push({
       $lookup: {
         from: "vendors",
         localField: "vendor",
         foreignField: "_id",
-        as: "vendorData"
-      }
+        as: "vendorData",
+      },
     });
 
     pipeline.push({ $unwind: "$vendorData" });
 
-    // Step 3: Filter by Vendor status and City
-    let vendorMatch = { "vendorData.status": "Approved" };
-    if (city && city !== 'Current Location') {
-      vendorMatch["vendorData.city"] = { $regex: new RegExp(city, 'i') };
-    }
-    pipeline.push({ $match: vendorMatch });
+    /* 2️⃣ Vendor-level filtering (STRICT) */
+    pipeline.push({
+      $match: {
+        "vendorData.status": "Approved",
+        ...(city && city !== "Current Location" && {
+          "vendorData.city": city, // EXACT match (no regex leakage)
+        }),
+      },
+    });
 
-    // Step 4: Unwind and filter specific services strictly
+    /* 3️⃣ Unwind services */
     pipeline.push({ $unwind: "$services" });
-    
-    let specificServiceMatch = { "services.status": "approved" };
-    if (hasFilter) {
-      const serviceConditions = [];
-      if (categoryIds.length > 0) serviceConditions.push({ "services.category": { $in: categoryIds } });
-      if (serviceIds.length > 0) serviceConditions.push({ "services._id": { $in: serviceIds } });
-      if (serviceName) serviceConditions.push({ 
-        $or: [
-          { "services.name": { $regex: new RegExp(serviceName, 'i') } },
-          { "vendorData.businessName": { $regex: new RegExp(serviceName, 'i') } }
-        ]
-      });
-      
-      if (serviceConditions.length > 0) {
-        specificServiceMatch.$or = serviceConditions;
-      }
-    }
-    pipeline.push({ $match: specificServiceMatch });
 
-    // Step 5: Populate category details inside aggregation if possible, or just group
+    /* 4️⃣ STRICT service filtering */
+    pipeline.push({
+      $match: {
+        "services.status": "approved",
+        ...(categoryIds.length > 0 && {
+          "services.category": { $in: categoryIds },
+        }),
+        ...(serviceName && {
+          $or: [
+            { "services.name": { $regex: new RegExp(serviceName, "i") } },
+            { "vendorData.businessName": { $regex: new RegExp(serviceName, "i") } },
+          ],
+        }),
+      },
+    });
+
+    /* 5️⃣ Populate category */
     pipeline.push({
       $lookup: {
         from: "categories",
         localField: "services.category",
         foreignField: "_id",
-        as: "services.category"
-      }
+        as: "services.category",
+      },
     });
 
     pipeline.push({
       $unwind: {
         path: "$services.category",
-        preserveNullAndEmptyArrays: true
-      }
+        preserveNullAndEmptyArrays: true,
+      },
     });
 
-    // Step 6: Regroup by Vendor to reconstruct the structure
+    /* 6️⃣ Regroup vendors */
     pipeline.push({
       $group: {
         _id: "$vendorData._id",
@@ -127,28 +119,38 @@ export const GET = async (request) => {
         description: { $first: "$vendorData.description" },
         createdAt: { $first: "$vendorData.createdAt" },
         subscription: { $first: "$vendorData.subscription" },
-        services: { $push: "$services" }
-      }
+        services: { $push: "$services" },
+      },
     });
 
-    // Step 7: Final sorting and pagination
+    /* 7️⃣ Safety net: remove vendors with NO services */
+    pipeline.push({
+      $match: {
+        services: { $ne: [] },
+      },
+    });
+
+    /* 8️⃣ Sort + Pagination */
     pipeline.push({ $sort: { createdAt: -1 } });
     pipeline.push({ $skip: offset });
     pipeline.push({ $limit: limit });
 
-    const finalResults = await VendorServicesModel.aggregate(pipeline).exec();
+    const vendors = await VendorServicesModel.aggregate(pipeline).exec();
 
     return setCorsHeaders(
       Response.json({
         success: true,
-        vendors: finalResults,
-        count: finalResults.length,
+        vendors,
+        count: vendors.length,
       })
     );
   } catch (error) {
-    console.error("Search API Error:", error);
+    console.error("Vendor search error:", error);
     return setCorsHeaders(
-      Response.json({ success: false, message: "Internal server error", vendors: [] }, { status: 500 })
+      Response.json(
+        { success: false, message: "Internal server error", vendors: [] },
+        { status: 500 }
+      )
     );
   }
 };

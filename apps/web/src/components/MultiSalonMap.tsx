@@ -8,6 +8,7 @@ import Image from "next/image";
 interface MultiSalonMapProps {
   vendors: any[];
   onMarkerClick?: (vendor: any) => void;
+  searchQuery?: string;
 }
 
 const containerStyle = {
@@ -20,7 +21,7 @@ const defaultCenter = {
   lng: 72.877426
 };
 
-export const MultiSalonMap = ({ vendors, onMarkerClick }: MultiSalonMapProps) => {
+export const MultiSalonMap = ({ vendors, onMarkerClick, searchQuery }: MultiSalonMapProps) => {
   const apiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: apiKey || "",
@@ -28,16 +29,32 @@ export const MultiSalonMap = ({ vendors, onMarkerClick }: MultiSalonMapProps) =>
   });
 
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
+  const [mapCenter, setMapCenter] = useState(defaultCenter);
 
-  const center = useMemo(() => {
-    if (vendors.length === 0) return defaultCenter;
-    
-    // Attempt to center on first vendor with coordinates
-    const firstWithCoords = vendors.find(v => v.coordinates?.lat && v.coordinates?.lng);
-    if (firstWithCoords) return { lat: firstWithCoords.coordinates.lat, lng: firstWithCoords.coordinates.lng };
-    
-    return defaultCenter;
-  }, [vendors]);
+  // Sync map center with searchQuery or vendors
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    if (searchQuery) {
+      const geocoder = new google.maps.Geocoder();
+      geocoder.geocode({ address: searchQuery }, (results, status) => {
+        if (status === "OK" && results?.[0]?.geometry?.location) {
+          setMapCenter({
+            lat: results[0].geometry.location.lat(),
+            lng: results[0].geometry.location.lng()
+          });
+        }
+      });
+      return;
+    }
+
+    if (vendors.length > 0) {
+      const firstWithCoords = vendors.find(v => v.coordinates?.lat && v.coordinates?.lng);
+      if (firstWithCoords) {
+        setMapCenter({ lat: firstWithCoords.coordinates.lat, lng: firstWithCoords.coordinates.lng });
+      }
+    }
+  }, [vendors, searchQuery, isLoaded]);
 
   if (loadError) return <div className="h-full bg-gray-100 flex items-center justify-center text-gray-400 font-bold p-8 text-center">Map failed to load. Check API key.</div>;
   if (!isLoaded) return <div className="h-full bg-gray-50 flex items-center justify-center animate-pulse"><p className="text-gray-400 font-black uppercase tracking-widest text-xs">Loading Live Map...</p></div>;
@@ -45,7 +62,7 @@ export const MultiSalonMap = ({ vendors, onMarkerClick }: MultiSalonMapProps) =>
   return (
     <GoogleMap
       mapContainerStyle={containerStyle}
-      center={center}
+      center={mapCenter}
       zoom={12}
       options={{
         styles: mapStyles,

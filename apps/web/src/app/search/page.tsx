@@ -148,10 +148,14 @@ const SearchResults = () => {
               ) : (
                 <div className="bg-white rounded-[40px] p-16 text-center border border-gray-100">
                   <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Scissors className="w-8 h-8 text-gray-300" />
+                    <MapPin className="w-8 h-8 text-gray-300" />
                   </div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">No salons found</h2>
-                  <p className="text-gray-400 text-sm font-medium mb-8">Try adjusting your filters or searching in a different area.</p>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2 tracking-tight">
+                    No salons found {locationQuery ? `in ${locationQuery}` : ""}
+                  </h2>
+                  <p className="text-gray-400 text-sm font-medium mb-8">
+                    We couldn't find any results for your search. Try adjusting your filters or searching in a nearby area.
+                  </p>
                   <Button variant="outline" className="rounded-full px-8" onClick={() => window.location.href = '/search'}>Clear filters</Button>
                 </div>
               )}
@@ -161,7 +165,7 @@ const SearchResults = () => {
 
         {/* Right Side: Google Map */}
         <section className="hidden lg:block lg:w-[45%] xl:w-[40%] h-full bg-gray-100 relative shadow-2xl z-10">
-          <MultiSalonMap vendors={vendors} />
+          <MultiSalonMap vendors={vendors} searchQuery={locationQuery} />
         </section>
 
       </main>

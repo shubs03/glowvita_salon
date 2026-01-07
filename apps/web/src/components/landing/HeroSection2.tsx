@@ -1,9 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Scissors,
   MapPin,
   Calendar,
   Sparkles,
+  Navigation,
 } from "lucide-react";
 import { 
   useGetPublicCategoriesQuery,
@@ -11,17 +12,30 @@ import {
 } from "@repo/store/services/api";
 import { useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
+import { useLoadScript } from "@react-google-maps/api";
+import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from "@repo/config/config";
+
+const GOOGLE_MAPS_LIBRARIES: any = ["places"];
 
 const HeroSection2 = () => {
   const router = useRouter();
   const [serviceInput, setServiceInput] = useState("");
   const [locationInput, setLocationInput] = useState("");
   const [dateInput, setDateInput] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [isServiceFocused, setIsServiceFocused] = useState(false);
   const [isLocationFocused, setIsLocationFocused] = useState(false);
 
   const { data: categoriesData, isLoading: categoriesLoading } = useGetPublicCategoriesQuery(undefined);
   const { data: servicesData } = useGetPublicServicesQuery({});
+
+  const { isLoaded } = useLoadScript({
+    googleMapsApiKey: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries: GOOGLE_MAPS_LIBRARIES,
+  });
+
+  const [locationPredictions, setLocationPredictions] = useState<any[]>([]);
+  const [isLocating, setIsLocating] = useState(false);
 
   // Merged autocomplete logic: categories + services
   const suggestions = useMemo(() => {
@@ -47,29 +61,52 @@ const HeroSection2 = () => {
     return results;
   }, [serviceInput, categoriesData, servicesData]);
 
-  // Static location suggestions
-  const staticLocations = [
-    "Current Location",
-    "New York, NY",
-    "Los Angeles, CA",
-    "Chicago, IL",
-    "Houston, TX",
-    "Miami, FL",
-    "San Francisco, CA",
-    "London, UK",
-    "Paris, France",
-  ];
+  // Dynamic location suggestions using Google Places
+  useEffect(() => {
+    if (!isLoaded || !locationInput || locationInput === "Current Location") {
+      setLocationPredictions([]);
+      return;
+    }
 
-  const displayedLocations = useMemo(() => {
-    if (!locationInput) return staticLocations.slice(0, 6);
-    return staticLocations
-      .filter(loc => loc.toLowerCase().includes(locationInput.toLowerCase()))
-      .slice(0, 6);
-  }, [locationInput]);
+    const autocompleteService = new google.maps.places.AutocompleteService();
+    autocompleteService.getPlacePredictions(
+      { input: locationInput, types: ["(cities)"] },
+      (predictions) => {
+        setLocationPredictions(predictions || []);
+      }
+    );
+  }, [locationInput, isLoaded]);
+
+  const handleCurrentLocation = () => {
+    setIsLocating(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          const geocoder = new google.maps.Geocoder();
+          geocoder.geocode({ location: { lat: latitude, lng: longitude } }, (results, status) => {
+            if (status === "OK" && results?.[0]) {
+              const cityComponent = results[0].address_components.find(
+                (c) => c.types.includes("locality") || c.types.includes("administrative_area_level_2")
+              );
+              if (cityComponent) {
+                setLocationInput(cityComponent.long_name);
+              }
+            }
+            setIsLocating(false);
+          });
+        },
+        () => setIsLocating(false)
+      );
+    } else {
+      setIsLocating(false);
+    }
+  };
 
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (serviceInput) params.append("serviceName", serviceInput);
+    if (selectedCategoryId) params.append("categoryIds", selectedCategoryId);
     
     if (locationInput && locationInput !== "Current Location") {
       // Split by comma and trim to get just the city part for the backend query
@@ -82,18 +119,14 @@ const HeroSection2 = () => {
   };
 
   const handleSuggestionSelection = (item: any) => {
-    const params = new URLSearchParams();
     if (item.type === "category") {
-      params.append("categoryIds", item._id);
+      setSelectedCategoryId(item._id);
+      setServiceInput(item.name);
     } else {
-      params.append("serviceName", item.name);
+      setServiceInput(item.name);
+      setSelectedCategoryId(""); // Clear category if a specific service is picked
     }
-    
-    if (locationInput && locationInput !== "Current Location") {
-      const cityPart = locationInput.split(',')[0].trim();
-      params.append("city", cityPart);
-    }
-    router.push(`/search?${params.toString()}`);
+    setIsServiceFocused(false);
   };
 
   const marqueeCategories = useMemo(() => {
@@ -164,9 +197,9 @@ const HeroSection2 = () => {
               {/* Fixed & Reliable Dropdown */}
               {isServiceFocused && suggestions.length > 0 && (
                 <div className="absolute top-full left-0 right-auto w-[300px] sm:w-[400px] mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-60 overflow-y-auto no-scrollbar">
-                  <div className="px-5 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50/50 sticky top-0 backdrop-blur-sm">
+                  {/* <div className="px-5 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50/50 sticky top-0 backdrop-blur-sm">
                     Suggestions
-                  </div>
+                  </div> */}
                   {suggestions.map((item: any) => (
                     <button
                       key={item._id}
@@ -220,24 +253,46 @@ const HeroSection2 = () => {
                 className="w-full bg-transparent outline-none text-base font-medium text-gray-900 placeholder:text-gray-500"
               />
 
-              {isLocationFocused && displayedLocations.length > 0 && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-60 overflow-y-auto no-scrollbar">
-                  <div className="px-5 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50/50 sticky top-0 backdrop-blur-sm">
+              {isLocationFocused && (locationPredictions.length > 0 || !locationInput) && (
+                <div className="absolute top-full left-0 right-auto w-[200px] sm:w-[350px] mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-60 overflow-y-auto no-scrollbar">
+                  {/* <div className="px-5 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50/50 sticky top-0 backdrop-blur-sm">
                     Locations
-                  </div>
-                  {displayedLocations.map((loc, i) => (
+                  </div> */}
+                  
+                  {/* Current Location Option */}
+                  {!locationInput && (
+                    <button
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleCurrentLocation();
+                      }}
+                      className="w-full text-left px-5 py-3 hover:bg-amber-50 flex items-center gap-3 transition-colors group"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-amber-100 group-hover:bg-amber-200 transition-colors flex items-center justify-center">
+                        <Navigation className="w-4 h-4 text-amber-600" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-gray-900 font-bold text-sm tracking-tight">
+                          {isLocating ? "Locating..." : "Use Current Location"}
+                        </span>
+                        <span className="text-[9px] text-gray-400 font-black uppercase">Instant Search</span>
+                      </div>
+                    </button>
+                  )}
+
+                  {locationPredictions.map((prediction, i) => (
                     <button
                       key={i}
                       onMouseDown={(e) => {
                         e.preventDefault();
-                        setLocationInput(loc);
+                        setLocationInput(prediction.description);
                       }}
                       className="w-full text-left px-5 py-3 hover:bg-amber-50 flex items-center gap-3 transition-colors group"
                     >
                       <div className="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-amber-100 transition-colors flex items-center justify-center">
                         <MapPin className="w-4 h-4 text-gray-400 group-hover:text-amber-600" />
                       </div>
-                      <span className="text-gray-800 font-bold text-sm tracking-tight">{loc}</span>
+                      <span className="text-gray-800 font-bold text-sm tracking-tight">{prediction.description}</span>
                     </button>
                   ))}
                 </div>
@@ -279,7 +334,10 @@ const HeroSection2 = () => {
               [...marqueeCategories, ...marqueeCategories].map((cat: any, i) => (
                 <button
                   key={i}
-                  onClick={() => router.push(`/search?categoryIds=${cat.id}`)}
+                  onClick={() => {
+                    setSelectedCategoryId(cat.id);
+                    setServiceInput(cat.label);
+                  }}
                   className="inline-flex items-center gap-3 px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-full text-white font-medium transition-all hover:scale-105"
                 >
                   <cat.icon className="w-5 h-5 text-amber-200" />
