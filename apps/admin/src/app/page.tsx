@@ -350,11 +350,11 @@ export default function AdminPage() {
           </CardContent>
         </Card>
         
-        {/* Card 4: Service Platform Fees */}
+        {/* Card 4: Total Service Amount */}
         <Card className="transition-all duration-300 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Service Platform Fees
+              Total Service Amount
             </CardTitle>
             <FaRupeeSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -367,11 +367,11 @@ export default function AdminPage() {
           </CardContent>
         </Card>
         
-        {/* Card 5: Product Platform Fees */}
+        {/* Card 5: Total Product Amount */}
         <Card className="transition-all duration-300 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Product Platform Fees
+              Total Product Amount
             </CardTitle>
             <FaRupeeSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -379,7 +379,7 @@ export default function AdminPage() {
             <div className="text-2xl font-bold">
               {showPlaceholder 
                 ? "₹0.00" 
-                : formatCurrency(dashboardData?.productPlatformFees || 0)}
+                : formatCurrency(dashboardData?.productAmount || 0)}
             </div>
           </CardContent>
         </Card>
@@ -520,7 +520,9 @@ export default function AdminPage() {
             <CardDescription>Popular services across all salons</CardDescription>
           </CardHeader>
           <CardContent className="p-4">
-            <SalesOfServicesChart servicesData={dashboardData?.services || []} filterType={filterType} filterValue={filterValue} />
+            <div className="overflow-x-auto">
+              <SalesOfServicesChart servicesData={dashboardData?.services || []} filterType={filterType} filterValue={filterValue} />
+            </div>
           </CardContent>
         </Card>
         
@@ -530,7 +532,9 @@ export default function AdminPage() {
             <CardDescription>Popular products across all vendors</CardDescription>
           </CardHeader>
           <CardContent className="p-4">
-            <SalesOfProductsChart productsData={dashboardData?.products || []} filterType={filterType} filterValue={filterValue} />
+            <div className="overflow-x-auto">
+              <SalesOfProductsChart productsData={dashboardData?.products || []} filterType={filterType} filterValue={filterValue} />
+            </div>
           </CardContent>
         </Card>
       </div>

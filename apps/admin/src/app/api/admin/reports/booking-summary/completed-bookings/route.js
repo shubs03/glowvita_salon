@@ -319,6 +319,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
       totalServiceTax: 0
     });
     
+    // Calculate total business (Online Payments + Offline Payments + Platform Fees + Service Tax)
+    aggregatedTotals.totalBusiness = aggregatedTotals.onlinePayments + aggregatedTotals.offlinePayments + aggregatedTotals.totalPlatformFees + aggregatedTotals.totalServiceTax;
+    aggregatedTotals.totalBusinessFormatted = `₹${aggregatedTotals.totalBusiness.toFixed(2)}`;
+    
     // Populate vendor names and cities
     const vendorIds = vendorStats.map(stat => stat._id).filter(id => id);
     const vendors = await VendorModel.find({ _id: { $in: vendorIds } }, 'businessName city');

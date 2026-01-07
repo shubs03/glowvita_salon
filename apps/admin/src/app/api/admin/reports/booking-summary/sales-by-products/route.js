@@ -341,6 +341,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
       totalProductGST: 0
     });
     
+    // Calculate total business (Product Amount + Product Platform Fee + Product GST)
+    aggregatedTotals.totalBusiness = aggregatedTotals.totalSale + aggregatedTotals.totalProductPlatformFee + aggregatedTotals.totalProductGST;
+    aggregatedTotals.totalBusinessFormatted = `₹${aggregatedTotals.totalBusiness.toFixed(2)}`;
+    
     // Get unique cities for the filter dropdown
     const cityPipeline = [
       { $match: { status: "Delivered" } }, // Only delivered orders
@@ -374,12 +378,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
           "ownerType": { $ifNull: ["$productInfo.origin", "Vendor"] }
         }
       },
-      // Add userType filter for cities
-      ...(userType && userType !== 'all' ? [{
-        $match: {
-          "ownerType": userType.charAt(0).toUpperCase() + userType.slice(1) // Capitalize first letter
-        }
-      }] : []),
       { $group: { _id: { $ifNull: ["$ownerInfo.city", null] } } }, // Get unique cities
       { $match: { "_id": { $ne: null } } }, // Filter out null cities
       { $sort: { _id: 1 } } // Sort alphabetically
@@ -472,12 +470,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
           "ownerType": { $ifNull: ["$productInfo.origin", "Vendor"] }
         }
       },
-      // Apply userType filter
-      ...(userType && userType !== 'all' ? [{
-        $match: {
-          "ownerType": userType.charAt(0).toUpperCase() + userType.slice(1) // Capitalize first letter
-        }
-      }] : []),
       // Lookup product category names
       {
         $lookup: {
@@ -525,12 +517,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
           "ownerType": { $ifNull: ["$productInfo.origin", "Vendor"] }
         }
       },
-      // Apply userType filter
-      ...(userType && userType !== 'all' ? [{
-        $match: {
-          "ownerType": userType.charAt(0).toUpperCase() + userType.slice(1) // Capitalize first letter
-        }
-      }] : []),
       { $group: { _id: { $ifNull: ["$productInfo.brand", null] } } }, // Get unique brands
       { $match: { "_id": { $ne: null } } }, // Filter out null brands
       { $sort: { _id: 1 } } // Sort alphabetically
