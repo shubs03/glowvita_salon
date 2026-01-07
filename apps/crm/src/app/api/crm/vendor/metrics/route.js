@@ -538,6 +538,66 @@ async function getVendorMetricsHandler(request) {
     
     console.log("Upcoming appointments (next 7 days):", upcomingAppointments);
     
+    // Calculate Total Business: sum of finalAmount for completed appointments
+    // For multi-service appointments, we count finalAmount only once per appointment
+    // Try with string vendorId first
+    let totalBusinessAggregation = await AppointmentModel.aggregate([
+      {
+        $match: {
+          vendorId: vendorId,
+          date: { $gte: startDate, $lte: endDate },
+          status: 'completed'
+        }
+      },
+      {
+        $group: {
+          _id: '$_id',  // Group by appointment ID to avoid double counting multi-service appointments
+          finalAmount: { $first: '$finalAmount' },
+          totalAmount: { $first: '$totalAmount' }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalBusiness: { $sum: { $ifNull: ['$finalAmount', '$totalAmount'] } }
+        }
+      }
+    ]);
+    
+    // If that doesn't work, try with ObjectId
+    if (totalBusinessAggregation.length === 0) {
+      try {
+        const mongoose = require('mongoose');
+        const vendorObjectId = new mongoose.Types.ObjectId(vendorId);
+        totalBusinessAggregation = await AppointmentModel.aggregate([
+          {
+            $match: {
+              vendorId: vendorObjectId,
+              date: { $gte: startDate, $lte: endDate },
+              status: 'completed'
+            }
+          },
+          {
+            $group: {
+              _id: '$_id',  // Group by appointment ID to avoid double counting multi-service appointments
+              finalAmount: { $first: '$finalAmount' },
+              totalAmount: { $first: '$totalAmount' }
+            }
+          },
+          {
+            $group: {
+              _id: null,
+              totalBusiness: { $sum: { $ifNull: ['$finalAmount', '$totalAmount'] } }
+            }
+          }
+        ]);
+      } catch (error) {
+        console.log("Error converting vendorId to ObjectId for total business query:", error.message);
+      }
+    }
+    
+    const totalBusiness = totalBusinessAggregation.length > 0 ? totalBusinessAggregation[0].totalBusiness : 0;
+    
     // Compile final metrics
     const metrics = {
       totalRevenue: combinedTotalRevenue, // Combined revenue from appointments and delivered products
@@ -546,7 +606,8 @@ async function getVendorMetricsHandler(request) {
       sellingServicesRevenue: totalServiceRevenue, // Revenue from completed service appointments
       sellingProductsRevenue: deliveredProductRevenue, // Revenue from delivered product orders
       cancelledAppointments: cancelledAppointments,
-      upcomingAppointments: upcomingAppointments
+      upcomingAppointments: upcomingAppointments,
+      totalBusiness: totalBusiness
     };
     
     console.log("Final metrics:", JSON.stringify(metrics, null, 2));

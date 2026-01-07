@@ -6,6 +6,7 @@ import {
   UpcomingAppointments, 
   ClientFeedback, 
   TopServicesChart,
+  TopSellingProductsChart,
   DynamicDateFilter
 } from '@/components/dashboard';
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics';
@@ -168,7 +169,7 @@ export default function CrmPage() {
       </div>
       
       {/* Stats Cards - Arranged in sequence per Vendor Dashboard Metric Definition Standard */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-7 mb-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-8 mb-6">
         <StatCard
           title="Total Revenue"
           value={metrics ? formatCurrency(metrics.totalRevenue) : '₹0'}
@@ -217,6 +218,13 @@ export default function CrmPage() {
           change={hasNoData ? "No data" : "2 today"}
           icon={FaCalendarAlt}
           iconColor="text-teal-500"
+        />
+        <StatCard
+          title="Total Business"
+          value={metrics ? formatCurrency(metrics.totalBusiness) : '₹0'}
+          change={hasNoData ? "No data" : "+10.2%"}
+          icon={FaDollarSign}
+          iconColor="text-indigo-500"
         />
       </div>
 
@@ -271,6 +279,16 @@ export default function CrmPage() {
           endDate={endDate}
         />
         <TopServicesChart 
+          filterType={filterType}
+          presetPeriod={presetPeriod}
+          startDate={startDate}
+          endDate={endDate}
+        />
+      </div>
+      
+      {/* Top Selling Products Chart */}
+      <div className="mb-6">
+        <TopSellingProductsChart
           filterType={filterType}
           presetPeriod={presetPeriod}
           startDate={startDate}
