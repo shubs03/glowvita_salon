@@ -34,6 +34,7 @@ export default function RootLayout({
     '/return-policy',
     '/terms-and-conditions',
     '/product-details/[id]',
+    '/search',
   ];
 
   const isMarketingPage = marketingPages.some(page => {
@@ -54,8 +55,8 @@ export default function RootLayout({
 
   // Show header on marketing and profile pages, but not on auth pages
   const showHeader = isMarketingPage || isProfilePage;
-  // Show footer only on marketing pages
-  const showFooter = isMarketingPage;
+  // Show footer only on marketing pages, but hide on Search to allow split-view to fill screen
+  const showFooter = isMarketingPage && pathname !== '/search';
 
   return (
     <html lang="en" suppressHydrationWarning>
