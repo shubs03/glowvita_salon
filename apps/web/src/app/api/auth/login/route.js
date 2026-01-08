@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import dbConnect from '@repo/lib/db';
 import User from '@repo/lib/models/user';
-import { comparePassword, createJwt } from '@repo/lib/auth';
+import { createJwt } from '@repo/lib/auth';
+import { comparePassword } from '@repo/lib/hashing';
 import { cookies } from 'next/headers';
 
 export async function POST(req) {
@@ -31,7 +32,7 @@ export async function POST(req) {
     }
 
     const token = await createJwt({ userId: user._id.toString(), role: user.role, email: user.emailAddress });
-    
+
     cookies().set('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV !== 'development',
@@ -42,7 +43,7 @@ export async function POST(req) {
 
     const { password: _, ...userWithoutPassword } = user.toObject();
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Logged in successfully',
       user: userWithoutPassword,
       token: token,

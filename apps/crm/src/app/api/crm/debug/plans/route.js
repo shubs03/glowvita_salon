@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import SubscriptionPlanModel from '@repo/lib/models/admin/SubscriptionPlan.model';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req) {
     await _db();
     const plans = await SubscriptionPlanModel.find({});

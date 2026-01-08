@@ -66,6 +66,7 @@ import {
   useGetPublicVendorServicesQuery,
   useGetSalonReviewsQuery,
   useAddToClientCartMutation,
+  useGetPublicVendorByIdQuery,
 } from "@repo/store/services/api";
 import { useAppDispatch } from "@repo/store/hooks";
 import { addToCart, setCurrentUser } from "@repo/store/slices/cartSlice";
@@ -539,7 +540,9 @@ export default function SalonDetailsPage() {
     data: vendorsResponse,
     isLoading,
     error,
-  } = useGetPublicVendorsQuery(undefined);
+  } = useGetPublicVendorByIdQuery(id, {
+    skip: !id,
+  });
 
   const {
     data: servicesData,
@@ -548,8 +551,8 @@ export default function SalonDetailsPage() {
   } = useGetPublicVendorServicesQuery(id);
 
   const vendorData = useMemo(() => {
-    const vendors = vendorsResponse?.vendors || [];
-    return vendors.find((v: any) => v._id === id);
+    const vendor = vendorsResponse?.vendor
+    return vendor
   }, [vendorsResponse, id]);
 
   const {

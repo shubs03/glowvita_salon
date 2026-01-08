@@ -179,15 +179,19 @@ export const GET = authMiddlewareAdmin(async (req) => {
           totalProductPlatformFee: 0, // Add total product platform fee
           totalPlatformFees: 0,
           totalServiceTax: 0,
+          totalProductTax: 0, // Add total product tax/GST
           subscriptionAmount: 0,
           smsAmount: 0
         });
       }
       
       const vendorData = vendorMap.get(key);
-      // Extract numeric value from sale string (remove ₹ symbol)
-      const serviceAmount = parseFloat((service.sale || '0').replace('₹', '')) || 0;
-      vendorData.totalServiceAmount += serviceAmount;
+      // Extract numeric value from rawTotalServiceAmount (the actual amount, not revenue)
+      const serviceAmount = service.rawTotalServiceAmount || 0;
+      // Only add service amounts for vendors (not suppliers)
+      if (vendorData.type.toLowerCase() === 'vendor') {
+        vendorData.totalServiceAmount += serviceAmount;
+      }
       
       // Add platform fees from selling services - only for vendors, not suppliers
       if (vendorData.type.toLowerCase() === 'vendor') {
@@ -220,6 +224,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           totalProductPlatformFee: 0, // Add total product platform fee
           totalPlatformFees: 0,
           totalServiceTax: 0,
+          totalProductTax: 0, // Add total product tax/GST
           subscriptionAmount: 0,
           smsAmount: 0
         });
@@ -231,6 +236,20 @@ export const GET = authMiddlewareAdmin(async (req) => {
       vendorData.totalProductAmount += productAmount;
       // Add product platform fee
       vendorData.totalProductPlatformFee += (product.productPlatformFee !== undefined && product.productPlatformFee !== null) ? product.productPlatformFee : 0;
+      // Add product tax/GST if available
+      if (product.rawProductTax !== undefined && product.rawProductTax !== null) {
+        vendorData.totalProductTax += product.rawProductTax;
+      } else if (product.productTax !== undefined && product.productTax !== null) {
+        // If rawProductTax is not available, try to extract from formatted tax string
+        const taxValue = parseFloat((product.productTax || '0').replace('₹', '')) || 0;
+        vendorData.totalProductTax += taxValue;
+      } else if (product.gstAmount !== undefined && product.gstAmount !== null) {
+        // Use gstAmount field from sales by products data
+        vendorData.totalProductTax += product.gstAmount;
+      } else if (product.productGST !== undefined && product.productGST !== null) {
+        // Use productGST field from sales by products data
+        vendorData.totalProductTax += product.productGST;
+      }
       // Also update the type if it wasn't set correctly before
       if (product.type) {
         vendorData.type = product.type;
@@ -329,6 +348,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           totalProductPlatformFee: 0, // Add total product platform fee
           totalPlatformFees: 0,
           totalServiceTax: 0,
+          totalProductTax: 0, // Add total product tax/GST
           subscriptionAmount: 0,
           smsAmount: 0
         });
@@ -386,12 +406,15 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Change 'vendor' to 'Business Name' as per requirements
     // Add subscriptionAmount and smsAmount columns after Service Tax
     // Add Type column after Business Name
+    // Add Service Tax and Product Tax/GST columns
     const formattedData = consolidatedData.map(vendor => ({
       "Business Name": vendor.vendor,
       "Type": vendor.type,
       "City": vendor.city,
       "Total Service Amount (₹)": `₹${vendor.totalServiceAmount.toFixed(2)}`,
       "Total Product Amount (₹)": `₹${vendor.totalProductAmount.toFixed(2)}`,
+      "Service Tax (₹)": `₹${vendor.totalServiceTax.toFixed(2)}`,
+      "Product Tax/GST (₹)": `₹${vendor.totalProductTax.toFixed(2)}`,
       "Product Platform Fee (₹)": `₹${vendor.totalProductPlatformFee.toFixed(2)}`,
       // Show '-' for suppliers if they have no service platform fees (as they don't provide services)
       "Service Platform Fees (₹)": vendor.type.toLowerCase() === 'supplier' && vendor.totalPlatformFees === 0 ? '-' : `₹${vendor.totalPlatformFees.toFixed(2)}`,
@@ -405,6 +428,8 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const aggregatedTotals = consolidatedData.reduce((totals, vendor) => {
       totals.totalServiceAmount += vendor.totalServiceAmount || 0;
       totals.totalProductAmount += vendor.totalProductAmount || 0;
+      totals.totalServiceTax += vendor.totalServiceTax || 0; // Add service tax
+      totals.totalProductTax += vendor.totalProductTax || 0; // Add product tax/GST
       totals.totalProductPlatformFee += vendor.totalProductPlatformFee || 0; // Add product platform fee
       totals.totalPlatformFees += vendor.totalPlatformFees || 0;
       totals.subscriptionAmount += vendor.subscriptionAmount || 0;
@@ -413,6 +438,8 @@ export const GET = authMiddlewareAdmin(async (req) => {
     }, {
       totalServiceAmount: 0,
       totalProductAmount: 0,
+      totalServiceTax: 0, // Add total service tax
+      totalProductTax: 0, // Add total product tax/GST
       totalProductPlatformFee: 0, // Add total product platform fee
       totalPlatformFees: 0,
       subscriptionAmount: 0,
@@ -422,13 +449,18 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Get unique business names for filter dropdown
     const businessNames = [...new Set(consolidatedData.map(item => item.vendor))].filter(name => name && name !== 'N/A');
     
-    // Calculate total revenue as per the requirement:
-    // total revenue = total service platform fees + total product platform fees + total Subscription Amount (₹) + total SMS Amount (₹)
-    aggregatedTotals.totalRevenue = 
-      aggregatedTotals.totalPlatformFees + 
+    // Calculate total business as per the requirement:
+    // total business = Total Service Amount (₹) + Total Product Amount (₹) + Service Tax (₹) + Product Tax/GST (₹) + Product Platform Fee (₹) + Service Platform Fees (₹) + Subscription Amount (₹) + SMS Amount (₹)
+    aggregatedTotals.totalBusiness = 
+      aggregatedTotals.totalServiceAmount + 
+      aggregatedTotals.totalProductAmount + 
+      aggregatedTotals.totalServiceTax + 
+      aggregatedTotals.totalProductTax + 
       aggregatedTotals.totalProductPlatformFee + 
+      aggregatedTotals.totalPlatformFees + 
       aggregatedTotals.subscriptionAmount + 
       aggregatedTotals.smsAmount;
+    aggregatedTotals.totalBusinessFormatted = `₹${aggregatedTotals.totalBusiness.toFixed(2)}`;
     
     // Generate city-wise sales data for CityWiseSalesTable component
     const cityWiseSales = consolidatedData.reduce((cityMap, vendorData) => {
@@ -437,8 +469,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
         cityMap[city] = {
           city: city,
           totalBusinesses: 0,
+          totalServiceAmount: 0,
+          totalProductAmount: 0,
           servicePlatformFees: 0,
           productPlatformFees: 0,
+          serviceTax: 0, // Add service tax
+          productTax: 0, // Add product tax/GST
           subscriptionAmount: 0,
           smsAmount: 0,
           totalRevenue: 0
@@ -449,8 +485,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
       cityMap[city].totalBusinesses += 1;
       
       // Add fees and amounts
+      cityMap[city].totalServiceAmount += vendorData.totalServiceAmount || 0;
+      cityMap[city].totalProductAmount += vendorData.totalProductAmount || 0;
       cityMap[city].servicePlatformFees += vendorData.totalPlatformFees || 0;
       cityMap[city].productPlatformFees += vendorData.totalProductPlatformFee || 0;
+      cityMap[city].serviceTax += vendorData.totalServiceTax || 0; // Add service tax
+      cityMap[city].productTax += vendorData.totalProductTax || 0; // Add product tax/GST
       cityMap[city].subscriptionAmount += vendorData.subscriptionAmount || 0;
       cityMap[city].smsAmount += vendorData.smsAmount || 0;
       

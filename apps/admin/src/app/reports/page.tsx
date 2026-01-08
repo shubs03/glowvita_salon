@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from '@repo/ui/input';
 import { Skeleton } from '@repo/ui/skeleton';
 // Import the API hooks for reports
-import { useGetSellingServicesReportQuery, useGetCancellationReportQuery, useGetTotalBookingsReportQuery, useGetCompletedBookingsReportQuery, useGetSalesByProductsReportQuery, useGetSalesByBrandReportQuery, useGetSalesByCategoryReportQuery, useGetConsolidatedSalesReportQuery, useGetSubscriptionReportQuery, useGetMarketingCampaignReportQuery } from '@repo/store/api';
+import { useGetSellingServicesReportQuery, useGetCancellationReportQuery, useGetTotalBookingsReportQuery, useGetCompletedBookingsReportQuery, useGetSalesByProductsReportQuery, useGetSalesByBrandReportQuery, useGetSalesByCategoryReportQuery, useGetConsolidatedSalesReportQuery, useGetSubscriptionReportQuery, useGetMarketingCampaignReportQuery, useGetVendorPayableReportQuery, useGetVendorPayoutSettlementReportQuery, useGetVendorPayoutSettlementReportProductQuery, useGetVendorPayableReportProductQuery } from '@repo/store/api';
 
 // Export functionality imports
 import * as XLSX from 'xlsx';
@@ -79,6 +79,68 @@ interface CampaignData {
   expiryDate: string;
   ticketRaised: number;
   status: string;
+}
+
+interface VendorPayoutData {
+  date: string;
+  sourceType: string;
+  entityName: string;
+  servicePlatformFee: number;
+  productPlatformFee: number;
+  serviceTax: number;
+  productTax: number;
+  subscriptionAmount: number;
+  smsCharges: number;
+  totalReceived: number;
+}
+
+interface VendorPayableData {
+  date: string;
+  payeeType: string;
+  payeeName: string;
+  serviceGrossAmount: number;
+  productGrossAmount: number;
+  platformFee: number;
+  gst: number;
+  amountPaid: number;
+  status: string;
+}
+
+interface VendorPayoutSettlementData {
+  "Source Type": string;
+  "Entity Name": string;
+  "Service Platform Fee": number;
+  "Service Tax (₹)": number;
+  "Service Total Amount": number;
+  "Total": number;
+  city: string;
+  vendorId: string;
+  appointmentCount: number;
+  completedAppointments: number;
+}
+
+interface VendorPayoutSettlementProductData {
+  "Source Type": string;
+  "Entity Name": string;
+  "Product Platform Fee": number;
+  "Product Tax (₹)": number;
+  "Product Total Amount": number;
+  "Total": number;
+  city?: string;
+  vendorId?: string;
+  orderCount?: number;
+  deliveredOrders?: number;
+}
+
+interface VendorPayableProductData {
+  "Payee Type": string;
+  "Payee Name": string;
+  "product Platform Fee": number;
+  "product Tax/gst": number;
+  "Total": number;
+  city?: string;
+  orderCount?: number;
+  deliveredOrders?: number;
 }
 
 // Custom hook for common report functionality
@@ -551,9 +613,9 @@ interface ServiceStat {
 }
 
 const reportsData: ReportCategory[] = [
-    {
-        category: "Financial Reports",
-        reports: [
+  {
+    category: "Financial Reports",
+    reports: [
             {
                 title: "Sales Report",
                 description: "Consolidated report of service and product sales.",
@@ -605,16 +667,7 @@ const reportsData: ReportCategory[] = [
                 description: "Analysis of cancelled bookings and reasons.",
                 details: "Identify patterns and reduce cancellation rates."
             },
-            {
-                title: "Supplier & Inventory Report",
-                description: "Track supplier performance and product sales.",
-                details: "Manage inventory and supplier relationships."
-            },
-            {
-                title: "Supplier Product Reviews Report",
-                description: "Comprehensive report on all reviews for supplier products.",
-                details: "View product ratings, review counts, and best-selling supplier products."
-            },
+
         ]
     },
     {
@@ -624,6 +677,36 @@ const reportsData: ReportCategory[] = [
                 title: "Marketing Campaign Report",
                 description: "Performance metrics for all marketing campaigns.",
                 details: "Includes SMS, social media, and digital marketing."
+            }
+        ]
+    },
+    {
+        category: "Admin Settlement Reports",
+        reports: [
+            {
+                title: "Admin Settlement Report",
+                description: "Combined view of Vendor Payout (IN) and Vendor Payable (OUT) with net balance calculation.",
+                details: "Track admin revenue and payouts with net balance."
+            },
+            {
+                title: "Vendor Payout Settlement Report",
+                description: "Amount admin pays to vendor for services",
+                details: "Track vendor payouts for services."
+            },
+            {
+                title: "Vendor Payout Settlement Report - Product",
+                description: "Amount admin pays to vendor for products",
+                details: "Track vendor payouts for products with platform fee, tax, and total amounts."
+            },
+            {
+                title: "Vendor Payable to Admin Report",
+                description: "Amount vendor pays to admin for services",
+                details: "Track platform fees, taxes, and other revenues from vendors."
+            },
+            {
+                title: "Vendor Payable to Admin Report - Product",
+                description: "Amount vendor pays to admin for products",
+                details: "Track platform fees, taxes, and other revenues from vendors for products with Payee Type, Payee Name, product Platform Fee, product Tax/gst, and Total amounts."
             }
         ]
     }
@@ -952,6 +1035,15 @@ const SellingServicesReportTable = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <Card>
             <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">Total Business</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
             </CardHeader>
             <CardContent>
@@ -971,15 +1063,6 @@ const SellingServicesReportTable = () => {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium">Total Vendors</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">0</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Total Services</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">0</div>
@@ -1132,7 +1215,16 @@ const SellingServicesReportTable = () => {
       </div>
       
       {/* Metrics Cards - always show, display 0 when no data */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Total Business</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{(data?.aggregatedTotals?.totalBusinessFormatted || '₹0.00')}</div>
+          </CardContent>
+        </Card>
+        
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Service Amount</CardTitle>
@@ -1166,24 +1258,6 @@ const SellingServicesReportTable = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data?.aggregatedTotals?.totalServiceTaxFormatted || '-'}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Vendors</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data?.uniqueVendors || 0}</div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Total Services</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{data?.uniqueServices || 0}</div>
           </CardContent>
         </Card>
       </div>
@@ -2159,7 +2233,17 @@ const CompletedBookingsReportTable = () => {
     return (
       <div>
         {/* Summary Cards - show with 0 values when no data */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Business</CardTitle>
+              <IndianRupee className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+          
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Online Appointments</CardTitle>
@@ -2356,7 +2440,19 @@ const CompletedBookingsReportTable = () => {
       />
       
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Business</CardTitle>
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {(data?.aggregatedTotals?.totalBusinessFormatted || '₹0.00')}
+            </div>
+          </CardContent>
+        </Card>
+        
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Online Appointments</CardTitle>
@@ -2827,60 +2923,10 @@ const ConsolidatedSalesReportTable = () => {
     return (
       <div>
         {/* Summary Cards - show with 0 values when no data */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-              <IndianRupee className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹0.00</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Service Amount</CardTitle>
-              <IndianRupee className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹0.00</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Product Amount</CardTitle>
-              <IndianRupee className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹0.00</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Platform Fees</CardTitle>
-              <IndianRupee className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹0.00</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Subscription Amount</CardTitle>
-              <IndianRupee className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">₹0.00</div>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total SMS Amount</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Business</CardTitle>
               <IndianRupee className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -3048,65 +3094,15 @@ const ConsolidatedSalesReportTable = () => {
       />
       
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Business</CardTitle>
             <IndianRupee className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ₹{(aggregatedTotals?.totalRevenue || 0).toFixed(2)}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Service Platform Fees (₹)</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ₹{(aggregatedTotals?.totalPlatformFees || 0).toFixed(2)}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Product Platform Fee (₹)</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ₹{(aggregatedTotals?.totalProductPlatformFee || 0).toFixed(2)}
-            </div>
-          </CardContent>
-        </Card>
-        
-
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Subscription Amount</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ₹{(aggregatedTotals?.subscriptionAmount || 0).toFixed(2)}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total SMS Amount</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ₹{(aggregatedTotals?.smsAmount || 0).toFixed(2)}
+              {(data?.aggregatedTotals?.totalBusinessFormatted || '₹0.00')}
             </div>
           </CardContent>
         </Card>
@@ -3121,26 +3117,46 @@ const ConsolidatedSalesReportTable = () => {
               <TableHead>City</TableHead>
               <TableHead>Total Service Amount (₹)</TableHead>
               <TableHead>Total Product Amount (₹)</TableHead>
+              <TableHead>Service Tax (₹)</TableHead>
+              <TableHead>Product Tax/GST (₹)</TableHead>
               <TableHead>Product Platform Fee (₹)</TableHead>
               <TableHead>Service Platform Fees (₹)</TableHead>
               <TableHead>Subscription Amount (₹)</TableHead>
               <TableHead>SMS Amount (₹)</TableHead>
+              <TableHead>Total Business (₹)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedData.map((vendor: any, index: number) => (
+            {paginatedData.map((vendor: any, index: number) => {
+              // Calculate total business for this vendor
+              const serviceAmount = parseFloat(vendor["Total Service Amount (₹)"].replace(/[₹,]/g, '')) || 0;
+              const productAmount = parseFloat(vendor["Total Product Amount (₹)"].replace(/[₹,]/g, '')) || 0;
+              const serviceTax = parseFloat(vendor["Service Tax (₹)"].replace(/[₹,]/g, '')) || 0;
+              const productTax = parseFloat(vendor["Product Tax/GST (₹)"].replace(/[₹,]/g, '')) || 0;
+              const productPlatformFee = parseFloat(vendor["Product Platform Fee (₹)"].replace(/[₹,]/g, '')) || 0;
+              const servicePlatformFees = vendor["Service Platform Fees (₹)"] !== '-' ? parseFloat(vendor["Service Platform Fees (₹)"]?.replace(/[₹,]/g, '')) || 0 : 0;
+              const subscriptionAmount = parseFloat(vendor["Subscription Amount (₹)"].replace(/[₹,]/g, '')) || 0;
+              const smsAmount = parseFloat(vendor["SMS Amount (₹)"].replace(/[₹,]/g, '')) || 0;
+              
+              const totalBusiness = serviceAmount + productAmount + serviceTax + productTax + productPlatformFee + servicePlatformFees + subscriptionAmount + smsAmount;
+              
+              return (
               <TableRow key={startIndex + index}>
                 <TableCell className="font-medium">{vendor["Business Name"]}</TableCell>
                 <TableCell>{vendor.Type}</TableCell>
                 <TableCell>{vendor.City}</TableCell>
                 <TableCell>{vendor["Total Service Amount (₹)"]}</TableCell>
                 <TableCell>{vendor["Total Product Amount (₹)"]}</TableCell>
+                <TableCell>{vendor["Service Tax (₹)"]}</TableCell>
+                <TableCell>{vendor["Product Tax/GST (₹)"]}</TableCell>
                 <TableCell>{vendor["Product Platform Fee (₹)"]}</TableCell>
                 <TableCell>{vendor["Service Platform Fees (₹)"]}</TableCell>
                 <TableCell>{vendor["Subscription Amount (₹)"]}</TableCell>
                 <TableCell>{vendor["SMS Amount (₹)"]}</TableCell>
+                <TableCell>₹{totalBusiness.toFixed(2)}</TableCell>
               </TableRow>
-            ))}
+              )
+            })}
             {/* Current Page Totals Row */}
             {paginatedData.length > 0 && (
               <TableRow className="bg-muted font-semibold">
@@ -3154,6 +3170,18 @@ const ConsolidatedSalesReportTable = () => {
                 <TableCell>₹{paginatedData.reduce((sum: number, item: any) => {
                   // Extract numeric value from "Total Product Amount (₹)" field
                   const rawValue = item["Total Product Amount (₹)"] || '0';
+                  const numericValue = typeof rawValue === 'number' ? rawValue : parseFloat(rawValue.toString().replace(/[₹,]/g, '')) || 0;
+                  return sum + numericValue;
+                }, 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => {
+                  // Extract numeric value from "Service Tax (₹)" field
+                  const rawValue = item["Service Tax (₹)"] || '0';
+                  const numericValue = typeof rawValue === 'number' ? rawValue : parseFloat(rawValue.toString().replace(/[₹,]/g, '')) || 0;
+                  return sum + numericValue;
+                }, 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => {
+                  // Extract numeric value from "Product Tax/GST (₹)" field
+                  const rawValue = item["Product Tax/GST (₹)"] || '0';
                   const numericValue = typeof rawValue === 'number' ? rawValue : parseFloat(rawValue.toString().replace(/[₹,]/g, '')) || 0;
                   return sum + numericValue;
                 }, 0).toFixed(2)}</TableCell>
@@ -3184,6 +3212,20 @@ const ConsolidatedSalesReportTable = () => {
                   const rawValue = item["SMS Amount (₹)"] || '0';
                   const numericValue = typeof rawValue === 'number' ? rawValue : parseFloat(rawValue.toString().replace(/[₹,]/g, '')) || 0;
                   return sum + numericValue;
+                }, 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => {
+                  // Calculate total business for each item
+                  const serviceAmount = parseFloat(item["Total Service Amount (₹)"]?.replace(/[₹,]/g, '')) || 0;
+                  const productAmount = parseFloat(item["Total Product Amount (₹)"]?.replace(/[₹,]/g, '')) || 0;
+                  const serviceTax = parseFloat(item["Service Tax (₹)"]?.replace(/[₹,]/g, '')) || 0;
+                  const productTax = parseFloat(item["Product Tax/GST (₹)"]?.replace(/[₹,]/g, '')) || 0;
+                  const productPlatformFee = parseFloat(item["Product Platform Fee (₹)"]?.replace(/[₹,]/g, '')) || 0;
+                  const servicePlatformFees = item["Service Platform Fees (₹)"] !== '-' ? parseFloat(item["Service Platform Fees (₹)"]?.replace(/[₹,]/g, '')) || 0 : 0;
+                  const subscriptionAmount = parseFloat(item["Subscription Amount (₹)"]?.replace(/[₹,]/g, '')) || 0;
+                  const smsAmount = parseFloat(item["SMS Amount (₹)"]?.replace(/[₹,]/g, '')) || 0;
+                  
+                  const totalBusiness = serviceAmount + productAmount + serviceTax + productTax + productPlatformFee + servicePlatformFees + subscriptionAmount + smsAmount;
+                  return sum + totalBusiness;
                 }, 0).toFixed(2)}</TableCell>
               </TableRow>
             )}
@@ -3294,17 +3336,11 @@ const SalesByProductReportTable = () => {
   useEffect(() => {
     // Always populate the complete lists from API response data to ensure filter options remain available
     // even when filters result in no data
-    if (cities.length > 0) {
-      setAllCities(cities);
-    }
+    setAllCities(cities);
     
-    if (categories.length > 0) {
-      setAllCategories(categories);
-    }
+    setAllCategories(categories);
     
-    if (brands.length > 0) {
-      setAllBrands(brands);
-    }
+    setAllBrands(brands);
     
     // Also extract business names from sales data
     if (salesData.length > 0 && allBusinessNames.length === 0) {
@@ -3443,7 +3479,17 @@ const SalesByProductReportTable = () => {
     return (
       <div>
         {/* Summary Cards - show with 0 values when no data */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Business</CardTitle>
+              <IndianRupee className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+          
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Sales (₹)</CardTitle>
@@ -3529,6 +3575,8 @@ const SalesByProductReportTable = () => {
           showBookingTypeFilter={false}
           showUserTypeFilter={true}
           showBusinessNameFilter={true}
+          showCategoryFilter={true}
+          showBrandFilter={true}
         />
         
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
@@ -3627,7 +3675,18 @@ const SalesByProductReportTable = () => {
       />
       
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Business</CardTitle>
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {(data?.aggregatedTotals?.totalBusinessFormatted || '₹0.00')}
+            </div>
+          </CardContent>
+        </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -3825,7 +3884,16 @@ const SalesByBrandReportTable = () => {
   const aggregatedTotals = data?.aggregatedTotals;
   
   // Store complete list of business names
-  const [allBusinessNames, setAllBusinessNames] = useState<string[]>(businessNames);
+  const [allBusinessNames, setAllBusinessNames] = useState<string[]>([]);
+  
+  // Extract business names from data when there are no filters applied
+  // This ensures we have business names available even when there's no sales data
+  useEffect(() => {
+    // Only update the complete list if no filters are applied or if the list is empty
+    if ((Object.keys(apiFilters).length === 0 || allBusinessNames.length === 0) && businessNames.length > 0) {
+      setAllBusinessNames(businessNames);
+    }
+  }, [businessNames, apiFilters, allBusinessNames.length]);
   
   // Format the data to match our expected structure
   const formattedData: SalesByBrandData[] = salesData.map((item: any) => ({
@@ -4098,11 +4166,14 @@ const SalesByBrandReportTable = () => {
         onClose={() => setIsFilterModalOpen(false)}
         onApplyFilters={handleFilterChange}
         cities={cities}
-        businessNames={businessNames}
+        businessNames={allBusinessNames}
+        brands={brands}
         initialFilters={filters}
         showBookingTypeFilter={false}
         showUserTypeFilter={true}
         showBusinessNameFilter={true}
+        showCategoryFilter={false}
+        showBrandFilter={true}
       />
       
       {/* Summary Cards */}
@@ -5103,7 +5174,7 @@ const SubscriptionReportTable = () => {
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Business</CardTitle>
             <IndianRupee className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -5559,7 +5630,7 @@ const MarketingCampaignReportTable = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Business</CardTitle>
             <IndianRupee className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -5749,6 +5820,2734 @@ const printTable = (tableRef: React.RefObject<HTMLDivElement>) => {
   }
 };
 
+// Component to display Vendor Payout report data in a table
+const VendorPayoutReportTable = () => {
+  const [filters, setFilters] = useState<FilterParams>({});
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5); // 5 entries by default
+  const [searchTerm, setSearchTerm] = useState('');
+  const tableRef = useRef<HTMLDivElement>(null);
+  
+  // Use the API hook to fetch consolidated sales report data with filters
+  const apiFilters = filters;
+  
+  console.log("Vendor Payout Report API filters:", apiFilters);
+  
+  // Import the consolidated sales report API hook to use for Vendor Payout data
+  const { data, isLoading, isError, error } = useGetConsolidatedSalesReportQuery(apiFilters);
+  
+  const handleFilterChange = (newFilters: FilterParams) => {
+    console.log("Vendor Payout Report filter change:", newFilters);
+    setFilters(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+  
+  // Define data variables after API call
+  const salesData = data?.salesReport || [];
+  const cities = data?.cities || []; // Get cities from the data
+  const aggregatedTotals = data?.aggregatedTotals;
+  
+  // Store complete list of business names
+  const [allBusinessNames, setAllBusinessNames] = useState<string[]>([]);
+  
+  // Extract business names from data when there are no filters applied
+  // This assumes that when no filters are applied, we get the complete dataset
+  useEffect(() => {
+    // Only update the complete list if no filters are applied or if the list is empty
+    if ((Object.keys(apiFilters).length === 0 || allBusinessNames.length === 0) && salesData.length > 0) {
+      const nameMap: { [key: string]: boolean } = {};
+      const names: string[] = [];
+      
+      salesData.forEach((item: any) => {
+        const name = item['Business Name'];
+        if (name && name !== 'N/A' && !nameMap[name]) {
+          nameMap[name] = true;
+          names.push(name);
+        }
+      });
+      setAllBusinessNames(names);
+    }
+  }, [salesData, apiFilters, allBusinessNames.length]);
+  
+  // Use the complete list for filter options
+  const businessNames = allBusinessNames;
+  
+  // Format the data to match Vendor Payout structure
+  const VendorPayoutData = salesData.map((item: any) => {
+    // Extract numeric values from the formatted strings
+    const servicePlatformFee = parseFloat(item["Service Platform Fees (₹)"].replace(/[₹,]/g, '')) || 0;
+    const productPlatformFee = parseFloat(item["Product Platform Fee (₹)"].replace(/[₹,]/g, '')) || 0;
+    const serviceTax = parseFloat(item["Service Tax (₹)"].replace(/[₹,]/g, '')) || 0;
+    const productTax = parseFloat(item["Product Tax/GST (₹)"].replace(/[₹,]/g, '')) || 0;
+    const serviceTotalAmount = parseFloat(item["Total Service Amount (₹)"].replace(/[₹,]/g, '')) || 0;
+    const productTotalAmount = parseFloat(item["Total Product Amount (₹)"].replace(/[₹,]/g, '')) || 0;
+    
+    return {
+      date: new Date().toISOString().split('T')[0], // Use current date as placeholder since API doesn't provide specific dates
+      sourceType: item.Type, // Using Type from API (Vendor or Supplier)
+      entityName: item["Business Name"],
+      servicePlatformFee,
+      productPlatformFee,
+      serviceTax,
+      productTax,
+      serviceTotalAmount,
+      productTotalAmount,
+      totalReceived: servicePlatformFee + productPlatformFee + serviceTax + productTax + serviceTotalAmount + productTotalAmount
+    };
+  });
+  
+  // Filter data based on search term
+  const filteredData = useMemo(() => {
+    if (!searchTerm) return VendorPayoutData;
+    
+    return VendorPayoutData.filter((item: any) =>
+      Object.values(item).some((value: any) => 
+        value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+  }, [VendorPayoutData, searchTerm]);
+  
+  // Pagination logic
+  const totalItems = filteredData.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedData = filteredData.slice(startIndex, endIndex);
+
+  if (isLoading) {
+    return (
+      <div>
+        {/* Summary Cards Skeleton */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        <div className="flex justify-end mb-4">
+          <Button onClick={() => setIsFilterModalOpen(true)}>
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+          </Button>
+        </div>
+        
+        <div className="overflow-x-auto no-scrollbar rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Source Type</TableHead>
+                <TableHead>Entity Name</TableHead>
+                <TableHead>Service Platform Fee</TableHead>
+                <TableHead>Product Platform Fee</TableHead>
+                <TableHead>Service Tax (₹)</TableHead>
+                <TableHead>Product Tax/GST (₹)</TableHead>
+                <TableHead>Service Total Amount</TableHead>
+                <TableHead>Product Total Amount</TableHead>
+                <TableHead>Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(5)].map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isError) {
+    console.error("Error fetching Vendor Payout report:", error);
+    return (
+      <div className="p-4 text-center text-red-500">
+        Error loading Vendor Payout report data. Please try again later.
+        {/* Display error details in development */}
+        {process.env.NODE_ENV === 'development' && error && (
+          <div className="mt-2 text-sm text-gray-500">
+            {typeof error === 'string' ? error : JSON.stringify(error)}
+          </div>
+        )}
+      </div>
+    );
+  }
+  
+  // Show table structure even when there's no data
+  if (VendorPayoutData.length === 0) {
+    return (
+      <div>
+
+        
+        <div className="flex justify-between items-center mb-4 gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when search term changes
+              }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsFilterModalOpen(true)}>
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'admin_receives_report')}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'admin_receives_report')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'admin_receives_report')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+        
+        <FilterModal 
+          isOpen={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          onApplyFilters={handleFilterChange}
+          cities={cities}
+          businessNames={businessNames}
+          initialFilters={filters}
+          showBookingTypeFilter={false}
+          showUserTypeFilter={true}
+          showBusinessNameFilter={true}
+        />
+        
+        <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Source Type</TableHead>
+                <TableHead>Entity Name</TableHead>
+                <TableHead>Service Platform Fee</TableHead>
+                <TableHead>Product Platform Fee</TableHead>
+                <TableHead>Service Tax (₹)</TableHead>
+                <TableHead>Product Tax/GST (₹)</TableHead>
+                <TableHead>Service Total Amount</TableHead>
+                <TableHead>Product Total Amount</TableHead>
+                <TableHead>Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                  No Vendor Payout data available.
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4 gap-2">
+        <div className="relative w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1); // Reset to first page when search term changes
+            }}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsFilterModalOpen(true)}>
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                <Copy className="mr-2 h-4 w-4" />
+                Copy
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'admin_receives_report')}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'admin_receives_report')}>
+                <FileText className="mr-2 h-4 w-4" />
+                CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'admin_receives_report')}>
+                <FileText className="mr-2 h-4 w-4" />
+                PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      
+      <FilterModal 
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApplyFilters={handleFilterChange}
+        cities={cities}
+        businessNames={businessNames}
+        initialFilters={filters}
+        showBookingTypeFilter={false}
+        showUserTypeFilter={true}
+        showBusinessNameFilter={true}
+      />
+      
+      {/* Summary Card for Vendor Payout */}
+      <Card className="mb-6 w-64">
+        <CardHeader className="p-4">
+          <CardTitle className="text-sm font-medium">Total Payout</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4">
+          <div className="text-lg font-bold">
+            ₹{(VendorPayoutData.reduce((sum: number, item: any) => sum + (item.totalReceived || 0), 0)).toFixed(2)}
+          </div>
+        </CardContent>
+      </Card>
+      
+      <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Source Type</TableHead>
+              <TableHead>Entity Name</TableHead>
+              <TableHead>Service Platform Fee</TableHead>
+              <TableHead>Product Platform Fee</TableHead>
+              <TableHead>Service Tax (₹)</TableHead>
+              <TableHead>Product Tax/GST (₹)</TableHead>
+              <TableHead>Service Total Amount</TableHead>
+              <TableHead>Product Total Amount</TableHead>
+              <TableHead>Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.map((item: any, index: number) => (
+              <TableRow key={startIndex + index}>
+                <TableCell className="font-medium">{item.sourceType}</TableCell>
+                <TableCell>{item.entityName}</TableCell>
+                <TableCell>₹{item.servicePlatformFee.toFixed(2)}</TableCell>
+                <TableCell>₹{item.productPlatformFee.toFixed(2)}</TableCell>
+                <TableCell>₹{item.serviceTax.toFixed(2)}</TableCell>
+                <TableCell>₹{item.productTax.toFixed(2)}</TableCell>
+                <TableCell>₹{item.serviceTotalAmount.toFixed(2)}</TableCell>
+                <TableCell>₹{item.productTotalAmount.toFixed(2)}</TableCell>
+                <TableCell>₹{item.totalReceived.toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+            {/* Current Page Totals Row */}
+            {paginatedData.length > 0 && (
+              <TableRow className="bg-muted font-semibold">
+                <TableCell colSpan={2}>TOTAL</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.servicePlatformFee || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.productPlatformFee || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.serviceTax || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.productTax || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.serviceTotalAmount || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.productTotalAmount || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.totalReceived || 0), 0).toFixed(2)}</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <Pagination
+        className="mt-4"
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={setItemsPerPage}
+        totalItems={totalItems}
+      />
+    </div>
+  );
+};
+
+// Component to display Vendor Payable report data in a table
+const VendorPayableReportTable = () => {
+  const {
+    filters,
+    isFilterModalOpen,
+    currentPage,
+    itemsPerPage,
+    searchTerm,
+    tableRef,
+    setFilters,
+    setIsFilterModalOpen,
+    setCurrentPage,
+    setItemsPerPage,
+    setSearchTerm,
+    handleFilterChange,
+    filterAndPaginateData
+  } = useReport<any>(5);
+  
+  // Use the API hook to fetch vendor payable report data with filters
+  const apiFilters = filters;
+  
+  console.log("Vendor Payable Report API filters:", apiFilters);
+  
+  // Import the vendor payable report API hook to use for Vendor Payable data
+  const { data, isLoading, isError, error } = useGetVendorPayableReportQuery(apiFilters);
+  
+  // Define data variables after API call
+  const salesData = data?.vendorPayableReport || [];
+  const cities = data?.cities || []; // Get cities from the data
+  const aggregatedTotals = data?.aggregatedTotals;
+  
+  // Store complete list of vendor names
+  const [allBusinessNames, setAllBusinessNames] = useState<string[]>([]);
+  
+  // Extract vendor names from data when there are no filters applied
+  // This assumes that when no filters are applied, we get the complete dataset
+  useEffect(() => {
+    // Only update the complete list if no filters are applied or if the list is empty
+    if ((Object.keys(apiFilters).length === 0 || allBusinessNames.length === 0) && salesData.length > 0) {
+      const nameMap: { [key: string]: boolean } = {};
+      const names: string[] = [];
+      
+      salesData.forEach((item: any) => {
+        const name = item.businessName;
+        if (name && name !== 'N/A' && !nameMap[name]) {
+          nameMap[name] = true;
+          names.push(name);
+        }
+      });
+      setAllBusinessNames(names);
+    }
+  }, [salesData, apiFilters, allBusinessNames.length]);
+  
+  // Use the complete list for filter options
+  const businessNames = allBusinessNames;
+  
+  // Format the data to match Vendor Payable structure
+  const VendorPayableData = salesData.map((item: any) => {
+    // Use the data structure from the new vendor payable report API
+    const servicePlatformFee = item.platformFee || 0; // Using platformFee from appointment data
+    const productPlatformFee = 0; // No product platform fee in this report
+    const serviceTax = item.serviceTax || 0; // Using serviceTax from appointment data
+    const productTax = 0; // No product tax in this report
+    
+    // Calculate amount paid based on the final amount from appointments
+    const amountPaid = item.finalAmount || 0;
+    
+    return {
+      date: new Date().toISOString().split('T')[0], // Use current date as placeholder since API doesn't provide specific dates
+      payeeType: 'Vendor', // All entries in this report are vendors
+      payeeName: item.businessName,
+      servicePlatformFee,
+      productPlatformFee,
+      serviceTax,
+      productTax,
+      amountPaid,
+    };
+  });
+  
+  // Filter and paginate data using the common hook
+  const {
+    filteredData,
+    paginatedData,
+    totalItems,
+    totalPages,
+    startIndex,
+    endIndex
+  } = filterAndPaginateData(
+    VendorPayableData, 
+    (item: any) => [
+      item.payeeType || '',
+      item.payeeName || '',
+      item.servicePlatformFee?.toString() || '',
+      item.serviceTax?.toString() || '',
+      item.amountPaid?.toString() || ''
+    ]
+  );
+
+  if (isLoading) {
+    return (
+      <div>
+        {/* Summary Cards Skeleton */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        <div className="flex justify-end mb-4">
+          <Button onClick={() => setIsFilterModalOpen(true)}>
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+          </Button>
+        </div>
+        
+        <div className="overflow-x-auto no-scrollbar rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Payee Type</TableHead>
+                <TableHead>Payee Name</TableHead>
+                <TableHead>Service Gross Amount</TableHead>
+                <TableHead>Product Gross Amount</TableHead>
+                <TableHead>Platform Fee</TableHead>
+                <TableHead>GST</TableHead>
+                <TableHead>Amount Paid</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(5)].map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isError) {
+    console.error("Error fetching Vendor Payable report:", error);
+    return (
+      <div className="p-4 text-center text-red-500">
+        Error loading Vendor Payable report data. Please try again later.
+        {/* Display error details in development */}
+        {process.env.NODE_ENV === 'development' && error && (
+          <div className="mt-2 text-sm text-gray-500">
+            {typeof error === 'string' ? error : JSON.stringify(error)}
+          </div>
+        )}
+      </div>
+    );
+  }
+  
+  // Show table structure even when there's no data
+  if (VendorPayableData.length === 0) {
+    return (
+      <div>
+        {/* Summary Card for Vendor Payable - show with 0 values when no data */}
+        <div className="mb-6">
+          <Card className="w-64">
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium">Vendor Payable Amount</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="flex justify-between items-center mb-4 gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when search term changes
+              }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsFilterModalOpen(true)}>
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'admin_pays_report')}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'admin_pays_report')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'admin_pays_report')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+        
+        <FilterModal 
+          isOpen={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          onApplyFilters={handleFilterChange}
+          cities={cities}
+          businessNames={businessNames}
+          vendors={businessNames}
+          initialFilters={filters}
+          showBookingTypeFilter={false}
+          showUserTypeFilter={false}
+          showBusinessNameFilter={false}
+          showVendorFilter={true}
+        />
+        
+        <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Payee Type</TableHead>
+                <TableHead>Payee Name</TableHead>
+                <TableHead>Service Platform Fee</TableHead>
+                <TableHead>Service Tax</TableHead>
+                <TableHead>Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  No Vendor Payable data available.
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4 gap-2">
+        <div className="relative w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1); // Reset to first page when search term changes
+            }}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsFilterModalOpen(true)}>
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                <Copy className="mr-2 h-4 w-4" />
+                Copy
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'admin_pays_report')}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'admin_pays_report')}>
+                <FileText className="mr-2 h-4 w-4" />
+                CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'admin_pays_report')}>
+                <FileText className="mr-2 h-4 w-4" />
+                PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      
+      <FilterModal 
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApplyFilters={handleFilterChange}
+        cities={cities}
+        businessNames={businessNames}
+        vendors={businessNames}
+        initialFilters={filters}
+        showBookingTypeFilter={false}
+        showUserTypeFilter={false}
+        showBusinessNameFilter={false}
+        showVendorFilter={true}
+      />
+      
+      {/* Summary Card for Vendor Payable */}
+      <Card className="mb-6 w-64">
+        <CardHeader className="p-4">
+          <CardTitle className="text-sm font-medium">Vendor Payable Amount</CardTitle>
+        </CardHeader>
+        <CardContent className="p-4">
+          <div className="text-lg font-bold">
+            ₹{VendorPayableData.reduce((sum: number, item: any) => sum + (item.amountPaid || 0), 0).toFixed(2)}
+          </div>
+        </CardContent>
+      </Card>
+      
+      <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Payee Type</TableHead>
+              <TableHead>Payee Name</TableHead>
+              <TableHead>Service Platform Fee</TableHead>
+              <TableHead>Service Tax</TableHead>
+              <TableHead>Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.map((item: any, index: number) => (
+              <TableRow key={startIndex + index}>
+                <TableCell className="font-medium">{item.payeeType}</TableCell>
+                <TableCell>{item.payeeName}</TableCell>
+                <TableCell>₹{item.servicePlatformFee.toFixed(2)}</TableCell>
+                <TableCell>₹{item.serviceTax.toFixed(2)}</TableCell>
+                <TableCell>₹{item.amountPaid.toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+            {/* Current Page Totals Row */}
+            {paginatedData.length > 0 && (
+              <TableRow className="bg-muted font-semibold">
+                <TableCell colSpan={2}>TOTAL</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.servicePlatformFee || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.serviceTax || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.amountPaid || 0), 0).toFixed(2)}</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <Pagination
+        className="mt-4"
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={setItemsPerPage}
+        totalItems={totalItems}
+      />
+    </div>
+  );
+};
+
+// Component for Vendor Payout report dialog
+const VendorPayoutReportDialog = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  const tableRef = useRef<HTMLDivElement>(null);
+  
+  const handleExport = (format: string) => {
+    const fileName = 'admin_receives_report';
+    switch (format) {
+      case 'excel':
+        exportToExcel(tableRef, fileName);
+        break;
+      case 'csv':
+        exportToCSV(tableRef, fileName);
+        break;
+      case 'pdf':
+        exportToPDF(tableRef, fileName);
+        break;
+      case 'copy':
+        copyToClipboard(tableRef);
+        break;
+      case 'print':
+        printTable(tableRef);
+        break;
+      default:
+        break;
+    }
+  };
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Vendor Payout Settlement Report</DialogTitle>
+          <DialogDescription>
+            Amount admin pays to vendor
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <div ref={tableRef}>
+            <VendorPayoutReportTable />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Component for Vendor Payable report dialog
+const VendorPayableReportDialog = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  const tableRef = useRef<HTMLDivElement>(null);
+  
+  const handleExport = (format: string) => {
+    const fileName = 'admin_pays_report';
+    switch (format) {
+      case 'excel':
+        exportToExcel(tableRef, fileName);
+        break;
+      case 'csv':
+        exportToCSV(tableRef, fileName);
+        break;
+      case 'pdf':
+        exportToPDF(tableRef, fileName);
+        break;
+      case 'copy':
+        copyToClipboard(tableRef);
+        break;
+      case 'print':
+        printTable(tableRef);
+        break;
+      default:
+        break;
+    }
+  };
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Vendor Payable to Admin Report</DialogTitle>
+          <DialogDescription>
+            Amount vendor pays to admin for services
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <div ref={tableRef}>
+            <VendorPayableReportTable />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Component to display Admin Settlement Report data in a table
+const AdminSettlementReportTable = () => {
+  const [filters, setFilters] = useState<FilterParams>({});
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5); // 5 entries by default
+  const [searchTerm, setSearchTerm] = useState('');
+  const tableRef = useRef<HTMLDivElement>(null);
+  
+  // Use the API hook to fetch consolidated sales report data with filters
+  const apiFilters = filters;
+  
+  console.log("Admin Settlement Report API filters:", apiFilters);
+  
+  // Import the consolidated sales report API hook to use for admin settlement data
+  const { data, isLoading, isError, error } = useGetConsolidatedSalesReportQuery(apiFilters);
+  
+  const handleFilterChange = (newFilters: FilterParams) => {
+    console.log("Admin Settlement Report filter change:", newFilters);
+    setFilters(newFilters);
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+  
+  // Define data variables after API call
+  const salesData = data?.salesReport || [];
+  const cities = data?.cities || []; // Get cities from the data
+  const aggregatedTotals = data?.aggregatedTotals;
+  
+  // Store complete list of business names
+  const [allBusinessNames, setAllBusinessNames] = useState<string[]>([]);
+  
+  // Extract business names from data when there are no filters applied
+  // This assumes that when no filters are applied, we get the complete dataset
+  useEffect(() => {
+    // Only update the complete list if no filters are applied or if the list is empty
+    if ((Object.keys(apiFilters).length === 0 || allBusinessNames.length === 0) && salesData.length > 0) {
+      const nameMap: { [key: string]: boolean } = {};
+      const names: string[] = [];
+      
+      salesData.forEach((item: any) => {
+        const name = item['Business Name'];
+        if (name && name !== 'N/A' && !nameMap[name]) {
+          nameMap[name] = true;
+          names.push(name);
+        }
+      });
+      setAllBusinessNames(names);
+    }
+  }, [salesData, apiFilters, allBusinessNames.length]);
+  
+  // Use the complete list for filter options
+  const businessNames = allBusinessNames;
+  
+  // Format the data to match Admin Settlement structure
+  const adminSettlementData = salesData.map((item: any) => {
+    // Extract numeric values from the formatted strings
+    const servicePlatformFee = item["Service Platform Fees (₹)"] !== '-' ? parseFloat(item["Service Platform Fees (₹)"].replace(/[₹,]/g, '')) || 0 : 0;
+    const productPlatformFee = parseFloat(item["Product Platform Fee (₹)"].replace(/[₹,]/g, '')) || 0;
+    const serviceTax = parseFloat(item["Service Tax (₹)"].replace(/[₹,]/g, '')) || 0;
+    const productTax = parseFloat(item["Product Tax/GST (₹)"].replace(/[₹,]/g, '')) || 0;
+    const subscriptionAmount = parseFloat(item["Subscription Amount (₹)"].replace(/[₹,]/g, '')) || 0;
+    const smsAmount = parseFloat(item["SMS Amount (₹)"].replace(/[₹,]/g, '')) || 0;
+    
+    // Calculate total IN (Vendor Payout)
+    const totalIn = servicePlatformFee + productPlatformFee + serviceTax + productTax + subscriptionAmount + smsAmount;
+    
+    // Calculate vendor/supplier payables (Vendor Payable out)
+    const serviceGrossAmount = parseFloat(item["Total Service Amount (₹)"].replace(/[₹,]/g, '')) || 0;
+    const productGrossAmount = parseFloat(item["Total Product Amount (₹)"].replace(/[₹,]/g, '')) || 0;
+    
+    // Calculate platform fees for vendor/supplier payables
+    const servicePlatformFeeForPayout = item.Type.toLowerCase() === 'vendor' ? servicePlatformFee : 0;
+    const productPlatformFeeForPayout = productPlatformFee;
+    
+    // Calculate GST for vendor/supplier payables
+    const serviceGst = item.Type.toLowerCase() === 'vendor' ? servicePlatformFeeForPayout * 0.18 : 0;
+    const productGst = productPlatformFeeForPayout * 0.18;
+    
+    // Calculate vendor payable (only for vendors)
+    const vendorPayable = item.Type.toLowerCase() === 'vendor' ? 
+      (serviceGrossAmount - servicePlatformFeeForPayout - serviceGst) + 
+      (productGrossAmount - productPlatformFeeForPayout - productGst) : 0;
+    
+    // Calculate supplier payable (only for suppliers)
+    const supplierPayable = item.Type.toLowerCase() === 'supplier' ? 
+      (productGrossAmount - productPlatformFeeForPayout - productGst) : 0;
+    
+    // Calculate total OUT (vendor + supplier payables)
+    const totalOut = vendorPayable + supplierPayable;
+    
+    // Calculate net balance (IN - OUT)
+    const netBalance = totalIn - totalOut;
+    
+    return {
+      date: new Date().toISOString().split('T')[0], // Use current date as placeholder since API doesn't provide specific dates
+      entity: item["Business Name"],
+      servicePF: servicePlatformFee,
+      productPF: productPlatformFee,
+      subscription: subscriptionAmount,
+      sms: smsAmount,
+      totalIn,
+      vendorPayable,
+      supplierPayable,
+      totalOut,
+      netBalance
+    };
+  });
+  
+  // Filter data based on search term
+  const filteredData = useMemo(() => {
+    if (!searchTerm) return adminSettlementData;
+    
+    return adminSettlementData.filter((item: any) =>
+      Object.values(item).some((value: any) => 
+        value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+  }, [adminSettlementData, searchTerm]);
+  
+  // Pagination logic
+  const totalItems = filteredData.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedData = filteredData.slice(startIndex, endIndex);
+
+  if (isLoading) {
+    return (
+      <div>
+        {/* Summary Cards Skeleton */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        <div className="flex justify-end mb-4">
+          <Button onClick={() => setIsFilterModalOpen(true)}>
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+          </Button>
+        </div>
+        
+        <div className="overflow-x-auto no-scrollbar rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Entity</TableHead>
+                <TableHead>Service PF (IN)</TableHead>
+                <TableHead>Product PF (IN)</TableHead>
+                <TableHead>Subscription (IN)</TableHead>
+                <TableHead>SMS (IN)</TableHead>
+                <TableHead>Total IN</TableHead>
+                <TableHead>Vendor Payable (OUT)</TableHead>
+                <TableHead>Supplier Payable (OUT)</TableHead>
+                <TableHead>Total OUT</TableHead>
+                <TableHead>Net Balance</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(5)].map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isError) {
+    console.error("Error fetching admin settlement report:", error);
+    return (
+      <div className="p-4 text-center text-red-500">
+        Error loading admin settlement report data. Please try again later.
+        {/* Display error details in development */}
+        {process.env.NODE_ENV === 'development' && error && (
+          <div className="mt-2 text-sm text-gray-500">
+            {typeof error === 'string' ? error : JSON.stringify(error)}
+          </div>
+        )}
+      </div>
+    );
+  }
+  
+  // Show table structure even when there's no data
+  if (adminSettlementData.length === 0) {
+    return (
+      <div>
+        {/* Summary Cards - show with 0 values when no data */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Vendor Payout (IN)</CardTitle>
+              <IndianRupee className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Vendor Payable (OUT)</CardTitle>
+              <IndianRupee className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Net Balance</CardTitle>
+              <IndianRupee className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div className="flex justify-between items-center mb-4 gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when search term changes
+              }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsFilterModalOpen(true)}>
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'admin_settlement_report')}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'admin_settlement_report')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'admin_settlement_report')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+        
+        <FilterModal 
+          isOpen={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          onApplyFilters={handleFilterChange}
+          cities={cities}
+          businessNames={businessNames}
+          initialFilters={filters}
+          showBookingTypeFilter={false}
+          showUserTypeFilter={true}
+          showBusinessNameFilter={true}
+        />
+        
+        <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Entity</TableHead>
+                <TableHead>Service PF (IN)</TableHead>
+                <TableHead>Product PF (IN)</TableHead>
+                <TableHead>Subscription (IN)</TableHead>
+                <TableHead>SMS (IN)</TableHead>
+                <TableHead>Total IN</TableHead>
+                <TableHead>Vendor Payable (OUT)</TableHead>
+                <TableHead>Supplier Payable (OUT)</TableHead>
+                <TableHead>Total OUT</TableHead>
+                <TableHead>Net Balance</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
+                  No admin settlement data available.
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4 gap-2">
+        <div className="relative w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1); // Reset to first page when search term changes
+            }}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsFilterModalOpen(true)}>
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                <Copy className="mr-2 h-4 w-4" />
+                Copy
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'admin_settlement_report')}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'admin_settlement_report')}>
+                <FileText className="mr-2 h-4 w-4" />
+                CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'admin_settlement_report')}>
+                <FileText className="mr-2 h-4 w-4" />
+                PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      
+      <FilterModal 
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApplyFilters={handleFilterChange}
+        cities={cities}
+        businessNames={businessNames}
+        initialFilters={filters}
+        showBookingTypeFilter={false}
+        showUserTypeFilter={true}
+        showBusinessNameFilter={true}
+      />
+      
+      {/* Summary Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Vendor Payout (IN)</CardTitle>
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ₹{adminSettlementData.reduce((sum: number, item: any) => sum + (item.totalIn || 0), 0).toFixed(2)}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Vendor Payable (OUT)</CardTitle>
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ₹{adminSettlementData.reduce((sum: number, item: any) => sum + (item.totalOut || 0), 0).toFixed(2)}
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Net Balance</CardTitle>
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ₹{adminSettlementData.reduce((sum: number, item: any) => sum + (item.netBalance || 0), 0).toFixed(2)}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Date</TableHead>
+              <TableHead>Entity</TableHead>
+              <TableHead>Service PF (IN)</TableHead>
+              <TableHead>Product PF (IN)</TableHead>
+              <TableHead>Subscription (IN)</TableHead>
+              <TableHead>SMS (IN)</TableHead>
+              <TableHead>Total IN</TableHead>
+              <TableHead>Vendor Payable (OUT)</TableHead>
+              <TableHead>Supplier Payable (OUT)</TableHead>
+              <TableHead>Total OUT</TableHead>
+              <TableHead>Net Balance</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.map((item: any, index: number) => (
+              <TableRow key={startIndex + index}>
+                <TableCell>{item.date}</TableCell>
+                <TableCell className="font-medium">{item.entity}</TableCell>
+                <TableCell>₹{item.servicePF.toFixed(2)}</TableCell>
+                <TableCell>₹{item.productPF.toFixed(2)}</TableCell>
+                <TableCell>₹{item.subscription.toFixed(2)}</TableCell>
+                <TableCell>₹{item.sms.toFixed(2)}</TableCell>
+                <TableCell>₹{item.totalIn.toFixed(2)}</TableCell>
+                <TableCell>₹{item.vendorPayable.toFixed(2)}</TableCell>
+                <TableCell>₹{item.supplierPayable.toFixed(2)}</TableCell>
+                <TableCell>₹{item.totalOut.toFixed(2)}</TableCell>
+                <TableCell>₹{item.netBalance.toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+            {/* Current Page Totals Row */}
+            {paginatedData.length > 0 && (
+              <TableRow className="bg-muted font-semibold">
+                <TableCell colSpan={2}>TOTAL</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.servicePF || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.productPF || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.subscription || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.sms || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.totalIn || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.vendorPayable || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.supplierPayable || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.totalOut || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.netBalance || 0), 0).toFixed(2)}</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <Pagination
+        className="mt-4"
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={setItemsPerPage}
+        totalItems={totalItems}
+      />
+    </div>
+  );
+};
+
+// Component to display Vendor Payout Settlement report data in a table
+const VendorPayoutSettlementReportTable = () => {
+  const {
+    filters,
+    isFilterModalOpen,
+    currentPage,
+    itemsPerPage,
+    searchTerm,
+    tableRef,
+    setFilters,
+    setIsFilterModalOpen,
+    setCurrentPage,
+    setItemsPerPage,
+    setSearchTerm,
+    handleFilterChange,
+    filterAndPaginateData
+  } = useReport<VendorPayoutSettlementData>(5);
+  
+  // Use the API hook to fetch vendor payout settlement report data with filters
+  const apiFilters = filters;
+  
+  console.log("Vendor Payout Settlement API filters:", apiFilters);
+  
+  const { data, isLoading, isError, error } = useGetVendorPayoutSettlementReportQuery(apiFilters);
+  
+  // Define data variables after API call
+  const vendorPayoutSettlementData = data?.vendorPayoutSettlementReport || [];
+  const cities = data?.cities || []; // Get cities from API response
+  const vendorNames = data?.vendorNames || []; // Get vendor names from API response
+  
+  // Filter and paginate data
+  const {
+    paginatedData,
+    totalItems,
+    totalPages,
+    startIndex
+  } = filterAndPaginateData(vendorPayoutSettlementData, (item) => [
+    item["Source Type"],
+    item["Entity Name"],
+    `${item["Service Platform Fee"]}`,
+    `${item["Service Tax (₹)"]}`,
+    `${item["Service Total Amount"]}`,
+    `${item["Total"]}`
+  ]);
+
+  if (isLoading) {
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4 gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when search term changes
+              }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsFilterModalOpen(true)}>
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'vendor_payout_settlement_report')}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'vendor_payout_settlement_report')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'vendor_payout_settlement_report')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+        <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Source Type</TableHead>
+                <TableHead>Entity Name</TableHead>
+                <TableHead>Service Platform Fee</TableHead>
+                <TableHead>Service Tax (₹)</TableHead>
+                <TableHead>Service Total Amount</TableHead>
+                <TableHead>Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(5)].map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isError) {
+    console.error("Error fetching vendor payout settlement report:", error);
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4 gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when search term changes
+              }}
+            />
+          </div>
+          <Button onClick={() => setIsFilterModalOpen(true)}>
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+          </Button>
+        </div>
+        <div className="p-4 text-center text-red-500">
+          Error loading vendor payout settlement report data. Please try again later.
+          {/* Display error details in development */}
+          {process.env.NODE_ENV === 'development' && error && (
+            <div className="mt-2 text-sm text-gray-500">
+              {typeof error === 'string' ? error : JSON.stringify(error)}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+  
+  // Show table structure even when there's no data
+  if (vendorPayoutSettlementData.length === 0) {
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4 gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when search term changes
+              }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsFilterModalOpen(true)}>
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'vendor_payout_settlement_report')}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'vendor_payout_settlement_report')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'vendor_payout_settlement_report')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+        
+        <FilterModal 
+          isOpen={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          onApplyFilters={handleFilterChange}
+          cities={cities}
+          vendors={vendorNames}
+          initialFilters={filters}
+          showVendorFilter={true}
+          showBookingTypeFilter={false}
+        />
+        
+        <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Source Type</TableHead>
+                <TableHead>Entity Name</TableHead>
+                <TableHead>Service Platform Fee</TableHead>
+                <TableHead>Service Tax (₹)</TableHead>
+                <TableHead>Service Total Amount</TableHead>
+                <TableHead>Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  No vendor payout settlement data available.
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4 gap-2">
+        <div className="relative w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1); // Reset to first page when search term changes
+            }}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsFilterModalOpen(true)}>
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                <Copy className="mr-2 h-4 w-4" />
+                Copy
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'vendor_payout_settlement_report')}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'vendor_payout_settlement_report')}>
+                <FileText className="mr-2 h-4 w-4" />
+                CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'vendor_payout_settlement_report')}>
+                <FileText className="mr-2 h-4 w-4" />
+                PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      
+      <FilterModal 
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApplyFilters={handleFilterChange}
+        cities={cities}
+        vendors={vendorNames}
+        initialFilters={filters}
+        showVendorFilter={true}
+        showBookingTypeFilter={false}
+      />
+      
+      <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Source Type</TableHead>
+              <TableHead>Entity Name</TableHead>
+              <TableHead>Service Platform Fee</TableHead>
+              <TableHead>Service Tax (₹)</TableHead>
+              <TableHead>Service Total Amount</TableHead>
+              <TableHead>Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.map((item: any, index: number) => (
+              <TableRow key={startIndex + index}>
+                <TableCell>{item["Source Type"]}</TableCell>
+                <TableCell>{item["Entity Name"]}</TableCell>
+                <TableCell>₹{item["Service Platform Fee"]?.toFixed(2)}</TableCell>
+                <TableCell>₹{item["Service Tax (₹)"]?.toFixed(2)}</TableCell>
+                <TableCell>₹{item["Service Total Amount"]?.toFixed(2)}</TableCell>
+                <TableCell>₹{item["Total"]?.toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+            {/* Current Page Totals Row */}
+            {paginatedData.length > 0 && (
+              <TableRow className="bg-muted font-semibold">
+                <TableCell colSpan={2}>TOTAL</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Service Platform Fee"] || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Service Tax (₹)"] || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Service Total Amount"] || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Total"] || 0), 0).toFixed(2)}</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <Pagination
+        className="mt-4"
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={setItemsPerPage}
+        totalItems={totalItems}
+      />
+    </div>
+  );
+};
+
+// Component to display Vendor Payout Settlement Report - Product data in a table
+const VendorPayoutSettlementReportProductTable = () => {
+  const {
+    filters,
+    isFilterModalOpen,
+    currentPage,
+    itemsPerPage,
+    searchTerm,
+    tableRef,
+    setFilters,
+    setIsFilterModalOpen,
+    setCurrentPage,
+    setItemsPerPage,
+    setSearchTerm,
+    handleFilterChange,
+    filterAndPaginateData
+  } = useReport<VendorPayoutSettlementProductData>(5);
+  
+  // Use the API hook to fetch vendor payout settlement report for products with filters
+  const apiFilters = filters;
+  
+  console.log("Vendor Payout Settlement Report - Product API filters:", apiFilters);
+  
+  const { data, isLoading, isError, error } = useGetVendorPayoutSettlementReportProductQuery(apiFilters);
+  
+  // Define data variables after API call
+  const vendorPayoutSettlementProductData = data?.vendorPayoutSettlementReport || [];
+  const cities = data?.cities || []; // Get cities from API response
+  const businessNames = data?.businessNames || []; // Get business names from API response
+  
+  // Filter and paginate data
+  const {
+    paginatedData,
+    totalItems,
+    totalPages,
+    startIndex
+  } = filterAndPaginateData(vendorPayoutSettlementProductData, (item) => [
+    item["Source Type"],
+    item["Entity Name"],
+    `${item["Product Platform Fee"]}`,
+    `${item["Product Tax (₹)"]}`,
+    `${item["Product Total Amount"]}`,
+    `${item["Total"]}`
+  ]);
+
+  if (isLoading) {
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4 gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when search term changes
+              }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsFilterModalOpen(true)}>
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'vendor_payout_settlement_report_product')}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'vendor_payout_settlement_report_product')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'vendor_payout_settlement_report_product')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+        <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Source Type</TableHead>
+                <TableHead>Entity Name</TableHead>
+                <TableHead>Product Platform Fee</TableHead>
+                <TableHead>Product Tax (₹)</TableHead>
+                <TableHead>Product Total Amount</TableHead>
+                <TableHead>Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(5)].map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isError) {
+    console.error("Error fetching vendor payout settlement report - product:", error);
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4 gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when search term changes
+              }}
+            />
+          </div>
+          <Button onClick={() => setIsFilterModalOpen(true)}>
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+          </Button>
+        </div>
+        <div className="p-4 text-center text-red-500">
+          Error loading vendor payout settlement report - product data. Please try again later.
+          {/* Display error details in development */}
+          {process.env.NODE_ENV === 'development' && error && (
+            <div className="mt-2 text-sm text-gray-500">
+              {typeof error === 'string' ? error : JSON.stringify(error)}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+  
+  // Show table structure even when there's no data
+  if (vendorPayoutSettlementProductData.length === 0) {
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4 gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when search term changes
+              }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsFilterModalOpen(true)}>
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'vendor_payout_settlement_report_product')}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'vendor_payout_settlement_report_product')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'vendor_payout_settlement_report_product')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+        
+        <FilterModal 
+          isOpen={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          onApplyFilters={handleFilterChange}
+          cities={cities}
+          businessNames={businessNames}
+          initialFilters={filters}
+          showBusinessNameFilter={true}
+          showUserTypeFilter={true}
+          showBookingTypeFilter={false}
+        />
+        
+        <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Source Type</TableHead>
+                <TableHead>Entity Name</TableHead>
+                <TableHead>Product Platform Fee</TableHead>
+                <TableHead>Product Tax (₹)</TableHead>
+                <TableHead>Product Total Amount</TableHead>
+                <TableHead>Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  No vendor payout settlement product data available.
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4 gap-2">
+        <div className="relative w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1); // Reset to first page when search term changes
+            }}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsFilterModalOpen(true)}>
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                <Copy className="mr-2 h-4 w-4" />
+                Copy
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'vendor_payout_settlement_report_product')}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'vendor_payout_settlement_report_product')}>
+                <FileText className="mr-2 h-4 w-4" />
+                CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'vendor_payout_settlement_report_product')}>
+                <FileText className="mr-2 h-4 w-4" />
+                PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      
+      <FilterModal 
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApplyFilters={handleFilterChange}
+        cities={cities}
+        businessNames={businessNames}
+        initialFilters={filters}
+        showBusinessNameFilter={true}
+        showUserTypeFilter={true}
+        showBookingTypeFilter={false}
+      />
+      
+      <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Source Type</TableHead>
+              <TableHead>Entity Name</TableHead>
+              <TableHead>Product Platform Fee</TableHead>
+              <TableHead>Product Tax (₹)</TableHead>
+              <TableHead>Product Total Amount</TableHead>
+              <TableHead>Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.map((item: any, index: number) => (
+              <TableRow key={startIndex + index}>
+                <TableCell>{item["Source Type"]}</TableCell>
+                <TableCell>{item["Entity Name"]}</TableCell>
+                <TableCell>₹{item["Product Platform Fee"]?.toFixed(2)}</TableCell>
+                <TableCell>₹{item["Product Tax (₹)"]?.toFixed(2)}</TableCell>
+                <TableCell>₹{item["Product Total Amount"]?.toFixed(2)}</TableCell>
+                <TableCell>₹{item["Total"]?.toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+            {/* Current Page Totals Row */}
+            {paginatedData.length > 0 && (
+              <TableRow className="bg-muted font-semibold">
+                <TableCell colSpan={2}>TOTAL</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Product Platform Fee"] || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Product Tax (₹)"] || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Product Total Amount"] || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Total"] || 0), 0).toFixed(2)}</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <Pagination
+        className="mt-4"
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={setItemsPerPage}
+        totalItems={totalItems}
+      />
+    </div>
+  );
+};
+
+// Component to display Vendor Payable to Admin Report - Product data in a table
+const VendorPayableReportProductTable = () => {
+  const {
+    filters,
+    isFilterModalOpen,
+    currentPage,
+    itemsPerPage,
+    searchTerm,
+    tableRef,
+    setFilters,
+    setIsFilterModalOpen,
+    setCurrentPage,
+    setItemsPerPage,
+    setSearchTerm,
+    handleFilterChange,
+    filterAndPaginateData
+  } = useReport<VendorPayableProductData>(5);
+  
+  // Use the API hook to fetch vendor payable report for products with filters
+  const apiFilters = filters;
+  
+  console.log("Vendor Payable to Admin Report - Product API filters:", apiFilters);
+  
+  const { data, isLoading, isError, error } = useGetVendorPayableReportProductQuery(apiFilters);
+  
+  // Define data variables after API call
+  const vendorPayableProductData = data?.vendorPayableReport || [];
+  const cities = data?.cities || []; // Get cities from API response
+  const businessNames = data?.businessNames || []; // Get business names from API response
+  
+  // Filter and paginate data
+  const {
+    paginatedData,
+    totalItems,
+    totalPages,
+    startIndex
+  } = filterAndPaginateData(vendorPayableProductData, (item) => [
+    item["Payee Type"],
+    item["Payee Name"],
+    `${item["product Platform Fee"]}`,
+    `${item["product Tax/gst"]}`,
+    `${item["Total"]}`
+  ]);
+
+  if (isLoading) {
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4 gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when search term changes
+              }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsFilterModalOpen(true)}>
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'vendor_payable_report_product')}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'vendor_payable_report_product')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'vendor_payable_report_product')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+        <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Payee Type</TableHead>
+                <TableHead>Payee Name</TableHead>
+                <TableHead>product Platform Fee</TableHead>
+                <TableHead>product Tax/gst</TableHead>
+                <TableHead>Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(5)].map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isError) {
+    console.error("Error fetching vendor payable to admin report - product:", error);
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4 gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when search term changes
+              }}
+            />
+          </div>
+          <Button onClick={() => setIsFilterModalOpen(true)}>
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+          </Button>
+        </div>
+        <div className="p-4 text-center text-red-500">
+          Error loading vendor payable to admin report - product data. Please try again later.
+          {/* Display error details in development */}
+          {process.env.NODE_ENV === 'development' && error && (
+            <div className="mt-2 text-sm text-gray-500">
+              {typeof error === 'string' ? error : JSON.stringify(error)}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+  
+  // Show table structure even when there's no data
+  if (vendorPayableProductData.length === 0) {
+    return (
+      <div>
+        <div className="flex justify-between items-center mb-4 gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when search term changes
+              }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsFilterModalOpen(true)}>
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'vendor_payable_report_product')}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'vendor_payable_report_product')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'vendor_payable_report_product')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+        
+        <FilterModal 
+          isOpen={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          onApplyFilters={handleFilterChange}
+          cities={cities}
+          businessNames={businessNames}
+          initialFilters={filters}
+          showBookingTypeFilter={false}
+          showUserTypeFilter={true}
+          showBusinessNameFilter={true}
+        />
+        
+        <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Payee Type</TableHead>
+                <TableHead>Payee Name</TableHead>
+                <TableHead>product Platform Fee</TableHead>
+                <TableHead>product Tax/gst</TableHead>
+                <TableHead>Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                  No vendor payable to admin product data available.
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4 gap-2">
+        <div className="relative w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search..."
+            className="pl-8"
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1); // Reset to first page when search term changes
+            }}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsFilterModalOpen(true)}>
+            <Filter className="mr-2 h-4 w-4" />
+            Filters
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                <Copy className="mr-2 h-4 w-4" />
+                Copy
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'vendor_payable_report_product')}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'vendor_payable_report_product')}>
+                <FileText className="mr-2 h-4 w-4" />
+                CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'vendor_payable_report_product')}>
+                <FileText className="mr-2 h-4 w-4" />
+                PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                <Printer className="mr-2 h-4 w-4" />
+                Print
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+      
+      <FilterModal 
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        onApplyFilters={handleFilterChange}
+        cities={cities}
+        businessNames={businessNames}
+        initialFilters={filters}
+        showBookingTypeFilter={false}
+        showUserTypeFilter={true}
+        showBusinessNameFilter={true}
+      />
+      
+      <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Payee Type</TableHead>
+              <TableHead>Payee Name</TableHead>
+              <TableHead>product Platform Fee</TableHead>
+              <TableHead>product Tax/gst</TableHead>
+              <TableHead>Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedData.map((item: any, index: number) => (
+              <TableRow key={startIndex + index}>
+                <TableCell>{item["Payee Type"]}</TableCell>
+                <TableCell>{item["Payee Name"]}</TableCell>
+                <TableCell>₹{item["product Platform Fee"]?.toFixed(2)}</TableCell>
+                <TableCell>₹{item["product Tax/gst"]?.toFixed(2)}</TableCell>
+                <TableCell>₹{item["Total"]?.toFixed(2)}</TableCell>
+              </TableRow>
+            ))}
+            {/* Current Page Totals Row */}
+            {paginatedData.length > 0 && (
+              <TableRow className="bg-muted font-semibold">
+                <TableCell colSpan={2}>TOTAL</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["product Platform Fee"] || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["product Tax/gst"] || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Total"] || 0), 0).toFixed(2)}</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      <Pagination
+        className="mt-4"
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={setItemsPerPage}
+        totalItems={totalItems}
+      />
+    </div>
+  );
+};
+
+// Component for Vendor Payable to Admin Report - Product dialog
+const VendorPayableReportProductDialog = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  const tableRef = useRef<HTMLDivElement>(null);
+  
+  const handleExport = (format: string) => {
+    const fileName = 'vendor_payable_report_product';
+    switch (format) {
+      case 'excel':
+        exportToExcel(tableRef, fileName);
+        break;
+      case 'csv':
+        exportToCSV(tableRef, fileName);
+        break;
+      case 'pdf':
+        exportToPDF(tableRef, fileName);
+        break;
+      case 'copy':
+        copyToClipboard(tableRef);
+        break;
+      case 'print':
+        printTable(tableRef);
+        break;
+      default:
+        break;
+    }
+  };
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Vendor Payable to Admin Report - Product</DialogTitle>
+          <DialogDescription>
+            Amount vendor pays to admin for products.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <div ref={tableRef}>
+            <VendorPayableReportProductTable />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Component for Vendor Payout Settlement report dialog
+const VendorPayoutSettlementReportDialog = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  const tableRef = useRef<HTMLDivElement>(null);
+  
+  const handleExport = (format: string) => {
+    const fileName = 'vendor_payout_settlement_report';
+    switch (format) {
+      case 'excel':
+        exportToExcel(tableRef, fileName);
+        break;
+      case 'csv':
+        exportToCSV(tableRef, fileName);
+        break;
+      case 'pdf':
+        exportToPDF(tableRef, fileName);
+        break;
+      case 'copy':
+        copyToClipboard(tableRef);
+        break;
+      case 'print':
+        printTable(tableRef);
+        break;
+      default:
+        break;
+    }
+  };
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Vendor Payout Settlement Report</DialogTitle>
+          <DialogDescription>
+            Amount admin pays to vendor for services.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <div ref={tableRef}>
+            <VendorPayoutSettlementReportTable />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+// Component for Vendor Payout Settlement Report - Product dialog
+const VendorPayoutSettlementReportProductDialog = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  const tableRef = useRef<HTMLDivElement>(null);
+  
+  const handleExport = (format: string) => {
+    const fileName = 'vendor_payout_settlement_report_product';
+    switch (format) {
+      case 'excel':
+        exportToExcel(tableRef, fileName);
+        break;
+      case 'csv':
+        exportToCSV(tableRef, fileName);
+        break;
+      case 'pdf':
+        exportToPDF(tableRef, fileName);
+        break;
+      case 'copy':
+        copyToClipboard(tableRef);
+        break;
+      case 'print':
+        printTable(tableRef);
+        break;
+      default:
+        break;
+    }
+  };
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Vendor Payout Settlement Report - Product</DialogTitle>
+          <DialogDescription>
+            Amount admin pays to vendor for products.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <div ref={tableRef}>
+            <VendorPayoutSettlementReportProductTable />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+
+
+// Component for Admin Settlement Report dialog
+const AdminSettlementReportDialog = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
+  const tableRef = useRef<HTMLDivElement>(null);
+  
+  const handleExport = (format: string) => {
+    const fileName = 'admin_settlement_report';
+    switch (format) {
+      case 'excel':
+        exportToExcel(tableRef, fileName);
+        break;
+      case 'csv':
+        exportToCSV(tableRef, fileName);
+        break;
+      case 'pdf':
+        exportToPDF(tableRef, fileName);
+        break;
+      case 'copy':
+        copyToClipboard(tableRef);
+        break;
+      case 'print':
+        printTable(tableRef);
+        break;
+      default:
+        break;
+    }
+  };
+  
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Admin Settlement Report</DialogTitle>
+          <DialogDescription>
+            Combined view of Vendor Payout (IN) and Vendor Payable (OUT) with net balance calculation.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+          <div ref={tableRef}>
+            <AdminSettlementReportTable />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 // Component for Marketing Campaign report dialog
 const MarketingCampaignReportDialog = ({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) => {
   const tableRef = useRef<HTMLDivElement>(null);
@@ -5866,6 +8665,11 @@ export default function ReportsPage() {
   const [isMarketingCampaignReportDialogOpen, setIsMarketingCampaignReportDialogOpen] = useState(false);
   const [isSalesByBrandReportDialogOpen, setIsSalesByBrandReportDialogOpen] = useState(false);
   const [isSalesByCategoryReportDialogOpen, setIsSalesByCategoryReportDialogOpen] = useState(false);
+  const [isVendorPayoutDialogOpen, setIsVendorPayoutDialogOpen] = useState(false);
+  const [isVendorPayoutProductDialogOpen, setIsVendorPayoutProductDialogOpen] = useState(false);
+  const [isVendorPayableDialogOpen, setIsVendorPayableDialogOpen] = useState(false);
+  const [isVendorPayableProductDialogOpen, setIsVendorPayableProductDialogOpen] = useState(false);
+  const [isAdminSettlementDialogOpen, setIsAdminSettlementDialogOpen] = useState(false);
   
   const handleViewClick = (report: Report) => {
     setSelectedReport(report);
@@ -5909,7 +8713,28 @@ export default function ReportsPage() {
     // Special handling for Sales by Category Report
     else if (report.title === "Sales by Category") {
       setIsSalesByCategoryReportDialogOpen(true);
-    } else {
+    }
+    // Special handling for Vendor Payout Settlement Report
+    else if (report.title === "Vendor Payout Settlement Report") {
+      setIsVendorPayoutDialogOpen(true);
+    }
+    // Special handling for Vendor Payout Settlement Report - Product
+    else if (report.title === "Vendor Payout Settlement Report - Product") {
+      setIsVendorPayoutProductDialogOpen(true);
+    }
+    // Special handling for Vendor Payable to Admin Report
+    else if (report.title === "Vendor Payable to Admin Report") {
+      setIsVendorPayableDialogOpen(true);
+    }
+    // Special handling for Vendor Payable to Admin Report - Product
+    else if (report.title === "Vendor Payable to Admin Report - Product") {
+      setIsVendorPayableProductDialogOpen(true);
+    }
+    // Special handling for Admin Settlement Report
+    else if (report.title === "Admin Settlement Report") {
+      setIsAdminSettlementDialogOpen(true);
+    }
+    else {
       setIsModalOpen(true);
     }
   };
@@ -6108,7 +8933,32 @@ export default function ReportsPage() {
         isOpen={isSalesByCategoryReportDialogOpen} 
         onClose={() => setIsSalesByCategoryReportDialogOpen(false)} 
       />
+            
+      <VendorPayoutSettlementReportDialog
+        isOpen={isVendorPayoutDialogOpen}
+        onClose={() => setIsVendorPayoutDialogOpen(false)}
+      />
+            
+      <VendorPayoutSettlementReportProductDialog
+        isOpen={isVendorPayoutProductDialogOpen}
+        onClose={() => setIsVendorPayoutProductDialogOpen(false)}
+      />
+            
+      <VendorPayableReportDialog
+        isOpen={isVendorPayableDialogOpen}
+        onClose={() => setIsVendorPayableDialogOpen(false)}
+      />
       
+      <VendorPayableReportProductDialog
+        isOpen={isVendorPayableProductDialogOpen}
+        onClose={() => setIsVendorPayableProductDialogOpen(false)}
+      />
+      
+      <AdminSettlementReportDialog
+        isOpen={isAdminSettlementDialogOpen}
+        onClose={() => setIsAdminSettlementDialogOpen(false)}
+      />
+            
       {/* Unified Filter Modal Component */}
       {/* Placeholder for FilterModal - instances are rendered where needed */}
       <div style={{ display: 'none' }}>

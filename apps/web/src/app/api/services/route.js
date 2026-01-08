@@ -1,5 +1,5 @@
 import _db from "@repo/lib/db";
-import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
+import ServiceModel from "@repo/lib/models/admin/Service.model";
 import CategoryModel from "@repo/lib/models/admin/Category.model";
 import mongoose from "mongoose";
 
@@ -12,7 +12,7 @@ export const OPTIONS = async () => {
   return response;
 };
 
-// Get all approved services across all vendors (public endpoint)
+// Get all services (public endpoint) - can be filtered by category
 export const GET = async (request) => {
   try {
     // Initialize database connection
@@ -21,79 +21,24 @@ export const GET = async (request) => {
     // Extract query parameters
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get('categoryId');
-    const limit = parseInt(searchParams.get('limit')) || 100;
-    const page = parseInt(searchParams.get('page')) || 1;
     
-    // Build aggregation pipeline
-    const pipeline = [
-      // Unwind services array to get individual services
-      { $unwind: "$services" },
-      // Match only approved services
-      { $match: { "services.status": "approved" } }
-    ];
-    
-    // Add category filter if provided
-    if (categoryId) {
-      pipeline.push({ 
-        $match: { 
-          "services.category": new mongoose.Types.ObjectId(categoryId) 
-        } 
-      });
+    // Build query
+    const query = {};
+    if (categoryId && mongoose.Types.ObjectId.isValid(categoryId)) {
+      query.category = new mongoose.Types.ObjectId(categoryId);
     }
     
-    // Lookup to get category details
-    pipeline.push(
-      {
-        $lookup: {
-          from: "categories",
-          localField: "services.category",
-          foreignField: "_id",
-          as: "categoryDetails",
-        },
-      },
-      { 
-        $unwind: { 
-          path: "$categoryDetails", 
-          preserveNullAndEmptyArrays: true 
-        } 
-      }
-    );
-    
-    // Add category name to services
-    pipeline.push({
-      $addFields: {
-        "services.categoryName": "$categoryDetails.name"
-      }
-    });
-    
-    // Remove categoryDetails field
-    pipeline.push({
-      $project: {
-        categoryDetails: 0
-      }
-    });
-    
-    // Pagination
-    pipeline.push(
-      { $skip: (page - 1) * limit },
-      { $limit: limit }
-    );
-    
-    // Execute aggregation
-    const result = await VendorServicesModel.aggregate(pipeline);
-    
-    // Transform the results
-    const services = result.map(item => ({
-      ...item.services,
-      vendorId: item.vendor
-    }));
+    // Fetch master services from admin's ServiceModel
+    // This provides a clean list of service types for the user to pick from
+    const services = await ServiceModel.find(query)
+      .populate("category", "name")
+      .lean()
+      .exec();
     
     const response = Response.json({
       success: true,
       services: services,
-      count: services.length,
-      page: page,
-      limit: limit
+      count: services.length
     });
 
     // Set CORS headers

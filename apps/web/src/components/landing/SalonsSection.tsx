@@ -160,7 +160,10 @@ export function SalonsSection() {
   } = useSalonFilter();
 
   // Fetch vendors and categories/services for filter display
-  const { data: VendorsData, isLoading, error } = useGetPublicVendorsQuery(void 0);
+  const { data: VendorsData, isLoading, error } = useGetPublicVendorsQuery({
+    categoryIds: selectedCategories.join(','),
+    serviceIds: selectedServices.join(',')
+  });
   const { data: CategoriesData } = useGetPublicCategoriesQuery(undefined);
   const { data: ServicesData } = useGetPublicServicesQuery({});
   
@@ -169,24 +172,7 @@ export function SalonsSection() {
     // Check for the correct API response structure
     let vendorsArray = VendorsData?.vendors;
     
-    // Apply filtering based on selected categories or services from PlatformFor
-    if (vendorsArray && Array.isArray(vendorsArray) && vendorsArray.length > 0) {
-      // Filter by selected services first (higher priority)
-      if (selectedServices.length > 0) {
-        vendorsArray = vendorsArray.filter(vendor => 
-          vendor.services && vendor.services.some((service: any) => selectedServices.includes(service._id))
-        );
-      } 
-      // If no services selected, filter by categories
-      else if (selectedCategories.length > 0) {
-        vendorsArray = vendorsArray.filter(vendor => 
-          vendor.services && vendor.services.some((service: any) => 
-            service.category && selectedCategories.includes(service.category._id)
-          )
-        );
-      }
-    }
-    
+    // Filtering is now handled by the API itself!
     // No fallback to mock data anymore - show empty state instead
     if (!vendorsArray || !Array.isArray(vendorsArray) || vendorsArray.length === 0) {
       return []; // Return empty array instead of mock data
