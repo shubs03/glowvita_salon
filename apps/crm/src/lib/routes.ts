@@ -36,7 +36,7 @@ export const vendorNavItems: NavItem[] = [
   { title: "Referrals", href: "/referrals", Icon: FaUserFriends, permission: 'referrals_view' },
   { title: "Marketing", href: "/marketing", Icon: FaBullhorn, permission: 'marketing_view' },
   { title: "Notifications", href: "/push-notifications", Icon: FaBell, permission: 'notifications_view' },
-  { title: "Reports", href: "/reports", Icon: FaFileAlt, permission: 'reports_view' },
+  { title: "Reports", href: "/reports/vendor", Icon: FaFileAlt, permission: 'reports_view' },
 ];
 
 export const doctorNavItems: NavItem[] = [
@@ -68,5 +68,5 @@ export const supplierNavItems: NavItem[] = [
   { title: "Referrals", href: "/referrals", Icon: FaUserFriends, permission: 'referrals_view' },
   { title: "Marketing", href: "/marketing", Icon: FaBullhorn, permission: 'marketing_view' },
   { title: "Notifications", href: "/push-notifications", Icon: FaBell, permission: 'notifications_view' },
-  { title: "Reports", href: "/reports", Icon: FaFileAlt, permission: 'reports_view' },
+  { title: "Reports", href: "/reports/supplier", Icon: FaFileAlt, permission: 'reports_view' },
 ];
