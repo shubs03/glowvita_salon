@@ -86,6 +86,10 @@ export default function SalesPage() {
   const [serviceCart, setServiceCart] = useState<ServiceCartItem[]>([]);
   const [productCart, setProductCart] = useState<ProductCartItem[]>([]);
   
+  // Force re-render when selectedClient changes
+  const selectedClientId = selectedClient?._id;
+
+  
   // Determine which tabs to show based on user role
   const showServicesTab = userRole !== 'supplier';
   const showProductsTab = true; // Both vendors and suppliers can have products
@@ -144,6 +148,7 @@ export default function SalesPage() {
       {/* Tab Content */}
       {activeTab === 'services' && showServicesTab ? (
         <ServicesTab 
+          key={`services-tab-${selectedClient?._id || 'none'}`}
           cart={serviceCart}
           setCart={setServiceCart}
           selectedClient={selectedClient}
@@ -151,6 +156,7 @@ export default function SalesPage() {
         />
       ) : activeTab === 'products' && showProductsTab ? (
         <ProductsTab 
+          key={`products-tab-${selectedClient?._id || 'none'}`}
           cart={productCart}
           setCart={setProductCart}
           selectedClient={selectedClient}
