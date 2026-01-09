@@ -117,6 +117,7 @@ export const GET = async (request) => {
         subCategories: { $first: "$vendorData.subCategories" },
         profileImage: { $first: "$vendorData.profileImage" },
         description: { $first: "$vendorData.description" },
+        location: { $first: "$vendorData.location" },
         createdAt: { $first: "$vendorData.createdAt" },
         subscription: { $first: "$vendorData.subscription" },
         services: { $push: "$services" },

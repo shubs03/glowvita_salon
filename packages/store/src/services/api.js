@@ -2565,6 +2565,26 @@ export const glowvitaApi = createApi({
       }),
       providesTags: ["CrmProducts"]
     }),
+    
+    // Settlement Summary Report
+    getSettlementSummaryReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, settlementFromDate, settlementToDate }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'week' || period === 'month' || period === 'year') && startDate && endDate) {
+          params.append('startDate', startDate);
+          params.append('endDate', endDate);
+        }
+        if (settlementFromDate) params.append('settlementFromDate', settlementFromDate);
+        if (settlementToDate) params.append('settlementToDate', settlementToDate);
+        
+        return {
+          url: `/crm/vendor/reports/settlement-summary?${params.toString()}`,
+          method: 'GET'
+        };
+      },
+      providesTags: ["CrmReports"]
+    }),
   }),
 });
 
@@ -2896,6 +2916,7 @@ export const {
   useGetUniqueProductNamesQuery,
   useGetUniqueBrandsQuery,
   useGetUniqueCategoriesQuery,
+  useGetSettlementSummaryReportQuery,
   
   // Payment Collections Hook
   useGetPaymentCollectionsQuery,

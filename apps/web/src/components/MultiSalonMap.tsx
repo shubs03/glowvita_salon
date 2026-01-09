@@ -5,6 +5,8 @@ import { GoogleMap, useLoadScript, Marker, InfoWindow } from '@react-google-maps
 import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '@repo/config/config';
 import Image from "next/image";
 
+const GOOGLE_MAPS_LIBRARIES: any = ["places"];
+
 interface MultiSalonMapProps {
   vendors: any[];
   onMarkerClick?: (vendor: any) => void;
@@ -25,7 +27,7 @@ export const MultiSalonMap = ({ vendors, onMarkerClick, searchQuery }: MultiSalo
   const apiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: apiKey || "",
-    libraries: ['places'] as any,
+    libraries: GOOGLE_MAPS_LIBRARIES,
   });
 
   const [selectedVendor, setSelectedVendor] = useState<any>(null);
@@ -49,9 +51,9 @@ export const MultiSalonMap = ({ vendors, onMarkerClick, searchQuery }: MultiSalo
     }
 
     if (vendors.length > 0) {
-      const firstWithCoords = vendors.find(v => v.coordinates?.lat && v.coordinates?.lng);
+      const firstWithCoords = vendors.find(v => v.location?.lat && v.location?.lng);
       if (firstWithCoords) {
-        setMapCenter({ lat: firstWithCoords.coordinates.lat, lng: firstWithCoords.coordinates.lng });
+        setMapCenter({ lat: firstWithCoords.location.lat, lng: firstWithCoords.location.lng });
       }
     }
   }, [vendors, searchQuery, isLoaded]);
@@ -71,10 +73,12 @@ export const MultiSalonMap = ({ vendors, onMarkerClick, searchQuery }: MultiSalo
       }}
     >
       {vendors.map((vendor) => {
-        // Fallback coordinates if not provided (mocking for now if missing)
+        // Use real backend coordinates from location field
+        if (!vendor.location?.lat || !vendor.location?.lng) return null;
+
         const position = { 
-          lat: vendor.coordinates?.lat || (defaultCenter.lat + (Math.random() - 0.5) * 0.1), 
-          lng: vendor.coordinates?.lng || (defaultCenter.lng + (Math.random() - 0.5) * 0.1) 
+          lat: vendor.location.lat, 
+          lng: vendor.location.lng
         };
 
         return (
@@ -96,8 +100,8 @@ export const MultiSalonMap = ({ vendors, onMarkerClick, searchQuery }: MultiSalo
       {selectedVendor && (
         <InfoWindow
           position={{ 
-            lat: selectedVendor.coordinates?.lat || defaultCenter.lat, 
-            lng: selectedVendor.coordinates?.lng || defaultCenter.lng 
+            lat: selectedVendor.location?.lat || defaultCenter.lat, 
+            lng: selectedVendor.location?.lng || defaultCenter.lng 
           }}
           onCloseClick={() => setSelectedVendor(null)}
         >
