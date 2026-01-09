@@ -1771,25 +1771,8 @@ export default function ServicesTab({
                           <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 rounded px-2">
                             <div className="flex-1">
                               <p className="font-semibold text-gray-900 text-xs">{item.name}</p>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                <span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full">
-                                  {item.duration} min
-                                </span>
-                                <span className="text-xs bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded-full">
-                                  {item.categoryName || 'General'}
-                                </span>
-                                <span className="text-xs bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded-full">
-                                  Qty: {item.quantity}
-                                </span>
-                                <span className="text-xs bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded-full">
-                                  Discount: {item.discount ? (item.discountType === 'percentage' ? `${item.discount}%` : `₹${item.discount}`) : '0'}
-                                </span>
-                              </div>
                             </div>
                             <div className="text-right ml-2">
-                              {item.discount && item.discount > 0 && (
-                                <p className="text-xs text-gray-500 line-through">₹{(item.price * item.quantity).toFixed(2)}</p>
-                              )}
                               <p className="font-semibold text-gray-900">₹{item.totalPrice.toFixed(2)}</p>
                             </div>
                           </div>
