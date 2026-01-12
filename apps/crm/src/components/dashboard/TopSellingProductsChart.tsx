@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#a4de6c", "#d0ed57"];
 
@@ -107,6 +107,15 @@ export function TopSellingProductsChart({
     );
   }
 
+  // Calculate total for percentage calculation
+  const totalQuantity = data.reduce((sum, item) => sum + item.quantitySold, 0);
+
+  // Format data with explicit percentages for display
+  const formattedData = data.map(item => ({
+    ...item,
+    percentage: totalQuantity > 0 ? (item.quantitySold / totalQuantity) * 100 : 0
+  }));
+
   // Custom tooltip to show detailed information
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -116,6 +125,7 @@ export function TopSellingProductsChart({
           <p className="font-semibold">{data.productName}</p>
           <p>Quantity Sold: {data.quantitySold}</p>
           <p>Total Sales: ₹{data.totalSales.toFixed(2)}</p>
+          <p>Percentage: {data.percentage.toFixed(1)}%</p>
         </div>
       );
     }
@@ -138,34 +148,27 @@ export function TopSellingProductsChart({
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {data.length > 0 ? (
+        {formattedData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              data={data}
-              margin={{
-                top: 5,
-                right: 30,
-                left: 20,
-                bottom: 50,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="productName" 
-                angle={-45} 
-                textAnchor="end"
-                height={60}
-                tick={{ fontSize: 12 }}
-              />
-              <YAxis />
+            <PieChart>
+              <Pie
+                data={formattedData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                outerRadius={100}
+                fill="#8884d8"
+                dataKey="quantitySold"
+                nameKey="productName"
+                label={({ productName, percentage }) => `${productName}: ${percentage.toFixed(0)}%`}
+              >
+                {formattedData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
               <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Bar 
-                dataKey="quantitySold" 
-                name="Quantity Sold" 
-                fill="#8884d8" 
-              />
-            </BarChart>
+              <Legend iconType="circle" />
+            </PieChart>
           </ResponsiveContainer>
         ) : (
           <div className="flex items-center justify-center h-[300px] text-muted-foreground">

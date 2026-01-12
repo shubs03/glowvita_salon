@@ -1420,6 +1420,10 @@ export const glowvitaApi = createApi({
       query: (product) => ({ url: "/crm/products", method: "POST", body: product }),
       invalidatesTags: ["CrmProducts"],
     }),
+    createBulkCrmProducts: builder.mutation({
+      query: (products) => ({ url: "/crm/products", method: "POST", body: products }),
+      invalidatesTags: ["CrmProducts"],
+    }),
     updateCrmProduct: builder.mutation({
       query: (product) => ({ url: "/crm/products", method: "PUT", body: product }),
       invalidatesTags: ["CrmProducts"],

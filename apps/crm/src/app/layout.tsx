@@ -147,6 +147,7 @@ export default function RootLayout({
     '/customers/summary',
     '/services',
     '/products',
+    '/supplier-products',
     '/product-questions',
     '/reviews',
     '/marketplace',
