@@ -6,7 +6,7 @@ export async function POST(request) {
     // Check if request is FormData (multipart/form-data) or JSON
     const contentType = request.headers.get('content-type') || '';
     
-    let to, subject, html, text, from, attachments = [];
+    let to, subject, html, text = '', from, attachments = [];
     
     if (contentType.includes('multipart/form-data')) {
       // Handle FormData
@@ -38,7 +38,7 @@ export async function POST(request) {
       from = jsonData.from;
     }
     
-    console.log('Received email request:', { to, subject, from });
+    console.log('Received email request:', { to, subject, from, html: html ? 'HTML content present' : 'No HTML content', text: text || 'No text content' });
     
     // Validate required fields
     if (!to || !subject || (!html && !text)) {

@@ -15,10 +15,21 @@ import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { toast } from 'sonner';
 import InvoiceUI from "@/components/InvoiceUI";
 // Dynamically import html2pdf to avoid compilation issues
-let html2pdf: any;
-if (typeof window !== 'undefined') {
-  html2pdf = require('html2pdf.js').default;
-}
+let html2pdf: any = null;
+
+// Function to load html2pdf dynamically
+const loadHtml2Pdf = async () => {
+  if (typeof window !== 'undefined' && !html2pdf) {
+    try {
+      const html2pdfModule = await import('html2pdf.js');
+      html2pdf = html2pdfModule.default;
+    } catch (error) {
+      console.error('Failed to load html2pdf:', error);
+      return null;
+    }
+  }
+  return html2pdf;
+};
 
 // Product interface
 
@@ -86,31 +97,31 @@ export default function ProductsTab({
   const { user } = useCrmAuth();
   const VENDOR_ID = user?._id || "";
   const userRole = user?.role;
-  
+
   // Fetch profile based on user role
   const { data: vendorProfile } = useGetVendorProfileQuery(undefined, {
     skip: !user?._id || userRole === 'supplier'
   });
-  
+
   const { data: supplierProfile } = useGetCurrentSupplierProfileQuery(undefined, {
     skip: !user?._id || userRole !== 'supplier'
   });
-  
+
   // Get business name from profile based on user role
-  const businessName = userRole === 'supplier' 
+  const businessName = userRole === 'supplier'
     ? (supplierProfile?.data?.shopName || "Your Supplier Business")
     : (vendorProfile?.data?.businessName || vendorProfile?.data?.shopName || "Your Salon");
-  
+
   // Product listing states
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [products, setProducts] = useState<Product[]>([]);
-  
+
   // Client selection states
   const [clientSearchTerm, setClientSearchTerm] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
-  
+
   // Client form state
   const [clientFormData, setClientFormData] = useState({
     fullName: "",
@@ -124,28 +135,28 @@ export default function ProductsTab({
     address: "",
     preferences: ""
   });
-  
+
   const [taxRate, setTaxRate] = useState(0); // 0% tax rate
-  
+
   // Fetch products with better loading state
   // Use different endpoints for vendors and suppliers
   const { data: crmProductsData, isLoading: crmProductsLoading, isFetching: crmProductsFetching } = useGetCrmProductsQuery(
     { vendorId: VENDOR_ID },
     { skip: !VENDOR_ID || userRole === 'supplier' }
   );
-  
+
   const { data: supplierProductsData, isLoading: supplierProductsLoading, isFetching: supplierProductsFetching } = useGetSupplierProductsQuery(
     undefined,
     { skip: !VENDOR_ID || userRole !== 'supplier' }
   );
-  
+
   // Use appropriate data based on user role and extract the data array
-  const productsData = userRole === 'supplier' 
-    ? (supplierProductsData?.data || supplierProductsData) 
+  const productsData = userRole === 'supplier'
+    ? (supplierProductsData?.data || supplierProductsData)
     : (crmProductsData?.data || crmProductsData);
   const productsLoading = userRole === 'supplier' ? supplierProductsLoading : crmProductsLoading;
   const productsFetching = userRole === 'supplier' ? supplierProductsFetching : crmProductsFetching;
-  
+
   // Fetch clients
   const { data: clientList = [], isLoading: clientsLoading } = useGetClientsQuery({
     search: '',
@@ -155,33 +166,33 @@ export default function ProductsTab({
   }, {
     skip: !user?._id,
   });
-  
+
   // Create client mutation
   const [createClient, { isLoading: isCreatingClient }] = useCreateClientMutation();
-  
+
   // Create billing mutation
   const [createBilling, { isLoading: isCreatingBilling }] = useCreateBillingMutation();
-  
+
   // Fetch categories
   const { data: categoriesData = [] } = useGetAdminProductCategoriesQuery({});
   const categories = categoriesData?.data || [];
-  
+
   // Fetch staff members
   const { data: staffData = [] } = useGetStaffQuery({});
-  
+
   // Filter products based on search and category
   useEffect(() => {
     if (productsData) {
       let filtered = productsData as Product[];
-      
+
       // Apply search filter
       if (searchTerm) {
-        filtered = filtered.filter(product => 
+        filtered = filtered.filter(product =>
           product.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
           (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
         );
       }
-      
+
       // Apply category filter
       if (selectedCategory !== "all") {
         const selectedCategoryName = categories.find((cat: any) => cat._id === selectedCategory)?.name;
@@ -189,32 +200,32 @@ export default function ProductsTab({
           filtered = filtered.filter(product => product.category === selectedCategoryName);
         }
       }
-      
+
       setProducts(filtered);
     }
   }, [productsData, searchTerm, selectedCategory, categories]);
-  
+
   // Filter clients based on search term
   const filteredClients = useMemo(() => {
-    return clientList.filter((client: Client) => 
-      client.fullName.toLowerCase().includes(clientSearchTerm.toLowerCase()) || 
+    return clientList.filter((client: Client) =>
+      client.fullName.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
       client.email.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
       client.phone.includes(clientSearchTerm)
     );
   }, [clientList, clientSearchTerm]);
-  
+
   // Handle client selection
   const handleSelectClient = (client: Client) => {
     setSelectedClient(client);
     setClientSearchTerm("");
     setIsSearchFocused(false);
   };
-  
+
   // Handle remove selected client
   const handleRemoveSelectedClient = () => {
     setSelectedClient(null);
   };
-  
+
   // Handle client form input change
   const handleClientInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -226,7 +237,7 @@ export default function ProductsTab({
     }
     setClientFormData(prev => ({ ...prev, [name]: value }));
   };
-  
+
   // Handle client file change for profile picture
   const handleClientFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -238,12 +249,12 @@ export default function ProductsTab({
       reader.readAsDataURL(file);
     }
   };
-  
+
   // Handle client select change
   const handleClientSelectChange = (name: string, value: string) => {
     setClientFormData(prev => ({ ...prev, [name]: value }));
   };
-  
+
   // Handle save new client
   const handleSaveClient = async () => {
     try {
@@ -252,9 +263,9 @@ export default function ProductsTab({
         toast.error('Phone number must be exactly 10 digits.');
         return;
       }
-      
+
       const gender = (clientFormData.gender as 'Male' | 'Female' | 'Other') || 'Other';
-      
+
       const clientData = {
         fullName: clientFormData.fullName.trim(),
         // Email is optional; omit when empty
@@ -268,16 +279,16 @@ export default function ProductsTab({
         address: clientFormData.address.trim(),
         preferences: clientFormData.preferences.trim()
       };
-      
+
       // Create new client
       const result: any = await createClient(clientData).unwrap();
       toast.success("Client created successfully.");
-      
+
       // Select the newly created client
       if (result?.data) {
         setSelectedClient(result.data);
       }
-      
+
       // Reset form and close modal
       setClientFormData({
         fullName: "",
@@ -297,20 +308,20 @@ export default function ProductsTab({
       toast.error(errorMessage);
     }
   };
-  
+
   // Add item to cart
   const addToCart = (product: Product) => {
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item._id === product._id);
-      
+
       if (existingItem) {
-        return prevCart.map(item => 
-          item._id === product._id 
-            ? { 
-                ...item, 
-                quantity: item.quantity + 1,
-                totalPrice: (item.quantity + 1) * item.price
-              } 
+        return prevCart.map(item =>
+          item._id === product._id
+            ? {
+              ...item,
+              quantity: item.quantity + 1,
+              totalPrice: (item.quantity + 1) * item.price
+            }
             : item
         );
       } else {
@@ -324,41 +335,41 @@ export default function ProductsTab({
         ];
       }
     });
-    
+
     toast.success(`${product.productName} added to cart`);
   };
-  
+
   // Update item quantity
   const updateQuantity = (id: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(id);
       return;
     }
-    
-    setCart(prevCart => 
-      prevCart.map(item => 
-        item._id === id 
-          ? { 
-              ...item, 
-              quantity,
-              totalPrice: quantity * item.price
-            } 
+
+    setCart(prevCart =>
+      prevCart.map(item =>
+        item._id === id
+          ? {
+            ...item,
+            quantity,
+            totalPrice: quantity * item.price
+          }
           : item
       )
     );
   };
-  
+
   // Remove item from cart
   const removeFromCart = (id: string) => {
     setCart(prevCart => prevCart.filter(item => item._id !== id));
     toast.success("Item removed from cart");
   };
-  
+
   // Calculate cart totals
   const originalSubtotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   }, [cart]);
-  
+
   const totalDiscount = useMemo(() => {
     return cart.reduce((sum, item) => {
       const itemTotal = item.price * item.quantity;
@@ -370,33 +381,33 @@ export default function ProductsTab({
       return sum;
     }, 0);
   }, [cart]);
-  
+
   const subtotal = useMemo(() => {
     return cart.reduce((sum, item) => sum + item.totalPrice, 0);
   }, [cart]);
-  
+
   const taxAmount = useMemo(() => (subtotal * taxRate) / 100, [subtotal, taxRate]);
   const total = useMemo(() => subtotal + taxAmount, [subtotal, taxAmount]);
-  
+
   // Clear cart
   const clearCart = () => {
     setCart([]);
     toast.success("Cart cleared");
   };
-  
+
   // Process payment
   const processPayment = () => {
     if (cart.length === 0) {
       toast.error("Cart is empty");
       return;
     }
-    
+
     // Check if client is selected
     if (!selectedClient) {
       toast.error("Please select a client before proceeding to payment");
       return;
     }
-    
+
     // Show payment options dialog
     setIsPaymentDialogOpen(true);
   };
@@ -413,10 +424,10 @@ export default function ProductsTab({
       toast.error("Please select a payment method");
       return;
     }
-    
+
     try {
       toast.loading("Saving order...");
-      
+
       // Prepare billing data according to the Billing model
       const billingData = {
         vendorId: VENDOR_ID,
@@ -456,11 +467,11 @@ export default function ProductsTab({
         paymentStatus: "Completed",
         billingType: "Counter Bill"
       };
-      
+
       // Execute the billing mutation with proper error handling and timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
-      
+
       let result: any;
       try {
         result = await createBilling(billingData).unwrap();
@@ -469,19 +480,19 @@ export default function ProductsTab({
         clearTimeout(timeoutId);
         throw error;
       }
-      
+
       // Prepare invoice data for display
       const invoice = {
         invoiceNumber: result.data?.invoiceNumber || "N/A",
-        date: new Date().toLocaleDateString('en-US', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'short', 
-          day: 'numeric' 
+        date: new Date().toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
         }),
-        time: new Date().toLocaleTimeString('en-US', { 
-          hour: '2-digit', 
-          minute: '2-digit' 
+        time: new Date().toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit'
         }),
         client: selectedClient,
         status: "Completed",
@@ -495,15 +506,15 @@ export default function ProductsTab({
         balance: total,
         paymentMethod: selectedPaymentMethod
       };
-      
+
       setInvoiceData(invoice);
       setIsInvoiceDialogOpen(true);
       setIsOrderSaved(true);
-      
+
       // Show success toast
       toast.dismiss(); // Dismiss loading toast
       toast.success("Order saved successfully!");
-      
+
       // Clear cart and reset
       clearCart();
       setSelectedPaymentMethod(null);
@@ -530,7 +541,7 @@ export default function ProductsTab({
     if (method === 'Net Banking') {
       setPaymentStep('link');
     } else {
-      // For other methods, you might want to show a payment form or process immediately
+      // For other methods, process immediately
       toast.success(`Processing payment via ${method}`);
       setIsPaymentDialogOpen(false);
       clearCart();
@@ -553,7 +564,7 @@ export default function ProductsTab({
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [invoiceData, setInvoiceData] = useState<any>(null);
   const [isOrderSaved, setIsOrderSaved] = useState(false);
-  
+
   // State for email dialog
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [emailData, setEmailData] = useState({
@@ -562,7 +573,7 @@ export default function ProductsTab({
     subject: '',
     message: ''
   });
-  
+
   // State for edit cart item dialog
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<CartItem | null>(null);
@@ -572,44 +583,107 @@ export default function ProductsTab({
     discountType: 'flat' as 'flat' | 'percentage',
     staffMemberId: 'none'
   });
-  
+
   // Email response type
   interface EmailResponse {
     success: boolean;
     error?: string;
     messageId?: string;
   }
-  
+
   // Handle email sending with improved error handling
   const handleSendEmail = async () => {
     if (!emailData.to || !emailData.subject || !emailData.message) {
       toast.error('Please fill in all required fields');
       return;
     }
-    
+
     // Show loading toast
     toast.loading('Sending email...');
-    
+
     try {
+      // Load html2pdf if not already loaded
+      const html2pdfLib = await loadHtml2Pdf();
+      if (!html2pdfLib) {
+        toast.dismiss();
+        toast.error('PDF generation library failed to load');
+        return;
+      }
+      
+      // Wait for the DOM to update
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Function to wait for element to be ready
+      const waitForElement = (selector: string, timeout: number) => {
+        return new Promise<HTMLDivElement>((resolve, reject) => {
+          const element = document.querySelector(selector) as HTMLDivElement;
+          if (element) {
+            resolve(element);
+            return;
+          }
+          
+          const observer = new MutationObserver(() => {
+            const el = document.querySelector(selector) as HTMLDivElement;
+            if (el) {
+              observer.disconnect();
+              resolve(el);
+            }
+          });
+          
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true
+          });
+          
+          setTimeout(() => {
+            observer.disconnect();
+            reject(new Error('Element not found within timeout period')); 
+          }, timeout);
+        });
+      };
+      
       // Generate PDF from InvoiceUI component
-      const invoiceElement = document.getElementById('invoice-to-pdf');
+      let invoiceElement: HTMLDivElement | null = document.getElementById('invoice-to-pdf') as HTMLDivElement;
+      
+      // If element is not found, wait for it to appear in the DOM
+      if (!invoiceElement) {
+        try {
+          invoiceElement = await waitForElement('#invoice-to-pdf', 5000) as HTMLDivElement; // 5 second timeout
+        } catch (error) {
+          console.error('Invoice element with ID "invoice-to-pdf" not found:', error);
+        }
+      }
+      
       let pdfBlob: Blob | null = null;
       
       if (invoiceElement) {
-        const pdfOptions: any = {
+        // Ensure the element is visible temporarily for PDF generation
+        const originalDisplay = invoiceElement.style.display;
+        const originalVisibility = invoiceElement.style.visibility;
+        invoiceElement.style.display = 'block';
+        invoiceElement.style.visibility = 'visible';
+        
+        // Wait a bit more to ensure styles are applied
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        const pdfOptions = {
           margin: 5,
           filename: `Sales_Invoice_${invoiceData.invoiceNumber}.pdf`,
           image: { type: 'jpeg', quality: 0.8 },
-          html2canvas: { scale: 1.5, useCORS: true },
+          html2canvas: { 
+            scale: 1.5, 
+            useCORS: true,
+            logging: false // Disable logging to reduce console output
+          },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
-        
+
         // Generate PDF as blob with timeout handling
         const pdfController = new AbortController();
-        const pdfTimeoutId = setTimeout(() => pdfController.abort(), 60000); // 60 second timeout for PDF generation
-        
+        const pdfTimeoutId = setTimeout(() => pdfController.abort(), 120000); // 120 second timeout for PDF generation
+
         try {
-          pdfBlob = await html2pdf().set(pdfOptions).from(invoiceElement).outputPdf('blob');
+          pdfBlob = await html2pdfLib().set(pdfOptions).from(invoiceElement).outputPdf('blob');
         } catch (pdfError) {
           if (pdfController.signal.aborted) {
             throw new Error('PDF generation timed out');
@@ -617,40 +691,43 @@ export default function ProductsTab({
           throw pdfError;
         } finally {
           clearTimeout(pdfTimeoutId);
+          // Restore original display state
+          invoiceElement.style.display = originalDisplay;
+          invoiceElement.style.visibility = originalVisibility;
         }
       }
-      
+
       // Send email using API endpoint (only plain text message, no HTML content)
       const formData = new FormData();
       formData.append('to', emailData.to);
       formData.append('subject', emailData.subject);
       formData.append('html', emailData.message); // Still using html field but with plain text content
-      
+
       if (pdfBlob) {
         formData.append('attachment', pdfBlob, `Sales_Invoice_${invoiceData.invoiceNumber}.pdf`);
       }
-      
+
       // Send email using API endpoint with proper timeout handling
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
-      
-      const response = await fetch('/api/send-email', {
+
+      const response = await fetch('/api/crm/send-email', {
         method: 'POST',
         body: formData,
         signal: controller.signal
       });
-      
+
       clearTimeout(timeoutId);
-      
+
       const result: any = await response.json();
-      
+
       // Dismiss loading toast
       toast.dismiss();
-      
+
       if (response.ok && result.success) {
         toast.success(`Email sent to ${emailData.to}`);
         setIsEmailDialogOpen(false);
-        
+
         // Reset email form
         setEmailData({
           to: '',
@@ -679,14 +756,14 @@ export default function ProductsTab({
     const clientEmail = invoiceData?.client?.email || '';
     const subject = `Sales Invoice ${invoiceData?.invoiceNumber} From ${businessName}`;
     const message = `Hi ${invoiceData?.client?.fullName || 'Customer'}, Please see attached sales invoice ${invoiceData?.invoiceNumber}. Thank you. ${businessName}`;
-    
+
     setEmailData({
       to: clientEmail,
       from: '', // Keep empty by default as requested
       subject: subject,
       message: message
     });
-    
+
     setIsEmailDialogOpen(true);
   };
 
@@ -699,37 +776,116 @@ export default function ProductsTab({
   // Handle download click
   const onDownloadClick = async () => {
     try {
-      // Generate PDF from InvoiceUI component
-      const invoiceElement = document.getElementById('invoice-to-pdf');
-      if (invoiceElement) {
-        const pdfOptions: any = {
-          margin: 5,
-          filename: `Sales_Invoice_${invoiceData.invoiceNumber}.pdf`,
-          image: { type: 'jpeg', quality: 0.8 },
-          html2canvas: { scale: 1.5, useCORS: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-        
-        // Generate and download PDF automatically with timeout handling
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
-        
-        try {
-          await html2pdf().set(pdfOptions).from(invoiceElement).save();
-          toast.success('Invoice downloaded successfully');
-        } catch (error) {
-          if (controller.signal.aborted) {
-            toast.error('Download timed out. Please try again.');
-          } else {
-            toast.error('Failed to download invoice');
+      // Load html2pdf if not already loaded
+      const html2pdfLib = await loadHtml2Pdf();
+      if (!html2pdfLib) {
+        toast.error('PDF generation library failed to load');
+        return;
+      }
+      
+      // Show a loading message
+      toast.loading('Preparing invoice for download...');
+      
+      // Wait for the DOM to update
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Function to wait for element to be ready
+      const waitForElement = (selector: string, timeout: number) => {
+        return new Promise<HTMLDivElement>((resolve, reject) => {
+          const element = document.querySelector(selector) as HTMLDivElement;
+          if (element) {
+            resolve(element);
+            return;
           }
-          console.error('Download error:', error);
-        } finally {
-          clearTimeout(timeoutId);
+          
+          const observer = new MutationObserver(() => {
+            const el = document.querySelector(selector) as HTMLDivElement;
+            if (el) {
+              observer.disconnect();
+              resolve(el);
+            }
+          });
+          
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true
+          });
+          
+          setTimeout(() => {
+            observer.disconnect();
+            reject(new Error('Element not found within timeout period')); 
+          }, timeout);
+        });
+      };
+      
+      // Generate PDF from InvoiceUI component
+      let invoiceElement: HTMLDivElement | null = document.getElementById('invoice-to-pdf') as HTMLDivElement;
+      
+      // If element is not found, wait for it to appear in the DOM
+      if (!invoiceElement) {
+        try {
+          invoiceElement = await waitForElement('#invoice-to-pdf', 5000) as HTMLDivElement; // 5 second timeout
+        } catch (error) {
+          toast.dismiss();
+          toast.error('Invoice element not found');
+          console.error('Invoice element with ID "invoice-to-pdf" not found:', error);
+          return;
         }
       }
-    } catch (error) {
-      toast.error('Failed to download invoice');
+      
+      if (!invoiceElement) {
+        toast.dismiss();
+        toast.error('Invoice element not found');
+        console.error('Invoice element with ID "invoice-to-pdf" not found');
+        return;
+      }
+      
+      // Ensure the element is visible temporarily for PDF generation
+      const originalDisplay = invoiceElement.style.display;
+      const originalVisibility = invoiceElement.style.visibility;
+      invoiceElement.style.display = 'block';
+      invoiceElement.style.visibility = 'visible';
+      
+      // Wait a bit more to ensure styles are applied
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const pdfOptions = {
+        margin: 5,
+        filename: `Sales_Invoice_${invoiceData.invoiceNumber}.pdf`,
+        image: { type: 'jpeg', quality: 0.8 },
+        html2canvas: { 
+          scale: 1.5, 
+          useCORS: true,
+          logging: false // Disable logging to reduce console output
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      // Generate and download PDF automatically with timeout handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000); // 120 second timeout
+
+      try {
+        await html2pdfLib().set(pdfOptions).from(invoiceElement).save();
+        toast.dismiss();
+        toast.success('Invoice downloaded successfully');
+      } catch (error: any) {
+        toast.dismiss();
+        if (controller.signal.aborted) {
+          toast.error('Download timed out. Please try again.');
+        } else {
+          toast.error('Failed to download invoice: ' + (error.message || 'Unknown error'));
+        }
+        console.error('Download error:', error);
+      } finally {
+        clearTimeout(timeoutId);
+        // Restore original display state
+        invoiceElement.style.display = originalDisplay;
+        invoiceElement.style.visibility = originalVisibility;
+      }
+    } catch (error: any) {
+      toast.dismiss();
+      toast.error('Failed to download invoice: ' + (error.message || 'Unknown error'));
       console.error('Download error:', error);
     }
   };
@@ -749,7 +905,7 @@ export default function ProductsTab({
     // Clear selected client
     setSelectedClient(null);
   };
-  
+
   // Handle edit cart item click
   const handleEditItemClick = (item: CartItem) => {
     setEditingItem(item);
@@ -761,41 +917,41 @@ export default function ProductsTab({
     });
     setIsEditDialogOpen(true);
   };
-  
+
   // Handle save edited item
   const handleSaveEditedItem = () => {
     if (!editingItem) return;
-    
+
     // Check if discount is greater than 0, then staff member is required
     if (editFormData.discount > 0 && editFormData.staffMemberId === 'none') {
       toast.error('Staff member is required');
       return;
     }
-    
+
     // Find staff member name
-    const selectedStaff = editFormData.staffMemberId !== 'none' ? 
+    const selectedStaff = editFormData.staffMemberId !== 'none' ?
       staffData.find((staff: any) => staff._id === editFormData.staffMemberId) : null;
-    
-    setCart(prevCart => 
-      prevCart.map(item => 
-        item._id === editingItem._id 
-          ? { 
-              ...item, 
-              quantity: editFormData.quantity,
-              totalPrice: calculateItemTotalPrice(item, editFormData.quantity, editFormData.discount, editFormData.discountType),
-              discount: editFormData.discount,
-              discountType: editFormData.discountType,
-              staffMember: selectedStaff ? { id: selectedStaff._id, name: selectedStaff.fullName } : undefined
-            } 
+
+    setCart(prevCart =>
+      prevCart.map(item =>
+        item._id === editingItem._id
+          ? {
+            ...item,
+            quantity: editFormData.quantity,
+            totalPrice: calculateItemTotalPrice(item, editFormData.quantity, editFormData.discount, editFormData.discountType),
+            discount: editFormData.discount,
+            discountType: editFormData.discountType,
+            staffMember: selectedStaff ? { id: selectedStaff._id, name: selectedStaff.fullName } : undefined
+          }
           : item
       )
     );
-    
+
     setIsEditDialogOpen(false);
     setEditingItem(null);
     toast.success('Item updated successfully');
   };
-  
+
   // Calculate item total price with discount
   const calculateItemTotalPrice = (item: CartItem, quantity: number, discount: number, discountType: 'flat' | 'percentage') => {
     const basePrice = item.price * quantity;
@@ -827,14 +983,14 @@ export default function ProductsTab({
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            
+
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-60 overflow-y-auto">
                 <SelectItem value="all">All Categories</SelectItem>
-                {categories.map((category: any) => (
+                {[...categories.slice(0, 5), ...categories.slice(5)].map((category: any) => (
                   <SelectItem key={category._id} value={category._id}>
                     {category.name}
                   </SelectItem>
@@ -842,7 +998,7 @@ export default function ProductsTab({
               </SelectContent>
             </Select>
           </div>
-          
+
           {/* Products Table */}
           <div className="rounded-md border">
             <Table>
@@ -878,8 +1034,8 @@ export default function ProductsTab({
                       <TableCell>₹{product.price.toFixed(2)}</TableCell>
                       <TableCell>{product.stock}</TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           onClick={() => addToCart(product)}
                         >
                           <Plus className="h-4 w-4 mr-1" />
@@ -894,7 +1050,7 @@ export default function ProductsTab({
           </div>
         </CardContent>
       </Card>
-      
+
       {/* Right Side - Billing Section */}
       <Card>
         <CardHeader>
@@ -908,13 +1064,13 @@ export default function ProductsTab({
               <UserCheck className="w-4 h-4 text-blue-600" />
               Client Selection
             </h3>
-            
+
             {/* Search Box */}
             <div className="mb-3">
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input 
-                  type="search" 
+                <Input
+                  type="search"
                   placeholder="Search clients by name, email, or phone..."
                   className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
                   value={clientSearchTerm}
@@ -924,7 +1080,7 @@ export default function ProductsTab({
                 />
               </div>
             </div>
-            
+
             {/* Selected Client Display */}
             {selectedClient && (
               <div className="mb-3">
@@ -932,19 +1088,19 @@ export default function ProductsTab({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <UserCheck className="w-4 h-4 text-green-600 flex-shrink-0" />
-                      <img 
-                        src={selectedClient.profilePicture || `https://placehold.co/32x32.png?text=${selectedClient.fullName[0]}`} 
-                        alt={selectedClient.fullName} 
-                        className="w-8 h-8 rounded-full object-cover border border-white shadow-sm" 
+                      <img
+                        src={selectedClient.profilePicture || `https://placehold.co/32x32.png?text=${selectedClient.fullName[0]}`}
+                        alt={selectedClient.fullName}
+                        className="w-8 h-8 rounded-full object-cover border border-white shadow-sm"
                       />
                       <div>
                         <p className="font-medium text-gray-900 text-sm">{selectedClient.fullName}</p>
                         <p className="text-xs text-gray-600">{selectedClient.phone}</p>
                       </div>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       onClick={handleRemoveSelectedClient}
                       className="text-red-600 hover:text-red-800 hover:bg-red-50 rounded-full h-8 w-8 p-0"
                     >
@@ -954,37 +1110,36 @@ export default function ProductsTab({
                 </div>
               </div>
             )}
-            
+
             {/* Show when search is focused or has content */}
             {(isSearchFocused || clientSearchTerm) && (
               <div className="space-y-3">
                 {/* Add New Client Button */}
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setIsAddClientModalOpen(true)}
                   className="w-full border-gray-300 hover:bg-gray-50 text-sm h-10"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add New Client
                 </Button>
-                
+
                 {/* Client List */}
-                <div className="space-y-2 max-h-48 overflow-y-auto" style={{scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9'}}>
+                <div className="space-y-2 max-h-48 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
                   {filteredClients.map((client: Client) => (
-                    <div 
-                      key={client._id} 
-                      className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
-                        selectedClient?._id === client._id 
-                          ? 'bg-blue-50 border-blue-300 shadow-md' 
+                    <div
+                      key={client._id}
+                      className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${selectedClient?._id === client._id
+                          ? 'bg-blue-50 border-blue-300 shadow-md'
                           : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm'
-                      }`}
+                        }`}
                       onClick={() => handleSelectClient(client)}
                     >
                       <div className="flex items-center space-x-3">
-                        <img 
-                          src={client.profilePicture || `https://placehold.co/32x32.png?text=${client.fullName[0]}`} 
-                          alt={client.fullName} 
-                          className="w-8 h-8 rounded-full object-cover border border-white shadow-sm" 
+                        <img
+                          src={client.profilePicture || `https://placehold.co/32x32.png?text=${client.fullName[0]}`}
+                          alt={client.fullName}
+                          className="w-8 h-8 rounded-full object-cover border border-white shadow-sm"
                         />
                         <div className="flex-1">
                           <p className="font-medium text-gray-900 text-sm">{client.fullName}</p>
@@ -1004,7 +1159,7 @@ export default function ProductsTab({
               </div>
             )}
           </div>
-          
+
           {/* Cart Items */}
           <div className="rounded-md border mb-6">
             <Table>
@@ -1037,18 +1192,18 @@ export default function ProductsTab({
                       <TableCell>₹{item.price.toFixed(2)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <Button
+                            size="sm"
+                            variant="outline"
                             onClick={() => updateQuantity(item._id, item.quantity - 1)}
                             disabled={item.quantity <= 1}
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
                           <span className="w-8 text-center">{item.quantity}</span>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <Button
+                            size="sm"
+                            variant="outline"
                             onClick={() => updateQuantity(item._id, item.quantity + 1)}
                           >
                             <Plus className="h-3 w-3" />
@@ -1057,9 +1212,9 @@ export default function ProductsTab({
                       </TableCell>
                       <TableCell>₹{item.totalPrice.toFixed(2)}</TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => removeFromCart(item._id)}
                         >
                           <Trash2 className="h-4 w-4 text-red-500" />
@@ -1071,7 +1226,7 @@ export default function ProductsTab({
               </TableBody>
             </Table>
           </div>
-          
+
           {/* Order Summary */}
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <h3 className="text-lg font-semibold mb-3">Order Summary</h3>
@@ -1098,11 +1253,11 @@ export default function ProductsTab({
               </div>
             </div>
           </div>
-          
+
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={clearCart}
               disabled={cart.length === 0}
               className="flex-1"
@@ -1110,7 +1265,7 @@ export default function ProductsTab({
               <Trash2 className="h-4 w-4 mr-2" />
               Clear Cart
             </Button>
-            <Button 
+            <Button
               onClick={processPayment}
               disabled={cart.length === 0}
               className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
@@ -1121,138 +1276,147 @@ export default function ProductsTab({
           </div>
         </CardContent>
       </Card>
-      
+
       {/* Payment Options Dialog */}
-      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Payment Options</DialogTitle>
-            <DialogDescription>
-              Select a payment method to complete the transaction
-            </DialogDescription>
-          </DialogHeader>
-          
+      <Dialog open={isPaymentDialogOpen} onOpenChange={(open) => {
+        setIsPaymentDialogOpen(open);
+        if (!open) {
+          // Reset when dialog is closed
+          setPaymentStep('options');
+          setSelectedPaymentMethod(null);
+        }
+      }}>
+        <DialogContent className="max-w-md">
           {paymentStep === 'options' && (
-            <div className="space-y-4">
-              <Button 
-                className="w-full justify-start"
-                variant="outline"
-                onClick={() => handlePaymentMethodSelect('Cash')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="bg-blue-100 p-2 rounded-lg">
-                    <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
+            <>
+              <DialogHeader>
+                <DialogTitle>Payment Options</DialogTitle>
+                <DialogDescription className="text-center py-2">
+                  <div className="text-lg font-bold">Total Amount: ₹{total.toFixed(2)}</div>
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="py-4 space-y-4">
+                <div className="flex gap-3">
+                  <Button
+                    onClick={handleSaveOrder}
+                    className="flex-1"
+                    disabled={!selectedPaymentMethod}
+                  >
+                    Save Order
+                  </Button>
+                </div>
+
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300"></div>
                   </div>
-                  <div className="text-left">
-                    <div className="font-medium">Cash</div>
-                    <div className="text-sm text-muted-foreground">Pay with cash</div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">Payment Methods</span>
                   </div>
                 </div>
-              </Button>
-              
-              <Button 
-                className="w-full justify-start"
-                variant="outline"
-                onClick={() => handlePaymentMethodSelect('Card')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="bg-green-100 p-2 rounded-lg">
-                    <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
-                    </svg>
-                  </div>
-                  <div className="text-left">
-                    <div className="font-medium">Card</div>
-                    <div className="text-sm text-muted-foreground">Credit or debit card</div>
-                  </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  {['Cash', 'QR Code', 'Debit Card', 'Credit Card', 'Net Banking'].map((method) => (
+                    <Button
+                      key={method}
+                      variant={selectedPaymentMethod === method ? "default" : "outline"}
+                      className="flex-1 text-xs h-16 flex-col justify-center items-center gap-1"
+                      onClick={() => setSelectedPaymentMethod(method)}
+                    >
+                      {method}
+                    </Button>
+                  ))}
                 </div>
-              </Button>
-              
-              <Button 
-                className="w-full justify-start"
-                variant="outline"
-                onClick={() => handlePaymentMethodSelect('Net Banking')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="bg-purple-100 p-2 rounded-lg">
-                    <svg className="h-5 w-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                    </svg>
-                  </div>
-                  <div className="text-left">
-                    <div className="font-medium">Net Banking</div>
-                    <div className="text-sm text-muted-foreground">Bank transfer</div>
-                  </div>
-                </div>
-              </Button>
-              
-              <Button 
-                className="w-full justify-start"
-                variant="outline"
-                onClick={() => handlePaymentMethodSelect('UPI')}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="bg-orange-100 p-2 rounded-lg">
-                    <svg className="h-5 w-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                    </svg>
-                  </div>
-                  <div className="text-left">
-                    <div className="font-medium">UPI</div>
-                    <div className="text-sm text-muted-foreground">Unified Payments Interface</div>
-                  </div>
-                </div>
-              </Button>
-            </div>
-          )}
-          
-          {paymentStep === 'link' && (
-            <div className="space-y-4">
-              <div className="text-center py-4">
-                <div className="bg-blue-100 p-3 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                  <svg className="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
-                  </svg>
-                </div>
-                <h3 className="font-semibold text-lg mb-2">Generate Payment Link</h3>
-                <p className="text-muted-foreground text-sm">
-                  A payment link will be generated and sent to the client's email or phone number.
-                </p>
               </div>
-              <Button 
-                className="w-full"
-                onClick={handleGeneratePaymentLink}
-              >
-                Generate Payment Link
-              </Button>
-            </div>
+            </>
           )}
-          
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setIsPaymentDialogOpen(false);
-                setPaymentStep('options');
-                setSelectedPaymentMethod(null);
-              }}
-            >
-              Cancel
-            </Button>
-            {paymentStep === 'options' && (
-              <Button 
-                onClick={handleSaveOrder}
-                disabled={!selectedPaymentMethod}
-              >
-                Save Order
-              </Button>
-            )}
-          </DialogFooter>
+
+          {paymentStep === 'method' && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Select Payment Method</DialogTitle>
+                <DialogDescription>
+                  Total Amount: <span className="font-bold">₹{total.toFixed(2)}</span>
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="py-4 space-y-3">
+                {['Cash', 'QR Code', 'Debit Card', 'Credit Card', 'Net Banking'].map((method) => (
+                  <Button
+                    key={method}
+                    variant={selectedPaymentMethod === method ? "default" : "outline"}
+                    className="w-full justify-start"
+                    onClick={() => handlePaymentMethodSelect(method)}
+                  >
+                    {method}
+                  </Button>
+                ))}
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="secondary"
+                  onClick={() => setPaymentStep('options')}
+                >
+                  Back
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+
+          {paymentStep === 'link' && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Generate Net Banking</DialogTitle>
+                <DialogDescription>
+                  Total Amount: <span className="font-bold">₹{total.toFixed(2)}</span>
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="py-4">
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="client-phone">Client Phone Number</Label>
+                    <Input
+                      id="client-phone"
+                      type="tel"
+                      placeholder="Enter client's phone number"
+                      className="mt-1"
+                      value={selectedClient?.phone || ''}
+                      readOnly
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="client-email">Client Email (Optional)</Label>
+                    <Input
+                      id="client-email"
+                      type="email"
+                      placeholder="Enter client's email"
+                      className="mt-1"
+                      value={selectedClient?.email || ''}
+                      readOnly
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="secondary"
+                  onClick={() => setPaymentStep('options')}
+                >
+                  Back
+                </Button>
+                <Button onClick={handleGeneratePaymentLink}>
+                  Generate Link
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
-      
+
       {/* Add Client Modal */}
       <Dialog open={isAddClientModalOpen} onOpenChange={setIsAddClientModalOpen}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
@@ -1262,7 +1426,7 @@ export default function ProductsTab({
               Enter client details to add them to your client list
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
@@ -1287,7 +1451,7 @@ export default function ProductsTab({
                 />
               </div>
             </div>
-            
+
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -1299,12 +1463,12 @@ export default function ProductsTab({
                 placeholder="john@example.com"
               />
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="gender">Gender</Label>
-                <Select 
-                  value={clientFormData.gender} 
+                <Select
+                  value={clientFormData.gender}
                   onValueChange={(value) => handleClientSelectChange('gender', value)}
                 >
                   <SelectTrigger>
@@ -1317,7 +1481,7 @@ export default function ProductsTab({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label htmlFor="birthdayDate">Birthday</Label>
                 <Input
@@ -1329,7 +1493,7 @@ export default function ProductsTab({
                 />
               </div>
             </div>
-            
+
             <div>
               <Label htmlFor="address">Address</Label>
               <Textarea
@@ -1340,7 +1504,7 @@ export default function ProductsTab({
                 placeholder="123 Main St, City, State"
               />
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="country">Country</Label>
@@ -1352,7 +1516,7 @@ export default function ProductsTab({
                   placeholder="India"
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="occupation">Occupation</Label>
                 <Input
@@ -1364,7 +1528,7 @@ export default function ProductsTab({
                 />
               </div>
             </div>
-            
+
             <div>
               <Label htmlFor="preferences">Preferences</Label>
               <Textarea
@@ -1376,15 +1540,15 @@ export default function ProductsTab({
               />
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsAddClientModalOpen(false)}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleSaveClient}
               disabled={isCreatingClient || !clientFormData.fullName || !clientFormData.phone || clientFormData.phone.length !== 10}
             >
@@ -1393,7 +1557,7 @@ export default function ProductsTab({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Edit Cart Item Modal */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -1403,14 +1567,14 @@ export default function ProductsTab({
               Modify quantity, discount, and staff assignment
             </DialogDescription>
           </DialogHeader>
-          
+
           {editingItem && (
             <div className="space-y-4">
               <div>
                 <Label>Item</Label>
                 <div className="font-medium">{editingItem.productName}</div>
               </div>
-              
+
               <div>
                 <Label htmlFor="quantity">Quantity</Label>
                 <Input
@@ -1421,7 +1585,7 @@ export default function ProductsTab({
                   onChange={(e) => setEditFormData(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="discount">Discount</Label>
@@ -1433,11 +1597,11 @@ export default function ProductsTab({
                     onChange={(e) => setEditFormData(prev => ({ ...prev, discount: parseFloat(e.target.value) || 0 }))}
                   />
                 </div>
-                
+
                 <div>
                   <Label htmlFor="discountType">Type</Label>
-                  <Select 
-                    value={editFormData.discountType} 
+                  <Select
+                    value={editFormData.discountType}
                     onValueChange={(value) => setEditFormData(prev => ({ ...prev, discountType: value as 'flat' | 'percentage' }))}
                   >
                     <SelectTrigger>
@@ -1450,11 +1614,11 @@ export default function ProductsTab({
                   </Select>
                 </div>
               </div>
-              
+
               <div>
                 <Label htmlFor="staffMember">Staff Member</Label>
-                <Select 
-                  value={editFormData.staffMemberId} 
+                <Select
+                  value={editFormData.staffMemberId}
                   onValueChange={(value) => setEditFormData(prev => ({ ...prev, staffMemberId: value }))}
                 >
                   <SelectTrigger>
@@ -1472,15 +1636,15 @@ export default function ProductsTab({
               </div>
             </div>
           )}
-          
+
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsEditDialogOpen(false)}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleSaveEditedItem}
             >
               Save Changes
@@ -1488,78 +1652,212 @@ export default function ProductsTab({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-      {/* Invoice Dialog */}
-      <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Invoice</DialogTitle>
-            <DialogDescription>
-              Review and send the invoice to your client
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-6">
-            {invoiceData && (
-              <div>
-                <InvoiceUI 
-                  invoiceData={invoiceData}
-                  vendorName={businessName}
-                  vendorProfile={vendorProfile || supplierProfile}
-                  taxRate={taxRate}
-                  isOrderSaved={isOrderSaved}
-                  onEmailClick={onEmailClick}
-                  onPrintClick={onPrintClick}
-                  onDownloadClick={onDownloadClick}
-                  onRebookClick={onRebookClick}
-                />
+
+      {/* Invoice Summary Dialog */}
+      <Dialog open={isInvoiceDialogOpen} onOpenChange={(open) => {
+        setIsInvoiceDialogOpen(open);
+        if (!open) {
+          setInvoiceData(null);
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-4">
+          {invoiceData && (
+            <>
+              <DialogHeader className="border-b pb-4">
+                <DialogTitle className="text-2xl font-bold text-center text-gray-900">Invoice Summary</DialogTitle>
+              </DialogHeader>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                {/* Left Section - Invoice Info & Actions */}
+                <div className="space-y-6">
+                  <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-4 text-white shadow-sm">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h2 className="text-xl font-bold">{invoiceData.invoiceNumber}</h2>
+                        <p className="text-blue-100 text-sm mt-1">
+                          {isOrderSaved
+                            ? `Saved on ${invoiceData.date} at ${businessName} by ${invoiceData.client?.fullName || 'Client'}`
+                            : `Saved Unpaid on ${invoiceData.date} at ${businessName} by ${invoiceData.client?.fullName || 'Client'}`}
+                        </p>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${invoiceData.status === "Completed"
+                          ? "bg-green-500 text-white"
+                          : "bg-yellow-500 text-gray-900"
+                        }`}>
+                        {invoiceData.status}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Quick Actions</h3>
+                    <div className="space-y-3">
+                      {/* Rebook button on its own line */}
+                      <div className="w-full">
+                        <Button
+                          className="w-full py-2 text-sm"
+                          onClick={onRebookClick}
+                        >
+                          <Calendar className="h-4 w-4 mr-2" />
+                          Rebook
+                        </Button>
+                      </div>
+
+                      {/* Other buttons in a row below */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <Button
+                          className="w-full py-2 text-sm"
+                          variant="outline"
+                          onClick={onEmailClick}
+                        >
+                          <Mail className="h-4 w-4 mr-2" />
+                          Email
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full py-2 text-sm"
+                          onClick={onPrintClick}
+                        >
+                          <Printer className="h-4 w-4 mr-2" />
+                          Print
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full py-2 text-sm"
+                          onClick={onDownloadClick}
+                        >
+                          <DownloadCloud className="h-5 w-5 mr-2" />
+                          Download
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Client Information</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-gradient-to-br from-gray-200 to-gray-300 border-2 border-dashed border-gray-300 rounded-xl w-12 h-12 flex items-center justify-center overflow-hidden">
+                          {invoiceData.client?.profilePicture ? (
+                            <img
+                              src={invoiceData.client.profilePicture}
+                              alt={invoiceData.client.fullName || 'Client'}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <UserCheck className="h-8 w-8 text-gray-500" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900">{invoiceData.client?.fullName || 'N/A'}</p>
+                          <p className="text-gray-600 text-sm flex items-center mt-1">
+                            <span className="flex items-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                              </svg>
+                              {invoiceData.client?.phone || 'No phone'}
+                            </span>
+                          </p>
+                          <p className="text-gray-600 text-sm flex items-center">
+                            <span className="flex items-center">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                              </svg>
+                              {invoiceData.client?.email || 'No email'}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Section - Invoice Details */}
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-200">Invoice Details</h3>
+
+                  <div className="space-y-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-gray-500 text-sm">Invoice Number</p>
+                        <p className="font-semibold text-sm">{invoiceData.invoiceNumber}</p>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-gray-500 text-sm">Date</p>
+                        <p className="font-semibold text-sm">{invoiceData.date}</p>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-gray-500 text-sm">Payment Method</p>
+                        <p className="font-semibold text-sm">{invoiceData.paymentMethod || 'Not specified'}</p>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded-lg">
+                        <p className="text-gray-500 text-sm">Status</p>
+                        <span className={`px-2 py-1 rounded-full text-sm font-semibold ${invoiceData.status === "Completed"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-yellow-100 text-yellow-800"
+                          }`}>
+                          {invoiceData.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200 text-lg">Products</h4>
+                      <div className="space-y-2 max-h-52 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 rounded">
+                        {invoiceData.items.map((item: any, index: number) => (
+                          <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 rounded px-2">
+                            <div className="flex-1">
+                              <p className="font-semibold text-gray-900 text-xs">{item.productName}</p>
+                            </div>
+                            <div className="text-right ml-2">
+                              <p className="font-semibold text-gray-900">₹{item.totalPrice.toFixed(2)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-xl">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 text-xs">Subtotal</span>
+                        <span className="font-medium text-xs">₹{invoiceData.originalSubtotal?.toFixed(2) || invoiceData.subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-green-600 text-xs font-medium">Discount</span>
+                        <span className="font-medium text-green-600 text-xs">-₹{(invoiceData.discount || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 text-xs">Tax ({taxRate}%)</span>
+                        <span className="font-medium text-xs">₹{invoiceData.tax.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 text-xs">Platform Fee</span>
+                        <span className="font-medium text-xs">₹{invoiceData.platformFee.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-2 border-t border-gray-300">
+                        <span className="font-semibold text-gray-900 text-sm">Total</span>
+                        <span className="font-bold text-gray-900 text-base">₹{invoiceData.total.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-1">
+                        <span className="font-semibold text-gray-900 text-sm">Balance</span>
+                        <span className="font-bold text-red-600 text-base">₹{invoiceData.balance.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-            
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button 
-                variant="outline" 
-                onClick={onEmailClick}
-                className="flex-1"
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Email
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={onPrintClick}
-                className="flex-1"
-              >
-                <Printer className="h-4 w-4 mr-2" />
-                Print
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={onDownloadClick}
-                className="flex-1"
-              >
-                <DownloadCloud className="h-4 w-4 mr-2" />
-                Download
-              </Button>
-            </div>
-          </div>
-          
-          <DialogFooter>
-            <Button 
-              variant="outline" 
-              onClick={() => setIsInvoiceDialogOpen(false)}
-            >
-              Close
-            </Button>
-            <Button 
-              onClick={onRebookClick}
-            >
-              New Order
-            </Button>
-          </DialogFooter>
+
+              <DialogFooter>
+                <Button onClick={() => setIsInvoiceDialogOpen(false)}>
+                  Close
+                </Button>
+              </DialogFooter>
+            </>
+          )}
         </DialogContent>
       </Dialog>
-      
+
       {/* Email Dialog */}
       <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -1569,7 +1867,7 @@ export default function ProductsTab({
               Send the invoice to your client's email address
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div>
               <Label htmlFor="to">To *</Label>
@@ -1580,7 +1878,7 @@ export default function ProductsTab({
                 placeholder="client@example.com"
               />
             </div>
-            
+
             <div>
               <Label htmlFor="subject">Subject *</Label>
               <Input
@@ -1590,7 +1888,7 @@ export default function ProductsTab({
                 placeholder="Sales Invoice"
               />
             </div>
-            
+
             <div>
               <Label htmlFor="message">Message *</Label>
               <Textarea
@@ -1602,15 +1900,15 @@ export default function ProductsTab({
               />
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsEmailDialogOpen(false)}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleSendEmail}
             >
               Send Email
@@ -1618,21 +1916,57 @@ export default function ProductsTab({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-      {/* Hidden Invoice for PDF Generation */}
-      <div id="invoice-to-pdf" className="hidden">
+
+      {/* Hidden print area for professional invoice */}
+      <div className="hidden print:block">
+        <style>{`
+          @media print {
+            body * {
+              visibility: hidden;
+            }
+            .print\:block,
+            .print\:block * {
+              visibility: visible;
+            }
+            .print\:block {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+            }
+          }
+        `}</style>
         {invoiceData && (
-          <InvoiceUI 
+          <InvoiceUI
             invoiceData={invoiceData}
             vendorName={businessName}
             vendorProfile={vendorProfile || supplierProfile}
             taxRate={taxRate}
             isOrderSaved={isOrderSaved}
-            onEmailClick={onEmailClick}
-            onPrintClick={onPrintClick}
-            onDownloadClick={onDownloadClick}
-            onRebookClick={onRebookClick}
+            onEmailClick={() => { }}
+            onPrintClick={() => { }}
+            onDownloadClick={() => { }}
+            onRebookClick={() => { }}
           />
+        )}
+      </div>
+
+      {/* Hidden PDF generation area */}
+      <div className="hidden">
+        {invoiceData && (
+          <div id="invoice-to-pdf" style={{ display: 'none' }}>
+            <InvoiceUI
+              invoiceData={invoiceData}
+              vendorName={businessName}
+              vendorProfile={vendorProfile || supplierProfile}
+              taxRate={taxRate}
+              isOrderSaved={isOrderSaved}
+              onEmailClick={() => { }}
+              onPrintClick={() => { }}
+              onDownloadClick={() => { }}
+              onRebookClick={() => { }}
+            />
+          </div>
         )}
       </div>
     </div>

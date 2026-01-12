@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { MapPin, Users, Star, ArrowRight } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { MapPin, Users, Star, ArrowRight, Filter, RotateCcw, X } from "lucide-react";
 import { useGetPublicVendorsQuery } from "@repo/store/services/api";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -55,7 +55,155 @@ interface TransformedSalon {
   badge: string | null;
 }
 
-const WhereToGo = () => {
+interface WhereToGoProps {
+  maxSalons?: number;
+  showViewAllButton?: boolean;
+}
+
+// MultiSelect component
+interface MultiSelectProps {
+  options: string[];
+  selectedOptions: string[];
+  onSelectionChange: (selected: string[]) => void;
+  placeholder: string;
+  label: string;
+}
+
+const MultiSelect: React.FC<MultiSelectProps> = ({ 
+  options, 
+  selectedOptions, 
+  onSelectionChange, 
+  placeholder, 
+  label 
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredOptions = options.filter(option => 
+    option.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const toggleOption = (option: string) => {
+    if (selectedOptions.includes(option)) {
+      onSelectionChange(selectedOptions.filter(item => item !== option));
+    } else {
+      onSelectionChange([...selectedOptions, option]);
+    }
+  };
+
+  const clearAll = () => {
+    onSelectionChange([]);
+  };
+
+  return (
+    <div className="relative w-full">
+      <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{label}</label>
+      <div 
+        className={`mt-1 w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${isOpen ? 'ring-1 ring-primary' : ''}`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center justify-between h-full">
+          <div className="flex flex-wrap gap-1">
+            {selectedOptions.length > 0 ? (
+              selectedOptions.map(option => (
+                <div key={option} className="flex items-center bg-primary/10 text-primary text-xs px-2 py-0.5 rounded">
+                  {option}
+                  <button 
+                    type="button" 
+                    className="ml-1 text-primary/70 hover:text-primary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleOption(option);
+                    }}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <span className="text-muted-foreground/70">{placeholder}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            {selectedOptions.length > 0 && (
+              <button 
+                type="button" 
+                className="text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearAll();
+                }}
+              >
+                <X size={16} />
+              </button>
+            )}
+            <div className={`ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m6 9 6 6 6-6"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div 
+          className="absolute z-50 mt-1 w-full bg-card border border-border rounded-md shadow-lg max-h-60 overflow-auto"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none'
+          }}
+        >
+          <div className="p-2">
+            <input
+              type="text"
+              placeholder="Search..."
+              className="w-full h-8 px-2 text-sm border border-border rounded mb-2"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              autoFocus
+            />
+          </div>
+          <div 
+            className="max-h-40 overflow-auto"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none'
+            }}
+          >
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map(option => (
+                <div 
+                  key={option}
+                  className={`px-3 py-2 text-sm cursor-pointer hover:bg-accent ${selectedOptions.includes(option) ? 'bg-accent' : ''}`}
+                  onClick={() => toggleOption(option)}
+                >
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedOptions.includes(option)}
+                      readOnly
+                      className="mr-2"
+                    />
+                    {option}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="px-3 py-2 text-sm text-muted-foreground">No options found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const WhereToGo: React.FC<WhereToGoProps> = ({ 
+  maxSalons = Infinity, 
+  showViewAllButton = true 
+}) => {
   const router = useRouter();
   const {
     data: vendorsData,
@@ -63,13 +211,68 @@ const WhereToGo = () => {
     error,
   } = useGetPublicVendorsQuery(undefined);
 
+  // State for filter controls (only show on salons page)
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const [serviceFilter, setServiceFilter] = useState<string[]>([]);
+  const [ratingFilter, setRatingFilter] = useState<string>("all");
+  const [locationFilter, setLocationFilter] = useState<string[]>([]);
+
+  // Check if we're on the salons page to show filters
+  const [isSalonsPage, setIsSalonsPage] = useState(false);
+
+  useEffect(() => {
+    setIsSalonsPage(window.location.pathname === '/salons');
+  }, []);
+
+  console.log("Vendors Data :", vendorsData);
+
+  // Extract unique categories, services, and locations from vendors data
+  const categories = React.useMemo(() => {
+    if (!vendorsData?.vendors) return [];
+    const uniqueCategories = new Set<string>();
+    vendorsData.vendors.forEach((vendor: VendorData) => {
+      uniqueCategories.add(vendor.category);
+    });
+    return Array.from(uniqueCategories);
+  }, [vendorsData]);
+
+  const services = React.useMemo(() => {
+    if (!vendorsData?.vendors) return [];
+    const uniqueServices = new Set<string>();
+    vendorsData.vendors.forEach((vendor: VendorData) => {
+      if (vendor.services && Array.isArray(vendor.services)) {
+        vendor.services.forEach(service => {
+          uniqueServices.add(service.name);
+        });
+      }
+    });
+    return Array.from(uniqueServices);
+  }, [vendorsData]);
+
+  const locations = React.useMemo(() => {
+    if (!vendorsData?.vendors) return [];
+    const uniqueLocations = new Set<string>();
+    vendorsData.vendors.forEach((vendor: VendorData) => {
+      uniqueLocations.add(`${vendor.city}, ${vendor.state}`);
+    });
+    return Array.from(uniqueLocations);
+  }, [vendorsData]);
+
+  // Function to reset all filters to default values
+  const resetFilters = () => {
+    setCategoryFilter([]);
+    setServiceFilter([]);
+    setRatingFilter("all");
+    setLocationFilter([]);
+  };
+
   // Transform vendor data to match the card structure
   const salons = React.useMemo(() => {
     if (!vendorsData?.vendors || !Array.isArray(vendorsData.vendors)) {
       return [];
     }
 
-    return vendorsData.vendors
+    const allTransformedSalons = vendorsData.vendors
       .map((vendor: VendorData, index: number) => {
         // Generate placeholder image URL based on business name if no profile image
         const imageUrl =
@@ -99,12 +302,117 @@ const WhereToGo = () => {
           image: imageUrl,
           badge: hasOffer ? "Offer Available" : null,
         };
-      })
-      .slice(0, 8) as TransformedSalon[]; // Limit to 8 salons to match original design
-  }, [vendorsData]);
+      });
+
+    // Apply filters if on salons page
+    let filteredSalons = allTransformedSalons;
+    if (isSalonsPage) {
+      if (categoryFilter.length > 0) {
+        filteredSalons = filteredSalons.filter((salon: TransformedSalon) => {
+          if (categoryFilter.includes("unisex")) {
+            if (salon.type.includes("Full-Service")) return true;
+          }
+          if (categoryFilter.includes("women")) {
+            if (salon.type.includes("Women's")) return true;
+          }
+          if (categoryFilter.includes("men")) {
+            if (salon.type.includes("Men's")) return true;
+          }
+          return false;
+        });
+      }
+      
+      if (ratingFilter !== "all") {
+        if (ratingFilter === "high-to-low") {
+          filteredSalons.sort((a: TransformedSalon, b: TransformedSalon) => Number(b.rating) - Number(a.rating));
+        } else if (ratingFilter === "low-to-high") {
+          filteredSalons.sort((a: TransformedSalon, b: TransformedSalon) => Number(a.rating) - Number(b.rating));
+        }
+      }
+      
+      if (locationFilter.length > 0) {
+        filteredSalons = filteredSalons.filter((salon: TransformedSalon) => locationFilter.includes(salon.location));
+      }
+    }
+
+    // Return only the limited number of salons
+    return filteredSalons
+      .slice(0, maxSalons) as TransformedSalon[]; // Limit to maxSalons based on prop
+  }, [vendorsData, maxSalons, isSalonsPage, categoryFilter, serviceFilter, ratingFilter, locationFilter]);
 
   return (
-    <section className="py-16 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="py-10 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+      {/* Filters Row - Only show on salons page */}
+      {isSalonsPage && (
+        <div className="mb-12">
+          <div className="p-6 bg-card border border-border rounded-3xl shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Filter className="h-5 w-5 text-primary" />
+                <h3 className="font-bold text-foreground text-lg">Filter Salons:</h3>
+              </div>
+              
+              <button
+                onClick={resetFilters}
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset Filters
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Category Filter */}
+              <div className="flex flex-col gap-2">
+                <MultiSelect 
+                  options={categories}
+                  selectedOptions={categoryFilter}
+                  onSelectionChange={setCategoryFilter}
+                  placeholder="All Categories"
+                  label="Category"
+                />
+              </div>
+              
+              {/* Service Filter */}
+              <div className="flex flex-col gap-2">
+                <MultiSelect 
+                  options={services}
+                  selectedOptions={serviceFilter}
+                  onSelectionChange={setServiceFilter}
+                  placeholder="All Services"
+                  label="Service"
+                />
+              </div>
+              
+              {/* Rating Filter - Single Select */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Rating</label>
+                <select
+                  value={ratingFilter}
+                  onChange={(e) => setRatingFilter(e.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="all">All Ratings</option>
+                  <option value="high-to-low">Highest Rated First</option>
+                  <option value="low-to-high">Lowest Rated First</option>
+                </select>
+              </div>
+              
+              {/* Location Filter */}
+              <div className="flex flex-col gap-2">
+                <MultiSelect 
+                  options={locations}
+                  selectedOptions={locationFilter}
+                  onSelectionChange={setLocationFilter}
+                  placeholder="All Locations"
+                  label="Location"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Section Header */}
       <div className="mb-16">
         <div className="flex items-center gap-4 mb-4">
@@ -264,15 +572,17 @@ const WhereToGo = () => {
       </div>
 
       {/* View More Button */}
-      <div className="flex justify-end">
-        <button
-          className="group bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 rounded-full font-semibold transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl"
-          onClick={() => (window.location.href = "/salons")}
-        >
-          View All Salons
-          <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
-        </button>
-      </div>
+      {showViewAllButton && maxSalons < Infinity && vendorsData?.vendors && vendorsData.vendors.length > maxSalons && (
+        <div className="flex justify-end">
+          <button
+            className="group bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 rounded-full font-semibold transition-all duration-300 flex items-center gap-2 shadow-lg hover:shadow-xl"
+            onClick={() => (window.location.href = "/salons")}
+          >
+            View All Salons
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
+          </button>
+        </div>
+      )}
     </section>
   );
 };

@@ -1,47 +1,77 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar } from 'lucide-react';
+import { useGetPublicAllOffersQuery } from '@repo/store/services/api';
 
 const OffersSection2 = () => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  const offers = [
-    {
-      discount: '20% OFF',
-      image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400',
-      validTill: '21st Dec',
-    },
-    {
-      discount: '50% OFF',
-      image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400',
-      validTill: 'Weekend',
-    },
-    {
-      discount: '10% OFF',
-      image: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=400',
-      validTill: '25th Dec',
-    },
-    {
-      discount: '40% OFF',
-      image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400',
-      validTill: '27th Dec',
-    },
-    {
-      discount: '30% OFF',
-      image: 'https://images.unsplash.com/photo-1583001931096-959e9a1a6223?w=400',
-      validTill: '30th Dec',
-    },
-    {
-      discount: '25% OFF',
-      image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400',
-      validTill: '31st Dec',
+  // Fetch all offers using RTK query (no vendor filter to get all offers)
+  const { data: offersData, isLoading, error } = useGetPublicAllOffersQuery(undefined);
+
+  // Log the offers data to console
+  useEffect(() => {
+    if (offersData) {
+      console.log('Fetched offers:', offersData);
     }
-  ];
+    if (error) {
+      console.error('Error fetching offers:', error);
+    }
+  }, [offersData, error]);
+
+  // Use the fetched offers data, fallback to hardcoded data if loading or error
+  const offers = offersData?.data && !isLoading && !error 
+    ? offersData.data
+        .filter((offer: any) => offer.status === 'Active') // Only show active offers
+        .map((offer: any) => ({
+          discount: `${offer.type === 'percentage' ? offer.value + '% OFF' : '₹' + offer.value + ' OFF'}`,
+          image: offer.offerImage || 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400',
+          validTill: offer.expires 
+            ? new Date(offer.expires).toLocaleDateString('en-US', { day: 'numeric', month: 'short' }) 
+            : 'N/A',
+        }))
+    : [
+        {
+          discount: '20% OFF',
+          image: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400',
+          validTill: '21st Dec',
+        },
+        {
+          discount: '50% OFF',
+          image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=400',
+          validTill: 'Weekend',
+        },
+        {
+          discount: '10% OFF',
+          image: 'https://images.unsplash.com/photo-1516975080664-ed2fc6a32937?w=400',
+          validTill: '25th Dec',
+        },
+        {
+          discount: '40% OFF',
+          image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=400',
+          validTill: '27th Dec',
+        },
+        {
+          discount: '30% OFF',
+          image: 'https://images.unsplash.com/photo-1583001931096-959e9a1a6223?w=400',
+          validTill: '30th Dec',
+        },
+        {
+          discount: '25% OFF',
+          image: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400',
+          validTill: '31st Dec',
+        }
+      ];
+
+  // Log the final offers array to console
+  useEffect(() => {
+    console.log('Final offers displayed:', offers);
+  }, [offers]);
 
   return (
-    <section className="py-20 overflow-hidden bg-white">
+    <section className="py-10 overflow-hidden bg-white">
       {/* Section Header */}
       <div className="px-6 lg:px-8 max-w-7xl mx-auto mb-16">
-        <h2 className="text-3xl md:text-4xl font-serif font-bold text-purple-600 border-b-2 border-gray-900 inline-block pb-4">
+        <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-gray-900 inline-block pb-4">
           Special Offers
         </h2>
         
@@ -66,7 +96,7 @@ const OffersSection2 = () => {
               onMouseLeave={() => setHoveredIndex(null)}
             >
               {/* Valid Till Badge - Top Right */}
-              <div className="absolute -top-1 -right-1 bg-white text-purple-500 px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg z-20 border-2 border-purple-700">
+              <div className="absolute -top-1 -right-1 bg-white text-primary px-3 py-1.5 rounded-full text-[10px] font-bold shadow-lg z-20 border-2 border-primary">
                 {offer.validTill}
               </div>
 
@@ -79,8 +109,8 @@ const OffersSection2 = () => {
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                 />
 
-                {/* Purple Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-purple-500/50 to-purple-700/50 group-hover:from-purple-500/70 group-hover:to-purple-700/70 transition-all duration-300"></div>
+                {/* text-primary Gradient Overlay */}
+                <div className="absolute inset-0 bg-primary/50 group-hover:from-primary/70 group-hover:to-primary/70 transition-all duration-300"></div>
 
                 {/* Discount Text - Normal State */}
                 <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${hoveredIndex === index ? 'opacity-0' : 'opacity-100'}`}>

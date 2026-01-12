@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { useGetPublicProductsQuery } from "@repo/store/api";
@@ -22,7 +22,6 @@ import {
   List,
   Star,
   TrendingUp,
-  X,
   Package,
   Shield,
   CheckCircle,
@@ -32,12 +31,19 @@ import {
   Lightbulb,
   Heart,
 } from "lucide-react";
-import { ProductCard } from "@repo/ui/components/landing/ProductCard";
 import { PageContainer } from "@repo/ui/page-container";
 import { Badge } from "@repo/ui/badge";
 import { Dialog, DialogContent } from "@repo/ui/dialog";
 import { Label } from "@repo/ui/label";
-import { NewProductCard } from "@/components/landing/NewProductCard";
+import ProductCard from "@/components/ProductCard";
+import HeroSection from "./components/HeroSection";
+import ProductsGrid from "./components/ProductsGrid";
+import FilterComponent from "./components/FilterComponent";
+import RecentlyAddedProducts from "./components/RecentlyAddedProducts";
+import Testimonials from "./components/Testimonials";
+import { ChevronDown } from "lucide-react";
+import DownloadApp from "@/components/landing/DownloadApp";
+import CTASection from "../salons/components/CTASection";
 
 // Product type definition
 interface Product {
@@ -53,6 +59,12 @@ interface Product {
   isNew?: boolean;
   description: string;
   category: string;
+  forBodyPart?: string;
+  brand?: string;
+  bodyPartType?: string;
+  salePrice?: number;
+  stock?: number;
+  productImages?: string[];
 }
 
 const ProductHighlightCard = ({
@@ -131,18 +143,18 @@ const ProductHighlightCard = ({
             <h4
               className={`font-bold truncate ${isLarge ? "text-base sm:text-lg md:text-xl" : "text-sm md:text-base"}`}
             >
-              {products[currentIndex].name}
+              {products[currentIndex]?.name}
             </h4>
             <p
               className={`truncate opacity-90 ${isLarge ? "text-sm md:text-base" : "text-xs md:text-sm"}`}
             >
-              {products[currentIndex].vendorName}
+              {products[currentIndex]?.vendorName}
             </p>
             <div className="flex justify-between items-center mt-1 md:mt-2">
               <p
                 className={`font-bold ${isLarge ? "text-sm md:text-base lg:text-lg" : "text-xs md:text-sm"}`}
               >
-                ₹{products[currentIndex].price.toFixed(2)}
+                ₹{products[currentIndex]?.price.toFixed(2)}
               </p>
               {isLarge && (
                 <Button
@@ -200,38 +212,50 @@ const ProductHighlightCard = ({
 
 export default function AllProductsPage() {
   // Fetch approved products from API
-  const { data: productsApiData, isLoading, error: apiError } = useGetPublicProductsQuery(undefined);
-  
+  const {
+    data: productsApiData,
+    isLoading,
+    error: apiError,
+  } = useGetPublicProductsQuery(undefined);
+
+  console.log("Products on all products page : ", productsApiData);
+
   const [products, setProducts] = useState<Product[]>([]);
   const [filteblueProducts, setFilteblueProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("grid");
 
   // New state for filters
-  const [selectedCategory, setSelectedCategory] = useState("all");
-  const [selectedBrand, setSelectedBrand] = useState("all");
+  const [selectedBodyParts, setSelectedBodyParts] = useState<string[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState([0, 10000]);
-  const [sortBy, setSortBy] = useState("featublue");
+  const [sortBy, setSortBy] = useState("featured");
+  const [ratingFilter, setRatingFilter] = useState<string>("all");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-  // Mock categories and brands
-  const categories = [
-    { id: "all", name: "All Categories" },
-    { id: "skincare", name: "Skincare" },
-    { id: "cosmetics", name: "Cosmetics" },
-    { id: "bodycare", name: "Body Care" },
-    { id: "facecare", name: "Face Care" },
-    { id: "fragrance", name: "Fragrance" },
-  ];
-  // Mock brands
-  const brands = [
-    { id: "all", name: "All Brands" },
-    { id: "aura", name: "Aura Cosmetics" },
-    { id: "chroma", name: "Chroma Beauty" },
-    { id: "serenity", name: "Serenity Skincare" },
-    { id: "earthly", name: "Earthly Essentials" },
-  ];
-  
+  // Extract unique body parts, brands from products data
+  const allBodyParts = React.useMemo(() => {
+    if (!productsApiData?.products) return [];
+    const uniqueBodyParts = new Set<string>();
+    productsApiData.products.forEach((product: Product) => {
+      if (product.forBodyPart) {
+        uniqueBodyParts.add(product.forBodyPart);
+      }
+    });
+    return Array.from(uniqueBodyParts);
+  }, [productsApiData]);
+
+  const allBrands = React.useMemo(() => {
+    if (!productsApiData?.products) return [];
+    const uniqueBrands = new Set<string>();
+    productsApiData.products.forEach((product: Product) => {
+      if (product.brand) {
+        uniqueBrands.add(product.brand);
+      }
+    });
+    return Array.from(uniqueBrands);
+  }, [productsApiData]);
+
   // Initialize products with API data
   useEffect(() => {
     if (productsApiData?.products) {
@@ -254,24 +278,25 @@ export default function AllProductsPage() {
       );
     }
 
-    // Apply category filter
-    if (selectedCategory !== "all") {
-      result = result.filter(
-        (product) => product.category === selectedCategory
+    // Apply body part filter
+    if (selectedBodyParts.length > 0) {
+      result = result.filter((product) =>
+        selectedBodyParts.includes(product.forBodyPart || "")
       );
     }
 
     // Apply brand filter
-    if (selectedBrand !== "all") {
-      const brandMap: { [key: string]: string } = {
-        aura: "Aura Cosmetics",
-        chroma: "Chroma Beauty",
-        serenity: "Serenity Skincare",
-        earthly: "Earthly Essentials",
-      };
-      result = result.filter(
-        (product) => product.vendorName === brandMap[selectedBrand]
+    if (selectedBrand.length > 0) {
+      result = result.filter((product) =>
+        selectedBrand.includes(product.brand || "")
       );
+    }
+
+    // Apply rating filter
+    if (ratingFilter === "high-to-low") {
+      result = result.sort((a, b) => b.rating - a.rating);
+    } else if (ratingFilter === "low-to-high") {
+      result = result.sort((a, b) => a.rating - b.rating);
     }
 
     // Apply price range filter
@@ -294,9 +319,9 @@ export default function AllProductsPage() {
       case "rating":
         result = result.sort((a, b) => b.rating - a.rating);
         break;
-      case "featublue":
+      case "featured":
       default:
-        // Keep original order for featublue
+        // Keep original order for featured
         break;
     }
 
@@ -304,587 +329,84 @@ export default function AllProductsPage() {
   }, [
     searchTerm,
     products,
-    selectedCategory,
+    selectedBodyParts,
     selectedBrand,
+    ratingFilter,
     priceRange,
     sortBy,
   ]);
 
   // Calculate dynamic stats
-  const uniqueVendors = new Set(products.map(p => p.vendorId)).size;
-  const totalProducts = products.length;
-  const averageRating = products.length > 0 
-    ? (products.reduce((acc, p) => acc + p.rating, 0) / products.length).toFixed(1)
-    : '0.0';
+  const uniqueVendors = new Set(filteblueProducts.map((p) => p.vendorId)).size;
+  const totalProducts = filteblueProducts.length;
+  const averageRating =
+    filteblueProducts.length > 0
+      ? (
+          filteblueProducts.reduce((acc, p) => acc + p.rating, 0) /
+          filteblueProducts.length
+        ).toFixed(1)
+      : "0.0";
 
   const bentoGridProducts = {
-    newArrivals: products.slice(0, 3),
-    topRated: products.slice(3, 6),
-    bestSellers: products.slice(6, 9),
+    newArrivals: filteblueProducts.slice(0, 3),
+    topRated: filteblueProducts.slice(3, 6),
+    bestSellers: filteblueProducts.slice(6, 9),
+  };
+
+  const resetFilters = () => {
+    setSelectedBodyParts([]);
+    setSelectedBrand([]);
+    setRatingFilter("all");
+    setSortBy("featured");
   };
 
   return (
     <PageContainer padding="none">
-      {/* 1. Hero Section */}
-      <section className="py-20 md:py-28 text-center bg-secondary/50 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-secondary/10" />
-        <div className="absolute inset-0 bg-grid-white/10 [mask-image:radial-gradient(white,transparent_70%)] animate-pulse-slow" />
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl opacity-50 animate-float" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/10 rounded-full blur-3xl opacity-50 animate-float-delayed" />
+      <HeroSection />
+      <RecentlyAddedProducts />
 
-        <div className="container mx-auto px-4 z-10 relative">
-          <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold font-headline mb-4 bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent">
-            Our Marketplace
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
-            Explore a curated selection of premium beauty and wellness products
-            from top-rated vendors.
-          </p>
 
-          <div className="flex flex-wrap justify-center gap-3 text-sm text-muted-foreground mb-12">
-            <Badge
-              variant="outline"
-              className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors"
-            >
-              Skincare
-            </Badge>
-            <Badge
-              variant="outline"
-              className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors"
-            >
-              Haircare
-            </Badge>
-            <Badge
-              variant="outline"
-              className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors"
-            >
-              Cosmetics
-            </Badge>
-            <Badge
-              variant="outline"
-              className="px-3 py-1 cursor-pointer hover:bg-muted transition-colors"
-            >
-              Body Care
-            </Badge>
-          </div>
+      {/* Filters Row - Similar to WhereToDo component */}
+      <FilterComponent
+        allBodyParts={allBodyParts}
+        allBrands={allBrands}
+        selectedBodyParts={selectedBodyParts}
+        setSelectedBodyParts={setSelectedBodyParts}
+        selectedBrand={selectedBrand}
+        setSelectedBrand={setSelectedBrand}
+        ratingFilter={ratingFilter}
+        setRatingFilter={setRatingFilter}
+        sortBy={sortBy}
+        setSortBy={setSortBy}
+        resetFilters={resetFilters}
+      />
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-md border border-border/20">
-              <p className="text-3xl font-bold text-primary">{isLoading ? '...' : uniqueVendors > 0 ? `${uniqueVendors}+` : '0'}</p>
-              <p className="text-sm text-muted-foreground">Verified Vendors</p>
-            </div>
-            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-md border border-border/20">
-              <p className="text-3xl font-bold text-primary">{isLoading ? '...' : totalProducts > 0 ? `${totalProducts.toLocaleString()}+` : '0'}</p>
-              <p className="text-sm text-muted-foreground">Products Listed</p>
-            </div>
-            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-md border border-border/20">
-              <p className="text-3xl font-bold text-primary">{isLoading ? '...' : averageRating}/5</p>
-              <p className="text-sm text-muted-foreground">Average Rating</p>
-            </div>
-            <div className="text-center p-4 bg-background/50 backdrop-blur-sm rounded-md border border-border/20">
-              <p className="text-3xl font-bold text-primary">Secure</p>
-              <p className="text-sm text-muted-foreground">
-                Shopping Guarantee
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <div className="container mx-auto px-4 py-8">
+        {/* 5. Product Grid */}
+        <ProductsGrid
+          products={filteblueProducts}
+          isLoading={isLoading}
+          apiError={apiError}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          viewMode={viewMode}
+          setViewMode={setViewMode}
+          filteblueProducts={filteblueProducts}
+          setIsFilterModalOpen={setIsFilterModalOpen}
+        />
+      </div>
 
       <div className="container mx-auto px-4 py-8">
         <div className="lg:grid lg:grid-cols-12 lg:gap-8">
           <main className="lg:col-span-12">
-            {/* 3. Bento Grid Section */}
-            <section className="mb-24 md:mb-24 lg:mb-36">
-              <div className="text-center my-8 md:my-12 lg:my-20">
-                <h2 className="text-4xl md:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-4 pb-2.5">
-                  Highlights
-                </h2>
-                <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                  Discover our most popular and trending products curated just
-                  for you. Shop now and elevate your beauty routine. It's time
-                  to glow!
-                </p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 auto-rows-fr min-h-[320px] sm:min-h-[400px] lg:min-h-[480px]">
-                {bentoGridProducts.newArrivals.length > 0 && (
-                  <ProductHighlightCard
-                    title="New Arrivals"
-                    products={bentoGridProducts.newArrivals}
-                    className="sm:col-span-2 sm:row-span-2 h-full min-h-[280px] sm:min-h-[400px] lg:min-h-[480px]"
-                    isLarge={true}
-                  />
-                )}
-                {bentoGridProducts.topRated.length > 0 && (
-                  <ProductHighlightCard
-                    title="Top Rated"
-                    products={bentoGridProducts.topRated}
-                    className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
-                  />
-                )}
-                {bentoGridProducts.bestSellers.length > 0 && (
-                  <ProductHighlightCard
-                    title="Best Sellers"
-                    products={bentoGridProducts.bestSellers}
-                    className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
-                  />
-                )}
-                {products.filter((p) => p.category === "fragrance").length >
-                  0 && (
-                  <ProductHighlightCard
-                    title="Fragrances"
-                    products={products.filter(
-                      (p) => p.category === "fragrance"
-                    )}
-                    className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
-                  />
-                )}
-                {products.filter((p) => p.category === "cosmetics").length >
-                  0 && (
-                  <ProductHighlightCard
-                    title="Cosmetics"
-                    products={products.filter(
-                      (p) => p.category === "cosmetics"
-                    )}
-                    className="h-full min-h-[280px] sm:min-h-[190px] lg:min-h-[230px]"
-                  />
-                )}
-              </div>
-            </section>
-
-            {/* 5. Product Grid */}
-            <section>
-              <div className="text-center my-8 md:my-12 lg:my-20">
-                <h2 className="text-4xl md:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-4 pb-2.5">
-                  All Products
-                </h2>
-                <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                  Browse our complete collection of premium beauty and wellness
-                  products. Discover top-rated skincare, cosmetics, body care,
-                  and more from trusted brands.
-                </p>
-              </div>
-
-              {/* Search Bar - New Design */}
-
-              <div className="mb-8 p-4 rounded-md flex flex-col sm:flex-row gap-4 items-center shadow-sm">
-                <div className="relative flex-1 w-full">
-                  <Input
-                    placeholder="Search for products..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-12 rounded-md w-full bg-background border focus:border-primary transition-all"
-                  />
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
-                </div>
-                <div className="flex gap-2 items-center">
-                  <Button
-                    variant={viewMode === "grid" ? "secondary" : "ghost"}
-                    size="icon"
-                    onClick={() => setViewMode("grid")}
-                    className="rounded-md hover:bg-primary/10 transition"
-                    aria-label="Grid View"
-                  >
-                    <Grid className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    variant={viewMode === "list" ? "secondary" : "ghost"}
-                    size="icon"
-                    onClick={() => setViewMode("list")}
-                    className="rounded-md hover:bg-primary/10 transition"
-                    aria-label="List View"
-                  >
-                    <List className="h-5 w-5" />
-                  </Button>
-                  <span className="hidden sm:block h-8 w-px bg-border mx-2" />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-md flex gap-2 items-center hover:bg-primary/10 transition"
-                    onClick={() => setIsFilterModalOpen(true)}
-                    aria-label="Open Filters"
-                  >
-                    <Filter className="h-4 w-4" />
-                    <span className="hidden md:inline">Filters</span>
-                  </Button>
-                </div>
-              </div>
-
-              {/* Results count */}
-              <div className="mb-6">
-                <p className="text-muted-foreground">
-                  Showing {filteblueProducts.length} of {products.length}{" "}
-                  products
-                  {searchTerm && ` for "${searchTerm}"`}
-                </p>
-              </div>
-
-              {isLoading ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">Loading products...</p>
-                </div>
-              ) : apiError ? (
-                <div className="text-center py-12">
-                  <p className="text-destructive">Failed to load products. Please try again later.</p>
-                </div>
-              ) : filteblueProducts.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">No products found.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-                  {filteblueProducts.map((product) => (
-                    <NewProductCard key={product.id} {...product} />
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* 6. Why Shop With Us Section */}
-            <section className="py-10 rounded-md">
-              <div className="text-center my-8 md:my-12 lg:my-20">
-                <h2 className="text-4xl md:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-4 pb-2.5">
-                  Why Shop With Us?
-                </h2>
-                <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                  Discover the benefits of choosing our marketplace for all your
-                  beauty needs. We prioritize quality, security, and customer
-                  satisfaction to provide an unparalleled shopping experience.
-                </p>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="relative text-center p-8 rounded-md bg-card shadow-md hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
-                  <div className="absolute inset-0 rounded"></div>
-                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-primary relative z-10" />
-                  <h3 className="font-bold text-xl mb-2 text-foreground relative z-10">
-                    Curated Selection
-                  </h3>
-                  <p className="text-muted-foreground text-base relative z-10">
-                    Only the best products from trusted vendors, carefully
-                    selected for quality, authenticity, and the latest trends in
-                    beauty.
-                  </p>
-                  <div className="absolute bottom-0 left-0 w-full h-1 bg-primary"></div>
-                </div>
-                <div className="relative text-center p-8 rounded-md bg-card shadow-md hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
-                  <div className="absolute inset-0 rounded"></div>
-                  <Shield className="h-12 w-12 mx-auto mb-4 text-primary relative z-10" />
-                  <h3 className="font-bold text-xl mb-2 text-foreground relative z-10">
-                    Secure Shopping
-                  </h3>
-                  <p className="text-muted-foreground text-base relative z-10">
-                    Your data and payments are always protected with
-                    industry-leading security measures, including encryption and
-                    fraud detection.
-                  </p>
-                  <div className="absolute bottom-0 left-0 w-full h-1 bg-primary"></div>
-                </div>
-                <div className="relative text-center p-8 rounded-md bg-card shadow-md hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
-                  <div className="absolute inset-0 rounded"></div>
-                  <Package className="h-12 w-12 mx-auto mb-4 text-primary relative z-10" />
-                  <h3 className="font-bold text-xl mb-2 text-foreground relative z-10">
-                    Fast Shipping
-                  </h3>
-                  <p className="text-muted-foreground text-base relative z-10">
-                    Get your favorite products deliveblue quickly with our
-                    reliable shipping partners, offering multiple options
-                    including express delivery.
-                  </p>
-                  <div className="absolute bottom-0 left-0 w-full h-1 bg-primary"></div>
-                </div>
-                <div className="relative text-center p-8 rounded-md bg-card shadow-md hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 overflow-hidden md:col-span-3 lg:col-span-1">
-                  <div className="absolute inset-0 rounded"></div>
-                  <DollarSign className="h-12 w-12 mx-auto mb-4 text-primary relative z-10" />
-                  <h3 className="font-bold text-xl mb-2 text-foreground relative z-10">
-                    Competitive Prices
-                  </h3>
-                  <p className="text-muted-foreground text-base relative z-10">
-                    Enjoy the best deals with competitive pricing, frequent
-                    discounts, and price match guarantees on all beauty
-                    products.
-                  </p>
-                  <div className="absolute bottom-0 left-0 w-full h-1 bg-primary"></div>
-                </div>
-                <div className="relative text-center p-8 rounded-md bg-card shadow-md hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 overflow-hidden md:col-span-3 lg:col-span-1">
-                  <div className="absolute inset-0 rounded"></div>
-                  <RotateCcw className="h-12 w-12 mx-auto mb-4 text-primary relative z-10" />
-                  <h3 className="font-bold text-xl mb-2 text-foreground relative z-10">
-                    Easy Returns
-                  </h3>
-                  <p className="text-muted-foreground text-base relative z-10">
-                    Hassle-free returns and exchanges within 30 days, ensuring
-                    you can shop with confidence and peace of mind.
-                  </p>
-                  <div className="absolute bottom-0 left-0 w-full h-1 bg-primary"></div>
-                </div>
-                <div className="relative text-center p-8 rounded-md bg-card shadow-md hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 overflow-hidden md:col-span-3 lg:col-span-1">
-                  <div className="absolute inset-0 bg-primary rounded-md"></div>
-                  <Users className="h-12 w-12 mx-auto mb-4 text-white relative z-10" />
-                  <h3 className="font-bold text-xl mb-2 text-white relative z-10">
-                    Lorem, ipsum dolor.
-                  </h3>
-                  <p className="text-white text-base relative z-10">
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                    Suspendisse varius enim in eros elementum tristique.
-                  </p>
-                  <div className="absolute bottom-0 left-0 w-full h-1 bg-white"></div>
-                </div>
-              </div>
-
-              <div className="relative overflow-hidden w-full bg-background lg:py-16">
-                {/* Marquee Container */}
-                <div className="flex animate-marquee gap-6">
-                  {/* Repeat items so marquee looks infinite */}
-                  <div className="flex gap-6">
-                    {/* Card 1 */}
-                    <div className="relative flex items-center justify-center gap-3 p-4 rounded-md bg-card shadow-md transition-all duration-300 transform hover:-translate-y-1 overflow-hidden min-w-[250px]">
-                      <Users className="h-6 w-6 text-primary relative z-10" />
-                      <span className="text-sm font-medium text-foreground relative z-10">
-                        24/7 Customer Support
-                      </span>
-                    </div>
-
-                    {/* Card 2 */}
-                    <div className="relative flex items-center justify-center gap-3 p-4 rounded-md bg-card shadow-md transition-all duration-300 transform hover:-translate-y-1 overflow-hidden min-w-[250px]">
-                      <TrendingUp className="h-6 w-6 text-primary relative z-10" />
-                      <span className="text-sm font-medium text-foreground relative z-10">
-                        Exclusive Member Deals
-                      </span>
-                    </div>
-
-                    {/* Card 3 */}
-                    <div className="relative flex items-center justify-center gap-3 p-4 rounded-md bg-card shadow-md transition-all duration-300 transform hover:-translate-y-1 overflow-hidden min-w-[250px]">
-                      <Star className="h-6 w-6 text-primary relative z-10" />
-                      <span className="text-sm font-medium text-foreground relative z-10">
-                        Personalized Recommendations
-                      </span>
-                    </div>
-
-                    {/* Card 4 */}
-                    <div className="relative flex items-center justify-center gap-3 p-4 rounded-md bg-blue-500 shadow-md transition-all duration-300 transform hover:-translate-y-1 overflow-hidden min-w-[250px]">
-                      <Globe className="h-6 w-6 text-white relative z-10" />
-                      <span className="text-sm font-medium text-white relative z-10">
-                        Worldwide Shipping
-                      </span>
-                    </div>
-
-                    {/* Card 5 */}
-                    <div className="relative flex items-center justify-center gap-3 p-4 rounded-md bg-card shadow-md transition-all duration-300 transform hover:-translate-y-1 overflow-hidden min-w-[250px]">
-                      <Leaf className="h-6 w-6 text-primary relative z-10" />
-                      <span className="text-sm font-medium text-foreground relative z-10">
-                        Eco-Friendly Packaging
-                      </span>
-                    </div>
-
-                    {/* Card 6 */}
-                    <div className="relative flex items-center justify-center gap-3 p-4 rounded-md bg-card shadow-md transition-all duration-300 transform hover:-translate-y-1 overflow-hidden min-w-[250px]">
-                      <Leaf className="h-6 w-6 text-primary relative z-10" />
-                      <span className="text-sm font-medium text-foreground relative z-10">
-                        Lorem ipsum dolor sit.
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Duplicate set for smooth infinite scroll */}
-                  <div className="flex gap-6">
-                    {/* Same cards repeated */}
-                    {/* ... copy the above cards here again */}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* 7. Featublue Brand Section */}
-            <section className="py-12 bg-gray-50">
-              <div className="text-center my-8 md:my-12 lg:my-20">
-                <h2 className="text-4xl md:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-4 pb-2.5">
-                  Featublue Brand: Aura Cosmetics
-                </h2>
-                <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                  Discover Aura Cosmetics, a top-rated brand offering
-                  high-performance, cruelty-free makeup loved by professionals
-                  and enthusiasts.
-                </p>
-              </div>
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid md:grid-cols-2 gap-12 items-center">
-                  <div className="flex flex-col justify-center">
-                    <p className="text-gray-700 text-lg leading-relaxed mb-6">
-                      Aura Cosmetics is dedicated to empowering your unique
-                      beauty with innovative, cruelty-free products. Their
-                      best-selling makeup line combines quality and
-                      sustainability, making it a favorite among beauty lovers.
-                    </p>
-                    <a
-                      href="#shop-aura"
-                      className="inline-block bg-blue-600 text-white font-medium py-3 px-6 rounded-md hover:bg-blue-700 transition-colors duration-200 w-fit"
-                    >
-                      Explore Aura Products
-                    </a>
-                  </div>
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="rounded-md overflow-hidden aspect-square shadow-md">
-                      <img
-                        src="https://placehold.co/320x224.png"
-                        alt="Aura Product 1"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="rounded-md overflow-hidden aspect-square shadow-md">
-                      <img
-                        src="https://placehold.co/320x224.png"
-                        alt="Aura Product 2"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
-
             {/* 8. Testimonials Section */}
-            <section className="py-12 bg-background">
-              <div className="text-center my-8 md:my-12 lg:my-20">
-                <h2 className="text-4xl md:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-4 pb-2.5">
-                  What Our Customers Say
-                </h2>
-                <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                  Hear from real customers who love shopping with us. Their
-                  experiences speak for our quality, service, and commitment to
-                  your beauty journey.
-                </p>
-              </div>
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {/* Testimonial 1 */}
-                  <div className="relative p-8 rounded-md bg-card shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex flex-row items-start text-left overflow-hidden">
-                    <div>
-                      <div className="flex items-center mb-2">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className="h-4 w-4 text-primary mr-1"
-                            fill="currentColor"
-                          />
-                        ))}
-                      </div>
-                      <p className="text-base text-muted-foreground mb-2 line-clamp-3">
-                        “Absolutely love the curated selection! Every product
-                        I’ve tried has exceeded my expectations. Fast shipping
-                        and great prices too.”
-                      </p>
-                      <div className="flex items-center gap-3 mt-2">
-                        <div>
-                          <p className="font-bold text-foreground">
-                            Manish Sonawane
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Navi Mumbai, Maharashtra
-                          </p>
-                        </div>
-                      </div>
-                      <div className="absolute bottom-0 left-0 w-full h-1 bg-primary"></div>
-                    </div>
-                  </div>
-                  {/* Testimonial 2 */}
-                  <div className="relative p-8 rounded-md bg-card shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex flex-row items-start text-left overflow-hidden">
-                    <div>
-                      <div className="flex items-center mb-2">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className="h-4 w-4 text-primary mr-1"
-                            fill="currentColor"
-                          />
-                        ))}
-                      </div>
-                      <p className="text-base text-muted-foreground mb-4 line-clamp-3">
-                        “The customer support is fantastic! They helped me with
-                        a return quickly and professionally. Highly recommend
-                        this marketplace.”
-                      </p>
-                      <div className="flex items-center gap-3 mt-4">
-                        <div>
-                          <p className="font-bold text-foreground">
-                            Shubham Vanarse
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Nashik, Maharashtra
-                          </p>
-                        </div>
-                      </div>
-                      <div className="absolute bottom-0 left-0 w-full h-1 bg-primary"></div>
-                    </div>
-                  </div>
-                  {/* Testimonial 3 */}
-                  <div className="relative p-8 rounded-md bg-card shadow-md hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1 flex flex-row items-start text-left overflow-hidden">
-                    <div>
-                      <div className="flex items-center mb-2">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className="h-4 w-4 text-primary mr-1"
-                            fill="currentColor"
-                          />
-                        ))}
-                      </div>
-                      <p className="text-base text-muted-foreground mb-4 line-clamp-3">
-                        “I love the eco-friendly packaging and the variety of
-                        brands. The site is easy to use and the deals are
-                        unbeatable!”
-                      </p>
-                      <div className="flex items-center gap-3 mt-4">
-                        <div>
-                          <p className="font-bold text-foreground">
-                            Siddhi Shinde
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Nashik, Maharashtra
-                          </p>
-                        </div>
-                      </div>
-                      <div className="absolute bottom-0 left-0 w-full h-1 bg-primary"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </section>
+            <Testimonials />
 
-            {/* 10. Call to Action */}
-
-            <section className="mt-20 text-center py-12 bg-secondary/20 rounded-lg">
-              <div className="my-5 md:my-8 lg:my-12">
-                <h2 className="text-4xl md:text-6xl font-bold font-headline bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-4 pb-2.5">
-                  Ready to Elevate Your Beauty Routine?
-                </h2>
-                <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-                  Join our community and get access to exclusive deals and new
-                  arrivals. Sign up for our newsletter today!
-                </p>
-              </div>
-
-              <div className="mt-20 text-start py-16 bg-primary text-primary-foreground rounded-lg">
-                <div className=" max-w-7xl mx-auto px-4">
-                  <h2 className="text-4xl md:text-4xl font-bold text-white bg-gradient-to-r from-foreground via-primary to-foreground bg-clip-text text-transparent mb-4 pb-2.5">
-                    Join Our Newsletter
-                  </h2>
-                  <p className="text-xl text-primary-foreground/80 max-w-7xl mx-auto leading-relaxed mb-6">
-                    Become part of our vibrant beauty community and unlock
-                    exclusive offers and early access to new arrivals. Subscribe to our newsletter for expert tips, special rewards, and the
-                    latest updates. Discover a world of beauty, wellness, and
-                    inspiration delivered straight to your inbox every week.
-                    Join us on this transformative journey of self-care and
-                    well-being.
-                  </p>
-                  <Button variant="secondary" size="lg">
-                    Sign Up Now
-                  </Button>
-                </div>
-              </div>
-            </section>
+            <DownloadApp />
           </main>
         </div>
       </div>
+      <CTASection />
     </PageContainer>
   );
 }

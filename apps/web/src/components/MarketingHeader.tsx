@@ -105,7 +105,7 @@ const profileNavItems = [
 
 const navItems = [
   { label: "Products", href: "/all-products" },
-  { label: "Salons", href: "/all-salons" },
+  { label: "Salons", href: "/salons" },
   { label: "Doctors", href: "/doctors" },
   { label: "About Us", href: "/about" },
   { label: "Reach Us", href: "/contact" },
@@ -214,7 +214,7 @@ export function MarketingHeader({
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between relative">
           <Link
             href="/"
-            className="font-bold text-xl sm:text-2xl font-headline bg-gradient-to-r from-purple-600 to-purple-400 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+            className="font-bold text-xl sm:text-2xl font-headline text-primary bg-clip-text hover:opacity-80 transition-opacity"
           >
             <span className="hidden sm:inline">GlowVita Salon</span>
             <span className="sm:hidden">GlowVita</span>
@@ -230,9 +230,9 @@ export function MarketingHeader({
                       <Button
                         variant="ghost"
                         className={cn(
-                          "hover:bg-purple-400/10 text-sm px-3 relative",
+                          "hover:bg-primary/10 text-sm px-3 relative",
                           isActiveRoute(item.href) &&
-                            "after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-3/4 after:h-0.5 after:bg-purple-400 after:rounded-full"
+                            "after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-3/4 after:h-0.5 after:bg-primary after:rounded-full"
                         )}
                       >
                         {item.label}
@@ -246,9 +246,9 @@ export function MarketingHeader({
                         <Button
                           variant="ghost"
                           className={cn(
-                            "hover:bg-purple-400/10 text-md px-5 relative",
+                            "hover:bg-primary/10 text-md px-5 relative",
                             isActiveRoute(item.href) &&
-                              "after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-3/4 after:h-1 after:bg-purple-400 after:rounded-full"
+                              "after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-3/4 after:h-1 after:bg-primary after:rounded-full"
                           )}
                         >
                           {item.label}
@@ -269,15 +269,15 @@ export function MarketingHeader({
                     <DropdownMenuTrigger asChild>
                       <Button
                         variant="ghost"
-                        className="group flex items-center gap-2 h-10 rounded-full hover:bg-purple-400/10 transition-all duration-300"
+                        className="group flex items-center gap-2 h-10 rounded-full hover:bg-primary/10 transition-all duration-300"
                         aria-label="User menu"
                       >
-                        <Avatar className="h-9 w-9 ring-2 ring-purple-400/50">
+                        <Avatar className="h-9 w-9 ring-2 ring-primary/50">
                           <AvatarImage
                             src={user?.profilePicture || user?.avatarUrl}
                             alt={`${user?.firstName || "User"} avatar`}
                           />
-                          <AvatarFallback className="bg-gradient-to-br from-purple-400 to-purple-600 text-white">
+                          <AvatarFallback className="bg-primary text-white">
                             {getInitials(user?.firstName, user?.lastName)}
                           </AvatarFallback>
                         </Avatar>
@@ -290,12 +290,12 @@ export function MarketingHeader({
                     >
                       <DropdownMenuLabel className="p-5 border-b border-border/20">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 ring-2 ring-purple-400/50">
+                          <Avatar className="h-10 w-10 ring-2 ring-primary/50">
                             <AvatarImage
                               src={user?.profilePicture || user?.avatarUrl}
                               alt={`${user?.firstName || "User"} avatar`}
                             />
-                            <AvatarFallback className="bg-gradient-to-br from-purple-400 to-purple-600 text-white">
+                            <AvatarFallback className="bg-primary text-white">
                               {getInitials(user?.firstName, user?.lastName)}
                             </AvatarFallback>
                           </Avatar>
@@ -341,7 +341,7 @@ export function MarketingHeader({
                 ) : (
                   <Button
                     variant="ghost"
-                    className="hover:bg-purple-400/10 text-md px-3"
+                    className="hover:bg-primary/10 text-md px-3"
                     asChild
                   >
                     <Link href="/client-login">Login</Link>
@@ -384,7 +384,7 @@ export function MarketingHeader({
                           variant="ghost"
                           className={cn(
                             "w-full justify-start h-12 text-left",
-                            isActiveRoute(item.href) && "bg-purple-400/10"
+                            isActiveRoute(item.href) && "bg-primary/10"
                           )}
                           asChild
                         >
@@ -399,7 +399,7 @@ export function MarketingHeader({
                             variant="ghost"
                             className={cn(
                               "w-full justify-start h-12 text-left",
-                              isActiveRoute(item.href) && "bg-purple-400/10"
+                              isActiveRoute(item.href) && "bg-primary/10"
                             )}
                             asChild
                           >
@@ -442,7 +442,7 @@ export function MarketingHeader({
                         <Link href="/client-login">Login</Link>
                       </Button>
                       <Button
-                        className="w-full h-12 justify-center bg-gradient-to-r from-purple-400 to-secondary hover:from-purple-400/90 hover:to-secondary/90"
+                        className="w-full h-12 justify-center bg-primary hover:to-secondary/90"
                         asChild
                       >
                         <Link href="/client-register">

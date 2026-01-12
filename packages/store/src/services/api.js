@@ -159,7 +159,8 @@ export const glowvitaApi = createApi({
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder","DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
-     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport","SupplierReports","Products"
+     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport","SupplierReports","Products",
+     "PublicAllOffers"
   ],
 
   endpoints: (builder) => ({
@@ -474,6 +475,17 @@ export const glowvitaApi = createApi({
     getPublicVendorOffers: builder.query({
       query: (vendorId) => ({ url: `/offers?businessId=${vendorId}`, method: "GET" }),
       providesTags: ["PublicVendorOffers"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public All Offers (Admin + CRM) for landing page
+    getPublicAllOffers: builder.query({
+      query: (vendorId = undefined) => ({ 
+        url: `/all-offers`, 
+        method: "GET",
+        params: vendorId ? { vendorId } : {}
+      }),
+      providesTags: ["PublicAllOffers"],
       transformResponse: (response) => response,
     }),
 
@@ -2615,6 +2627,7 @@ export const {
   useGetPublicVendorStaffQuery,
   useGetPublicVendorStaffByServiceQuery,
   useGetPublicVendorOffersQuery,
+  useGetPublicAllOffersQuery,
   useUserLoginMutation,
   useGetClientOrdersQuery,
   useCreateClientOrderMutation,

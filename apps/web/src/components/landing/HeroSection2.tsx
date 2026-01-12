@@ -152,51 +152,62 @@ const HeroSection2 = () => {
   }, [categoriesData]);
 
   return (
-    <div className="relative w-full min-h-screen flex items-center justify-center overflow-hidden bg-[#2D1C30]">
-      {/* Background */}
+    <div className="relative w-full h-[615px] overflow-hidden">
+      {/* Background Image with Overlay */}
       <div
-        className="absolute inset-0 bg-cover bg-center scale-105"
+        className="absolute inset-0 bg-cover bg-center"
         style={{
-          backgroundImage: `linear-gradient(to bottom, rgba(45, 28, 48, 0.6), rgba(45, 28, 48, 0.85)), url('https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?q=80&w=2000')`,
+          backgroundImage: `linear-gradient(to right, rgba(45, 28, 48, 0.85), rgba(45, 28, 48, 0.4)), url('https://images.unsplash.com/photo-1560066984-138dadb4c035?w=1200')`,
         }}
       />
 
-      {/* Glow Effects */}
-      <div className="absolute top-20 left-10 w-80 h-80 bg-purple-500/25 rounded-full blur-[150px] animate-pulse" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 bg-amber-500/15 rounded-full blur-[180px] animate-pulse delay-1000" />
-      <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-indigo-500/10 rounded-full blur-[120px] animate-pulse delay-2000 -translate-x-1/2 -translate-y-1/2" />
-
       {/* Content */}
-      <div className="relative z-10 w-full max-w-6xl px-4 sm:px-8 text-center">
-        <div className="mb-12">
-          <h2 className="text-4xl sm:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-100 to-amber-300 mb-4">
-            Discover Your Perfect Glow
-          </h2>
-          <p className="text-gray-100 text-xl sm:text-2xl max-w-2xl mx-auto font-light">
-            Unlock premium self-care: Find top-rated salons and specialists nearby, tailored for your ultimate beauty experience.
-          </p>
+      <div className="relative z-10 container mx-auto px-6 lg:px-8 h-full flex flex-col justify-center max-w-7xl">
+        {/* Logo */}
+        <div className="mb-8">
+          <h3 className="text-amber-100 text-sm font-light tracking-[0.3em] uppercase">
+            GLOWVITA
+          </h3>
         </div>
 
-        {/* Search Bar - Your Preferred UI */}
-        <div className="w-full max-w-4xl mx-auto">
-          <div className="bg-white rounded-full shadow-2xl p-3 flex flex-col sm:flex-row items-center gap-3 sm:gap-0">
-            
-            {/* Treatment / Venue */}
-            <div className="relative flex-1 w-full flex items-center px-4 sm:px-6 py-3 hover:bg-gray-50/50 transition-all rounded-full">
-              <Scissors className="w-5 h-5 text-gray-500 mr-3 shrink-0" />
+        {/* Heading */}
+        <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold text-amber-50 mb-6 max-w-2xl leading-tight">
+          Find a service
+          <br />
+          close to you
+        </h1>
+
+        {/* Subheading */}
+        <p className="text-gray-200 text-base md:text-lg mb-10 max-w-xl leading-relaxed">
+          Experience convenience by discovering salons and specialists in your
+          area, ready to provide excellent self-care services.
+        </p>
+
+        {/* Search Bar */}
+        <div className="bg-white rounded-full shadow-2xl p-2 flex items-center gap-3 max-w-4xl mb-8">
+          {/* Service Name Input */}
+          <div className="relative flex-1 flex items-center gap-3 px-4 border-r border-gray-200">
+            <div className="flex flex-col flex-1">
+              {!serviceInput && (
+                <label className="text-primary text-xs font-medium mb-1">
+                  Service Name
+                </label>
+              )}
               <input
                 type="text"
-                placeholder="Treatment or venue"
+                placeholder="Book your services..."
                 value={serviceInput}
                 onChange={(e) => setServiceInput(e.target.value)}
                 onFocus={() => setIsServiceFocused(true)}
                 onBlur={() => setTimeout(() => setIsServiceFocused(false), 200)}
-                className="w-full bg-transparent outline-none text-base font-medium text-gray-900 placeholder:text-gray-500"
+                className="outline-none text-gray-800 placeholder-gray-400 text-sm"
               />
+            </div>
+            <Scissors className="w-4 h-4 text-gray-400" />
 
-              {/* Fixed & Reliable Dropdown */}
-              {isServiceFocused && suggestions.length > 0 && (
-                <div className="absolute top-full left-0 right-auto w-[300px] sm:w-[400px] mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-60 overflow-y-auto no-scrollbar">
+            {/* Fixed & Reliable Dropdown */}
+            {isServiceFocused && suggestions.length > 0 && (
+              <div className="absolute top-full left-0 right-auto w-[300px] sm:w-[400px] mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-60 overflow-y-auto no-scrollbar">
                   {/* <div className="px-5 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50/50 sticky top-0 backdrop-blur-sm">
                     Suggestions
                   </div> */}
@@ -232,29 +243,32 @@ const HeroSection2 = () => {
                       </div>
                     </button>
                   ))}
-                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Address Input */}
+          <div className="relative flex-1 flex items-center gap-3 px-4">
+            <div className="flex flex-col flex-1">
+              {!locationInput && (
+                <label className="text-primary text-xs font-medium mb-1">
+                  Address
+                </label>
               )}
-            </div>
-
-            {/* Dividers */}
-            <div className="hidden sm:block w-px h-10 bg-gray-200 mx-2" />
-            <div className="hidden sm:block w-px h-10 bg-gray-200 mx-2" />
-
-            {/* Location */}
-            <div className="relative flex-1 w-full flex items-center px-4 sm:px-6 py-3 hover:bg-gray-50/50 transition-all rounded-full">
-              <MapPin className="w-5 h-5 text-gray-500 mr-3 shrink-0" />
               <input
                 type="text"
-                placeholder="Location"
+                placeholder="Where"
                 value={locationInput}
                 onChange={(e) => setLocationInput(e.target.value)}
                 onFocus={() => setIsLocationFocused(true)}
                 onBlur={() => setTimeout(() => setIsLocationFocused(false), 200)}
-                className="w-full bg-transparent outline-none text-base font-medium text-gray-900 placeholder:text-gray-500"
+                className="outline-none text-gray-800 placeholder-gray-400 text-sm"
               />
+            </div>
+            <MapPin className="w-4 h-4 text-gray-400" />
 
-              {isLocationFocused && (locationPredictions.length > 0 || !locationInput) && (
-                <div className="absolute top-full left-0 right-auto w-[200px] sm:w-[350px] mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-60 overflow-y-auto no-scrollbar">
+            {isLocationFocused && (locationPredictions.length > 0 || !locationInput) && (
+              <div className="absolute top-full left-0 right-auto w-[200px] sm:w-[350px] mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-60 overflow-y-auto no-scrollbar">
                   {/* <div className="px-5 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50/50 sticky top-0 backdrop-blur-sm">
                     Locations
                   </div> */}
@@ -295,40 +309,36 @@ const HeroSection2 = () => {
                       <span className="text-gray-800 font-bold text-sm tracking-tight">{prediction.description}</span>
                     </button>
                   ))}
-                </div>
-              )}
-            </div>
-
-            {/* Time */}
-            <div className="flex-1 w-full flex items-center px-4 sm:px-6 py-3 hover:bg-gray-50/50 transition-all rounded-full">
-              <Calendar className="w-5 h-5 text-gray-500 mr-3 shrink-0" />
-              <input
-                type="text"
-                placeholder="Time"
-                value={dateInput}
-                onChange={(e) => setDateInput(e.target.value)}
-                onFocus={(e) => (e.target.type = "datetime-local")}
-                onBlur={(e) => !e.target.value && (e.target.type = "text")}
-                className="w-full bg-transparent outline-none text-base font-medium text-gray-900 placeholder:text-gray-500"
-              />
-            </div>
-
-            {/* Search Button */}
-            <button
-              onClick={handleSearch}
-              className="bg-amber-500 hover:bg-amber-600 text-white px-10 py-3 rounded-full font-semibold text-base transition-all shadow-md hover:shadow-amber-400/40 active:scale-95 mx-2 sm:mx-0 hover:scale-105"
-            >
-              Search
-            </button>
+              </div>
+            )}
           </div>
+
+          {/* Search Button */}
+          <button
+            onClick={handleSearch}
+            className="bg-primary text-white px-8 py-3 rounded-full font-medium transition-all duration-300 flex items-center gap-2 shadow-lg hover:bg-primary/90"
+          >
+            Search
+            <Sparkles className="w-4 h-4" />
+          </button>
         </div>
 
-        {/* Marquee Categories */}
-        <div className="mt-16 w-full max-w-4xl mx-auto overflow-hidden">
-          <div className="flex gap-4 animate-marquee whitespace-nowrap py-4">
+        {/* Service Categories Marquee */}
+        <div className="max-w-4xl overflow-hidden relative">
+          {/* Left Fade */}
+          <div className="rounded-full absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[rgba(45,28,48,0.95)] via-[rgba(45,28,48,0.7)] to-transparent z-10 pointer-events-none"></div>
+
+          {/* Marquee */}
+          <div className="flex gap-3 animate-marquee hover:[animation-play-state:paused]">
             {categoriesLoading ? (
               Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="w-40 h-12 bg-white/10 rounded-full animate-pulse" />
+                <div
+                  key={i}
+                  className="bg-white bg-opacity-10 backdrop-blur-sm border border-purple-950 border-opacity-30 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2 whitespace-nowrap flex-shrink-0 animate-pulse"
+                >
+                  <div className="w-4 h-4 bg-gray-300 rounded-full" />
+                  <div className="h-4 bg-gray-300 rounded w-16" />
+                </div>
               ))
             ) : (
               [...marqueeCategories, ...marqueeCategories].map((cat: any, i) => (
@@ -338,14 +348,17 @@ const HeroSection2 = () => {
                     setSelectedCategoryId(cat.id);
                     setServiceInput(cat.label);
                   }}
-                  className="inline-flex items-center gap-3 px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 rounded-full text-white font-medium transition-all hover:scale-105"
+                  className="bg-white bg-opacity-10 backdrop-blur-sm hover:border-white hover:bg-opacity-20 border border-purple-950 border-opacity-30 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2 whitespace-nowrap flex-shrink-0"
                 >
-                  <cat.icon className="w-5 h-5 text-amber-200" />
+                  <cat.icon className="w-4 h-4" />
                   {cat.label}
                 </button>
               ))
             )}
           </div>
+
+          {/* Right Fade */}
+          <div className="rounded-full absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[rgba(45,28,48,0.95)] via-[rgba(45,28,48,0.7)] to-transparent z-10 pointer-events-none"></div>
         </div>
       </div>
     </div>
