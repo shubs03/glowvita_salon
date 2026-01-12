@@ -756,6 +756,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     });
     
+    // Calculate total business (Total Service Amount + Platform Fee + Service Tax)
+    aggregatedTotals.totalBusiness = aggregatedTotals.totalServiceAmount + aggregatedTotals.totalPlatformFee + aggregatedTotals.totalServiceTax;
+    aggregatedTotals.totalBusinessFormatted = `₹${aggregatedTotals.totalBusiness.toFixed(2)}`;
+    
     return NextResponse.json({
       success: true,
       data: {

@@ -71,7 +71,7 @@ export const useEnhancedWeddingPackages = ({ vendorId }: UseEnhancedWeddingPacka
       setLoading(true);
       const response = await fetch(`/api/wedding-packages/enhanced?vendorId=${vendorId}`);
       const data = await response.json();
-      
+
       if (data.success) {
         setPackages(data.weddingPackages);
       } else {
@@ -95,9 +95,9 @@ export const useEnhancedWeddingPackages = ({ vendorId }: UseEnhancedWeddingPacka
         },
         body: JSON.stringify(packageData),
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         await fetchPackages(); // Refresh the list
         return { success: true, package: data.weddingPackage };
@@ -120,9 +120,9 @@ export const useEnhancedWeddingPackages = ({ vendorId }: UseEnhancedWeddingPacka
         },
         body: JSON.stringify({ packageId, ...updateData }),
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         await fetchPackages(); // Refresh the list
         return { success: true, package: data.weddingPackage };
@@ -141,9 +141,9 @@ export const useEnhancedWeddingPackages = ({ vendorId }: UseEnhancedWeddingPacka
       const response = await fetch(`/api/wedding-packages/enhanced?packageId=${packageId}`, {
         method: 'DELETE',
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         await fetchPackages(); // Refresh the list
         return { success: true };
@@ -166,9 +166,9 @@ export const useEnhancedWeddingPackages = ({ vendorId }: UseEnhancedWeddingPacka
         },
         body: JSON.stringify({ packageId, customizedServices }),
       });
-      
+
       const data = await response.json();
-      
+
       if (data.success) {
         await fetchPackages(); // Refresh the list
         return { success: true, package: data.weddingPackage };
@@ -186,12 +186,12 @@ export const useEnhancedWeddingPackages = ({ vendorId }: UseEnhancedWeddingPacka
     return services.reduce((total, service) => {
       const quantity = service.quantity || 1;
       let price = service.servicePrice || 0;
-      
+
       // Use discounted price if available
       if (service.serviceDiscountedPrice !== null && service.serviceDiscountedPrice !== undefined) {
         price = service.serviceDiscountedPrice;
       }
-      
+
       return total + (price * quantity);
     }, 0);
   };
@@ -203,7 +203,7 @@ export const useEnhancedWeddingPackages = ({ vendorId }: UseEnhancedWeddingPacka
       const duration = service.serviceDuration || 60;
       const prepTime = service.servicePrepTime || service.prepTime || 0;
       const setupCleanupTime = service.serviceSetupCleanupTime || service.setupCleanupTime || 0;
-      
+
       return total + ((duration + prepTime + setupCleanupTime) * quantity);
     }, 0);
   };
@@ -213,14 +213,14 @@ export const useEnhancedWeddingPackages = ({ vendorId }: UseEnhancedWeddingPacka
     if (pkg.depositAmount > 0) {
       return pkg.depositAmount;
     }
-    
+
     if (pkg.depositPercentage > 0) {
-      const price = pkg.discountedPrice !== null && pkg.discountedPrice !== undefined 
-        ? pkg.discountedPrice 
+      const price = pkg.discountedPrice !== null && pkg.discountedPrice !== undefined
+        ? pkg.discountedPrice
         : pkg.totalPrice;
       return price * (pkg.depositPercentage / 100);
     }
-    
+
     return 0;
   };
 
@@ -229,13 +229,15 @@ export const useEnhancedWeddingPackages = ({ vendorId }: UseEnhancedWeddingPacka
     if (!pkg.allowCustomization) {
       return { valid: false, error: "Customization is not allowed for this package" };
     }
-    
+
     if (customizedServices.length > pkg.maxCustomizations) {
       return { valid: false, error: `Maximum ${pkg.maxCustomizations} services allowed in this package` };
     }
-    
+
     // Check if all services belong to the same vendor or are properly multi-vendor
-    const vendorIds = [...new Set(customizedServices.map(s => s.vendorId).filter(Boolean))];
+    const vendorIds = customizedServices
+      .map(s => s.vendorId)
+      .filter((id, index, self) => id && self.indexOf(id) === index);
     if (vendorIds.length > 1) {
       // For multi-vendor packages, ensure all services have vendorId specified
       const servicesWithoutVendor = customizedServices.filter(s => !s.vendorId);
@@ -243,7 +245,7 @@ export const useEnhancedWeddingPackages = ({ vendorId }: UseEnhancedWeddingPacka
         return { valid: false, error: "All services in multi-vendor packages must specify a vendorId" };
       }
     }
-    
+
     return { valid: true };
   };
 

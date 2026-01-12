@@ -22,30 +22,30 @@
 `}</style>
 
 import React, { useState, useEffect, useMemo, Suspense } from "react";
-import { 
-  ChevronLeft, 
-  X, 
-  Scissors, 
-  User, 
-  Calendar, 
-  CalendarDays, 
-  Clock, 
-  MapPin, 
-  Star, 
-  ChevronUp, 
-  ChevronDown, 
-  Wallet, 
-  CreditCard, 
-  Hourglass, 
-  Loader2, 
-  AlertCircle, 
-  Search, 
-  Home, 
-  List, 
-  UserCircle, 
-  Phone, 
-  CheckCircle, 
-  Info, 
+import {
+  ChevronLeft,
+  X,
+  Scissors,
+  User,
+  Calendar,
+  CalendarDays,
+  Clock,
+  MapPin,
+  Star,
+  ChevronUp,
+  ChevronDown,
+  Wallet,
+  CreditCard,
+  Hourglass,
+  Loader2,
+  AlertCircle,
+  Search,
+  Home,
+  List,
+  UserCircle,
+  Phone,
+  CheckCircle,
+  Info,
   ChevronRight,
   Heart
 } from "lucide-react";
@@ -67,15 +67,18 @@ import { Input } from '@repo/ui/input';
 import DatePicker from 'react-datepicker';
 import { format } from 'date-fns';
 import { useBookingData, Service, StaffMember, ServiceStaffAssignment, calculateTotalDuration, convertDurationToMinutes, WeddingPackage } from '@/hooks/useBookingData';
-import { useCreatePublicAppointmentMutation, useGetPublicVendorOffersQuery, 
-  useAcquireSlotLockMutation, useConfirmBookingMutation, 
-  useLockWeddingPackageMutation } from '@repo/store/api';
+import {
+  useCreatePublicAppointmentMutation, useGetPublicVendorOffersQuery,
+  useAcquireSlotLockMutation, useConfirmBookingMutation,
+  useLockWeddingPackageMutation
+} from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
 // Add import for payment calculator - use cleaner @repo alias
 import { calculateBookingAmount, validateOfferCode } from '@repo/lib/utils';
 import { toast } from 'sonner';
 import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
 import { GoogleMapSelector } from '@/components/GoogleMapSelector';
+import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from "@repo/config/config";
 
 // Add a custom hook to fetch tax fee settings
 const useTaxFeeSettings = () => {
@@ -110,12 +113,13 @@ const useTaxFeeSettings = () => {
 // Add interface for home service location
 interface HomeServiceLocation {
   address: string;
-  city: string;
-  state: string;
-  pincode: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   landmark?: string;
   lat?: number;
   lng?: number;
+  coordinates?: { lat: number; lng: number };
 }
 
 function BookingPageContent() {
@@ -127,21 +131,21 @@ function BookingPageContent() {
     const endMinutes = totalMinutes % 60;
     return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
   };
-  
+
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
   const { salonId } = params;
-  
+
   // State for tracking the selected service
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  
+
   // State for tracking the selected wedding package
   const [selectedWeddingPackage, setSelectedWeddingPackage] = useState<WeddingPackage | null>(null);
   const [isCustomizingPackage, setIsCustomizingPackage] = useState(false);
   const [customizedPackageServices, setCustomizedPackageServices] = useState<Service[]>([]);
   const [weddingPackageMode, setWeddingPackageMode] = useState<'default' | 'customized' | null>(null);
-  
+
   // State declarations
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
@@ -159,14 +163,7 @@ function BookingPageContent() {
   }>>([]);
 
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [homeServiceLocation, setHomeServiceLocation] = useState<{
-    address: string;
-    city?: string;
-    state?: string;
-    pincode?: string;
-    landmark?: string;
-    coordinates: { lat: number; lng: number };
-  } | null>(null);
+  const [homeServiceLocation, setHomeServiceLocation] = useState<HomeServiceLocation | null>(null);
   const [showMapSelector, setShowMapSelector] = useState(false);
   const [locationForm, setLocationForm] = useState<HomeServiceLocation>({
     address: '',
@@ -177,27 +174,24 @@ function BookingPageContent() {
     lat: undefined,
     lng: undefined
   });
-  
+
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState<string>('Pay at Salon');
 
   // Defensive: Ensure location is cleared if mode is salon (catches state inconsistencies)
   useEffect(() => {
     if (bookingMode === 'salon' && homeServiceLocation) {
-       console.log("Defensive Cleanup: Clearing homeServiceLocation because mode is salon");
-       setHomeServiceLocation(null);
+      console.log("Defensive Cleanup: Clearing homeServiceLocation because mode is salon");
+      setHomeServiceLocation(null);
     }
   }, [bookingMode, homeServiceLocation]);
 
   // Wrapper to handle mode switching with cleanup
   const handleBookingModeChange = (mode: 'salon' | 'home') => {
-    console.log(`=== Switching booking mode to: ${mode} ===`);
-    console.log('Is wedding package:', !!selectedWeddingPackage);
-    console.log('Is authenticated:', isAuthenticated);
-    console.log('Selected Time:', selectedTime);
+    console.log(`=== Switching booking mode to: ${mode} at step ${currentStep} ===`);
     
     setBookingMode(mode);
-    
+
     if (mode === 'salon') {
       // Clear home service location when switching to salon mode
       setHomeServiceLocation(null);
@@ -210,25 +204,13 @@ function BookingPageContent() {
         lat: undefined,
         lng: undefined
       });
-      
-      // For salon mode, just validate time is selected
-      if (selectedWeddingPackage && !selectedTime) {
-        toast.error('Please select a time slot first');
-        setCurrentStep(3); // Go back to time selection
-        return;
-      }
-      
-      // User will click "Continue to Confirmation" button to proceed
-      console.log('Salon mode selected. User can now click Continue to Confirmation');
     } else if (mode === 'home') {
-      // For wedding venue mode, validate time and open map selector
-      if (!selectedTime) {
-        toast.error('Please select a time slot first');
-        setCurrentStep(3); // Go back to time selection
-        return;
+      // For home mode, we only open the map automatically if we are already at the location step (Step 4 for weddings)
+      // For regular services, the location modal is triggered by an effect in Step 3
+      if (currentStep === 4 && selectedWeddingPackage) {
+        console.log('Opening map selector for wedding venue');
+        setShowMapSelector(true);
       }
-      console.log('Opening map selector for wedding venue');
-      setShowMapSelector(true);
     }
   };
 
@@ -248,10 +230,10 @@ function BookingPageContent() {
   // Fetch vendor offers
   const { data: vendorOffersData, isLoading: isOffersLoading } = useGetPublicVendorOffersQuery(salonId as string);
   const vendorOffers = vendorOffersData?.data || [];
-  
+
   // Fetch tax fee settings using our custom hook
   const { taxFeeSettings, isLoading: isTaxFeeSettingsLoading } = useTaxFeeSettings();
-  
+
   // State for offer dropdown
   const [isOfferDropdownOpen, setIsOfferDropdownOpen] = useState(false);
   const [offerSearchTerm, setOfferSearchTerm] = useState('');
@@ -262,9 +244,9 @@ function BookingPageContent() {
     const handleClickOutside = (event: MouseEvent) => {
       const dropdown = document.getElementById('offer-dropdown');
       const input = document.getElementById('offer-input');
-      if (dropdown && input && 
-          !dropdown.contains(event.target as Node) && 
-          !input.contains(event.target as Node)) {
+      if (dropdown && input &&
+        !dropdown.contains(event.target as Node) &&
+        !input.contains(event.target as Node)) {
         setShowOfferDropdown(false);
       }
     };
@@ -285,20 +267,20 @@ function BookingPageContent() {
       console.log('Returning all vendor offers:', vendorOffers);
       return vendorOffers;
     }
-    
-    const filtered = vendorOffers.filter((offer: { code: string; type: string; value: number }) => 
+
+    const filtered = vendorOffers.filter((offer: { code: string; type: string; value: number }) =>
       offer.code.toLowerCase().includes(offerSearchTerm.toLowerCase()) ||
       (offer.type === 'percentage' && `${offer.value}%`.includes(offerSearchTerm)) ||
       (offer.type === 'fixed' && `₹${offer.value}`.includes(offerSearchTerm))
     );
-    
+
     console.log('Filtered offers:', filtered);
     return filtered;
   }, [vendorOffers, offerSearchTerm]);
 
   // Fetch service-specific staff data when a service is selected
   const serviceStaffData = useBookingData(salonId as string, selectedService?.id || (selectedServices.length > 0 ? selectedServices[0]?.id : undefined));
-  
+
 
   // Make sure currentStep is always a valid number (allow up to step 5 for wedding packages)
   if (typeof currentStep !== 'number' || currentStep < 1 || currentStep > 5) {
@@ -318,7 +300,7 @@ function BookingPageContent() {
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isServiceScheduleOpen, setIsServiceScheduleOpen] = useState(false);
-  
+
   // Add missing state variables
   const [isStaffScheduleOpen, setIsStaffScheduleOpen] = useState(false);
   const [isLocationFormOpen, setIsLocationFormOpen] = useState(false);
@@ -328,20 +310,20 @@ function BookingPageContent() {
   const [isDateSelectionOpen, setIsDateSelectionOpen] = useState(false);
   const [isServiceSelectionOpen, setIsServiceSelectionOpen] = useState(false);
   const [isVendorSelectionOpen, setIsVendorSelectionOpen] = useState(false);
-  
+
   // Add state to store lock token from Step3 for wedding packages
   const [slotLockToken, setSlotLockToken] = useState<string | null>(null);
-  
+
   // Add missing form state variables
   const [customerInfoForm, setCustomerInfoForm] = useState({
     name: '',
     phone: ''
   });
-  
+
   const [selectedStaffId, setSelectedStaffId] = useState('');
   const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([]);
   const [selectedVendorId, setSelectedVendorId] = useState('');
-  
+
   // Mock data for missing components
   const staffList = staff || [];
   const timeSlots = ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
@@ -367,8 +349,8 @@ function BookingPageContent() {
       setTotalAmount(priceBreakdown.finalTotal);
     } else {
       const amount = selectedServices.reduce((sum, service) => {
-        const price = service.discountedPrice !== null && service.discountedPrice !== undefined ? 
-          parseFloat(service.discountedPrice) : 
+        const price = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+          parseFloat(service.discountedPrice) :
           parseFloat(service.price || '0');
         return sum + price;
       }, 0);
@@ -459,7 +441,7 @@ function BookingPageContent() {
   // Handle service selection
   const handleServiceSelection = () => {
     // Find selected services
-    const selectedServices = services.filter((service: any) => 
+    const selectedServices = services.filter((service: any) =>
       selectedServiceIds.includes(service.id)
     );
     setSelectedServices(selectedServices);
@@ -482,13 +464,13 @@ function BookingPageContent() {
     console.log("- city:", !!locationForm.city);
     console.log("- state:", !!locationForm.state);
     console.log("- pincode:", !!locationForm.pincode);
-    
+
     if (!locationForm.lat || !locationForm.lng) {
       toast.error('Please select a location on the map');
       console.log("❌ Validation failed - no location selected");
       return;
     }
-    
+
     // Convert lat/lng to numbers and create proper structure with coordinates object
     const locationData = {
       address: locationForm.address,
@@ -503,31 +485,78 @@ function BookingPageContent() {
         lng: Number(locationForm.lng)
       }
     };
-    
+
     console.log("✅ Validation passed - setting location data");
     console.log("Setting homeServiceLocation to:", locationData);
     setHomeServiceLocation(locationData as any);
     setShowLocationModal(false);
     setShowMapSelector(false); // Reset map selector state
-    
-    toast.success('Location saved successfully!');
-    
-    // After setting location, proceed to confirmation
-    setIsConfirmationModalOpen(true);
-    
-    console.log("=== LOCATION SUBMISSION COMPLETE ===");
-  };
 
+    toast.success('Location saved successfully!');
+
+    // After setting location, if we have a time selected, try to proceed
+    if (selectedTime) {
+      if (isAuthenticated) {
+        setIsConfirmationModalOpen(true);
+      } else {
+        // Save booking data to sessionStorage before redirecting to login
+        const bookingData = {
+          selectedServices,
+          serviceStaffAssignments,
+          selectedStaff,
+          selectedDate: selectedDate.toISOString(),
+          selectedTime,
+          salonId,
+          homeServiceLocation: locationData
+        };
+        sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+        router.push(`/client-login?redirect=/book/${salonId}`);
+      }
+    }
+
+  };
+  
   const handleAddressDetailsFetched = (locationData: HomeServiceLocation) => {
     console.log("✅ Address details fetched - setting location data");
     console.log("Setting homeServiceLocation to:", locationData);
-    setHomeServiceLocation(locationData as HomeServiceLocation);
+
+    // Ensure coordinates are present before setting state
+    let finalLocation = locationData;
+    if (locationData.lat !== undefined && locationData.lng !== undefined) {
+      finalLocation = {
+        ...locationData,
+        coordinates: {
+          lat: Number(locationData.lat),
+          lng: Number(locationData.lng)
+        }
+      };
+      setHomeServiceLocation(finalLocation as any);
+    } else {
+      setHomeServiceLocation(locationData as any);
+    }
     setShowLocationModal(false);
     setShowMapSelector(false); // Reset map selector state
-    
-    // After setting location, proceed to confirmation
-    setIsConfirmationModalOpen(true);
-    
+
+    // After setting location, if we have a time selected, try to proceed
+    if (selectedTime) {
+      if (isAuthenticated) {
+        setIsConfirmationModalOpen(true);
+      } else {
+        // Save booking data to sessionStorage before redirecting to login
+        const bookingData = {
+          selectedServices,
+          serviceStaffAssignments,
+          selectedStaff,
+          selectedDate: selectedDate.toISOString(),
+          selectedTime,
+          salonId,
+          homeServiceLocation: finalLocation
+        };
+        sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+        router.push(`/client-login?redirect=/book/${salonId}`);
+      }
+    }
+
     console.log("=== LOCATION SUBMISSION COMPLETE ===");
   };
 
@@ -535,21 +564,21 @@ function BookingPageContent() {
   const fetchAddressDetails = async (lat: number, lng: number) => {
     try {
       console.log("Fetching address details for:", { lat, lng });
-      
+
       // Check if we have the Google Maps API key
-      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      const apiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
       if (!apiKey) {
         toast.error('Google Maps API key is not configured. Please contact support.');
         console.error('Google Maps API key is missing');
         return;
       }
-      
+
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`
       );
       const data = await response.json();
       console.log("Google Maps API response:", data);
-      
+
       if (data.results && data.results.length > 0) {
         const addressComponents = data.results[0].address_components;
         const addressData: Partial<HomeServiceLocation> = {
@@ -557,7 +586,7 @@ function BookingPageContent() {
           lat,
           lng
         };
-        
+
         // Extract address components
         addressComponents.forEach((component: any) => {
           if (component.types.includes('locality')) {
@@ -568,29 +597,52 @@ function BookingPageContent() {
             addressData.pincode = component.long_name;
           }
         });
-        
+
         console.log("Extracted address data:", addressData);
-        
+
         // Update the location form with the fetched data
         setLocationForm(prev => ({
           ...prev,
           ...addressData
         }));
-        
+
         // If we now have all required data, proceed with submission
         if (addressData.address && addressData.city && addressData.state && addressData.pincode) {
           const locationData = {
             ...addressData,
             lat: Number(lat),
-            lng: Number(lng)
+            lng: Number(lng),
+            coordinates: {
+              lat: Number(lat),
+              lng: Number(lng)
+            }
           };
-          
+
           console.log("✅ Address details fetched - setting location data");
           console.log("Setting homeServiceLocation to:", locationData);
-          setHomeServiceLocation(locationData as HomeServiceLocation);
+          setHomeServiceLocation(locationData as any);
           setShowLocationModal(false);
           setShowMapSelector(false); // Reset map selector state
-          setCurrentStep(3);
+          
+          // After setting location, if we have a time selected, try to proceed
+          if (selectedTime) {
+            if (isAuthenticated) {
+              setIsConfirmationModalOpen(true);
+            } else {
+                // Save booking data to sessionStorage before redirecting to login
+                const bookingData = {
+                  selectedServices,
+                  serviceStaffAssignments,
+                  selectedStaff,
+                  selectedDate: selectedDate.toISOString(),
+                  selectedTime,
+                  salonId,
+                  homeServiceLocation: locationData
+                };
+                sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+                router.push(`/client-login?redirect=/book/${salonId}`);
+            }
+          }
         } else {
           toast.error('Could not fetch complete address details. Please try again or enter manually.');
           console.log("❌ Incomplete address data fetched:", addressData);
@@ -603,7 +655,7 @@ function BookingPageContent() {
       toast.error('Could not fetch address details. Please enter manually.');
     }
   };
-  
+
   // Add useEffect to monitor homeServiceLocation changes
   useEffect(() => {
     console.log("homeServiceLocation state updated:", homeServiceLocation);
@@ -622,28 +674,33 @@ function BookingPageContent() {
   // Handle offer code application
   const handleApplyOffer = async () => {
     if (!offerCode) return;
-    
+
     try {
-      // 3. Confirm the booking
-      console.log("Confirming booking with lock ID:", lockResult.lockId);
-      const confirmResponse = await fetch('/api/booking/confirm', {
+      // Correctly validate the offer using the validate-offer API
+      console.log("Validating offer code:", offerCode, "for vendor:", salonId);
+      const response = await fetch('/api/validate-offer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          appointmentId: lockResult.appointmentId,
-          lockId: lockResult.lockId
+          offerCode: offerCode.toUpperCase().trim(),
+          vendorId: salonId
         }),
       });
-      
-      const result = await confirmResponse.json();
-      
+
+      const result = await response.json();
+
       if (result.success) {
         setOffer(result.data); // Set the offer data directly
         setAppliedOffer(result.data); // Also set the applied offer
-        // Use toast instead of alert
-        toast.success(`Offer ${result.data.code} applied successfully! You saved ₹${result.data.type === 'percentage' ? (totalAmount * result.data.value / 100).toFixed(2) : result.data.value.toFixed(2)}.`);
+
+        // Calculate savings for the message
+        const savings = result.data.type === 'percentage'
+          ? (totalAmount * result.data.value / 100).toFixed(2)
+          : result.data.value.toFixed(2);
+
+        toast.success(`Offer ${result.data.code} applied successfully! You saved ₹${savings}.`);
         // Hide the dropdown after successful application
         setShowOfferDropdown(false);
       } else {
@@ -696,7 +753,7 @@ function BookingPageContent() {
         setCurrentStep(3); // Skip staff selection, go directly to time/date
         return;
       }
-      
+
       // Check if user selected at least one service (only for regular service bookings)
       if (selectedServices.length === 0) {
         toast.error("Please select at least one service to continue.");
@@ -705,29 +762,29 @@ function BookingPageContent() {
 
       // For regular services: Check for incompatible services based on Booking Mode
       if (selectedServices.length > 0 && bookingMode === 'home') {
-        const incompatibleServices = selectedServices.filter(service => 
+        const incompatibleServices = selectedServices.filter(service =>
           !service.homeService?.available && !service.serviceHomeService?.available
         );
-        
+
         if (incompatibleServices.length > 0) {
           const names = incompatibleServices.map(s => s.name).join(", ");
           toast.error(`Some services are not available for Home Service: ${names}. Please remove them or switch to Salon mode.`);
           return;
         }
       }
-      
+
       // OPTIONAL: Check for Salon-only services? 
       // Current logic assumes if it's NOT home service, it works in salon.
       // But if we wanted to enforce strict Salon-only vs Home-only, we could add checks here.
     }
     // For multi-service bookings, validate assignments before proceeding
     const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
-    
+
     // Check if any selected service is a home service
-    const hasHomeService = selectedServices.some(service => 
+    const hasHomeService = selectedServices.some(service =>
       service.homeService?.available || service.serviceHomeService?.available
     );
-    
+
     console.log("hasHomeService", hasHomeService)
     if (currentStep < 3) {
       // For step 2 in multi-service flow, validate assignments
@@ -746,38 +803,38 @@ function BookingPageContent() {
         setCurrentStep(currentStep + 1);
       }
     } else {
-    // We're at step 3 (time selection) - check for home service location if needed
-    // Only require location if we are in 'home' mode
-    if (bookingMode === 'home' && !homeServiceLocation) {
-      console.log("Blocking next step: Home mode without location");
-      toast.error("Please select a location for home service");
-      setShowLocationModal(true); // Force show location modal
-      return;
+      // We're at step 3 (time selection) - check for home service location if needed
+      // Only require location if we are in 'home' mode
+      if (bookingMode === 'home' && !homeServiceLocation) {
+        console.log("Blocking next step: Home mode without location");
+        toast.error("Please select a location for home service");
+        setShowLocationModal(true); // Force show location modal
+        return;
+      }
+
+      console.log("Step 3 Next: Checking Auth...", { isAuthenticated });
+      if (isAuthenticated) {
+        console.log("User authenticated, opening confirmation modal");
+        // toast.info("Reviewing appointment details..."); // Optional status update
+        setIsConfirmationModalOpen(true);
+      } else {
+        console.log("User NOT authenticated, redirecting to login");
+        toast.info("Please login to complete your booking");
+        // Save booking data to sessionStorage before redirecting to login
+        const bookingData = {
+          selectedServices,
+          serviceStaffAssignments,
+          selectedStaff,
+          selectedDate: selectedDate.toISOString(),
+          selectedTime,
+          salonId,
+          homeServiceLocation
+        };
+        sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+        router.push(`/client-login?redirect=/book/${salonId}`);
+      }
     }
-      
-    console.log("Step 3 Next: Checking Auth...", { isAuthenticated });
-    if (isAuthenticated) {
-      console.log("User authenticated, opening confirmation modal");
-      // toast.info("Reviewing appointment details..."); // Optional status update
-      setIsConfirmationModalOpen(true);
-    } else {
-      console.log("User NOT authenticated, redirecting to login");
-      toast.info("Please login to complete your booking");
-      // Save booking data to sessionStorage before redirecting to login
-      const bookingData = {
-        selectedServices,
-        serviceStaffAssignments,
-        selectedStaff,
-        selectedDate: selectedDate.toISOString(),
-        selectedTime,
-        salonId,
-        homeServiceLocation
-      };
-      sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
-      router.push(`/client-login?redirect=/book/${salonId}`);
-    }
-  }
-};
+  };
 
 
   const handlePrevStep = () => {
@@ -825,17 +882,19 @@ function BookingPageContent() {
 
   // Check if any selected service is a home service and show location modal if needed
   useEffect(() => {
-    // Don't auto-trigger location modal for wedding packages - they have dedicated Step 4
+    // Disabled auto-trigger for location modal in Step 3.
+    // Location is now requested when clicking 'Continue' from Step 3 for better UX.
+    /*
     if (selectedWeddingPackage) {
       return;
     }
-    
-    // Simplified Map Logic: Only show if we are in Home Mode for regular services
+
     const requiresLocation = bookingMode === 'home';
 
     if (requiresLocation && currentStep === 3 && !homeServiceLocation) {
       setShowLocationModal(true);
     }
+    */
   }, [selectedServices, currentStep, homeServiceLocation, bookingMode, selectedWeddingPackage]);
 
   // Ensure service-staff assignments are properly initialized when selectedServices change
@@ -849,7 +908,7 @@ function BookingPageContent() {
           console.warn('Invalid service data found:', service);
           return null;
         }
-        
+
         // Check if this service already has an assignment
         const existingAssignment = serviceStaffAssignments.find(assignment => assignment.service.id === service.id);
         if (existingAssignment) {
@@ -858,11 +917,11 @@ function BookingPageContent() {
         // Create a new assignment with no staff selected
         return { service, staff: null };
       }).filter(Boolean) as ServiceStaffAssignment[]; // Filter out any null values
-      
+
       // Only update if there are changes
-      if (newAssignments.length !== serviceStaffAssignments.length || 
-          newAssignments.some((newAssignment, index) => 
-            newAssignment?.service?.id !== serviceStaffAssignments[index]?.service?.id)) {
+      if (newAssignments.length !== serviceStaffAssignments.length ||
+        newAssignments.some((newAssignment, index) =>
+          newAssignment?.service?.id !== serviceStaffAssignments[index]?.service?.id)) {
         console.log('useEffect - Updating service-staff assignments', { newAssignments, serviceStaffAssignments });
         setServiceStaffAssignments(newAssignments);
       }
@@ -883,18 +942,18 @@ function BookingPageContent() {
         console.log("Selected services:", selectedServices);
         console.log("Selected staff:", selectedStaff);
         console.log("Is single service?", selectedServices.length === 1);
-        
+
         // Validate inputs
         if (!selectedTime || !selectedServices || selectedServices.length === 0) {
           console.warn("Missing required data for service schedule calculation");
           setServiceSchedule([]);
           return;
         }
-        
+
         // Calculate the detailed schedule for each service
         const totalDuration = calculateTotalDuration(selectedServices);
         console.log("Total duration:", totalDuration);
-        
+
         // Calculate start and end times for each service
         const newServiceSchedule: Array<{
           service: Service;
@@ -903,28 +962,28 @@ function BookingPageContent() {
           endTime: string;
           duration: number;
         }> = [];
-        
+
         let currentTimeMinutes = parseInt(selectedTime?.split(':')[0] || '0') * 60 + parseInt(selectedTime?.split(':')[1] || '0');
-        
+
         // Check if this is a single service booking
         const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
-        
+
         if (!isMultiService) {
           console.log("Processing SINGLE SERVICE booking");
           const service = selectedServices[0];
-          
+
           // Validate service
           if (!service || !service.duration) {
             console.error("Invalid service data for single service booking:", service);
             setServiceSchedule([]);
             return;
           }
-          
+
           const serviceDuration = convertDurationToMinutes(service.duration);
           const startTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
           const endTimeMinutes = currentTimeMinutes + serviceDuration;
           const endTime = `${Math.floor(endTimeMinutes / 60).toString().padStart(2, '0')}:${(endTimeMinutes % 60).toString().padStart(2, '0')}`;
-          
+
           newServiceSchedule.push({
             service,
             staff: selectedStaff, // Use the selectedStaff from Step2
@@ -932,19 +991,19 @@ function BookingPageContent() {
             endTime,
             duration: serviceDuration
           });
-          
+
           console.log("Single service schedule created:", newServiceSchedule);
         } else {
           // Multi-service flow - use service-staff assignments
           console.log("Processing MULTI-SERVICE booking");
-          
+
           // Validate service-staff assignments
           if (!serviceStaffAssignments || serviceStaffAssignments.length === 0) {
             console.warn("No service-staff assignments found for multi-service booking");
             setServiceSchedule([]);
             return;
           }
-          
+
           // Process services in the order they were assigned
           serviceStaffAssignments.forEach(assignment => {
             // Validate assignment
@@ -952,20 +1011,20 @@ function BookingPageContent() {
               console.warn("Invalid assignment found:", assignment);
               return;
             }
-            
+
             const service = assignment.service;
-            
+
             // Validate service
             if (!service || !service.duration) {
               console.warn("Invalid service data:", service);
               return;
             }
-            
+
             const serviceDuration = convertDurationToMinutes(service.duration);
             const startTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
             currentTimeMinutes += serviceDuration;
             const endTime = `${Math.floor(currentTimeMinutes / 60).toString().padStart(2, '0')}:${(currentTimeMinutes % 60).toString().padStart(2, '0')}`;
-            
+
             newServiceSchedule.push({
               service,
               staff: assignment.staff, // Use the staff from the assignment
@@ -975,7 +1034,7 @@ function BookingPageContent() {
             });
           });
         }
-        
+
         console.log("Final service schedule:", newServiceSchedule);
         setServiceSchedule(newServiceSchedule);
       } catch (error) {
@@ -989,14 +1048,14 @@ function BookingPageContent() {
   useEffect(() => {
     if (selectedWeddingPackage && currentStep === 3 && selectedTime) {
       console.log('Wedding package time selected, moving to location selection');
-      
+
       // Automatically move to location selection after a brief delay (for UX)
       // Weddings are typically done at the wedding venue, so location is always required
       const timer = setTimeout(() => {
         console.log('Moving to step 4 (location selection) for wedding package');
         setCurrentStep(4);
       }, 500);
-      
+
       return () => clearTimeout(timer);
     }
   }, [selectedWeddingPackage, currentStep, selectedTime, weddingPackageMode, customizedPackageServices, isAuthenticated, salonId, router]);
@@ -1028,16 +1087,22 @@ function BookingPageContent() {
         paymentMethod
       };
       sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
-      
+
       // Redirect to login
       router.push(`/client-login?redirect=/book/${salonId}`);
       return;
     }
 
     try {
-      const packageServices = weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services;
-      const packageDuration = packageServices.reduce((total, service) => total + convertDurationToMinutes(service.duration), 0);
+      const isCustomized = weddingPackageMode === 'customized';
+      const packageDuration = isCustomized
+        ? customizedPackageServices.reduce((total, service) => total + convertDurationToMinutes(service.duration), 0)
+        : selectedWeddingPackage.duration || 0;
       const endTime = calculateEndTime(selectedTime, packageDuration);
+
+      const firstServiceId = isCustomized
+        ? (customizedPackageServices[0]?.id || (customizedPackageServices[0] as any)?._id)
+        : (selectedWeddingPackage.services[0]?.serviceId || (selectedWeddingPackage.services[0] as any)?._id || selectedWeddingPackage.id);
 
       // Create appointment data for wedding package
       const appointmentData = {
@@ -1045,7 +1110,7 @@ function BookingPageContent() {
         client: user?._id || user?.id,
         clientName: `${user?.firstName} ${user?.lastName}`,
         // For wedding package, use the first service as primary
-        service: packageServices[0].id,
+        service: firstServiceId,
         serviceName: selectedWeddingPackage.name,
         staff: selectedStaff?.id || null,
         staffName: selectedStaff?.name || "Any Professional",
@@ -1063,24 +1128,24 @@ function BookingPageContent() {
         paymentStatus: 'pending',
         status: 'scheduled',
         notes: `Wedding Package: ${selectedWeddingPackage.name} (${weddingPackageMode === 'customized' ? 'Customized' : 'Default'})`,
-        serviceItems: packageServices.map(service => ({
-          service: service.id,
-          serviceName: service.name,
+        serviceItems: (isCustomized ? customizedPackageServices : selectedWeddingPackage.services).map((service: any) => ({
+          service: service.id || service.serviceId || service._id,
+          serviceName: service.name || service.serviceName,
           staff: selectedStaff?.id || null,
           staffName: selectedStaff?.name || "Any Professional",
           startTime: selectedTime,
           endTime: endTime,
-          duration: convertDurationToMinutes(service.duration),
-          amount: service.discountedPrice !== null && service.discountedPrice !== undefined ? 
-            parseFloat(service.discountedPrice) : 
-            parseFloat(service.price)
+          duration: convertDurationToMinutes(service.duration || selectedWeddingPackage.duration / (selectedWeddingPackage.services?.length || 1)),
+          amount: service.discountedPrice !== null && service.discountedPrice !== undefined ?
+            Number(service.discountedPrice) :
+            Number(service.price || (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice) / (selectedWeddingPackage.services?.length || 1))
         })),
         isMultiService: true,
         isHomeService: bookingMode === 'home' && !!homeServiceLocation,
         isWeddingService: true,
         weddingPackageId: selectedWeddingPackage.id || selectedWeddingPackage._id,
         weddingPackageMode: weddingPackageMode,
-        ...(bookingMode === 'home' && homeServiceLocation ? { 
+        ...(bookingMode === 'home' && homeServiceLocation ? {
           homeServiceLocation: {
             address: homeServiceLocation.address,
             city: homeServiceLocation.city || '',
@@ -1114,12 +1179,12 @@ function BookingPageContent() {
       }
 
       const result = await response.json();
-      
+
       toast.success("Wedding package booking confirmed!");
-      
+
       // Mark that an appointment was just created
       sessionStorage.setItem('appointmentJustCreated', 'true');
-      
+
       // Redirect to success page or appointments page
       router.push(`/appointments/${result.appointment._id}`);
 
@@ -1137,7 +1202,7 @@ function BookingPageContent() {
     console.log('Home Service Location:', homeServiceLocation);
     console.log('Payment Method:', paymentMethod);
     console.log('Is Authenticated:', isAuthenticated);
-    
+
     if (!selectedTime) {
       toast.error("Please select a time slot");
       return;
@@ -1155,7 +1220,7 @@ function BookingPageContent() {
         homeServiceLocation
       };
       sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
-      
+
       // Redirect to login
       router.push(`/login?redirect=/book/${salonId}`);
       return;
@@ -1169,9 +1234,9 @@ function BookingPageContent() {
 
     // Check if this is a multi-service booking
     const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
-    
+
     let staffId, staffName;
-    
+
     if (isMultiService) {
       // For multi-service, use the first service assignment
       const firstAssignment = serviceStaffAssignments[0];
@@ -1205,7 +1270,7 @@ function BookingPageContent() {
       // Use the first selected service
       primaryService = selectedServices[0];
     }
-    
+
     // Validate primary service has required fields
     if (!primaryService || !primaryService.id || !primaryService.name) {
       toast.error("Invalid service data. Please try again.");
@@ -1217,17 +1282,17 @@ function BookingPageContent() {
     const endTime = calculateEndTime(selectedTime, duration);
 
     // Check if any selected service is a home service or if wedding package is for wedding venue
-    const isHomeService = selectedWeddingPackage 
+    const isHomeService = selectedWeddingPackage
       ? false // Wedding packages handle location separately
-      : selectedServices.some(service => 
-          service.homeService?.available || service.serviceHomeService?.available
-        );
-    
-    // Check if this is a wedding service (either wedding package or wedding service)
-    const isWeddingService = !!selectedWeddingPackage || selectedServices.some(service => 
-        service.weddingService?.available || service.serviceWeddingService?.available
+      : selectedServices.some(service =>
+        service.homeService?.available || service.serviceHomeService?.available
       );
-    
+
+    // Check if this is a wedding service (either wedding package or wedding service)
+    const isWeddingService = !!selectedWeddingPackage || selectedServices.some(service =>
+      service.weddingService?.available || service.serviceWeddingService?.available
+    );
+
     // Log home service location data
     console.log("Home service location data:", {
       isHomeService,
@@ -1236,7 +1301,7 @@ function BookingPageContent() {
       hasLocationData: !!homeServiceLocation,
       locationData: homeServiceLocation
     });
-    
+
     // Update the appointment data creation to properly set service type flags
 
     // DEBUG: Log home service detection and location data
@@ -1263,84 +1328,84 @@ function BookingPageContent() {
       startTime: selectedTime,
       endTime: endTime,
       duration: duration,
-      amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ? 
-        parseFloat(primaryService.discountedPrice) : 
-        parseFloat(primaryService.price),
-      totalAmount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ? 
-        parseFloat(primaryService.discountedPrice) : 
-        parseFloat(primaryService.price),
+      amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
+        Number(primaryService.discountedPrice) :
+        Number(primaryService.price),
+      totalAmount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
+        Number(primaryService.discountedPrice) :
+        Number(primaryService.price),
       platformFee: priceBreakdown?.platformFee || 0,
       serviceTax: priceBreakdown?.serviceTax || 0,
       discountAmount: priceBreakdown?.discountAmount || 0,
-      finalAmount: priceBreakdown?.finalTotal || (primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ? 
-        parseFloat(primaryService.discountedPrice) : 
-        parseFloat(primaryService.price)),
+      finalAmount: priceBreakdown?.finalTotal || (primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
+        Number(primaryService.discountedPrice) :
+        Number(primaryService.price)),
       paymentMethod: paymentMethod, // Use selected payment method
       paymentStatus: 'pending',
       status: 'scheduled',
-      notes: selectedWeddingPackage 
+      notes: selectedWeddingPackage
         ? `Wedding Package: ${selectedWeddingPackage.name}`
         : isMultiService ? "Multi-service appointment" : "Single service appointment",
       serviceItems: selectedWeddingPackage
         ? // For wedding packages, create service items from package services
-          selectedWeddingPackage.services.map((pkgService: any) => ({
-            service: pkgService.serviceId || pkgService.id,
-            serviceName: pkgService.serviceName || pkgService.name,
-            staff: staffId,
-            staffName: staffName,
-            startTime: selectedTime,
-            endTime: endTime,
-            duration: duration,
-            amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ? 
-              parseFloat(primaryService.discountedPrice) : 
-              parseFloat(primaryService.price)
-          }))
+        selectedWeddingPackage.services.map((pkgService: any) => ({
+          service: pkgService.serviceId || pkgService.id,
+          serviceName: pkgService.serviceName || pkgService.name,
+          staff: staffId,
+          staffName: staffName,
+          startTime: selectedTime,
+          endTime: endTime,
+          duration: duration,
+          amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
+            Number(primaryService.discountedPrice) :
+            Number(primaryService.price)
+        }))
         : // For regular services
-          selectedServices.map(service => {
-        // For multi-service, find the specific staff assignment for this service
-        let serviceStaffId = null;
-        let serviceStaffName = "Any Professional";
-        
-        if (isMultiService) {
-          const assignment = serviceStaffAssignments.find(a => a.service.id === service.id);
-          if (assignment) {
-            serviceStaffId = assignment.staff ? assignment.staff.id : null;
-            serviceStaffName = assignment.staff ? assignment.staff.name : "Any Professional";
+        selectedServices.map(service => {
+          // For multi-service, find the specific staff assignment for this service
+          let serviceStaffId = null;
+          let serviceStaffName = "Any Professional";
+
+          if (isMultiService) {
+            const assignment = serviceStaffAssignments.find(a => a.service.id === service.id);
+            if (assignment) {
+              serviceStaffId = assignment.staff ? assignment.staff.id : null;
+              serviceStaffName = assignment.staff ? assignment.staff.name : "Any Professional";
+            }
+          } else {
+            // For single service, use the selectedStaff
+            serviceStaffId = selectedStaff?.id || null;
+            serviceStaffName = selectedStaff?.name || "Any Professional";
           }
-        } else {
-          // For single service, use the selectedStaff
-          serviceStaffId = selectedStaff?.id || null;
-          serviceStaffName = selectedStaff?.name || "Any Professional";
-        }
-        
-        return {
-          service: service.id,
-          serviceName: service.name,
-          staff: serviceStaffId,
-          staffName: serviceStaffName,
-          startTime: selectedTime, // This would need to be more specific for multi-service
-          endTime: calculateEndTime(selectedTime, convertDurationToMinutes(service.duration)), // This would need to be more specific for multi-service
-          duration: convertDurationToMinutes(service.duration),
-          amount: service.discountedPrice !== null && service.discountedPrice !== undefined ? 
-            parseFloat(service.discountedPrice) : 
-            parseFloat(service.price)
-        };
-      }),
+
+          return {
+            service: service.id,
+            serviceName: service.name,
+            staff: serviceStaffId,
+            staffName: serviceStaffName,
+            startTime: selectedTime, // This would need to be more specific for multi-service
+            endTime: calculateEndTime(selectedTime, convertDurationToMinutes(service.duration)), // This would need to be more specific for multi-service
+            duration: convertDurationToMinutes(service.duration),
+            amount: service.discountedPrice !== null && service.discountedPrice !== undefined ?
+              Number(service.discountedPrice) :
+              Number(service.price)
+          };
+        }),
       isMultiService: isMultiService,
       // STRICT FIX: Only set isHomeService to true if bookingMode is 'home' AND location is provided.
       // This prevents "Phantom Home Mode" where bookingMode is 'home' but user is booking for salon.
       isHomeService: bookingMode === 'home' && !!homeServiceLocation,
       isWeddingService: isWeddingService,
       // Add home service location if it's a home service - ensure proper structure
-      ...(bookingMode === 'home' && homeServiceLocation ? { 
+      ...(bookingMode === 'home' && homeServiceLocation ? {
         homeServiceLocation: {
           address: homeServiceLocation.address || locationForm.address || '',
           city: homeServiceLocation.city || locationForm.city || '',
           state: homeServiceLocation.state || locationForm.state || '',
           pincode: homeServiceLocation.pincode || locationForm.pincode || '',
           landmark: homeServiceLocation.landmark || locationForm.landmark || '',
-          lat: homeServiceLocation.coordinates?.lat || homeServiceLocation.lat || locationForm.lat || 0,
-          lng: homeServiceLocation.coordinates?.lng || homeServiceLocation.lng || locationForm.lng || 0
+          lat: homeServiceLocation.coordinates?.lat || homeServiceLocation.lat || Number(locationForm.lat) || 0,
+          lng: homeServiceLocation.coordinates?.lng || homeServiceLocation.lng || Number(locationForm.lng) || 0
         }
       } : {}),
       // Add travel time fields with default values if not already present
@@ -1366,7 +1431,7 @@ function BookingPageContent() {
       // Determine if this is a home service based on booking mode and location availability
       // Payment method should NOT affect whether it's a home service or not
       const finalIsHomeService = bookingMode === 'home' && !!homeServiceLocation;
-      
+
       console.log("=== FINAL BOOKING DECISION ===");
       console.log("Booking Mode:", bookingMode);
       console.log("Payment Method:", paymentMethod);
@@ -1388,9 +1453,9 @@ function BookingPageContent() {
           endTime: endTime,
           location: finalIsHomeService ? homeServiceLocation : null,
         });
-        
+
         let lockId = slotLockToken;
-        
+
         // Only acquire lock if we don't already have one from Step3
         if (!lockId) {
           console.log("No existing lock found, acquiring new lock...");
@@ -1412,63 +1477,63 @@ function BookingPageContent() {
               phone: user?.phone
             }
           }).unwrap();
-          
+
           console.log("=== LOCK RESULT ===", lockResult);
-          
+
           if (!lockResult.success || !lockResult.lockId) {
             throw new Error(lockResult.message || "Failed to acquire lock");
           }
-          
+
           lockId = lockResult.lockId;
         } else {
           console.log("Using existing lock token from Step3");
         }
-        
+
         // Now confirm the booking with the lock ID
         console.log("=== CONFIRMING WEDDING PACKAGE BOOKING ===");
         console.log("Lock ID:", lockId);
-        
+
         // Call the wedding package specific endpoint
         const response = await fetch('/api/scheduling/wedding-package', {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            packageId: selectedWeddingPackage._id || selectedWeddingPackage.id,
+            lockId: lockId,
+            selectedSlot: {
+              date: selectedDate,
+              startTime: selectedTime,
+              endTime: endTime,
+              location: finalIsHomeService ? homeServiceLocation : null,
+              totalAmount: appointmentData.totalAmount,
             },
-            body: JSON.stringify({
-              packageId: selectedWeddingPackage._id || selectedWeddingPackage.id,
-              lockId: lockId,
-              selectedSlot: {
-                date: selectedDate,
-                startTime: selectedTime,
-                endTime: endTime,
-                location: finalIsHomeService ? homeServiceLocation : null,
-                totalAmount: appointmentData.totalAmount,
-              },
-              clientName: `${user?.firstName} ${user?.lastName}`,
-              customerDetails: {
-                userId: user?._id || user?.id,
-                name: `${user?.firstName} ${user?.lastName}`,
-                phone: user?.phone,
-                email: user?.email
-              },
-              paymentDetails: {
-                method: paymentMethod,
-                status: 'pending'
-              }
-            })
-          });
-          
-          const confirmResult = await response.json();
-          console.log("=== CONFIRM RESULT ===", confirmResult);
-          
-          if (confirmResult.success) {
-            toast.success("Wedding package booking confirmed!");
-            setIsConfirmationModalOpen(false);
-            setIsSuccessModalOpen(true);
-          } else {
-            throw new Error(confirmResult.message || "Failed to confirm booking");
-          }
+            clientName: `${user?.firstName} ${user?.lastName}`,
+            customerDetails: {
+              userId: user?._id || user?.id,
+              name: `${user?.firstName} ${user?.lastName}`,
+              phone: user?.phone,
+              email: user?.email
+            },
+            paymentDetails: {
+              method: paymentMethod,
+              status: 'pending'
+            }
+          })
+        });
+
+        const confirmResult = await response.json();
+        console.log("=== CONFIRM RESULT ===", confirmResult);
+
+        if (confirmResult.success) {
+          toast.success("Wedding package booking confirmed!");
+          setIsConfirmationModalOpen(false);
+          setIsSuccessModalOpen(true);
         } else {
+          throw new Error(confirmResult.message || "Failed to confirm booking");
+        }
+      } else {
         // Handle regular booking with enhanced slot locking
         const lockResult = await acquireSlotLock({
           vendorId: salonId,
@@ -1485,31 +1550,31 @@ function BookingPageContent() {
           isHomeService: finalIsHomeService,
           isWeddingService: isWeddingService,
           location: finalIsHomeService && homeServiceLocation ? {
-             address: homeServiceLocation.address || locationForm.address || '',
-             city: homeServiceLocation.city || locationForm.city || '',
-             state: homeServiceLocation.state || locationForm.state || '',
-             pincode: homeServiceLocation.pincode || locationForm.pincode || '',
-             landmark: homeServiceLocation.landmark || locationForm.landmark || '',
-             lat: Number(homeServiceLocation.coordinates?.lat || homeServiceLocation.lat || locationForm.lat || 0),
-             lng: Number(homeServiceLocation.coordinates?.lng || homeServiceLocation.lng || locationForm.lng || 0)
+            address: homeServiceLocation.address || locationForm.address || '',
+            city: homeServiceLocation.city || locationForm.city || '',
+            state: homeServiceLocation.state || locationForm.state || '',
+            pincode: homeServiceLocation.pincode || locationForm.pincode || '',
+            landmark: homeServiceLocation.landmark || locationForm.landmark || '',
+            lat: Number(homeServiceLocation.coordinates?.lat || homeServiceLocation.lat || locationForm.lat || 0),
+            lng: Number(homeServiceLocation.coordinates?.lng || homeServiceLocation.lng || locationForm.lng || 0)
           } : null,
           duration: duration,
           amount: appointmentData.amount,
           totalAmount: appointmentData.totalAmount,
           finalAmount: appointmentData.finalAmount
         }).unwrap();
-        
+
         if (lockResult.success) {
           // Confirm the booking
           const confirmResult = await confirmBooking({
             appointmentId: lockResult.appointmentId,
             lockId: lockResult.lockId,
             paymentDetails: {
-               method: paymentMethod,
-               status: 'pending'
+              method: paymentMethod,
+              status: 'pending'
             }
           }).unwrap();
-          
+
           toast.success("Booking confirmed!");
           setIsPaymentModalOpen(false);
           setIsSuccessModalOpen(true);
@@ -1517,15 +1582,15 @@ function BookingPageContent() {
           throw new Error(lockResult.message || "Failed to acquire slot lock");
         }
       }
-      
+
       // Set a flag in sessionStorage to indicate that an appointment was just created
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('appointmentJustCreated', 'true');
       }
-      
+
       // Clear the selected time to ensure the time slot component refetches data
       setSelectedTime(null);
-      
+
     } catch (error: any) {
       console.error("Error creating appointment:", error);
       toast.error(error?.data?.message || error?.message || "Failed to create appointment. Please try again.");
@@ -1535,37 +1600,37 @@ function BookingPageContent() {
   const handlePaymentMethodSelection = async (method: string) => {
     console.log("=== PAYMENT METHOD SELECTION ===");
     console.log("Selected payment method:", method);
-    
+
     // Check if this is a home service booking based on mode
     // We strictly use the bookingMode state, NOT service capabilities
     const isHomeService = bookingMode === 'home';
-      
+
     console.log(`Payment selection - Booking Mode: ${bookingMode}, Is Home Service: ${isHomeService}`);
 
     // Check if any selected service is a wedding service
-    const isWeddingService = selectedServices.some(service => 
+    const isWeddingService = selectedServices.some(service =>
       service.weddingService?.available || service.serviceWeddingService?.available
     );
-    
+
     // If it's a home service, we need to go through the slot-lock process first
     // STRICTER CHECK: Must have mode=home AND a valid location
     if (isHomeService && selectedTime && homeServiceLocation) {
       console.log("Processing home service booking through slot-lock process");
-      
+
       // Get the first service as the primary service
       const primaryService = selectedServices[0];
-      
+
       // Validate primary service has required fields
       if (!primaryService.id || !primaryService.name) {
         toast.error("Invalid service data. Please try again.");
         return;
       }
-      
+
       // Check if any selected service is a wedding service
-      const isWeddingService = selectedServices.some(service => 
+      const isWeddingService = selectedServices.some(service =>
         service.weddingService?.available || service.serviceWeddingService?.available
       );
-      
+
       try {
         // Acquire slot lock for home service
         const lockData = {
@@ -1587,41 +1652,41 @@ function BookingPageContent() {
             state: homeServiceLocation.state,
             pincode: homeServiceLocation.pincode,
             landmark: homeServiceLocation.landmark || '',
-            lat: Number(homeServiceLocation.lat),
-            lng: Number(homeServiceLocation.lng)
+            lat: Number(homeServiceLocation.coordinates?.lat || homeServiceLocation.lat || 0),
+            lng: Number(homeServiceLocation.coordinates?.lng || homeServiceLocation.lng || 0)
           } : null,
           duration: convertDurationToMinutes(primaryService.duration),
-          amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ? 
-            parseFloat(primaryService.discountedPrice) : 
-            parseFloat(primaryService.price),
-          totalAmount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ? 
-            parseFloat(primaryService.discountedPrice) : 
-            parseFloat(primaryService.price),
-          finalAmount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ? 
-            parseFloat(primaryService.discountedPrice) : 
-            parseFloat(primaryService.price)
+          amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
+            Number(primaryService.discountedPrice) :
+            Number(primaryService.price),
+          totalAmount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
+            Number(primaryService.discountedPrice) :
+            Number(primaryService.price),
+          finalAmount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
+            Number(primaryService.discountedPrice) :
+            Number(primaryService.price)
         };
-        
+
         console.log("Acquiring slot lock with data:", lockData);
         const lockResult = await acquireSlotLock(lockData).unwrap();
-        
+
         if (lockResult.success) {
           // Confirm the booking
           const confirmResult = await confirmBooking({
             appointmentId: lockResult.appointmentId,
             lockId: lockResult.lockId
           }).unwrap();
-          
+
           // Handle online payment if selected
           if (method === 'Pay Online' && confirmResult.appointment.finalAmount > 0) {
             try {
               // In a real implementation, you would integrate with Razorpay or another payment gateway here
               // For now, we'll simulate this
               console.log("Processing online payment...");
-              
+
               // Simulate payment processing
               await new Promise(resolve => setTimeout(resolve, 2000));
-              
+
               // Update payment status to completed
               // In a real implementation, you would call an API to update the appointment
               console.log("Payment processed successfully");
@@ -1633,21 +1698,21 @@ function BookingPageContent() {
               return;
             }
           }
-          
+
           // Close the payment modal
           setIsPaymentModalOpen(false);
-          
+
           // Show confirmation message with toast
           toast.success("Booking Confirmed! Payment Method: " + method);
-          
+
           // Set a flag in sessionStorage to indicate that an appointment was just created
           if (typeof window !== 'undefined') {
             sessionStorage.setItem('appointmentJustCreated', 'true');
           }
-          
+
           // Clear the selected time to ensure the time slot component refetches data
           setSelectedTime(null);
-          
+
           // Redirect to the appointments page after a short delay
           setTimeout(() => {
             router.push('/profile/appointments');
@@ -1666,29 +1731,29 @@ function BookingPageContent() {
     } else {
       // Handle regular (non-home service) appointments as before
       console.log("Processing regular appointment (step check passed or fallback)");
-      
+
       // FALLBACK LOG: If bookingMode is home but we are here, it means location was missing
       if (bookingMode === 'home' && !homeServiceLocation) {
         console.warn("Booking Mode is Home but no location found. Falling back to Salon booking.");
         // Optional: toast.warning("Missing home location details. Proceeding as salon booking.");
       }
-      
+
       // Prevent multiple calls
       if (isCreatingAppointment) {
         console.log("Appointment creation already in progress, skipping...");
         return;
       }
-      
+
       // Validate that we have at least one service or a wedding package
       if (selectedServices.length === 0 && !selectedWeddingPackage) {
         toast.error("Please select at least one service or a wedding package");
         return;
       }
-      
+
       // Check if this is a multi-service booking or wedding package
       const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
       const isWeddingPackageBooking = !!selectedWeddingPackage;
-      
+
       // For wedding packages, use package data; otherwise use first service
       let primaryService;
       if (isWeddingPackageBooking && selectedWeddingPackage) {
@@ -1706,36 +1771,36 @@ function BookingPageContent() {
       } else {
         primaryService = selectedServices[0];
       }
-      
+
       // Validate primary service has required fields
       if (!primaryService.id || !primaryService.name) {
         toast.error("Invalid service data. Please try again.");
         return;
       }
-      
+
       try {
         // Check if we have a service schedule or need to create one
         let finalServiceSchedule = serviceSchedule;
-        
+
         // If no service schedule exists, create one based on whether it's single or multi-service
         if (serviceSchedule.length === 0 && selectedTime) {
           console.log("Creating service schedule - is multi-service:", isMultiService);
-          
+
           if (isMultiService && serviceStaffAssignments.length > 0) {
             // MULTI-SERVICE: Create sequential schedule with proper start/end times
             console.log("Creating MULTI-service schedule with sequential times");
             let currentStartTime = selectedTime;
-            
+
             finalServiceSchedule = serviceStaffAssignments.map((assignment, index) => {
               const serviceDuration = convertDurationToMinutes(assignment.service.duration);
               const endTime = calculateEndTime(currentStartTime, serviceDuration);
-              
+
               console.log(`\n📝 Creating Service ${index + 1} Schedule Entry:`);
               console.log(`   Service: ${assignment.service.name}`);
               console.log(`   Duration: ${serviceDuration} minutes`);
               console.log(`   Current Start Time (BEFORE this service): ${currentStartTime}`);
               console.log(`   Calculated End Time: ${endTime}`);
-              
+
               const scheduleEntry = {
                 service: assignment.service,
                 staff: assignment.staff,
@@ -1743,17 +1808,17 @@ function BookingPageContent() {
                 endTime: endTime,              // This service ends at endTime
                 duration: serviceDuration
               };
-              
+
               console.log(`   ✅ Service ${index + 1} will run: ${currentStartTime} - ${endTime}\n`);
-              
+
               // CRITICAL: Update start time for next service (sequential)
               const previousStartTime = currentStartTime;
               currentStartTime = endTime;  // Next service starts where this one ends
               console.log(`   🔄 Next service will start at: ${currentStartTime}\n`);
-              
+
               return scheduleEntry;
             });
-            
+
             console.log("Created multi-service schedule with sequential times:", finalServiceSchedule);
           } else if (selectedServices.length === 1) {
             // SINGLE-SERVICE: Create simple schedule
@@ -1771,26 +1836,26 @@ function BookingPageContent() {
               name: service?.name,
               price: service?.price
             });
-            
+
             // Validate service has required properties
             if (!service) {
               console.error("No service selected for schedule creation");
               toast.error("No service selected. Please try again.");
               return;
             }
-            
+
             if (!service.id) {
               console.error("Service missing ID:", service);
               toast.error("Invalid service data - missing ID. Please try again.");
               return;
             }
-            
+
             if (!service.name) {
               console.error("Service missing name:", service);
               toast.error("Invalid service data - missing name. Please try again.");
               return;
             }
-            
+
             // Determine staff for single service
             let staffForSchedule = selectedStaff;
             if (isMultiService && serviceStaffAssignments.length > 0) {
@@ -1799,10 +1864,10 @@ function BookingPageContent() {
                 staffForSchedule = assignment.staff;
               }
             }
-            
+
             const serviceDuration = convertDurationToMinutes(service.duration);
             console.log("Service duration:", serviceDuration);
-            
+
             // Create a service schedule entry for the single service
             finalServiceSchedule = [{
               service,
@@ -1811,7 +1876,7 @@ function BookingPageContent() {
               endTime: calculateEndTime(selectedTime, serviceDuration),
               duration: serviceDuration
             }];
-            
+
             console.log("Created single service schedule:", finalServiceSchedule);
             console.log("Created schedule service details:", {
               service: finalServiceSchedule[0].service,
@@ -1829,13 +1894,13 @@ function BookingPageContent() {
             });
           }
         }
-        
+
         console.log("Final service schedule:", finalServiceSchedule);
-        
+
         // For multiple services or single service with schedule, create appointment
         if (finalServiceSchedule.length > 0) {
           console.log("Creating appointment with method:", method);
-          
+
           // Use the first service as the primary service for the appointment
           const primarySchedule = finalServiceSchedule[0];
           console.log("Primary schedule:", primarySchedule);
@@ -1849,14 +1914,14 @@ function BookingPageContent() {
             serviceId: primarySchedule.service?.id,
             serviceName: primarySchedule.service?.name
           });
-          
+
           // Validate that we have all required service data
           if (!primarySchedule.service || !primarySchedule.service.id || !primarySchedule.service.name) {
             console.error("Missing required service data:", primarySchedule.service);
             toast.error("Invalid service data. Please try again.");
             return;
           }
-          
+
           // Validate that we have all required staff data (staff can be null for "Any Professional")
           console.log("Primary schedule staff details:", {
             staff: primarySchedule.staff,
@@ -1868,33 +1933,33 @@ function BookingPageContent() {
             staffId: primarySchedule.staff?.id,
             staffName: primarySchedule.staff?.name
           });
-          
+
           if (primarySchedule.staff && (!primarySchedule.staff.id || !primarySchedule.staff.name)) {
             console.error("Invalid staff data:", primarySchedule.staff);
             toast.error("Invalid staff data. Please try again.");
             return;
           }
-          
+
           console.log("Primary service data:", {
             id: primarySchedule.service.id,
             name: primarySchedule.service.name,
             hasId: !!primarySchedule.service.id,
             hasName: !!primarySchedule.service.name
           });
-          
+
           console.log("Primary staff data:", {
             id: primarySchedule.staff ? primarySchedule.staff.id : null,
             name: primarySchedule.staff ? primarySchedule.staff.name : "Any Professional",
             hasId: primarySchedule.staff ? !!primarySchedule.staff.id : true, // Can be null
             hasName: primarySchedule.staff ? !!primarySchedule.staff.name : true
           });
-          
+
           // Format the appointment date with the correct time
-        const appointmentDate = selectedDate instanceof Date ? new Date(selectedDate) : new Date(selectedDate);
-        const [hours, minutes] = primarySchedule.startTime.split(':').map(Number);
-        appointmentDate.setHours(hours, minutes, 0, 0);
-        console.log("Appointment date:", appointmentDate);
-          
+          const appointmentDate = selectedDate instanceof Date ? new Date(selectedDate) : new Date(selectedDate);
+          const [hours, minutes] = primarySchedule.startTime.split(':').map(Number);
+          appointmentDate.setHours(hours, minutes, 0, 0);
+          console.log("Appointment date:", appointmentDate);
+
           // Create service items for all services
           const serviceItems = finalServiceSchedule.map(schedule => {
             // Validate service data
@@ -1902,13 +1967,13 @@ function BookingPageContent() {
               console.error("Missing required service data in schedule:", schedule.service);
               throw new Error("Invalid service data in schedule");
             }
-            
+
             // Validate staff data (staff can be null for "Any Professional")
             if (schedule.staff && (!schedule.staff.id || !schedule.staff.name)) {
               console.error("Invalid staff data in schedule:", schedule.staff);
               throw new Error("Invalid staff data in schedule");
             }
-            
+
             console.log("Creating service item:", {
               serviceId: schedule.service.id,
               serviceName: schedule.service.name,
@@ -1917,11 +1982,11 @@ function BookingPageContent() {
               startTime: schedule.startTime,
               endTime: schedule.endTime,
               duration: schedule.duration,
-              amount: schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ? 
-                parseFloat(schedule.service.discountedPrice) : 
+              amount: schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ?
+                parseFloat(schedule.service.discountedPrice) :
                 parseFloat(schedule.service.price)
             });
-            
+
             return {
               service: schedule.service.id,
               serviceName: schedule.service.name,
@@ -1930,32 +1995,32 @@ function BookingPageContent() {
               startTime: schedule.startTime,
               endTime: schedule.endTime,
               duration: schedule.duration,
-              amount: schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ? 
-                parseFloat(schedule.service.discountedPrice) : 
+              amount: schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ?
+                parseFloat(schedule.service.discountedPrice) :
                 parseFloat(schedule.service.price)
             };
           });
-          
+
           console.log("Service items:", serviceItems);
-          
+
           // Calculate total amount for all services
           const totalAmount = finalServiceSchedule.reduce((sum, schedule) => {
-            const price = schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ? 
-              parseFloat(schedule.service.discountedPrice) : 
+            const price = schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ?
+              parseFloat(schedule.service.discountedPrice) :
               parseFloat(schedule.service.price);
             return sum + price;
           }, 0);
 
           console.log("Total amount:", totalAmount);
-          
+
           // Calculate total duration
           const totalDuration = finalServiceSchedule.reduce((sum, schedule) => sum + schedule.duration, 0);
           console.log("Total duration:", totalDuration);
-          
+
           // Use the last service's end time as the appointment end time
-          const endTime = finalServiceSchedule[finalServiceSchedule.length - 1].endTime || 
-                         calculateEndTime(primarySchedule.startTime, totalDuration);
-          
+          const endTime = finalServiceSchedule[finalServiceSchedule.length - 1].endTime ||
+            calculateEndTime(primarySchedule.startTime, totalDuration);
+
           console.log("\n🕐 === APPOINTMENT TIME DETAILS ===");
           console.log("Start time:", primarySchedule.startTime);
           console.log("End time:", endTime);
@@ -1967,7 +2032,7 @@ function BookingPageContent() {
             console.log(`    Time: ${sched.startTime} - ${sched.endTime} (${sched.duration} min)`);
           });
           console.log("=================================\n");
-          
+
           // Handle staff field - it can now be null for "Any Professional"
           let staffId = primarySchedule.staff ? primarySchedule.staff.id : null;
           let staffName = primarySchedule.staff ? primarySchedule.staff.name : "Any Professional";
@@ -1985,7 +2050,7 @@ function BookingPageContent() {
             lastName: user.lastName,
             id: clientId
           });
-          
+
           // Fix salonId if it's an array
           const vendorId = Array.isArray(salonId) ? salonId[0] : salonId;
           console.log("Vendor ID check:", {
@@ -1994,17 +2059,17 @@ function BookingPageContent() {
             salonIdType: typeof salonId,
             isSalonIdArray: Array.isArray(salonId)
           });
-          
+
           // Update the appointment data creation to properly set service type flags
           // STRICT FIX: Only set isHomeService to true if the user explicitly chose 'home' mode AND provided location
           // This serves as the final safety net against phantom home bookings
           const isHomeService = bookingMode === 'home' && !!homeServiceLocation;
-          
+
           // Check if any selected service is a wedding service
-          const isWeddingService = selectedServices.some(service => 
+          const isWeddingService = selectedServices.some(service =>
             service.weddingService?.available || service.serviceWeddingService?.available
           );
-          
+
           const appointmentData = {
             vendorId: vendorId, // Use the fixed vendorId
             client: clientId, // Use the fixed client ID
@@ -2056,12 +2121,12 @@ function BookingPageContent() {
               }
             }),
             // Add travel time fields -- Pass null/undefined to let backend calculate if not available
-            travelTime: undefined, 
+            travelTime: undefined,
             bufferBefore: 0,
             bufferAfter: 0,
             blockingWindows: []
           };
-          
+
           // DEBUG: Log the complete appointment data being sent
           console.log("\n🚀 === ABOUT TO CREATE APPOINTMENT ===");
           console.log("Appointment Data:", {
@@ -2081,7 +2146,7 @@ function BookingPageContent() {
             // homeServiceLocation is added conditionally to appointmentData but not logged here due to type constraints
           });
           console.log("========================================\n");
-          
+
           // Log all required fields to make sure they're present
           console.log("Required fields check:", {
             vendorId: appointmentData.vendorId,
@@ -2094,53 +2159,56 @@ function BookingPageContent() {
             date: appointmentData.date,
             booking_mode: bookingMode
           });
-          
+
           // Create the appointment using the mutation
           console.log("Creating appointment via mutation...");
-          
+
           try {
             const result = await createAppointment(appointmentData).unwrap();
             console.log("Appointment created successfully:", result);
-            
+
             // Handle online payment trigger if needed
             if (method === 'Pay Online' && result.data?.finalAmount > 0) {
-              // In a real implementation, you would integrate with Razorpay or another payment gateway here
-              // For now, we'll simulate this
-              console.log("Processing online payment...");
-              
-              // Simulate payment processing
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              
-              // Update payment status to completed
-              // In a real implementation, you would call an API to update the appointment
-              console.log("Payment processed successfully");
-              console.error("Payment processing error:", paymentError);
-              // Update payment status to failed
-              // In a real implementation, you would call an API to update the appointment
-              toast.error("Payment failed. Please try again or pay at the salon.");
-              return;
+              try {
+                // In a real implementation, you would integrate with Razorpay or another payment gateway here
+                // For now, we'll simulate this
+                console.log("Processing online payment...");
+
+                // Simulate payment processing
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // Update payment status to completed
+                // In a real implementation, you would call an API to update the appointment
+                console.log("Payment processed successfully");
+              } catch (paymentError) {
+                console.error("Payment processing error:", paymentError);
+                // Update payment status to failed
+                // In a real implementation, you would call an API to update the appointment
+                toast.error("Payment failed. Please try again or pay at the salon.");
+                return;
+              }
             }
           } catch (error) {
             console.error("Error during appointment creation mutation:", error);
             throw error;
           }
-          
+
           // Close the payment modal
           setIsPaymentModalOpen(false);
-          
+
           // Show confirmation message with toast
           toast.success(`Booking Confirmed! Payment Method: ${method}\nAppointment created successfully with ${finalServiceSchedule.length} services.`);
-          
+
           // Set a flag in sessionStorage to indicate that an appointment was just created
           // This will help the time slot component know to refetch data when it mounts again
           if (typeof window !== 'undefined') {
             sessionStorage.setItem('appointmentJustCreated', 'true');
           }
-          
+
           // Clear the selected time to ensure the time slot component refetches data
           // This will help ensure that the newly created appointment is reflected in the available time slots
           setSelectedTime(null);
-          
+
           // Redirect to the appointments page after a short delay
           setTimeout(() => {
             router.push('/profile/appointments');
@@ -2173,13 +2241,13 @@ function BookingPageContent() {
       console.error('Invalid service data:', service);
       return;
     }
-    
+
     // Ensure service has all required properties
     if (!service.name) {
       console.error('Service missing name property:', service);
       return;
     }
-    
+
     console.log('handleSelectService called with:', service);
     console.log('Service properties:', {
       id: service.id,
@@ -2190,18 +2258,18 @@ function BookingPageContent() {
       hasPrice: !!service.price,
       serviceKeys: Object.keys(service)
     });
-    
+
     setSelectedServices(prev => {
       const isSelected = prev.some(s => s.id === service.id);
       console.log('Service is already selected:', isSelected);
-      
+
       if (isSelected) {
         // If deselecting the service, clear the selected service if it matches
         if (selectedService?.id === service.id) {
           setSelectedService(null);
         }
         // Also remove the service from service-staff assignments
-        setServiceStaffAssignments(prevAssignments => 
+        setServiceStaffAssignments(prevAssignments =>
           prevAssignments.filter(assignment => assignment.service.id !== service.id)
         );
         return prev.filter(s => s.id !== service.id);
@@ -2209,17 +2277,17 @@ function BookingPageContent() {
         // When selecting a service, update the selected service state
         setSelectedService(service);
         console.log('Updated selectedService state to:', service);
-        
+
         // Clear wedding package selection when individual service is selected
         setSelectedWeddingPackage(null);
-        
+
         // Add a new service-staff assignment with no staff selected initially
         setServiceStaffAssignments(prevAssignments => {
           // Check if this service is already in assignments to prevent duplicates
           const isAlreadyAssigned = prevAssignments.some(assignment => assignment.service.id === service.id);
           if (isAlreadyAssigned) {
             // Update the existing assignment
-            return prevAssignments.map(assignment => 
+            return prevAssignments.map(assignment =>
               assignment.service.id === service.id ? { ...assignment, service } : assignment
             );
           }
@@ -2239,13 +2307,13 @@ function BookingPageContent() {
   const handleSelectWeddingPackage = (pkg: WeddingPackage | null) => {
     console.log('handleSelectWeddingPackage called with:', pkg);
     setSelectedWeddingPackage(pkg);
-    
+
     if (pkg) {
       // Package selected - keep on step 1 to show decision modal
       // Don't auto-advance, let the rendering logic show the decision modal
       setWeddingPackageMode(null); // Reset mode to trigger decision modal
     }
-    
+
     // Clear individual service selection when package is selected
     setSelectedServices([]);
     setSelectedService(null);
@@ -2253,7 +2321,7 @@ function BookingPageContent() {
     setIsCustomizingPackage(false);
     setCustomizedPackageServices([]);
   };
-  
+
   // Handle wedding package customization start
   const handleCustomizePackage = () => {
     if (selectedWeddingPackage) {
@@ -2267,7 +2335,7 @@ function BookingPageContent() {
       setCustomizedPackageServices(packageServices);
     }
   };
-  
+
   // Handle proceeding with default package
   const handleProceedWithDefault = () => {
     if (selectedWeddingPackage) {
@@ -2277,7 +2345,7 @@ function BookingPageContent() {
       setCurrentStep(3);
     }
   };
-  
+
   // Handle customization complete
   const handleCustomizationComplete = (customServices: Service[]) => {
     setCustomizedPackageServices(customServices);
@@ -2285,7 +2353,7 @@ function BookingPageContent() {
     // Skip staff selection for wedding packages - go directly to time slots
     setCurrentStep(3);
   };
-  
+
   // Handle back from customization
   const handleBackFromCustomization = () => {
     setIsCustomizingPackage(false);
@@ -2304,11 +2372,11 @@ function BookingPageContent() {
       // Use multi-service flow if more than one service is selected
       // Also use multi-service flow if there are service-staff assignments (which indicates we're in multi-service workflow)
       const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
-      
+
       // Add debugging
-      console.log('renderStepContent - Current state:', { 
-        currentStep, 
-        isMultiService, 
+      console.log('renderStepContent - Current state:', {
+        currentStep,
+        isMultiService,
         selectedServicesLength: selectedServices.length,
         serviceStaffAssignmentsLength: serviceStaffAssignments.length,
         selectedService: selectedService?.id,
@@ -2316,16 +2384,16 @@ function BookingPageContent() {
         serviceStaffDataError: serviceStaffData?.error,
         serviceStaffData: serviceStaffData
       });
-      
+
       // Add a simple test to ensure we always return something (allow up to step 5 for wedding packages)
       if (currentStep < 1 || currentStep > 5) {
         console.warn('Invalid currentStep value:', currentStep);
         return <div className="w-full py-12 text-center">Invalid step: {currentStep}</div>;
       }
-      
+
       // Add a simple test to see if we're getting to this point
       console.log('renderStepContent - About to render step:', currentStep);
-      
+
       // Show skeleton loader while services are being fetched
       if (isLoading) {
         return (
@@ -2348,7 +2416,7 @@ function BookingPageContent() {
                 ))}
               </div>
             </div>
-            
+
             {/* Skeleton for continue button */}
             <div className="flex justify-end">
               <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
@@ -2356,7 +2424,7 @@ function BookingPageContent() {
           </div>
         );
       }
-      
+
       // Check if we have services data
       if (!services || services.length === 0) {
         return (
@@ -2369,436 +2437,449 @@ function BookingPageContent() {
           </div>
         );
       }
-      
+
       switch (currentStep) {
-          case 1:
-              console.log('Rendering Step1_Services');
-              
-              // If wedding package selected and customization started, show customizer
-              if (selectedWeddingPackage && isCustomizingPackage) {
-                return (
-                  <div className="w-full max-w-4xl mx-auto space-y-6">
-                    {/* Breadcrumb */}
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <button 
-                        onClick={() => handleBackFromCustomization()}
-                        className="hover:text-primary transition-colors"
-                      >
-                        Packages
-                      </button>
-                      <ChevronRight className="h-4 w-4" />
-                      <span className="text-primary font-medium">Customize Package</span>
-                    </div>
-                    
-                    {/* Package Header */}
-                    <Card className="border-2 border-primary/20">
-                      <CardContent className="p-6">
-                        <div className="flex items-start gap-4">
-                          <div className="p-3 bg-rose-100 rounded-full">
-                            <Heart className="h-6 w-6 text-rose-600" />
+        case 1:
+          console.log('Rendering Step1_Services');
+
+          // If wedding package selected and customization started, show customizer
+          if (selectedWeddingPackage && isCustomizingPackage) {
+            return (
+              <div className="w-full max-w-4xl mx-auto space-y-6">
+                {/* Breadcrumb */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <button
+                    onClick={() => handleBackFromCustomization()}
+                    className="hover:text-primary transition-colors"
+                  >
+                    Packages
+                  </button>
+                  <ChevronRight className="h-4 w-4" />
+                  <span className="text-primary font-medium">Customize Package</span>
+                </div>
+
+                {/* Package Header */}
+                <Card className="border-2 border-primary/20">
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <div className="p-3 bg-rose-100 rounded-full">
+                        <Heart className="h-6 w-6 text-rose-600" />
+                      </div>
+                      <div className="flex-1">
+                        <h2 className="text-2xl font-bold">{selectedWeddingPackage.name}</h2>
+                        <p className="text-muted-foreground mt-1">{selectedWeddingPackage.description}</p>
+                        <div className="flex items-center gap-4 mt-4">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{selectedWeddingPackage.duration} min</span>
                           </div>
-                          <div className="flex-1">
-                            <h2 className="text-2xl font-bold">{selectedWeddingPackage.name}</h2>
-                            <p className="text-muted-foreground mt-1">{selectedWeddingPackage.description}</p>
-                            <div className="flex items-center gap-4 mt-4">
-                              <div className="flex items-center gap-2">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">{selectedWeddingPackage.duration} min</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Scissors className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">{selectedWeddingPackage.services.length} services</span>
-                              </div>
-                              <div className="flex items-center gap-2 ml-auto">
-                                <span className="text-2xl font-bold text-primary">
-                                  ₹{selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice}
-                                </span>
-                                {selectedWeddingPackage.discountedPrice && (
-                                  <span className="text-sm text-muted-foreground line-through">
-                                    ₹{selectedWeddingPackage.totalPrice}
-                                  </span>
-                                )}
-                              </div>
+                          <div className="flex items-center gap-2">
+                            <Scissors className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{selectedWeddingPackage.services.length} services</span>
+                          </div>
+                          <div className="flex items-center gap-2 ml-auto">
+                            <span className="text-2xl font-bold text-primary">
+                              ₹{selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice}
+                            </span>
+                            {selectedWeddingPackage.discountedPrice && (
+                              <span className="text-sm text-muted-foreground line-through">
+                                ₹{selectedWeddingPackage.totalPrice}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Customization Interface */}
+                <Step1_WeddingPackageCustomizer
+                  weddingPackage={selectedWeddingPackage}
+                  allServices={services}
+                  onPackageUpdate={(updatedPackage, customServices) => {
+                    handleCustomizationComplete(customServices);
+                  }}
+                  onBack={handleBackFromCustomization}
+                  currentStep={1}
+                  setCurrentStep={setCurrentStep}
+                />
+              </div>
+            );
+          }
+
+          // Wedding package is handled inline in Step1_Services component
+          // No separate modal or screen needed
+
+          // Default: Show service selection with wedding packages
+          return (
+            <Step1_Services
+              selectedServices={selectedServices}
+              onSelectService={handleSelectService}
+              currentStep={currentStep}
+              setCurrentStep={setCurrentStep}
+              services={services}
+              servicesByCategory={servicesByCategory}
+              categories={categories}
+              isLoading={isLoading}
+              error={error}
+              onServiceSelect={handleSelectService}
+              weddingPackages={weddingPackages}
+              onWeddingPackageSelect={handleSelectWeddingPackage}
+              selectedWeddingPackage={selectedWeddingPackage}
+              bookingMode={bookingMode}
+              setBookingMode={handleBookingModeChange}
+            />
+          );
+        case 2:
+          console.log('Rendering Step2 - Wedding Package Mode:', weddingPackageMode);
+
+          // Wedding Package Flow - Skip staff selection and go directly to time/date
+          if (selectedWeddingPackage && weddingPackageMode) {
+            // Automatically advance to step 3 for wedding packages
+            setCurrentStep(3);
+            return null;
+          }
+
+
+          // Regular service flow
+          console.log('Rendering Step2 - isMultiService:', isMultiService);
+          if (isMultiService) {
+            // Multi-service flow
+            console.log('Rendering Step2_MultiService');
+            // Check if we have staff data
+            if (!staff || staff.length === 0) {
+              return (
+                <div className="w-full py-12 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <AlertCircle className="h-8 w-8 text-destructive" />
+                    <p className="text-muted-foreground">No staff available at this salon.</p>
+                    <Button onClick={() => window.location.reload()}>Reload</Button>
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <Step2_MultiService
+                serviceStaffAssignments={serviceStaffAssignments}
+                onUpdateAssignment={(serviceId: string, staff: StaffMember | null) => {
+                  setServiceStaffAssignments(prev =>
+                    prev.map(assignment =>
+                      assignment.service.id === serviceId
+                        ? { ...assignment, staff }
+                        : assignment
+                    )
+                  );
+                }}
+                currentStep={currentStep}
+                setCurrentStep={setCurrentStep}
+                staff={staff}
+                isLoading={false}
+                error={null}
+                onNext={() => setCurrentStep(3)}
+              />
+            );
+          } else {
+            // Single service flow
+            console.log('Rendering Step2_Staff');
+
+            // Check if serviceStaffData is still loading
+            if (serviceStaffData?.isLoading) {
+              return (
+                <div className="w-full space-y-6">
+                  {/* Skeleton for staff selection */}
+                  <div className="space-y-4">
+                    <div className="h-6 bg-gray-200 rounded w-1/3 animate-pulse"></div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {[...Array(3)].map((_, i) => (
+                        <div key={i} className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-center space-x-4">
+                            <div className="h-12 w-12 bg-gray-200 rounded-full animate-pulse"></div>
+                            <div className="flex-1 space-y-2">
+                              <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                              <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse"></div>
                             </div>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
-                    
-                    {/* Customization Interface */}
-                    <Step1_WeddingPackageCustomizer
-                      weddingPackage={selectedWeddingPackage}
-                      allServices={services}
-                      onPackageUpdate={(updatedPackage, customServices) => {
-                        handleCustomizationComplete(customServices);
-                      }}
-                      onBack={handleBackFromCustomization}
-                      currentStep={1}
-                      setCurrentStep={setCurrentStep}
-                    />
+                      ))}
+                    </div>
                   </div>
-                );
-              }
-              
-              // Wedding package is handled inline in Step1_Services component
-              // No separate modal or screen needed
-              
-              // Default: Show service selection with wedding packages
-              return (
-                <Step1_Services 
-                selectedServices={selectedServices}
-                onSelectService={handleSelectService}
-                currentStep={currentStep}
-                setCurrentStep={setCurrentStep}
-                services={services}
-                servicesByCategory={servicesByCategory}
-                categories={categories}
-                isLoading={isLoading}
-                error={error}
-                onServiceSelect={handleSelectService}
-                weddingPackages={weddingPackages}
-                onWeddingPackageSelect={handleSelectWeddingPackage}
-                selectedWeddingPackage={selectedWeddingPackage}
-                bookingMode={bookingMode}
-                setBookingMode={handleBookingModeChange}
-              />
+                </div>
               );
-          case 2:
-              console.log('Rendering Step2 - Wedding Package Mode:', weddingPackageMode);
-              
-              // Wedding Package Flow - Skip staff selection and go directly to time/date
-              if (selectedWeddingPackage && weddingPackageMode) {
-                // Automatically advance to step 3 for wedding packages
-                setCurrentStep(3);
-                return null;
-              }
+            }
 
-              
-              // Regular service flow
-              console.log('Rendering Step2 - isMultiService:', isMultiService);
-              if (isMultiService) {
-                  // Multi-service flow
-                  console.log('Rendering Step2_MultiService');
-                  // Check if we have staff data
-                  if (!staff || staff.length === 0) {
-                    return (
-                      <div className="w-full py-12 text-center">
-                        <div className="flex flex-col items-center gap-4">
-                          <AlertCircle className="h-8 w-8 text-destructive" />
-                          <p className="text-muted-foreground">No staff available at this salon.</p>
-                          <Button onClick={() => window.location.reload()}>Reload</Button>
-                        </div>
-                      </div>
-                    );
-                  }
-                  return (
-                    <Step2_MultiService 
-                      serviceStaffAssignments={serviceStaffAssignments}
-                      onUpdateAssignment={(serviceId: string, staff: StaffMember | null) => {
-                        setServiceStaffAssignments(prev => 
-                          prev.map(assignment => 
-                            assignment.service.id === serviceId 
-                              ? { ...assignment, staff } 
-                              : assignment
-                          )
-                        );
-                      }}
-                      currentStep={currentStep}
-                      setCurrentStep={setCurrentStep}
-                      staff={staff}
-                      isLoading={false}
-                      error={null}
-                      onNext={() => setCurrentStep(3)}
-                    />
-                  );
-              } else {
-                  // Single service flow
-                  console.log('Rendering Step2_Staff');
-                  
-                  // Check if serviceStaffData is still loading
-                  if (serviceStaffData?.isLoading) {
-                    return (
-                      <div className="w-full space-y-6">
-                        {/* Skeleton for staff selection */}
-                        <div className="space-y-4">
-                          <div className="h-6 bg-gray-200 rounded w-1/3 animate-pulse"></div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {[...Array(3)].map((_, i) => (
-                              <div key={i} className="border rounded-lg p-4 space-y-3">
-                                <div className="flex items-center space-x-4">
-                                  <div className="h-12 w-12 bg-gray-200 rounded-full animate-pulse"></div>
-                                  <div className="flex-1 space-y-2">
-                                    <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
-                                    <div className="h-3 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-                  
-                  // Check if there's an error with serviceStaffData
-                  if (serviceStaffData?.error) {
-                    return (
-                      <div className="w-full">
-                        <div className="flex items-center justify-center py-12">
-                          <div className="flex flex-col items-center gap-4">
-                            <AlertCircle className="h-8 w-8 text-destructive" />
-                            <p className="text-muted-foreground">Unable to load staff members. Please try again.</p>
-                            <Button onClick={() => window.location.reload()}>Reload</Button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-                  
-                  // Check if we have staff data
-                  const staffData = serviceStaffData.staff || [];
-                  if (!staffData || staffData.length === 0) {
-                    return (
-                      <div className="w-full py-12 text-center">
-                        <div className="flex flex-col items-center gap-4">
-                          <AlertCircle className="h-8 w-8 text-destructive" />
-                          <p className="text-muted-foreground">No staff available for this service.</p>
-                          <Button onClick={() => window.location.reload()}>Reload</Button>
-                        </div>
-                      </div>
-                    );
-                  }
-                  
-                  return (
-                    <Step2_Staff 
-                      selectedStaff={selectedStaff}
-                      onSelectStaff={handleSelectStaff}
-                      currentStep={currentStep}
-                      setCurrentStep={setCurrentStep}
-                      staff={staffData}
-                      isLoading={serviceStaffData.isLoading || false}
-                      error={serviceStaffData.error}
-                      selectedService={selectedService}
-                      onStaffSelect={setSelectedStaff}
-                    />
-                  );
-              }
-              break;
-              
-          case 3:
-              console.log('Rendering Step3 - Wedding Package:', selectedWeddingPackage, 'isMultiService:', isMultiService);
-              
-              // Check if we have working hours data
-              if (!workingHours || workingHours.length === 0) {
-                return (
-                  <div className="w-full py-12 text-center">
+            // Check if there's an error with serviceStaffData
+            if (serviceStaffData?.error) {
+              return (
+                <div className="w-full">
+                  <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-4">
                       <AlertCircle className="h-8 w-8 text-destructive" />
-                      <p className="text-muted-foreground">Working hours not configured for this salon.</p>
+                      <p className="text-muted-foreground">Unable to load staff members. Please try again.</p>
                       <Button onClick={() => window.location.reload()}>Reload</Button>
                     </div>
                   </div>
-                );
-              }
-              
-              // CENTRALIZED TIME SLOT GENERATION FOR ALL SERVICE TYPES
-              // Determine service data for time slot generation
-              let serviceForTimeSlot;
-              let totalDuration = 0;
-              
-              if (selectedWeddingPackage) {
-                // Wedding package
-                const packageServices = weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services;
-                totalDuration = selectedWeddingPackage.duration || packageServices.reduce((total, service) => {
-                  const duration = typeof service.duration === 'string' ? parseInt(service.duration) : service.duration;
-                  return total + (duration || 0);
-                }, 0);
-                
-                serviceForTimeSlot = {
-                  id: selectedWeddingPackage.id || selectedWeddingPackage._id,
-                  name: selectedWeddingPackage.name,
-                  duration: `${totalDuration} min`,
-                  price: selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice,
-                  category: 'Wedding Package',
-                  description: selectedWeddingPackage.description
-                };
-              } else if (isMultiService) {
-                // Multi-service
-                totalDuration = selectedServices.reduce((total, service) => {
-                  const duration = typeof service.duration === 'string' ? parseInt(service.duration) : service.duration;
-                  return total + (duration || 0);
-                }, 0);
-                
-                serviceForTimeSlot = {
-                  id: 'multi-service',
-                  name: `${selectedServices.length} Services`,
-                  duration: `${totalDuration} min`,
-                  price: selectedServices.reduce((total, s) => total + (s.discountedPrice || s.price || 0), 0),
-                  category: 'Multi-Service',
-                  description: selectedServices.map(s => s.name).join(', ')
-                };
-              } else {
-                // Single service
-                const service = selectedServices[0];
-                const duration = typeof service.duration === 'string' ? parseInt(service.duration) : service.duration;
-                totalDuration = duration || 0;
-                serviceForTimeSlot = service;
-              }
-              
-              // UNIFIED TIME SLOT SELECTOR - Same UI for all service types
-              return isMultiService ? (
-                <Step3_MultiServiceTimeSlot 
-                  selectedDate={selectedDate}
-                  onSelectDate={setSelectedDate}
-                  selectedTime={selectedTime}
-                  onSelectTime={setSelectedTime}
-                  currentStep={currentStep}
-                  setCurrentStep={setCurrentStep}
-                  serviceStaffAssignments={serviceStaffAssignments}
-                  staff={staff}
-                  workingHours={workingHours}
-                  isLoading={false}
-                  error={null}
-                  selectedServices={selectedServices}
-                  vendorId={salonId as string}
-                />
-              ) : (
-                <TimeSlotSelector 
-                  selectedDate={selectedDate}
-                  onSelectDate={setSelectedDate}
-                  selectedTime={selectedTime}
-                  onSelectTime={setSelectedTime}
-                  currentStep={currentStep}
-                  setCurrentStep={setCurrentStep}
-                  selectedStaff={selectedStaff}
-                  onSelectStaff={setSelectedStaff}
-                  staff={selectedStaff ? [selectedStaff] : staff}
-                  workingHours={workingHours}
-                  isLoading={false}
-                  error={null}
-                  salonId={salonId as string}
-                  service={serviceForTimeSlot}
-                  isWeddingPackage={!!selectedWeddingPackage}
-                  weddingPackage={selectedWeddingPackage}
-                  weddingPackageServices={selectedWeddingPackage ? (weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services) : undefined}
-                  onLockAcquired={setSlotLockToken}
-                />
+                </div>
               );
-              break;
-              
-          case 4:
-              // Step 4: Location Selection (for wedding packages and home services)
-              console.log('Rendering Step4 - Wedding Package or Service Location');
-              
-              if (selectedWeddingPackage) {
-                // Wedding package: Always show location selection since weddings are typically at venue
-                return (
-                  <div className="w-full space-y-6">
-                    {/* Wedding Package Info */}
-                    <Card className="border-rose-200 bg-gradient-to-br from-rose-50 to-white">
-                        <CardHeader>
-                          <CardTitle className="text-lg flex items-center gap-2">
-                            <MapPin className="h-5 w-5 text-rose-600" />
-                            Select Wedding Location
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="text-sm text-muted-foreground">
-                            Wedding services can be provided at your venue or at our salon. Please select your preferred location.
-                          </div>
-                          
-                          {/* Location Options */}
-                          <div className="space-y-3">
-                            <Card 
-                              className={`cursor-pointer transition-all ${bookingMode === 'salon' ? 'border-rose-500 bg-rose-50 ring-2 ring-rose-200' : 'border-gray-200 hover:border-rose-300'}`}
-                              onClick={() => handleBookingModeChange('salon')}
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex items-center gap-3">
-                                  <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${bookingMode === 'salon' ? 'border-rose-500' : 'border-gray-300'}`}>
-                                    {bookingMode === 'salon' && <div className="h-3 w-3 rounded-full bg-rose-500" />}
-                                  </div>
-                                  <div>
-                                    <div className="font-medium">At Salon</div>
-                                    <div className="text-sm text-muted-foreground">Come to our salon</div>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                            
-                            <Card 
-                              className={`cursor-pointer transition-all ${bookingMode === 'home' ? 'border-rose-500 bg-rose-50 ring-2 ring-rose-200' : 'border-gray-200 hover:border-rose-300'}`}
-                              onClick={() => handleBookingModeChange('home')}
-                            >
-                              <CardContent className="p-4">
-                                <div className="flex items-center gap-3">
-                                  <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${bookingMode === 'home' ? 'border-rose-500' : 'border-gray-300'}`}>
-                                    {bookingMode === 'home' && <div className="h-3 w-3 rounded-full bg-rose-500" />}
-                                  </div>
-                                  <div>
-                                    <div className="font-medium">Wedding Venue</div>
-                                    <div className="text-sm text-muted-foreground">We'll come to your venue</div>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          </div>
+            }
 
-                          {/* Location Details for Wedding Venue */}
-                          {bookingMode === 'home' && (
-                            <div className="space-y-4 pt-4 border-t">
-                              <div className="flex items-center justify-between">
-                                <h3 className="font-medium">Wedding Venue Location</h3>
-                                {homeServiceLocation && (
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={() => setShowMapSelector(true)}
-                                  >
-                                    Change Location
-                                  </Button>
-                                )}
-                              </div>
-                              
-                              {homeServiceLocation ? (
-                                <Card className="bg-green-50 border-green-200">
-                                  <CardContent className="p-4">
-                                    <div className="flex items-start gap-3">
-                                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                                      <div>
-                                        <div className="font-medium text-green-900">Location Selected</div>
-                                        <div className="text-sm text-green-700 mt-1">{homeServiceLocation.address}</div>
-                                        <div className="text-xs text-green-600 mt-2">
-                                          Click "Confirm Booking" button below to proceed
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              ) : (
-                                <Button 
-                                  onClick={() => setShowMapSelector(true)}
-                                  className="w-full"
-                                  variant="outline"
-                                >
-                                  <MapPin className="h-4 w-4 mr-2" />
-                                  Select Location on Map
-                                </Button>
-                              )}
+            // Check if we have staff data
+            const staffData = serviceStaffData.staff || [];
+            if (!staffData || staffData.length === 0) {
+              return (
+                <div className="w-full py-12 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <AlertCircle className="h-8 w-8 text-destructive" />
+                    <p className="text-muted-foreground">No staff available for this service.</p>
+                    <Button onClick={() => window.location.reload()}>Reload</Button>
+                  </div>
+                </div>
+              );
+            }
+
+            return (
+              <Step2_Staff
+                selectedStaff={selectedStaff}
+                onSelectStaff={handleSelectStaff}
+                currentStep={currentStep}
+                setCurrentStep={setCurrentStep}
+                staff={staffData}
+                isLoading={serviceStaffData.isLoading || false}
+                error={serviceStaffData.error}
+                selectedService={selectedService}
+                onStaffSelect={setSelectedStaff}
+              />
+            );
+          }
+          break;
+
+        case 3:
+          console.log('Rendering Step3 - Wedding Package:', selectedWeddingPackage, 'isMultiService:', isMultiService);
+
+          // Check if we have working hours data
+          if (!workingHours || workingHours.length === 0) {
+            return (
+              <div className="w-full py-12 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <AlertCircle className="h-8 w-8 text-destructive" />
+                  <p className="text-muted-foreground">Working hours not configured for this salon.</p>
+                  <Button onClick={() => window.location.reload()}>Reload</Button>
+                </div>
+              </div>
+            );
+          }
+
+          // CENTRALIZED TIME SLOT GENERATION FOR ALL SERVICE TYPES
+          // Determine service data for time slot generation
+          let serviceForTimeSlot;
+          let totalDuration = 0;
+
+          if (selectedWeddingPackage) {
+            // Wedding package
+            const packageServices = weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services;
+            totalDuration = selectedWeddingPackage.duration || packageServices.reduce((total, service: any) => {
+              const dur = service.duration || service.serviceDuration || 0;
+              const duration = convertDurationToMinutes(dur);
+              return total + (duration || 0);
+            }, 0);
+
+            serviceForTimeSlot = {
+              id: selectedWeddingPackage.id || (selectedWeddingPackage as any)._id || 'wedding-package',
+              name: selectedWeddingPackage.name,
+              duration: `${totalDuration} min`,
+              price: (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice).toString(),
+              category: 'Wedding Package',
+              description: selectedWeddingPackage.description
+            } as any;
+          } else if (isMultiService) {
+            // Multi-service
+            totalDuration = selectedServices.reduce((total, service) => {
+              const duration = convertDurationToMinutes(service.duration);
+              return total + (duration || 0);
+            }, 0);
+
+            serviceForTimeSlot = {
+              id: 'multi-service',
+              name: `${selectedServices.length} Services`,
+              duration: `${totalDuration} min`,
+              price: selectedServices.reduce((total, s) => total + Number(s.discountedPrice || s.price || 0), 0).toString(),
+              category: 'Multi-Service',
+              description: selectedServices.map(s => s.name).join(', ')
+            } as any;
+          } else {
+            // Single service
+            if (selectedServices.length === 0) {
+              console.warn('Step3 Rendering: No services selected for single service flow');
+              return (
+                <div className="w-full py-12 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <AlertCircle className="h-8 w-8 text-destructive" />
+                    <p className="text-muted-foreground">No services selected. Please go back and select a service.</p>
+                    <Button onClick={() => setCurrentStep(1)}>Go to Step 1</Button>
+                  </div>
+                </div>
+              );
+            }
+            const service = selectedServices[0];
+            const duration = convertDurationToMinutes(service?.duration || 0);
+            totalDuration = duration || 0;
+            serviceForTimeSlot = service;
+          }
+
+          // UNIFIED TIME SLOT SELECTOR - Same UI for all service types
+          return isMultiService ? (
+            <Step3_MultiServiceTimeSlot
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              selectedTime={selectedTime}
+              onSelectTime={setSelectedTime}
+              currentStep={currentStep}
+              setCurrentStep={setCurrentStep}
+              serviceStaffAssignments={serviceStaffAssignments}
+              staff={staff}
+              workingHours={workingHours}
+              isLoading={false}
+              error={null}
+              selectedServices={selectedServices}
+              vendorId={salonId as string}
+            />
+          ) : (
+            <TimeSlotSelector
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              selectedTime={selectedTime}
+              onSelectTime={setSelectedTime}
+              currentStep={currentStep}
+              setCurrentStep={setCurrentStep}
+              selectedStaff={selectedStaff}
+              onSelectStaff={setSelectedStaff}
+              staff={selectedStaff ? [selectedStaff] : staff}
+              workingHours={workingHours}
+              isLoading={false}
+              error={null}
+              salonId={salonId as string}
+              service={serviceForTimeSlot}
+              isWeddingPackage={!!selectedWeddingPackage}
+              weddingPackage={selectedWeddingPackage}
+              weddingPackageServices={selectedWeddingPackage ? (weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services) : undefined}
+              onLockAcquired={setSlotLockToken}
+            />
+          );
+          break;
+
+        case 4:
+          // Step 4: Location Selection (for wedding packages and home services)
+          console.log('Rendering Step4 - Wedding Package or Service Location');
+
+          if (selectedWeddingPackage) {
+            // Wedding package: Always show location selection since weddings are typically at venue
+            return (
+              <div className="w-full space-y-6">
+                {/* Wedding Package Info */}
+                <Card className="border-rose-200 bg-gradient-to-br from-rose-50 to-white">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-rose-600" />
+                      Select Wedding Location
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="text-sm text-muted-foreground">
+                      Wedding services can be provided at your venue or at our salon. Please select your preferred location.
+                    </div>
+
+                    {/* Location Options */}
+                    <div className="space-y-3">
+                      <Card
+                        className={`cursor-pointer transition-all ${bookingMode === 'salon' ? 'border-rose-500 bg-rose-50 ring-2 ring-rose-200' : 'border-gray-200 hover:border-rose-300'}`}
+                        onClick={() => handleBookingModeChange('salon')}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${bookingMode === 'salon' ? 'border-rose-500' : 'border-gray-300'}`}>
+                              {bookingMode === 'salon' && <div className="h-3 w-3 rounded-full bg-rose-500" />}
                             </div>
-                          )}
+                            <div>
+                              <div className="font-medium">At Salon</div>
+                              <div className="text-sm text-muted-foreground">Come to our salon</div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      <Card
+                        className={`cursor-pointer transition-all ${bookingMode === 'home' ? 'border-rose-500 bg-rose-50 ring-2 ring-rose-200' : 'border-gray-200 hover:border-rose-300'}`}
+                        onClick={() => handleBookingModeChange('home')}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${bookingMode === 'home' ? 'border-rose-500' : 'border-gray-300'}`}>
+                              {bookingMode === 'home' && <div className="h-3 w-3 rounded-full bg-rose-500" />}
+                            </div>
+                            <div>
+                              <div className="font-medium">Wedding Venue</div>
+                              <div className="text-sm text-muted-foreground">We'll come to your venue</div>
+                            </div>
+                          </div>
                         </CardContent>
                       </Card>
                     </div>
-                  );
-              }
-              
-              // Regular service location selection (existing logic would go here)
-              return <div className="w-full py-12 text-center">Location selection for regular services</div>;
-              
-          default:
-              console.log('Rendering default case - step not found');
-              return <div className="w-full py-12 text-center">Step not found: {currentStep}</div>;
+
+                    {/* Location Details for Wedding Venue */}
+                    {bookingMode === 'home' && (
+                      <div className="space-y-4 pt-4 border-t">
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-medium">Wedding Venue Location</h3>
+                          {homeServiceLocation && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowMapSelector(true)}
+                            >
+                              Change Location
+                            </Button>
+                          )}
+                        </div>
+
+                        {homeServiceLocation ? (
+                          <Card className="bg-green-50 border-green-200">
+                            <CardContent className="p-4">
+                              <div className="flex items-start gap-3">
+                                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                                <div>
+                                  <div className="font-medium text-green-900">Location Selected</div>
+                                  <div className="text-sm text-green-700 mt-1">{homeServiceLocation.address}</div>
+                                  <div className="text-xs text-green-600 mt-2">
+                                    Click "Confirm Booking" button below to proceed
+                                  </div>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ) : (
+                          <Button
+                            onClick={() => setShowMapSelector(true)}
+                            className="w-full"
+                            variant="outline"
+                          >
+                            <MapPin className="h-4 w-4 mr-2" />
+                            Select Location on Map
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          }
+
+          // Regular service location selection (existing logic would go here)
+          return <div className="w-full py-12 text-center">Location selection for regular services</div>;
+
+        default:
+          console.log('Rendering default case - step not found');
+          return <div className="w-full py-12 text-center">Step not found: {currentStep}</div>;
       }
     } catch (error) {
       console.error('Error rendering step content:', error);
@@ -2836,20 +2917,20 @@ function BookingPageContent() {
         setPriceBreakdown(defaultBreakdown);
         return;
       }
-      
+
       // Validate that we have valid services before calculating prices
       if (selectedServices && selectedServices.length > 0) {
         // Filter out any invalid services
-        const validServices = selectedServices.filter(service => 
+        const validServices = selectedServices.filter(service =>
           service && service.id && (service.price !== undefined && service.price !== null) && !isNaN(parseFloat(String(service.price)))
         );
-        
+
         if (validServices.length === 0) {
           console.warn('No valid services found for price calculation');
           setPriceBreakdown(null);
           return;
         }
-        
+
         try {
           console.log('Calculating prices for services:', validServices);
           console.log('Current offer:', offer);
@@ -2862,12 +2943,12 @@ function BookingPageContent() {
           console.error('Error calculating prices:', error);
           // Set a default price breakdown to prevent blank screen
           const subtotal = validServices.reduce((sum, service) => {
-            const price = service.discountedPrice !== null && service.discountedPrice !== undefined ? 
-              parseFloat(service.discountedPrice) : 
+            const price = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+              parseFloat(service.discountedPrice) :
               parseFloat(service.price || '0');
             return sum + price;
           }, 0);
-          
+
           const defaultBreakdown = {
             subtotal: subtotal,
             discountAmount: 0,
@@ -2891,40 +2972,40 @@ function BookingPageContent() {
 
   // Check for pre-selected service from salon details page
   useEffect(() => {
-    console.log('Pre-selected service useEffect running with:', { 
+    console.log('Pre-selected service useEffect running with:', {
       hasWindow: typeof window !== 'undefined',
       servicesLength: services?.length,
       isLoading,
       hasStoredService: typeof window !== 'undefined' ? sessionStorage.getItem('selectedService') : null,
       currentStep
     });
-    
+
     if (typeof window !== 'undefined' && services && services.length > 0 && !isLoading) {
       const storedService = sessionStorage.getItem('selectedService');
       console.log('Checking for stored service:', storedService);
-      
+
       if (storedService) {
         try {
           const serviceData = JSON.parse(storedService);
           console.log('Found pre-selected service in sessionStorage:', serviceData);
           console.log('Available services:', services);
-          
+
           // Find the corresponding service in the loaded services
           // Check multiple possible ID fields since the data might have different structures
-          let service = services.find(s => 
-            s.id === (serviceData.id || serviceData._id) || 
+          let service = services.find(s =>
+            s.id === (serviceData.id || serviceData._id) ||
             s.id === serviceData._id ||
             s.id === serviceData.id
           );
-          
+
           console.log('Found service match by ID:', service);
-          
+
           // If we still haven't found a match, try matching by name as a fallback
           if (!service) {
             service = services.find(s => s.name === serviceData.name);
             console.log('Fallback - Found service match by name:', service);
           }
-          
+
           if (service) {
             console.log('Found matching service in loaded services:', service);
             // Select the service
@@ -2943,14 +3024,14 @@ function BookingPageContent() {
               name: serviceData.name || '',
               duration: serviceData.duration || '60 min',
               price: String(serviceData.price || 0),
-              discountedPrice: serviceData.discountedPrice !== undefined && serviceData.discountedPrice !== null ? 
+              discountedPrice: serviceData.discountedPrice !== undefined && serviceData.discountedPrice !== null ?
                 String(serviceData.discountedPrice) : null,
               category: serviceData.category || 'General',
               image: serviceData.image,
               description: serviceData.description,
               staff: serviceData.staff || []
             };
-            
+
             // Select the service
             handleSelectService(newService);
             // Make sure we're on step 1
@@ -2959,7 +3040,7 @@ function BookingPageContent() {
               setCurrentStep(1);
             }
           }
-          
+
           // Remove the stored service to prevent it from being processed again
           sessionStorage.removeItem('selectedService');
         } catch (error) {
@@ -2972,17 +3053,17 @@ function BookingPageContent() {
 
   // Additional useEffect to handle service selection when services are first loaded
   useEffect(() => {
-    console.log('Services loaded useEffect running with:', { 
+    console.log('Services loaded useEffect running with:', {
       servicesLength: services?.length,
       isLoading,
       selectedServicesLength: selectedServices.length
     });
-    
+
     // Only run this if we haven't already selected a service and there are services loaded
     if (services && services.length > 0 && !isLoading && selectedServices.length === 0) {
       const storedService = typeof window !== 'undefined' ? sessionStorage.getItem('selectedService') : null;
       console.log('Checking for stored service in services loaded effect:', storedService);
-      
+
       if (storedService) {
         // Trigger the main useEffect by ensuring all conditions are met
         // This will cause the main useEffect to run again
@@ -2993,20 +3074,20 @@ function BookingPageContent() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-primary/5 to-background">
-       <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-6 md:px-12 border-b z-20 bg-background/80 backdrop-blur-sm">
+      <header className="flex-shrink-0 sticky top-0 flex items-center justify-between h-20 px-6 md:px-12 border-b z-20 bg-background/80 backdrop-blur-sm">
         <Button variant="ghost" onClick={handlePrevStep} className="flex items-center text-md gap-2">
           <ChevronLeft className="mr-1 h-6 w-6" />
           {currentStep === 1 ? 'Back' : 'Back'}
         </Button>
-      
+
         <Button variant="ghost" size="icon" onClick={() => window.history.back()}>
           <X className="h-6 w-6" />
         </Button>
       </header>
       <div className="flex-1 grid lg:grid-cols-12 gap-8 px-8">
         <main className="lg:col-span-7 xl:col-span-8 overflow-y-auto no-scrollbar">
-            <div className="max-w-4xl mx-auto pb-24 lg:pb-8 pt-8">
-                {/* Debug info
+          <div className="max-w-4xl mx-auto pb-24 lg:pb-8 pt-8">
+            {/* Debug info
                 <div className="mb-4 p-3 bg-secondary/30 rounded-lg text-sm">
                   <div>Current step: {currentStep}</div>
                   <div>Is loading: {isLoading ? 'true' : 'false'}</div>
@@ -3015,13 +3096,13 @@ function BookingPageContent() {
                   <div>Staff length: {staff?.length || 0}</div>
                   <div>Selected services: {selectedServices.length}</div>
                 </div> */}
-                {renderStepContent()}
-            </div>
+            {renderStepContent()}
+          </div>
         </main>
-        
+
         <aside className="hidden lg:block lg:col-span-5 xl:col-span-4 py-8">
           <div className="sticky top-28">
-            <BookingSummary 
+            <BookingSummary
               selectedServices={selectedWeddingPackage ? [] : selectedServices}
               selectedStaff={selectedStaff}
               selectedDate={selectedDate}
@@ -3041,21 +3122,21 @@ function BookingPageContent() {
       </div>
 
       <div className="block lg:hidden fixed bottom-0 left-0 right-0 z-30">
-        <BookingSummary 
-            selectedServices={selectedServices}
-            selectedStaff={selectedStaff}
-            selectedDate={selectedDate}
-            selectedTime={selectedTime}
-            onNextStep={handleNextStep}
-            currentStep={currentStep}
-            isMobileFooter={true}
-            salonInfo={salonInfo}
-            serviceStaffAssignments={serviceStaffAssignments}
-            priceBreakdown={priceBreakdown}
-            weddingPackage={selectedWeddingPackage}
-            weddingPackageMode={weddingPackageMode}
-            customizedPackageServices={customizedPackageServices}
-            onEditPackage={handleCustomizePackage}
+        <BookingSummary
+          selectedServices={selectedServices}
+          selectedStaff={selectedStaff}
+          selectedDate={selectedDate}
+          selectedTime={selectedTime}
+          onNextStep={handleNextStep}
+          currentStep={currentStep}
+          isMobileFooter={true}
+          salonInfo={salonInfo}
+          serviceStaffAssignments={serviceStaffAssignments}
+          priceBreakdown={priceBreakdown}
+          weddingPackage={selectedWeddingPackage}
+          weddingPackageMode={weddingPackageMode}
+          customizedPackageServices={customizedPackageServices}
+          onEditPackage={handleCustomizePackage}
         />
       </div>
 
@@ -3077,16 +3158,16 @@ function BookingPageContent() {
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">Select Location on Map</label>
                 <div className="flex gap-2">
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="text-xs text-blue-500 hover:underline flex items-center gap-1"
                     onClick={handleGetCurrentLocation}
                   >
                     <MapPin className="h-3 w-3" />
                     Use Current
                   </button>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="text-xs text-gray-500 hover:underline"
                     onClick={() => {
                       setShowLocationModal(false);
@@ -3099,14 +3180,14 @@ function BookingPageContent() {
               </div>
               <div className="flex-grow rounded-lg overflow-hidden border flex flex-col">
                 <div className="flex-grow">
-                  <GoogleMapSelector 
+                  <GoogleMapSelector
                     onLocationSelect={async (lat: number, lng: number) => {
                       setLocationForm(prev => ({
                         ...prev,
                         lat,
                         lng
                       }));
-                      
+
                       // Automatically fetch address details from coordinates
                       fetchAddressDetails(lat, lng);
                     }}
@@ -3159,7 +3240,7 @@ function BookingPageContent() {
               Please review your service and payment details
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4 space-y-6 animate-fadeIn bg-background/50 rounded-b-xl">
             {/* Salon Info */}
             <Card className="bg-background/80 border-l-4 border-l-primary shadow-sm">
@@ -3259,7 +3340,7 @@ function BookingPageContent() {
                         className="w-full px-4 py-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-all shadow-sm focus:shadow-md"
                       />
                       {vendorOffers && vendorOffers.length > 0 && (
-                        <button 
+                        <button
                           type="button"
                           onClick={() => setShowOfferDropdown(!showOfferDropdown)}
                           className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-primary bg-white border border-gray-200 rounded-md p-1 shadow-sm"
@@ -3269,8 +3350,8 @@ function BookingPageContent() {
                         </button>
                       )}
                     </div>
-                    <Button 
-                      onClick={handleApplyOffer} 
+                    <Button
+                      onClick={handleApplyOffer}
                       disabled={!offerCode.trim()}
                       className="bg-primary hover:bg-primary/90 px-4 flex items-center gap-2"
                     >
@@ -3366,9 +3447,9 @@ function BookingPageContent() {
                           </div>
                         </div>
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={handleClearOffer}
                         className="h-7 px-2 text-xs border-green-300 text-green-700 hover:bg-green-100"
                       >
@@ -3561,9 +3642,9 @@ function BookingPageContent() {
                     </div>
                     <div className="text-primary">
                       ₹{(
-                        totalAmount - 
-                        (appliedOffer ? 
-                          (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value) 
+                        totalAmount -
+                        (appliedOffer ?
+                          (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value)
                           : 0)
                       ).toFixed(2)}
                     </div>
@@ -3591,31 +3672,31 @@ function BookingPageContent() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-4 space-y-3">
-                 <div 
-                    className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-all ${paymentMethod === 'Pay at Salon' ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : 'border-gray-200 hover:border-gray-300'}`}
-                    onClick={() => setPaymentMethod('Pay at Salon')}
-                 >
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === 'Pay at Salon' ? 'border-primary' : 'border-gray-400'}`}>
-                      {paymentMethod === 'Pay at Salon' && <div className="w-2 h-2 rounded-full bg-primary" />}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm">Pay at Salon</div>
-                      <div className="text-muted-foreground text-xs">Pay with cash or card after your service</div>
-                    </div>
-                 </div>
-                 
-                 <div 
-                    className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-all ${paymentMethod === 'Pay Online' ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : 'border-gray-200 hover:border-gray-300'}`}
-                    onClick={() => setPaymentMethod('Pay Online')}
-                 >
-                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === 'Pay Online' ? 'border-primary' : 'border-gray-400'}`}>
-                      {paymentMethod === 'Pay Online' && <div className="w-2 h-2 rounded-full bg-primary" />}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-sm">Pay Online</div>
-                      <div className="text-muted-foreground text-xs">Securely pay now using UPI, Card, or Netbanking</div>
-                    </div>
-                 </div>
+                <div
+                  className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-all ${paymentMethod === 'Pay at Salon' ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : 'border-gray-200 hover:border-gray-300'}`}
+                  onClick={() => setPaymentMethod('Pay at Salon')}
+                >
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === 'Pay at Salon' ? 'border-primary' : 'border-gray-400'}`}>
+                    {paymentMethod === 'Pay at Salon' && <div className="w-2 h-2 rounded-full bg-primary" />}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm">Pay at Salon</div>
+                    <div className="text-muted-foreground text-xs">Pay with cash or card after your service</div>
+                  </div>
+                </div>
+
+                <div
+                  className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-all ${paymentMethod === 'Pay Online' ? 'border-primary bg-primary/5 ring-2 ring-primary/20' : 'border-gray-200 hover:border-gray-300'}`}
+                  onClick={() => setPaymentMethod('Pay Online')}
+                >
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${paymentMethod === 'Pay Online' ? 'border-primary' : 'border-gray-400'}`}>
+                    {paymentMethod === 'Pay Online' && <div className="w-2 h-2 rounded-full bg-primary" />}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm">Pay Online</div>
+                    <div className="text-muted-foreground text-xs">Securely pay now using UPI, Card, or Netbanking</div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -3682,7 +3763,7 @@ function BookingPageContent() {
                 )}
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-md flex items-center gap-2">
@@ -3716,7 +3797,7 @@ function BookingPageContent() {
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-md flex items-center gap-2">
@@ -3738,7 +3819,7 @@ function BookingPageContent() {
                 ))}
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-md flex items-center gap-2">
@@ -3763,16 +3844,16 @@ function BookingPageContent() {
                   <div>Total Paid</div>
                   <div className="text-primary">
                     ₹{(
-                      totalAmount - 
-                      (appliedOffer ? 
-                        (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value) 
+                      totalAmount -
+                      (appliedOffer ?
+                        (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value)
                         : 0)
                     ).toFixed(2)}
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
+
             <div className="bg-blue-50 p-3 rounded-md text-sm">
               <div className="flex items-start gap-2">
                 <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
@@ -3805,7 +3886,7 @@ function BookingPageContent() {
               Review your service schedule before confirming your appointment
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4 space-y-6">
             {/* Service Schedule Card */}
             <Card className="bg-background/80 border-l-4 border-l-primary">
@@ -3869,8 +3950,8 @@ function BookingPageContent() {
                     <div className="text-sm text-primary/80">Total Amount</div>
                     <div className="text-2xl font-bold text-primary">
                       ₹{priceBreakdown?.finalTotal.toFixed(2) || selectedServices.reduce((acc, s) => {
-                        const price = s.discountedPrice !== null && s.discountedPrice !== undefined ? 
-                          parseFloat(s.discountedPrice) : 
+                        const price = s.discountedPrice !== null && s.discountedPrice !== undefined ?
+                          parseFloat(s.discountedPrice) :
                           parseFloat(s.price || '0');
                         return acc + price;
                       }, 0).toFixed(2)}
@@ -3883,7 +3964,7 @@ function BookingPageContent() {
               </CardContent>
             </Card>
           </div>
-          
+
           <DialogFooter>
             <Button onClick={() => setIsServiceScheduleOpen(false)} className="w-full">
               Continue to Confirmation
@@ -3899,7 +3980,7 @@ function BookingPageContent() {
             <DialogTitle className="text-2xl font-bold text-center">Staff Schedule</DialogTitle>
             <DialogDescription className="text-center">Review your staff schedule before confirming.</DialogDescription>
           </DialogHeader>
-          
+
           <div className="py-4 space-y-6 max-h-[60vh] overflow-y-auto">
             {/* Staff Schedule Card */}
             <div>
@@ -4114,7 +4195,7 @@ function BookingPageContent() {
               <Label htmlFor="date">Date</Label>
               <DatePicker
                 selected={selectedDate}
-                onChange={(date) => date && setSelectedDate(date)}
+                onChange={(date: Date | null) => date && setSelectedDate(date)}
                 className="w-full"
               />
             </div>
@@ -4221,15 +4302,15 @@ function BookingPageContent() {
                 console.log('Location selected from map:', { lat, lng });
                 console.log('Is wedding package:', !!selectedWeddingPackage);
                 console.log('Is authenticated:', isAuthenticated);
-                
+
                 // Fetch address from coordinates
                 fetchAddressDetails(lat, lng);
-                
+
                 setHomeServiceLocation({
                   address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`, // Temporary, will be updated by fetchAddressDetails
                   coordinates: { lat, lng }
                 });
-                
+
                 setLocationForm(prev => ({
                   ...prev,
                   lat,
@@ -4244,26 +4325,26 @@ function BookingPageContent() {
             <Button variant="outline" onClick={() => setShowMapSelector(false)}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={() => {
                 console.log('=== Location Confirm Button Clicked ===');
                 console.log('Location Form:', locationForm);
                 console.log('Selected Wedding Package:', selectedWeddingPackage);
                 console.log('Selected Time:', selectedTime);
                 console.log('Booking Mode:', bookingMode);
-                
+
                 if (!locationForm.lat || !locationForm.lng) {
                   toast.error('Please select a location on the map');
                   return;
                 }
-                
+
                 if (!selectedTime) {
                   toast.error('Please select a time slot first');
                   setShowMapSelector(false);
                   setCurrentStep(3);
                   return;
                 }
-                
+
                 // Set the home service location from the location form
                 const newLocation = {
                   address: locationForm.address,
@@ -4276,14 +4357,14 @@ function BookingPageContent() {
                     lng: locationForm.lng
                   }
                 };
-                
+
                 console.log('Setting homeServiceLocation to:', newLocation);
                 setHomeServiceLocation(newLocation);
-                
+
                 // Close map modal
                 setShowMapSelector(false);
                 toast.success('Location selected successfully. Click "Continue to Confirmation" to proceed.');
-                
+
                 console.log('Location saved. User can now click Continue to Confirmation button.');
               }}
               disabled={!locationForm.lat || !locationForm.lng}

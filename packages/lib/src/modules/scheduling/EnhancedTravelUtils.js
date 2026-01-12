@@ -1,3 +1,4 @@
+import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '../../../../config/config.js';
 import VendorModel from '../../models/Vendor/Vendor.model.js';
 import { calculateHaversineDistance, calculateHaversineTime } from './TravelUtils.js';
 
@@ -62,7 +63,7 @@ export async function calculateEnhancedTravelTime(origin, destination, vendor, u
     let source = 'haversine';
     
     // Try external API if enabled and available
-    if (useExternalAPI && process.env.GOOGLE_MAPS_API_KEY) {
+    if (useExternalAPI && NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
       try {
         timeInMinutes = await calculateExternalTravelTime(origin, destination);
         source = 'external-api';
@@ -105,7 +106,7 @@ export async function calculateEnhancedTravelTime(origin, destination, vendor, u
 async function calculateExternalTravelTime(origin, destination) {
   try {
     // Check if Google Maps API key is available
-    const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+    const apiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
     if (!apiKey) {
       throw new Error('Google Maps API key not configured');
     }

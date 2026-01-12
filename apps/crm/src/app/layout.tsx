@@ -162,6 +162,8 @@ export default function RootLayout({
     '/marketing',
     '/push-notifications',
     '/reports',
+    '/reports/vendor',
+    '/reports/supplier',
     '/staff',
     '/earnings',
     '/doctor-reports',

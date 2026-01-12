@@ -10,17 +10,7 @@ import { validateService, validateStaff, validateAppointment, validateWeddingPac
 import { AppError, formatErrorResponse } from "@repo/lib/modules/error/ErrorHandler";
 import { getCache, setCache } from "@repo/lib/modules/caching/CacheManager";
 
-// Export utility functions for frontend integration
-export { 
-  calculateVendorTravelTime,
-  generateFreshaLikeSlots,
-  generateAnyStaffSlots,
-  generateWeddingPackageSlots,
-  acquireLock,
-  createTemporaryAppointment,
-  confirmAppointment
-};
-
+// Utility functions for internally use
 /**
  * Unified Booking API Route
  * Consolidates all booking operations into a single endpoint
@@ -41,12 +31,12 @@ export const OPTIONS = async () => {
 export const GET = async (request, { params }) => {
   try {
     await _db();
-    
+
     // params.action is an array from the catch-all route [...action]
     // e.g. /api/booking/vendors -> params.action = ['vendors']
     const path = params.action ? params.action[0] : '';
     const { searchParams } = new URL(request.url);
-    
+
     switch (path) {
       case 'vendors':
         return await handleVendorDiscovery(searchParams);
@@ -59,7 +49,7 @@ export const GET = async (request, { params }) => {
       case 'wedding-packages':
         return await handleWeddingPackageDiscovery(searchParams);
       default:
-        return formatErrorResponse(new AppError(`Invalid endpoint: ${path}`, 'INVALID_ENDPOINT', 'CLIENT_ERROR', 404));
+        return Response.json(formatErrorResponse(new AppError(`Invalid endpoint: ${path}`, 'INVALID_ENDPOINT', 'CLIENT_ERROR', 404)), { status: 404 });
     }
   } catch (error) {
     console.error('GET Error:', error);
@@ -74,10 +64,10 @@ export const GET = async (request, { params }) => {
 export const POST = async (request, { params }) => {
   try {
     await _db();
-    
+
     const path = params.action ? params.action[0] : '';
     const body = await request.json();
-    
+
     switch (path) {
       case 'quote':
         return await handleQuoteRequest(body);
@@ -90,7 +80,7 @@ export const POST = async (request, { params }) => {
       case 'travel-time':
         return await handleTravelTimeRequest(body);
       default:
-        return formatErrorResponse(new AppError(`Invalid endpoint: ${path}`, 'INVALID_ENDPOINT', 'CLIENT_ERROR', 404));
+        return Response.json(formatErrorResponse(new AppError(`Invalid endpoint: ${path}`, 'INVALID_ENDPOINT', 'CLIENT_ERROR', 404)), { status: 404 });
     }
   } catch (error) {
     console.error('POST Error:', error);
@@ -105,15 +95,15 @@ export const POST = async (request, { params }) => {
 export const PUT = async (request, { params }) => {
   try {
     await _db();
-    
+
     const path = params.action ? params.action[0] : '';
     const body = await request.json();
-    
+
     switch (path) {
       case 'wedding-package':
         return await handleWeddingPackageUpdate(body);
       default:
-        return formatErrorResponse(new AppError(`Invalid endpoint: ${path}`, 'INVALID_ENDPOINT', 'CLIENT_ERROR', 404));
+        return Response.json(formatErrorResponse(new AppError(`Invalid endpoint: ${path}`, 'INVALID_ENDPOINT', 'CLIENT_ERROR', 404)), { status: 404 });
     }
   } catch (error) {
     console.error('PUT Error:', error);
@@ -128,15 +118,15 @@ export const PUT = async (request, { params }) => {
 export const DELETE = async (request, { params }) => {
   try {
     await _db();
-    
+
     const path = params.action ? params.action[0] : '';
     const body = await request.json();
-    
+
     switch (path) {
       case 'booking':
         return await handleBookingCancellation(body);
       default:
-        return formatErrorResponse(new AppError(`Invalid endpoint: ${path}`, 'INVALID_ENDPOINT', 'CLIENT_ERROR', 404));
+        return Response.json(formatErrorResponse(new AppError(`Invalid endpoint: ${path}`, 'INVALID_ENDPOINT', 'CLIENT_ERROR', 404)), { status: 404 });
     }
   } catch (error) {
     console.error('DELETE Error:', error);
@@ -149,6 +139,7 @@ export const DELETE = async (request, { params }) => {
 
 /**
  * Handle vendor discovery with location-based filtering
+ * @returns {Promise<Response>}
  */
 async function handleVendorDiscovery(searchParams) {
   const lat = parseFloat(searchParams.get('lat'));
@@ -159,9 +150,9 @@ async function handleVendorDiscovery(searchParams) {
   const serviceId = searchParams.get('serviceId');
 
   // Validate location parameters if provided
-  const hasValidLocation = !isNaN(lat) && !isNaN(lng) && 
-                           lat >= -90 && lat <= 90 && 
-                           lng >= -180 && lng <= 180;
+  const hasValidLocation = !isNaN(lat) && !isNaN(lng) &&
+    lat >= -90 && lat <= 90 &&
+    lng >= -180 && lng <= 180;
 
   // Build base query for approved vendors
   let query = { status: "Approved" };
@@ -219,10 +210,10 @@ async function handleVendorDiscovery(searchParams) {
       baseLocation: 1,
       createdAt: 1
     })
-    .limit(limit)
-    .maxTimeMS(5000) // 5-second timeout
-    .lean()
-    .exec();
+      .limit(limit)
+      .maxTimeMS(5000) // 5-second timeout
+      .lean()
+      .exec();
   } else {
     // If no location provided, fetch vendors ordered by creation date
     vendors = await VendorModel.find(query, {
@@ -240,11 +231,11 @@ async function handleVendorDiscovery(searchParams) {
       baseLocation: 1,
       createdAt: 1
     })
-    .sort({ createdAt: -1 })
-    .limit(limit)
-    .maxTimeMS(5000)
-    .lean()
-    .exec();
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .maxTimeMS(5000)
+      .lean()
+      .exec();
   }
 
   // Transform vendor data for response
@@ -276,21 +267,22 @@ async function handleVendorDiscovery(searchParams) {
 
 /**
  * Handle service discovery for a specific vendor
+ * @returns {Promise<Response>}
  */
 async function handleServiceDiscovery(searchParams) {
   const vendorId = searchParams.get('vendorId');
-  
+
   if (!vendorId) {
     return formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
   }
-  
+
   // Validate vendor ID format
   if (!/^[0-9a-fA-F]{24}$/.test(vendorId)) {
     return formatErrorResponse(new AppError('Invalid vendor ID format', 'INVALID_VENDOR_ID', 'CLIENT_ERROR', 400));
   }
-  
+
   const cacheKey = `services_vendor_${vendorId}`;
-  
+
   // Try to get from cache first
   const cachedServices = await getCache(cacheKey);
   if (cachedServices) {
@@ -302,16 +294,16 @@ async function handleServiceDiscovery(searchParams) {
       fromCache: true
     });
   }
-  
+
   // Import the VendorServicesModel dynamically to avoid circular dependencies
   const VendorServicesModel = (await import("@repo/lib/models/Vendor/VendorServices.model")).default;
   const CategoryModel = (await import("@repo/lib/models/admin/Category.model")).default;
-  
+
   // Find the vendor services document with optimized query
-  const vendorServices = await VendorServicesModel.findOne({ 
-    vendor: vendorId 
+  const vendorServices = await VendorServicesModel.findOne({
+    vendor: vendorId
   }).select('services').lean().exec();
-  
+
   if (!vendorServices || !vendorServices.services || vendorServices.services.length === 0) {
     return Response.json({
       success: true,
@@ -321,18 +313,18 @@ async function handleServiceDiscovery(searchParams) {
       message: "No services found for this vendor"
     });
   }
-  
+
   // Filter only approved services
-  const approvedServices = vendorServices.services.filter(service => 
+  const approvedServices = vendorServices.services.filter(service =>
     service.status === 'approved'
   );
-  
+
   // Transform services and resolve category names
   const serviceCategories = new Set();
   const transformedServices = approvedServices.map((service) => {
     // Add category to set for later use
     let categoryName = 'Other';
-    
+
     // Handle category resolution
     if (service.category && /^[0-9a-fA-F]{24}$/.test(service.category)) {
       // Will resolve category names later in batch
@@ -340,9 +332,9 @@ async function handleServiceDiscovery(searchParams) {
     } else if (typeof service.category === 'string') {
       categoryName = service.category;
     }
-    
+
     serviceCategories.add(categoryName);
-    
+
     return {
       id: service._id.toString(),
       name: service.name,
@@ -354,7 +346,7 @@ async function handleServiceDiscovery(searchParams) {
       image: service.image,
       status: service.status,
       gender: service.gender,
-      staff: Array.isArray(service.staff) ? service.staff.map(s => 
+      staff: Array.isArray(service.staff) ? service.staff.map(s =>
         typeof s === 'object' ? s.toString() : s
       ) : [],
       homeService: service.homeService || { available: false, charges: null },
@@ -363,23 +355,23 @@ async function handleServiceDiscovery(searchParams) {
       isAddon: service.category?.toLowerCase().includes('addon') || false
     };
   });
-  
+
   // Resolve category names in batch for better performance
-  const categoryIds = Array.from(serviceCategories).filter(cat => 
+  const categoryIds = Array.from(serviceCategories).filter(cat =>
     /^[0-9a-fA-F]{24}$/.test(cat)
   );
-  
+
   const categoryNames = {};
   if (categoryIds.length > 0) {
     const categories = await CategoryModel.find({
       _id: { $in: categoryIds.map(id => id) }
     }).select('name').lean().exec();
-    
+
     categories.forEach(cat => {
       categoryNames[cat._id.toString()] = cat.name;
     });
   }
-  
+
   // Apply resolved category names
   const finalServices = transformedServices.map(service => {
     if (categoryNames[service.category]) {
@@ -390,10 +382,10 @@ async function handleServiceDiscovery(searchParams) {
     }
     return service;
   });
-  
+
   // Cache the results
   await setCache(cacheKey, finalServices, 600); // Cache for 10 minutes
-  
+
   // Group services by category for frontend convenience
   const servicesByCategory = {};
   finalServices.forEach(service => {
@@ -402,7 +394,7 @@ async function handleServiceDiscovery(searchParams) {
     }
     servicesByCategory[service.category].push(service);
   });
-  
+
   // Prepare response with all necessary data
   return Response.json({
     success: true,
@@ -416,21 +408,22 @@ async function handleServiceDiscovery(searchParams) {
 
 /**
  * Handle staff discovery for a specific vendor
+ * @returns {Promise<Response>}
  */
 async function handleStaffDiscovery(searchParams) {
   const vendorId = searchParams.get('vendorId');
-  
+
   if (!vendorId) {
     return formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
   }
-  
+
   // Validate vendor ID format
   if (!/^[0-9a-fA-F]{24}$/.test(vendorId)) {
     return formatErrorResponse(new AppError('Invalid vendor ID format', 'INVALID_VENDOR_ID', 'CLIENT_ERROR', 400));
   }
-  
+
   const cacheKey = `staff_vendor_${vendorId}`;
-  
+
   // Try to get from cache first
   const cachedStaff = await getCache(cacheKey);
   if (cachedStaff) {
@@ -442,13 +435,13 @@ async function handleStaffDiscovery(searchParams) {
       fromCache: true
     });
   }
-  
+
   // Find all active staff members for the vendor
-  const staffMembers = await StaffModel.find({ 
-    vendorId: vendorId, 
-    status: 'Active' 
+  const staffMembers = await StaffModel.find({
+    vendorId: vendorId,
+    status: 'Active'
   }).select('fullName position photo mobileNo emailAddress mondayAvailable tuesdayAvailable wednesdayAvailable thursdayAvailable fridayAvailable saturdayAvailable sundayAvailable blockedTimes mondaySlots tuesdaySlots wednesdaySlots thursdaySlots fridaySlots saturdaySlots sundaySlots');
-  
+
   // Transform staff data for public consumption (hide sensitive info)
   const publicStaffData = staffMembers.map(staff => ({
     id: staff._id,
@@ -472,10 +465,10 @@ async function handleStaffDiscovery(searchParams) {
     sundaySlots: staff.sundaySlots || []
     // Hide sensitive information like phone and email for public endpoint
   }));
-  
+
   // Cache the results
   await setCache(cacheKey, publicStaffData, 600); // Cache for 10 minutes
-  
+
   return Response.json({
     success: true,
     staff: publicStaffData,
@@ -486,12 +479,13 @@ async function handleStaffDiscovery(searchParams) {
 
 /**
  * Handle slot discovery with comprehensive validation
+ * @returns {Promise<Response>}
  */
 async function handleSlotDiscovery(searchParams) {
   try {
     console.log('=== handleSlotDiscovery called ===');
     console.log('Query params:', Object.fromEntries(searchParams.entries()));
-    
+
     const vendorId = searchParams.get('vendorId');
     const staffId = searchParams.get('staffId');
     const serviceIds = searchParams.get('serviceIds')?.split(',') || [];
@@ -503,135 +497,135 @@ async function handleSlotDiscovery(searchParams) {
     const packageId = searchParams.get('packageId');
     const bufferBefore = parseInt(searchParams.get('bufferBefore')) || 0;
     const bufferAfter = parseInt(searchParams.get('bufferAfter')) || 0;
-    
+
     console.log('Parsed values:', { vendorId, staffId, serviceIds, isWeddingService, packageId });
-    
+
     // Validate required parameters
     if (!vendorId) {
       console.error('Missing vendorId');
       return formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
     }
-    
+
     if (!date) {
       console.error('Missing date');
       return formatErrorResponse(new AppError('Date is required', 'MISSING_DATE', 'CLIENT_ERROR', 400));
     }
-  
-  // Parse date
-  const parsedDate = new Date(date);
-  if (isNaN(parsedDate.getTime())) {
-    return formatErrorResponse(new AppError('Invalid date format', 'INVALID_DATE_FORMAT', 'CLIENT_ERROR', 400));
-  }
-  
-  // Get services - for wedding packages, we'll pass minimal info since package has duration
-  let services = [];
-  if (serviceIds.length > 0 && !isWeddingService) {
-    // Only fetch detailed services for non-wedding bookings
+
+    // Parse date
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) {
+      return formatErrorResponse(new AppError('Invalid date format', 'INVALID_DATE_FORMAT', 'CLIENT_ERROR', 400));
+    }
+
+    // Get services - for wedding packages, we'll pass minimal info since package has duration
+    let services = [];
+    if (serviceIds.length > 0 && !isWeddingService) {
+      // Only fetch detailed services for non-wedding bookings
+      try {
+        services = await ServiceModel.find({
+          _id: { $in: serviceIds }
+        }).lean();
+        console.log(`Found ${services.length} regular services`);
+      } catch (error) {
+        console.error('Error fetching services:', error);
+        return formatErrorResponse(new AppError('Failed to fetch services', 'SERVICE_FETCH_ERROR', 'SERVER_ERROR', 500));
+      }
+    }
+
+    // For wedding packages, services array can be empty - we use package duration directly
+
+    // Prepare customer location if provided
+    let customerLocation = null;
+    if (lat && lng) {
+      customerLocation = {
+        lat: parseFloat(lat),
+        lng: parseFloat(lng)
+      };
+    }
+
+    let slots = [];
+    const cacheKey = `slots_${vendorId}_${staffId || 'any'}_${serviceIds.join('_')}_${date}_${isHomeService ? 'home' : 'salon'}_${isWeddingService ? 'wedding' : 'regular'}_${packageId || 'none'}`;
+
+    // Try to get from cache first
+    const cachedSlots = await getCache(cacheKey);
+    if (cachedSlots) {
+      return Response.json({
+        slots: cachedSlots,
+        fromCache: true
+      });
+    }
+
     try {
-      services = await ServiceModel.find({
-        _id: { $in: serviceIds }
-      }).lean();
-      console.log(`Found ${services.length} regular services`);
+      if (isWeddingService && packageId) {
+        // Generate wedding package slots
+        console.log('Generating wedding package slots with:', {
+          packageId,
+          vendorId,
+          servicesCount: services.length,
+          date: parsedDate,
+          hasCustomerLocation: !!customerLocation
+        });
+
+        slots = await generateWeddingPackageSlots({
+          packageId,
+          vendorId,
+          services,
+          date: parsedDate,
+          customerLocation,
+          bufferBefore,
+          bufferAfter
+        });
+
+        console.log(`Generated ${slots.length} wedding package slots`);
+      } else if (staffId === 'any' || !staffId) {
+        // Generate "Any Staff" slots
+        slots = await generateAnyStaffSlots({
+          vendorId,
+          serviceIds: serviceIds.length > 0 ? serviceIds[0] : null,
+          date: parsedDate,
+          services,
+          customerLocation,
+          isHomeService,
+          bufferBefore,
+          bufferAfter
+        });
+      } else {
+        // Generate slots for specific staff
+        slots = await generateFreshaLikeSlots({
+          vendorId,
+          staffId,
+          date: parsedDate,
+          services,
+          customerLocation,
+          isHomeService,
+          bufferBefore,
+          bufferAfter
+        });
+      }
     } catch (error) {
-      console.error('Error fetching services:', error);
-      return formatErrorResponse(new AppError('Failed to fetch services', 'SERVICE_FETCH_ERROR', 'SERVER_ERROR', 500));
+      console.error('Error generating slots:', error);
+      console.error('Error stack:', error.stack);
+      return formatErrorResponse(new AppError(
+        `Failed to generate slots: ${error.message}`,
+        'SLOT_GENERATION_ERROR',
+        'SERVER_ERROR',
+        500
+      ));
     }
-  }
-  
-  // For wedding packages, services array can be empty - we use package duration directly
-  
-  // Prepare customer location if provided
-  let customerLocation = null;
-  if (lat && lng) {
-    customerLocation = {
-      lat: parseFloat(lat),
-      lng: parseFloat(lng)
-    };
-  }
-  
-  let slots = [];
-  const cacheKey = `slots_${vendorId}_${staffId || 'any'}_${serviceIds.join('_')}_${date}_${isHomeService ? 'home' : 'salon'}_${isWeddingService ? 'wedding' : 'regular'}_${packageId || 'none'}`;
-  
-  // Try to get from cache first
-  const cachedSlots = await getCache(cacheKey);
-  if (cachedSlots) {
-    return Response.json({
-      slots: cachedSlots,
-      fromCache: true
-    });
-  }
-  
-  try {
-    if (isWeddingService && packageId) {
-      // Generate wedding package slots
-      console.log('Generating wedding package slots with:', {
-        packageId,
-        vendorId,
-        servicesCount: services.length,
-        date: parsedDate,
-        hasCustomerLocation: !!customerLocation
-      });
-      
-      slots = await generateWeddingPackageSlots({
-        packageId,
-        vendorId,
-        services,
-        date: parsedDate,
-        customerLocation,
-        bufferBefore,
-        bufferAfter
-      });
-      
-      console.log(`Generated ${slots.length} wedding package slots`);
-    } else if (staffId === 'any' || !staffId) {
-      // Generate "Any Staff" slots
-      slots = await generateAnyStaffSlots({
-        vendorId,
-        serviceIds: serviceIds.length > 0 ? serviceIds[0] : null,
-        date: parsedDate,
-        services,
-        customerLocation,
-        isHomeService,
-        bufferBefore,
-        bufferAfter
-      });
-    } else {
-      // Generate slots for specific staff
-      slots = await generateFreshaLikeSlots({
-        vendorId,
-        staffId,
-        date: parsedDate,
-        services,
-        customerLocation,
-        isHomeService,
-        bufferBefore,
-        bufferAfter
-      });
-    }
-  } catch (error) {
-    console.error('Error generating slots:', error);
-    console.error('Error stack:', error.stack);
-    return formatErrorResponse(new AppError(
-      `Failed to generate slots: ${error.message}`, 
-      'SLOT_GENERATION_ERROR', 
-      'SERVER_ERROR', 
-      500
-    ));
-  }
-  
-  // Cache the results
-  await setCache(cacheKey, slots, 180); // Cache for 3 minutes
-  
-  return Response.json({ slots });
-  
+
+    // Cache the results
+    await setCache(cacheKey, slots, 180); // Cache for 3 minutes
+
+    return Response.json({ slots });
+
   } catch (topLevelError) {
     console.error('=== CRITICAL ERROR in handleSlotDiscovery ===');
     console.error('Error:', topLevelError);
     console.error('Stack:', topLevelError.stack);
     return formatErrorResponse(new AppError(
-      `Server error: ${topLevelError.message}`, 
-      'INTERNAL_ERROR', 
-      'SERVER_ERROR', 
+      `Server error: ${topLevelError.message}`,
+      'INTERNAL_ERROR',
+      'SERVER_ERROR',
       500
     ));
   }
@@ -639,19 +633,20 @@ async function handleSlotDiscovery(searchParams) {
 
 /**
  * Handle wedding package discovery
+ * @returns {Promise<Response>}
  */
 async function handleWeddingPackageDiscovery(searchParams) {
   const vendorId = searchParams.get('vendorId');
   const packageId = searchParams.get('packageId');
   const isActive = searchParams.get('isActive');
-  
+
   // Validate required parameters
   if (!vendorId) {
     return formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
   }
-  
+
   const cacheKey = `wedding_packages_${vendorId}_${packageId || 'all'}_${isActive || 'all'}`;
-  
+
   // Try to get from cache first
   const cachedPackages = await getCache(cacheKey);
   if (cachedPackages) {
@@ -662,31 +657,31 @@ async function handleWeddingPackageDiscovery(searchParams) {
       fromCache: true
     });
   }
-  
+
   // Import the EnhancedWeddingPackageModel dynamically
   const EnhancedWeddingPackageModel = (await import("@repo/lib/models/Vendor/EnhancedWeddingPackage.model")).default;
-  
+
   let query = { vendorId };
-  
+
   if (packageId) {
     query._id = packageId;
   }
-  
+
   if (isActive !== null) {
     query.isActive = isActive === 'true';
   }
-  
+
   const weddingPackages = await EnhancedWeddingPackageModel.find(query)
     .sort({ createdAt: -1 });
-  
+
   // Populate service details for each package
   const populatedPackages = await Promise.all(weddingPackages.map(async (pkg) => {
     return await pkg.populateEnhancedServiceDetails();
   }));
-  
+
   // Cache the results
   await setCache(cacheKey, populatedPackages, 600); // Cache for 10 minutes
-  
+
   return Response.json({
     success: true,
     weddingPackages: populatedPackages,
@@ -696,6 +691,7 @@ async function handleWeddingPackageDiscovery(searchParams) {
 
 /**
  * Handle quote request for services or wedding packages
+ * @returns {Promise<Response>}
  */
 async function handleQuoteRequest(body) {
   const {
@@ -709,27 +705,27 @@ async function handleQuoteRequest(body) {
     bufferBefore = 0,
     bufferAfter = 0
   } = body;
-  
+
   // Validate required parameters
   if (!vendorId) {
     return formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
   }
-  
+
   if (!date) {
     return formatErrorResponse(new AppError('Date is required', 'MISSING_DATE', 'CLIENT_ERROR', 400));
   }
-  
+
   // Parse date
   const parsedDate = new Date(date);
   if (isNaN(parsedDate.getTime())) {
     return formatErrorResponse(new AppError('Invalid date format', 'INVALID_DATE_FORMAT', 'CLIENT_ERROR', 400));
   }
-  
+
   // For wedding services, package ID is required
   if (isWeddingService && !packageId) {
     return formatErrorResponse(new AppError('Package ID is required for wedding services', 'MISSING_PACKAGE_ID', 'CLIENT_ERROR', 400));
   }
-  
+
   // Get services if service IDs are provided
   let services = [];
   if (serviceIds.length > 0) {
@@ -738,17 +734,17 @@ async function handleQuoteRequest(body) {
       vendorId: vendorId
     });
   }
-  
+
   let slots = [];
   let quoteDetails = {};
-  
+
   if (isWeddingService && packageId) {
     // Generate wedding package slots and quote
     const weddingPackage = await WeddingPackageModel.findById(packageId);
     if (!weddingPackage) {
       return formatErrorResponse(new AppError('Wedding package not found', 'PACKAGE_NOT_FOUND', 'CLIENT_ERROR', 404));
     }
-    
+
     slots = await generateWeddingPackageSlots({
       packageId,
       vendorId,
@@ -758,7 +754,7 @@ async function handleQuoteRequest(body) {
       bufferBefore,
       bufferAfter
     });
-    
+
     quoteDetails = {
       packageName: weddingPackage.name,
       packageDescription: weddingPackage.description,
@@ -774,16 +770,16 @@ async function handleQuoteRequest(body) {
     if (serviceIds.length === 0) {
       return formatErrorResponse(new AppError('At least one service ID is required', 'MISSING_SERVICE_IDS', 'CLIENT_ERROR', 400));
     }
-    
+
     // Calculate total price and duration
     let totalPrice = 0;
     let totalDuration = 0;
-    
+
     services.forEach(service => {
       totalPrice += service.price;
       totalDuration += service.duration;
     });
-    
+
     slots = await generateAnyStaffSlots({
       vendorId,
       serviceIds: serviceIds[0],
@@ -794,7 +790,7 @@ async function handleQuoteRequest(body) {
       bufferBefore,
       bufferAfter
     });
-    
+
     quoteDetails = {
       services: services.map(s => ({
         id: s._id,
@@ -807,7 +803,7 @@ async function handleQuoteRequest(body) {
       isHomeService
     };
   }
-  
+
   return Response.json({
     success: true,
     message: "Quote generated successfully",
@@ -819,6 +815,7 @@ async function handleQuoteRequest(body) {
 
 /**
  * Handle slot lock acquisition
+ * @returns {Promise<Response>}
  */
 async function handleSlotLock(body) {
   try {
@@ -836,20 +833,20 @@ async function handleSlotLock(body) {
       isHomeService,
       isWeddingService,
       location,
-      homeServiceLocation, 
+      homeServiceLocation,
       packageId,
       duration,
       amount,
       totalAmount,
       finalAmount
     } = body;
-    
+
     // SUPPORT BOTH FIELD NAMES: If location is missing but homeServiceLocation exists, use it
     const actualLocation = location || homeServiceLocation;
 
     console.log('Received slot lock request:', body);
     console.log('Using location data:', actualLocation);
-    
+
     // FIX: Force isHomeService to true if we have a location
     // This handles cases where the frontend might send location but false flag, or legacy calls
     const effectiveIsHomeService = isHomeService || !!actualLocation;
@@ -864,14 +861,14 @@ async function handleSlotLock(body) {
     // Set default clientId if not provided
     const effectiveClientId = clientId || 'temp-client-id';
     const effectiveClientName = clientName || 'Customer';
-    
+
     // Parse date
     const appointmentDate = new Date(date);
     if (isNaN(appointmentDate.getTime())) {
       const errorResponse = formatErrorResponse(new AppError('Invalid date format', 'INVALID_DATE_FORMAT', 'CLIENT_ERROR', 400));
       return Response.json(errorResponse, { status: 400 });
     }
-    
+
     // Prepare lock data - only include location if it exists
     const lockData = {
       vendorId,
@@ -893,7 +890,7 @@ async function handleSlotLock(body) {
       ...(actualLocation && actualLocation.lat && actualLocation.lng ? { location: actualLocation } : {}),
       ...(packageId ? { packageId } : {})
     };
-    
+
     // Calculate travel time for home services
     let travelTimeInfo = null;
     if (effectiveIsHomeService && actualLocation) {
@@ -914,33 +911,33 @@ async function handleSlotLock(body) {
         };
       }
     }
-    
+
     // Add travel time info to lock data
     const enhancedLockData = {
       ...lockData,
       travelTimeInfo
     };
-    
+
     console.log('Enhanced lock data:', enhancedLockData);
-    
+
     // Acquire lock
     const lockToken = await acquireLock(enhancedLockData);
-    
+
     if (!lockToken) {
       const errorResponse = formatErrorResponse(new AppError('Failed to acquire slot lock - slot may be taken', 'LOCK_ACQUISITION_FAILED', 'CONFLICT', 409));
       return Response.json(errorResponse, { status: 409 });
     }
-    
+
     console.log('Lock acquired with token:', lockToken);
-    
+
     // Create temporary appointment with travel time information
     const tempAppointment = await createTemporaryAppointment(enhancedLockData, lockToken);
-    
+
     // Use the actual MongoDB ObjectId of the temporary appointment
     const tempAppointmentId = tempAppointment._id.toString();
-    
+
     console.log('Temporary appointment created with ID:', tempAppointmentId);
-    
+
     return Response.json({
       success: true,
       message: "Slot lock acquired successfully",
@@ -957,6 +954,7 @@ async function handleSlotLock(body) {
 
 /**
  * Handle booking confirmation
+ * @returns {Promise<Response>}
  */
 async function handleBookingConfirmation(body) {
   const {
@@ -964,14 +962,14 @@ async function handleBookingConfirmation(body) {
     lockId,
     paymentDetails
   } = body;
-  
+
   console.log('Received confirmation request:', body);
-  
+
   // Validate required parameters
   if (!appointmentId) {
     return formatErrorResponse(new AppError('Appointment ID is required', 'MISSING_APPOINTMENT_ID', 'CLIENT_ERROR', 400));
   }
-  
+
   // Confirm appointment
   let confirmResult;
   try {
@@ -990,7 +988,7 @@ async function handleBookingConfirmation(body) {
       throw error; // Re-throw other errors
     }
   }
-  
+
   return Response.json({
     success: true,
     message: "Appointment confirmed successfully",
@@ -1000,34 +998,35 @@ async function handleBookingConfirmation(body) {
 
 /**
  * Handle wedding package customization
+ * @returns {Promise<Response>}
  */
 async function handleWeddingPackageCustomization(body) {
   const {
     packageId,
     customizedServices
   } = body;
-  
+
   if (!packageId || !customizedServices) {
     return formatErrorResponse(new AppError('Package ID and customized services are required', 'MISSING_REQUIRED_FIELDS', 'CLIENT_ERROR', 400));
   }
-  
+
   // Import the EnhancedWeddingPackageModel dynamically
   const EnhancedWeddingPackageModel = (await import("@repo/lib/models/Vendor/EnhancedWeddingPackage.model")).default;
-  
+
   // Find the package
   const weddingPackage = await EnhancedWeddingPackageModel.findById(packageId);
-  
+
   if (!weddingPackage) {
     return formatErrorResponse(new AppError('Wedding package not found', 'PACKAGE_NOT_FOUND', 'CLIENT_ERROR', 404));
   }
-  
+
   // Apply customizations
   const customizedPackage = weddingPackage.applyCustomizations(customizedServices);
   await customizedPackage.save();
-  
+
   // Populate service details
   const populatedPackage = await customizedPackage.populateEnhancedServiceDetails();
-  
+
   return Response.json({
     success: true,
     message: "Customizations applied successfully",
@@ -1037,34 +1036,35 @@ async function handleWeddingPackageCustomization(body) {
 
 /**
  * Handle wedding package update
+ * @returns {Promise<Response>}
  */
 async function handleWeddingPackageUpdate(body) {
   const {
     packageId,
     ...updateData
   } = body;
-  
+
   if (!packageId) {
     return formatErrorResponse(new AppError('Package ID is required', 'MISSING_PACKAGE_ID', 'CLIENT_ERROR', 400));
   }
-  
+
   // Import the EnhancedWeddingPackageModel dynamically
   const EnhancedWeddingPackageModel = (await import("@repo/lib/models/Vendor/EnhancedWeddingPackage.model")).default;
-  
+
   // Update the package
   const updatedPackage = await EnhancedWeddingPackageModel.findByIdAndUpdate(
     packageId,
     { ...updateData, updatedAt: new Date() },
     { new: true, runValidators: true }
   );
-  
+
   if (!updatedPackage) {
     return formatErrorResponse(new AppError('Wedding package not found', 'PACKAGE_NOT_FOUND', 'CLIENT_ERROR', 404));
   }
-  
+
   // Populate service details
   const populatedPackage = await updatedPackage.populateEnhancedServiceDetails();
-  
+
   return Response.json({
     success: true,
     message: "Enhanced wedding package updated successfully",
@@ -1074,38 +1074,39 @@ async function handleWeddingPackageUpdate(body) {
 
 /**
  * Handle booking cancellation
+ * @returns {Promise<Response>}
  */
 async function handleBookingCancellation(body) {
   const { appointmentId, reason } = body;
-  
+
   // Validate required parameters
   if (!appointmentId) {
     return formatErrorResponse(new AppError('Appointment ID is required', 'MISSING_APPOINTMENT_ID', 'CLIENT_ERROR', 400));
   }
-  
+
   // Import the AppointmentModel dynamically
   const AppointmentModel = (await import("@repo/lib/models/Appointment/Appointment.model")).default;
-  
+
   // Cancel booking
   const appointment = await AppointmentModel.findByIdAndUpdate(
     appointmentId,
-    { 
+    {
       status: 'cancelled',
       cancellationReason: reason,
       cancelledAt: new Date()
     },
     { new: true }
   );
-  
+
   if (!appointment) {
     return formatErrorResponse(new AppError('Appointment not found', 'APPOINTMENT_NOT_FOUND', 'CLIENT_ERROR', 404));
   }
-  
+
   // Release any associated lock
   if (appointment.lockToken) {
     await releaseLock(appointment.lockToken);
   }
-  
+
   return Response.json({
     success: true,
     message: "Booking cancelled successfully",
@@ -1115,18 +1116,19 @@ async function handleBookingCancellation(body) {
 
 /**
  * Handle travel time calculation request
+ * @returns {Promise<Response>}
  */
 async function handleTravelTimeRequest(body) {
   const { vendorId, customerLocation } = body;
-  
+
   // Validate required parameters
   if (!vendorId || !customerLocation) {
     return formatErrorResponse(new AppError('Vendor ID and customer location are required', 'MISSING_REQUIRED_FIELDS', 'CLIENT_ERROR', 400));
   }
-  
+
   try {
     const travelTimeInfo = await calculateVendorTravelTime(vendorId, customerLocation);
-    
+
     return Response.json({
       success: true,
       message: "Travel time calculated successfully",

@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import UserModel from '@repo/lib/models/user';
 import _db from "@repo/lib/db";
-import { hashPassword } from "@repo/lib/auth";
+import { hashPassword } from "@repo/lib/hashing";
 
 export async function POST(request) {
   try {
     console.log('Reset password endpoint called');
-    
+
     // Connect to database
     try {
       await _db();
@@ -35,13 +35,13 @@ export async function POST(request) {
       console.log(`Searching in User model for email field emailAddress:`, email);
       const now = Date.now();
       console.log('Current time for query:', now);
-      
-      user = await UserModel.findOne({ 
+
+      user = await UserModel.findOne({
         emailAddress: email,
         resetPasswordToken: token,
         resetPasswordExpires: { $gt: now }
       });
-      
+
       if (user) {
         console.log(`User found in User model:`, user.emailAddress);
         console.log('User resetPasswordExpires:', user.resetPasswordExpires);
@@ -57,9 +57,9 @@ export async function POST(request) {
 
     if (!user) {
       console.log('Invalid or expired token for email:', email);
-      return NextResponse.json({ 
-        success: false, 
-        error: "Password reset token is invalid or has expired." 
+      return NextResponse.json({
+        success: false,
+        error: "Password reset token is invalid or has expired."
       }, { status: 400 });
     }
 
@@ -74,9 +74,9 @@ export async function POST(request) {
       console.log('Reset token cleared for user:', user.emailAddress);
     } catch (clearError) {
       console.error('Error clearing reset token:', clearError);
-      return NextResponse.json({ 
-        success: false, 
-        error: "Failed to process reset request. Please try again later." 
+      return NextResponse.json({
+        success: false,
+        error: "Failed to process reset request. Please try again later."
       }, { status: 500 });
     }
 
@@ -86,9 +86,9 @@ export async function POST(request) {
       hashedPassword = await hashPassword(password);
     } catch (hashError) {
       console.error('Password hashing error:', hashError);
-      return NextResponse.json({ 
-        success: false, 
-        error: "Failed to process password. Please try again later." 
+      return NextResponse.json({
+        success: false,
+        error: "Failed to process password. Please try again later."
       }, { status: 500 });
     }
 
@@ -100,15 +100,15 @@ export async function POST(request) {
       console.log('Password updated for user:', user.emailAddress);
     } catch (saveError) {
       console.error('Error updating password:', saveError);
-      return NextResponse.json({ 
-        success: false, 
-        error: "Failed to update password. Please try again later." 
+      return NextResponse.json({
+        success: false,
+        error: "Failed to update password. Please try again later."
       }, { status: 500 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Password reset successfully. You can now log in with your new password." 
+    return NextResponse.json({
+      success: true,
+      message: "Password reset successfully. You can now log in with your new password."
     });
   } catch (error) {
     console.error("Reset password error:", error);

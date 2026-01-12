@@ -224,7 +224,33 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const productPlatformFeesResult = await ClientOrderModel.aggregate(productPlatformFeesPipeline);
     const productPlatformFees = productPlatformFeesResult.length > 0 ? productPlatformFeesResult[0].totalProductPlatformFees : 0;
     
-
+    // Calculate service tax from completed appointments
+    const serviceTaxPipeline = [
+      { $match: { ...dateFilter, status: 'completed' } },
+      {
+        $group: {
+          _id: null,
+          totalServiceTax: { $sum: "$serviceTax" }
+        }
+      }
+    ];
+    
+    const serviceTaxResult = await AppointmentModel.aggregate(serviceTaxPipeline);
+    const serviceTax = serviceTaxResult.length > 0 ? serviceTaxResult[0].totalServiceTax : 0;
+    
+    // Calculate product tax from delivered orders
+    const productTaxPipeline = [
+      { $match: { ...dateFilter, status: 'Delivered' } },
+      {
+        $group: {
+          _id: null,
+          totalProductTax: { $sum: "$gstAmount" }
+        }
+      }
+    ];
+    
+    const productTaxResult = await ClientOrderModel.aggregate(productTaxPipeline);
+    const productTax = productTaxResult.length > 0 ? productTaxResult[0].totalProductTax : 0;
     
     // Calculate subscription amount from vendor and supplier subscriptions
     const subscriptionAmount = await calculateSubscriptionAmount(dateFilter);
@@ -291,7 +317,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const smsAmount = marketingReportData?.success && marketingReportData.data?.campaigns ? 
       marketingReportData.data.campaigns.reduce((sum, campaign) => sum + (campaign.price || 0), 0) : 0;
     
-    // Fetch city-wise sales data from sales report
+    // Fetch city-wise sales data from sales report with proper filter parameters
     const salesReportRes = await salesReportModule.GET(createInternalRequest('/api/admin/reports/Financial-Reports/salesreport'));
     const salesReportData = await salesReportRes.json();
     
@@ -303,8 +329,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
           cityMap[city] = {
             city: city,
             totalBusinesses: 0,
+            totalServiceAmount: 0,
+            totalProductAmount: 0,
             servicePlatformFees: 0,
             productPlatformFees: 0,
+            serviceTax: 0,
+            productTax: 0,
             subscriptionAmount: 0,
             smsAmount: 0,
             totalRevenue: 0
@@ -315,12 +345,16 @@ export const GET = authMiddlewareAdmin(async (req) => {
         cityMap[city].totalBusinesses += 1;
         
         // Add fees and amounts
+        cityMap[city].totalServiceAmount += vendorData.totalServiceAmount || 0;
+        cityMap[city].totalProductAmount += vendorData.totalProductAmount || 0;
         cityMap[city].servicePlatformFees += vendorData.totalPlatformFees || 0;
         cityMap[city].productPlatformFees += vendorData.totalProductPlatformFee || 0;
+        cityMap[city].serviceTax += vendorData.totalServiceTax || 0;  // Fixed: use totalServiceTax instead of serviceTax
+        cityMap[city].productTax += vendorData.totalProductTax || 0;  // Fixed: use totalProductTax instead of productTax
         cityMap[city].subscriptionAmount += vendorData.subscriptionAmount || 0;
         cityMap[city].smsAmount += vendorData.smsAmount || 0;
         
-        // Calculate total revenue for this city
+        // Calculate total revenue for this city (without tax components)
         cityMap[city].totalRevenue = 
           cityMap[city].servicePlatformFees + 
           cityMap[city].productPlatformFees + 

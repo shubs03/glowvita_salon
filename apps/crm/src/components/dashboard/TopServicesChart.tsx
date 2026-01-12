@@ -7,8 +7,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recha
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#a4de6c", "#d0ed57"];
 
 interface TopServiceData {
-  name: string;
-  value: number;
+  service: string;
+  serviceSold: number;
+  totalSales: number;
 }
 
 interface TopServicesChartProps {
@@ -42,7 +43,7 @@ export function TopServicesChart({
     const fetchTopServices = async () => {
       try {
         // Build query params based on filter parameters
-        let url = '/api/crm/vendor/metrics/top-services';
+        let url = '/api/crm/vendor/reports/sales-by-service';
         const params = new URLSearchParams();
         
         // Handle custom date range
@@ -55,6 +56,9 @@ export function TopServicesChart({
           params.append('period', presetPeriod);
         }
         
+        // Always filter for completed status for sales reports
+        params.append('status', 'completed');
+        
         // Append query parameters if any exist
         if (params.toString()) {
           url += `?${params.toString()}`;
@@ -63,18 +67,22 @@ export function TopServicesChart({
         const response = await fetch(url);
         if (response.ok) {
           const result = await response.json();
-          if (result.success) {
-            setData(result.data);
+          if (result.success && result.data && result.data.salesByService) {
+            // Get top 5 services by total sales
+            const topServices = result.data.salesByService
+              .sort((a: any, b: any) => b.totalSales - a.totalSales)
+              .slice(0, 5);
+            setData(topServices);
           }
         }
       } catch (error) {
         console.error('Error fetching top services:', error);
         // Fallback to mock data on error
         setData([
-          { name: 'Haircut', value: 4 },
-          { name: 'Manicure', value: 3 },
-          { name: 'Facial', value: 3 },
-          { name: 'Spa', value: 2 },
+          { service: 'Haircut', serviceSold: 4, totalSales: 800 },
+          { service: 'Manicure', serviceSold: 3, totalSales: 600 },
+          { service: 'Facial', serviceSold: 3, totalSales: 900 },
+          { service: 'Spa', serviceSold: 2, totalSales: 1200 },
         ]);
       } finally {
         setLoading(false);
@@ -89,7 +97,7 @@ export function TopServicesChart({
       <Card>
         <CardHeader>
           <CardTitle>Top Services</CardTitle>
-          <CardDescription>Your most popular services this month.</CardDescription>
+          <CardDescription>Based on completed appointments and sales data.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-[300px]">
@@ -101,12 +109,12 @@ export function TopServicesChart({
   }
 
   // Calculate total for percentage calculation
-  const total = data.reduce((sum, item) => sum + item.value, 0);
+  const totalSales = data.reduce((sum, item) => sum + item.totalSales, 0);
 
   // Format data with explicit percentages for display
   const formattedData = data.map(item => ({
     ...item,
-    percentage: total > 0 ? (item.value / total) * 100 : 0
+    percentage: totalSales > 0 ? (item.totalSales / totalSales) * 100 : 0
   }));
 
   // Custom tooltip to show detailed information
@@ -115,8 +123,9 @@ export function TopServicesChart({
       const data = payload[0].payload;
       return (
         <div className="bg-background border border-border p-2 rounded shadow-sm">
-          <p className="font-semibold">{data.name}</p>
-          <p>Count: {data.value} appointments</p>
+          <p className="font-semibold">{data.service}</p>
+          <p>Services Sold: {data.serviceSold}</p>
+          <p>Total Sales: ₹{data.totalSales.toFixed(2)}</p>
           <p>Percentage: {data.percentage.toFixed(1)}%</p>
         </div>
       );
@@ -130,13 +139,13 @@ export function TopServicesChart({
         <CardTitle>Top Services</CardTitle>
         <CardDescription>
           {filterType === 'custom' 
-            ? `Your most popular services from ${formatDateDisplay(startDate)} to ${formatDateDisplay(endDate)}.`
+            ? `Top services from ${formatDateDisplay(startDate)} to ${formatDateDisplay(endDate)}.`
             : presetPeriod === 'day' 
-              ? "Your most popular services today."
+              ? "Top services today."
               : presetPeriod === 'month' 
-                ? "Your most popular services this month."
-                : presetPeriod === 'year' ? "Your most popular services this year."
-                  : "Your most popular services."}
+                ? "Top services this month."
+                : presetPeriod === 'year' ? "Top services this year."
+                  : "Top services. All time."}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -150,9 +159,9 @@ export function TopServicesChart({
                 labelLine={false}
                 outerRadius={100}
                 fill="#8884d8"
-                dataKey="value"
-                nameKey="name"
-                label={({ name, percentage }) => `${name}: ${percentage.toFixed(0)}%`}
+                dataKey="totalSales"
+                nameKey="service"
+                label={({ service, percentage }) => `${service}: ${percentage.toFixed(0)}%`}
               >
                 {formattedData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

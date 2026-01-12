@@ -31,8 +31,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const city = searchParams.get('city'); // City filter
     const userType = searchParams.get('userType'); // 'vendor', 'supplier', or 'all'
     const businessName = searchParams.get('businessName'); // Business name filter
+    const brand = searchParams.get('brand'); // Brand filter
     
-    console.log("Sales by Brand Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, saleType, city, userType, businessName });
+    console.log("Sales by Brand Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, saleType, city, userType, businessName, brand });
     
     // Build date filter
     const buildDateFilter = (filterType, filterValue, startDateParam, endDateParam) => {
@@ -150,8 +151,8 @@ export const GET = authMiddlewareAdmin(async (req) => {
       ...(city && city !== 'all' ? [{ 
         $match: { 
           $or: [
-            { "vendorInfo.city": city },
-            { "supplierInfo.city": city }
+            { "$expr": { "$eq": [{ "$let": { "vars": { "vendor": { "$arrayElemAt": ["$vendorInfo", 0] } }, "in": "$$vendor.city" } }, city] } },
+            { "$expr": { "$eq": [{ "$let": { "vars": { "supplier": { "$arrayElemAt": ["$supplierInfo", 0] } }, "in": "$$supplier.city" } }, city] } }
           ]
         } 
       }] : []),
@@ -165,16 +166,32 @@ export const GET = authMiddlewareAdmin(async (req) => {
       ...(businessName && businessName !== 'all' ? [{
         $match: {
           $or: [
-            { "vendorInfo.businessName": businessName },
-            { "supplierInfo.shopName": businessName }
+            { "$expr": { "$eq": [{ "$let": { "vars": { "vendor": { "$arrayElemAt": ["$vendorInfo", 0] } }, "in": "$$vendor.businessName" } }, businessName] } },
+            { "$expr": { "$eq": [{ "$let": { "vars": { "supplier": { "$arrayElemAt": ["$supplierInfo", 0] } }, "in": "$$supplier.shopName" } }, businessName] } }
           ]
+        }
+      }] : []),
+      // Add brand filter
+      ...(brand && brand !== 'all' ? [{
+        $match: {
+          "productInfo.brand": brand
+        }
+      }] : [])
+    ];
+    
+    // Build brand filter pipeline
+    const brandFilterPipeline = [
+      ...cityFilterPipeline,
+      ...(brand && brand !== 'all' ? [{
+        $match: {
+          "productInfo.brand": brand
         }
       }] : [])
     ];
     
     // Get sales by brand data
     const salesByBrandPipeline = [
-      ...cityFilterPipeline,
+      ...brandFilterPipeline,
       { $unwind: "$items" }, // Unwind the items array to process each product separately
       {
         $group: {
@@ -261,7 +278,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       totalQuantitySold: 0
     });
     
-    // Get unique cities for the filter dropdown
+    // Get unique cities for the filter dropdown - DO NOT filter by userType to show all cities
     const cityPipeline = [
       { $match: { status: "Delivered" } }, // Only delivered orders
       { $lookup: { from: "crm_products", localField: "items.productId", foreignField: "_id", as: "productInfo" } },
@@ -294,12 +311,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
           "ownerType": { $ifNull: ["$productInfo.origin", "Vendor"] }
         }
       },
-      // Add userType filter for cities
-      ...(userType && userType !== 'all' ? [{
-        $match: {
-          "ownerType": userType.charAt(0).toUpperCase() + userType.slice(1) // Capitalize first letter
-        }
-      }] : []),
       { $group: { _id: { $ifNull: ["$ownerInfo.city", null] } } }, // Get unique cities
       { $match: { "_id": { $ne: null } } }, // Filter out null cities
       { $sort: { _id: 1 } } // Sort alphabetically
@@ -307,6 +318,52 @@ export const GET = authMiddlewareAdmin(async (req) => {
     
     // Get unique business names for the filter dropdown
     const businessNamePipeline = [
+      { $match: { status: "Delivered" } }, // Only delivered orders
+      { $lookup: { from: "crm_products", localField: "items.productId", foreignField: "_id", as: "productInfo" } },
+      { $unwind: "$productInfo" },
+      { $match: { "productInfo": { $ne: null, $exists: true } } }, // Ensure productInfo exists
+      {
+        $lookup: {
+          from: "vendors",
+          localField: "productInfo.vendorId",
+          foreignField: "_id",
+          as: "vendorInfo"
+        }
+      },
+      {
+        $lookup: {
+          from: "suppliers",
+          localField: "productInfo.vendorId",
+          foreignField: "_id",
+          as: "supplierInfo"
+        }
+      },
+      // Get all business names regardless of user type to show in dropdown
+      {
+        $group: {
+          _id: {
+            $cond: {
+              if: { $eq: ["$productInfo.origin", "Vendor"] },
+              then: { $let: { vars: { vendor: { $arrayElemAt: ["$vendorInfo", 0] } }, in: { $ifNull: ["$$vendor.businessName", ""] } } },
+              else: { $let: { vars: { supplier: { $arrayElemAt: ["$supplierInfo", 0] } }, in: { $ifNull: ["$$supplier.shopName", ""] } } }
+            }
+          }
+        }
+      },
+      { $match: { "_id": { $ne: null, $ne: "" } } }, // Filter out null and empty business names
+      { $sort: { _id: 1 } } // Sort alphabetically
+    ];
+    
+    const citiesResult = await ClientOrderModel.aggregate(cityPipeline);
+    const cities = citiesResult.map(item => item._id).filter(city => city && city !== 'N/A'); // Filter out null/undefined cities
+    
+    const businessNamesResult = await ClientOrderModel.aggregate(businessNamePipeline);
+    console.log("Business names result:", businessNamesResult);
+    const businessNames = businessNamesResult.map(item => item._id).filter(name => name && name !== ''); // Filter out null/undefined/empty names
+    console.log("Business names after filtering:", businessNames);
+    
+    // Get unique brands for the filter dropdown
+    const brandPipeline = [
       { $match: { status: "Delivered" } }, // Only delivered orders
       { $lookup: { from: "crm_products", localField: "items.productId", foreignField: "_id", as: "productInfo" } },
       { $unwind: "$productInfo" },
@@ -338,29 +395,15 @@ export const GET = authMiddlewareAdmin(async (req) => {
           "ownerType": { $ifNull: ["$productInfo.origin", "Vendor"] }
         }
       },
-      // Remove userType filter for business names to show all business names
-      // This ensures the business name dropdown always shows all available business names
-      // regardless of the userType filter selection
-      {
-        $group: {
-          _id: {
-            $cond: {
-              if: { $eq: ["$productInfo.origin", "Vendor"] },
-              then: "$vendorInfo.businessName",
-              else: "$supplierInfo.shopName"
-            }
-          }
-        }
-      },
-      { $match: { "_id": { $ne: null } } }, // Filter out null business names
+      { $group: { _id: { $ifNull: ["$productInfo.brand", null] } } }, // Get unique brands
+      { $match: { "_id": { $ne: null, $ne: "Unknown Brand", $ne: "" } } }, // Filter out null, unknown, and empty brands
       { $sort: { _id: 1 } } // Sort alphabetically
     ];
     
-    const citiesResult = await ClientOrderModel.aggregate(cityPipeline);
-    const cities = citiesResult.map(item => item._id).filter(city => city && city !== 'N/A'); // Filter out null/undefined cities
-    
-    const businessNamesResult = await ClientOrderModel.aggregate(businessNamePipeline);
-    const businessNames = businessNamesResult.map(item => item._id).filter(name => name); // Filter out null/undefined names
+    const brandsResult = await ClientOrderModel.aggregate(brandPipeline);
+    console.log("Brands result:", brandsResult);
+    const brands = brandsResult.map(item => item._id).filter(brand => brand && brand !== 'Unknown Brand' && brand !== ''); // Filter out null/undefined/empty/unknown brands
+    console.log("Brands after filtering:", brands);
     
     return NextResponse.json({
       success: true,
@@ -369,6 +412,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
         aggregatedTotals,
         cities: cities,
         businessNames: businessNames,
+        brands: brands,
         filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
       }
     }, { status: 200 });

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
+import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '@repo/config/config';
 
 interface GoogleMapSelectorProps {
   onLocationSelect: (lat: number, lng: number) => void;
@@ -24,8 +25,8 @@ export function GoogleMapSelector({
   initialLat, 
   initialLng 
 }: GoogleMapSelectorProps) {
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-  
+  const apiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+    
   // Check if API key is available
   if (!apiKey) {
     console.error('NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is not defined');
