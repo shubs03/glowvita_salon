@@ -193,8 +193,11 @@ export default function ServicesTab({
   // Handle client selection
   const handleSelectClient = (client: Client) => {
     setSelectedClient(client);
-    setClientSearchTerm("");
-    setIsSearchFocused(false);
+    // Don't clear the search term immediately to maintain UI continuity
+    setTimeout(() => {
+      setClientSearchTerm("");
+      setIsSearchFocused(false);
+    }, 100); // Small delay to allow UI to update
   };
 
   // Handle remove selected client
@@ -1092,8 +1095,8 @@ export default function ServicesTab({
               </div>
             )}
 
-            {/* Show when search is focused or has content */}
-            {(isSearchFocused || clientSearchTerm) && (
+            {/* Show client list when search is focused or has content, or when loading */}
+            {(isSearchFocused || clientSearchTerm || clientsLoading) && (
               <div className="space-y-3">
                 {/* Add New Client Button */}
                 <Button
@@ -1107,35 +1110,41 @@ export default function ServicesTab({
 
                 {/* Client List */}
                 <div className="space-y-2 max-h-48 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-                  {filteredClients.map((client: Client) => (
-                    <div
-                      key={client._id}
-                      className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${selectedClient?._id === client._id
-                          ? 'bg-blue-50 border-blue-300 shadow-md'
-                          : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm'
-                        }`}
-                      onClick={() => handleSelectClient(client)}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <img
-                          src={client.profilePicture || `https://placehold.co/32x32.png?text=${client.fullName[0]}`}
-                          alt={client.fullName}
-                          className="w-8 h-8 rounded-full object-cover border border-white shadow-sm"
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900 text-sm">{client.fullName}</p>
-                          <p className="text-xs text-gray-600">{client.phone}</p>
-                        </div>
-                        {selectedClient?._id === client._id && (
-                          <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
-                            <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
+                  {clientsLoading ? (
+                    <div className="p-3 text-center text-gray-500">Loading clients...</div>
+                  ) : filteredClients.length > 0 ? (
+                    filteredClients.map((client: Client) => (
+                      <div
+                        key={client._id}
+                        className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${selectedClient?._id === client._id
+                            ? 'bg-blue-50 border-blue-300 shadow-md'
+                            : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm'
+                          }`}
+                        onClick={() => handleSelectClient(client)}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <img
+                            src={client.profilePicture || `https://placehold.co/32x32.png?text=${client.fullName[0]}`}
+                            alt={client.fullName}
+                            className="w-8 h-8 rounded-full object-cover border border-white shadow-sm"
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900 text-sm">{client.fullName}</p>
+                            <p className="text-xs text-gray-600">{client.phone}</p>
                           </div>
-                        )}
+                          {selectedClient?._id === client._id && (
+                            <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+                              <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : clientSearchTerm && (
+                    <div className="p-3 text-center text-gray-500">No clients found matching "{clientSearchTerm}"</div>
+                  )}
                 </div>
               </div>
             )}

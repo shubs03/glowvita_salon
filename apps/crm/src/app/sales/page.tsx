@@ -8,7 +8,7 @@ import ProductsTab from "./components/ProductsTab";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 
 // Client interface
-interface Client {after
+interface Client {
   _id: string;
   fullName: string;
   email: string;
