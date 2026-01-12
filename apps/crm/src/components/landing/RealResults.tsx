@@ -27,7 +27,7 @@ const AdvantageCard = ({
           </h3>
         </div>
         <div className="mt-4">
-          <p className="text-3xl font-bold text-primary mb-2">
+          <p className="text-5xl font-bold text-primary mb-2">
             {stat}
           </p>
         </div>

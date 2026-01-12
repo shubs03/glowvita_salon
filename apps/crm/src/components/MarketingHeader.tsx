@@ -89,11 +89,9 @@ const profileNavItems = [
 ];
 
 const navItems = [
-  { label: "Products", href: "/all-products" },
-  { label: "Salons", href: "/salons" },
-  { label: "Doctors", href: "/doctors" },
-  { label: "About Us", href: "/about" },
-  { label: "Reach Us", href: "/contact" },
+  { label: "Apps", href: "/apps" },
+  { label: "Support", href: "/support" },
+  { label: "About", href: "/about" },
 ];
 
 export function MarketingHeader({
