@@ -1866,12 +1866,14 @@ const CompletedAppointmentsTable = ({ startDate, endDate, client, service, staff
               <TableHead>Time</TableHead>
               <TableHead>Duration</TableHead>
               <TableHead>Base Amount</TableHead>
-              <TableHead>Total Amount</TableHead>
               <TableHead>Platform Fee</TableHead>
               <TableHead>Service Tax</TableHead>
               <TableHead>Final Amount</TableHead>
               <TableHead>Status</TableHead>
-            </TableRow>
+
+
+
+   </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedAppointments.map((item: any) => {
@@ -1935,9 +1937,6 @@ const CompletedAppointmentsTable = ({ startDate, endDate, client, service, staff
               <TableCell colSpan={6}></TableCell>
               <TableCell>
                 ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.amount || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.totalAmount || 0), 0)}
               </TableCell>
               <TableCell>
                 ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.platformFee || 0), 0)}
