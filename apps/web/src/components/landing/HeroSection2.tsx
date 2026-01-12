@@ -98,7 +98,7 @@ const Hepurplection2 = () => {
           <div className="flex-1 flex items-center gap-3 px-4 border-r border-gray-200">
             <div className="flex flex-col flex-1">
               {!serviceName && (
-                <label className="text-purple-400 text-xs font-medium mb-1">
+                <label className="text-primary text-xs font-medium mb-1">
                   Service Name
                 </label>
               )}
@@ -117,7 +117,7 @@ const Hepurplection2 = () => {
           <div className="flex-1 flex items-center gap-3 px-4">
             <div className="flex flex-col flex-1">
               {!address && (
-                <label className="text-purple-400 text-xs font-medium mb-1">
+                <label className="text-primary text-xs font-medium mb-1">
                   Address
                 </label>
               )}
@@ -133,7 +133,7 @@ const Hepurplection2 = () => {
           </div>
 
           {/* Search Button */}
-          <button className="bg-gradient-to-r from-purple-400 to-purple-500 hover:from-purple-500 hover:to-purple-600 text-white px-8 py-3 rounded-full font-medium transition-all duration-300 flex items-center gap-2 shadow-lg">
+          <button className="bg-primary text-white px-8 py-3 rounded-full font-medium transition-all duration-300 flex items-center gap-2 shadow-lg">
             Search
             <Search className="w-4 h-4" />
           </button>

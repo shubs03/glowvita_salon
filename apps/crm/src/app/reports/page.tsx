@@ -26,7 +26,8 @@ import {
   useGetSupplierCompletedOrdersReportQuery,
   useGetSupplierPlatformCollectionsReportQuery,
   useGetSupplierProductSalesReportQuery
-} from '@repo/store/services/api';import { toast } from 'sonner';
+} from '@repo/store/services/api';
+import { toast } from 'sonner';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -76,6 +77,7 @@ interface SupplierOrder {
 // Define role-specific reports
 const roleSpecificReports: Record<string, ReportCategory[]> = {
   admin: [
+    {
       category: "Financial Reports",
       reports: [
         {
@@ -84,6 +86,9 @@ const roleSpecificReports: Record<string, ReportCategory[]> = {
           details: "Includes profit, loss, and settlement data.",
           type: "sales"
         },
+        {
+          title: "Customer Demographics Report",
+          description: "Analytics on customer demographics and preferences.",
           details: "Understand your audience to tailor your services.",
           type: "customer-demographics"
         },
@@ -818,6 +823,181 @@ const ReportPreviewTable = ({ reportType, reportData }: { reportType: string; re
                       {cell}
                     </TableCell>
                   ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={(reportData.headers || []).length} className="text-center py-8 text-muted-foreground">
+                  No data available
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+};
+
+// Helper function to generate month options for supplier revenue report
+const generateMonthOptions = () => {
+  const options = [];
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  
+  // Generate options for the last 12 months
+  for (let i = 11; i >= 0; i--) {
+    const date = new Date(currentYear, now.getMonth() - i, 1);
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    
+    const value = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const label = `${date.toLocaleString('default', { month: 'long' })} ${year}`;
+    
+    options.push({ value, label });
+  }
+  
+  return options;
+};
+
+// Placeholder components for specialized reports
+const OffersReportPreview = ({ reportData }: { reportData: any }) => {
+  return (
+    <div className="space-y-6">
+      {reportData.summary && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h4 className="text-sm text-blue-800 font-medium">Total Offers</h4>
+            <p className="text-2xl font-bold text-blue-900">{reportData.summary.totalOffers}</p>
+          </div>
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h4 className="text-sm text-green-800 font-medium">Active</h4>
+            <p className="text-2xl font-bold text-green-900">{reportData.summary.activeOffers}</p>
+          </div>
+          <div className="bg-orange-50 p-4 rounded-lg">
+            <h4 className="text-sm text-orange-800 font-medium">Redemptions</h4>
+            <p className="text-2xl font-bold text-orange-900">{reportData.summary.totalRedemptions}</p>
+          </div>
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <h4 className="text-sm text-purple-800 font-medium">Est. Value</h4>
+            <p className="text-2xl font-bold text-purple-900">₹{reportData.summary.totalDiscountValue?.toFixed(2)}</p>
+          </div>
+        </div>
+      )}
+      <ReportPreviewTable reportType="offers" reportData={reportData} />
+    </div>
+  );
+};
+
+const ReferralsReportPreview = ({ reportData }: { reportData: any }) => {
+  return (
+    <div className="space-y-6">
+      {reportData.summary && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h4 className="text-sm text-blue-800 font-medium">Total Referrals</h4>
+            <p className="text-2xl font-bold text-blue-900">{reportData.summary.totalReferrals}</p>
+          </div>
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h4 className="text-sm text-green-800 font-medium">Completed</h4>
+            <p className="text-2xl font-bold text-green-900">{reportData.summary.completedReferrals}</p>
+          </div>
+          <div className="bg-orange-50 p-4 rounded-lg">
+            <h4 className="text-sm text-orange-800 font-medium">Paid</h4>
+            <p className="text-2xl font-bold text-orange-900">{reportData.summary.paidReferrals}</p>
+          </div>
+          <div className="bg-purple-50 p-4 rounded-lg">
+            <h4 className="text-sm text-purple-800 font-medium">Total Earnings</h4>
+            <p className="text-2xl font-bold text-purple-900">₹{reportData.summary.totalEarnings?.toFixed(2)}</p>
+          </div>
+        </div>
+      )}
+      <ReportPreviewTable reportType="referrals" reportData={reportData} />
+    </div>
+  );
+};
+
+const SupplierTotalOrdersReportPreview = ({ reportData }: { reportData: any }) => {
+  const processedData = useMemo(() => {
+    if (!reportData || !reportData.data) return { headers: [], rows: [] };
+    
+    const { orders, taxFeeSettings } = reportData.data;
+    return generateSupplierOrdersReportData(orders, taxFeeSettings);
+  }, [reportData]);
+  
+  return <ReportPreviewTable reportType="supplier-total-orders" reportData={processedData} />;
+};
+
+const SupplierPendingOrdersReportPreview = ({ reportData }: { reportData: any }) => {
+  const processedData = useMemo(() => {
+    if (!reportData || !reportData.data) return { headers: [], rows: [] };
+    
+    const { orders, taxFeeSettings } = reportData.data;
+    return generateSupplierOrdersReportData(orders, taxFeeSettings);
+  }, [reportData]);
+  
+  return <ReportPreviewTable reportType="supplier-pending-orders" reportData={processedData} />;
+};
+
+const SupplierConfirmedOrdersReportPreview = ({ reportData }: { reportData: any }) => {
+  const processedData = useMemo(() => {
+    if (!reportData || !reportData.data) return { headers: [], rows: [] };
+    
+    const { orders, taxFeeSettings } = reportData.data;
+    return generateSupplierOrdersReportData(orders, taxFeeSettings);
+  }, [reportData]);
+  
+  return <ReportPreviewTable reportType="supplier-confirmed-orders" reportData={processedData} />;
+};
+
+const SupplierCompletedOrdersReportPreview = ({ reportData }: { reportData: any }) => {
+  const processedData = useMemo(() => {
+    if (!reportData || !reportData.data) return { headers: [], rows: [] };
+    
+    const { orders, taxFeeSettings } = reportData.data;
+    return generateSupplierOrdersReportData(orders, taxFeeSettings);
+  }, [reportData]);
+  
+  return <ReportPreviewTable reportType="supplier-completed-orders" reportData={processedData} />;
+};
+
+const SupplierPlatformCollectionsReportPreview = ({ reportData }: { reportData: any }) => {
+  const processedData = useMemo(() => {
+    if (!reportData || !reportData.data) return { headers: [], rows: [] };
+    
+    const { orders, taxFeeSettings } = reportData.data;
+    return generateSupplierOrdersReportData(orders, taxFeeSettings);
+  }, [reportData]);
+  
+  return <ReportPreviewTable reportType="platform-collections" reportData={processedData} />;
+};
+
+const SupplierProductSalesReportPreview = ({ reportData }: { reportData: any }) => {
+  const processedData = useMemo(() => {
+    if (!reportData || !reportData.data || !reportData.data.products) {
+      return { headers: [], rows: [], summary: {} };
+    }
+    
+    const { products, summary } = reportData.data;
+    
+    // Prepare headers
+    const headers = ["Product Name", "Price", "Stock", "Category", "Units Sold", "Revenue", "Orders"];
+    
+    // Prepare rows
+    const rows = products.map((product: any) => [
+      product.productName || "N/A",
+      `₹${product.price?.toFixed(2) || "0.00"}`,
+      product.stock?.toString() || "0",
+      product.category || "N/A",
+      product.totalQuantitySold?.toString() || "0",
+      `₹${product.totalRevenue?.toFixed(2) || "0.00"}`,
+      product.orderCount?.toString() || "0"
+    ]);
+    
+    return { headers, rows, summary };
+  }, [reportData]);
+  
+  return <ReportPreviewTable reportType="supplier-product-sales" reportData={processedData} />;
 };
 
 export default function ReportsPage() {

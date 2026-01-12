@@ -46,6 +46,7 @@ import {
   Mail,
   Wallet,
   AlertCircle,
+  ChevronDown,
 } from "lucide-react";
 import {
   Dialog,
@@ -73,8 +74,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { useCartSync } from "@/hooks/useCartSync";
 import { toast } from "sonner";
 import ServicesSection from "./components/ServicesSection";
+import ProductsSection from "./components/ProductsSection";
+import ReviewsSection from "./components/ReviewsSection";
 import Link from "next/link";
 import { ReviewForm } from '@/components/ReviewForm';
+import ServicesOffered from "@/components/salon/ServicesOffered";
+import DownloadApp from "@/components/landing/DownloadApp";
+import SpecialOffered from "./components/SpecialOffered";
 
 // Skeleton Components
 const Skeleton = ({ className }: { className?: string }) => (
@@ -307,7 +313,7 @@ const WorkingHoursDisplay = ({
                 "font-semibold",
                 timeDisplay === "Closed"
                   ? "text-muted-foreground"
-                  : "text-blue-600"
+                  : "text-primary"
               )}
             >
               {timeDisplay}
@@ -334,187 +340,7 @@ const defaultSalon = {
   images: ["https://placehold.co/1200x800/png?text=Loading..."],
 };
 
-const ProductCard = ({ product, onBuyNow, onAddToCart, vendorId, vendorName, isSubscriptionExpired = false }: {
-  product: any;
-  onBuyNow: (product: any) => void;
-  onAddToCart: (product: any) => void;
-  vendorId: string;
-  vendorName: string;
-  isSubscriptionExpired?: boolean;
-}) => {
-  const [isLiked, setIsLiked] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
 
-  // Check if product is in wishlist on component mount
-  useEffect(() => {
-    const checkWishlistStatus = async () => {
-      if (isAuthenticated && user?._id) {
-        try {
-          const response = await fetch(`/api/client/wishlist/${product.id}`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            setIsLiked(data.isInWishlist);
-          }
-        } catch (error) {
-          console.error('Error checking wishlist status:', error);
-        }
-      }
-      setIsLoading(false);
-    };
-
-    checkWishlistStatus();
-  }, [product.id, isAuthenticated, user]);
-
-  const handleWishlistToggle = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    if (!isAuthenticated) {
-      toast.error("Please login to add items to wishlist");
-      router.push("/client-login");
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const url = isLiked ? `/api/client/wishlist/${product.id}/remove` : '/api/client/wishlist';
-      const method = isLiked ? 'DELETE' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ productId: product.id }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setIsLiked(!isLiked);
-        toast.success(isLiked ? "Removed from Wishlist" : "Added to Wishlist", {
-          description: isLiked ? "Product removed from your wishlist" : "Product added to your wishlist"
-        });
-      } else {
-        const errorData = await response.json();
-        toast.error("Wishlist Update Failed", {
-          description: errorData.message || "Failed to update wishlist"
-        });
-      }
-    } catch (error) {
-      console.error("Failed to update wishlist:", error);
-      toast.error("Wishlist Update Failed", {
-        description: "Failed to update wishlist. Please try again."
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  return (
-    <Card
-      className="group overflow-hidden hover:shadow-lg transition-shadow flex flex-col text-left cursor-pointer relative"
-      onClick={() => router.push(`/product-details/${product.id}`)}
-    >
-      <div className="relative aspect-square overflow-hidden rounded-md m-3">
-        <Image
-          src={product.image}
-          alt={product.name}
-          fill
-          className="group-hover:scale-105 transition-transform duration-300 object-cover"
-          data-ai-hint={product.hint}
-        />
-        <Badge
-          variant={
-            product.stock > 0 ? "secondary" : "default"
-          }
-          className="absolute top-2 right-2 text-xs"
-        >
-          {product.stock > 0 ? `In Stock` : "Out of Stock"}
-        </Badge>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="absolute top-2 left-2 h-8 w-8 rounded-full bg-white/20 text-blue-500 backdrop-blur-sm hover:bg-white/30 transition-all"
-          onClick={handleWishlistToggle}
-          disabled={isLoading}
-        >
-          <Heart
-            className={`h-4 w-4 ${isLiked ? "fill-current text-blue-500" : ""}`}
-          />
-        </Button>
-      </div>
-      <div className="p-3 flex flex-col flex-grow">
-        <p className="text-xs font-bold text-primary mb-1">
-          {product.category}
-        </p>
-        <h4 className="text-sm font-semibold flex-grow mb-2">
-          {product.name}
-        </h4>
-        <p className="text-xs text-muted-foreground line-clamp-2">
-          {product.description}
-        </p>
-        <div className="flex justify-between items-center mt-auto">
-          <p className="font-bold text-primary">
-            ₹{product.price.toFixed(2)}
-          </p>
-          <div className="flex items-center gap-1">
-            <Star className="h-3 w-3 text-blue-400 fill-current" />
-            <span className="text-xs text-muted-foreground font-medium">
-              {product.rating}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between gap-2 mt-2">
-          <div className="flex justify-between w-full">
-            <Button
-              size="sm"
-              variant="outline"
-              className={`w-full text-xs lg:mr-3 ${isSubscriptionExpired ? 'opacity-50' : ''}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!isSubscriptionExpired) {
-                  onBuyNow(product);
-                }
-              }}
-              disabled={isSubscriptionExpired}
-            >
-              {isSubscriptionExpired ? 'Unavailable' : 'Buy Now'}
-            </Button>
-
-            <Button
-              size="sm"
-              variant="outline"
-              className={`w-fit text-xs ${isSubscriptionExpired ? 'opacity-50' : ''}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (!isSubscriptionExpired) {
-                  onAddToCart(product);
-                }
-              }}
-              disabled={isSubscriptionExpired}
-            >
-              <ShoppingCart className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-
-        {isSubscriptionExpired && (
-          <p className="text-xs text-red-600 mt-2 text-center">
-            Not available at the moment
-          </p>
-        )}
-      </div>
-    </Card>
-  );
-};
 
 // Function to get the salon data dynamically
 export default function SalonDetailsPage() {
@@ -531,6 +357,7 @@ export default function SalonDetailsPage() {
   const [mainImage, setMainImage] = useState("");
   const [showReviewForm, setShowReviewForm] = useState(false);
 
+
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
@@ -540,6 +367,8 @@ export default function SalonDetailsPage() {
     isLoading,
     error,
   } = useGetPublicVendorsQuery(undefined);
+
+  console.log("vendorsResponse : ", vendorsResponse)
 
   const {
     data: servicesData,
@@ -666,34 +495,17 @@ export default function SalonDetailsPage() {
     return isStatusExpired || isDateExpired;
   }, [vendorData]);
 
-  const salonProducts = useMemo(() => {
-    if (!productsData?.products) return [];
 
-    // Products are already filtered by vendor ID on the server side
-    return productsData.products.map((p: any) => ({
-      id: p.id || p._id,
-      name: p.name || p.productName,
-      description: p.description || "",
-      price: p.price || 0,
-      salePrice: p.salePrice || null,
-      image:
-        p.image ||
-        p.productImage ||
-        "https://placehold.co/320x224/png?text=Product",
-      vendorId: id, // Always use the salon ID from URL params as vendorId
-      vendorName: vendorData?.businessName || "Unknown Vendor",
-      category: p.category || "Beauty Products",
-      stock: p.stock || 0,
-      rating: p.rating || (4.2 + Math.random() * 0.8).toFixed(1),
-      hint: p.hint || p.description || p.name || p.productName,
-    }));
-  }, [productsData, id, vendorData]);
+
+
 
   useEffect(() => {
     if (salon.images.length > 0) {
       setMainImage(salon.images[0]);
     }
   }, [salon.images]);
+
+
 
   const handleBookNow = (service?: any) => {
     // Check if subscription is expired
@@ -711,6 +523,17 @@ export default function SalonDetailsPage() {
       sessionStorage.removeItem("selectedService");
     }
     router.push(`/book/${id}`);
+  };
+
+
+
+  const openGalleryModal = (imageUrl: string) => {
+    setSelectedImage(imageUrl);
+    setIsGalleryModalOpen(true);
+  };
+
+  const closePreview = () => {
+    setSelectedImage("");
   };
 
   const handleBuyNow = (product: any) => {
@@ -790,15 +613,6 @@ export default function SalonDetailsPage() {
       console.error("Failed to add item to cart:", error);
       toast.error("Failed to add item to cart. Please try again.");
     }
-  };
-
-  const openGalleryModal = (imageUrl: string) => {
-    setSelectedImage(imageUrl);
-    setIsGalleryModalOpen(true);
-  };
-
-  const closePreview = () => {
-    setSelectedImage("");
   };
 
   if (isLoading) {
@@ -973,16 +787,7 @@ export default function SalonDetailsPage() {
     image: string;
   }
 
-  interface Product {
-    id: string;
-    name: string;
-    brand: string;
-    price: number;
-    image: string;
-    hint: string;
-    stock: number;
-    rating: number;
-  }
+
 
   interface StaffMember {
     name: string;
@@ -997,17 +802,6 @@ export default function SalonDetailsPage() {
     date: string;
     text: string;
   }
-
-  const StarRating = ({ rating }: { rating: number }) => (
-    <div className="flex items-center gap-1">
-      {[...Array(5)].map((_, i) => (
-        <Star
-          key={i}
-          className={`h-4 w-4 ${i < rating ? "text-yellow-400 fill-current" : "text-gray-300"}`}
-        />
-      ))}
-    </div>
-  );
 
   return (
     <>
@@ -1137,6 +931,7 @@ export default function SalonDetailsPage() {
           </section>
 
           {/* Main Content Area */}
+
           <div className="lg:grid lg:grid-cols-3 lg:gap-12 lg:items-start py-8">
             {/* Left Scrolling Column */}
             <div className="lg:col-span-2 space-y-16">
@@ -1222,7 +1017,7 @@ export default function SalonDetailsPage() {
                 </div>
               </section>
 
-              <section id="offers">
+              {/* <section id="offers">
                 <h2 className="text-4xl font-bold mb-2">Offers Available</h2>
                 <p className="text-muted-foreground mb-6">
                   Take advantage of our special offers and packages.
@@ -1302,7 +1097,15 @@ export default function SalonDetailsPage() {
                     </div>
                   )}
                 </div>
-              </section>
+              </section> */}
+
+              <SpecialOffered vendorId={id}/>
+
+              <ServicesOffered 
+                vendorId={id}
+                onBookNow={handleBookNow}
+                isSubscriptionExpired={isSubscriptionExpired}
+              />
 
               {/* Services Section */}
               <ServicesSection
@@ -1311,35 +1114,16 @@ export default function SalonDetailsPage() {
                 isSubscriptionExpired={isSubscriptionExpired}
               />
 
-              <section id="products">
-                <h2 className="text-4xl font-bold mb-2">
-                  Products We Use & Sell
-                </h2>
-                <p className="text-muted-foreground mb-6">
-                  High-quality products available for purchase.
-                </p>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {salonProducts.length > 0 ? (
-                    salonProducts.map((product: any) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        onBuyNow={handleBuyNow}
-                        onAddToCart={handleAddToCart}
-                        vendorId={id}
-                        vendorName={vendorData?.businessName || "Unknown Vendor"}
-                        isSubscriptionExpired={isSubscriptionExpired}
-                      />
-                    ))
-                  ) : (
-                    <div className="col-span-full text-center py-8">
-                      <p className="text-muted-foreground">
-                        No products available for this salon at the moment.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </section>
+              <ProductsSection
+                vendorId={id}
+                vendorData={vendorData}
+                productsData={productsData}
+                isLoading={productsLoading}
+                error={productsError}
+                isSubscriptionExpired={isSubscriptionExpired}
+                onBuyNow={handleBuyNow}
+                onAddToCart={handleAddToCart}
+              />
 
               <section id="team">
                 <h2 className="text-4xl font-bold mb-2">Meet Our Team</h2>
@@ -1352,113 +1136,14 @@ export default function SalonDetailsPage() {
                 />
               </section>
 
-              <section id="reviews">
-                <h2 className="text-4xl font-bold mb-2">Reviews</h2>
-                <p className="text-muted-foreground mb-6">
-                  What our clients are saying about us.
-                </p>
-                <Card>
-                  <CardHeader>
-                    <div className="flex items-center gap-4">
-                      <div className="text-4xl font-bold">
-                        {salon.rating || 0}
-                      </div>
-                      <div>
-                        <StarRating rating={salon.rating || 0} />
-                        <p className="text-sm text-muted-foreground">
-                          Based on {salon.reviewCount || 0} reviews
-                        </p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {isLoadingReviews ? (
-                      <div className="space-y-4">
-                        {[1, 2, 3].map((i) => (
-                          <div key={i} className="border-t pt-4">
-                            <Skeleton className="h-20 w-full" />
-                          </div>
-                        ))}
-                      </div>
-                    ) : salonReviews.length > 0 ? (
-                      salonReviews.map((review: any) => (
-                        <div key={review._id} className="border-t pt-4">
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center font-semibold text-primary">
-                                {review.userName?.charAt(0) || "U"}
-                              </div>
-                              <div>
-                                <p className="font-semibold text-sm">
-                                  {review.userName || "Anonymous"}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {new Date(review.createdAt).toLocaleDateString(
-                                    "en-US",
-                                    {
-                                      day: "numeric",
-                                      month: "short",
-                                      year: "numeric",
-                                    }
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                            <StarRating rating={review.rating || 0} />
-                          </div>
-                          <p className="text-sm text-muted-foreground italic">
-                            "{review.comment || "No review text available"}"
-                          </p>
-                        </div>
-                      ))
-                    ) : (
-                      // Show placeholder when no reviews available
-                      <div className="text-center py-12">
-                        <div className="bg-secondary/20 rounded-lg p-8">
-                          <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                          <p className="text-muted-foreground">
-                            No reviews yet
-                          </p>
-                          <p className="text-sm text-muted-foreground mt-2">
-                            Be the first to leave a review!
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                  <CardFooter>
-                    {showReviewForm ? (
-                      <div className="w-full">
-                        <ReviewForm
-                          entityId={vendorData?._id || ''}
-                          entityType="salon"
-                          onSubmitSuccess={() => {
-                            setShowReviewForm(false);
-                            refetchReviews();
-                          }}
-                        />
-                        <Button
-                          variant="outline"
-                          className="w-full mt-4"
-                          onClick={() => setShowReviewForm(false)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => setShowReviewForm(true)}
-                      >
-                        {salonReviews.length > 0
-                          ? "Write a Review"
-                          : "Write a Review"}
-                      </Button>
-                    )}
-                  </CardFooter>
-                </Card>
-              </section>
+              <ReviewsSection
+                vendorId={id}
+                vendorData={vendorData}
+                reviewsData={reviewsData}
+                isLoading={isLoadingReviews}
+                error={reviewsError}
+                refetchReviews={refetchReviews}
+              />
             </div>
 
             {/* Right Sticky Column */}
@@ -1586,6 +1271,7 @@ export default function SalonDetailsPage() {
               </Card>
             </div>
           </div>
+            <DownloadApp/>
         </div>
 
         <Dialog open={isGalleryModalOpen} onOpenChange={setIsGalleryModalOpen}>
