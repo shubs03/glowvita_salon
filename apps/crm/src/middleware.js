@@ -63,7 +63,7 @@ export async function middleware(request) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('crm_access_token')?.value;
 
-  const publicPaths = ['/login', '/auth/register', '/', '/apps', '/pricing', '/support', '/forgot-password', '/reset-password'];
+  const publicPaths = ['/login', '/auth/register', '/', '/apps', '/pricing', '/support', '/forgot-password', '/reset-password', '/about'];
   const isPublicPath = publicPaths.some(path => pathname === path);
 
   if (isPublicPath) {
