@@ -1,26 +1,41 @@
 'use client'
 
 import React, { useState } from 'react';
-import { Heart, Zap, Shield, ChevronDown } from 'lucide-react';
+import { CircleHelp, Info, FileQuestion, ChevronDown } from 'lucide-react';
 
-const PhilosophySection = () => {
+const SupportApproach = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   
-  const values = [
+  const faqs = [
     {
-      icon: Heart,
-      title: 'Efficiency',
-      description: 'We believe salon management should be streamlined and intuitive, eliminating operational bottlenecks and administrative overhead.',
+      icon: CircleHelp,
+      title: 'How do I reset my password?',
+      description: 'To reset your password, go to the login page and click on "Forgot Password". Enter your email address and follow the instructions sent to your inbox.',
     },
     {
-      icon: Zap,
-      title: 'Reliability',
-      description: 'We deliver robust, dependable systems that you can trust to run your business smoothly and securely.',
+      icon: Info,
+      title: 'Can I customize my dashboard?',
+      description: 'Yes, you can customize your dashboard by clicking on the settings icon in the top right corner. From there, you can select which widgets to display and rearrange them according to your preference.',
     },
     {
-      icon: Shield,
-      title: 'Growth',
-      description: 'We build solutions that help your business scale and adapt to changing market demands.',
+      icon: FileQuestion,
+      title: 'How do I add new staff members?',
+      description: 'To add new staff members, navigate to the Staff Management section from your dashboard. Click on "Add New Staff", fill in the required information, and assign appropriate permissions.',
+    },
+    {
+      icon: CircleHelp,
+      title: 'What payment methods are supported?',
+      description: 'GlowVita CRM supports multiple payment methods including credit cards, debit cards, PayPal, and bank transfers. You can set your preferred payment gateways in the Settings section.',
+    },
+    {
+      icon: Info,
+      title: 'How do I backup my data?',
+      description: 'Your data is automatically backed up daily. However, you can also manually export your data by going to Settings > Data Export. Select the data types you want to export and choose your preferred format.',
+    },
+    {
+      icon: FileQuestion,
+      title: 'Can I integrate with third-party tools?',
+      description: 'Yes, GlowVita CRM offers integrations with popular tools like QuickBooks, Google Calendar, and Mailchimp. Visit the Integrations section in your dashboard to explore available options.',
     },
   ];
 
@@ -29,18 +44,17 @@ const PhilosophySection = () => {
       {/* Section Header */}
       <div className="mb-12">
         <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4 mx-auto">
-          Our Business Approach
+          Frequently Asked Questions
         </h2>
         <p className="text-muted-foreground mt-4 text-base max-w-2xl">
-          Our approach is guided by three fundamental principles that shape every business 
-          solution we develop for salon owners and managers.
+          Find answers to common questions about using GlowVita CRM for your salon business.
         </p>
       </div>
 
       {/* Interactive Accordion Layout */}
       <div className="space-y-4 max-w-4xl mx-auto">
-        {values.map((value, index) => {
-          const Icon = value.icon;
+        {faqs.map((faq, index) => {
+          const Icon = faq.icon;
           const isActive = activeIndex === index;
           
           return (
@@ -65,7 +79,7 @@ const PhilosophySection = () => {
                   <h3 className={`font-bold text-lg ${
                     isActive ? 'text-primary' : 'text-card-foreground'
                   }`}>
-                    {value.title}
+                    {faq.title}
                   </h3>
                 </div>
                 <ChevronDown 
@@ -82,7 +96,7 @@ const PhilosophySection = () => {
               >
                 <div className="p-4 border-t border-border">
                   <p className="text-muted-foreground text-sm">
-                    {value.description}
+                    {faq.description}
                   </p>
                 </div>
               </div>
@@ -94,4 +108,4 @@ const PhilosophySection = () => {
   );
 };
 
-export default PhilosophySection;
+export default SupportApproach;

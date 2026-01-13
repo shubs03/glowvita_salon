@@ -7,18 +7,18 @@ const FinalCTASection = () => {
       <div className="max-w-4xl mx-auto text-center">
         {/* Headline */}
         <h2 className="text-3xl md:text-4xl font-serif font-bold text-foreground mb-4">
-          Ready to Grow Your Salon Business?
+          Ready to Transform Your Salon Business?
         </h2>
 
         {/* Description */}
         <p className="text-muted-foreground text-base md:text-lg mb-8 max-w-2xl mx-auto">
-          Join thousands of salons using GlowVita to reach more customers and manage bookings effortlessly.
+          Join thousands of salon owners using GlowVita CRM to streamline operations and boost revenue.
         </p>
 
         {/* Primary CTA Button */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 rounded-lg font-semibold text-base transition-all duration-300 flex items-center gap-2 shadow-sm">
-            Join as a Salon
+            Join as a Business Owner
             <ArrowRight className="w-5 h-5" />
           </button>
 

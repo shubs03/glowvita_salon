@@ -8,34 +8,34 @@ const IntroductionSection = () => {
         {/* Elegant Brand Mark */}
         <div className="mb-8">
           <p className="text-primary/60 text-xs sm:text-sm font-medium tracking-[0.2em] uppercase">
-            Welcome to GlowVita Salon
+            Welcome to GlowVita CRM
           </p>
         </div>
 
         {/* Main Headline */}
         <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-semibold text-foreground mb-8 leading-tight tracking-tight">
-          Discover Your Perfect
+          Grow Your Salon
           <br />
-          <span className="text-primary">Salon Experience</span>
+          <span className="text-primary">Business Success</span>
         </h1>
 
         {/* Descriptive Paragraph */}
         <p className="text-base sm:text-lg md:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto font-light mb-6">
-          GlowVita is your trusted online platform for discovering and booking
-          exceptional salon services. Explore verified salons near you or across
-          the city, read authentic reviews, compare services, and schedule
-          appointments effortlessly—all in one elegant experience.
+          GlowVita CRM is your comprehensive business management platform for
+          running your salon operations. Manage appointments, track customer
+          relationships, handle payments, and grow your business—all in one
+          powerful solution.
         </p>
 
         {/* Supporting Text */}
         <p className="text-sm sm:text-base text-muted-foreground/80 leading-relaxed max-w-2xl mx-auto font-light">
-          From haircuts to spa treatments, finding quality beauty and wellness
-          services has never been easier.
+          From appointment scheduling to customer analytics, managing your
+          salon business has never been more efficient.
         </p>
 
         <div className="gap-4 flex flex-wrap justify-center mt-8">
-          <a href="/salons" className="bg-primary text-white px-6 py-3 rounded-md font-medium transition-all hover:opacity-90">Explore Salons</a>
-          <a href="/about#cta-section" className="bg-transparent border border-primary text-primary px-6 py-3 rounded-md font-medium transition-all hover:bg-primary/5">Join GlowVita Today</a>
+          <a href="/dashboard" className="bg-primary text-white px-6 py-3 rounded-md font-medium transition-all hover:opacity-90">Access Dashboard</a>
+          <a href="/about#cta-section" className="bg-transparent border border-primary text-primary px-6 py-3 rounded-md font-medium transition-all hover:bg-primary/5">Join as Vendor</a>
         </div>
       </div>
     </section>

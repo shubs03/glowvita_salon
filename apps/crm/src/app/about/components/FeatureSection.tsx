@@ -5,23 +5,23 @@ const FeaturesSection = () => {
   const features = [
     {
       icon: Sparkles,
-      title: 'Premium Quality',
-      description: 'Access verified salons and skilled professionals committed to delivering exceptional beauty and wellness experiences.',
+      title: 'Business Growth',
+      description: 'Tools and analytics to help expand your customer base and increase revenue streams.',
     },
     {
       icon: Users,
-      title: 'Trusted Community',
-      description: 'Join thousands of satisfied customers who rely on authentic reviews and transparent ratings for their choices.',
+      title: 'Customer Management',
+      description: 'Comprehensive CRM tools to track client preferences, booking history, and engagement patterns.',
     },
     {
       icon: Shield,
-      title: 'Safe & Secure',
-      description: 'Book with confidence knowing your data is protected and every transaction is secure and encrypted.',
+      title: 'Secure Operations',
+      description: 'Enterprise-grade security for all your business data, payment processing, and customer information.',
     },
     {
       icon: Zap,
-      title: 'Instant Booking',
-      description: 'Schedule appointments effortlessly with real-time availability and instant confirmation at your fingertips.',
+      title: 'Efficient Scheduling',
+      description: 'Advanced booking systems with real-time availability, automated reminders, and conflict resolution.'
     },
   ];
 
@@ -30,10 +30,10 @@ const FeaturesSection = () => {
       {/* Section Header */}
       <div className="mb-8">
         <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
-          Why Choose GlowVita
+          Business Advantages
         </h2>
         <p className="text-muted-foreground mt-3 text-sm">
-          Experience the difference with our unique features designed to enhance your beauty and wellness journey.
+          Transform your salon operations with our unique business management features.
         </p>
       </div>
 

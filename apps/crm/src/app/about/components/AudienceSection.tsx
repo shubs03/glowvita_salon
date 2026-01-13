@@ -2,12 +2,12 @@ import React from 'react';
 
 const AudienceSection = () => {
   const audiences = [
-    'Beauty Enthusiasts',
-    'Salon Professionals',
-    'Wellness Seekers',
-    'Busy Professionals',
-    'Style Conscious Individuals',
-    'Self-Care Advocates',
+    'Salon Owners',
+    'Spa Managers',
+    'Beauty Business Entrepreneurs',
+    'Wellness Center Directors',
+    'Independent Beauty Professionals',
+    'Multi-location Business Owners',
   ];
 
   return (
@@ -15,11 +15,11 @@ const AudienceSection = () => {
       {/* Section Header */}
       <div className="mb-8">
         <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
-          Who We Serve
+          For Salon Business Owners
         </h2>
         <p className="text-muted-foreground mt-3 text-sm max-w-2xl">
-          GlowVita is designed for anyone who values quality, convenience, and exceptional 
-          beauty experiences, bringing together a diverse community united by self-care.
+          GlowVita CRM is designed for salon business owners who value efficiency, 
+          comprehensive management tools, and data-driven growth strategies.
         </p>
       </div>
 
