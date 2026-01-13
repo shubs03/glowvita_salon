@@ -217,8 +217,11 @@ export default function ProductsTab({
   // Handle client selection
   const handleSelectClient = (client: Client) => {
     setSelectedClient(client);
-    setClientSearchTerm("");
-    setIsSearchFocused(false);
+    // Don't clear the search term immediately to maintain UI continuity
+    setTimeout(() => {
+      setClientSearchTerm("");
+      setIsSearchFocused(false);
+    }, 100); // Small delay to allow UI to update
   };
 
   // Handle remove selected client
