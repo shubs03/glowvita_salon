@@ -695,15 +695,17 @@ export default function DayScheduleView({
           appointments.forEach(appt => {
             // Check if this is a multi-service appointment
             if (appt.isMultiService && appt.serviceItems && appt.serviceItems.length > 0) {
-              // Find if this staff has a service in this multi-service appointment
-              const staffServiceItem = appt.serviceItems.find(
+              // Get all service items for this staff in this multi-service appointment
+              const staffServiceItems = appt.serviceItems.filter(
                 item => item.staffName === staff.name || item.staff === staff.id
               );
 
-              if (staffServiceItem) {
+              staffServiceItems.forEach(staffServiceItem => {
                 // Create a specialized appointment entry for this staff's service
                 staffAppointments.push({
                   ...appt,
+                  // Unique ID for each service item instance in the calendar
+                  id: `${appt._id || appt.id}-${staffServiceItem._id || Math.random()}`,
                   // Override with staff-specific times from serviceItem
                   startTime: staffServiceItem.startTime,
                   endTime: staffServiceItem.endTime,
@@ -715,7 +717,7 @@ export default function DayScheduleView({
                   isMultiService: true,
                   serviceItems: appt.serviceItems
                 } as Appointment);
-              }
+              });
             } else {
               // Regular single-service appointment
               if (appt.staffName === staff.name || appt.staffName === staff.id) {
@@ -1287,8 +1289,8 @@ export default function DayScheduleView({
           {appointment.mode && (
             <div className="mb-1.5">
               <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${appointment.mode === 'online'
-                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
-                  : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
+                : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
                 }`}>
                 <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
                   {appointment.mode === 'online' ? (
@@ -1612,14 +1614,14 @@ export default function DayScheduleView({
                             <div
                               key={`${staff.name}-${timeSlot.hour}-${timeSlot.minute}`}
                               className={`border-b border-gray-100 dark:border-gray-800 relative transition-all duration-150 ${!isAvailable
-                                  ? 'bg-gray-200/70 dark:bg-gray-800/70'
-                                  : isBlocked
-                                    ? 'bg-red-50/50 dark:bg-red-900/20 cursor-not-allowed'
-                                    : !isWithinWorkingHours
-                                      ? 'bg-gray-100/50 dark:bg-gray-700/30 cursor-not-allowed'
-                                      : role === 'doctor'
-                                        ? 'hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-default'
-                                        : 'hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
+                                ? 'bg-gray-200/70 dark:bg-gray-800/70'
+                                : isBlocked
+                                  ? 'bg-red-50/50 dark:bg-red-900/20 cursor-not-allowed'
+                                  : !isWithinWorkingHours
+                                    ? 'bg-gray-100/50 dark:bg-gray-700/30 cursor-not-allowed'
+                                    : role === 'doctor'
+                                      ? 'hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-default'
+                                      : 'hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
                                 }`}
                               style={{
                                 height: `${height}px`,

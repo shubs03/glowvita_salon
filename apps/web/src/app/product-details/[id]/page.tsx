@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -11,13 +11,49 @@ import { PageContainer } from '@repo/ui/page-container';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
-import { useGetPublicProductByIdQuery, useAddToClientCartMutation, useGetProductQuestionsQuery, useSubmitProductQuestionMutation, useGetProductReviewsQuery, useSubmitProductReviewMutation } from '@repo/store/api';
+import { useGetPublicProductByIdQuery, useAddToClientCartMutation, useGetProductQuestionsQuery, useSubmitProductQuestionMutation, useGetProductReviewsQuery, useSubmitProductReviewMutation, useGetPublicVendorProductsQuery } from '@repo/store/api';
 import { Skeleton } from '@repo/ui/skeleton';
 import { useAppDispatch } from "@repo/store/hooks";
 import { addToCart as addToLocalCart } from "@repo/store/slices/cartSlice";
 import { useAuth } from '@/hooks/useAuth';
 import { useCartSync } from "@/hooks/useCartSync";
 import { toast } from 'sonner';
+import ProductRatingsReviews from '../components/ProductRatingsReviews';
+import DiscountBanner from '../components/DiscountBanner';
+import RelevantProducts from '../components/RelevantProducts';
+import ProductPurchaseActions from '../components/ProductPurchaseActions';
+
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  salePrice?: number;
+  image: string;
+  vendorId: string;
+  vendorName: string;
+  category: string;
+  stock: number;
+  rating: number;
+  hint: string;
+  images?: string[];
+}
+
+// Define type for vendor products
+interface VendorProduct {
+  id: string;
+  name: string;
+  image: string;
+  images?: string[];
+  vendorId: string;
+  vendorName: string;
+  price: number;
+  salePrice?: number;
+  category: string;
+  stock: number;
+  rating: number;
+  description: string;
+}
 
 export default function ProductDetailsPage() {
   const params = useParams();
@@ -156,16 +192,19 @@ export default function ProductDetailsPage() {
   };
 
   // Handle add to cart with stock validation
-  const handleAddToCart = async () => {
+  const handleAddToCart = async (selectedProduct?: any) => {
+    const prod = selectedProduct || product;
+    const qty = selectedProduct ? 1 : quantity; // Use 1 for related products
+    
     // Validate product data is available
-    if (!product) {
+    if (!prod) {
       toast.error("Product data not available. Please try again.");
       return;
     }
 
     // Validate required fields
-    const productId = product.id || product._id || id;
-    const productPrice = product.salePrice || product.price;
+    const productId = prod.id || prod._id || id;
+    const productPrice = prod.salePrice || prod.price;
     
     if (!productId) {
       toast.error("Product ID is missing. Please refresh the page.");
@@ -177,35 +216,39 @@ export default function ProductDetailsPage() {
       return;
     }
 
-    if (!quantity || quantity < 1) {
+    if (!qty || qty < 1) {
       toast.error("Please select a valid quantity.");
       return;
     }
 
-    if (isOutOfStock) {
+    const availableStock = prod.stock || 0;
+    if (availableStock === 0 && !selectedProduct) {
       toast.error("This product is currently out of stock.");
       return;
     }
 
-    if (quantity > availableStock) {
+    if (qty > availableStock && !selectedProduct) {
       toast.error(`Only ${availableStock} units available. Please adjust the quantity.`);
       return;
     }
 
-    setIsAddingToCart(true);
+    const isAddingToCartState = selectedProduct ? false : isAddingToCart;
+    const setIsAddingToCartState = selectedProduct ? () => {} : setIsAddingToCart;
+
+    setIsAddingToCartState(true as any);
     try {
       if (isAuthenticated && user?._id) {
         // User is authenticated - use API
         const cartItem = {
           productId: productId,
-          productName: product.name || "Product",
-          productImage: Array.isArray(product.images) && product.images.length > 0 
-            ? product.images[0] 
+          productName: prod.name || "Product",
+          productImage: Array.isArray(prod.images) && prod.images.length > 0 
+            ? prod.images[0] 
             : "",
-          quantity: quantity,
+          quantity: qty,
           price: productPrice,
-          vendorId: product.vendorId || "",
-          supplierName: product.vendorName || "Unknown Vendor",
+          vendorId: prod.vendorId || "",
+          supplierName: prod.vendorName || "Unknown Vendor",
         };
 
         console.log("Adding to cart (API):", cartItem); // Debug log
@@ -213,8 +256,8 @@ export default function ProductDetailsPage() {
         await addToCartAPI(cartItem).unwrap();
         
         // Show success toast
-        toast.success(`${product.name} added to cart!`, {
-          description: `${quantity} ${quantity > 1 ? 'items' : 'item'} added to your cart.`,
+        toast.success(`${prod.name} added to cart!`, {
+          description: `${qty} ${qty > 1 ? 'items' : 'item'} added to your cart.`,
           action: {
             label: "View Cart",
             onClick: () => router.push("/profile/cart"),
@@ -225,18 +268,18 @@ export default function ProductDetailsPage() {
         const cartItem = {
           _id: productId,
           productId: productId,
-          productName: product.name || "Product",
+          productName: prod.name || "Product",
           price: productPrice,
-          quantity: quantity,
-          productImage: Array.isArray(product.images) && product.images.length > 0 
-            ? product.images[0] 
+          quantity: qty,
+          productImage: Array.isArray(prod.images) && prod.images.length > 0 
+            ? prod.images[0] 
             : "",
-          vendorId: product.vendorId || "",
-          supplierName: product.vendorName || "Unknown Vendor",
+          vendorId: prod.vendorId || "",
+          supplierName: prod.vendorName || "Unknown Vendor",
           // Additional details for better cart management
-          category: product.category,
-          stock: product.stock,
-          hint: product.description,
+          category: prod.category,
+          stock: prod.stock,
+          hint: prod.description,
         };
 
         console.log("Adding to cart (Local):", cartItem); // Debug log
@@ -245,8 +288,8 @@ export default function ProductDetailsPage() {
         dispatch(addToLocalCart(cartItem));
 
         // Show success toast
-        toast.success(`${product.name} added to cart!`, {
-          description: `${quantity} ${quantity > 1 ? 'items' : 'item'} added to your cart.`,
+        toast.success(`${prod.name} added to cart!`, {
+          description: `${qty} ${qty > 1 ? 'items' : 'item'} added to your cart.`,
           action: {
             label: "View Cart",
             onClick: () => router.push("/profile/cart"),
@@ -257,23 +300,27 @@ export default function ProductDetailsPage() {
       console.error("Failed to add item to cart:", error);
       toast.error(error?.data?.message || "Failed to add item to cart. Please try again.");
     } finally {
-      setIsAddingToCart(false);
+      if (!selectedProduct) {
+        setIsAddingToCart(false);
+      }
     }
   };
 
   // Handle buy now with stock validation
-  const handleBuyNow = () => {
-    if (!product) {
+  const handleBuyNow = (selectedProduct?: any) => {
+    const prod = selectedProduct || product;
+    if (!prod) {
       toast.error("Product data not available. Please try again.");
       return;
     }
 
-    if (isOutOfStock) {
+    if (isOutOfStock && !selectedProduct) {
       toast.error("This product is currently out of stock.");
       return;
     }
 
-    if (quantity > availableStock) {
+    const availableStock = prod.stock || 0;
+    if (quantity > availableStock && !selectedProduct) {
       toast.error(`Only ${availableStock} units available. Please adjust the quantity.`);
       return;
     }
@@ -283,19 +330,19 @@ export default function ProductDetailsPage() {
       // Store product details in local storage for checkout
       // Match the structure used in salon-details page
       const productForCheckout = {
-        id: product.id || id, // Product ID (MongoDB ObjectId)
-        name: product.name,
-        price: product.salePrice || product.price, // Use sale price if available
-        image: Array.isArray(product.images) && product.images.length > 0 
-          ? product.images[0] 
+        id: prod.id || id, // Product ID (MongoDB ObjectId)
+        name: prod.name,
+        price: prod.salePrice || prod.price, // Use sale price if available
+        image: Array.isArray(prod.images) && prod.images.length > 0 
+          ? prod.images[0] 
           : "https://placehold.co/320x224/e2e8f0/64748b?text=Product",
-        vendorId: product.vendorId,
-        vendorName: product.vendorName || "Unknown Vendor",
-        quantity: quantity,
+        vendorId: prod.vendorId,
+        vendorName: prod.vendorName || "Unknown Vendor",
+        quantity: selectedProduct ? 1 : quantity, // Use 1 for related products
         // Additional fields that might be useful
-        description: product.description || "",
-        category: product.category || "Beauty Products",
-        stock: product.stock,
+        description: prod.description || "",
+        category: prod.category || "Beauty Products",
+        stock: prod.stock,
       };
       
       console.log("Buy Now - Product for checkout:", productForCheckout); // Debug log
@@ -411,6 +458,13 @@ export default function ProductDetailsPage() {
     }
   };
 
+  // Fetch other products from the same vendor
+  const { data: vendorProductsResponse, isLoading: vendorProductsLoading } = useGetPublicVendorProductsQuery(product?.vendorId || '', {
+    skip: !product?.vendorId
+  });
+
+  const vendorProducts = vendorProductsResponse?.products?.filter((prod: any) => prod.id !== id) || [];
+
   if (isLoading) {
     return (
       <PageContainer className='max-w-7xl'>
@@ -418,7 +472,7 @@ export default function ProductDetailsPage() {
           <div className="space-y-4">
             <Skeleton className="w-full h-96" />
             <div className="flex gap-2">
-              {[1, 2, 3, 4].map((i) => (
+              {[1, 2, 3, 4, 5, 6].map((i) => (
                 <Skeleton key={i} className="w-20 h-20" />
               ))}
             </div>
@@ -462,6 +516,9 @@ export default function ProductDetailsPage() {
 
   return (
     <PageContainer className='max-w-7xl'>
+
+      <DiscountBanner/>
+      
       <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-start py-12">
         {/* Left Column: Image Gallery (Sticky) */}
         <div className="lg:sticky top-24">
@@ -469,7 +526,7 @@ export default function ProductDetailsPage() {
             {/* Vertical Thumbnails */}
             <div className="flex flex-col gap-4">
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-              {product.images.map((img: any, index: any) => (
+              {product.images?.map((img: any, index: any) => (
                 <div 
                   key={index} 
                   className={`relative w-20 h-20 rounded-md overflow-hidden cursor-pointer border-2 transition-all ${mainImage === img ? 'border-primary shadow-md' : 'border-transparent hover:border-primary/50'}`}
@@ -487,22 +544,69 @@ export default function ProductDetailsPage() {
             </div>
             
             {/* Main Image */}
-            <div className="flex w-full h-auto relative rounded-lg overflow-hidden shadow-lg">
+            <div className="flex w-full h-96 relative rounded-lg overflow-hidden shadow-lg">
               <Image 
                 src={mainImage} 
                 alt={product.name} 
                 layout="fill" 
                 objectFit="cover"
+                className="w-full h-full"
                 data-ai-hint="skincare product"
               />
             </div>
           </div>
+          
+          {/* Product Purchase Actions - Below Main Image */}
+          <ProductPurchaseActions
+            handleWishlistToggle={handleWishlistToggle}
+            isWishlisted={isWishlisted}
+            isWishlistLoading={isWishlistLoading}
+            handleBuyNow={handleBuyNow}
+            handleAddToCart={handleAddToCart}
+            isOutOfStock={isOutOfStock}
+            isBuyingNow={isBuyingNow}
+            isAddingToCart={isAddingToCart}
+          />
+          
+          {/* Other Products from Same Vendor Section */}
+          {vendorProducts.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg text-right font-semibold mb-4">More from {product.vendorName}</h3>
+              <div className="flex justify-end gap-4">
+                {(vendorProducts as any[]).slice(0, 4).map((prod: any) => (
+                  <div 
+                    key={prod.id} 
+                    className="relative group cursor-pointer"
+                    onClick={() => router.push(`/product-details/${prod.id}`)}
+                  >
+                    <div className="w-20 h-20 overflow-hidden rounded-md shadow-sm">
+                      <Image 
+                        src={Array.isArray(prod.images) && prod.images.length > 0 
+                          ? prod.images[0] 
+                          : prod.image || "https://placehold.co/80x80/e2e8f0/64748b?text=Product"}
+                        alt={prod.name} 
+                        width={80}
+                        height={80}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                    
+                    {/* Tooltip */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20">
+                      {prod.name}
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-
+        
         {/* Right Column: Product Details (Scrollable) */}
         <div className="mt-8 lg:mt-0 space-y-12">
           <div className="space-y-6">
-            <h1 className="text-4xl font-bold font-headline">{product.name}</h1>
+            <h1 className="text-4xl font-bold font-headline text-primary">{product.name}</h1>
             
             <div className="flex items-center gap-2">
               <div className="flex">
@@ -519,103 +623,15 @@ export default function ProductDetailsPage() {
             <div className="flex items-center gap-4">
               {product.salePrice && product.salePrice < product.price ? (
                 <>
-                  <p className="text-4xl font-bold text-blue-700">₹{product.salePrice.toFixed(2)}</p>
+                  <p className="text-4xl font-bold text-primary">₹{product.salePrice.toFixed(2)}</p>
                   <p className="text-2xl text-muted-foreground line-through">₹{product.price.toFixed(2)}</p>
-                  <span className="bg-blue-100 text-blue-800 text-sm font-semibold px-3 py-1 rounded-full">
+                  <span className="bg-primary text-primary-foreground text-sm font-semibold px-3 py-1 rounded-full">
                     {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
                   </span>
                 </>
               ) : (
                 <p className="text-4xl font-bold">₹{product.price.toFixed(2)}</p>
               )}
-            </div>
-
-            {/* Stock Information */}
-            <div className="flex items-center gap-3">
-              {isOutOfStock ? (
-                <div className="flex items-center gap-2 text-red-600">
-                  <AlertCircle className="h-5 w-5" />
-                  <span className="font-semibold">Out of Stock</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <PackageCheck className={`h-5 w-5 ${availableStock < 10 ? 'text-orange-500' : 'text-green-600'}`} />
-                  <span className={`font-semibold ${availableStock < 10 ? 'text-orange-500' : 'text-green-600'}`}>
-                    {availableStock < 10 ? `Only ${availableStock} left in stock` : 'In Stock'}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 border rounded-md p-2">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8" 
-                  onClick={handleDecreaseQuantity}
-                  disabled={isOutOfStock}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="font-semibold w-8 text-center">{quantity}</span>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8" 
-                  onClick={handleIncreaseQuantity}
-                  disabled={isOutOfStock || quantity >= availableStock}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              <Button 
-                size="lg" 
-                variant="default"
-                className="flex-1 bg-blue-600 hover:bg-blue-700" 
-                onClick={handleBuyNow}
-                disabled={isOutOfStock || isBuyingNow}
-              >
-                {isBuyingNow ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
-                ) : isOutOfStock ? (
-                  'Out of Stock'
-                ) : (
-                  'Buy Now'
-                )}
-
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                className="flex-1 border-2 border-blue-600 hover:border-blue-700" 
-                onClick={handleAddToCart}
-                disabled={isOutOfStock || isAddingToCart}
-              >
-                {isAddingToCart ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Adding...
-                  </>
-                ) : isOutOfStock ? (
-                  'Out of Stock'
-                ) : (
-                  'Add to Cart'
-                )}
-              </Button>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-12 w-12"
-                onClick={handleWishlistToggle}
-                disabled={isWishlistLoading}
-              >
-                <Heart className={`h-5 w-5 ${isWishlisted ? "fill-current text-blue-500" : ""}`} />
-              </Button>
             </div>
 
             <div className="space-y-3 pt-4 border-t">
@@ -648,271 +664,35 @@ export default function ProductDetailsPage() {
             </div>
           )}
 
-          {/* Section: Ratings & Reviews */}
-          <div>
-            <h2 className="text-2xl font-bold mb-4">Ratings & Reviews</h2>
-            <Card>
-              <CardContent className="p-6 space-y-6">
-                {productReviews.length > 0 ? (
-                  productReviews.map((review: any) => (
-                    <div key={review._id} className="border-b pb-4 last:border-b-0">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-1">
-                          {[...Array(5)].map((_, i) => (
-                            <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
-                          ))}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(review.createdAt).toLocaleDateString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            year: 'numeric' 
-                          })}
-                        </p>
-                      </div>
-                      <p className="font-semibold">{review.userName}</p>
-                      <p className="text-sm text-muted-foreground mt-1">{review.comment}</p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No reviews yet. Be the first to review!
-                  </p>
-                )}
-                
-                {/* Review Submission Form */}
-                <div className="pt-4 border-t">
-                  <Label htmlFor="write-review" className="font-semibold mb-2 block">Write a Review</Label>
-                  
-                  {/* Star Rating Input */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-sm text-muted-foreground">Your Rating:</span>
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setReviewRating(star)}
-                          onMouseEnter={() => setHoveredRating(star)}
-                          onMouseLeave={() => setHoveredRating(0)}
-                          className="focus:outline-none transition-transform hover:scale-110"
-                        >
-                          <Star 
-                            className={`h-6 w-6 ${
-                              star <= (hoveredRating || reviewRating) 
-                                ? 'text-yellow-400 fill-current' 
-                                : 'text-gray-300'
-                            }`} 
-                          />
-                        </button>
-                      ))}
-                    </div>
-                    {reviewRating > 0 && (
-                      <span className="text-sm text-muted-foreground">
-                        ({reviewRating} {reviewRating === 1 ? 'star' : 'stars'})
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Review Text Input */}
-                  <Textarea 
-                    id="write-review" 
-                    placeholder="Share your experience with this product..." 
-                    value={reviewComment}
-                    onChange={(e) => setReviewComment(e.target.value)}
-                    rows={4}
-                    className="mb-2"
-                  />
-                  
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={handleSubmitReview}
-                      disabled={isSubmittingReview || !reviewComment.trim() || !reviewRating}
-                      className="flex-1"
-                    >
-                      {isSubmittingReview ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Submitting...
-                        </>
-                      ) : (
-                        'Submit Review'
-                      )}
-                    </Button>
-                  </div>
-                  
-                  {!isAuthenticated && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Please{' '}
-                      <button
-                        onClick={() => router.push('/client-login')}
-                        className="text-blue-600 hover:underline font-medium"
-                      >
-                        log in
-                      </button>
-                      {' '}to write a review
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Section: Questions & Answers */}
-          <div>
-            <h2 className="text-2xl font-bold mb-4">Questions & Answers</h2>
-            <Card>
-              <CardContent className="p-6 space-y-6">
-                {productQuestions.length > 0 ? (
-                  productQuestions.map((item: any) => (
-                    <div key={item._id} className="border-b pb-4 last:border-b-0">
-                      <p className="font-semibold">Q: {item.question}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Asked by {item.userName}
-                      </p>
-                      {item.answer && (
-                        <>
-                          <p className="text-sm text-muted-foreground mt-2">A: {item.answer}</p>
-                          <div className="flex items-center gap-4 mt-2">
-                            <span className="text-xs text-muted-foreground">Was this helpful?</span>
-                            <Button variant="ghost" size="sm" className="flex items-center gap-1 text-xs h-auto p-1">
-                              <ThumbsUp className="h-3 w-3" /> Yes
-                            </Button>
-                            <Button variant="ghost" size="sm" className="flex items-center gap-1 text-xs h-auto p-1">
-                              <ThumbsDown className="h-3 w-3" /> No
-                            </Button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No questions yet. Be the first to ask!
-                  </p>
-                )}
-                <div className="pt-4 border-t">
-                  <Label htmlFor="ask-question" className="font-semibold">Have a question?</Label>
-                  <div className="flex gap-2 mt-2">
-                    <Input 
-                      id="ask-question" 
-                      placeholder="Ask a question about this product..." 
-                      value={questionText}
-                      onChange={(e) => setQuestionText(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSubmitQuestion();
-                        }
-                      }}
-                    />
-                    <Button 
-                      onClick={handleSubmitQuestion}
-                      disabled={isSubmittingQuestion || !questionText.trim()}
-                    >
-                      {isSubmittingQuestion ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Submitting...
-                        </>
-                      ) : (
-                        'Submit'
-                      )}
-                    </Button>
-                  </div>
-                  {!isAuthenticated && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Please{' '}
-                      <button
-                        onClick={() => router.push('/client-login')}
-                        className="text-blue-600 hover:underline font-medium"
-                      >
-                        log in
-                      </button>
-                      {' '}to ask a question
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <ProductRatingsReviews 
+            averageRating={product.rating || 0} 
+            totalRatings={product.reviews || 0} 
+            totalReviews={product.reviews || 0}
+            productReviews={productReviews}
+            productQuestions={productQuestions}
+            productId={id}
+            onRefetchReviews={refetchReviews}
+            onRefetchQuestions={refetchQuestions}
+            onSubmitReview={async (reviewData: { productId: string; rating: number; comment: string }) => {
+              await submitReview(reviewData).unwrap();
+            }}
+            onSubmitQuestion={async (questionData: { productId: string; question: string }) => {
+              await submitQuestion(questionData).unwrap();
+            }}
+          />
         </div>
       </div>
-      
-      {/* NEW SECTIONS ADDED BELOW */}
-      <div className="space-y-16 mt-16">
-        {/* Section: Why You'll Love It */}
-        <section>
-          <h2 className="text-3xl font-bold text-center mb-8">Why You'll Love It</h2>
-          <div className="grid md:grid-cols-3 gap-8 text-center">
-            <Card className="p-6">
-              <div className="mx-auto bg-primary/10 text-primary p-4 rounded-full w-fit mb-4">
-                <Droplets className="h-8 w-8" />
-              </div>
-              <h3 className="text-xl font-semibold">Intense Hydration</h3>
-              <p className="text-muted-foreground mt-2">Hyaluronic Acid provides deep, lasting moisture for plump, supple skin.</p>
-            </Card>
-            <Card className="p-6">
-              <div className="mx-auto bg-primary/10 text-primary p-4 rounded-full w-fit mb-4">
-                <Leaf className="h-8 w-8" />
-              </div>
-              <h3 className="text-xl font-semibold">Brightens Complexion</h3>
-              <p className="text-muted-foreground mt-2">Vitamin C works to fade dark spots and even out skin tone for a radiant look.</p>
-            </Card>
-            <Card className="p-6">
-              <div className="mx-auto bg-primary/10 text-primary p-4 rounded-full w-fit mb-4">
-                <FlaskConical className="h-8 w-8" />
-              </div>
-              <h3 className="text-xl font-semibold">Fights Aging</h3>
-              <p className="text-muted-foreground mt-2">Powerful antioxidants combat free radicals and reduce the appearance of fine lines.</p>
-            </Card>
-          </div>
-        </section>
 
-        {/* Section: How to Use */}
-        <section>
-          <h2 className="text-3xl font-bold text-center mb-8">How to Use</h2>
-          <div className="max-w-2xl mx-auto space-y-4">
-            <Card className="flex items-center p-4">
-              <div className="bg-secondary text-secondary-foreground font-bold rounded-full w-8 h-8 flex items-center justify-center mr-4">1</div>
-              <div>
-                <h4 className="font-semibold">Cleanse</h4>
-                <p className="text-sm text-muted-foreground">Start with a clean, dry face.</p>
-              </div>
-            </Card>
-            <Card className="flex items-center p-4">
-              <div className="bg-secondary text-secondary-foreground font-bold rounded-full w-8 h-8 flex items-center justify-center mr-4">2</div>
-              <div>
-                <h4 className="font-semibold">Apply Serum</h4>
-                <p className="text-sm text-muted-foreground">Apply 2-3 drops of Aura Serum and gently massage into your skin.</p>
-              </div>
-            </Card>
-            <Card className="flex items-center p-4">
-              <div className="bg-secondary text-secondary-foreground font-bold rounded-full w-8 h-8 flex items-center justify-center mr-4">3</div>
-              <div>
-                <h4 className="font-semibold">Moisturize</h4>
-                <p className="text-sm text-muted-foreground">Follow up with your favorite moisturizer to lock in the hydration.</p>
-              </div>
-            </Card>
-          </div>
-        </section>
-
-        {/* Section: From the Brand */}
-        <section>
-          <Card className="bg-secondary/50">
-            <CardContent className="p-8 grid md:grid-cols-3 gap-8 items-center">
-              <div className="md:col-span-1 text-center">
-                <h3 className="text-2xl font-bold font-headline">Aura Cosmetics</h3>
-                <p className="text-muted-foreground mt-1">Science-backed skincare</p>
-              </div>
-              <div className="md:col-span-2">
-                <p className="text-lg text-muted-foreground italic">"At Aura, we believe that radiant skin is a reflection of overall wellness. Our mission is to blend cutting-edge science with nature's finest ingredients to create products that not only beautify but also nourish."</p>
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-      </div>
-
+      {/* Relevant Products Section */}
+      <RelevantProducts 
+        currentProductId={product.id || id}
+        vendorId={product.vendorId || ''}
+        vendorName={product.vendorName || ''}
+        category={product.category || ''}
+        onBuyNow={handleBuyNow}
+        onAddToCart={handleAddToCart}
+        isSubscriptionExpired={false}
+      />
     </PageContainer>
   );
 }

@@ -193,8 +193,11 @@ export default function ServicesTab({
   // Handle client selection
   const handleSelectClient = (client: Client) => {
     setSelectedClient(client);
-    setClientSearchTerm("");
-    setIsSearchFocused(false);
+    // Don't clear the search term immediately to maintain UI continuity
+    setTimeout(() => {
+      setClientSearchTerm("");
+      setIsSearchFocused(false);
+    }, 100); // Small delay to allow UI to update
   };
 
   // Handle remove selected client
@@ -584,10 +587,10 @@ export default function ServicesTab({
         toast.error('PDF generation library failed to load');
         return;
       }
-      
+
       // Wait for the DOM to update
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Function to wait for element to be ready
       const waitForElement = (selector: string, timeout: number) => {
         return new Promise<HTMLDivElement>((resolve, reject) => {
@@ -596,7 +599,7 @@ export default function ServicesTab({
             resolve(element);
             return;
           }
-          
+
           const observer = new MutationObserver(() => {
             const el = document.querySelector(selector) as HTMLDivElement;
             if (el) {
@@ -604,22 +607,22 @@ export default function ServicesTab({
               resolve(el);
             }
           });
-          
+
           observer.observe(document.body, {
             childList: true,
             subtree: true
           });
-          
+
           setTimeout(() => {
             observer.disconnect();
-            reject(new Error('Element not found within timeout period')); 
+            reject(new Error('Element not found within timeout period'));
           }, timeout);
         });
       };
-      
+
       // Generate PDF from InvoiceUI component
       let invoiceElement: HTMLDivElement | null = document.getElementById('invoice-to-pdf') as HTMLDivElement;
-      
+
       // If element is not found, wait for it to appear in the DOM
       if (!invoiceElement) {
         try {
@@ -628,25 +631,25 @@ export default function ServicesTab({
           console.error('Invoice element with ID "invoice-to-pdf" not found:', error);
         }
       }
-      
+
       let pdfBlob: Blob | null = null;
-      
+
       if (invoiceElement) {
         // Ensure the element is visible temporarily for PDF generation
         const originalDisplay = invoiceElement.style.display;
         const originalVisibility = invoiceElement.style.visibility;
         invoiceElement.style.display = 'block';
         invoiceElement.style.visibility = 'visible';
-        
+
         // Wait a bit more to ensure styles are applied
         await new Promise(resolve => setTimeout(resolve, 500));
-        
+
         const pdfOptions = {
           margin: 5,
           filename: `Sales_Invoice_${invoiceData.invoiceNumber}.pdf`,
           image: { type: 'jpeg', quality: 0.8 },
-          html2canvas: { 
-            scale: 1.5, 
+          html2canvas: {
+            scale: 1.5,
             useCORS: true,
             logging: false // Disable logging to reduce console output
           },
@@ -757,13 +760,13 @@ export default function ServicesTab({
         toast.error('PDF generation library failed to load');
         return;
       }
-      
+
       // Show a loading message
       toast.loading('Preparing invoice for download...');
-      
+
       // Wait for the DOM to update
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Function to wait for element to be ready
       const waitForElement = (selector: string, timeout: number) => {
         return new Promise<HTMLDivElement>((resolve, reject) => {
@@ -772,7 +775,7 @@ export default function ServicesTab({
             resolve(element);
             return;
           }
-          
+
           const observer = new MutationObserver(() => {
             const el = document.querySelector(selector) as HTMLDivElement;
             if (el) {
@@ -780,22 +783,22 @@ export default function ServicesTab({
               resolve(el);
             }
           });
-          
+
           observer.observe(document.body, {
             childList: true,
             subtree: true
           });
-          
+
           setTimeout(() => {
             observer.disconnect();
-            reject(new Error('Element not found within timeout period')); 
+            reject(new Error('Element not found within timeout period'));
           }, timeout);
         });
       };
-      
+
       // Generate PDF from InvoiceUI component
       let invoiceElement: HTMLDivElement | null = document.getElementById('invoice-to-pdf') as HTMLDivElement;
-      
+
       // If element is not found, wait for it to appear in the DOM
       if (!invoiceElement) {
         try {
@@ -807,29 +810,29 @@ export default function ServicesTab({
           return;
         }
       }
-      
+
       if (!invoiceElement) {
         toast.dismiss();
         toast.error('Invoice element not found');
         console.error('Invoice element with ID "invoice-to-pdf" not found');
         return;
       }
-      
+
       // Ensure the element is visible temporarily for PDF generation
       const originalDisplay = invoiceElement.style.display;
       const originalVisibility = invoiceElement.style.visibility;
       invoiceElement.style.display = 'block';
       invoiceElement.style.visibility = 'visible';
-      
+
       // Wait a bit more to ensure styles are applied
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       const pdfOptions = {
         margin: 5,
         filename: `Sales_Invoice_${invoiceData.invoiceNumber}.pdf`,
         image: { type: 'jpeg', quality: 0.8 },
-        html2canvas: { 
-          scale: 1.5, 
+        html2canvas: {
+          scale: 1.5,
           useCORS: true,
           logging: false // Disable logging to reduce console output
         },
@@ -1092,8 +1095,8 @@ export default function ServicesTab({
               </div>
             )}
 
-            {/* Show when search is focused or has content */}
-            {(isSearchFocused || clientSearchTerm) && (
+            {/* Show client list when search is focused or has content, or when loading */}
+            {(isSearchFocused || clientSearchTerm || clientsLoading) && (
               <div className="space-y-3">
                 {/* Add New Client Button */}
                 <Button
@@ -1107,35 +1110,44 @@ export default function ServicesTab({
 
                 {/* Client List */}
                 <div className="space-y-2 max-h-48 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-                  {filteredClients.map((client: Client) => (
-                    <div
-                      key={client._id}
-                      className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${selectedClient?._id === client._id
+                  {clientsLoading ? (
+                    <div className="p-3 text-center text-gray-500">Loading clients...</div>
+                  ) : filteredClients.length > 0 ? (
+                    filteredClients.map((client: Client) => (
+                      <div
+                        key={client._id}
+                        className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${selectedClient?._id === client._id
                           ? 'bg-blue-50 border-blue-300 shadow-md'
                           : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm'
-                        }`}
-                      onClick={() => handleSelectClient(client)}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <img
-                          src={client.profilePicture || `https://placehold.co/32x32.png?text=${client.fullName[0]}`}
-                          alt={client.fullName}
-                          className="w-8 h-8 rounded-full object-cover border border-white shadow-sm"
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900 text-sm">{client.fullName}</p>
-                          <p className="text-xs text-gray-600">{client.phone}</p>
-                        </div>
-                        {selectedClient?._id === client._id && (
-                          <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
-                            <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
+                          }`}
+                        onMouseDown={(e) => {
+                          e.preventDefault(); // Prevent input blur
+                          handleSelectClient(client);
+                        }}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <img
+                            src={client.profilePicture || `https://placehold.co/32x32.png?text=${client.fullName[0]}`}
+                            alt={client.fullName}
+                            className="w-8 h-8 rounded-full object-cover border border-white shadow-sm"
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900 text-sm">{client.fullName}</p>
+                            <p className="text-xs text-gray-600">{client.phone}</p>
                           </div>
-                        )}
+                          {selectedClient?._id === client._id && (
+                            <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+                              <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : clientSearchTerm && (
+                    <div className="p-3 text-center text-gray-500">No clients found matching "{clientSearchTerm}"</div>
+                  )}
                 </div>
               </div>
             )}
@@ -1613,8 +1625,8 @@ export default function ServicesTab({
                         </p>
                       </div>
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${invoiceData.status === "Completed"
-                          ? "bg-green-500 text-white"
-                          : "bg-yellow-500 text-gray-900"
+                        ? "bg-green-500 text-white"
+                        : "bg-yellow-500 text-gray-900"
                         }`}>
                         {invoiceData.status}
                       </span>
@@ -1756,8 +1768,8 @@ export default function ServicesTab({
                       <div className="bg-gray-50 p-3 rounded-lg">
                         <p className="text-gray-500 text-sm">Status</p>
                         <span className={`px-2 py-1 rounded-full text-sm font-semibold ${invoiceData.status === "Completed"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-yellow-100 text-yellow-800"
                           }`}>
                           {invoiceData.status}
                         </span>
@@ -1988,25 +2000,28 @@ export default function ServicesTab({
         </DialogContent>
       </Dialog>
 
-      {/* Hidden print area for professional invoice */}
-      <div className="hidden print:block">
-        <style>{`
-          @media print {
-            body * {
-              visibility: hidden;
-            }
-            .print\:block,
-            .print\:block * {
-              visibility: visible;
-            }
-            .print\:block {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-            }
+      {/* Print Styles */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
           }
-        `}</style>
+          #printable-invoice-section,
+          #printable-invoice-section * {
+            visibility: visible;
+          }
+          #printable-invoice-section {
+            display: block !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+        }
+      `}</style>
+
+      {/* Hidden print area for professional invoice */}
+      <div className="hidden print:block" id="printable-invoice-section">
         {invoiceData && (
           <InvoiceUI
             invoiceData={invoiceData}

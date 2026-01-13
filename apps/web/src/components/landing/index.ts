@@ -15,3 +15,5 @@ export * from './Services';
 export * from './SalonsSection';
 export * from './FeaturedProducts';
 export * from './SalonFilterContext';
+export * from './FeaturedProductsSection';
+export * from './StatisticsSection';

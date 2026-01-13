@@ -1,12 +1,12 @@
-export type AppointmentStatus = 
+export type AppointmentStatus =
   | 'temp-locked'
-  | 'scheduled' 
-  | 'confirmed' 
-  | 'in_progress' 
-  | 'completed' 
-  | 'partially-completed' 
-  | 'completed without payment' 
-  | 'cancelled' 
+  | 'scheduled'
+  | 'confirmed'
+  | 'in_progress'
+  | 'completed'
+  | 'partially-completed'
+  | 'completed without payment'
+  | 'cancelled'
   | 'no_show';
 
 export interface ServiceItem {

@@ -40,6 +40,7 @@ import {
   Grid3X3,
   List,
   Package,
+  PackagePlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Textarea } from '@repo/ui/textarea';
@@ -52,6 +53,7 @@ import {
   useDeleteCrmProductMutation,
 } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
+import BulkProductAddition from '@/components/BulkProductAddition';
 
 // Types
 type Product = {
@@ -109,6 +111,7 @@ export default function ProductsPage() {
     const [isProductModalOpen, setIsProductModalOpen] = useState(false);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
     
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
     const [newCategory, setNewCategory] = useState({ name: '', description: '' });
@@ -331,13 +334,22 @@ export default function ProductsPage() {
                                         <List className="h-4 w-4" />
                                     </Button>
                                 </div>
-                                <Button 
-                                    onClick={() => handleOpenProductModal()}
-                                    className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90"
-                                >
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add Product
-                                </Button>
+                                <div className="flex gap-3">
+                                    <Button 
+                                        onClick={() => setIsBulkModalOpen(true)}
+                                        className="h-12 px-6 rounded-lg bg-secondary hover:bg-secondary/90 text-foreground border border-border"
+                                    >
+                                        <PackagePlus className="mr-2 h-4 w-4" />
+                                        Bulk Add
+                                    </Button>
+                                    <Button 
+                                        onClick={() => handleOpenProductModal()}
+                                        className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90"
+                                    >
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Add Product
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     </CardContent>
@@ -687,6 +699,7 @@ export default function ProductsPage() {
                                                     }));
                                                 }}
                                                 className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                aria-label="Remove image"
                                             >
                                                 <Trash2 size={12} />
                                             </button>
@@ -938,6 +951,13 @@ export default function ProductsPage() {
                     </div>
                 </DialogContent>
             </Dialog>
+            
+            {/* Bulk Product Addition Modal */}
+            <BulkProductAddition 
+                isOpen={isBulkModalOpen}
+                onOpenChange={setIsBulkModalOpen}
+                onProductsAdded={refetchProducts}
+            />
             </div>
         </div>
     );

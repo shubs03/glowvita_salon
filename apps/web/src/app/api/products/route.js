@@ -39,7 +39,7 @@ export const GET = async (request) => {
     
     // Get products that are approved via admin panel
     const approvedProducts = await ProductModel.find(query)
-      .select('productName description price salePrice productImages vendorId stock createdAt origin')
+      .select('productName description price salePrice productImages vendorId stock createdAt origin size sizeMetric keyIngredients forBodyPart bodyPartType productForm brand')
       .sort({ createdAt: -1 })
       .limit(50);
 
@@ -111,12 +111,20 @@ export const GET = async (request) => {
         vendorName: product.origin === 'Vendor' 
           ? (vendorData?.businessName || 'Unknown Vendor') 
           : (vendorData?.shopName || 'Unknown Supplier'),
-        category: 'Beauty Products',
+        category: product.category || 'Beauty Products',
         stock: product.stock,
         isNew: new Date(product.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         rating: (4.2 + Math.random() * 0.8).toFixed(1),
         reviewCount: Math.floor(50 + Math.random() * 500),
-        hint: product.description || product.productName
+        hint: product.description || product.productName,
+        // Additional fields from product schema
+        size: product.size || null,
+        sizeMetric: product.sizeMetric || null,
+        keyIngredients: product.keyIngredients || [],
+        forBodyPart: product.forBodyPart || null,
+        bodyPartType: product.bodyPartType || null,
+        productForm: product.productForm || null,
+        brand: product.brand || null
       };
     });
 

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
-import { 
-  useGetPublicVendorServicesQuery, 
-  useGetPublicVendorStaffQuery, 
+import {
+  useGetPublicVendorServicesQuery,
+  useGetPublicVendorStaffQuery,
   useGetPublicVendorStaffByServiceQuery,
   useGetPublicVendorWorkingHoursQuery,
   useGetPublicVendorsQuery,
@@ -45,6 +45,21 @@ export interface Service {
     charges: number | null;
   };
   serviceIsAddon?: boolean;
+  serviceIsAddon?: boolean;
+  addOns?: Array<{
+    _id: string;
+    name: string;
+    price: number;
+    description?: string;
+    duration?: number;
+  }>;
+  selectedAddons?: Array<{
+    _id: string;
+    name: string;
+    price: number;
+    description?: string;
+    duration?: number;
+  }>; // Store selected add-ons for booking
 }
 
 export interface StaffMember {
@@ -125,16 +140,16 @@ export const convertDurationToMinutes = (duration: string | number): number => {
   if (typeof duration === 'string') {
     const match = duration.match(/(\d+)\s*(min|hour|hours)/);
     if (!match) return 60; // default to 60 minutes
-    
+
     const value = parseInt(match[1]);
     const unit = match[2];
-    
+
     if (unit === 'min') return value;
     if (unit === 'hour' || unit === 'hours') return value * 60;
   } else if (typeof duration === 'number') {
     return duration;
   }
-  
+
   return 60; // default to 60 minutes
 };
 
@@ -148,10 +163,10 @@ export const isStaffCompatibleWithService = (staff: StaffMember, service: Servic
   if (!service.staff || service.staff.length === 0) {
     return true;
   }
-  
+
   const isIdMatch = service.staff.includes(staff.id);
   const isNameMatch = service.staff.includes(staff.name);
-  
+
   return isIdMatch || isNameMatch;
 };
 
@@ -163,24 +178,24 @@ export const validateServiceStaffAssignments = (assignments: ServiceStaffAssignm
       console.warn('Invalid service in assignment:', assignment);
       return false;
     }
-    
+
     // Staff can be null ("Any Professional"), but if provided, must be valid
     if (assignment.staff !== null) {
       if (!assignment.staff || !assignment.staff.id) {
         console.warn('Invalid staff in assignment:', assignment);
         return false;
       }
-      
+
       // Check staff compatibility with service
       if (!isStaffCompatibleWithService(assignment.staff, assignment.service)) {
         console.warn('Staff not compatible with service:', assignment);
         return false;
       }
     }
-    
+
     return true;
   });
-  
+
   return isValid;
 };
 
@@ -189,12 +204,12 @@ export const findOverlappingAvailability = (assignments: ServiceStaffAssignment[
   if (allAnyProfessional) {
     return [];
   }
-  
+
   const assignedStaff = assignments.filter(assignment => assignment.staff);
   if (assignedStaff.length === 1) {
     return [];
   }
-  
+
   return [];
 };
 
@@ -203,12 +218,12 @@ export const findOverlappingAvailability = (assignments: ServiceStaffAssignment[
  */
 export const useSalonServices = (salonId: string) => {
   const { data: rawServices, isLoading, error } = useGetPublicVendorServicesQuery(salonId);
-  
+
   const services = useMemo((): Service[] => {
     if (!rawServices) return [];
-    
+
     let servicesArray: any[] = [];
-    
+
     if (rawServices.data && Array.isArray(rawServices.data)) {
       servicesArray = rawServices.data;
     } else if (rawServices.services && Array.isArray(rawServices.services)) {
@@ -218,19 +233,19 @@ export const useSalonServices = (salonId: string) => {
     } else {
       return [];
     }
-    
+
     if (!Array.isArray(servicesArray)) {
       return [];
     }
-    
+
     return servicesArray.map((service: any): Service => {
       return {
         id: service._id || service.id,
         name: service.serviceName || service.name,
         duration: `${service.duration || 60} min` || '60 min',
         price: (service.price || 0).toString(),
-        discountedPrice: service.discountedPrice !== null && service.discountedPrice !== undefined ? 
-          service.discountedPrice.toString() : 
+        discountedPrice: service.discountedPrice !== null && service.discountedPrice !== undefined ?
+          service.discountedPrice.toString() :
           null,
         category: service.category || 'General',
         image: service.image || `https://picsum.photos/seed/${service.serviceName}/200/200`,
@@ -238,7 +253,8 @@ export const useSalonServices = (salonId: string) => {
         staff: service.staff || [],
         homeService: service.homeService || { available: false, charges: null },
         weddingService: service.weddingService || { available: false, charges: null },
-        isAddon: service.category?.toLowerCase().includes('addon') || false
+        isAddon: service.category?.toLowerCase().includes('addon') || false,
+        addOns: service.addOns || []
       };
     });
   }, [rawServices]);
@@ -275,24 +291,24 @@ export const useSalonServices = (salonId: string) => {
 
 export const useWeddingPackages = (salonId: string) => {
   const { data: rawPackages, isLoading, error } = useGetPublicVendorWeddingPackagesQuery(salonId);
-  
+
   // Helper function to process wedding packages regardless of input format
   const processWeddingPackages = (packages: any[]): WeddingPackage[] => {
     if (!Array.isArray(packages)) {
       return [];
     }
-        
+
     return packages.map((pkg: any): WeddingPackage => {
       // Process services properly
-      const processedServices = Array.isArray(pkg.services) 
+      const processedServices = Array.isArray(pkg.services)
         ? pkg.services.map((service: any) => ({
-            serviceId: service.serviceId || service._id || service.id || '',
-            serviceName: service.serviceName || service.name || '',
-            quantity: service.quantity || 1,
-            staffRequired: service.staffRequired !== undefined ? service.staffRequired : true
-          })) 
+          serviceId: service.serviceId || service._id || service.id || '',
+          serviceName: service.serviceName || service.name || '',
+          quantity: service.quantity || 1,
+          staffRequired: service.staffRequired !== undefined ? service.staffRequired : true
+        }))
         : [];
-          
+
       return {
         id: pkg.id || pkg._id || '',
         _id: pkg._id || pkg.id || '',
@@ -310,12 +326,12 @@ export const useWeddingPackages = (salonId: string) => {
       };
     });
   };
-      
+
   const weddingPackages = useMemo((): WeddingPackage[] => {
     if (!rawPackages) {
       return [];
     }
-    
+
     // Handle different response formats from the API
     if (rawPackages.hasOwnProperty('success') && rawPackages.success) {
       // Format: { success: true, weddingPackages: [...] }
@@ -334,7 +350,7 @@ export const useWeddingPackages = (salonId: string) => {
       // Format: { data: [...] }
       return processWeddingPackages(rawPackages.data);
     }
-    
+
     return [];
   }, [rawPackages]);
 
@@ -351,18 +367,18 @@ export const useWeddingPackages = (salonId: string) => {
  */
 export const useSalonStaff = (salonId: string, serviceId?: string) => {
   console.log('useSalonStaff - Called with:', { salonId, serviceId });
-  
+
   const shouldUseServiceSpecificEndpoint = !!(serviceId && serviceId.trim() !== '');
-  
+
   const { data: rawStaff, isLoading, error } = shouldUseServiceSpecificEndpoint
     ? useGetPublicVendorStaffByServiceQuery({ vendorId: salonId, serviceId: serviceId! })
     : useGetPublicVendorStaffQuery(salonId);
-  
+
   const staff = useMemo(() => {
     if (!rawStaff) return [];
-    
+
     let staffArray = [];
-    
+
     if (rawStaff.data && Array.isArray(rawStaff.data)) {
       staffArray = rawStaff.data;
     } else if (rawStaff.staff && Array.isArray(rawStaff.staff)) {
@@ -372,11 +388,11 @@ export const useSalonStaff = (salonId: string, serviceId?: string) => {
     } else {
       return [];
     }
-    
+
     if (!Array.isArray(staffArray)) {
       return [];
     }
-    
+
     return staffArray.map((member: any): StaffMember => ({
       id: member._id || member.id,
       name: member.name || `${member.firstName || ''} ${member.lastName || ''}`.trim(),
@@ -414,14 +430,14 @@ export const useSalonStaff = (salonId: string, serviceId?: string) => {
  */
 export const useSalonWorkingHours = (salonId: string) => {
   const { data: rawWorkingHours, isLoading, error } = useGetPublicVendorWorkingHoursQuery(salonId);
-  
+
   const workingHours = useMemo(() => {
     if (!rawWorkingHours) return [];
-    
+
     console.log('useSalonWorkingHours - Raw data:', rawWorkingHours);
-    
+
     let workingHoursData = null;
-    
+
     if (rawWorkingHours.data && Array.isArray(rawWorkingHours.data.workingHours) && rawWorkingHours.data.workingHours.length > 0) {
       workingHoursData = rawWorkingHours.data.workingHours;
     } else if (rawWorkingHours.data && Array.isArray(rawWorkingHours.data.workingHoursArray) && rawWorkingHours.data.workingHoursArray.length > 0) {
@@ -435,11 +451,11 @@ export const useSalonWorkingHours = (salonId: string) => {
     } else {
       return [];
     }
-    
+
     if (!Array.isArray(workingHoursData)) {
       return [];
     }
-    
+
     const transformedHours = workingHoursData.map((dayHours: any): WorkingHours => {
       if (!dayHours.isOpen || !dayHours.open || !dayHours.close) {
         return {
@@ -449,10 +465,10 @@ export const useSalonWorkingHours = (salonId: string) => {
           isAvailable: false
         };
       }
-      
+
       const startTime = dayHours.open;
       const endTime = dayHours.close;
-      
+
       return {
         dayOfWeek: dayHours.day,
         startTime,
@@ -460,7 +476,7 @@ export const useSalonWorkingHours = (salonId: string) => {
         isAvailable: true
       };
     });
-    
+
     return Array.isArray(transformedHours) ? transformedHours : [];
   }, [rawWorkingHours]);
 
@@ -476,12 +492,12 @@ export const useSalonWorkingHours = (salonId: string) => {
  */
 export const useSalonInfo = (salonId: string) => {
   const { data: rawSalonData, isLoading, error } = useGetPublicVendorsQuery({});
-  
+
   const salonInfo = useMemo(() => {
     if (!rawSalonData) return null;
-    
+
     let vendorsArray = [];
-    
+
     if (rawSalonData.data && Array.isArray(rawSalonData.data)) {
       vendorsArray = rawSalonData.data;
     } else if (rawSalonData.vendors && Array.isArray(rawSalonData.vendors)) {
@@ -492,14 +508,14 @@ export const useSalonInfo = (salonId: string) => {
       console.warn('Unexpected salon data structure:', rawSalonData);
       return null;
     }
-    
+
     if (!Array.isArray(vendorsArray)) {
       return null;
     }
-    
+
     const salon = vendorsArray.find((vendor: any) => vendor._id === salonId || vendor.id === salonId);
     if (!salon) return null;
-    
+
     return {
       id: salon._id || salon.id,
       name: salon.businessName || salon.name,
@@ -523,13 +539,13 @@ export const useSalonInfo = (salonId: string) => {
  */
 export const useBookingData = (salonId: string, serviceId?: string) => {
   console.log('useBookingData - Called with:', { salonId, serviceId });
-  
+
   const servicesQuery = useSalonServices(salonId);
   const staffQuery = useSalonStaff(salonId, serviceId); // Pass serviceId to filter staff
   const workingHoursQuery = useSalonWorkingHours(salonId);
   const salonInfoQuery = useSalonInfo(salonId);
   const weddingPackagesQuery = useWeddingPackages(salonId);
-  
+
   // Debug logging
   console.log('useBookingData - weddingPackagesQuery:', weddingPackagesQuery);
   console.log('useBookingData - weddingPackagesQuery.weddingPackages:', weddingPackagesQuery.weddingPackages);
@@ -538,37 +554,37 @@ export const useBookingData = (salonId: string, serviceId?: string) => {
   console.log('useBookingData - weddingPackagesQuery.error:', weddingPackagesQuery.error);
   console.log('useBookingData - weddingPackagesQuery type:', typeof weddingPackagesQuery.weddingPackages);
   console.log('useBookingData - weddingPackagesQuery is array:', Array.isArray(weddingPackagesQuery.weddingPackages));
-  
-  const isLoading = servicesQuery.isLoading || 
-                   staffQuery.isLoading || 
-                   workingHoursQuery.isLoading || 
-                   salonInfoQuery.isLoading ||
-                   weddingPackagesQuery.isLoading;
 
-  const error = servicesQuery.error || 
-               staffQuery.error || 
-               workingHoursQuery.error || 
-               salonInfoQuery.error ||
-               weddingPackagesQuery.error;
-  
+  const isLoading = servicesQuery.isLoading ||
+    staffQuery.isLoading ||
+    workingHoursQuery.isLoading ||
+    salonInfoQuery.isLoading ||
+    weddingPackagesQuery.isLoading;
+
+  const error = servicesQuery.error ||
+    staffQuery.error ||
+    workingHoursQuery.error ||
+    salonInfoQuery.error ||
+    weddingPackagesQuery.error;
+
   console.log('useBookingData - Final wedding packages:', weddingPackagesQuery.weddingPackages);
   console.log('useBookingData - weddingPackagesQuery.weddingPackages type:', typeof weddingPackagesQuery.weddingPackages);
   console.log('useBookingData - weddingPackagesQuery.weddingPackages is array:', Array.isArray(weddingPackagesQuery.weddingPackages));
-  
+
   // Ensure weddingPackages is always an array
-  const weddingPackages = Array.isArray(weddingPackagesQuery.weddingPackages) 
-    ? weddingPackagesQuery.weddingPackages 
+  const weddingPackages = Array.isArray(weddingPackagesQuery.weddingPackages)
+    ? weddingPackagesQuery.weddingPackages
     : [];
-  
+
   // Additional validation to ensure we have valid packages
   const validWeddingPackages = weddingPackages.filter(pkg => pkg && (pkg.id || pkg._id || pkg.name));
-  
+
   console.log('useBookingData - Processed wedding packages:', weddingPackages);
-  
+
   console.log('useBookingData - Final wedding packages (ensured array):', validWeddingPackages);
   console.log('useBookingData - Final wedding packages length:', validWeddingPackages.length);
   console.log('useBookingData - Final wedding packages type:', typeof validWeddingPackages);
-  
+
   // Log individual packages
   if (validWeddingPackages && validWeddingPackages.length > 0) {
     validWeddingPackages.forEach((pkg, index) => {
@@ -581,7 +597,7 @@ export const useBookingData = (salonId: string, serviceId?: string) => {
   } else {
     console.log('useBookingData - No wedding packages found or empty array');
   }
-  
+
   return {
     services: servicesQuery.services,
     servicesByCategory: servicesQuery.servicesByCategory,
