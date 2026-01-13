@@ -50,13 +50,13 @@ export function InvoiceUI({
   // Split address into multiple lines if it's too long
   const formatAddress = (address: string) => {
     if (!address || address === 'N/A') return address;
-    
+
     // If address is longer than 50 characters, try to split it into 2-3 lines
     if (address.length > 50) {
       const words = address.split(' ');
       const lines = [];
       let currentLine = '';
-      
+
       for (const word of words) {
         if ((currentLine + word).length > 40 && currentLine.length > 0) {
           lines.push(currentLine.trim());
@@ -65,14 +65,14 @@ export function InvoiceUI({
           currentLine += word + ' ';
         }
       }
-      
+
       if (currentLine.trim().length > 0) {
         lines.push(currentLine.trim());
       }
-      
+
       return lines.join('<br />');
     }
-    
+
     return address;
   };
 
@@ -91,12 +91,19 @@ export function InvoiceUI({
     setIsPopupOpen(true);
   };
 
+  // Safety check for invoiceData
+  if (!invoiceData) {
+    return <div className="p-4 text-center text-red-500">Error: No invoice data available</div>;
+  }
+
+  const items = invoiceData.items || [];
+
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white font-sans print:p-4 rounded-lg print:rounded-none" style={{ minWidth: 'auto' }}>
       {/* Header with Salon Info */}
       <div className="flex justify-between items-start mb-4 print:mb-3 border-b-2 border-black pb-4">
         <div>
-          <h1 className="text-xl font-bold text-black print:text-lg">{vendorName}</h1>
+          <h1 className="text-xl font-bold text-black print:text-lg">{vendorName || 'Salon Name'}</h1>
           <div className="text-black text-sm mt-1 print:text-xs" dangerouslySetInnerHTML={{ __html: formatAddress(vendorAddress) }} />
           <p className="text-black text-sm mt-1 print:text-xs">Phone: {vendorPhone}</p>
         </div>
@@ -108,10 +115,10 @@ export function InvoiceUI({
       {/* Invoice Info */}
       <div className="flex justify-between items-start mb-4 print:mb-3">
         <div>
-          <p className="text-black text-sm print:text-xs"><span className="font-semibold">Date:</span> {invoiceData.date}</p>
+          <p className="text-black text-sm print:text-xs"><span className="font-semibold">Date:</span> {invoiceData.date || new Date().toLocaleDateString()}</p>
         </div>
         <div className="text-right">
-          <p className="text-black text-sm print:text-xs"><span className="font-semibold">Invoice No:</span> {invoiceData.invoiceNumber}</p>
+          <p className="text-black text-sm print:text-xs"><span className="font-semibold">Invoice No:</span> {invoiceData.invoiceNumber || 'N/A'}</p>
         </div>
       </div>
 
@@ -120,7 +127,7 @@ export function InvoiceUI({
 
       {/* Invoice To section */}
       <div className="mb-4 print:mb-3">
-        <p className="text-black text-sm print:text-xs"><span className="font-semibold">Invoice To:</span> {invoiceData.client?.fullName || 'N/A'}</p>
+        <p className="text-black text-sm print:text-xs"><span className="font-semibold">Invoice To:</span> {invoiceData.client?.fullName || 'Guest Client'}</p>
       </div>
 
       {/* Combined Items and Payment Summary Table */}
@@ -136,9 +143,9 @@ export function InvoiceUI({
             </tr>
           </thead>
           <tbody>
-            {invoiceData.items.map((item: any, index: number) => (
-              <tr 
-                key={index} 
+            {items.map((item: any, index: number) => (
+              <tr
+                key={index}
                 className="border border-black cursor-pointer"
                 onClick={() => handleItemClick(item)}
               >
@@ -147,16 +154,16 @@ export function InvoiceUI({
                     {isProduct(item) ? item.productName : item.name}
                   </div>
                 </td>
-                <td className="border border-black p-2 text-right text-sm text-black print:text-xs print:p-1">₹{item.price.toFixed(2)}</td>
-                <td className="border border-black p-2 text-right text-sm text-black print:text-xs print:p-1">{item.quantity}</td>
-                <td className="border border-black p-2 text-right text-sm text-black print:text-xs print:p-1">₹{((item.price * item.quantity * taxRate) / 100).toFixed(2)}</td>
-                <td className="border border-black p-2 text-right text-sm font-semibold text-black print:text-xs print:p-1">₹{item.totalPrice.toFixed(2)}</td>
+                <td className="border border-black p-2 text-right text-sm text-black print:text-xs print:p-1">₹{(item.price || 0).toFixed(2)}</td>
+                <td className="border border-black p-2 text-right text-sm text-black print:text-xs print:p-1">{item.quantity || 0}</td>
+                <td className="border border-black p-2 text-right text-sm text-black print:text-xs print:p-1">₹{(((item.price || 0) * (item.quantity || 0) * taxRate) / 100).toFixed(2)}</td>
+                <td className="border border-black p-2 text-right text-sm font-semibold text-black print:text-xs print:p-1">₹{(item.totalPrice || 0).toFixed(2)}</td>
               </tr>
             ))}
             {/* Payment Summary Rows */}
             <tr className="border border-black">
               <td className="border border-black p-2 text-right font-semibold text-black text-sm print:text-xs print:p-1" colSpan={4}>Subtotal:</td>
-              <td className="border border-black p-2 text-right text-sm font-semibold text-black print:text-xs print:p-1">₹{invoiceData.originalSubtotal?.toFixed(2) || invoiceData.subtotal.toFixed(2)}</td>
+              <td className="border border-black p-2 text-right text-sm font-semibold text-black print:text-xs print:p-1">₹{(invoiceData.originalSubtotal || invoiceData.subtotal || 0).toFixed(2)}</td>
             </tr>
             <tr className="border border-black">
               <td className="border border-black p-2 text-right font-semibold text-green-600 text-sm print:text-xs print:p-1" colSpan={4}>Discount:</td>
@@ -164,15 +171,15 @@ export function InvoiceUI({
             </tr>
             <tr className="border border-black">
               <td className="border border-black p-2 text-right font-semibold text-black text-sm print:text-xs print:p-1" colSpan={4}>Tax ({taxRate}%):</td>
-              <td className="border border-black p-2 text-right text-sm font-semibold text-black print:text-xs print:p-1">₹{invoiceData.tax.toFixed(2)}</td>
+              <td className="border border-black p-2 text-right text-sm font-semibold text-black print:text-xs print:p-1">₹{(invoiceData.tax || 0).toFixed(2)}</td>
             </tr>
             <tr className="border border-black">
               <td className="border border-black p-2 text-right font-semibold text-black text-sm print:text-xs print:p-1" colSpan={4}>Platform Fee:</td>
-              <td className="border border-black p-2 text-right text-sm font-semibold text-black print:text-xs print:p-1">₹{invoiceData.platformFee.toFixed(2)}</td>
+              <td className="border border-black p-2 text-right text-sm font-semibold text-black print:text-xs print:p-1">₹{(invoiceData.platformFee || 0).toFixed(2)}</td>
             </tr>
             <tr className="border border-black bg-gray-200">
               <td className="border border-black p-2 text-right font-bold text-black text-sm print:text-xs print:p-1" colSpan={4}>Total:</td>
-              <td className="border border-black p-2 text-right font-bold text-black text-sm print:text-xs print:p-1">₹{invoiceData.total.toFixed(2)}</td>
+              <td className="border border-black p-2 text-right font-bold text-black text-sm print:text-xs print:p-1">₹{(invoiceData.total || 0).toFixed(2)}</td>
             </tr>
           </tbody>
         </table>
@@ -181,9 +188,9 @@ export function InvoiceUI({
       {/* Payment Info and Footer */}
       <div className="border-t-2 border-black pt-4 print:pt-3 mt-auto">
         <p className="text-center text-black font-medium text-sm print:text-xs mb-2">
-          {invoiceData.paymentMethod 
-            ? `Payment Of ₹${invoiceData.total.toFixed(2)} Received By ${invoiceData.paymentMethod}`
-            : `Payment Of ₹${invoiceData.total.toFixed(2)} Is Pending`
+          {invoiceData.paymentMethod
+            ? `Payment Of ₹{(invoiceData.total || 0).toFixed(2)} Received By ${invoiceData.paymentMethod}`
+            : `Payment Of ₹{(invoiceData.total || 0).toFixed(2)} Is Pending`
           }
         </p>
         <p className="text-center text-xs text-black print:text-xs">
@@ -197,7 +204,7 @@ export function InvoiceUI({
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold">Item Details</h3>
-              <button 
+              <button
                 onClick={() => setIsPopupOpen(false)}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -206,57 +213,57 @@ export function InvoiceUI({
                 </svg>
               </button>
             </div>
-            
+
             <div className="space-y-3">
               <div>
                 <p className="text-sm font-semibold">Item Name</p>
                 <p className="text-sm">{isProduct(selectedItem) ? selectedItem.productName : selectedItem.name}</p>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-semibold">Price</p>
-                  <p className="text-sm">₹{selectedItem.price.toFixed(2)}</p>
+                  <p className="text-sm">₹{(selectedItem.price || 0).toFixed(2)}</p>
                 </div>
                 <div>
                   <p className="text-sm font-semibold">Quantity</p>
-                  <p className="text-sm">{selectedItem.quantity}</p>
+                  <p className="text-sm">{selectedItem.quantity || 0}</p>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-semibold">Discount</p>
                   <p className="text-sm">
                     {selectedItem.discount ? (
-                      selectedItem.discountType === 'percentage' ? 
-                      `${selectedItem.discount}%` : 
-                      `₹${selectedItem.discount}`
+                      selectedItem.discountType === 'percentage' ?
+                        `${selectedItem.discount}%` :
+                        `₹${selectedItem.discount}`
                     ) : '0'}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm font-semibold">Total</p>
-                  <p className="text-sm">₹{selectedItem.totalPrice.toFixed(2)}</p>
+                  <p className="text-sm">₹{(selectedItem.totalPrice || 0).toFixed(2)}</p>
                 </div>
               </div>
-              
+
               {selectedItem.staffMember && selectedItem.staffMember.name && (
                 <div>
                   <p className="text-sm font-semibold">Staff Member</p>
                   <p className="text-sm">{selectedItem.staffMember.name}</p>
                 </div>
               )}
-              
+
               {isProduct(selectedItem) ? (
                 <div>
                   <p className="text-sm font-semibold">Stock</p>
-                  <p className="text-sm">{selectedItem.stock}</p>
+                  <p className="text-sm">{selectedItem.stock || 'N/A'}</p>
                 </div>
               ) : (
                 <div>
                   <p className="text-sm font-semibold">Duration</p>
-                  <p className="text-sm">{selectedItem.duration} min</p>
+                  <p className="text-sm">{selectedItem.duration || 0} min</p>
                 </div>
               )}
             </div>

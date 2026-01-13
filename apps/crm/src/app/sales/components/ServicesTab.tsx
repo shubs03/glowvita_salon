@@ -587,10 +587,10 @@ export default function ServicesTab({
         toast.error('PDF generation library failed to load');
         return;
       }
-      
+
       // Wait for the DOM to update
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Function to wait for element to be ready
       const waitForElement = (selector: string, timeout: number) => {
         return new Promise<HTMLDivElement>((resolve, reject) => {
@@ -599,7 +599,7 @@ export default function ServicesTab({
             resolve(element);
             return;
           }
-          
+
           const observer = new MutationObserver(() => {
             const el = document.querySelector(selector) as HTMLDivElement;
             if (el) {
@@ -607,22 +607,22 @@ export default function ServicesTab({
               resolve(el);
             }
           });
-          
+
           observer.observe(document.body, {
             childList: true,
             subtree: true
           });
-          
+
           setTimeout(() => {
             observer.disconnect();
-            reject(new Error('Element not found within timeout period')); 
+            reject(new Error('Element not found within timeout period'));
           }, timeout);
         });
       };
-      
+
       // Generate PDF from InvoiceUI component
       let invoiceElement: HTMLDivElement | null = document.getElementById('invoice-to-pdf') as HTMLDivElement;
-      
+
       // If element is not found, wait for it to appear in the DOM
       if (!invoiceElement) {
         try {
@@ -631,25 +631,25 @@ export default function ServicesTab({
           console.error('Invoice element with ID "invoice-to-pdf" not found:', error);
         }
       }
-      
+
       let pdfBlob: Blob | null = null;
-      
+
       if (invoiceElement) {
         // Ensure the element is visible temporarily for PDF generation
         const originalDisplay = invoiceElement.style.display;
         const originalVisibility = invoiceElement.style.visibility;
         invoiceElement.style.display = 'block';
         invoiceElement.style.visibility = 'visible';
-        
+
         // Wait a bit more to ensure styles are applied
         await new Promise(resolve => setTimeout(resolve, 500));
-        
+
         const pdfOptions = {
           margin: 5,
           filename: `Sales_Invoice_${invoiceData.invoiceNumber}.pdf`,
           image: { type: 'jpeg', quality: 0.8 },
-          html2canvas: { 
-            scale: 1.5, 
+          html2canvas: {
+            scale: 1.5,
             useCORS: true,
             logging: false // Disable logging to reduce console output
           },
@@ -760,13 +760,13 @@ export default function ServicesTab({
         toast.error('PDF generation library failed to load');
         return;
       }
-      
+
       // Show a loading message
       toast.loading('Preparing invoice for download...');
-      
+
       // Wait for the DOM to update
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // Function to wait for element to be ready
       const waitForElement = (selector: string, timeout: number) => {
         return new Promise<HTMLDivElement>((resolve, reject) => {
@@ -775,7 +775,7 @@ export default function ServicesTab({
             resolve(element);
             return;
           }
-          
+
           const observer = new MutationObserver(() => {
             const el = document.querySelector(selector) as HTMLDivElement;
             if (el) {
@@ -783,22 +783,22 @@ export default function ServicesTab({
               resolve(el);
             }
           });
-          
+
           observer.observe(document.body, {
             childList: true,
             subtree: true
           });
-          
+
           setTimeout(() => {
             observer.disconnect();
-            reject(new Error('Element not found within timeout period')); 
+            reject(new Error('Element not found within timeout period'));
           }, timeout);
         });
       };
-      
+
       // Generate PDF from InvoiceUI component
       let invoiceElement: HTMLDivElement | null = document.getElementById('invoice-to-pdf') as HTMLDivElement;
-      
+
       // If element is not found, wait for it to appear in the DOM
       if (!invoiceElement) {
         try {
@@ -810,29 +810,29 @@ export default function ServicesTab({
           return;
         }
       }
-      
+
       if (!invoiceElement) {
         toast.dismiss();
         toast.error('Invoice element not found');
         console.error('Invoice element with ID "invoice-to-pdf" not found');
         return;
       }
-      
+
       // Ensure the element is visible temporarily for PDF generation
       const originalDisplay = invoiceElement.style.display;
       const originalVisibility = invoiceElement.style.visibility;
       invoiceElement.style.display = 'block';
       invoiceElement.style.visibility = 'visible';
-      
+
       // Wait a bit more to ensure styles are applied
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       const pdfOptions = {
         margin: 5,
         filename: `Sales_Invoice_${invoiceData.invoiceNumber}.pdf`,
         image: { type: 'jpeg', quality: 0.8 },
-        html2canvas: { 
-          scale: 1.5, 
+        html2canvas: {
+          scale: 1.5,
           useCORS: true,
           logging: false // Disable logging to reduce console output
         },
@@ -1117,10 +1117,13 @@ export default function ServicesTab({
                       <div
                         key={client._id}
                         className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${selectedClient?._id === client._id
-                            ? 'bg-blue-50 border-blue-300 shadow-md'
-                            : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm'
+                          ? 'bg-blue-50 border-blue-300 shadow-md'
+                          : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm'
                           }`}
-                        onClick={() => handleSelectClient(client)}
+                        onMouseDown={(e) => {
+                          e.preventDefault(); // Prevent input blur
+                          handleSelectClient(client);
+                        }}
                       >
                         <div className="flex items-center space-x-3">
                           <img
@@ -1622,8 +1625,8 @@ export default function ServicesTab({
                         </p>
                       </div>
                       <span className={`px-2 py-1 rounded-full text-xs font-semibold ${invoiceData.status === "Completed"
-                          ? "bg-green-500 text-white"
-                          : "bg-yellow-500 text-gray-900"
+                        ? "bg-green-500 text-white"
+                        : "bg-yellow-500 text-gray-900"
                         }`}>
                         {invoiceData.status}
                       </span>
@@ -1765,8 +1768,8 @@ export default function ServicesTab({
                       <div className="bg-gray-50 p-3 rounded-lg">
                         <p className="text-gray-500 text-sm">Status</p>
                         <span className={`px-2 py-1 rounded-full text-sm font-semibold ${invoiceData.status === "Completed"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-yellow-100 text-yellow-800"
+                          ? "bg-green-100 text-green-800"
+                          : "bg-yellow-100 text-yellow-800"
                           }`}>
                           {invoiceData.status}
                         </span>
@@ -1997,25 +2000,28 @@ export default function ServicesTab({
         </DialogContent>
       </Dialog>
 
-      {/* Hidden print area for professional invoice */}
-      <div className="hidden print:block">
-        <style>{`
-          @media print {
-            body * {
-              visibility: hidden;
-            }
-            .print\:block,
-            .print\:block * {
-              visibility: visible;
-            }
-            .print\:block {
-              position: absolute;
-              left: 0;
-              top: 0;
-              width: 100%;
-            }
+      {/* Print Styles */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden;
           }
-        `}</style>
+          #printable-invoice-section,
+          #printable-invoice-section * {
+            visibility: visible;
+          }
+          #printable-invoice-section {
+            display: block !important;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+        }
+      `}</style>
+
+      {/* Hidden print area for professional invoice */}
+      <div className="hidden print:block" id="printable-invoice-section">
         {invoiceData && (
           <InvoiceUI
             invoiceData={invoiceData}
