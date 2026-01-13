@@ -20,7 +20,7 @@ export function SalesOfProductsChart({ productsData, filterType, filterValue }: 
   // Format the data for the chart - aggregate products data
   const chartData = productsData?.map((product: ProductData) => ({
     name: product.product,
-    value: product.productPlatformFee, // Use platform fee for the chart
+    value: product.rawSale, // Use total product amount instead of platform fee
     sales: product.productSold,
     platformFee: product.productPlatformFee,
     gst: product.productGST,
@@ -76,9 +76,6 @@ export function SalesOfProductsChart({ productsData, filterType, filterValue }: 
           <p className="text-sm">
             <span className="font-medium">Product Sold:</span> {data.sales}
           </p>
-          <p className="text-sm">
-            <span className="font-medium">Percentage:</span> {payload[0].percent ? (payload[0].percent * 100).toFixed(1) + '%' : 'N/A'}
-          </p>
         </div>
       );
     }
@@ -88,7 +85,7 @@ export function SalesOfProductsChart({ productsData, filterType, filterValue }: 
 
 
   return (
-    <ResponsiveContainer width="100%" height={350}>
+    <ResponsiveContainer width="100%" height={350} className="min-w-max">
       <PieChart>
         <Pie
           data={chartData}
@@ -98,8 +95,8 @@ export function SalesOfProductsChart({ productsData, filterType, filterValue }: 
           outerRadius={100}
           fill="#8884d8"
           dataKey="value"
-          name="Product Platform Fee"
-          label={({name, percent}) => `${name}: ${(percent * 100).toFixed(0)}%`}
+          name="Total Product Amount"
+          label={({name}) => name}
         >
           {chartData.map((entry: any, index: number) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

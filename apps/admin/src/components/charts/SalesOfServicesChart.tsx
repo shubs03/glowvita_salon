@@ -21,9 +21,9 @@ export function SalesOfServicesChart({ servicesData, filterType, filterValue }: 
   // Format the data for the chart - aggregate services data
   const chartData = servicesData?.map((service: ServiceData) => ({
     name: service.service,
-    value: service.rawPlatformFee, // Use platform fee instead of total service amount
+    value: service.rawTotalServiceAmount, // Use total service amount instead of platform fee
     bookings: service.itemsSold,
-    totalSale: service.rawTotalServiceAmount // Keep total sale for reference
+    platformFee: service.rawPlatformFee // Keep platform fee for reference
   })) || [];
 
   // Check if we have services data
@@ -64,10 +64,10 @@ export function SalesOfServicesChart({ servicesData, filterType, filterValue }: 
         <div className="bg-background border border-border p-4 rounded-md shadow-md">
           <p className="font-bold text-lg">{data.name}</p>
           <p className="text-sm">
-            <span className="font-medium">Service Platform Fee:</span> ₹{data.value.toLocaleString('en-IN')}
+            <span className="font-medium">Total Service Amount:</span> ₹{data.value.toLocaleString('en-IN')}
           </p>
           <p className="text-sm">
-            <span className="font-medium">Total Service Amount:</span> ₹{data.totalSale?.toLocaleString('en-IN') || '0.00'}
+            <span className="font-medium">Service Platform Fee:</span> ₹{data.platformFee?.toLocaleString('en-IN') || '0.00'}
           </p>
           <p className="text-sm">
             <span className="font-medium">Total Bookings:</span> {data.bookings}
@@ -85,7 +85,7 @@ export function SalesOfServicesChart({ servicesData, filterType, filterValue }: 
   };
 
   return (
-    <ResponsiveContainer width="100%" height={350}>
+    <ResponsiveContainer width="100%" height={350} className="min-w-max">
       <BarChart
         data={chartData}
         margin={{
@@ -119,7 +119,7 @@ export function SalesOfServicesChart({ servicesData, filterType, filterValue }: 
         <Legend />
         <Bar 
           dataKey="value" 
-          name="Service Platform Fee (₹)"
+          name="Sale (₹)"
           radius={[4, 4, 0, 0]}
         >
           {chartData.map((entry: any, index: number) => (

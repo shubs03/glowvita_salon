@@ -14,6 +14,7 @@ interface DashboardMetrics {
   sellingProductsRevenue: number;
   cancelledAppointments: CancelledAppointments;
   upcomingAppointments: number;
+  totalBusiness: number;
 }
 
 interface UseDashboardMetricsReturn {

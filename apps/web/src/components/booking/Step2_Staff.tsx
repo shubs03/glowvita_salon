@@ -109,12 +109,10 @@ export function Step2_Staff({
             onStaffSelect(staff);
         }
         
-        // For wedding packages or home services, automatically navigate to Step 3
-        if (isWeddingPackage || (selectedService && (selectedService.homeService?.available || selectedService.serviceHomeService?.available))) {
-            setTimeout(() => {
-                setCurrentStep(3);
-            }, 100);
-        }
+        // Automatically navigate to Step 3 (Time Selection) after staff is selected
+        setTimeout(() => {
+            setCurrentStep(3);
+        }, 100);
     };
 
     // Loading state

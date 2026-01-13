@@ -1,5 +1,5 @@
 import _db from "@repo/lib/db";
-import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
+import ServiceModel from "@repo/lib/models/admin/Service.model";
 import CategoryModel from "@repo/lib/models/admin/Category.model";
 import mongoose from "mongoose";
 
@@ -12,7 +12,7 @@ export const OPTIONS = async () => {
   return response;
 };
 
-// Get all approved services across all vendors (public endpoint)
+// Get all services (public endpoint) - can be filtered by category
 export const GET = async (request) => {
   try {
     // Initialize database connection

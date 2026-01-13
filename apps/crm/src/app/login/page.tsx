@@ -136,7 +136,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full h-12 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300"
+                className="w-full h-12 text-sm font-medium bg-primary hover:bg-primary/90 text-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -155,7 +155,7 @@ export default function LoginPage() {
                   <input
                     id="remember"
                     type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                   />
                   <label htmlFor="remember" className="ml-2 block text-md text-gray-700">
                     Remember me
@@ -167,7 +167,7 @@ export default function LoginPage() {
                     console.log('Forgot password button clicked');
                     router.push('/forgot-password');
                   }}
-                  className="text-md font-medium text-blue-600 hover:text-blue-500"
+                  className="text-md font-medium text-primary hover:text-primary/90"
                   title="Forgot password"
                 >
                   Forgot password?
@@ -233,7 +233,7 @@ export default function LoginPage() {
                   href="/" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-500 block mt-1"
+                  className="text-sm font-medium text-primary hover:text-primary/90 block mt-1"
                 >
                   Go to GlowvitaSalon for customers
                 </a>

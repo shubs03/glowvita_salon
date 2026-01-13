@@ -342,7 +342,7 @@ export const CategoryWiseProductTable = ({
           </Button>
         </div>
         <div className="text-center py-4 text-gray-500">
-          No category data found.
+          No category data available.
         </div>
       </div>
     );

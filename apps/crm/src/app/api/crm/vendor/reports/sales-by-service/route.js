@@ -177,6 +177,12 @@ export const GET = authMiddlewareCrm(async (req) => {
         // Add each service item to the sales summary
         appt.serviceItems.forEach(item => {
           const serviceName = item.service?.name || item.serviceName || 'Unknown Service';
+          
+          // If service filter is applied, only include the matching service
+          if (serviceFilter && serviceFilter !== '' && serviceName !== serviceFilter) {
+            return; // Skip this service item if it doesn't match the filter
+          }
+          
           if (!salesByService[serviceName]) {
             salesByService[serviceName] = {
               serviceSold: 0,
@@ -199,6 +205,12 @@ export const GET = authMiddlewareCrm(async (req) => {
       } else {
         // Handle single-service appointments
         const serviceName = appt.service?.name || appt.serviceName || 'Unknown Service';
+        
+        // If service filter is applied, only include the matching service
+        if (serviceFilter && serviceFilter !== '' && serviceName !== serviceFilter) {
+          return; // Skip this appointment if service doesn't match the filter
+        }
+        
         if (!salesByService[serviceName]) {
           salesByService[serviceName] = {
             serviceSold: 0,
@@ -225,18 +237,30 @@ export const GET = authMiddlewareCrm(async (req) => {
     // Adjust for multi-service appointments by distributing appointment-level values
     allAppointments.forEach(appt => {
       if (appt.isMultiService && appt.serviceItems && appt.serviceItems.length > 0) {
-        // Distribute appointment-level financials proportionally across service items
-        const totalItemAmount = appt.serviceItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+        // Filter service items based on the service filter
+        let filteredServiceItems = appt.serviceItems;
+        if (serviceFilter && serviceFilter !== '') {
+          filteredServiceItems = appt.serviceItems.filter(item => {
+            const serviceName = item.service?.name || item.serviceName || 'Unknown Service';
+            return serviceName === serviceFilter;
+          });
+        }
         
-        appt.serviceItems.forEach(item => {
+        // Distribute appointment-level financials proportionally across filtered service items
+        const totalItemAmount = filteredServiceItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+        
+        filteredServiceItems.forEach(item => {
           const serviceName = item.service?.name || item.serviceName || 'Unknown Service';
           const itemProportion = totalItemAmount > 0 ? (item.amount || 0) / totalItemAmount : 0;
           
-          // Distribute appointment-level values proportionally
-          salesByService[serviceName].discounts += (appt.discountAmount || 0) * itemProportion;
-          salesByService[serviceName].offers += (appt.discountAmount || 0) * itemProportion;
-          salesByService[serviceName].netSale += ((item.amount || 0) - ((appt.discountAmount || 0) * itemProportion)) || 0;
-          salesByService[serviceName].tax += (appt.serviceTax || 0) * itemProportion;
+          // Only distribute if the service exists in salesByService
+          if (salesByService[serviceName]) {
+            // Distribute appointment-level values proportionally
+            salesByService[serviceName].discounts += (appt.discountAmount || 0) * itemProportion;
+            salesByService[serviceName].offers += (appt.discountAmount || 0) * itemProportion;
+            salesByService[serviceName].netSale += ((item.amount || 0) - ((appt.discountAmount || 0) * itemProportion)) || 0;
+            salesByService[serviceName].tax += (appt.serviceTax || 0) * itemProportion;
+          }
         });
       }
     });

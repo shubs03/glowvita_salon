@@ -24,6 +24,7 @@ export default function RootLayout({
   
   const marketingPages = [
     '/',
+    '/salons',
     '/apps',
     '/all-products',
     '/pricing',
@@ -34,7 +35,17 @@ export default function RootLayout({
     '/return-policy',
     '/terms-and-conditions',
     '/product-details/[id]',
+    '/search',
   ];
+
+  const footerHiddenPages = [
+  '/search',
+];
+  
+const isSearchPage = pathname.startsWith('/search');
+const isFooterHiddenPage = footerHiddenPages.some(page =>
+  pathname === page || pathname.startsWith(`${page}/`)
+);
 
   const isMarketingPage = marketingPages.some(page => {
     // For dynamic routes, check if the pathname starts with the base path
@@ -54,8 +65,8 @@ export default function RootLayout({
 
   // Show header on marketing and profile pages, but not on auth pages
   const showHeader = isMarketingPage || isProfilePage;
-  // Show footer only on marketing pages
-  const showFooter = isMarketingPage;
+  // Show footer only on marketing pages, but hide on Search to allow split-view to fill screen
+  const showFooter = isMarketingPage && !isFooterHiddenPage;
 
   return (
     <html lang="en" suppressHydrationWarning>

@@ -159,7 +159,8 @@ export const glowvitaApi = createApi({
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
-    "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "AddOns"
+    "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products",
+    "PublicAllOffers", "AddOns"
   ],
 
   endpoints: (builder) => ({
@@ -306,11 +307,29 @@ export const glowvitaApi = createApi({
 
     // Public Vendors for landing page
     getPublicVendors: builder.query({
-      query: () => ({
-        url: `/vendors`,
-        method: "GET"
-      }),
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+
+        // Only append truthy parameters
+        if (params.serviceName) queryParams.append("serviceName", params.serviceName);
+        if (params.city) queryParams.append("city", params.city);
+        if (params.categoryIds) queryParams.append("categoryIds", params.categoryIds);
+        if (params.limit) queryParams.append("limit", params.limit.toString());
+        if (params.offset) queryParams.append("offset", params.offset.toString());
+
+        const queryString = queryParams.toString();
+        return {
+          url: `/vendors${queryString ? `?${queryString}` : ""}`,
+          method: "GET",
+        };
+      },
       providesTags: ["PublicVendors"],
+      transformResponse: (response) => response,
+    }),
+
+    getPublicVendorById: builder.query({
+      query: (vendorId) => ({ url: `/vendors/${vendorId}`, method: "GET" }),
+      providesTags: (result, error, vendorId) => [{ type: "PublicVendor", id: vendorId }],
       transformResponse: (response) => response,
     }),
 
@@ -456,6 +475,17 @@ export const glowvitaApi = createApi({
     getPublicVendorOffers: builder.query({
       query: (vendorId) => ({ url: `/offers?businessId=${vendorId}`, method: "GET" }),
       providesTags: ["PublicVendorOffers"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public All Offers (Admin + CRM) for landing page
+    getPublicAllOffers: builder.query({
+      query: (vendorId = undefined) => ({
+        url: `/all-offers`,
+        method: "GET",
+        params: vendorId ? { vendorId } : {}
+      }),
+      providesTags: ["PublicAllOffers"],
       transformResponse: (response) => response,
     }),
 
@@ -1238,6 +1268,50 @@ export const glowvitaApi = createApi({
       providesTags: ["SalesByCategoryReport"],
       transformResponse: (response) => (response && response.success ? response.data : {}),
     }),
+
+    // Vendor Payable Report
+    getVendorPayableReport: builder.query({
+      query: (params) => ({
+        url: "/admin/reports/settlementreport/vendor-payable",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["VendorPayableReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    // Vendor Payout Settlement Report
+    getVendorPayoutSettlementReport: builder.query({
+      query: (params) => ({
+        url: "/admin/reports/settlementreport/vendor-payout",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["VendorPayoutSettlementReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    // Vendor Payout Settlement Report Product
+    getVendorPayoutSettlementReportProduct: builder.query({
+      query: (params) => ({
+        url: "/admin/reports/settlementreport/vendor-payout-product",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["VendorPayoutSettlementReportProduct"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    // Vendor Payable to Admin Report Product
+    getVendorPayableReportProduct: builder.query({
+      query: (params) => ({
+        url: "/admin/reports/settlementreport/vendor-payable-product",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["VendorPayableReportProduct"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
     // Admin Product Categories 
 
     getAdminProductCategories: builder.query({
@@ -1385,6 +1459,10 @@ export const glowvitaApi = createApi({
     }),
     createCrmProduct: builder.mutation({
       query: (product) => ({ url: "/crm/products", method: "POST", body: product }),
+      invalidatesTags: ["CrmProducts"],
+    }),
+    createBulkCrmProducts: builder.mutation({
+      query: (products) => ({ url: "/crm/products", method: "POST", body: products }),
       invalidatesTags: ["CrmProducts"],
     }),
     updateCrmProduct: builder.mutation({
@@ -2550,6 +2628,26 @@ export const glowvitaApi = createApi({
       }),
       providesTags: ["CrmProducts"]
     }),
+
+    // Settlement Summary Report
+    getSettlementSummaryReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, settlementFromDate, settlementToDate }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'week' || period === 'month' || period === 'year') && startDate && endDate) {
+          params.append('startDate', startDate);
+          params.append('endDate', endDate);
+        }
+        if (settlementFromDate) params.append('settlementFromDate', settlementFromDate);
+        if (settlementToDate) params.append('settlementToDate', settlementToDate);
+
+        return {
+          url: `/crm/vendor/reports/settlement-summary?${params.toString()}`,
+          method: 'GET'
+        };
+      },
+      providesTags: ["CrmReports"]
+    }),
   }),
 });
 
@@ -2560,6 +2658,7 @@ export const {
   // Web App
   useGetMeQuery,
   useGetPublicVendorsQuery,
+  useGetPublicVendorByIdQuery,
   useGetPublicProductsQuery,
   useGetPublicServicesQuery,
   useGetPublicCategoriesQuery,
@@ -2575,6 +2674,7 @@ export const {
   useGetPublicVendorStaffQuery,
   useGetPublicVendorStaffByServiceQuery,
   useGetPublicVendorOffersQuery,
+  useGetPublicAllOffersQuery,
   useUserLoginMutation,
   useGetClientOrdersQuery,
   useCreateClientOrderMutation,
@@ -2869,6 +2969,10 @@ export const {
   // Sales Report Hooks
   useGetSalesByServiceReportQuery,
   useGetSalesByCustomerReportQuery,
+  useGetVendorPayableReportQuery,
+  useGetVendorPayoutSettlementReportQuery,
+  useGetVendorPayoutSettlementReportProductQuery,
+  useGetVendorPayableReportProductQuery,
   // Product Report Hooks
   useGetProductSummaryReportQuery,
   useGetSalesByProductReportQuery,
@@ -2880,6 +2984,7 @@ export const {
   useGetUniqueProductNamesQuery,
   useGetUniqueBrandsQuery,
   useGetUniqueCategoriesQuery,
+  useGetSettlementSummaryReportQuery,
 
   // Payment Collections Hook
   useGetPaymentCollectionsQuery,
