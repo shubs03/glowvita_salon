@@ -1,6 +1,7 @@
 import _db from "@repo/lib/db";
 import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
 import CategoryModel from "../../../../../../../../packages/lib/src/models/admin/Category.model";
+import AddOnModel from "@repo/lib/models/Vendor/AddOn.model";
 import mongoose from "mongoose";
 
 // Handle CORS preflight
@@ -17,7 +18,7 @@ export const GET = async (request, { params }) => {
   try {
     // Initialize database connection
     await _db();
-    
+
     const { id } = params;
 
     if (!id) {
@@ -36,10 +37,10 @@ export const GET = async (request, { params }) => {
     }
 
     // Find the vendor services document (without populate for now)
-    const vendorServices = await VendorServicesModel.findOne({ 
-      vendor: new mongoose.Types.ObjectId(id) 
+    const vendorServices = await VendorServicesModel.findOne({
+      vendor: new mongoose.Types.ObjectId(id)
     });
-    
+
     if (!vendorServices || !vendorServices.services || vendorServices.services.length === 0) {
       return Response.json({
         success: true,
@@ -50,32 +51,17 @@ export const GET = async (request, { params }) => {
       });
     }
 
-    if (vendorServices.services.length > 0) {
-    }
-
     // Filter only approved services
-    const approvedServices = vendorServices.services.filter(service => 
+    const approvedServices = vendorServices.services.filter(service =>
       service.status === 'approved'
     );
-  
-    if (approvedServices.length > 0) {
-    } else {
-      // If no approved services, log all services for debugging
-      vendorServices.services.forEach((service, index) => {
-        console.log(`Service ${index + 1}:`, {
-          name: service.name,
-          status: service.status,
-          category: service.category
-        });
-      });
-    }
 
     // Transform services and resolve category names
     const transformedServices = await Promise.all(
       approvedServices.map(async (service) => {
         let categoryName = 'Other';
-        
-        // Try to resolve category name if category is an ObjectId
+
+        // Try to resolve category name
         if (service.category && mongoose.Types.ObjectId.isValid(service.category)) {
           try {
             const category = await CategoryModel.findById(service.category).select('name');
@@ -85,6 +71,24 @@ export const GET = async (request, { params }) => {
           }
         } else if (typeof service.category === 'string') {
           categoryName = service.category;
+        }
+
+        // Manually populate add-ons (from service.addOns OR addon.services OR addon.service)
+        let addOns = [];
+        try {
+          const serviceId = new mongoose.Types.ObjectId(service._id);
+          const addOnIds = (service.addOns || []).map(id => new mongoose.Types.ObjectId(id));
+
+          addOns = await AddOnModel.find({
+            $or: [
+              { _id: { $in: addOnIds } },
+              { services: serviceId },
+              { service: serviceId } // Backward compatibility
+            ],
+            status: 'active'
+          }).select('name price description duration');
+        } catch (err) {
+          console.error(`Error fetching add-ons for service ${service.name}:`, err);
         }
 
         console.log(`Service ${service.name} has staff array:`, service.staff);
@@ -103,7 +107,8 @@ export const GET = async (request, { params }) => {
           staff: service.staff || [], // Ensure staff array is included
           homeService: service.homeService,
           weddingService: service.weddingService,
-          onlineBooking: service.onlineBooking
+          onlineBooking: service.onlineBooking,
+          addOns: addOns // Include populated add-ons
         };
       })
     );
@@ -124,7 +129,7 @@ export const GET = async (request, { params }) => {
 
   } catch (error) {
     console.error("Error fetching vendor services:", error);
-    
+
     const response = Response.json({
       success: false,
       message: "Failed to fetch vendor services",

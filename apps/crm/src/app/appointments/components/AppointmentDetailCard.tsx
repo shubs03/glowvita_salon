@@ -23,7 +23,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
   };
 
   const formatStatus = (status: string) => {
-    return status.split('_').map(word => 
+    return status.split('_').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
@@ -182,10 +182,9 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Badge 
-              className={`mb-3 ${
-                statusColors[appointment.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
-              }`}
+            <Badge
+              className={`mb-3 ${statusColors[appointment.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
+                }`}
             >
               {formatStatus(appointment.status)}
             </Badge>
@@ -193,8 +192,8 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
               <div className="mt-2 text-sm bg-gray-50 p-3 rounded-md">
                 <p className="font-medium text-gray-700 mb-1">Notes:</p>
                 <p className="text-gray-600">
-                  {appointment.notes.includes('Appointment cancelled:') 
-                    ? appointment.notes.split('Appointment cancelled:')[1].trim() 
+                  {appointment.notes.includes('Appointment cancelled:')
+                    ? appointment.notes.split('Appointment cancelled:')[1].trim()
                     : appointment.notes}
                 </p>
               </div>

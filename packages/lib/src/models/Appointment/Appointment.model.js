@@ -42,6 +42,13 @@ const serviceItemSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  // Add-ons for this service
+  addOns: [{
+    name: { type: String, required: true },
+    price: { type: Number, required: true },
+    duration: { type: Number }, // duration in minutes
+    _id: { type: mongoose.Schema.Types.ObjectId } // original addon ID
+  }],
   // Additional fields for enhanced booking
   travelTime: {
     type: Number, // in minutes
@@ -120,8 +127,20 @@ const appointmentSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    // Add-ons specific amount
+    addOnsAmount: {
+      type: Number,
+      default: 0,
+    },
+    addOns: [{
+      name: { type: String, required: true },
+      price: { type: Number, required: true },
+      duration: { type: Number, default: 0 },
+      _id: { type: mongoose.Schema.Types.ObjectId, required: true }
+    }],
     discount: {
       type: Number,
+      default: 0,
     },
     totalAmount: {
       type: Number,
@@ -219,10 +238,10 @@ const appointmentSchema = new mongoose.Schema(
     notes: {
       type: String,
     },
-    // New field for multi-service appointments
+    // Array of service items (for multi-service appointments)
     serviceItems: {
       type: [serviceItemSchema],
-      default: [],
+      default: []
     },
     // Flag to indicate if this is a multi-service appointment
     isMultiService: {
@@ -361,8 +380,8 @@ const appointmentSchema = new mongoose.Schema(
       default: 0,
     },
     bufferAfter: {
-        type: Number, // in minutes
-        default: 0
+      type: Number, // in minutes
+      default: 0
     },
     // Booking mode: 'online' for web bookings, 'offline' for CRM bookings
     mode: {

@@ -10,11 +10,11 @@ await _db();
 // POST: Create or update a VendorServices document, adding services to the array
 export const POST = authMiddlewareCrm(async (req) => {
 
-  const vendor  = req.user;
+  const vendor = req.user;
   const body = await req.json();
   const { services } = body;
 
-  const vendorId  =  vendor.userId.toString();
+  const vendorId = vendor.userId.toString();
 
   // 1️⃣ Validate required fields
   if (!vendorId || !services || !Array.isArray(services)) {
@@ -29,24 +29,24 @@ export const POST = authMiddlewareCrm(async (req) => {
     if (!service.name || !service.category || !service.price || !service.duration || !service.description || !service.gender) {
       throw new Error("Each service must have name, category, price, duration, description, and gender");
     }
-    
+
     // Handle image upload if provided
     let imageUrl = null;
     if (service.image) {
       const fileName = `vendor-service-${vendorId}-${Date.now()}`;
       imageUrl = await uploadBase64(service.image, fileName);
-      
+
       if (!imageUrl) {
         console.warn('Failed to upload service image for service:', service.name);
       }
     }
-    
-    return { 
-      ...service, 
+
+    return {
+      ...service,
       image: imageUrl || null,
-      status: 'pending', 
-      createdAt: new Date(), 
-      updatedAt: new Date() 
+      status: 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
   }));
 
@@ -92,37 +92,37 @@ export const GET = authMiddlewareCrm(async (req) => {
       { status: 200 }
     );
   }
-  
+
   // Manual population because lean() doesn't work with virtuals well
   let populatedServices = vendorServicesDoc.services.map(service => ({
-      ...service,
-      categoryName: service.category ? service.category.name : 'Uncategorized'
+    ...service,
+    categoryName: service.category ? service.category.name : 'Uncategorized'
   }));
 
   // Filtering
   if (status) {
-      populatedServices = populatedServices.filter(s => s.status === status);
+    populatedServices = populatedServices.filter(s => s.status === status);
   }
   if (category) {
-      populatedServices = populatedServices.filter(s => s.category?._id.toString() === category);
+    populatedServices = populatedServices.filter(s => s.category?._id.toString() === category);
   }
 
   // Pagination
   const totalServices = populatedServices.length;
   const paginatedServices = populatedServices.slice((page - 1) * limit, page * limit);
-  
+
   const response = {
-      _id: vendorServicesDoc._id,
-      vendor: vendorServicesDoc.vendor,
-      services: paginatedServices,
-      createdAt: vendorServicesDoc.createdAt,
-      updatedAt: vendorServicesDoc.updatedAt,
-      pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalServices / limit),
-          totalServices: totalServices,
-          limit: limit,
-      },
+    _id: vendorServicesDoc._id,
+    vendor: vendorServicesDoc.vendor,
+    services: paginatedServices,
+    createdAt: vendorServicesDoc.createdAt,
+    updatedAt: vendorServicesDoc.updatedAt,
+    pagination: {
+      currentPage: page,
+      totalPages: Math.ceil(totalServices / limit),
+      totalServices: totalServices,
+      limit: limit,
+    },
   };
 
   return Response.json(response);
@@ -133,7 +133,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 export const PUT = authMiddlewareCrm(async (req) => {
   const vendorId = req.user.userId.toString();
   const body = await req.json();
-  const {  services } = body;
+  const { services } = body;
 
   if (!vendorId || !services || !Array.isArray(services)) {
     return Response.json(
@@ -146,7 +146,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
   const updatePromises = services.map(async (service) => {
     // If service was disapproved, resubmitting sets it back to pending
     const status = service.status === 'disapproved' ? 'pending' : service.status;
-    
+
     // Handle image upload if provided
     let imageUrl = service.image;
     if (service.image !== undefined) {
@@ -158,12 +158,12 @@ export const PUT = authMiddlewareCrm(async (req) => {
           // Upload new image to VPS
           const fileName = `vendor-service-${vendorId}-${Date.now()}`;
           imageUrl = await uploadBase64(service.image, fileName);
-          
+
           if (!imageUrl) {
             console.warn('Failed to upload service image for service:', service.name);
             imageUrl = service.image; // Keep the original value if upload failed
           }
-          
+
           // Delete old image from VPS if it exists and is different
           if (existingService && existingService.image && existingService.image !== imageUrl) {
             await deleteFile(existingService.image);
@@ -177,7 +177,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
         }
       }
     }
-    
+
     return VendorServicesModel.findOneAndUpdate(
       { vendor: vendorId, "services._id": service._id },
       {
@@ -197,6 +197,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
           "services.$.bookingInterval": service.bookingInterval,
           "services.$.tax": service.tax,
           "services.$.onlineBooking": service.onlineBooking,
+          "services.$.addOns": service.addOns,
           "services.$.status": status, // Set status
           "services.$.updatedAt": Date.now(),
         },
@@ -245,11 +246,11 @@ export const DELETE = authMiddlewareCrm(async (req) => {
   // Get the service to be deleted to check for image
   const vendorServices = await VendorServicesModel.findOne({ vendor: vendorId });
   let serviceToDelete = null;
-  
+
   if (vendorServices) {
     serviceToDelete = vendorServices.services.id(serviceId);
   }
-  
+
   // Delete the specific service from vendor's services array
   const result = await VendorServicesModel.findOneAndUpdate(
     { vendor: vendorId },
@@ -259,7 +260,7 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     },
     { new: true }
   ).populate("services.category");
-  
+
   // Delete image from VPS if it exists
   if (serviceToDelete && serviceToDelete.image) {
     await deleteFile(serviceToDelete.image);

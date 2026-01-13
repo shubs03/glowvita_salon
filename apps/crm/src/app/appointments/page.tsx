@@ -28,19 +28,19 @@ const NewAppointmentForm = dynamic(
 
 export default function AppointmentsPage() {
   const dispatch = useAppDispatch();
-  
+
   // Hide body scrollbar when component mounts
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
-    
+
     return () => {
       // Restore scrollbar when component unmounts
       document.body.style.overflow = 'auto';
       document.documentElement.style.overflow = 'auto';
     };
   }, []);
-  
+
   // RTK Query hooks for appointments
   const { data: appointmentsData = [], isLoading, isError, refetch } = glowvitaApi.useGetAppointmentsQuery(
     {
@@ -59,9 +59,9 @@ export default function AppointmentsPage() {
   const [deleteAppointment, { isLoading: isDeleting }] = glowvitaApi.useDeleteAppointmentMutation();
   // Use backend payments collect endpoint so each payment is recorded with timestamped history
   const [collectPayment] = glowvitaApi.useCollectPaymentMutation();
-  
+
   const appointments = Array.isArray(appointmentsData) ? appointmentsData : [];
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -84,9 +84,9 @@ export default function AppointmentsPage() {
   });
 
   const filteredAppointments = useMemo(() => {
-    return appointments.filter(appt => 
-      (appt.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-       appt.service?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    return appointments.filter(appt =>
+      (appt.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        appt.service?.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (statusFilter === 'all' || appt.status === statusFilter || (statusFilter === 'completed without payment' && appt.status === 'completed without payment'))
     );
   }, [appointments, searchTerm, statusFilter]);
@@ -112,13 +112,13 @@ export default function AppointmentsPage() {
       if (modalType === 'edit' && selectedAppointment?._id) {
         // For updates, we need to separate the ID and exclude metadata fields
         const { _id, createdAt, updatedAt, ...updates } = appointmentData;
-        
+
         // Call the update mutation with properly structured data
         await updateAppointment({
           _id: selectedAppointment._id, // Use the ID from selectedAppointment
           ...updates                    // Spread the rest of the appointment data
         }).unwrap();
-        
+
         toast.success('Appointment updated successfully');
       } else {
         // For new appointments, ensure we're not sending _id or other metadata fields
@@ -126,7 +126,7 @@ export default function AppointmentsPage() {
         await createAppointment(newAppointment).unwrap();
         toast.success('Appointment created successfully');
       }
-      
+
       // Refresh the appointments list
       refetch();
       handleCloseModal();
@@ -138,7 +138,7 @@ export default function AppointmentsPage() {
 
   const handleDeleteAppointment = async () => {
     if (!selectedAppointment?._id) return;
-    
+
     try {
       await deleteAppointment(selectedAppointment._id).unwrap();
       toast.success('Appointment deleted successfully');
@@ -157,7 +157,7 @@ export default function AppointmentsPage() {
     const totalAmount = (appointment as any).finalAmount || appointment.totalAmount || 0;
     const paidAmount = (appointment as any).amountPaid || appointment.payment?.paid || 0;
     const remainingAmount = Math.max(0, totalAmount - paidAmount);
-    
+
     setPaymentData({
       amount: remainingAmount,
       paymentMethod: 'cash',
@@ -206,7 +206,7 @@ export default function AppointmentsPage() {
     if (status === 'completed without payment') {
       return 'Completed Without Payment';
     }
-    return status.split('_').map(word => 
+    return status.split('_').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
@@ -345,7 +345,7 @@ export default function AppointmentsPage() {
                           // Use the new amountPaid field from the appointment, fallback to payment.paid for backward compatibility
                           const paidAmount = (appointment as any).amountPaid || appointment.payment?.paid || 0;
                           const remainingAmount = Math.max(0, totalAmount - paidAmount);
-                          
+
                           console.log('=== APPOINTMENTS PAGE PAYMENT DEBUG ===');
                           console.log('Appointment ID:', appointment._id);
                           console.log('totalAmount:', totalAmount);
@@ -354,7 +354,7 @@ export default function AppointmentsPage() {
                           console.log('paidAmount (final):', paidAmount);
                           console.log('remainingAmount:', remainingAmount);
                           console.log('Full appointment data:', appointment);
-                          
+
                           return (
                           <TableRow key={appointment._id}>
                             <TableCell className="font-medium">
@@ -425,10 +425,10 @@ export default function AppointmentsPage() {
                             <TableCell>
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                 ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'completed' 
-                                  ? 'bg-green-100 text-green-800' :
-                                ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'pending' 
-                                  ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-red-100 text-red-800'
+                                  'bg-green-100 text-green-800' :
+                                ((pointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'pending' 
+                                  ? g-yellow-100 text-yellow-800' :
+                                'bg-d-100 text-red-800'
                               }`}>
                                 {(() => {
                                   // Map the backend payment status to more user-friendly terms
@@ -452,12 +452,12 @@ export default function AppointmentsPage() {
                               <div className="flex items-center gap-2">
                                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                   appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                  appointment.status === 'completed without payment' ? 'bg-orange-100 text-orange-800' :
-                                  appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                  appointment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                  appointment.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
-                                  appointment.status === 'no_show' ? 'bg-orange-100 text-orange-800' :
-                                  'bg-yellow-100 text-yellow-800'
+                                  apintment.status === 'completed without payment' ? 'bg-orange-100 text-orange-800' :
+                                  appotment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                  appoinent.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                  appointmt.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
+                                  appointmenstatus === 'no_show' ? 'bg-orange-100 text-orange-800' :
+                                  'bg-yellow-1 text-yellow-800'
                                 }`}>
                                   {formatStatus(appointment.status)}
                                 </span>
@@ -518,227 +518,227 @@ export default function AppointmentsPage() {
                               </div>
                             </TableCell>
                           </TableRow>
-                        );
+                    );
                         })
                       )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="text-sm text-muted-foreground">
+            Showing <span className="font-medium">{Math.min(firstItemIndex + 1, filteredAppointments.length)}</span> to{' '}
+            <span className="font-medium">
+              {Math.min(lastItemIndex, filteredAppointments.length)}
+            </span>{' '}
+            of <span className="font-medium">{filteredAppointments.length}</span> appointments
+          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            onItemsPerPageChange={(value) => {
+              setItemsPerPage(Number(value));
+              setCurrentPage(1); // Reset to first page when changing items per page
+            }}
+            totalItems={filteredAppointments.length}
+            className="mt-0"
+          />
+        </div>
+      </div>
+    </div>
+
+      {/* Appointment Form Modal */ }
+  <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+    <DialogContent className="max-w-4xl w-[95vw] sm:w-full h-[90vh] max-h-[90vh] p-0 overflow-hidden flex flex-col">
+      <DialogHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-background z-10">
+        <DialogTitle className="text-lg sm:text-xl">
+          {modalType === 'add' ? 'New Appointment' :
+            modalType === 'edit' ? 'Edit Appointment' : 'Appointment Details'}
+        </DialogTitle>
+        <DialogDescription>
+          {modalType === 'add' ? 'Create a new appointment' :
+            modalType === 'edit' ? 'Edit appointment details' : 'View appointment details'}
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="flex-1 overflow-y-auto px-6 pb-6 -mt-1">
+        {modalType === 'view' && selectedAppointment ? (
+          <div className="pr-1">
+            <AppointmentDetailCard
+              appointment={selectedAppointment}
+              onEdit={() => {
+                setModalType('edit');
+              }}
+              onDelete={() => {
+                setIsModalOpen(false);
+                setIsDeleteModalOpen(true);
+              }}
+              onClose={() => setIsModalOpen(false)}
+            />
+          </div>
+        ) : (
+          <NewAppointmentForm
+            defaultValues={selectedAppointment ? {
+              ...selectedAppointment,
+              status: selectedAppointment.status as 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'partially-completed' | 'completed without payment' | 'cancelled' | 'no_show' | undefined
+            } : undefined}
+            isEditing={modalType === 'edit'}
+            onSubmit={handleFormSubmit}
+            onCancel={handleCloseModal}
+            onSuccess={handleCloseModal}
+            onDelete={modalType === 'edit' ? () => {
+              setIsModalOpen(false);
+              setIsDeleteModalOpen(true);
+            } : undefined}
+          />
+        )}
+      </div>
+    </DialogContent>
+  </Dialog>
+
+  {/* Delete Confirmation Modal */ }
+  <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+    <DialogContent className="max-w-md">
+      <DialogHeader>
+        <DialogTitle>Delete Appointment</DialogTitle>
+        <DialogDescription>
+          Are you sure you want to delete the appointment for <strong>{selectedAppointment?.clientName}</strong>?
+          This action cannot be undone.
+        </DialogDescription>
+      </DialogHeader>
+      <DialogFooter className="gap-2">
+        <Button
+          variant="outline"
+          onClick={() => setIsDeleteModalOpen(false)}
+          disabled={isDeleting}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="destructive"
+          onClick={handleDeleteAppointment}
+          disabled={isDeleting}
+        >
+          {isDeleting ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Deleting...
+            </>
+          ) : (
+            <>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </>
+          )}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  {/* Payment Collection Modal */ }
+  <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+    <DialogContent className="max-w-md">
+      <DialogHeader>
+        <DialogTitle>Collect Payment</DialogTitle>
+        <DialogDescription>
+          Collect payment for <strong>{selectedAppointment?.clientName}</strong>'s appointment
+        </DialogDescription>
+      </DialogHeader>
+
+      {selectedAppointment && (
+        <div className="space-y-4 py-4">
+          {/* Payment Summary */}
+          <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Total Amount:</span>
+              <span className="font-semibold">₹{((selectedAppointment as any).finalAmount || selectedAppointment.totalAmount || 0).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Already Paid:</span>
+              <span className="font-semibold text-green-600">₹{(((selectedAppointment as any).amountPaid || selectedAppointment.payment?.paid || 0)).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm pt-2 border-t">
+              <span className="font-medium">Remaining:</span>
+              <span className="font-bold text-orange-600">₹{(Math.max(0, ((selectedAppointment as any).finalAmount || selectedAppointment.totalAmount || 0) - (((selectedAppointment as any).amountPaid || selectedAppointment.payment?.paid || 0)))).toFixed(2)}</span>
+            </div>
           </div>
 
-          {/* Pagination */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-muted-foreground">
-              Showing <span className="font-medium">{Math.min(firstItemIndex + 1, filteredAppointments.length)}</span> to{' '}
-              <span className="font-medium">
-                {Math.min(lastItemIndex, filteredAppointments.length)}
-              </span>{' '}
-              of <span className="font-medium">{filteredAppointments.length}</span> appointments
+          {/* Amount Input */}
+          <div className="space-y-2">
+            <Label htmlFor="amount">Collecting Amount</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">₹</span>
+              <Input
+                id="amount"
+                type="number"
+                value={paymentData.amount}
+                onChange={(e) => setPaymentData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                className="pl-7"
+                min="0"
+                step="0.01"
+              />
             </div>
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              itemsPerPage={itemsPerPage}
-              onItemsPerPageChange={(value) => {
-                setItemsPerPage(Number(value));
-                setCurrentPage(1); // Reset to first page when changing items per page
-              }}
-              totalItems={filteredAppointments.length}
-              className="mt-0"
+          </div>
+
+          {/* Payment Method */}
+          <div className="space-y-2">
+            <Label htmlFor="paymentMethod">Payment Method</Label>
+            <Select
+              value={paymentData.paymentMethod}
+              onValueChange={(value) => setPaymentData(prev => ({ ...prev, paymentMethod: value }))}
+            >
+              <SelectTrigger id="paymentMethod">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cash">💰 Cash</SelectItem>
+                <SelectItem value="card">💳 Card</SelectItem>
+                <SelectItem value="upi">📱 UPI</SelectItem>
+                <SelectItem value="netbanking">🏦 Net Banking</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Textarea
+              id="notes"
+              value={paymentData.notes}
+              onChange={(e) => setPaymentData(prev => ({ ...prev, notes: e.target.value }))}
+              placeholder="Payment reference or notes..."
+              rows={2}
             />
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Appointment Form Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-4xl w-[95vw] sm:w-full h-[90vh] max-h-[90vh] p-0 overflow-hidden flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-background z-10">
-            <DialogTitle className="text-lg sm:text-xl">
-              {modalType === 'add' ? 'New Appointment' : 
-               modalType === 'edit' ? 'Edit Appointment' : 'Appointment Details'}
-            </DialogTitle>
-            <DialogDescription>
-              {modalType === 'add' ? 'Create a new appointment' : 
-               modalType === 'edit' ? 'Edit appointment details' : 'View appointment details'}
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="flex-1 overflow-y-auto px-6 pb-6 -mt-1">
-            {modalType === 'view' && selectedAppointment ? (
-              <div className="pr-1">
-                <AppointmentDetailCard
-                  appointment={selectedAppointment}
-                  onEdit={() => {
-                    setModalType('edit');
-                  }}
-                  onDelete={() => {
-                    setIsModalOpen(false);
-                    setIsDeleteModalOpen(true);
-                  }}
-                  onClose={() => setIsModalOpen(false)}
-                />
-              </div>
-            ) : (
-              <NewAppointmentForm
-                defaultValues={selectedAppointment ? {
-                  ...selectedAppointment,
-                  status: selectedAppointment.status as 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'partially-completed' | 'completed without payment' | 'cancelled' | 'no_show' | undefined
-                } : undefined}
-                isEditing={modalType === 'edit'}
-                onSubmit={handleFormSubmit}
-                onCancel={handleCloseModal}
-                onSuccess={handleCloseModal}
-                onDelete={modalType === 'edit' ? () => {
-                  setIsModalOpen(false);
-                  setIsDeleteModalOpen(true);
-                } : undefined}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Delete Appointment</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the appointment for <strong>{selectedAppointment?.clientName}</strong>?
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setIsDeleteModalOpen(false)}
-              disabled={isDeleting}
-            >
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleDeleteAppointment}
-              disabled={isDeleting}
-            >
-              {isDeleting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Payment Collection Modal */}
-      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Collect Payment</DialogTitle>
-            <DialogDescription>
-              Collect payment for <strong>{selectedAppointment?.clientName}</strong>'s appointment
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedAppointment && (
-            <div className="space-y-4 py-4">
-              {/* Payment Summary */}
-              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Total Amount:</span>
-                  <span className="font-semibold">₹{((selectedAppointment as any).finalAmount || selectedAppointment.totalAmount || 0).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Already Paid:</span>
-                  <span className="font-semibold text-green-600">₹{(((selectedAppointment as any).amountPaid || selectedAppointment.payment?.paid || 0)).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm pt-2 border-t">
-                  <span className="font-medium">Remaining:</span>
-                  <span className="font-bold text-orange-600">₹{(Math.max(0, ((selectedAppointment as any).finalAmount || selectedAppointment.totalAmount || 0) - (((selectedAppointment as any).amountPaid || selectedAppointment.payment?.paid || 0)))).toFixed(2)}</span>
-                </div>
-              </div>
-
-              {/* Amount Input */}
-              <div className="space-y-2">
-                <Label htmlFor="amount">Collecting Amount</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">₹</span>
-                  <Input
-                    id="amount"
-                    type="number"
-                    value={paymentData.amount}
-                    onChange={(e) => setPaymentData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
-                    className="pl-7"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-              </div>
-
-              {/* Payment Method */}
-              <div className="space-y-2">
-                <Label htmlFor="paymentMethod">Payment Method</Label>
-                <Select 
-                  value={paymentData.paymentMethod}
-                  onValueChange={(value) => setPaymentData(prev => ({ ...prev, paymentMethod: value }))}
-                >
-                  <SelectTrigger id="paymentMethod">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">💰 Cash</SelectItem>
-                    <SelectItem value="card">💳 Card</SelectItem>
-                    <SelectItem value="upi">📱 UPI</SelectItem>
-                    <SelectItem value="netbanking">🏦 Net Banking</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Notes */}
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes (Optional)</Label>
-                <Textarea
-                  id="notes"
-                  value={paymentData.notes}
-                  onChange={(e) => setPaymentData(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Payment reference or notes..."
-                  rows={2}
-                />
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setIsPaymentModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleCollectPayment}
-              disabled={paymentData.amount <= 0}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Confirm Payment ₹{paymentData.amount.toFixed(2)}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+      <DialogFooter className="gap-2">
+        <Button
+          variant="outline"
+          onClick={() => setIsPaymentModalOpen(false)}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleCollectPayment}
+          disabled={paymentData.amount <= 0}
+          className="bg-green-600 hover:bg-green-700"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          Confirm Payment ₹{paymentData.amount.toFixed(2)}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+    </div >
   );
 }

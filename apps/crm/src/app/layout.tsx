@@ -172,7 +172,8 @@ export default function RootLayout({
     '/consultations',
     '/patients',
     '/crm',
-    '/wedding-packages'
+    '/wedding-packages',
+    '/add-ons'
   ].some(path => pathname.startsWith(path));
 
   const isAuthPage = pathname.startsWith('/login') ||

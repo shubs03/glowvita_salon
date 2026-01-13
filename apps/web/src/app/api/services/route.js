@@ -17,13 +17,13 @@ export const GET = async (request) => {
   try {
     // Initialize database connection
     await _db();
-    
+
     // Extract query parameters
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get('categoryId');
     const limit = parseInt(searchParams.get('limit')) || 100;
     const page = parseInt(searchParams.get('page')) || 1;
-    
+
     // Build aggregation pipeline
     const pipeline = [
       // Unwind services array to get individual services
@@ -31,16 +31,16 @@ export const GET = async (request) => {
       // Match only approved services
       { $match: { "services.status": "approved" } }
     ];
-    
+
     // Add category filter if provided
     if (categoryId) {
-      pipeline.push({ 
-        $match: { 
-          "services.category": new mongoose.Types.ObjectId(categoryId) 
-        } 
+      pipeline.push({
+        $match: {
+          "services.category": new mongoose.Types.ObjectId(categoryId)
+        }
       });
     }
-    
+
     // Lookup to get category details
     pipeline.push(
       {
@@ -51,50 +51,111 @@ export const GET = async (request) => {
           as: "categoryDetails",
         },
       },
-      { 
-        $unwind: { 
-          path: "$categoryDetails", 
-          preserveNullAndEmptyArrays: true 
-        } 
+      {
+        $unwind: {
+          path: "$categoryDetails",
+          preserveNullAndEmptyArrays: true
+        }
       }
     );
-    
+
     // Add category name to services
     pipeline.push({
       $addFields: {
         "services.categoryName": "$categoryDetails.name"
       }
     });
-    
+
     // Remove categoryDetails field
     pipeline.push({
       $project: {
         categoryDetails: 0
       }
     });
-    
+
+    pipeline.push({
+      $addFields: {
+        "services.rawAddOns": "$services.addOns", // Preserve raw
+        "services.addOnObjectIds": {
+          $map: {
+            input: { $ifNull: ["$services.addOns", []] },
+            as: "addonId",
+            in: { $toObjectId: "$$addonId" }
+          }
+        }
+      }
+    });
+
+    // Lookup using the temporary field
+    pipeline.push(
+      {
+        $lookup: {
+          from: "addons",
+          localField: "services.addOnObjectIds",
+          foreignField: "_id",
+          as: "addOnDetails",
+        },
+      },
+      {
+        $addFields: {
+          "services.addOns": "$addOnDetails",
+        },
+      },
+      {
+        $project: {
+          addOnDetails: 0,
+          // "services.addOnObjectIds": 0, // DEBUG: Keep temp field
+          // "services.rawAddOns": 0 // DEBUG: Keep debug field
+        },
+      }
+    );
+
     // Pagination
     pipeline.push(
       { $skip: (page - 1) * limit },
       { $limit: limit }
     );
-    
+
+    // DEBUG: Direct check for the problematic ID
+    const sampleAddonId = "695cd38a79c07c3786ecf71d"; // The ID user mentioned
+    const directCheck = await AddOnModel.findById(sampleAddonId);
+    console.log("DEBUG: Direct AddOn Check:", {
+      searchedId: sampleAddonId,
+      found: !!directCheck,
+      doc: directCheck ? { _id: directCheck._id, name: directCheck.name } : null
+    });
+
+
     // Execute aggregation
     const result = await VendorServicesModel.aggregate(pipeline);
-    
+
     // Transform the results
     const services = result.map(item => ({
       ...item.services,
-      vendorId: item.vendor
+      vendorId: item.vendor,
+      // Ensure these are passed through if they exist
+      rawAddOns: item.services.rawAddOns,
+      addOnObjectIds: item.services.addOnObjectIds
     }));
-    
+
     const response = Response.json({
       success: true,
       services: services,
       count: services.length,
       page: page,
-      limit: limit
+      limit: limit,
+      debug: {
+        directAddonCheck: !!directCheck
+      }
     });
+
+    // Debug Log
+    console.log("Services API Aggregation Result:", JSON.stringify(services.map(s => ({
+      name: s.name,
+      addOns: s.addOns,
+      rawAddOns: s.rawAddOns,
+      addOnObjectIds: s.addOnObjectIds,
+    })), null, 2));
 
     // Set CORS headers
     response.headers.set('Access-Control-Allow-Origin', '*');
@@ -105,7 +166,7 @@ export const GET = async (request) => {
 
   } catch (error) {
     console.error("Error fetching services:", error);
-    
+
     const response = Response.json({
       success: false,
       message: "Failed to fetch services",

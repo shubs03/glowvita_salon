@@ -51,6 +51,12 @@ interface ServiceItem {
   endTime: string;
   duration: number;
   amount: number;
+  addOns?: Array<{
+    _id: string;
+    name: string;
+    price: number;
+    duration: number;
+  }>;
 }
 
 // Create a new interface that combines the properties we need
@@ -715,7 +721,7 @@ export function AppointmentDetailView({
       }
 
       // Success toast
-      let successMessage = `Payment of â‚¹${paymentData.amount.toFixed(2)} received via ${paymentData.paymentMethod}`;
+      let successMessage = `Payment of ₹${paymentData.amount.toFixed(2)} received via ${paymentData.paymentMethod}`;
       if (updatedAppointmentData?.status && appointment.status !== updatedAppointmentData.status) {
         successMessage += ` and appointment marked as ${updatedAppointmentData.status}`;
       }
@@ -819,6 +825,16 @@ export function AppointmentDetailView({
     );
   }
 
+  // Debug log to check appointment data
+  console.log('Appointment data:', JSON.stringify(appointment, null, 2));
+
+  // Helper function to format currency with proper symbol and formatting
+  const formatCurrency = (amount: number | string): string => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(num)) return '₹0.00';
+    return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   return (
     <>
       {renderStatusConfirmDialog()}
@@ -834,9 +850,13 @@ export function AppointmentDetailView({
             <div className="flex justify-between items-start">
               <div>
                 <DialogTitle className="text-xl font-semibold text-foreground">Appointment Details</DialogTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {appointment.clientName} â€¢ {format(new Date(appointment.date), 'MMM d, yyyy')} â€¢ {appointment.startTime}
-                </p>
+                <div className="text-sm text-muted-foreground mt-1">
+                  <span>{appointment.clientName}</span>
+                  <span className="mx-2">•</span>
+                  <span>{format(new Date(appointment.date), 'MMM d, yyyy')}</span>
+                  <span className="mx-2">•</span>
+                  <span>{appointment.startTime}</span>
+                </div>
               </div>
             </div>
           </DialogHeader>
@@ -991,14 +1011,14 @@ export function AppointmentDetailView({
                         {/* Service Amount */}
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Service Amount</span>
-                          <span className="font-medium">â‚¹{appointment.amount?.toFixed(2) || '0.00'}</span>
+                          <span className="font-medium">{formatCurrency(appointment.amount)}</span>
                         </div>
 
                         {/* Discount Amount (from appointment root) */}
                         {(appointment as any).discountAmount > 0 && (
                           <div className="flex justify-between items-center text-foreground">
                             <span>Discount Applied</span>
-                            <span className="font-medium">-â‚¹{((appointment as any).discountAmount)?.toFixed(2) || '0.00'}</span>
+                            <span className="font-medium">-{formatCurrency((appointment as any).discountAmount)}</span>
                           </div>
                         )}
 
@@ -1011,7 +1031,7 @@ export function AppointmentDetailView({
                               </svg>
                               <span>Offer ({appointment.payment.offer.code})</span>
                             </div>
-                            <span className="font-medium">-â‚¹{appointment.payment.offer.discountAmount?.toFixed(2) || '0.00'}</span>
+                            <span className="font-medium">-{formatCurrency(appointment.payment.offer.discountAmount)}</span>
                           </div>
                         )}
 
@@ -1019,7 +1039,7 @@ export function AppointmentDetailView({
                         {appointment.discount > 0 && (
                           <div className="flex justify-between items-center text-foreground">
                             <span>Discount</span>
-                            <span className="font-medium">-â‚¹{appointment.discount.toFixed(2)}</span>
+                            <span className="font-medium">-{formatCurrency(appointment.discount)}</span>
                           </div>
                         )}
 
@@ -1027,7 +1047,7 @@ export function AppointmentDetailView({
                         {(appointment as any).serviceTax && (appointment as any).serviceTax > 0 && (
                           <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Service Tax (GST)</span>
-                            <span className="font-medium">â‚¹{((appointment as any).serviceTax)?.toFixed(2) || '0.00'}</span>
+                            <span className="font-medium">{formatCurrency((appointment as any).serviceTax)}</span>
                           </div>
                         )}
 
@@ -1035,7 +1055,7 @@ export function AppointmentDetailView({
                         {!((appointment as any).serviceTax) && appointment.payment?.serviceTax && appointment.payment.serviceTax > 0 && (
                           <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Service Tax (GST)</span>
-                            <span className="font-medium">â‚¹{appointment.payment.serviceTax.toFixed(2)}</span>
+                            <span className="font-medium">{formatCurrency(appointment.payment.serviceTax)}</span>
                           </div>
                         )}
 
@@ -1043,7 +1063,7 @@ export function AppointmentDetailView({
                         {(appointment as any).platformFee && (appointment as any).platformFee > 0 && (
                           <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Platform Fee</span>
-                            <span className="font-medium">â‚¹{((appointment as any).platformFee)?.toFixed(2) || '0.00'}</span>
+                            <span className="font-medium">{formatCurrency((appointment as any).platformFee)}</span>
                           </div>
                         )}
 
@@ -1051,14 +1071,14 @@ export function AppointmentDetailView({
                         {!((appointment as any).platformFee) && appointment.payment?.platformFee && appointment.payment.platformFee > 0 && (
                           <div className="flex justify-between items-center">
                             <span className="text-muted-foreground">Platform Fee</span>
-                            <span className="font-medium">â‚¹{appointment.payment.platformFee.toFixed(2)}</span>
+                            <span className="font-medium">{formatCurrency(appointment.payment.platformFee)}</span>
                           </div>
                         )}
 
                         <div className="border-t pt-2 mt-2">
                           <div className="flex justify-between items-center font-semibold text-base">
                             <span>Total Amount</span>
-                            <span className="text-foreground">â‚¹{((appointment as any).finalAmount || appointment.totalAmount)?.toFixed(2) || '0.00'}</span>
+                            <span className="text-foreground">{formatCurrency(totalAmount)}</span>
                           </div>
                         </div>
 
@@ -1087,7 +1107,7 @@ export function AppointmentDetailView({
                         <div className="flex justify-between items-center py-2 px-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
                           <span className="text-sm font-medium text-green-900 dark:text-green-100">Amount Paid:</span>
                           <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                            â‚¹{paidAmount.toFixed(2)}
+                            {formatCurrency(paidAmount)}
                           </span>
                         </div>
 
@@ -1095,7 +1115,7 @@ export function AppointmentDetailView({
                         <div className="flex justify-between items-center py-2 px-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
                           <span className="text-sm font-medium text-orange-900 dark:text-orange-100">Amount Remaining:</span>
                           <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
-                            â‚¹{remainingAmount.toFixed(2)}
+                            {formatCurrency(remainingAmount)}
                           </span>
                         </div>
 
@@ -1108,7 +1128,7 @@ export function AppointmentDetailView({
                               </svg>
                               <span>Amount Paid {appointment.payment?.paymentMode === 'online' ? '(Online)' : ''}</span>
                             </div>
-                            <span className="font-medium">â‚¹{(appointment.payment?.paid ?? 0).toFixed(2)}</span>
+                            <span className="font-medium">{formatCurrency(appointment.payment?.paid ?? 0)}</span>
                           </div>
                         )}
 
@@ -1117,7 +1137,7 @@ export function AppointmentDetailView({
                           <div className="flex justify-between items-center">
                             <span className="font-semibold text-base">Amount to Collect</span>
                             <span className="text-xl font-bold text-foreground">
-                              â‚¹{remainingAmount.toFixed(2)}
+                              {formatCurrency(remainingAmount)}
                             </span>
                           </div>
                         </div>
@@ -1134,21 +1154,21 @@ export function AppointmentDetailView({
                         <div className="flex justify-between items-center py-2 px-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
                           <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Total Amount</span>
                           <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                            â‚¹{((appointment as any).finalAmount || appointment.totalAmount || 0).toFixed(2)}
+                            {formatCurrency(totalAmount)}
                           </span>
                         </div>
 
                         <div className="flex justify-between items-center py-2 px-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
                           <span className="text-sm font-medium text-green-900 dark:text-green-100">Amount Paid</span>
                           <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                            â‚¹{paidAmount.toFixed(2)}
+                            {formatCurrency(paidAmount)}
                           </span>
                         </div>
 
                         <div className="flex justify-between items-center py-2 px-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
                           <span className="text-sm font-medium text-orange-900 dark:text-orange-100">Amount Remaining</span>
                           <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
-                            â‚¹{remainingAmount.toFixed(2)}
+                            {formatCurrency(remainingAmount)}
                           </span>
                         </div>
 
@@ -1169,7 +1189,7 @@ export function AppointmentDetailView({
                                 case 'completed': return 'PAID';
                                 case 'pending':
                                   if (amountPaid > 0 && totalAmount > 0) {
-                                    return `PARTIAL (â‚¹${amountPaid.toFixed(2)})`;
+                                    return `PARTIAL (${formatCurrency(amountPaid)})`;
                                   }
                                   return 'UNPAID';
                                 default: return status.toUpperCase();
@@ -1186,7 +1206,7 @@ export function AppointmentDetailView({
                         <div>
                           <label className="text-sm font-medium mb-2 block">Collecting Amount (Manual Entry)</label>
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground font-medium">â‚¹</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground font-medium">₹</span>
                             <Input
                               type="number"
                               value={paymentData.amount}
@@ -1206,7 +1226,7 @@ export function AppointmentDetailView({
                           </div>
                           <div className="flex justify-between items-center mt-1.5">
                             <p className="text-xs text-foreground/80">
-                              Remaining Balance: â‚¹{remainingAmount.toFixed(2)}
+                              Remaining Balance: {formatCurrency(remainingAmount)}
                             </p>
                             {paymentData.amount !== remainingAmount && remainingAmount > 0 && (
                               <button
@@ -1222,7 +1242,7 @@ export function AppointmentDetailView({
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                               </svg>
-                              Amount exceeds remaining balance by â‚¹{(paymentData.amount - remainingAmount).toFixed(2)}
+                              Amount exceeds remaining balance by {formatCurrency(paymentData.amount - remainingAmount)}
                             </p>
                           )}
                         </div>
@@ -1297,7 +1317,7 @@ export function AppointmentDetailView({
                                   </div>
                                 </div>
                               </div>
-                              <p className="text-sm font-medium text-center">Scan QR code to pay â‚¹{paymentData.amount.toFixed(2)}</p>
+                              <p className="text-sm font-medium text-center">Scan QR code to pay {formatCurrency(paymentData.amount)}</p>
                               <p className="text-xs text-foreground/80 mt-1">Or enter UPI ID manually</p>
                             </div>
                           </div>
@@ -1345,7 +1365,7 @@ export function AppointmentDetailView({
                                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
-                                Confirm Payment â‚¹{paymentData.amount.toFixed(2)}
+                                Confirm Payment {formatCurrency(paymentData.amount)}
                               </>
                             )}
                           </Button>
@@ -1364,7 +1384,7 @@ export function AppointmentDetailView({
                           </div>
                           <div>
                             <p className="font-semibold text-foreground">Payment Complete</p>
-                            <p className="text-sm text-foreground/80">Full payment of â‚¹{appointment.totalAmount?.toFixed(2)} has been received.</p>
+                            <p className="text-sm text-foreground/80">Full payment of {formatCurrency(appointment.totalAmount)} has been received.</p>
                           </div>
                         </div>
                       </div>
@@ -1395,7 +1415,7 @@ export function AppointmentDetailView({
                         <div key={idx} className="flex items-start justify-between p-3 rounded-lg border bg-card/50">
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold text-foreground">â‚¹{Number(p.amount || 0).toFixed(2)}</span>
+                              <span className="text-sm font-semibold text-foreground">{formatCurrency(p.amount)}</span>
                               <span className="text-xs text-muted-foreground">â€¢ {String(p.paymentMethod || 'cash').toUpperCase()}</span>
                             </div>
                             <div className="text-xs text-muted-foreground mt-0.5">{dateStr}</div>
@@ -1452,54 +1472,76 @@ export function AppointmentDetailView({
                     </div>
 
                     {/* Show single service or multi-service header */}
-                    {!(appointment.isMultiService || (appointment.serviceItems && appointment.serviceItems.length > 1)) ? (
-                      <div className="bg-background p-3 rounded-lg border shadow-sm">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-primary/10 rounded-lg">
-                            <Scissors className="h-5 w-5 text-foreground" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Service</p>
+                    <div className="bg-background p-3 rounded-lg border shadow-sm">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <Scissors className="h-5 w-5 text-foreground" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            {appointment.serviceItems?.length > 1 ? 'Services' : 'Service'}
+                          </p>
+                          {appointment.serviceItems?.length > 1 ? (
+                            <p className="text-lg font-semibold text-foreground">
+                              Multi-Service ({appointment.serviceItems.length} Services)
+                            </p>
+                          ) : (
                             <p className="text-lg font-semibold text-foreground">
                               {appointment.serviceName || 'No service specified'}
                             </p>
-                          </div>
+                          )}
                         </div>
                       </div>
-                    ) : (
-                      <div className="bg-background p-3 rounded-lg border shadow-sm">
-                        <div className="flex items-center space-x-3 mb-3">
-                          <div className="p-2 bg-primary/10 rounded-lg">
-                            <ClipboardList className="h-5 w-5 text-foreground" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Services</p>
-                            <p className="text-lg font-semibold text-foreground">
-                              Multi-Service ({appointment.serviceItems?.length || 0} Services)
-                            </p>
-                          </div>
-                        </div>
 
-                        {/* Display all service items */}
-                        {appointment.serviceItems && appointment.serviceItems.length > 0 && (
-                          <div className="space-y-2 mt-3">
-                            {appointment.serviceItems.map((item: ServiceItem, index: number) => (
-                              <div key={item._id || index} className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-muted">
-                                <div className="flex-1">
-                                  <div className="font-medium text-sm">{item.serviceName}</div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {item.staffName} â€¢ {item.startTime} - {item.endTime} ({item.duration} min)
+                      {/* Service Items List */}
+                      {appointment.serviceItems?.length > 0 && (
+                        <div className="mt-3 space-y-3">
+                          {appointment.serviceItems.map((item, index) => {
+                            // Ensure addOns is always an array
+                            const itemAddOns = Array.isArray(item.addOns) ? item.addOns : [];
+                            
+                            return (
+                              <div key={item._id || index} className="p-3 bg-muted/20 rounded-lg border border-muted/30">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <p className="font-medium text-foreground">{item.serviceName}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {item.staffName} • {item.startTime} - {item.endTime} ({item.duration} min)
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-medium font-mono">{formatCurrency(item.amount || 0)}</p>
                                   </div>
                                 </div>
-                                <div className="text-right ml-2">
-                                  <div className="font-semibold text-sm">â‚¹{item.amount?.toFixed(2) || '0.00'}</div>
-                                </div>
+
+                                {/* Add-ons section */}
+                                {itemAddOns.length > 0 && (
+                                  <div className="mt-2 pt-2 border-t border-muted/30">
+                                    <p className="text-xs font-medium text-muted-foreground mb-1">Add-ons:</p>
+                                    <div className="space-y-1">
+                                      {itemAddOns.map((addOn, addOnIndex) => (
+                                        <div 
+                                          key={`${item._id || 'item'}-addon-${addOnIndex}`} 
+                                          className="flex justify-between items-center text-xs pl-2"
+                                        >
+                                          <span className="text-muted-foreground">
+                                            + {addOn.name} ({addOn.duration} min)
+                                          </span>
+                                          <span className="font-medium font-mono">
+                                            {formatCurrency(addOn.price || 0)}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            ))}
-                          </div>
-                        )}
+                            );
+                          })}
+                        </div>
+                      )}
                       </div>
-                    )}
+                    
 
                     <div className="bg-background p-3 rounded-lg border shadow-sm">
                       <div className="flex items-center space-x-3">
@@ -1524,7 +1566,12 @@ export function AppointmentDetailView({
                           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Date & Time</p>
                           <div className="space-y-1">
                             <p className="text-lg font-semibold text-foreground">
-                              {format(new Date(appointment.date), 'EEEE, MMMM d, yyyy')}
+                              {new Date(appointment.date).toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
                             </p>
                             <div className="flex items-center text-foreground/80">
                               <Clock className="h-4 w-4 mr-1.5 text-foreground" />
@@ -1620,37 +1667,37 @@ export function AppointmentDetailView({
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Service Amount:</span>
-                    <span>â‚¹{Number(((liveAppointment as any)?.amount ?? appointment.amount) || 0).toFixed(2)}</span>
+                    <span className="font-mono">{formatCurrency(appointment.amount)}</span>
                   </div>
 
                   {appointment.discount && appointment.discount > 0 && (
                     <div className="flex justify-between text-green-600 dark:text-green-400">
                       <span>Discount:</span>
-                      <span>-â‚¹{appointment.discount.toFixed(2)}</span>
+                      <span className="font-mono">-{formatCurrency(appointment.discount)}</span>
                     </div>
                   )}
 
                   <div className="flex justify-between font-medium pt-2 border-t mt-2">
                     <span>Total Amount:</span>
-                    <span>â‚¹{Number(totalAmount || (liveAppointment as any)?.totalAmount || appointment.totalAmount || 0).toFixed(2)}</span>
+                    <span className="font-mono">{formatCurrency(totalAmount)}</span>
                   </div>
 
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Amount Paid:</span>
-                    <span>â‚¹{paidAmount.toFixed(2)}</span>
+                    <span className="font-mono">{formatCurrency(paidAmount)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Amount Remaining:</span>
-                    <span>â‚¹{remainingAmount.toFixed(2)}</span>
+                    <span className="font-mono">{formatCurrency(remainingAmount)}</span>
                   </div>
                   <div className="flex justify-between text-sm mt-2">
                     <span className="text-muted-foreground">Payment Status:</span>
                     <span className="capitalize">
                       {(() => {
-                        const status = (overridePayment?.paymentStatus ?? (liveAppointment as any)?.paymentStatus ?? 'pending') as string;
+                        const status = (overridePayment?.paymentStatus ?? (liveAppointment as any).paymentStatus ?? 'pending') as string;
                         if (status === 'completed') return 'paid';
-                        if (status === 'pending') return paidAmount > 0 ? `partial (â‚¹${paidAmount.toFixed(2)})` : 'unpaid';
-                        if (status === 'partial') return `partial (â‚¹${paidAmount.toFixed(2)})`;
+                        if (status === 'pending') return paidAmount > 0 ? `partial (${formatCurrency(paidAmount)})` : 'unpaid';
+                        if (status === 'partial') return `partial (${formatCurrency(paidAmount)})`;
                         return status;
                       })()}
                     </span>
@@ -1771,7 +1818,11 @@ export function AppointmentDetailView({
                               {appt.service}
                             </h4>
                             <p className="text-sm text-muted-foreground">
-                              {format(appt.date, 'MMM d, yyyy')} â€¢ {appt.startTime}
+{new Date(appt.date).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })} • {appt.startTime}
                             </p>
                           </div>
                           <Badge variant={appt.status === 'completed' ? 'default' : 'secondary'}>

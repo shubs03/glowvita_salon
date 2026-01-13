@@ -61,12 +61,14 @@ import {
   useGetServicesQuery,
   useCreateServiceMutation,
   useGetStaffQuery,
+  useGetAddOnsQuery,
   useGetSuperDataQuery
 } from "@repo/store/api";
 import Image from "next/image";
 import { Skeleton } from "@repo/ui/skeleton";
 import { Pagination } from "@repo/ui/pagination";
 import { toast } from 'sonner';
+import Link from "next/link";
 import {
   setSearchTerm,
   setModalOpen,
@@ -98,6 +100,7 @@ interface FormData {
   onlineBooking: boolean;
   image: string;
   status: string;
+  addOns: string[];
 }
 
 interface Service {
@@ -122,6 +125,7 @@ interface Service {
   onlineBooking?: boolean;
   image?: string;
   status?: string;
+  addOns?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -149,7 +153,7 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
 
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
   const [createService, { isLoading: isCreatingService }] = useCreateServiceMutation();
-  
+
   const { data: categories = [] } = useGetCategoriesQuery(undefined);
   const { data: allServices = [] } = useGetServicesQuery(undefined);
 
@@ -169,12 +173,12 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
   const handleCreate = async () => {
     // Reset error
     setError("");
-    
+
     if (!name.trim()) {
       setError("Name is required");
       return;
     }
-    
+
     try {
       let newItem;
       if (itemType === "Category") {
@@ -182,26 +186,26 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
         const isDuplicate = categories.some(
           (cat: Category) => cat.name.toLowerCase() === name.trim().toLowerCase()
         );
-        
+
         if (isDuplicate) {
           setError("A category with this name already exists");
           return;
         }
-        
+
         newItem = await createCategory({ name, description, image }).unwrap();
       } else if (itemType === "Service" && categoryId) {
         // Check for duplicate service name in the same category
         const isDuplicate = allServices.some(
-          (service: Service) => 
-            service.name.toLowerCase() === name.trim().toLowerCase() && 
+          (service: Service) =>
+            service.name.toLowerCase() === name.trim().toLowerCase() &&
             service.category?._id === categoryId
         );
-        
+
         if (isDuplicate) {
           setError("A service with this name already exists in this category");
           return;
         }
-        
+
         newItem = await createService({ name, description, category: categoryId, image }).unwrap();
       } else {
         throw new Error("Invalid item type or missing categoryId");
@@ -300,6 +304,17 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   const [createVendorServices, { isLoading: isCreating }] = useCreateVendorServicesMutation();
   const [updateVendorServices, { isLoading: isUpdating }] = useUpdateVendorServicesMutation();
 
+  const { data: addOnsData, isLoading: addOnsLoading } = useGetAddOnsQuery(undefined);
+  const availableAddOns = useMemo(() => {
+    const allAddOns = addOnsData?.addOns || [];
+    if (!service?._id) return [];
+    return allAddOns.filter((addon: any) => {
+      const services = addon.services || [];
+      const serviceId = String(service._id);
+      return services.some((id: any) => String(id) === serviceId) || String(addon.service) === serviceId;
+    });
+  }, [addOnsData, service]);
+
   const isSaving = isCreating || isUpdating;
 
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -321,6 +336,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
     onlineBooking: true,
     image: '',
     status: 'pending',
+    addOns: [],
   });
 
   useEffect(() => {
@@ -342,6 +358,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
         onlineBooking: service.onlineBooking !== undefined ? service.onlineBooking : true,
         image: service.image || '',
         status: service.status || 'pending',
+        addOns: service.addOns || [],
       });
       setActiveTab("basic");
     } else {
@@ -362,6 +379,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
         onlineBooking: true,
         image: '',
         status: 'pending',
+        addOns: [],
       });
       setActiveTab("basic");
     }
@@ -427,7 +445,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
       console.error("Vendor ID is missing");
       return;
     }
-    
+
     const payload = {
       ...formData,
       category: (formData.category as any)?._id || undefined,
@@ -455,12 +473,12 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
       if (type === "add") {
         await createVendorServices({ vendor: VENDOR_ID, services: [payload] }).unwrap();
       } else if (type === "edit" && service?._id) {
-         if (service.status === 'disapproved') {
+        if (service.status === 'disapproved') {
           payload.status = 'pending';
         }
         await updateVendorServices({ vendor: VENDOR_ID, services: [{ ...payload, _id: service._id }] }).unwrap();
       }
-      onClose();  
+      onClose();
     } catch (error) {
       console.error("Failed to save service", error);
     }
@@ -744,6 +762,48 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
           )}
         </div>
       </div>
+      <div className="space-y-2">
+        <Label>Add-ons</Label>
+        <div className="p-4 border rounded-md max-h-48 overflow-y-auto space-y-2">
+          {addOnsLoading ? <p>Loading add-ons...</p> : availableAddOns.length > 0 ? (
+            <>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="addons-all"
+                  checked={formData.addOns?.length === availableAddOns.length}
+                  onCheckedChange={(checked) =>
+                    handleSelectChange("addOns", checked ? availableAddOns.map((a: any) => a._id) : [])
+                  }
+                />
+                <Label htmlFor="addons-all" className="font-semibold">
+                  Select All Add-ons
+                </Label>
+              </div>
+              {availableAddOns.map((addon: any) => (
+                <div key={addon._id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`addon-${addon._id}`}
+                    checked={(formData.addOns as string[])?.includes(addon._id) || false}
+                    onCheckedChange={(checked) =>
+                      handleCheckboxChange("addOns", addon._id, !!checked)
+                    }
+                  />
+                  <Label htmlFor={`addon-${addon._id}`}>
+                    {addon.name} (₹{addon.price})
+                  </Label>
+                </div>
+              ))}
+            </>
+          ) : (
+            <div className="text-center py-2">
+              <p className="text-sm text-muted-foreground mb-2">No add-ons found.</p>
+              <Link href="/add-ons">
+                <Button variant="outline" size="sm">Create Add-ons</Button>
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
       <DialogFooter className="flex justify-end pt-4">
         <Button variant="outline" onClick={onClose} disabled={isSaving}>
           Cancel
@@ -879,15 +939,15 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
               </div>
               <div>
                 <span className="font-semibold">Status:</span>
-                <Badge 
-                   variant={
-                    service?.status === 'approved' ? 'default' : 
-                    service?.status === 'disapproved' ? 'destructive' : 'secondary'
+                <Badge
+                  variant={
+                    service?.status === 'approved' ? 'default' :
+                      service?.status === 'disapproved' ? 'destructive' : 'secondary'
                   }
                   className={
                     service?.status === 'approved' ? 'bg-green-100 text-green-800' :
-                    service?.status === 'disapproved' ? 'bg-red-100 text-red-800' :
-                    'bg-yellow-100 text-yellow-800'
+                      service?.status === 'disapproved' ? 'bg-red-100 text-red-800' :
+                        'bg-yellow-100 text-yellow-800'
                   }
                 >
                   {service?.status || 'N/A'}
@@ -902,6 +962,21 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
                 {service?.updatedAt ? new Date(service.updatedAt).toLocaleDateString() : 'N/A'}
               </div>
             </div>
+            {service?.addOns && service.addOns.length > 0 && (
+              <div className="mt-4">
+                <span className="font-semibold block mb-2">Selected Add-ons:</span>
+                <div className="flex flex-wrap gap-2">
+                  {service.addOns.map((addonId: string) => {
+                    const addon = availableAddOns.find((a: any) => a._id === addonId);
+                    return addon ? (
+                      <Badge key={addonId} variant="secondary">
+                        {addon.name} (₹{addon.price})
+                      </Badge>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
             {service?.image && (
               <div className="mt-4">
                 <span className="font-semibold">Image:</span>
@@ -992,7 +1067,7 @@ export default function ServicesPage() {
     refetch,
   } = useGetVendorServicesQuery({ vendorId: user?._id }, { skip: !user?._id });
 
-  
+
   const services = data.services || [];
 
   console.log("Services Data on Services page : ", services)
@@ -1031,18 +1106,18 @@ export default function ServicesPage() {
   };
 
   const handleConfirmDelete = async () => {
-      try {
-        await deleteVendorServices({
-          vendorId: user?._id,
-          serviceId: selectedService?._id,
-       } ).unwrap();
-        refetch();
-      } catch (error) {
-        console.error("Failed to delete service", error);
-      }
+    try {
+      await deleteVendorServices({
+        vendorId: user?._id,
+        serviceId: selectedService?._id,
+      }).unwrap();
+      refetch();
+    } catch (error) {
+      console.error("Failed to delete service", error);
+    }
     dispatch(setDeleteModalOpen({ isOpen: false, selectedService: null }));
   };
-  
+
   const handleVisibilityToggle = async (service: any) => {
     try {
       const updatedService = { ...service, onlineBooking: !service.onlineBooking };
@@ -1243,16 +1318,16 @@ export default function ServicesPage() {
                       </TableCell>
                       <TableCell>{service.duration} mins</TableCell>
                       <TableCell>₹{service.price?.toFixed(2)}</TableCell>
-                       <TableCell>
+                      <TableCell>
                         <Badge
                           variant={
-                            service.status === 'approved' ? 'default' : 
-                            service.status === 'disapproved' ? 'destructive' : 'secondary'
+                            service.status === 'approved' ? 'default' :
+                              service.status === 'disapproved' ? 'destructive' : 'secondary'
                           }
                           className={
                             service.status === 'approved' ? 'bg-green-100 text-green-800' :
-                            service.status === 'disapproved' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
+                              service.status === 'disapproved' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
                           }
                         >
                           {service.status}
@@ -1265,10 +1340,10 @@ export default function ServicesPage() {
                         />
                       </TableCell>
                       <TableCell className="text-right">
-                         {service.status === 'disapproved' && (
-                            <Button variant="ghost" size="icon" onClick={() => handleOpenModal("edit", service)}>
-                                <span className="text-xs">Resubmit</span>
-                            </Button>
+                        {service.status === 'disapproved' && (
+                          <Button variant="ghost" size="icon" onClick={() => handleOpenModal("edit", service)}>
+                            <span className="text-xs">Resubmit</span>
+                          </Button>
                         )}
                         <Button variant="ghost" size="icon" onClick={() => handleOpenModal("view", service)}>
                           <Eye className="h-4 w-4" />

@@ -40,7 +40,7 @@ interface Step2MultiServiceProps {
     onNext: () => void;
 }
 
-export function Step2_MultiService({ 
+export function Step2_MultiService({
     serviceStaffAssignments,
     onUpdateAssignment,
     currentStep,
@@ -59,25 +59,25 @@ export function Step2_MultiService({
     useEffect(() => {
         if (serviceStaffAssignments.length > 0 && currentAssignmentIndex < serviceStaffAssignments.length) {
             const currentService = serviceStaffAssignments[currentAssignmentIndex].service;
-            
+
             // If no staff data, return empty array
             if (!staff || staff.length === 0) {
                 setFilteredStaff([]);
                 return;
             }
-            
+
             // If no service is selected, show all staff
             if (!currentService) {
                 setFilteredStaff(staff);
                 return;
             }
-            
+
             // If the service doesn't have a staff array, show all staff
             if (!currentService.staff || currentService.staff.length === 0) {
                 setFilteredStaff(staff);
                 return;
             }
-            
+
             // Filter staff based on the service's staff array
             // The staff array in the service can contain either staff IDs or staff names
             const serviceStaff = staff.filter((staffMember: StaffMember) => {
@@ -90,12 +90,12 @@ export function Step2_MultiService({
             });
             // Preserve selection state from previous assignments
             const updatedStaff = serviceStaff.map(staffMember => {
-                const assignment = serviceStaffAssignments.find(a => 
-                  a.service.id === currentService.id && a.staff?.id === staffMember.id
+                const assignment = serviceStaffAssignments.find(a =>
+                    a.service.id === currentService.id && a.staff?.id === staffMember.id
                 );
                 return {
-                  ...staffMember,
-                  selected: !!assignment
+                    ...staffMember,
+                    selected: !!assignment
                 };
             });
             setFilteredStaff(updatedStaff);
@@ -109,7 +109,7 @@ export function Step2_MultiService({
             const serviceId = serviceStaffAssignments[currentAssignmentIndex].service.id;
             // Ensure we're updating the correct assignment and not creating duplicates
             onUpdateAssignment(serviceId, staff);
-            
+
             // Update filteredStaff state to reflect the selection visually
             const selectedStaffId = staff ? staff.id : null;
             setFilteredStaff(prev => prev.map(member => ({
@@ -153,7 +153,7 @@ export function Step2_MultiService({
                     </div>
                     <p className="text-muted-foreground">Choose your preferred stylist for each service.</p>
                 </div>
-                
+
                 <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-4">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -178,7 +178,7 @@ export function Step2_MultiService({
                     </div>
                     <p className="text-muted-foreground">Choose your preferred stylist for each service.</p>
                 </div>
-                
+
                 <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-4">
                         <AlertCircle className="h-8 w-8 text-destructive" />
@@ -203,7 +203,7 @@ export function Step2_MultiService({
                     </div>
                     <p className="text-muted-foreground">Choose your preferred stylist for each service.</p>
                 </div>
-                
+
                 <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-4">
                         <AlertCircle className="h-8 w-8 text-destructive" />
@@ -232,17 +232,24 @@ export function Step2_MultiService({
 
             {/* Progress indicator */}
             <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-muted-foreground">
+                <div className="flex items-start justify-between mb-2">
+                    <span className="text-sm font-medium text-muted-foreground mt-0.5">
                         Service {currentAssignmentIndex + 1} of {serviceStaffAssignments.length}
                     </span>
-                    <span className="text-sm font-medium text-primary">
-                        {currentAssignment?.service?.name}
-                    </span>
+                    <div className="text-right">
+                        <span className="text-sm font-medium text-primary block">
+                            {currentAssignment?.service?.name}
+                        </span>
+                        {currentAssignment?.service?.selectedAddons && currentAssignment.service.selectedAddons.length > 0 && (
+                            <span className="text-xs text-muted-foreground block mt-0.5">
+                                + {currentAssignment.service.selectedAddons.map(a => a.name).join(', ')}
+                            </span>
+                        )}
+                    </div>
                 </div>
                 <div className="w-full bg-secondary rounded-full h-2">
-                    <div 
-                        className="bg-primary h-2 rounded-full transition-all duration-300" 
+                    <div
+                        className="bg-primary h-2 rounded-full transition-all duration-300"
                         style={{ width: `${((currentAssignmentIndex + 1) / serviceStaffAssignments.length) * 100}%` }}
                     ></div>
                 </div>
@@ -250,7 +257,7 @@ export function Step2_MultiService({
 
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
                 {/* Any Professional Card */}
-                <div 
+                <div
                     className={cn(
                         'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2',
                         !serviceStaffAssignments[currentAssignmentIndex]?.staff ? 'border-primary bg-primary/5 shadow-lg' : 'border-dashed border-border hover:border-primary/50 hover:bg-secondary/50'
@@ -270,50 +277,50 @@ export function Step2_MultiService({
                 </div>
                 {/* Staff Member Cards */}
                 {filteredStaff && filteredStaff.length > 0 ? filteredStaff.map((staffMember: StaffMember) => {
-                  // Check if this staff member is selected for the current service
-                  const isCurrentStaffSelected = serviceStaffAssignments[currentAssignmentIndex]?.staff?.id === staffMember.id;
-                  
-                  return (
-                    <div 
-                        key={staffMember.id}
-                        className={cn(
-                            'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2 overflow-hidden',
-                            isCurrentStaffSelected ? 'border-primary bg-primary/5 shadow-lg' : 'border-border/50 hover:border-primary/50 hover:bg-secondary/50'
-                        )}
-                        onClick={() => handleSelectStaff(staffMember)}
-                    >
-                        <div className="relative w-24 h-24 rounded-full mb-4 overflow-hidden shadow-md">
-                            <Image 
-                                src={staffMember.image || `https://picsum.photos/seed/${staffMember.name}/400/400`} 
-                                alt={staffMember.name} 
-                                width={120} 
-                                height={120} 
-                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                                data-ai-hint="professional staff portrait"
-                            />
+                    // Check if this staff member is selected for the current service
+                    const isCurrentStaffSelected = serviceStaffAssignments[currentAssignmentIndex]?.staff?.id === staffMember.id;
+
+                    return (
+                        <div
+                            key={staffMember.id}
+                            className={cn(
+                                'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2 overflow-hidden',
+                                isCurrentStaffSelected ? 'border-primary bg-primary/5 shadow-lg' : 'border-border/50 hover:border-primary/50 hover:bg-secondary/50'
+                            )}
+                            onClick={() => handleSelectStaff(staffMember)}
+                        >
+                            <div className="relative w-24 h-24 rounded-full mb-4 overflow-hidden shadow-md">
+                                <Image
+                                    src={staffMember.image || `https://picsum.photos/seed/${staffMember.name}/400/400`}
+                                    alt={staffMember.name}
+                                    width={120}
+                                    height={120}
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    data-ai-hint="professional staff portrait"
+                                />
+                            </div>
+                            <h3 className="font-semibold text-foreground text-sm">{staffMember.name}</h3>
+                            <p className="text-xs text-muted-foreground">{staffMember.role}</p>
+                            {staffMember.rating && (
+                                <div className="flex items-center gap-1 mt-1">
+                                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                    <span className="text-xs text-muted-foreground">{staffMember.rating}</span>
+                                </div>
+                            )}
+                            {staffMember.specialties && staffMember.specialties.length > 0 && (
+                                <div className="mt-1">
+                                    <p className="text-xs text-muted-foreground truncate">
+                                        {staffMember.specialties.slice(0, 2).join(', ')}
+                                    </p>
+                                </div>
+                            )}
+                            {isCurrentStaffSelected && (
+                                <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
+                                    <CheckCircle className="h-4 w-4" />
+                                </div>
+                            )}
                         </div>
-                        <h3 className="font-semibold text-foreground text-sm">{staffMember.name}</h3>
-                        <p className="text-xs text-muted-foreground">{staffMember.role}</p>
-                        {staffMember.rating && (
-                            <div className="flex items-center gap-1 mt-1">
-                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                <span className="text-xs text-muted-foreground">{staffMember.rating}</span>
-                            </div>
-                        )}
-                        {staffMember.specialties && staffMember.specialties.length > 0 && (
-                            <div className="mt-1">
-                                <p className="text-xs text-muted-foreground truncate">
-                                    {staffMember.specialties.slice(0, 2).join(', ')}
-                                </p>
-                            </div>
-                        )}
-                        {isCurrentStaffSelected && (
-                            <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
-                                <CheckCircle className="h-4 w-4" />
-                            </div>
-                        )}
-                    </div>
-                  );
+                    );
                 }) : (
                     <div className="col-span-full flex items-center justify-center py-12">
                         <div className="flex flex-col items-center gap-4">

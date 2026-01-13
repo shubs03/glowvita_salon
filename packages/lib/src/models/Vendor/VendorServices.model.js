@@ -125,16 +125,22 @@ const serviceSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    addOns: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "AddOn",
+      },
+    ],
   },
   { _id: true }
 );
 
 // Add a method to calculate service price with tax
-serviceSchema.methods.calculatePriceWithTax = function() {
+serviceSchema.methods.calculatePriceWithTax = function () {
   if (!this.tax || !this.tax.enabled) {
     return this.price;
   }
-  
+
   if (this.tax.type === "percentage") {
     return this.price + (this.price * this.tax.value) / 100;
   } else {
@@ -143,7 +149,7 @@ serviceSchema.methods.calculatePriceWithTax = function() {
 };
 
 // Add a method to calculate discount
-serviceSchema.methods.calculateDiscountedPrice = function() {
+serviceSchema.methods.calculateDiscountedPrice = function () {
   if (this.discountedPrice !== null && this.discountedPrice !== undefined) {
     return this.discountedPrice;
   }
@@ -234,11 +240,20 @@ vendorServicesSchema.statics.getServicesByVendor = async function (
     },
     { $unwind: { path: "$categoryDetails", preserveNullAndEmptyArrays: true } },
     {
-      $addFields: {
-        "services.categoryName": "$categoryDetails.name", // add category name
+      $lookup: {
+        from: "addons", // collection name in MongoDB (plural of AddOn)
+        localField: "services.addOns",
+        foreignField: "_id",
+        as: "addOnDetails",
       },
     },
-    { $project: { categoryDetails: 0 } }, // remove raw categoryDetails
+    {
+      $addFields: {
+        "services.categoryName": "$categoryDetails.name", // add category name
+        "services.addOnDetails": "$addOnDetails",
+      },
+    },
+    { $project: { categoryDetails: 0, addOnDetails: 0 } }, // remove raw details
     { $skip: skip },
     { $limit: limit },
     {
@@ -262,13 +277,13 @@ vendorServicesSchema.statics.getStaffForService = async function (
   serviceId
 ) {
   const vendorServices = await this.findOne({ vendor: vendorId });
-  
+
   if (!vendorServices) {
     return [];
   }
 
   const service = vendorServices.services.id(serviceId);
-  
+
   if (!service || !service.staff || service.staff.length === 0) {
     return [];
   }

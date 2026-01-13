@@ -62,8 +62,8 @@ const staffMembers: StaffMember[] = [
 ];
 
 const timeSlots = [
-  "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM", 
-  "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM", "02:00 PM", "02:30 PM", 
+  "09:00 AM", "09:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+  "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM", "02:00 PM", "02:30 PM",
   "03:00 PM", "03:30 PM", "04:00 PM", "04:30 PM", "05:00 PM"
 ];
 
@@ -116,15 +116,15 @@ export default function BookAppointmentPage() {
       case 2:
         return <StaffSelectionStep staffMembers={staffMembers} selectedStaff={selectedStaff} setSelectedStaff={setSelectedStaff} />;
       case 3:
-        return <DateTimeSelectionStep 
-          selectedDate={selectedDate} 
-          setSelectedDate={setSelectedDate} 
-          selectedTime={selectedTime} 
-          setSelectedTime={setSelectedTime} 
-          timeSlots={timeSlots} 
+        return <DateTimeSelectionStep
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          selectedTime={selectedTime}
+          setSelectedTime={setSelectedTime}
+          timeSlots={timeSlots}
         />;
       case 4:
-        return <ConfirmationStep 
+        return <ConfirmationStep
           salon={salonData}
           selectedServices={selectedServices}
           selectedStaff={selectedStaff}
@@ -156,20 +156,20 @@ export default function BookAppointmentPage() {
             <ChevronLeft className="h-5 w-5" />
             {step === 1 ? 'Back' : 'Back'}
           </Button>
-          
+
           <div className="font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
             GlowVita
           </div>
-          
+
           <Button variant="ghost" size="icon" onClick={() => router.back()}>
             <X className="h-5 w-5" />
           </Button>
         </div>
-        
+
         {/* Progress bar */}
         <div className="h-1.5 bg-muted">
-          <div 
-            className="h-full bg-primary transition-all duration-500 ease-in-out" 
+          <div
+            className="h-full bg-primary transition-all duration-500 ease-in-out"
             style={{ width: `${progressPercentage}%` }}
           />
         </div>
@@ -183,7 +183,7 @@ export default function BookAppointmentPage() {
               <div className="bg-card rounded-2xl shadow-lg border border-border/50 p-6">
                 {renderStepContent()}
               </div>
-              
+
               {/* Navigation Buttons */}
               <div className="flex justify-between mt-6">
                 {step > 1 && (
@@ -191,8 +191,8 @@ export default function BookAppointmentPage() {
                     Previous
                   </Button>
                 )}
-                <Button 
-                  onClick={goToNextStep} 
+                <Button
+                  onClick={goToNextStep}
                   className="ml-auto px-6 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
                   disabled={step === 1 && selectedServices.length === 0}
                 >
@@ -201,10 +201,10 @@ export default function BookAppointmentPage() {
                 </Button>
               </div>
             </div>
-            
+
             {/* Sidebar */}
             <div className="lg:col-span-1">
-              <BookingSummary 
+              <BookingSummary
                 salon={salonData}
                 selectedServices={selectedServices}
                 selectedStaff={selectedStaff}
@@ -223,14 +223,14 @@ export default function BookAppointmentPage() {
 }
 
 // Service Selection Step
-const ServiceSelectionStep = ({ 
-  services, 
-  selectedServices, 
-  toggleService 
-}: { 
-  services: Service[]; 
-  selectedServices: Service[]; 
-  toggleService: (service: Service) => void; 
+const ServiceSelectionStep = ({
+  services,
+  selectedServices,
+  toggleService
+}: {
+  services: Service[];
+  selectedServices: Service[];
+  toggleService: (service: Service) => void;
 }) => {
   return (
     <div>
@@ -238,27 +238,26 @@ const ServiceSelectionStep = ({
         <h1 className="text-3xl font-bold font-headline mb-2">Select Your Services</h1>
         <p className="text-muted-foreground">Choose one or more services you'd like to book</p>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {services.map(service => {
           const isSelected = selectedServices.some(s => s.id === service.id);
           return (
-            <Card 
-              key={service.id} 
-              className={`cursor-pointer transition-all duration-300 border-2 ${
-                isSelected 
-                  ? 'border-primary bg-primary/5 shadow-lg' 
+            <Card
+              key={service.id}
+              className={`cursor-pointer transition-all duration-300 border-2 ${isSelected
+                  ? 'border-primary bg-primary/5 shadow-lg'
                   : 'border-border hover:border-primary/50 hover:shadow-md'
-              }`}
+                }`}
               onClick={() => toggleService(service)}
             >
               <CardContent className="p-4">
                 <div className="flex items-start gap-4">
                   <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                    <Image 
-                      src={service.image} 
-                      alt={service.name} 
-                      fill 
+                    <Image
+                      src={service.image}
+                      alt={service.name}
+                      fill
                       className="object-cover"
                     />
                   </div>
@@ -283,14 +282,14 @@ const ServiceSelectionStep = ({
 };
 
 // Staff Selection Step
-const StaffSelectionStep = ({ 
-  staffMembers, 
-  selectedStaff, 
-  setSelectedStaff 
-}: { 
-  staffMembers: StaffMember[]; 
-  selectedStaff: StaffMember | null; 
-  setSelectedStaff: (staff: StaffMember | null) => void; 
+const StaffSelectionStep = ({
+  staffMembers,
+  selectedStaff,
+  setSelectedStaff
+}: {
+  staffMembers: StaffMember[];
+  selectedStaff: StaffMember | null;
+  setSelectedStaff: (staff: StaffMember | null) => void;
 }) => {
   return (
     <div>
@@ -298,15 +297,14 @@ const StaffSelectionStep = ({
         <h1 className="text-3xl font-bold font-headline mb-2">Select a Professional</h1>
         <p className="text-muted-foreground">Choose your preferred stylist or select any professional</p>
       </div>
-      
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Any Professional Option */}
-        <Card 
-          className={`cursor-pointer transition-all duration-300 border-2 ${
-            !selectedStaff 
-              ? 'border-primary bg-primary/5 shadow-lg' 
+        <Card
+          className={`cursor-pointer transition-all duration-300 border-2 ${!selectedStaff
+              ? 'border-primary bg-primary/5 shadow-lg'
               : 'border-border hover:border-primary/50 hover:shadow-md'
-          }`}
+            }`}
           onClick={() => setSelectedStaff(null)}
         >
           <CardContent className="p-6 text-center">
@@ -322,25 +320,24 @@ const StaffSelectionStep = ({
             )}
           </CardContent>
         </Card>
-        
+
         {/* Staff Members */}
         {staffMembers.map(staff => (
-          <Card 
-            key={staff.id} 
-            className={`cursor-pointer transition-all duration-300 border-2 ${
-              selectedStaff?.id === staff.id 
-                ? 'border-primary bg-primary/5 shadow-lg' 
+          <Card
+            key={staff.id}
+            className={`cursor-pointer transition-all duration-300 border-2 ${selectedStaff?.id === staff.id
+                ? 'border-primary bg-primary/5 shadow-lg'
                 : 'border-border hover:border-primary/50 hover:shadow-md'
-            }`}
+              }`}
             onClick={() => setSelectedStaff(staff)}
           >
             <CardContent className="p-6">
               <div className="flex flex-col items-center">
                 <div className="relative w-20 h-20 rounded-full overflow-hidden mb-4">
-                  <Image 
-                    src={staff.image} 
-                    alt={staff.name} 
-                    fill 
+                  <Image
+                    src={staff.image}
+                    alt={staff.name}
+                    fill
                     className="object-cover"
                   />
                 </div>
@@ -365,18 +362,18 @@ const StaffSelectionStep = ({
 };
 
 // Date & Time Selection Step
-const DateTimeSelectionStep = ({ 
-  selectedDate, 
-  setSelectedDate, 
-  selectedTime, 
-  setSelectedTime, 
-  timeSlots 
-}: { 
-  selectedDate: Date; 
-  setSelectedDate: (date: Date) => void; 
-  selectedTime: string | null; 
-  setSelectedTime: (time: string | null) => void; 
-  timeSlots: string[]; 
+const DateTimeSelectionStep = ({
+  selectedDate,
+  setSelectedDate,
+  selectedTime,
+  setSelectedTime,
+  timeSlots
+}: {
+  selectedDate: Date;
+  setSelectedDate: (date: Date) => void;
+  selectedTime: string | null;
+  setSelectedTime: (time: string | null) => void;
+  timeSlots: string[];
 }) => {
   // Generate next 30 days
   const dates = Array.from({ length: 30 }, (_, i) => {
@@ -391,7 +388,7 @@ const DateTimeSelectionStep = ({
         <h1 className="text-3xl font-bold font-headline mb-2">Select Date & Time</h1>
         <p className="text-muted-foreground">Choose a date and time slot that works for you</p>
       </div>
-      
+
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Calendar className="h-5 w-5 text-primary" />
@@ -403,13 +400,12 @@ const DateTimeSelectionStep = ({
               const isSelected = selectedDate.toDateString() === date.toDateString();
               const isToday = date.toDateString() === new Date().toDateString();
               return (
-                <Card 
-                  key={index} 
-                  className={`cursor-pointer transition-all duration-300 transform hover:scale-105 flex-shrink-0 ${
-                    isSelected 
-                      ? 'border-primary bg-primary/10 shadow-lg ring-2 ring-primary/30' 
+                <Card
+                  key={index}
+                  className={`cursor-pointer transition-all duration-300 transform hover:scale-105 flex-shrink-0 ${isSelected
+                      ? 'border-primary bg-primary/10 shadow-lg ring-2 ring-primary/30'
                       : 'border-border hover:border-primary/50 hover:shadow-md hover:bg-primary/5'
-                  } ${isToday ? 'ring-2 ring-accent' : ''}`}
+                    } ${isToday ? 'ring-2 ring-accent' : ''}`}
                   onClick={() => setSelectedDate(date)}
                 >
                   <CardContent className="p-2 text-center min-w-[70px] sm:min-w-[80px]">
@@ -430,7 +426,7 @@ const DateTimeSelectionStep = ({
           </div>
         </div>
       </div>
-      
+
       <div>
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Clock className="h-5 w-5 text-primary" />
@@ -441,11 +437,10 @@ const DateTimeSelectionStep = ({
             <Button
               key={time}
               variant={selectedTime === time ? 'default' : 'outline'}
-              className={`h-12 rounded-lg transition-all duration-200 transform hover:scale-105 ${
-                selectedTime === time 
-                  ? 'bg-primary hover:bg-primary/90 shadow-lg' 
+              className={`h-12 rounded-lg transition-all duration-200 transform hover:scale-105 ${selectedTime === time
+                  ? 'bg-primary hover:bg-primary/90 shadow-lg'
                   : 'hover:bg-primary/10 border-2 border-primary/30'
-              }`}
+                }`}
               onClick={() => setSelectedTime(time)}
             >
               <span className="text-sm font-medium">{time}</span>
@@ -458,7 +453,7 @@ const DateTimeSelectionStep = ({
 };
 
 // Confirmation Step
-const ConfirmationStep = ({ 
+const ConfirmationStep = ({
   salon,
   selectedServices,
   selectedStaff,
@@ -468,7 +463,7 @@ const ConfirmationStep = ({
   tax,
   finalTotal,
   onConfirm
-}: { 
+}: {
   salon: typeof salonData;
   selectedServices: typeof services;
   selectedStaff: typeof staffMembers[0] | null;
@@ -488,7 +483,7 @@ const ConfirmationStep = ({
         <h1 className="text-3xl font-bold font-headline mb-2">Review Your Booking</h1>
         <p className="text-muted-foreground">Please review your appointment details before confirming</p>
       </div>
-      
+
       <div className="space-y-6">
         {/* Salon Info */}
         <Card>
@@ -501,10 +496,10 @@ const ConfirmationStep = ({
           <CardContent>
             <div className="flex items-start gap-4">
               <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                <Image 
-                  src={salon.image} 
-                  alt={salon.name} 
-                  fill 
+                <Image
+                  src={salon.image}
+                  alt={salon.name}
+                  fill
                   className="object-cover"
                 />
               </div>
@@ -519,7 +514,7 @@ const ConfirmationStep = ({
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Services */}
         <Card>
           <CardHeader className="pb-3">
@@ -540,7 +535,7 @@ const ConfirmationStep = ({
             ))}
           </CardContent>
         </Card>
-        
+
         {/* Appointment Details */}
         <Card>
           <CardHeader className="pb-3">
@@ -564,7 +559,7 @@ const ConfirmationStep = ({
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Payment Summary */}
         <Card>
           <CardHeader className="pb-3">
@@ -590,10 +585,10 @@ const ConfirmationStep = ({
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="mt-8">
-        <Button 
-          onClick={onConfirm} 
+        <Button
+          onClick={onConfirm}
           className="w-full py-6 text-lg bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
         >
           Confirm & Pay
@@ -604,7 +599,7 @@ const ConfirmationStep = ({
 };
 
 // Booking Summary Sidebar
-const BookingSummary = ({ 
+const BookingSummary = ({
   salon,
   selectedServices,
   selectedStaff,
@@ -613,7 +608,7 @@ const BookingSummary = ({
   totalPrice,
   tax,
   finalTotal
-}: { 
+}: {
   salon: typeof salonData;
   selectedServices: typeof services;
   selectedStaff: typeof staffMembers[0] | null;
@@ -635,10 +630,10 @@ const BookingSummary = ({
         {/* Salon Info */}
         <div className="flex items-start gap-3">
           <div className="relative w-12 h-12 rounded-md overflow-hidden flex-shrink-0">
-            <Image 
-              src={salon.image} 
-              alt={salon.name} 
-              fill 
+            <Image
+              src={salon.image}
+              alt={salon.name}
+              fill
               className="object-cover"
             />
           </div>
@@ -650,9 +645,9 @@ const BookingSummary = ({
             </div>
           </div>
         </div>
-        
+
         <Separator />
-        
+
         {/* Services Summary */}
         <div>
           <h4 className="font-semibold text-sm mb-2">Services</h4>
@@ -669,9 +664,9 @@ const BookingSummary = ({
             <p className="text-sm text-muted-foreground">No services selected</p>
           )}
         </div>
-        
+
         <Separator />
-        
+
         {/* Appointment Details */}
         <div>
           <h4 className="font-semibold text-sm mb-2">Appointment</h4>
@@ -690,9 +685,9 @@ const BookingSummary = ({
             </div>
           </div>
         </div>
-        
+
         <Separator />
-        
+
         {/* Payment Summary */}
         <div>
           <h4 className="font-semibold text-sm mb-2">Payment</h4>
@@ -719,7 +714,7 @@ const BookingSummary = ({
 // Booking Confirmation Screen
 const BookingConfirmationScreen = ({ salon }: { salon: typeof salonData }) => {
   const router = useRouter();
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-secondary/5 flex items-center justify-center p-4">
       <Card className="max-w-md w-full shadow-2xl border-border/50">
@@ -727,12 +722,12 @@ const BookingConfirmationScreen = ({ salon }: { salon: typeof salonData }) => {
           <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
             <CheckCircle className="h-12 w-12 text-green-500" />
           </div>
-          
+
           <h1 className="text-3xl font-bold font-headline mb-2">Booking Confirmed!</h1>
           <p className="text-muted-foreground mb-6">
             Your appointment at {salon.name} has been successfully booked.
           </p>
-          
+
           <div className="bg-secondary/50 rounded-xl p-4 mb-6 text-left">
             <h3 className="font-semibold mb-2">Next Steps</h3>
             <ul className="text-sm space-y-2">
@@ -756,17 +751,17 @@ const BookingConfirmationScreen = ({ salon }: { salon: typeof salonData }) => {
               </li>
             </ul>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button 
-              onClick={() => router.push('/')} 
-              variant="outline" 
+            <Button
+              onClick={() => router.push('/')}
+              variant="outline"
               className="flex-1"
             >
               Back to Home
             </Button>
-            <Button 
-              onClick={() => router.push('/my-appointments')} 
+            <Button
+              onClick={() => router.push('/my-appointments')}
               className="flex-1 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
             >
               View Booking
