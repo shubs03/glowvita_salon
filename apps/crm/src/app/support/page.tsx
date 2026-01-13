@@ -14,10 +14,10 @@ const SupportPage = () => {
       <main className="flex-grow">
         <IntroductionSection />
         <StatsSection />
-        <SupportApproach />
         <ContactForm />
         <PurposeVisionSection />
         <SupportFeaturesSection />
+        <SupportApproach />
         <CallToActionSection />
       </main>
     </div>

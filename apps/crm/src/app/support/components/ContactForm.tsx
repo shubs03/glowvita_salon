@@ -183,12 +183,28 @@ const ContactForm = () => {
             </div>
             
             <div className="space-y-3">
-              <a href="/support/faq" className="block text-primary hover:underline font-medium">
+              <button 
+                type="button" 
+                onClick={() => {
+                  const element = document.getElementById('faq-section');
+                  if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                className="block text-primary hover:underline font-medium text-left bg-transparent border-none p-0 cursor-pointer"
+              >
                 View Frequently Asked Questions
-              </a>
-              <a href="/support/tutorials" className="block text-primary hover:underline font-medium">
+              </button>
+              <button 
+                type="button" 
+                onClick={() => {
+                  // Navigate to the home page and scroll to the overview section
+                  window.location.href = '/#overview-preview';
+                }}
+                className="block text-primary hover:underline font-medium text-left bg-transparent border-none p-0 cursor-pointer"
+              >
                 Watch Video Tutorials
-              </a>
+              </button>
             </div>
           </div>
 

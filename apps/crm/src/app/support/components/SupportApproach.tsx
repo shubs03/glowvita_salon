@@ -9,38 +9,38 @@ const SupportApproach = () => {
   const faqs = [
     {
       icon: CircleHelp,
-      title: 'How do I reset my password?',
-      description: 'To reset your password, go to the login page and click on "Forgot Password". Enter your email address and follow the instructions sent to your inbox.',
+      title: 'How do I schedule appointments for my clients?',
+      description: 'To schedule appointments, go to the Calendar section from your dashboard. You can book appointments by selecting a date and time slot, choosing the service and staff member, and adding client details. You can also allow clients to book online through the customer portal.',
     },
     {
       icon: Info,
-      title: 'Can I customize my dashboard?',
-      description: 'Yes, you can customize your dashboard by clicking on the settings icon in the top right corner. From there, you can select which widgets to display and rearrange them according to your preference.',
+      title: 'Can I view and manage my client profiles?',
+      description: 'Yes, navigate to the Clients section to view all your customer profiles. You can see their appointment history, contact information, preferences, and purchase history. You can also add notes and special requirements for personalized service.',
     },
     {
       icon: FileQuestion,
-      title: 'How do I add new staff members?',
-      description: 'To add new staff members, navigate to the Staff Management section from your dashboard. Click on "Add New Staff", fill in the required information, and assign appropriate permissions.',
+      title: 'How do I manage my staff schedules?',
+      description: 'Go to the Staff Management section to view and manage your team\'s schedules. You can set working hours, assign services to staff members, manage time-offs, and see who is available for upcoming appointments.',
     },
     {
       icon: CircleHelp,
-      title: 'What payment methods are supported?',
-      description: 'GlowVita CRM supports multiple payment methods including credit cards, debit cards, PayPal, and bank transfers. You can set your preferred payment gateways in the Settings section.',
+      title: 'How can I track my business performance?',
+      description: 'Access the Analytics Dashboard to view detailed reports on revenue, appointments, popular services, client retention, and staff performance. You can filter data by date range and export reports for further analysis.',
     },
     {
       icon: Info,
-      title: 'How do I backup my data?',
-      description: 'Your data is automatically backed up daily. However, you can also manually export your data by going to Settings > Data Export. Select the data types you want to export and choose your preferred format.',
+      title: 'How do I manage my service catalog?',
+      description: 'Navigate to the Services section to add, edit, or remove services from your catalog. You can set prices, durations, staff assignments, and service categories to organize your offerings effectively.',
     },
     {
       icon: FileQuestion,
-      title: 'Can I integrate with third-party tools?',
-      description: 'Yes, GlowVita CRM offers integrations with popular tools like QuickBooks, Google Calendar, and Mailchimp. Visit the Integrations section in your dashboard to explore available options.',
+      title: 'How do I handle customer inquiries about products?',
+      description: 'Go to the Product Questions section to manage customer inquiries about your products. You can view unanswered questions, provide detailed answers, and choose whether to publish the Q&A on the product page for other customers.',
     },
   ];
 
   return (
-    <section className="py-10 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section id="faq-section" className="py-10 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
       {/* Section Header */}
       <div className="mb-12">
         <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4 mx-auto">

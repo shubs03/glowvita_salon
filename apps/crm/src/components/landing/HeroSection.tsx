@@ -3,6 +3,7 @@ import {
   Scissors,
   Sparkles,
 } from "lucide-react";
+import glowvita_crm from "../../../public/images/glowvita-crm.png";
 
 const HeroSection = () => {
   return (
@@ -50,10 +51,8 @@ const HeroSection = () => {
         <div className="lg:w-1/2 flex justify-center items-center">
           <div className="relative rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20 max-w-full">
             <img 
-              src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&auto=format&fit=crop" 
-              alt="GlowVita CRM Dashboard"
-              className="w-full h-auto max-h-[500px] object-cover"
-              style={{minHeight: "400px"}}
+              src={glowvita_crm.src} alt="GlowVita CRM Dashboard" className="w-full h-auto max-h-[500px] object-contain"
+              style={{ minHeight: "320px" }}
             />
             <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-black/10"></div>
           </div>

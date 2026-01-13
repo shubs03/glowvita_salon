@@ -37,7 +37,7 @@ import {
   X,
 } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import HeroSection from "@/components/landing/HeroSection";
@@ -55,6 +55,17 @@ import OverviewPreview from "@/components/landing/OverviewPreview";
 import CTACRM from "@/components/landing/CTACRM";
 
 export default function CrmHomePage() {
+  useEffect(() => {
+    // Handle smooth scrolling when page loads with hash
+    if (window.location.hash) {
+      const hash = window.location.hash.substring(1); // Remove # symbol
+      const element = document.getElementById(hash);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, []);
+
   return (
     <div className="flex flex-col min-h-screen text-foreground">
       <main className="flex-grow">
