@@ -1,44 +1,35 @@
 'use client';
 
 import { useCrmAuth } from '@/hooks/useCrmAuth';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import VendorReports from '@/components/reports/vendor/VendorReports';
+import SupplierReports from '@/components/reports/supplier/SupplierReports';
+import { Skeleton } from "@repo/ui/skeleton";
 
-export default function ReportsRedirectPage() {
+export default function ReportsPage() {
   const { role, isLoading } = useCrmAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isLoading) {
-      // Redirect to the appropriate reports page based on user role
-      if (role === 'vendor' || role === 'staff') {
-        router.push('/reports/vendor');
-      } else if (role === 'supplier') {
-        router.push('/reports/supplier');
-      } else {
-        // If user doesn't have a valid role, redirect to dashboard
-        router.push('/dashboard');
-      }
-    }
-  }, [role, isLoading, router]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Loading...</h1>
-          <p>Please wait while we determine your role.</p>
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-96 mt-2" />
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full" />
+          ))}
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold mb-4">Redirecting to Reports...</h1>
-        <p>Based on your role, you'll be redirected to the appropriate reports page.</p>
-      </div>
-    </div>
-  );
+  if (role === 'supplier') {
+    return <SupplierReports />;
+  }
+
+  // Default to vendor reports for vendor, staff, owner, and admin
+  return <VendorReports />;
 }

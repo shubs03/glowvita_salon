@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { 
-  StatCard, 
-  SalesChart, 
-  ClientFeedback, 
+import {
+  StatCard,
+  SalesChart,
+  ClientFeedback,
   TopServicesChart,
   TopSellingProductsChart,
   DynamicDateFilter
@@ -55,9 +55,9 @@ interface SupplierDashboardProps {
   startDate: string;
   endDate: string;
   onFilterChange: (
-    newFilterType: 'preset' | 'custom', 
-    newPresetPeriod?: 'day' | 'month' | 'year' | 'all', 
-    newStartDate?: string, 
+    newFilterType: 'preset' | 'custom',
+    newPresetPeriod?: 'day' | 'month' | 'year' | 'all',
+    newStartDate?: string,
     newEndDate?: string
   ) => void;
 }
@@ -97,7 +97,7 @@ export default function SupplierDashboard({
             <span>Loading...</span>
           </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-7 mb-6">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
           {[...Array(7)].map((_, index) => (
             <div key={index} className="h-32 bg-muted rounded-lg animate-pulse"></div>
           ))}
@@ -129,9 +129,9 @@ export default function SupplierDashboard({
   }
 
   // Check if we have metrics but all values are zero
-  const hasNoData = metrics && 
-    metrics.totalRevenue === 0 && 
-    metrics.totalOrders === 0 && 
+  const hasNoData = metrics &&
+    metrics.totalRevenue === 0 &&
+    metrics.totalOrders === 0 &&
     metrics.totalProducts === 0 &&
     metrics.pendingOrders === 0 &&
     metrics.shippedOrders === 0 &&
@@ -143,19 +143,19 @@ export default function SupplierDashboard({
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Supplier Dashboard</h1>
         <div className="flex flex-col gap-4">
           {/* Dynamic Date Filter Component */}
-          <DynamicDateFilter 
+          <DynamicDateFilter
             filterType={filterType}
             presetPeriod={presetPeriod}
             startDate={startDate}
             endDate={endDate}
             onFilterChange={onFilterChange}
           />
-          
+
         </div>
       </div>
-      
+
       {/* Stats Cards - Specific to Supplier Dashboard */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-8 mb-6">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
         <StatCard
           title="Total Revenue"
           value={metrics ? formatCurrency(metrics.totalRevenue) : '₹0'}
@@ -239,20 +239,20 @@ export default function SupplierDashboard({
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <SalesChart 
+        <SalesChart
           filterType={filterType}
           presetPeriod={presetPeriod}
           startDate={startDate}
           endDate={endDate}
         />
-        <TopSellingProductsChart 
+        <TopSellingProductsChart
           filterType={filterType}
           presetPeriod={presetPeriod}
           startDate={startDate}
           endDate={endDate}
         />
       </div>
-      
+
       {/* Feedback Section */}
       <div className="lg:col-span-2">
         <ClientFeedback />
