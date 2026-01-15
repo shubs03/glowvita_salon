@@ -28,7 +28,7 @@ async function fetchTaxFeeSettings() {
  * @returns {Object} - Breakdown of all calculations
  */
 export async function calculateBookingAmount(
-  services, 
+  services,
   offer = null,
   taxFeeSettings = null
 ) {
@@ -39,13 +39,13 @@ export async function calculateBookingAmount(
       if (TaxFeeSettings && typeof TaxFeeSettings.getLatestSettings === 'function') {
         taxFeeSettings = await TaxFeeSettings.getLatestSettings();
       }
-      
+
       // If that didn't work, try to fetch from public API (browser-side)
       if (!taxFeeSettings) {
         taxFeeSettings = await fetchTaxFeeSettings();
       }
     }
-    
+
     // If still no tax fee settings, use defaults with fees enabled
     if (!taxFeeSettings) {
       taxFeeSettings = {
@@ -57,16 +57,22 @@ export async function calculateBookingAmount(
         serviceTaxEnabled: true
       };
     }
-    
+
     // Calculate subtotal using discounted price if available, otherwise regular price
     const subtotal = services.reduce((sum, service) => {
       // Use discounted price if available, otherwise regular price
-      const price = service.discountedPrice !== null && service.discountedPrice !== undefined ? 
-        parseFloat(service.discountedPrice) : 
+      const price = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+        parseFloat(service.discountedPrice) :
         parseFloat(service.price || 0);
-      return sum + price;
+
+      // Add price of selected add-ons
+      const addOnsPrice = (service.selectedAddons || []).reduce((acc, addon) => {
+        return acc + parseFloat(addon.price || 0);
+      }, 0);
+
+      return sum + price + addOnsPrice;
     }, 0);
-    
+
     // Calculate discount amount from offer (applied only to subtotal, not to platform fees or taxes)
     let discountAmount = 0;
     // Handle both raw offer data and offer objects with methods
@@ -92,11 +98,11 @@ export async function calculateBookingAmount(
         }
       }
     }
-    
+
     // Calculate amount after discount (this is what platform fee and GST will be calculated on)
     const amountAfterDiscount = subtotal - discountAmount;
     console.log('Amount after discount:', amountAfterDiscount);
-    
+
     // Calculate platform fee (calculated on amount after discount)
     let platformFee = 0;
     if (taxFeeSettings && taxFeeSettings.platformFeeEnabled) {
@@ -107,7 +113,7 @@ export async function calculateBookingAmount(
       }
       console.log('Calculated platform fee:', platformFee);
     }
-    
+
     // Calculate GST (calculated on amount after discount + platform fee)
     let serviceTax = 0; // This is GST
     if (taxFeeSettings && taxFeeSettings.serviceTaxEnabled) {
@@ -120,14 +126,14 @@ export async function calculateBookingAmount(
       }
       console.log('Calculated GST:', serviceTax);
     }
-    
+
     // Calculate vendor-specific taxes for each service
     let vendorServiceTaxTotal = 0;
     for (const service of services) {
       if (service.tax && service.tax.enabled) {
         if (service.tax.type === 'percentage') {
-          const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ? 
-            parseFloat(service.discountedPrice) : 
+          const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+            parseFloat(service.discountedPrice) :
             parseFloat(service.price || 0);
           vendorServiceTaxTotal += (servicePrice * service.tax.value) / 100;
         } else {
@@ -136,13 +142,13 @@ export async function calculateBookingAmount(
       }
     }
     console.log('Calculated vendor service tax:', vendorServiceTaxTotal);
-    
+
     // Total tax is the sum of GST and vendor service taxes
     const totalTax = serviceTax + vendorServiceTaxTotal;
-    
+
     // Calculate final total
     const finalTotal = amountAfterDiscount + platformFee + totalTax;
-    
+
     console.log('Final calculation breakdown:', {
       subtotal,
       discountAmount,
@@ -153,7 +159,7 @@ export async function calculateBookingAmount(
       totalTax,
       finalTotal
     });
-    
+
     return {
       subtotal: parseFloat(subtotal.toFixed(2)),
       discountAmount: parseFloat(discountAmount.toFixed(2)),
@@ -169,12 +175,12 @@ export async function calculateBookingAmount(
     console.error('Error calculating booking amount:', error);
     // Return default values if calculation fails
     const subtotal = services.reduce((sum, service) => {
-      const price = service.discountedPrice !== null && service.discountedPrice !== undefined ? 
-        parseFloat(service.discountedPrice) : 
+      const price = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+        parseFloat(service.discountedPrice) :
         parseFloat(service.price || 0);
       return sum + price;
     }, 0);
-    
+
     return {
       subtotal: parseFloat(subtotal.toFixed(2)),
       discountAmount: 0,
@@ -198,12 +204,12 @@ export function calculateServicePriceWithTax(service) {
   if (service.calculatePriceWithTax) {
     return service.calculatePriceWithTax();
   }
-  
+
   // Use discounted price if available, otherwise regular price
-  const price = service.discountedPrice !== null && service.discountedPrice !== undefined ? 
-    parseFloat(service.discountedPrice) : 
+  const price = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+    parseFloat(service.discountedPrice) :
     parseFloat(service.price || 0);
-  
+
   // Check if service has its own tax configuration
   if (service.tax && service.tax.enabled) {
     if (service.tax.type === "percentage") {
@@ -212,7 +218,7 @@ export function calculateServicePriceWithTax(service) {
       return price + (service.tax.value || 0);
     }
   }
-  
+
   // No tax applicable
   return price;
 }
@@ -226,19 +232,19 @@ export function calculateServicePriceWithTax(service) {
  */
 export async function validateOfferCode(offerCode, services = [], vendorId = null) {
   if (!offerCode) return null;
-  
+
   try {
     // Check if models are available (server-side only)
     if (!AdminOfferModel || !CRMOfferModel) {
       console.warn('Offer models not available in browser environment');
       return null;
     }
-    
+
     // First, check for admin-level offers
-    let offer = await AdminOfferModel.findOne({ 
-      code: offerCode.toUpperCase().trim() 
+    let offer = await AdminOfferModel.findOne({
+      code: offerCode.toUpperCase().trim()
     }).lean();
-    
+
     if (offer) {
       // Convert to Mongoose document-like object with methods
       const offerDoc = new AdminOfferModel(offer);
@@ -246,15 +252,15 @@ export async function validateOfferCode(offerCode, services = [], vendorId = nul
         return offerDoc;
       }
     }
-    
+
     // If no valid admin offer found, check for vendor-specific offers
     if (vendorId) {
-      offer = await CRMOfferModel.findOne({ 
+      offer = await CRMOfferModel.findOne({
         code: offerCode.toUpperCase().trim(),
         businessType: 'vendor',
         businessId: vendorId
       }).lean();
-      
+
       if (offer) {
         // Convert to Mongoose document-like object with methods
         const offerDoc = new CRMOfferModel(offer);
@@ -272,7 +278,7 @@ export async function validateOfferCode(offerCode, services = [], vendorId = nul
         }
       }
     }
-    
+
     return null;
   } catch (error) {
     console.error('Error validating offer code:', error);

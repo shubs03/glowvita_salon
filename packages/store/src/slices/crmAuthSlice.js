@@ -70,36 +70,43 @@ const crmAuthSlice = createSlice({
     },
     updateUser: (state, action) => {
       const incomingUser = action.payload;
-      const isCurrentlyExpired = selectIsSubscriptionExpired({ crmAuth: state });
-
-      // If the subscription is currently considered expired (by status or date)...
-      if (isCurrentlyExpired) {
-        // ...only update the user if the incoming data represents a valid, active subscription (a renewal).
-        const isIncomingSubscriptionActive = 
-          incomingUser?.subscription?.status?.toLowerCase() !== 'expired' &&
-          (incomingUser?.subscription?.endDate ? new Date(incomingUser.subscription.endDate) > new Date() : false);
-
-        if (isIncomingSubscriptionActive) {
-          state.user = incomingUser;
-        } else {
-          // Do nothing, preserving the 'expired' status against stale data.
-          // This is the key to preventing the race condition.
+      
+      // Update the user with incoming data, always prioritizing fresh data from the server
+      if (incomingUser?.subscription) {
+        // Always update with the incoming subscription data from the server
+        // The server should provide the most accurate subscription status
+        state.user = incomingUser;
+        
+        // Update localStorage with the fresh data
+        if (typeof window !== 'undefined') {
+          try {
+            const persistedState = JSON.parse(localStorage.getItem('crmAuthState'));
+            if (persistedState) {
+              const updatedState = { ...persistedState, user: state.user };
+              localStorage.setItem('crmAuthState', JSON.stringify(updatedState));
+            }
+          } catch (e) {
+            console.error("Could not update user in localStorage", e);
+          }
         }
       } else {
-        // If not currently expired, always accept the incoming user data.
-        state.user = incomingUser;
-      }
-
-      // Sync the final, correct state to localStorage
-      if (typeof window !== 'undefined') {
-        try {
-          const persistedState = JSON.parse(localStorage.getItem('crmAuthState'));
-          if (persistedState) {
-            const updatedState = { ...persistedState, user: state.user };
-            localStorage.setItem('crmAuthState', JSON.stringify(updatedState));
+        // No subscription data in incoming user, just update other fields
+        state.user = {
+          ...state.user,
+          ...incomingUser
+        };
+        
+        // Sync to localStorage
+        if (typeof window !== 'undefined') {
+          try {
+            const persistedState = JSON.parse(localStorage.getItem('crmAuthState'));
+            if (persistedState) {
+              const updatedState = { ...persistedState, user: state.user };
+              localStorage.setItem('crmAuthState', JSON.stringify(updatedState));
+            }
+          } catch (e) {
+            console.error("Could not update user in localStorage", e);
           }
-        } catch (e) {
-          console.error("Could not update user in localStorage", e);
         }
       }
     },

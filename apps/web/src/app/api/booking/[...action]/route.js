@@ -302,7 +302,7 @@ async function handleServiceDiscovery(searchParams) {
   // Find the vendor services document with optimized query
   const vendorServices = await VendorServicesModel.findOne({
     vendor: vendorId
-  }).select('services').lean().exec();
+  }).select('services').populate('services.addOns').lean().exec();
 
   if (!vendorServices || !vendorServices.services || vendorServices.services.length === 0) {
     return Response.json({
@@ -352,6 +352,7 @@ async function handleServiceDiscovery(searchParams) {
       homeService: service.homeService || { available: false, charges: null },
       weddingService: service.weddingService || { available: false, charges: null },
       onlineBooking: service.onlineBooking !== false, // Default to true if not explicitly false
+      addOns: service.addOns || [],
       isAddon: service.category?.toLowerCase().includes('addon') || false
     };
   });
@@ -702,6 +703,7 @@ async function handleQuoteRequest(body) {
     customerLocation,
     isHomeService = false,
     isWeddingService = false,
+    selectedAddOns = [], // Array of add-on IDs
     bufferBefore = 0,
     bufferAfter = 0
   } = body;
@@ -774,11 +776,29 @@ async function handleQuoteRequest(body) {
     // Calculate total price and duration
     let totalPrice = 0;
     let totalDuration = 0;
+    let selectedAddOnDetails = [];
 
     services.forEach(service => {
       totalPrice += service.price;
       totalDuration += service.duration;
     });
+
+    // Handle Add-ons
+    if (selectedAddOns.length > 0) {
+      const AddOnModel = (await import("@repo/lib/models/Vendor/AddOn.model")).default;
+      const addOns = await AddOnModel.find({ _id: { $in: selectedAddOns } }).lean();
+
+      addOns.forEach(addOn => {
+        totalPrice += addOn.price;
+        totalDuration += addOn.duration;
+        selectedAddOnDetails.push({
+          addOnId: addOn._id,
+          name: addOn.name,
+          price: addOn.price,
+          duration: addOn.duration
+        });
+      });
+    }
 
     slots = await generateAnyStaffSlots({
       vendorId,
@@ -800,7 +820,8 @@ async function handleQuoteRequest(body) {
       })),
       totalPrice,
       totalDuration,
-      isHomeService
+      isHomeService,
+      selectedAddOns: selectedAddOnDetails
     };
   }
 
@@ -819,6 +840,8 @@ async function handleQuoteRequest(body) {
  */
 async function handleSlotLock(body) {
   try {
+    console.log('handleSlotLock body:', body);
+
     const {
       vendorId,
       staffId,
@@ -837,9 +860,18 @@ async function handleSlotLock(body) {
       packageId,
       duration,
       amount,
+      addOnsAmount = 0,
       totalAmount,
-      finalAmount
+      finalAmount,
+      platformFee = 0,
+      serviceTax = 0,
+      taxRate = 0,
+      addOns = [],
+      selectedAddOns
     } = body;
+
+    const effectiveAddOns = addOns && addOns.length > 0 ? addOns : selectedAddOns || [];
+    console.log('Effective AddOns:', effectiveAddOns);
 
     // SUPPORT BOTH FIELD NAMES: If location is missing but homeServiceLocation exists, use it
     const actualLocation = location || homeServiceLocation;
@@ -848,7 +880,6 @@ async function handleSlotLock(body) {
     console.log('Using location data:', actualLocation);
 
     // FIX: Force isHomeService to true if we have a location
-    // This handles cases where the frontend might send location but false flag, or legacy calls
     const effectiveIsHomeService = isHomeService || !!actualLocation;
     console.log('Effective isHomeService:', effectiveIsHomeService, '(Original:', isHomeService, ', Has Location:', !!actualLocation, ')');
 
@@ -869,25 +900,144 @@ async function handleSlotLock(body) {
       return Response.json(errorResponse, { status: 400 });
     }
 
-    // Prepare lock data - only include location if it exists
+    // Prepare lock data, ensuring it matches the Appointment schema structure
+    // Use serviceItems from request body if provided (for multi-service bookings)
+    // Otherwise, create a single-service array for backward compatibility
+    let serviceItems;
+    if (body.serviceItems && Array.isArray(body.serviceItems) && body.serviceItems.length > 0) {
+      // Multi-service booking - use the serviceItems from frontend
+      console.log('Using serviceItems from request body (multi-service):', body.serviceItems.length, 'services');
+      serviceItems = body.serviceItems;
+    } else {
+      // Single service booking - create serviceItems array with the primary service
+      console.log('Creating serviceItems for single service');
+      serviceItems = [{
+        service: serviceId,
+        serviceName: serviceName || 'Service',
+        staff: staffId,
+        staffName: staffName || 'Any Professional',
+        startTime,
+        endTime,
+        duration,
+        amount: amount || 0,
+        addOns: effectiveAddOns
+      }];
+    }
+
+    console.log('Constructed serviceItems:', JSON.stringify(serviceItems, null, 2));
+
+    // Determine if this is a multi-service booking
+    const isMultiService = body.isMultiService || (serviceItems && serviceItems.length > 1);
+    console.log('isMultiService:', isMultiService, '(from body:', body.isMultiService, ', serviceItems count:', serviceItems?.length, ')');
+
+    // For multi-service bookings, recalculate sequential start/end times
+    if (isMultiService && serviceItems && serviceItems.length > 1) {
+      let currentStartTime = startTime;
+
+      serviceItems = serviceItems.map((item, index) => {
+        // Calculate duration including add-ons for this service
+        let serviceDuration = item.duration || 0;
+        if (item.addOns && Array.isArray(item.addOns)) {
+          const addOnsDuration = item.addOns.reduce((sum, addon) => sum + (addon.duration || 0), 0);
+          serviceDuration += addOnsDuration;
+        }
+
+        // Calculate end time for this service
+        const [hours, minutes] = currentStartTime.split(':').map(Number);
+        const totalMinutes = hours * 60 + minutes + serviceDuration;
+        const endHours = Math.floor(totalMinutes / 60) % 24;
+        const endMinutes = totalMinutes % 60;
+        const serviceEndTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+
+        const updatedItem = {
+          ...item,
+          startTime: currentStartTime,
+          endTime: serviceEndTime
+        };
+
+        // Next service starts when this one ends
+        currentStartTime = serviceEndTime;
+
+        console.log(`Service ${index + 1} (${item.serviceName}): ${updatedItem.startTime} - ${updatedItem.endTime} (${serviceDuration}min)`);
+
+        return updatedItem;
+      });
+
+      console.log('Sequential times calculated for multi-service booking');
+    }
+
+
+    // Calculate total duration and end time for multi-service bookings
+    let totalDuration = duration;
+    let calculatedEndTime = endTime;
+    let totalAddOnsAmount = addOnsAmount || 0;
+
+    if (serviceItems && serviceItems.length > 0) {
+      // Calculate total duration from all services and their add-ons
+      totalDuration = serviceItems.reduce((sum, item) => {
+        let itemDuration = item.duration || 0;
+        // Add duration of add-ons for this service
+        if (item.addOns && Array.isArray(item.addOns)) {
+          const addOnsDuration = item.addOns.reduce((addonSum, addon) => addonSum + (addon.duration || 0), 0);
+          itemDuration += addOnsDuration;
+        }
+        return sum + itemDuration;
+      }, 0);
+
+      // Calculate total add-ons amount from all services
+      totalAddOnsAmount = serviceItems.reduce((sum, item) => {
+        if (item.addOns && Array.isArray(item.addOns)) {
+          const itemAddOnsAmount = item.addOns.reduce((addonSum, addon) => addonSum + (addon.price || 0), 0);
+          return sum + itemAddOnsAmount;
+        }
+        return sum;
+      }, 0);
+
+      // Calculate end time based on total duration
+      const [hours, minutes] = startTime.split(':').map(Number);
+      const totalMinutes = hours * 60 + minutes + totalDuration;
+      const endHours = Math.floor(totalMinutes / 60) % 24;
+      const endMinutes = totalMinutes % 60;
+      calculatedEndTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+
+      console.log('Duration calculation:', {
+        totalDuration,
+        calculatedEndTime,
+        totalAddOnsAmount,
+        servicesCount: serviceItems.length,
+        isMultiService
+      });
+    }
+
     const lockData = {
       vendorId,
       staffId,
-      serviceId,
-      serviceName: serviceName || 'Service',
+      serviceId, // Keep for top-level reference if needed by other logic
       date: appointmentDate,
       startTime,
-      endTime,
+      endTime: calculatedEndTime, // Use calculated end time for multi-service
+      duration: totalDuration, // Use total duration for multi-service
       clientId: effectiveClientId,
       clientName: effectiveClientName,
-      staffName: staffName || 'Any Professional',
       isHomeService: effectiveIsHomeService,
       isWeddingService,
-      duration,
+      isMultiService, // Add multi-service flag
+      // Amounts
       amount: amount || 0,
+      addOnsAmount: totalAddOnsAmount, // Use calculated total add-ons amount
       totalAmount: totalAmount || amount || 0,
       finalAmount: finalAmount || totalAmount || amount || 0,
+      platformFee: platformFee || 0,
+      serviceTax: serviceTax || 0,
+      taxRate: taxRate || 0,
+      // For multi-service, don't include top-level addOns as they're in serviceItems
+      // For single service, keep addOns for backward compatibility
+      ...(isMultiService ? {} : { addOns: effectiveAddOns }),
+      // Service Structure
+      serviceItems: serviceItems,
+      // Location
       ...(actualLocation && actualLocation.lat && actualLocation.lng ? { location: actualLocation } : {}),
+      // Package
       ...(packageId ? { packageId } : {})
     };
 
@@ -902,9 +1052,8 @@ async function handleSlotLock(body) {
         travelTimeInfo = await calculateVendorTravelTime(vendorId, customerLocation);
       } catch (error) {
         console.warn('Could not calculate travel time, using fallback:', error.message);
-        // Use a conservative estimate
         travelTimeInfo = {
-          timeInMinutes: 30, // Conservative 30-minute estimate
+          timeInMinutes: 30,
           distanceInKm: 10,
           distanceInMeters: 10000,
           source: 'fallback'
@@ -928,9 +1077,7 @@ async function handleSlotLock(body) {
       return Response.json(errorResponse, { status: 409 });
     }
 
-    console.log('Lock acquired with token:', lockToken);
-
-    // Create temporary appointment with travel time information
+    // Create a temporary appointment
     const tempAppointment = await createTemporaryAppointment(enhancedLockData, lockToken);
 
     // Use the actual MongoDB ObjectId of the temporary appointment

@@ -2,7 +2,7 @@
 import {
   FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut,
   FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn,
-  FaBell, FaGift, FaHeart, FaUserFriends, FaUserCircle, FaStethoscope, FaDollarSign, FaClock, FaTruck, FaShoppingCart, FaShippingFast, FaMoneyCheckAlt, FaStore, FaReceipt, FaQuestionCircle, FaStar
+  FaBell, FaGift, FaHeart, FaUserFriends, FaUserCircle, FaStethoscope, FaDollarSign, FaClock, FaTruck, FaShoppingCart, FaShippingFast, FaMoneyCheckAlt, FaStore, FaReceipt, FaQuestionCircle, FaStar, FaPlusSquare
 } from "react-icons/fa";
 import { IconType } from "react-icons";
 
@@ -21,6 +21,7 @@ export const vendorNavItems: NavItem[] = [
   { title: "Clients", href: "/clients", Icon: FaUsers, permission: 'clients_view' },
   { title: "Customer Summary", href: "/customers/summary", Icon: FaUsers, permission: 'clients_view' },
   { title: "Services", href: "/services", Icon: FaCut, permission: 'services_view' },
+  { title: "Add-ons", href: "/add-ons", Icon: FaPlusSquare, permission: 'services_view' },
   { title: "Wedding Packages", href: "/wedding-packages", Icon: FaHeart, permission: 'services_view' },
   { title: "Products", href: "/products", Icon: FaBoxOpen, permission: 'products_view' },
   { title: "Product Questions", href: "/product-questions", Icon: FaQuestionCircle, permission: 'product_questions_view' },

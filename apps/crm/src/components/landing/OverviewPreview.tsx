@@ -2,7 +2,7 @@ import React from 'react';
 
 const OverviewPreview = () => {
   return (
-    <section className="py-10 overflow-hidden bg-white">
+    <section id="overview-preview" className="py-10 overflow-hidden bg-white">
       {/* Section Header */}
       <div className="px-6 lg:px-8 max-w-7xl mx-auto mb-16 text-center">
         <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-gray-900 inline-block pb-4 mx-auto">
