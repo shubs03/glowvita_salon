@@ -45,7 +45,6 @@ export interface Service {
     charges: number | null;
   };
   serviceIsAddon?: boolean;
-  serviceIsAddon?: boolean;
   addOns?: Array<{
     _id: string;
     name: string;
