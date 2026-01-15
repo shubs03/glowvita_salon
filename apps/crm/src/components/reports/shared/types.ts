@@ -30,6 +30,7 @@ export interface FilterParams {
     brand?: string;
     region?: string;
     bookingType?: string;
+    isActive?: boolean | string;
     settlementFromDate?: string;
     settlementToDate?: string;
 }
