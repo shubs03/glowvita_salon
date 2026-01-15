@@ -190,7 +190,7 @@ function BookingPageContent() {
   // Wrapper to handle mode switching with cleanup
   const handleBookingModeChange = (mode: 'salon' | 'home') => {
     console.log(`=== Switching booking mode to: ${mode} at step ${currentStep} ===`);
-    
+
     setBookingMode(mode);
 
     if (mode === 'salon') {
@@ -355,7 +355,7 @@ function BookingPageContent() {
           parseFloat(service.price || '0');
 
         const addonsPrice = service.selectedAddons?.reduce((addonSum, addon) => {
-          const addonPriceValue = addon.price !== null && addon.price !== undefined ? parseFloat(addon.price) : 0;
+          const addonPriceValue = addon.price !== null && addon.price !== undefined ? (typeof addon.price === 'string' ? parseFloat(addon.price) : addon.price) : 0;
           return addonSum + addonPriceValue;
         }, 0) || 0;
 
@@ -522,7 +522,7 @@ function BookingPageContent() {
     }
 
   };
-  
+
   const handleAddressDetailsFetched = (locationData: HomeServiceLocation) => {
     console.log("✅ Address details fetched - setting location data");
     console.log("Setting homeServiceLocation to:", locationData);
@@ -630,24 +630,24 @@ function BookingPageContent() {
           setHomeServiceLocation(locationData as any);
           setShowLocationModal(false);
           setShowMapSelector(false); // Reset map selector state
-          
+
           // After setting location, if we have a time selected, try to proceed
           if (selectedTime) {
             if (isAuthenticated) {
               setIsConfirmationModalOpen(true);
             } else {
-                // Save booking data to sessionStorage before redirecting to login
-                const bookingData = {
-                  selectedServices,
-                  serviceStaffAssignments,
-                  selectedStaff,
-                  selectedDate: selectedDate.toISOString(),
-                  selectedTime,
-                  salonId,
-                  homeServiceLocation: locationData
-                };
-                sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
-                router.push(`/client-login?redirect=/book/${salonId}`);
+              // Save booking data to sessionStorage before redirecting to login
+              const bookingData = {
+                selectedServices,
+                serviceStaffAssignments,
+                selectedStaff,
+                selectedDate: selectedDate.toISOString(),
+                selectedTime,
+                salonId,
+                homeServiceLocation: locationData
+              };
+              sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+              router.push(`/client-login?redirect=/book/${salonId}`);
             }
           }
         } else {
@@ -1287,15 +1287,18 @@ function BookingPageContent() {
       return;
     }
 
-    // Calculate total duration including add-ons
-    let totalDuration = convertDurationToMinutes(primaryService.duration);
-
-    // Add duration of all selected add-ons
-    if (selectedServices[0]?.selectedAddons?.length > 0) {
-      const addOnsDuration = selectedServices[0].selectedAddons.reduce(
-        (sum, addon) => sum + (addon.duration || 0), 0
-      );
-      totalDuration += addOnsDuration;
+    // Calculate total duration including add-ons for ALL selected services
+    let totalDuration = 0;
+    if (selectedWeddingPackage) {
+      totalDuration = convertDurationToMinutes(primaryService.duration);
+    } else {
+      totalDuration = selectedServices.reduce((acc, service) => {
+        const serviceDuration = convertDurationToMinutes(service.duration);
+        const addOnsDuration = service.selectedAddons?.reduce(
+          (sum, addon) => sum + (addon.duration || 0), 0
+        ) || 0;
+        return acc + serviceDuration + addOnsDuration;
+      }, 0);
     }
 
     const endTime = calculateEndTime(selectedTime, totalDuration);
@@ -1366,6 +1369,7 @@ function BookingPageContent() {
       })(),
       platformFee: priceBreakdown?.platformFee || 0,
       serviceTax: priceBreakdown?.serviceTax || 0,
+      taxRate: priceBreakdown?.taxFeeSettings?.serviceTax || 0,
       discountAmount: priceBreakdown?.discountAmount || 0,
       finalAmount: priceBreakdown?.finalTotal || (() => {
         // Calculate total including add-ons
@@ -1396,7 +1400,7 @@ function BookingPageContent() {
           staffName: staffName,
           startTime: selectedTime,
           endTime: endTime,
-          duration: duration,
+          duration: totalDuration,
           amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
             Number(primaryService.discountedPrice) :
             Number(primaryService.price)
@@ -1448,7 +1452,7 @@ function BookingPageContent() {
                 name: addon.name,
                 price: addon.price,
                 duration: addon.duration || 0,
-                _id: addon._id || addon.id
+                _id: addon._id || (addon as any).id
               })) : []
             };
           });
@@ -2071,7 +2075,7 @@ function BookingPageContent() {
                   name: addon.name,
                   price: Number(addon.price) || 0,
                   duration: addon.duration ? Number(addon.duration) : 0,
-                  _id: addon._id || addon.id
+                  _id: addon._id || (addon as any).id
                 }))
                 : []
             };
@@ -2839,7 +2843,6 @@ function BookingPageContent() {
               error={null}
               salonId={salonId as string}
               service={serviceForTimeSlot}
-              selectedServices={selectedServices}
               isWeddingPackage={!!selectedWeddingPackage}
               weddingPackage={selectedWeddingPackage}
               weddingPackageServices={selectedWeddingPackage ? (weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services) : undefined}
