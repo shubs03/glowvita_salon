@@ -82,21 +82,47 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
         phone: (appointment as any).client?.phone || (appointment as any).clientPhone || ''
       },
       status: appointment.status,
-      items: appointment.serviceItems?.length ? (appointment.serviceItems as any[]).map(item => ({
-        name: item.serviceName,
-        price: item.amount,
-        quantity: 1,
-        totalPrice: item.amount,
-        discount: 0,
-        staff: item.staffName
-      })) : [{
-        name: appointment.serviceName,
-        price: appointment.amount,
-        quantity: 1,
-        totalPrice: appointment.amount,
-        discount: appointment.discount || 0,
-        staff: appointment.staffName
-      }],
+      items: appointment.serviceItems?.length ? (appointment.serviceItems as any[]).flatMap(item => [
+        {
+          name: item.serviceName,
+          price: item.amount,
+          quantity: 1,
+          totalPrice: item.amount,
+          discount: 0,
+          staff: item.staffName,
+          duration: item.duration,
+          type: 'service'
+        },
+        ...(Array.isArray(item.addOns) ? item.addOns.map((addOn: any) => ({
+          name: `${addOn.name} (Add-on)`,
+          price: addOn.price,
+          quantity: 1,
+          totalPrice: addOn.price,
+          discount: 0,
+          duration: addOn.duration,
+          type: 'addon'
+        })) : [])
+      ]) : [
+        {
+          name: appointment.serviceName,
+          price: appointment.amount,
+          quantity: 1,
+          totalPrice: appointment.amount,
+          discount: appointment.discount || 0,
+          staff: appointment.staffName,
+          duration: appointment.duration,
+          type: 'service'
+        },
+        ...((appointment as any).addOns || []).map((addOn: any) => ({
+          name: `${addOn.name} (Add-on)`,
+          price: addOn.price,
+          quantity: 1,
+          totalPrice: addOn.price,
+          discount: 0,
+          duration: addOn.duration,
+          type: 'addon'
+        }))
+      ],
       subtotal: Number(totalBaseAmount + totalAddOnsAmount),
       originalSubtotal: Number(totalBaseAmount + totalAddOnsAmount),
       discount: Number(discountAmount),
@@ -376,33 +402,6 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
               <div className="flex items-center justify-between text-xs text-gray-600 mt-3">
                 <span>Method: {paymentMethod ?? '—'}</span>
                 <span>Status: {paymentStatus ? String(paymentStatus).toUpperCase() : '—'}</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 flex items-center">
-              <Info className="h-4 w-4 mr-2" />
-              Status & Notes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Badge
-              className={`mb-3 ${statusColors[appointment.status as keyof typeof statusColors] || 'bg-gray-100 text-gray-800'
-                }`}
-            >
-              {formatStatus(appointment.status)}
-            </Badge>
-            {appointment.notes && (
-              <div className="mt-2 text-sm bg-gray-50 p-3 rounded-md">
-                <p className="font-medium text-gray-700 mb-1">Notes:</p>
-                <p className="text-gray-600">
-                  {appointment.notes.includes('Appointment cancelled:')
-                    ? appointment.notes.split('Appointment cancelled:')[1].trim()
-                    : appointment.notes}
-                </p>
               </div>
             )}
           </CardContent>

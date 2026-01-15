@@ -171,7 +171,8 @@ export function AppointmentInvoice({
                                 onClick={() => handleItemClick(item)}
                             >
                                 <td className="border border-black p-2 print:p-1">
-                                    <div className="font-semibold text-sm text-black print:text-xs">
+                                    <div className={`font-semibold text-sm text-black print:text-xs ${item.type === 'addon' ? 'pl-4' : ''}`}>
+                                        {item.type === 'addon' ? '+ ' : ''}
                                         {isProduct(item) ? item.productName : item.name}
                                     </div>
                                 </td>

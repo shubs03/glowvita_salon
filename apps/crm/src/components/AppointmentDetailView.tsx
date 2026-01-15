@@ -851,22 +851,49 @@ export function AppointmentDetailView({
         phone: (appointment.client as any)?.phone || ''
       },
       status: appointment.status,
-      items: appointment.serviceItems?.length ? appointment.serviceItems.map(item => ({
-        name: item.serviceName,
-        price: item.amount,
-        quantity: 1,
-        totalPrice: item.amount,
-        discount: 0,
-        staff: item.staffName
-      })) : [{
-        name: appointment.serviceName,
-        price: appointment.amount,
-        quantity: 1,
-        totalPrice: appointment.amount,
-        discount: appointment.discount,
-        staff: appointment.staffName
-      }],
+      items: appointment.serviceItems?.length ? appointment.serviceItems.flatMap(item => [
+        {
+          name: item.serviceName,
+          price: item.amount,
+          quantity: 1,
+          totalPrice: item.amount,
+          discount: 0,
+          staff: item.staffName,
+          duration: item.duration,
+          type: 'service'
+        },
+        ...(Array.isArray(item.addOns) ? item.addOns.map(addOn => ({
+          name: `${addOn.name} (Add-on)`,
+          price: addOn.price,
+          quantity: 1,
+          totalPrice: addOn.price,
+          discount: 0,
+          duration: addOn.duration,
+          type: 'addon'
+        })) : [])
+      ]) : [
+        {
+          name: appointment.serviceName,
+          price: appointment.amount,
+          quantity: 1,
+          totalPrice: appointment.amount,
+          discount: appointment.discount,
+          staff: appointment.staffName,
+          duration: appointment.duration,
+          type: 'service'
+        },
+        ...((appointment as any).addOns || []).map((addOn: any) => ({
+          name: `${addOn.name} (Add-on)`,
+          price: addOn.price,
+          quantity: 1,
+          totalPrice: addOn.price,
+          discount: 0,
+          duration: addOn.duration,
+          type: 'addon'
+        }))
+      ],
       subtotal: totalBaseAmount + totalAddOnsAmount,
+      originalSubtotal: totalBaseAmount + totalAddOnsAmount,
       discount: appointment.discount,
       tax: (appointment as any).serviceTax || (appointment as any).tax || appointment.payment?.serviceTax || 0,
       platformFee: (appointment as any).platformFee || appointment.payment?.platformFee || 0,
