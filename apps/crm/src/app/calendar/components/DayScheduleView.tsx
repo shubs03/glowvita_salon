@@ -11,7 +11,8 @@ import { AppointmentDetailView } from '../../../components/AppointmentDetailView
 import { Appointment as SharedAppointment } from '../../../../../../packages/types/src/appointment';
 
 type Appointment = {
-  id: string;
+  id?: string;
+  _id?: string;
   clientName: string;
   service: string;
   serviceName?: string;

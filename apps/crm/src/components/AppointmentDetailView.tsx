@@ -933,12 +933,12 @@ export function AppointmentDetailView({
         (buttons as HTMLElement).style.display = 'none';
       }
 
-      const opt = {
-        margin: [10, 10, 10, 10], // Top, Right, Bottom, Left margins in mm
+      const opt: any = {
+        margin: [10, 10, 10, 10] as [number, number, number, number], // Top, Right, Bottom, Left margins in mm
         filename: `Invoice_${appointment._id?.substring(appointment._id.length - 6).toUpperCase() || 'INV'}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
       };
 
       await html2pdf().set(opt).from(clone).save();
@@ -986,11 +986,11 @@ export function AppointmentDetailView({
         (buttons as HTMLElement).style.display = 'none';
       }
 
-      const opt = {
-        margin: [10, 10, 10, 10],
-        image: { type: 'jpeg', quality: 0.98 },
+      const opt: any = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
       };
 
       // Generate PDF as blob and open it in a new tab for printing
@@ -1720,11 +1720,11 @@ export function AppointmentDetailView({
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            {appointment.serviceItems?.length > 1 ? 'Services' : 'Service'}
+                            {((appointment.serviceItems || []).length > 1) ? 'Services' : 'Service'}
                           </p>
-                          {appointment.serviceItems?.length > 1 ? (
+                          {((appointment.serviceItems || []).length > 1) ? (
                             <p className="text-lg font-semibold text-foreground">
-                              Multi-Service ({appointment.serviceItems.length} Services)
+                              Multi-Service ({(appointment.serviceItems || []).length} Services)
                             </p>
                           ) : (
                             <p className="text-lg font-semibold text-foreground">
@@ -1735,9 +1735,9 @@ export function AppointmentDetailView({
                       </div>
 
                       {/* Service Items List */}
-                      {appointment.serviceItems?.length > 0 && (
+                      {(appointment.serviceItems || []).length > 0 && (
                         <div className="mt-3 space-y-3">
-                          {appointment.serviceItems.map((item, index) => {
+                          {(appointment.serviceItems || []).map((item, index) => {
                             // Ensure addOns is always an array
                             const itemAddOns = Array.isArray(item.addOns) ? item.addOns : [];
 

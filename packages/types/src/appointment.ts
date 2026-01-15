@@ -19,6 +19,12 @@ export interface ServiceItem {
   duration: number;
   amount: number;
   _id?: string;
+  addOns?: Array<{
+    _id: string;
+    name: string;
+    price: number;
+    duration: number;
+  }>;
 }
 
 export interface Appointment {
