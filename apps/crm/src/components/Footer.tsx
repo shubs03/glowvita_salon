@@ -59,18 +59,6 @@ export function Footer() {
                 href="#"
                 className="block hover:text-primary transition-colors duration-200"
               >
-                Careers
-              </Link>
-              <Link
-                href="#"
-                className="block hover:text-primary transition-colors duration-200"
-              >
-                Blog
-              </Link>
-              <Link
-                href="#"
-                className="block hover:text-primary transition-colors duration-200"
-              >
                 Press
               </Link>
             </div>
@@ -108,12 +96,6 @@ export function Footer() {
         <div className="border-t border-border/50 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="text-center md:text-left text-muted-foreground text-sm">
             &copy; {new Date().getFullYear()} Vendor CRM. All Rights Reserved.
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Heart className="h-4 w-4 text-red-500" />
-              <span>Made with love for salon owners</span>
-            </div>
           </div>
         </div>
       </div>

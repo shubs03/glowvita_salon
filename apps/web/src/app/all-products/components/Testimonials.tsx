@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Star } from 'lucide-react';
 
 interface Testimonial {
@@ -10,6 +10,10 @@ interface Testimonial {
 }
 
 const Testimonials = () => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [position, setPosition] = useState(0);
+  
   const testimonials: Testimonial[] = [
     {
       id: '1',
@@ -34,6 +38,29 @@ const Testimonials = () => {
     },
   ];
 
+  const totalWidth = testimonials.length * 384; // 384px per testimonial
+  
+  useEffect(() => {
+    if (isHovered || testimonials.length === 0) return;
+    
+    const interval = setInterval(() => {
+      setPosition(prev => {
+        // Move left continuously
+        let newPosition = prev - 1;
+        // When we've moved past the first set of testimonials, reset
+        if (newPosition <= -totalWidth) {
+          return 0;
+        }
+        return newPosition;
+      });
+    }, 50); // Adjust speed as needed
+    
+    return () => clearInterval(interval);
+  }, [isHovered, totalWidth, testimonials.length]);
+
+  // Duplicate testimonials for seamless loop
+  const allTestimonials = [...testimonials, ...testimonials];
+
   return (
     <section className="py-20 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
       {/* Section Header */}
@@ -48,38 +75,56 @@ const Testimonials = () => {
         </p>
       </div>
 
-      {/* Testimonials Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {testimonials.map((testimonial, index) => (
-          <div
-            key={testimonial.id}
-            className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group hover:border-primary/50 flex flex-col h-full"
-          >
-            <div className="flex items-center gap-4 mb-4">
-              <div className="bg-primary/10 text-primary p-3 rounded-2xl flex-shrink-0 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-300">
-                <Star className="w-6 h-6" strokeWidth={2.5} fill="currentColor" />
+      {/* Scrolling Testimonials Container */}
+      <div 
+        ref={containerRef}
+        className="overflow-hidden w-full py-4 relative"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        {/* Left fade overlay */}
+        <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-background to-transparent z-10 pointer-events-none"></div>
+        {/* Right fade overlay */}
+        <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-background to-transparent z-10 pointer-events-none"></div>
+        
+        <div 
+          className="flex" 
+          style={{ 
+            transform: `translateX(${position}px)`
+          }}
+        >
+          {allTestimonials.map((testimonial, i) => (
+            <div key={`${testimonial.id}-${i}`} className="flex-shrink-0 w-[384px] px-3">
+              <div
+                className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group hover:border-primary/50 flex flex-col h-full"
+              >
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="bg-primary/10 text-primary p-3 rounded-2xl flex-shrink-0 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-300">
+                    <Star className="w-6 h-6" strokeWidth={2.5} fill="currentColor" />
+                  </div>
+                  <h3 className="font-bold text-card-foreground text-lg items-center leading-tight">
+                    {testimonial.name}
+                  </h3>
+                </div>
+                <div className="flex mb-3">
+                  {[...Array(5)].map((_, starIndex) => (
+                    <Star
+                      key={starIndex}
+                      className={`w-4 h-4 ${starIndex < testimonial.rating ? 'text-primary fill-primary' : 'text-muted-foreground fill-muted-foreground'}`}
+                      strokeWidth={1.5}
+                    />
+                  ))}
+                </div>
+                <p className="text-muted-foreground text-sm leading-relaxed flex-grow">
+                  "{testimonial.quote}"
+                </p>
+                <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border">
+                  {testimonial.location}
+                </p>
               </div>
-              <h3 className="font-bold text-card-foreground text-lg items-center leading-tight">
-                {testimonial.name}
-              </h3>
             </div>
-            <div className="flex mb-3">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`w-4 h-4 ${i < testimonial.rating ? 'text-primary fill-primary' : 'text-muted-foreground fill-muted-foreground'}`}
-                  strokeWidth={1.5}
-                />
-              ))}
-            </div>
-            <p className="text-muted-foreground text-sm leading-relaxed flex-grow">
-              "{testimonial.quote}"
-            </p>
-            <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border">
-              {testimonial.location}
-            </p>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );

@@ -13,6 +13,7 @@ import {
   Calendar,
   ShoppingCart,
   Star,
+  ScrollText,
   Wallet,
   Settings,
   LogOut,
@@ -89,6 +90,12 @@ const profileNavItems = [
   { id: "cart", label: "My Cart", icon: ShoppingCart, href: "/profile/cart" },
   { id: "reviews", label: "My Reviews", icon: Star, href: "/profile/reviews" },
   {
+    id: "wishlist",
+    label: "My Wishlist",
+    icon: ScrollText,
+    href: "/profile/wishlist",
+  },
+  {
     id: "referrals",
     label: "Refer & Earn",
     icon: Gift,
@@ -106,7 +113,6 @@ const profileNavItems = [
 const navItems = [
   { label: "Products", href: "/all-products" },
   { label: "Salons", href: "/salons" },
-  { label: "Doctors", href: "/doctors" },
   { label: "About Us", href: "/about" },
   { label: "Reach Us", href: "/contact" },
 ];

@@ -11,7 +11,6 @@ import FinalCTASection from "@/components/apps/FinalCTASection";
 import AppFeature from "@/components/apps/AppFeature";
 import TestimonialCard from "@/components/apps/TestimonialCard";
 import FeatureCheck from "@/components/apps/FeatureCheck";
-import AppStoreButtons from "@/components/apps/AppStoreButtons";
 import { Card, CardContent } from "@repo/ui/card";
 import { cn } from "@repo/ui/cn";
 import {
