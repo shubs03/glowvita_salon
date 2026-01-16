@@ -8,7 +8,7 @@ interface RegionMapEditorProps {
   initialGeometry?: {
     type: string;
     coordinates: number[][][];
-  };
+  } | null;
   onChange: (geometry: any) => void;
 }
 

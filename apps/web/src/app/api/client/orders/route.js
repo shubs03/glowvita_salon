@@ -138,8 +138,6 @@ export async function POST(req) {
     
     // Ensure all amount fields have proper default values
     const orderShippingAmount = typeof shippingAmount === 'number' ? shippingAmount : 0;
-    // Ensure all amount fields have proper default values
-    const orderShippingAmount = typeof shippingAmount === 'number' ? shippingAmount : 0;
     const orderTaxAmount = typeof taxAmount === 'number' ? taxAmount : 0;
     const orderGstAmount = typeof gstAmount === 'number' ? gstAmount : 0;
     const orderPlatformFeeAmount = typeof platformFeeAmount === 'number' ? platformFeeAmount : 0;

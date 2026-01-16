@@ -4,6 +4,6 @@ export * from "./utils/buildRegionQuery.js";
 export * from "./utils/assignRegion.js";
 export * from "./utils/permission";
 export * from "./auth.js";
-export * from "./models/User/User.model.js";
-export * from "./models/User/UserWishlist.model.js";
+export * from "./models/user/User.model.js";
+export * from "./models/user/UserWishlist.model.js";
 export * from "./hashing.js";

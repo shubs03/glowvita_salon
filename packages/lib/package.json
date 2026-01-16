@@ -23,6 +23,7 @@
     "./models/admin/Region": "./src/models/admin/Region.model.js",
     "./models/admin/Region.model": "./src/models/admin/Region.model.js",
     "./models/admin/Reffer": "./src/models/admin/Reffer.model.js",
+    "./models/admin/Reffer.model": "./src/models/admin/Reffer.model.js",
     "./models/admin/SuperData": "./src/models/admin/SuperData.model.js",
     "./models/admin/GeoFence": "./src/models/admin/GeoFence.model.js",
     "./models/admin/AdminOffers": "./src/models/admin/AdminOffers.model.js",
@@ -65,6 +66,7 @@
     "./modules/scheduling/OptimisticLocking": "./src/modules/scheduling/OptimisticLocking.js",
     "./modules/scheduling/FreshaLikeSlotEngine": "./src/modules/scheduling/FreshaLikeSlotEngine.js",
     "./utils/regionQuery": "./src/utils/regionQuery.js",
+    "./utils/assignRegion.js": "./src/utils/assignRegion.js",
     "./VPSUpload": "./VPSUpload.js"
   },
   "scripts": {

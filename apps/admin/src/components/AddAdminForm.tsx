@@ -39,6 +39,7 @@ export type AdminUser = {
   profileImage?: string | File;
   isActive?: boolean;
   assignedRegions?: string[];
+  permissions?: string[];
   lastLoginAt?: Date | null;
   createdAt?: Date;
   updatedAt?: Date;
