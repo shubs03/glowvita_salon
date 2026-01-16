@@ -210,6 +210,20 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
     const isValidObjectId = (str) => {
       return str && typeof str === 'string' && /^[0-9a-fA-F]{24}$/.test(str);
     };
+
+    // Lookup Vendor Region
+    const VendorModel = (await import('../../models/Vendor/Vendor.model.js')).default;
+    let vendorRegionId = null;
+    try {
+        if (cleanAppointmentData.vendorId && isValidObjectId(cleanAppointmentData.vendorId)) {
+            const vendor = await VendorModel.findById(cleanAppointmentData.vendorId).select('regionId').lean();
+            if (vendor && vendor.regionId) {
+                vendorRegionId = vendor.regionId;
+            }
+        }
+    } catch (err) {
+        console.error("Error fetching vendor region for appointment:", err);
+    }
     
     // Add lock information to appointment data
     const tempAppointmentData = {
@@ -220,6 +234,7 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
       updatedAt: new Date(),
       // Ensure all required fields are populated
       vendorId: cleanAppointmentData.vendorId,
+      regionId: vendorRegionId, // <--- Added Region ID
       clientName: cleanAppointmentData.clientName || 'Temporary Client',
       service: cleanAppointmentData.serviceId,
       serviceName: cleanAppointmentData.serviceName || 'Temporary Service',

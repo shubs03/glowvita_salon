@@ -2,14 +2,17 @@ import _db from "@repo/lib/db";
 import OrderModel from "@repo/lib/models/Vendor/Order.model";
 import TaxFeeSettings from "@repo/lib/models/admin/TaxFeeSettings";
 import { authMiddlewareAdmin } from '../../../../../middlewareAdmin';
+import { buildRegionQueryFromRequest } from "@repo/lib";
 
 await _db();
 
 // GET - Fetch platform collections report for product orders
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
-    // Get all supplier orders (orders where supplierId exists)
+    // Get all supplier orders (orders where supplierId exists) - scoped by region
+    const regionQuery = buildRegionQueryFromRequest(req);
     const orders = await OrderModel.find({
+      ...regionQuery,
       supplierId: { $exists: true, $ne: null }
     })
     .sort({ createdAt: -1 })
@@ -130,4 +133,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }
     });
   }
-});
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

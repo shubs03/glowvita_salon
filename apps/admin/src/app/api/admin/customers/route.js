@@ -5,9 +5,14 @@ import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import _db from '@repo/lib/db';
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin";
+import { hasPermission, forbiddenResponse } from "@repo/lib";
+import mongoose from "mongoose";
 
 // GET - Fetch customers for admin dashboard
 export const GET = authMiddlewareAdmin(async (req) => {
+    if (!hasPermission(req.user, "customers:view")) {
+        return forbiddenResponse();
+    }
     // Validate models are properly imported
     if (!ClientModel) {
         console.error('ClientModel is not properly imported');
@@ -445,7 +450,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
             error: error.message 
         }, { status: 500 });
     }
-}, ['superadmin', 'admin']);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // Validate models have expected methods
 if (ClientModel && typeof ClientModel.find !== 'function') {

@@ -3,6 +3,7 @@ import _db from '@repo/lib/db';
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import { authMiddlewareAdmin } from "../../../../../middlewareAdmin";
+import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 
 // Initialize database connection
 const initDb = async () => {
@@ -63,36 +64,38 @@ export const GET = authMiddlewareAdmin(async (req) => {
     };
     
     const dateFilter = buildDateFilter(filterType, filterValue);
+    const regionQuery = getRegionQuery(req.user, searchParams.get('regionId'));
+    const combinedFilter = { ...dateFilter, ...regionQuery };
     
     // 1. Total Bookings
-    const totalBookings = await AppointmentModel.countDocuments(dateFilter);
+    const totalBookings = await AppointmentModel.countDocuments(combinedFilter);
     
     // 2. Completed Bookings
     const completedBookings = await AppointmentModel.countDocuments({
-      ...dateFilter,
+      ...combinedFilter,
       status: 'completed'
     });
     
     // 3. Cancelled Bookings
     const cancelledBookings = await AppointmentModel.countDocuments({
-      ...dateFilter,
+      ...combinedFilter,
       status: 'cancelled'
     });
     
     // 4. Online vs Offline Bookings
     const onlineBookings = await AppointmentModel.countDocuments({
-      ...dateFilter,
+      ...combinedFilter,
       mode: 'online'
     });
     
     const offlineBookings = await AppointmentModel.countDocuments({
-      ...dateFilter,
+      ...combinedFilter,
       mode: 'offline'
     });
     
     // 5. Revenue from completed bookings
     const completedAppointments = await AppointmentModel.find({
-      ...dateFilter,
+      ...combinedFilter,
       status: 'completed'
     }).select('finalAmount');
     
@@ -103,7 +106,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // 6. Top 5 services by booking count
     const topServices = await AppointmentModel.aggregate([
       { $match: { 
-          ...dateFilter,
+          ...combinedFilter,
           status: 'completed'
         } 
       },
@@ -119,22 +122,22 @@ export const GET = authMiddlewareAdmin(async (req) => {
     
     // 7. Bookings by status
     const scheduledBookings = await AppointmentModel.countDocuments({
-      ...dateFilter,
+      ...combinedFilter,
       status: 'scheduled'
     });
     
     const confirmedBookings = await AppointmentModel.countDocuments({
-      ...dateFilter,
+      ...combinedFilter,
       status: 'confirmed'
     });
     
     const noShowBookings = await AppointmentModel.countDocuments({
-      ...dateFilter,
+      ...combinedFilter,
       status: 'no-show'
     });
     
     // 8. Recent bookings (last 5)
-    const recentBookings = await AppointmentModel.find(dateFilter)
+    const recentBookings = await AppointmentModel.find(combinedFilter)
       .sort({ createdAt: -1 })
       .limit(5)
       .populate('vendorId', 'businessName')
@@ -171,4 +174,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       error: error.message
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

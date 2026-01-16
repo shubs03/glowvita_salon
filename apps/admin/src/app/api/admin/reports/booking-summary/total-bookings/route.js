@@ -3,6 +3,7 @@ import _db from '@repo/lib/db';
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import { authMiddlewareAdmin } from "../../../../../../middlewareAdmin";
+import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 
 // Initialize database connection
 const initDb = async () => {
@@ -28,8 +29,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const saleType = searchParams.get('saleType'); // 'online', 'offline', or 'all'
     const city = searchParams.get('city'); // City filter
     const vendorName = searchParams.get('vendor'); // Vendor filter
+    const regionId = searchParams.get('regionId'); // Region filter
     
-    console.log("Total Bookings Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, saleType, city });
+    console.log("Total Bookings Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, saleType, city, regionId });
     
     // Build date filter
     const buildDateFilter = (filterType, filterValue, startDateParam, endDateParam) => {
@@ -103,12 +105,14 @@ export const GET = authMiddlewareAdmin(async (req) => {
     };
     
     const vendorFilter = await buildVendorFilter(vendorName);
+    const regionQuery = getRegionQuery(req.user, regionId);
     
     // Combine all filters
     const combinedFilter = {
       ...dateFilter,
       ...modeFilter,
-      ...vendorFilter
+      ...vendorFilter,
+      ...regionQuery
       // Note: We don't filter by status for total bookings to match dashboard route behavior
     };
     
@@ -125,8 +129,8 @@ export const GET = authMiddlewareAdmin(async (req) => {
     
     // 1. Total Bookings
     // Use a simpler count approach that matches the main booking summary and dashboard
-    // Only apply date filter to match other routes
-    const totalBookings = await AppointmentModel.countDocuments(dateFilter);
+    // Apply date and region filter
+    const totalBookings = await AppointmentModel.countDocuments({ ...dateFilter, ...regionQuery });
     
     // 2. Completed Bookings
     const completedBookingsPipeline = [
@@ -143,7 +147,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     
     // 2.1 Online Completed Bookings (specifically requested)
     const onlineCompletedBookingsPipeline = [
-      { $match: { ...dateFilter, mode: 'online', status: 'completed' } }, // Use date filter only
+      { $match: { ...dateFilter, ...regionQuery, mode: 'online', status: 'completed' } }, // Use date and region filter
       { $lookup: { from: "vendors", localField: "vendorId", foreignField: "_id", as: "vendorInfo" } },
       { $unwind: { path: "$vendorInfo", preserveNullAndEmptyArrays: true } },
       ...(city && city !== 'all' ? [{ $match: { "vendorInfo.city": city } }] : [])
@@ -177,7 +181,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Count online/offline bookings regardless of the saleType filter
     // This ensures we get accurate counts of online and offline bookings
     const onlineBookingsPipeline = [
-      { $match: { ...dateFilter, mode: 'online' } },  // Use only date filter, not mode filter
+      { $match: { ...dateFilter, ...regionQuery, mode: 'online' } },  // Use date and region filter, not mode filter
       { $lookup: { from: "vendors", localField: "vendorId", foreignField: "_id", as: "vendorInfo" } },
       { $unwind: { path: "$vendorInfo", preserveNullAndEmptyArrays: true } },
       ...(city && city !== 'all' ? [{ $match: { "vendorInfo.city": city } }] : [])
@@ -191,7 +195,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     onlineBookings = onlineBookingsResult.length > 0 ? onlineBookingsResult[0].total : 0;
     
     const offlineBookingsPipeline = [
-      { $match: { ...dateFilter, mode: 'offline' } },  // Use only date filter, not mode filter
+      { $match: { ...dateFilter, ...regionQuery, mode: 'offline' } },  // Use date and region filter, not mode filter
       { $lookup: { from: "vendors", localField: "vendorId", foreignField: "_id", as: "vendorInfo" } },
       { $unwind: { path: "$vendorInfo", preserveNullAndEmptyArrays: true } },
       ...(city && city !== 'all' ? [{ $match: { "vendorInfo.city": city } }] : [])
@@ -434,4 +438,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       error: error.message
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

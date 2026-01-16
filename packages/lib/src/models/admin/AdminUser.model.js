@@ -43,6 +43,12 @@ const adminUserSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  assignedRegions: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Region",
+    },
+  ],
   permissions: [
     {
       type: String,

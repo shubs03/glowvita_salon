@@ -17,7 +17,7 @@ import {
 } from "../../config/config.js";
 
 
-function generateTokens(_id, role = "user", permissions = []) {
+function generateTokens(_id, role = "user", permissions = [], regions = [], roleName = null) {
   let secretKey;
   let refreshSecret; // This seems unused in the current setup, but keeping for completeness
 
@@ -55,7 +55,9 @@ function generateTokens(_id, role = "user", permissions = []) {
   const payload = {
      userId: _id,
      role,
+     roleName: roleName || role,
      permissions: permissions || [],
+     regions: regions || [],
   };
 
   const accessToken = jwt.sign(payload, secretKey, {

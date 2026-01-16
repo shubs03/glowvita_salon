@@ -72,6 +72,12 @@ const appointmentSchema = new mongoose.Schema(
       ref: "Vendor",
       required: true,
     },
+    regionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Region",
+      required: true,
+      index: true,
+    },
     client: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Client",
@@ -431,6 +437,39 @@ appointmentSchema.index(
   },
   { sparse: true }
 );
+
+// Pre-save middleware to automate regionId inheritance and status updates
+appointmentSchema.pre('save', async function (next) {
+  try {
+    // 1. Inherit regionId from Vendor if missing
+    if (!this.regionId && this.vendorId) {
+      // Use standard connection to avoid missing models during registration
+      const Vendor = mongoose.models.Vendor || (await import('../Vendor/Vendor.model.js')).default;
+      const vendor = await Vendor.findById(this.vendorId).select('regionId');
+      if (vendor && vendor.regionId) {
+        this.regionId = vendor.regionId;
+      }
+    }
+
+    // 2. Auto-complete past appointments
+    if (this.bookingDate && this.endTime && this.status !== 'completed' && this.status !== 'cancelled') {
+      const now = new Date();
+      const endDateTime = new Date(this.bookingDate);
+      const [hours, minutes] = this.endTime.split(':');
+      endDateTime.setHours(parseInt(hours), parseInt(minutes), 0);
+
+      if (endDateTime < now) {
+        this.status = 'completed';
+      }
+    }
+    
+    this.updatedAt = new Date();
+    next();
+  } catch (error) {
+    console.error("Error in Appointment pre-save middleware:", error);
+    next(error);
+  }
+});
 
 // Ensure the model is only defined once
 const AppointmentModel =

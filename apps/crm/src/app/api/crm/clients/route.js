@@ -222,9 +222,14 @@ export const POST = withSubscriptionCheck(async (req) => {
             profilePictureUrl = imageUrl;
         }
 
+        // Fetch vendor's region to inherit
+        const VendorModel = (await import("@repo/lib/models/Vendor/Vendor.model")).default;
+        const vendor = await VendorModel.findById(vendorId).select('regionId');
+
         // Create client data
         const clientData = {
             vendorId,
+            regionId: vendor?.regionId,
             fullName: body.fullName.trim(),
             email: body.email.toLowerCase().trim(),
             phone: body.phone.trim(),
@@ -236,6 +241,8 @@ export const POST = withSubscriptionCheck(async (req) => {
             address: body.address?.trim() || '',
             status: 'New'
         };
+        
+        console.log('Creating client with regionId:', clientData.regionId);
 
         const client = new ClientModel(clientData);
         await client.save();

@@ -75,6 +75,18 @@ export const POST = authMiddlewareAdmin(async (req) => {
             );
         }
 
+        // 3. Regional Filtering Security Check
+        const { roleName, assignedRegions } = req.user;
+        if ((roleName === "REGIONAL_ADMIN") && assignedRegions && assignedRegions.length > 0) {
+            const userRegionId = user.regionId ? user.regionId.toString() : null;
+            if (!userRegionId || !assignedRegions.includes(userRegionId)) {
+                return NextResponse.json(
+                    { message: "Forbidden: You cannot renew subscriptions for users outside your assigned regions" },
+                    { status: 403 }
+                );
+            }
+        }
+
         const now = new Date();
         const startDate = new Date(now);
         const endDate = new Date(now);
@@ -156,4 +168,4 @@ export const POST = authMiddlewareAdmin(async (req) => {
             { status: 500 }
         );
     }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

@@ -143,10 +143,15 @@ export const POST = withSubscriptionCheck(async (req) => {
             body.endTime = endDate.toTimeString().slice(0, 5);
         }
 
+        // Fetch vendor's region to inherit
+        const VendorModel = (await import("@repo/lib/models/Vendor/Vendor.model")).default;
+        const vendor = await VendorModel.findById(vendorId).select('regionId');
+
         // Set default values
         const appointmentData = {
             ...body,
             vendorId,
+            regionId: vendor?.regionId,
             status: body.status || 'scheduled',
             amount: Number(body.amount) || 0,
             discount: Number(body.discount) || 0,

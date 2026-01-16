@@ -3,6 +3,7 @@ import _db from '@repo/lib/db';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import SubscriptionPlanModel from '@repo/lib/models/admin/SubscriptionPlan.model';
 import { authMiddlewareAdmin } from "../../../../../../middlewareAdmin";
+import { buildRegionQueryFromRequest } from "@repo/lib";
 
 // Initialize database connection
 const initDb = async () => {
@@ -95,7 +96,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
     let suppliersWithSubscriptions = [];
     
     if (userTypeFilter === 'all' || userTypeFilter === 'vendor') {
+      const regionQuery = buildRegionQueryFromRequest(req);
       vendorsWithSubscriptions = await VendorModel.find({
+        ...regionQuery,
         "subscription.plan": { $exists: true, $ne: null }
       }).populate([
         { path: 'subscription.plan', model: 'SubscriptionPlan' },
@@ -106,7 +109,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Get all suppliers with subscriptions
     const SupplierModel = (await import('@repo/lib/models/Vendor/Supplier.model')).default;
     if (userTypeFilter === 'all' || userTypeFilter === 'supplier') {
+      const regionQuery = buildRegionQueryFromRequest(req);
       suppliersWithSubscriptions = await SupplierModel.find({
+        ...regionQuery,
         "subscription.plan": { $exists: true, $ne: null }
       }).populate([
         { path: 'subscription.plan', model: 'SubscriptionPlan' },
@@ -263,14 +268,16 @@ export const GET = authMiddlewareAdmin(async (req) => {
     let supplierBusinessNames = [];
     
     if (userTypeFilter === 'all' || userTypeFilter === 'vendor') {
-      const allVendors = await VendorModel.find();
+      const regionQuery = buildRegionQueryFromRequest(req);
+      const allVendors = await VendorModel.find(regionQuery);
       vendorCities = [...new Set(allVendors.map(vendor => vendor.city))];
       vendorBusinessNames = [...new Set(allVendors.map(vendor => vendor.businessName || vendor.shopName || vendor.name))]
         .filter(name => name && name !== 'N/A');
     }
     
     if (userTypeFilter === 'all' || userTypeFilter === 'supplier') {
-      const allSuppliers = await SupplierModel.find();
+      const regionQuery = buildRegionQueryFromRequest(req);
+      const allSuppliers = await SupplierModel.find(regionQuery);
       supplierCities = [...new Set(allSuppliers.map(supplier => supplier.city))];
       supplierBusinessNames = [...new Set(allSuppliers.map(supplier => supplier.businessName || supplier.shopName || supplier.name))]
         .filter(name => name && name !== 'N/A');
@@ -315,4 +322,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       error: error.message
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

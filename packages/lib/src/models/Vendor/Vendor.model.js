@@ -67,6 +67,12 @@ const vendorSchema = new mongoose.Schema({
     enum: ["unisex", "men", "women"],
     required: true,
   },
+  regionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Region",
+    required: true,
+    index: true,
+  },
   shippingCharge: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "ShippingConfig",
@@ -364,7 +370,7 @@ vendorSchema.pre('validate', function (next) {
 });
 
 // Pre-save middleware to auto-update subscription status based on endDate
-vendorSchema.pre('save', function (next) {
+vendorSchema.pre('validate', async function (next) {
   // Migrate old 'Active' status to 'Approved' for backward compatibility
   if (this.status === 'Active') {
     this.status = 'Approved';
@@ -377,6 +383,19 @@ vendorSchema.pre('save', function (next) {
     // Auto-update status to Expired if endDate has passed
     if (endDate <= now && this.subscription.status !== 'Expired') {
       this.subscription.status = 'Expired';
+    }
+  }
+
+  // Auto-assign regionId based on location if missing or location changed
+  if (!this.regionId || this.isModified("location")) {
+    try {
+      const { assignRegion } = await import("../../utils/assignRegion.js");
+      const assignedRegionId = await assignRegion(this.city, this.state, this.location);
+      if (assignedRegionId) {
+        this.regionId = assignedRegionId;
+      }
+    } catch (error) {
+      console.error("[VendorModel] Error auto-assigning region:", error);
     }
   }
 

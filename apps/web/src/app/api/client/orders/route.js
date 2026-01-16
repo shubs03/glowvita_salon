@@ -138,13 +138,20 @@ export async function POST(req) {
     
     // Ensure all amount fields have proper default values
     const orderShippingAmount = typeof shippingAmount === 'number' ? shippingAmount : 0;
+    // Ensure all amount fields have proper default values
+    const orderShippingAmount = typeof shippingAmount === 'number' ? shippingAmount : 0;
     const orderTaxAmount = typeof taxAmount === 'number' ? taxAmount : 0;
     const orderGstAmount = typeof gstAmount === 'number' ? gstAmount : 0;
     const orderPlatformFeeAmount = typeof platformFeeAmount === 'number' ? platformFeeAmount : 0;
     
+    // Fetch Vendor Region
+    const VendorModel = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
+    const vendor = await VendorModel.findById(vendorId).select('regionId').lean();
+
     const newOrder = new ClientOrder({
       userId: payload.userId,
       vendorId,
+      regionId: vendor?.regionId || null, // <--- Added Region ID
       items,
       totalAmount,
       shippingAmount: orderShippingAmount,

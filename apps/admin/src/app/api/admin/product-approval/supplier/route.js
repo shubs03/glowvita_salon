@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import ProductModel from '@repo/lib/models/Vendor/Product.model';
 import {authMiddlewareAdmin} from '../../../../../middlewareAdmin';
+import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import ProductCategoryModel from '@repo/lib/models/admin/ProductCategory';
 
@@ -9,9 +10,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
   try {
     const url = new URL(req.url);
     const status = url.searchParams.get('status'); // Optional query parameter for status
+    const regionId = url.searchParams.get('regionId');
+
+    // Build region query
+    const regionQuery = getRegionQuery(req.user, regionId);
 
     // Build query for supplier products only
-    const query = { origin: 'Supplier' };
+    const query = { ...regionQuery, origin: 'Supplier' };
     if (status) {
       query.status = status;
     }
@@ -32,7 +37,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ['superadmin']);
+},   ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // Approve or Reject Supplier Product
 export const PATCH = authMiddlewareAdmin(async (req) => {
@@ -89,4 +94,4 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ['superadmin']);
+},   ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

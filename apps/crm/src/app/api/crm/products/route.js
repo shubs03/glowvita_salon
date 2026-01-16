@@ -209,8 +209,22 @@ const createProduct = async (req) => {
             }
         }
 
+        // Fetch owner's region to inherit
+        let parentRegionId = null;
+        try {
+            const Model = userRole === 'supplier' 
+                ? (await import("@repo/lib/models/Vendor/Supplier.model")).default
+                : (await import("@repo/lib/models/Vendor/Vendor.model")).default;
+            
+            const parent = await Model.findById(vendorId).select('regionId');
+            parentRegionId = parent?.regionId;
+        } catch (err) {
+            console.error("Error inheriting region for product:", err);
+        }
+
         const newProduct = new ProductModel({
             vendorId: vendorId,
+            regionId: parentRegionId,
             origin: userRole.charAt(0).toUpperCase() + userRole.slice(1),
             productName: productName.trim(),
             description: description?.trim() || '',

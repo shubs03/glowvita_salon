@@ -1,9 +1,9 @@
 
 import _db from "@repo/lib/db";
-import { ReferralModel, C2CSettingsModel, C2VSettingsModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer";
+import { ReferralModel, C2CSettingsModel, C2VSettingsModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer.model";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 import jwt from "jsonwebtoken";
-import { JWT_SECRET_VENDOR } from "@repo/config/config";
 
 await _db();
 
@@ -76,7 +76,7 @@ const validateSettings = (settings) => {
 export const POST = authMiddlewareAdmin(
   async (req) => {
     const body = await req.json();
-    const { referralType, referrer, referee, status, bonus } = body;
+    const { referralType, referrer, referee, status, bonus, regionId } = body;
 
     if (!['C2C', 'C2V', 'V2V'].includes(referralType) || !referrer || !referee || !status || !bonus) {
       return Response.json(
@@ -85,12 +85,17 @@ export const POST = authMiddlewareAdmin(
       );
     }
 
+    // Validate and lock region
+    const { validateAndLockRegion } = await import("@repo/lib");
+    const finalRegionId = validateAndLockRegion(req.user, regionId);
+
     const newReferral = await ReferralModel.create({
       referralType,
       referrer,
       referee,
       status,
       bonus,
+      regionId: finalRegionId
     });
 
     return Response.json(
@@ -98,40 +103,18 @@ export const POST = authMiddlewareAdmin(
       { status: 201 }
     );
   },
-  ["superadmin"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );
 
 // Get Referrals or Settings
-export const GET = async (req) => {
-  // const token = req.headers.get("authorization")?.split(" ")[1];
-  // if (!token) {
-  //   return Response.json({ message: "Unauthorized: No token provided" }, { status: 401 });
-  // }
-
+export const GET = authMiddlewareAdmin(async (req) => {
   try {
-  //   // This endpoint can be accessed by both admin and vendors, so we need to determine the role
-  //   // This is a simplified check; a more robust solution might use different secrets or a public key system.
-  //   let decoded;
-  //   try {
-  //     // Try verifying with admin secret first
-  //     decoded = jwt.verify(token, process.env.JWT_SECRET_ADMIN);
-  //   } catch (adminError) {
-  //     // If admin verification fails, try with vendor secret
-  //     try {
-  //       decoded = jwt.verify(token, JWT_SECRET_VENDOR);
-  //     } catch (vendorError) {
-  //       throw new Error("Invalid token for any role");
-  //     }
-    // }
-
     const url = new URL(req.url);
     const referralType = url.searchParams.get('referralType');
+    const regionId = url.searchParams.get('regionId');
     const isSettings = url.searchParams.get('settings') === 'true';
 
     if (isSettings) {
-      // if (decoded.role !== 'admin' && decoded.role !== 'superadmin') {
-      //    return Response.json({ message: "Forbidden: You do not have permission to access settings" }, { status: 403 });
-      // }
       if (!referralType) {
         return Response.json({ message: "Referral type required for settings" }, { status: 400 });
       }
@@ -153,7 +136,8 @@ export const GET = async (req) => {
         minPayoutCycle: null,
       });
     } else {
-      const query = {};
+      const regionQuery = getRegionQuery(req.user, regionId);
+      const query = { ...regionQuery };
       if (referralType) {
         query.referralType = referralType;
       }
@@ -164,8 +148,7 @@ export const GET = async (req) => {
     console.error("Referral GET error:", error);
     return Response.json({ message: "An error occurred", error: error.message }, { status: 500 });
   }
-};
-
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // Update Referral
 export const PUT = authMiddlewareAdmin(
@@ -192,7 +175,7 @@ export const PUT = authMiddlewareAdmin(
 
     return Response.json(updatedReferral);
   },
-  ["superadmin"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );
 
 // Delete Referral
@@ -207,7 +190,7 @@ export const DELETE = authMiddlewareAdmin(
 
     return Response.json({ message: "Referral deleted successfully" });
   },
-  ["superadmin"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );
 
 // Update Referral Settings
@@ -233,15 +216,9 @@ export const PATCH = authMiddlewareAdmin(
 
     let Model;
     switch (referralType) {
-      case 'C2C':
-        Model = C2CSettingsModel;
-        break;
-      case 'C2V':
-        Model = C2VSettingsModel;
-        break;
-      case 'V2V':
-        Model = V2VSettingsModel;
-        break;
+      case 'C2C': Model = C2CSettingsModel; break;
+      case 'C2V': Model = C2VSettingsModel; break;
+      case 'V2V': Model = V2VSettingsModel; break;
     }
 
     const updatedSettings = await Model.findOneAndUpdate(
@@ -255,5 +232,5 @@ export const PATCH = authMiddlewareAdmin(
       settings: updatedSettings
     });
   },
-  ["superadmin"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );

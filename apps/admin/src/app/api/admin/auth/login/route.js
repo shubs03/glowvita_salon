@@ -46,7 +46,13 @@ export async function POST(request) {
     }
 
     // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(user._id, "admin");
+    const { accessToken, refreshToken } = generateTokens(
+      user._id,
+      "admin",
+      user.permissions || [],
+      user.assignedRegions || [],
+      user.roleName
+    );
 
     // Remove password from response
     const { password: _, ...safeUser } = user.toObject();

@@ -7,7 +7,7 @@ import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 await _db();
 
 // GET all services
-export const GET = async () => {
+export const GET = authMiddlewareAdmin(async (req) => {
   try {
     const services = await ServiceModel.find({}).populate("category", "name");
     return Response.json(services, { status: 200 });
@@ -17,10 +17,10 @@ export const GET = async () => {
       { status: 500 }
     );
   }
-};
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // POST a new service
-export const POST = async (req) => {
+export const POST = authMiddlewareAdmin(async (req) => {
   const body = await req.json();
   const { name, description, category , image} = body;
 
@@ -60,7 +60,7 @@ export const POST = async (req) => {
       { status: 500 }
     );
   }
-};
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // PUT (update) a service by ID
 export const PUT = authMiddlewareAdmin(
@@ -128,7 +128,7 @@ export const PUT = authMiddlewareAdmin(
       );
     }
   },
-  ["superadmin"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );
 
 // DELETE a service by ID
@@ -165,5 +165,5 @@ export const DELETE = authMiddlewareAdmin(
       );
     }
   },
-  ["superadmin"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );

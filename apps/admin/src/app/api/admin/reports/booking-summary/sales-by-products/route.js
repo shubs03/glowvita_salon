@@ -5,6 +5,7 @@ import ProductModel from '@repo/lib/models/Vendor/Product.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
 import { authMiddlewareAdmin } from "../../../../../../middlewareAdmin";
+import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 
 // Initialize database connection
 const initDb = async () => {
@@ -33,6 +34,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const businessName = searchParams.get('businessName'); // Business name filter
     const category = searchParams.get('category'); // Category filter
     const brand = searchParams.get('brand'); // Brand filter
+    const regionId = searchParams.get('regionId'); // Region filter
     
     console.log("Sales by Products Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, saleType, city, userType, businessName, category, brand });
     
@@ -100,10 +102,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
     
     const modeFilter = buildModeFilter(saleType);
     
+    const regionQuery = getRegionQuery(req.user, regionId);
+    
     // Combine all filters
     const combinedFilter = {
       ...dateFilter,
       ...modeFilter,
+      ...regionQuery,
       status: "Delivered" // Only count delivered orders
     };
     
@@ -285,6 +290,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           vendor: Array.isArray(owner.ownerName) ? (owner.ownerName.length > 0 ? owner.ownerName[0] : 'Unknown Vendor') : (owner.ownerName || 'Unknown Vendor'),
           city: Array.isArray(owner.ownerCity) ? (owner.ownerCity.length > 0 ? owner.ownerCity[0] : 'Unknown City') : (owner.ownerCity || 'Unknown City'),
           sale: `₹${(owner.totalRevenue || 0).toFixed(2)}`,
+          rawSale: owner.totalRevenue || 0,
           productSold: owner.totalQuantity || 0,
           productPlatformFee: owner.totalPlatformFee || 0,
           productGST: owner.totalGST || 0,
@@ -550,4 +556,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       error: error.message
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

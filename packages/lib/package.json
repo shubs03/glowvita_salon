@@ -20,6 +20,8 @@
     "./models/admin/Service": "./src/models/admin/Service.model.js",
     "./models/admin/TaxFeeSettings": "./src/models/admin/TaxFeeSettings.model.js",
     "./models/admin/SubscriptionPlan": "./src/models/admin/SubscriptionPlan.model.js",
+    "./models/admin/Region": "./src/models/admin/Region.model.js",
+    "./models/admin/Region.model": "./src/models/admin/Region.model.js",
     "./models/admin/Reffer": "./src/models/admin/Reffer.model.js",
     "./models/admin/SuperData": "./src/models/admin/SuperData.model.js",
     "./models/admin/GeoFence": "./src/models/admin/GeoFence.model.js",
@@ -55,11 +57,14 @@
     "./models/admin/SuperData.model": "./src/models/admin/SuperData.model.js",
     "./models/Vendor/ProductQuestion.model": "./src/models/Vendor/ProductQuestion.model.js",
     "./models/Review/Review.model": "./src/models/Review/Review.model.js",
+    "./models/Vendor/DoctorConsultation.model": "./src/models/Vendor/DoctorConsultation.model.js",
     "./utils": "./src/utils/index.js",
     "./utils/paymentCalculator": "./src/utils/paymentCalculator.js",
     "./modules/scheduling/EnhancedTravelUtils": "./src/modules/scheduling/EnhancedTravelUtils.js",
     "./modules/scheduling/OptimisticLocking": "./src/modules/scheduling/OptimisticLocking.js",
-    "./modules/scheduling/FreshaLikeSlotEngine": "./src/modules/scheduling/FreshaLikeSlotEngine.js"
+    "./modules/scheduling/FreshaLikeSlotEngine": "./src/modules/scheduling/FreshaLikeSlotEngine.js",
+    "./utils/regionQuery": "./src/utils/regionQuery.js",
+    "./VPSUpload": "./VPSUpload.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

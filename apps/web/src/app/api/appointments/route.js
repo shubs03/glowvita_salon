@@ -361,14 +361,12 @@ export const POST = async (req) => {
             }));
         }
 
-        console.log('Creating appointment with data:', appointmentData);
-        console.log('Final appointment data before saving:', {
-            isHomeService: appointmentData.isHomeService,
-            homeServiceLocation: appointmentData.homeServiceLocation,
-            travelTime: appointmentData.travelTime,
-            travelDistance: appointmentData.travelDistance,
-            distanceMeters: appointmentData.distanceMeters
-        });
+        // Fetch vendor to get regionId
+        const vendor = await VendorModel.findById(body.vendorId).select('regionId').lean();
+        if (vendor && vendor.regionId) {
+            appointmentData.regionId = vendor.regionId;
+            console.log('Set regionId for appointment:', vendor.regionId);
+        }
 
         const newAppointment = await AppointmentModel.create(appointmentData);
         console.log('Appointment created successfully with ID:', newAppointment._id);

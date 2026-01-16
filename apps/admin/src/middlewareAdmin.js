@@ -9,7 +9,13 @@ export function authMiddlewareAdmin(handler, allowedRoles = []) {
   return async (req, ctx) => {
     await _db();
 
-    const token = req.headers.get("authorization")?.split(" ")[1];
+    let token = req.headers.get("authorization")?.split(" ")[1];
+    
+    // If no header, try to get from cookies
+    if (!token) {
+      token = req.cookies?.get('admin_access_token')?.value;
+    }
+
     if (!token) {
       return Response.json({ message: "Unauthorized: No token provided" }, { status: 401 });
     }
@@ -32,6 +38,9 @@ export function authMiddlewareAdmin(handler, allowedRoles = []) {
       }
 
       req.user = admin;
+      req.user.roleName = decoded.roleName || admin.roleName;
+      req.user.permissions = decoded.permissions || [];
+      req.user.assignedRegions = decoded.regions || [];
       return handler(req, ctx);
     } catch (err) {
       console.error("Auth Middleware Error:", err.message);

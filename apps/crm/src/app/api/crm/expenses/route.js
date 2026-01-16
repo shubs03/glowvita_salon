@@ -50,10 +50,26 @@ export const POST = withSubscriptionCheck(async (req) => {
             }, { status: 400 });
         }
 
+        // Fetch owner's region to inherit
+        let parentRegionId = null;
+        try {
+            const Model = req.user.role === 'doctor' 
+                ? (await import("@repo/lib/models/Vendor/Docters.model")).default
+                : req.user.role === 'supplier'
+                    ? (await import("@repo/lib/models/Vendor/Supplier.model")).default
+                    : (await import("@repo/lib/models/Vendor/Vendor.model")).default;
+            
+            const parent = await Model.findById(ownerId).select('regionId');
+            parentRegionId = parent?.regionId;
+        } catch (err) {
+            console.error("Error inheriting region for expense:", err);
+        }
+
         // Create new expense
         const newExpense = new ExpenseModel({
             ...body,
             vendorId: ownerId,
+            regionId: parentRegionId,
             createdBy: userType,
         });
 

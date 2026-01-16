@@ -3,6 +3,7 @@ import _db from '@repo/lib/db';
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import { authMiddlewareAdmin } from "../../../../../../middlewareAdmin";
+import { buildRegionQueryFromRequest } from "@repo/lib";
 
 // Initialize database connection
 const initDb = async () => {
@@ -64,15 +65,15 @@ export const GET = authMiddlewareAdmin(async (req) => {
     
     const dateFilter = buildDateFilter(filterType, filterValue);
     
-    // Get all appointments with detailed information within the filtered period
-    const vendorAppointments = await AppointmentModel.find({
-      ...dateFilter
-    }).select(
+    // Get all appointments with detailed information within the filtered period (scoped by region)
+    const appointmentQuery = buildRegionQueryFromRequest(req, dateFilter);
+    const vendorAppointments = await AppointmentModel.find(appointmentQuery).select(
       'vendorId status paymentStatus mode finalAmount platformFee taxAmount discountAmount date'
     );
     
-    // Fetch all vendors with business name and city
-    const allVendors = await VendorModel.find({}, 'businessName city');
+    // Fetch all vendors with business name and city (scoped by region)
+    const vendorQuery = buildRegionQueryFromRequest(req);
+    const allVendors = await VendorModel.find(vendorQuery, 'businessName city');
     const vendorMap = new Map(allVendors.map(vendor => [vendor._id.toString(), {
       businessName: vendor.businessName,
       city: vendor.city || 'Unknown City'
@@ -143,7 +144,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Group sales by date for trend analysis
     const salesByDate = await AppointmentModel.aggregate([
       { $match: { 
-          ...dateFilter,
+          ...appointmentQuery,
           status: 'completed',
           paymentStatus: 'completed'
         } 
@@ -182,4 +183,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       error: error.message
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

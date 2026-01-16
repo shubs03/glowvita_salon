@@ -159,10 +159,50 @@ export const glowvitaApi = createApi({
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder","DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
-     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport","SupplierReports","Products"
+     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport","SupplierReports","Products", "Regions"
   ],
 
   endpoints: (builder) => ({
+    // Regions Endpoints
+    getRegions: builder.query({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append("page", params.page);
+        if (params.limit) queryParams.append("limit", params.limit);
+        const queryString = queryParams.toString();
+        return {
+          url: `/admin/regions${queryString ? `?${queryString}` : ""}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["Regions"],
+    }),
+
+    createRegion: builder.mutation({
+      query: (regionData) => ({
+        url: "/admin/regions",
+        method: "POST",
+        body: regionData,
+      }),
+      invalidatesTags: ["Regions"],
+    }),
+
+    updateRegion: builder.mutation({
+      query: (regionData) => ({
+        url: "/admin/regions",
+        method: "PUT",
+        body: regionData,
+      }),
+      invalidatesTags: ["Regions"],
+    }),
+
+    deleteRegion: builder.mutation({
+      query: (id) => ({
+        url: `/admin/regions?id=${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Regions"],
+    }),
     getProfile: builder.query({
       query: () => `/crm/auth/profile`,
       providesTags: ['User'],
@@ -2908,4 +2948,10 @@ export const {
   useGetSupplierConfirmedOrdersReportQuery,
   useGetSupplierPlatformCollectionsReportQuery,
   useGetSupplierProductSalesReportQuery,
+
+  // Regions Hooks
+  useGetRegionsQuery,
+  useCreateRegionMutation,
+  useUpdateRegionMutation,
+  useDeleteRegionMutation,
 } = glowvitaApi;
