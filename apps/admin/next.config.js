@@ -1,10 +1,16 @@
+const path = require('path');
 require('dotenv').config({ path: '../../.env' });
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ["@repo/ui", "@repo/store", "@repo/lib", "@repo/config", "@repo/utils"],
   output: 'standalone',
   poweredByHeader: false,
   webpack: (config, { isServer }) => {
+    config.resolve.alias['@repo/config'] = path.resolve(__dirname, '../../packages/config');
+    config.resolve.alias['@repo/lib'] = path.resolve(__dirname, '../../packages/lib/src');
+    config.resolve.alias['@repo/store'] = path.resolve(__dirname, '../../packages/store/src');
+    config.resolve.alias['@repo/utils'] = path.resolve(__dirname, '../../packages/utils/src');
     // Handle canvas.node binary files
     config.module.rules.push({
       test: /\.node$/,
