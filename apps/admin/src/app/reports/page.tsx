@@ -689,7 +689,7 @@ const reportsData: ReportCategory[] = [
                 details: "Track admin revenue and payouts with net balance."
             },
             {
-                title: "Vendor Payout Settlement Report",
+                title: "Vendor Payout Settlement Report-service",
                 description: "Amount admin pays to vendor for services",
                 details: "Track vendor payouts for services."
             },
@@ -699,7 +699,7 @@ const reportsData: ReportCategory[] = [
                 details: "Track vendor payouts for products with platform fee, tax, and total amounts."
             },
             {
-                title: "Vendor Payable to Admin Report",
+                title: "Vendor Payable to Admin Report-service",
                 description: "Amount vendor pays to admin for services",
                 details: "Track platform fees, taxes, and other revenues from vendors."
             },
@@ -6401,7 +6401,7 @@ const VendorPayableReportTable = () => {
         <div className="mb-6">
           <Card className="w-64">
             <CardHeader className="p-4">
-              <CardTitle className="text-sm font-medium">Vendor Payable Amount</CardTitle>
+              <CardTitle className="text-sm font-medium">Vendor Payable Amount-service</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
               <div className="text-lg font-bold">₹0.00</div>
@@ -6570,7 +6570,7 @@ const VendorPayableReportTable = () => {
       {/* Summary Card for Vendor Payable */}
       <Card className="mb-6 w-64">
         <CardHeader className="p-4">
-          <CardTitle className="text-sm font-medium">Vendor Payable Amount</CardTitle>
+          <CardTitle className="text-sm font-medium">Vendor Payable Amount-service</CardTitle>
         </CardHeader>
         <CardContent className="p-4">
           <div className="text-lg font-bold">
@@ -6656,7 +6656,7 @@ const VendorPayoutReportDialog = ({ isOpen, onClose }: { isOpen: boolean; onClos
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Vendor Payout Settlement Report</DialogTitle>
+          <DialogTitle>Vendor Payout Settlement Report-service</DialogTitle>
           <DialogDescription>
             Amount admin pays to vendor
           </DialogDescription>
@@ -6707,7 +6707,7 @@ const VendorPayableReportDialog = ({ isOpen, onClose }: { isOpen: boolean; onClo
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Vendor Payable to Admin Report</DialogTitle>
+          <DialogTitle>Vendor Payable to Admin Report-service</DialogTitle>
           <DialogDescription>
             Amount vendor pays to admin for services
           </DialogDescription>
@@ -7331,6 +7331,28 @@ const VendorPayoutSettlementReportTable = () => {
             </DropdownMenu>
           </div>
         </div>
+        
+        <FilterModal 
+          isOpen={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          onApplyFilters={handleFilterChange}
+          cities={cities}
+          vendors={vendorNames}
+          initialFilters={filters}
+          showVendorFilter={true}
+          showBookingTypeFilter={false}
+        />
+        
+        <div className="mb-6">
+          <Card className="w-64">
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium">Vendor Payout Amount-service</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+        </div>
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -7464,6 +7486,28 @@ const VendorPayoutSettlementReportTable = () => {
           showBookingTypeFilter={false}
         />
         
+        <div className="mb-6">
+          <Card className="w-64">
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium">Vendor Payout Amount-service</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <FilterModal 
+          isOpen={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          onApplyFilters={handleFilterChange}
+          cities={cities}
+          vendors={vendorNames}
+          initialFilters={filters}
+          showVendorFilter={true}
+          showBookingTypeFilter={false}
+        />
+        
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -7542,7 +7586,7 @@ const VendorPayoutSettlementReportTable = () => {
           </DropdownMenu>
         </div>
       </div>
-      
+            
       <FilterModal 
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
@@ -7553,7 +7597,18 @@ const VendorPayoutSettlementReportTable = () => {
         showVendorFilter={true}
         showBookingTypeFilter={false}
       />
-      
+            
+      <div className="mb-6">
+        <Card className="w-64">
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium">Vendor Payout Amount-service</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold">₹{paginatedData.reduce((sum, item: any) => sum + (item["Total"] || 0), 0).toFixed(2)}</div>
+          </CardContent>
+        </Card>
+      </div>
+            
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>
@@ -7651,6 +7706,16 @@ const VendorPayoutSettlementReportProductTable = () => {
   if (isLoading) {
     return (
       <div>
+        <div className="mb-6">
+          <Card className="w-64">
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium">Vendor Payout Amount-Product</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+        </div>
         <div className="flex justify-between items-center mb-4 gap-2">
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -7772,6 +7837,16 @@ const VendorPayoutSettlementReportProductTable = () => {
   if (vendorPayoutSettlementProductData.length === 0) {
     return (
       <div>
+        <div className="mb-6">
+          <Card className="w-64">
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium">Vendor Payout Amount-Product</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+        </div>
         <div className="flex justify-between items-center mb-4 gap-2">
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -7927,6 +8002,17 @@ const VendorPayoutSettlementReportProductTable = () => {
         showBookingTypeFilter={false}
       />
       
+      <div className="mb-6">
+        <Card className="w-64">
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium">Vendor Payout Amount-Product</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold">₹{paginatedData.reduce((sum, item: any) => sum + (item["Total"] || 0), 0).toFixed(2)}</div>
+          </CardContent>
+        </Card>
+      </div>
+      
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>
@@ -8074,6 +8160,29 @@ const VendorPayableReportProductTable = () => {
             </DropdownMenu>
           </div>
         </div>
+        
+        <FilterModal 
+          isOpen={isFilterModalOpen}
+          onClose={() => setIsFilterModalOpen(false)}
+          onApplyFilters={handleFilterChange}
+          cities={cities}
+          businessNames={businessNames}
+          initialFilters={filters}
+          showBookingTypeFilter={false}
+          showUserTypeFilter={true}
+          showBusinessNameFilter={true}
+        />
+        
+        <div className="mb-6">
+          <Card className="w-64">
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium">Vendor Payable Amount-Product</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+        </div>
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -8206,6 +8315,17 @@ const VendorPayableReportProductTable = () => {
           showBusinessNameFilter={true}
         />
         
+        <div className="mb-6">
+          <Card className="w-64">
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium">Vendor Payable Amount-Product</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+        </div>
+        
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -8215,7 +8335,7 @@ const VendorPayableReportProductTable = () => {
                 <TableHead>product Platform Fee</TableHead>
                 <TableHead>product Tax/gst</TableHead>
                 <TableHead>Total</TableHead>
-              </TableRow>
+                </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
@@ -8283,7 +8403,7 @@ const VendorPayableReportProductTable = () => {
           </DropdownMenu>
         </div>
       </div>
-      
+            
       <FilterModal 
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
@@ -8295,7 +8415,18 @@ const VendorPayableReportProductTable = () => {
         showUserTypeFilter={true}
         showBusinessNameFilter={true}
       />
-      
+            
+      <div className="mb-6">
+        <Card className="w-64">
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium">Vendor Payable Amount-Product</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold">₹{paginatedData.reduce((sum, item: any) => sum + (item["Total"] || 0), 0).toFixed(2)}</div>
+          </CardContent>
+        </Card>
+      </div>
+            
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>
@@ -8424,7 +8555,7 @@ const VendorPayoutSettlementReportDialog = ({ isOpen, onClose }: { isOpen: boole
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Vendor Payout Settlement Report</DialogTitle>
+          <DialogTitle>Vendor Payout Settlement Report-service</DialogTitle>
           <DialogDescription>
             Amount admin pays to vendor for services.
           </DialogDescription>
@@ -8715,7 +8846,7 @@ export default function ReportsPage() {
       setIsSalesByCategoryReportDialogOpen(true);
     }
     // Special handling for Vendor Payout Settlement Report
-    else if (report.title === "Vendor Payout Settlement Report") {
+    else if (report.title === "Vendor Payout Settlement Report-service") {
       setIsVendorPayoutDialogOpen(true);
     }
     // Special handling for Vendor Payout Settlement Report - Product
@@ -8723,7 +8854,7 @@ export default function ReportsPage() {
       setIsVendorPayoutProductDialogOpen(true);
     }
     // Special handling for Vendor Payable to Admin Report
-    else if (report.title === "Vendor Payable to Admin Report") {
+    else if (report.title === "Vendor Payable to Admin Report-service") {
       setIsVendorPayableDialogOpen(true);
     }
     // Special handling for Vendor Payable to Admin Report - Product

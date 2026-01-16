@@ -8,14 +8,15 @@ import { Label } from "@repo/ui/label";
 import { Textarea } from "@repo/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import { X, Phone, Mail, MapPin, Clock, Calendar, User, Scissors, DollarSign, UserCheck, CreditCard, Wallet, Smartphone, History, CalendarPlus, ClipboardList } from "lucide-react";
+import { X, Phone, Mail, MapPin, Clock, Calendar, User, Scissors, DollarSign, UserCheck, CreditCard, Wallet, Smartphone, History, CalendarPlus, ClipboardList, Printer, Download } from "lucide-react";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
 import { Badge } from "@repo/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
 import NewAppointmentForm, { type Appointment as FormAppointment } from "../app/calendar/components/NewAppointmentForm";
 import { toast } from 'sonner';
-import { useCollectPaymentMutation, useGetAppointmentsQuery } from '@repo/store/services/api';
+import { useCollectPaymentMutation, useGetAppointmentsQuery, useGetVendorProfileQuery } from '@repo/store/services/api';
+import { AppointmentInvoice } from './AppointmentInvoice';
 
 interface PaymentDetails {
   amount: number;
@@ -51,6 +52,12 @@ interface ServiceItem {
   endTime: string;
   duration: number;
   amount: number;
+  addOns?: Array<{
+    _id: string;
+    name: string;
+    price: number;
+    duration: number;
+  }>;
 }
 
 // Create a new interface that combines the properties we need
@@ -85,6 +92,12 @@ interface Appointment {
   // Additional properties used in this component
   payment?: PaymentDetails;
   vendorId?: string;
+  addOnsAmount?: number;
+  platformFee?: number;
+  serviceTax?: number;
+  finalAmount?: number;
+  amountPaid?: number;
+  amountRemaining?: number;
 }
 
 interface AppointmentDetailViewProps {
@@ -145,6 +158,8 @@ export function AppointmentDetailView({
 
   // Add the missing isStatusChanging state
   const [isStatusChanging, setIsStatusChanging] = useState(false);
+  const [showInvoice, setShowInvoice] = useState(false);
+  const { data: vendorProfile, isLoading: isVendorLoading } = useGetVendorProfileQuery({});
 
   // Local override for payment values after a successful collection, so UI updates immediately
   const [overridePayment, setOverridePayment] = useState<{ amountPaid: number; amountRemaining: number; paymentStatus: string } | null>(null);
@@ -171,6 +186,22 @@ export function AppointmentDetailView({
     if (Array.isArray(r?.data?.data)) return r.data.data;
     return [];
   }, [allAppointments]);
+
+  // Calculate totals for services and add-ons
+  const { totalBaseAmount, totalAddOnsAmount } = useMemo(() => {
+    if (liveAppointment.serviceItems && liveAppointment.serviceItems.length > 0) {
+      const base = liveAppointment.serviceItems.reduce((sum: number, item: any) => sum + (Number(item.amount) || 0), 0);
+      const addOns = liveAppointment.serviceItems.reduce((sum: number, item: any) => {
+        const itemAddOns = Array.isArray(item.addOns) ? item.addOns : [];
+        return sum + itemAddOns.reduce((aSum: number, a: any) => aSum + (Number(a.price) || 0), 0);
+      }, 0);
+      return { totalBaseAmount: base, totalAddOnsAmount: addOns };
+    }
+    return {
+      totalBaseAmount: Number(liveAppointment.amount) || 0,
+      totalAddOnsAmount: Number(liveAppointment.addOnsAmount) || 0
+    };
+  }, [liveAppointment]);
 
   // Prepare default values for edit/reschedule form
   const defaultFormValues = useMemo(() => {
@@ -542,32 +573,71 @@ export function AppointmentDetailView({
       { value: 'cancelled', label: 'Cancel Appointment' }
     ];
 
+    const statusLabels: Record<string, string> = {
+      'scheduled': 'Scheduled',
+      'pending': 'Pending',
+      'confirmed': 'Confirmed',
+      'completed': 'Completed',
+      'completed without payment': 'Completed without payment',
+      'cancelled': 'Cancelled',
+      'partially-completed': 'Partially Completed',
+      'in_progress': 'In Progress',
+      'missed': 'Missed',
+      'no_show': 'No Show'
+    };
+
+    const currentOption = { value: currentStatus, label: statusLabels[currentStatus] || currentStatus };
+
+    let options = [];
     switch (currentStatus) {
       case 'scheduled':
-        return [
+        options = [
           { value: 'confirmed', label: 'Confirm Appointment' },
           { value: 'completed without payment', label: 'Completed without payment' },
           ...commonOptions
         ];
+        break;
       case 'pending':
-        return [
+        options = [
           { value: 'scheduled', label: 'Mark as Scheduled' },
           { value: 'confirmed', label: 'Confirm Appointment' },
           { value: 'completed without payment', label: 'Completed without payment' },
           ...commonOptions
         ];
+        break;
       case 'confirmed':
-        return [
+        options = [
           { value: 'completed without payment', label: 'Completed without payment' },
           ...commonOptions
         ];
+        break;
       default:
-        return [
+        options = [
           { value: 'scheduled', label: 'Mark as Scheduled' },
           { value: 'confirmed', label: 'Confirm Appointment' },
           ...commonOptions
         ];
     }
+
+    // Ensure current status is in the options list if not already there
+    const hasCurrent = options.some(opt => opt.value === currentStatus);
+    return hasCurrent ? options : [currentOption, ...options];
+  };
+
+  const getStatusLabel = (status: string) => {
+    const statusLabels: Record<string, string> = {
+      'scheduled': 'Scheduled',
+      'pending': 'Pending',
+      'confirmed': 'Confirmed',
+      'completed': 'Completed',
+      'completed without payment': 'Completed without payment',
+      'cancelled': 'Cancelled',
+      'partially-completed': 'Partially Completed',
+      'in_progress': 'In Progress',
+      'missed': 'Missed',
+      'no_show': 'No Show'
+    };
+    return statusLabels[status] || status.replace(/-/g, ' ').toUpperCase();
   };
 
   const handleStatusChange = useCallback(async (newStatus: string) => {
@@ -715,7 +785,7 @@ export function AppointmentDetailView({
       }
 
       // Success toast
-      let successMessage = `Payment of â‚¹${paymentData.amount.toFixed(2)} received via ${paymentData.paymentMethod}`;
+      let successMessage = `Payment of ₹${paymentData.amount.toFixed(2)} received via ${paymentData.paymentMethod}`;
       if (updatedAppointmentData?.status && appointment.status !== updatedAppointmentData.status) {
         successMessage += ` and appointment marked as ${updatedAppointmentData.status}`;
       }
@@ -755,6 +825,191 @@ export function AppointmentDetailView({
       console.error('Error collecting payment:', error);
       toast.error('Payment Failed', {
         description: error?.message || 'There was an error processing your payment. Please try again.',
+      });
+    } finally {
+      toast.dismiss(toastId);
+    }
+  };
+
+  // Prepare Invoice Data
+  const invoiceData = useMemo(() => {
+    if (!appointment) return null;
+
+    return {
+      invoiceNumber: (() => {
+        const dateStr = appointment.date instanceof Date
+          ? appointment.date.toISOString().split('T')[0].replace(/-/g, '')
+          : String(appointment.date).split('T')[0].replace(/-/g, '');
+        const salonName = vendorProfile?.data?.businessName?.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 10) || 'SALON';
+        const uniqueId = appointment._id ? appointment._id.substring(appointment._id.length - 6).toUpperCase() : '000';
+        return `INV-${dateStr}-${salonName}-${uniqueId}`;
+      })(),
+      date: appointment.date instanceof Date ? appointment.date.toLocaleDateString() : String(appointment.date).split('T')[0],
+      time: appointment.startTime,
+      client: {
+        fullName: appointment.clientName,
+        phone: (appointment.client as any)?.phone || ''
+      },
+      status: appointment.status,
+      items: appointment.serviceItems?.length ? appointment.serviceItems.flatMap(item => [
+        {
+          name: item.serviceName,
+          price: item.amount,
+          quantity: 1,
+          totalPrice: item.amount,
+          discount: 0,
+          staff: item.staffName,
+          duration: item.duration,
+          type: 'service'
+        },
+        ...(Array.isArray(item.addOns) ? item.addOns.map(addOn => ({
+          name: `${addOn.name} (Add-on)`,
+          price: addOn.price,
+          quantity: 1,
+          totalPrice: addOn.price,
+          discount: 0,
+          duration: addOn.duration,
+          type: 'addon'
+        })) : [])
+      ]) : [
+        {
+          name: appointment.serviceName,
+          price: appointment.amount,
+          quantity: 1,
+          totalPrice: appointment.amount,
+          discount: appointment.discount,
+          staff: appointment.staffName,
+          duration: appointment.duration,
+          type: 'service'
+        },
+        ...((appointment as any).addOns || []).map((addOn: any) => ({
+          name: `${addOn.name} (Add-on)`,
+          price: addOn.price,
+          quantity: 1,
+          totalPrice: addOn.price,
+          discount: 0,
+          duration: addOn.duration,
+          type: 'addon'
+        }))
+      ],
+      subtotal: totalBaseAmount + totalAddOnsAmount,
+      originalSubtotal: totalBaseAmount + totalAddOnsAmount,
+      discount: appointment.discount,
+      tax: (appointment as any).serviceTax || (appointment as any).tax || appointment.payment?.serviceTax || 0,
+      platformFee: (appointment as any).platformFee || appointment.payment?.platformFee || 0,
+      total: totalAmount,
+      balance: remainingAmount,
+      paymentMethod: (appointment as any).paymentMethod || appointment.payment?.paymentMethod || null
+    };
+  }, [appointment, totalAmount, remainingAmount, vendorProfile]);
+
+  const handleDownloadPdf = async () => {
+    const toastId = toast.loading('Generating PDF...');
+    try {
+      // Dynamic import
+      const html2pdf = (await import('html2pdf.js')).default;
+      const element = document.getElementById('invoice-content');
+
+      if (!element) {
+        throw new Error('Invoice element not found');
+      }
+
+      // Clone the element to avoid modifying the visible one
+      const clone = element.cloneNode(true) as HTMLElement;
+
+      // Create a temporary container for the clone
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = '800px'; // Force standard A4 width
+      container.style.backgroundColor = 'white';
+      container.appendChild(clone);
+      document.body.appendChild(container);
+
+      // Ensure buttons are hidden in the clone (double check)
+      const buttons = clone.querySelector('[data-html2canvas-ignore="true"]');
+      if (buttons) {
+        (buttons as HTMLElement).style.display = 'none';
+      }
+
+      const opt: any = {
+        margin: [10, 10, 10, 10] as [number, number, number, number], // Top, Right, Bottom, Left margins in mm
+        filename: `Invoice_${appointment._id?.substring(appointment._id.length - 6).toUpperCase() || 'INV'}.pdf`,
+        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
+      };
+
+      await html2pdf().set(opt).from(clone).save();
+
+      // Cleanup
+      document.body.removeChild(container);
+
+      toast.success('Invoice downloaded successfully');
+    } catch (error: any) {
+      console.error('Error downloading PDF:', error);
+      toast.error('Failed to download invoice', {
+        description: error?.message || 'Please try again.'
+      });
+    } finally {
+      toast.dismiss(toastId);
+    }
+  };
+
+  const handlePrintPdf = async () => {
+    const toastId = toast.loading('Preparing print preview...');
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      const element = document.getElementById('invoice-content');
+
+      if (!element) {
+        throw new Error('Invoice element not found');
+      }
+
+      // Clone the element to avoid modifying the visible one
+      const clone = element.cloneNode(true) as HTMLElement;
+
+      // Create a temporary container for the clone
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.left = '-9999px';
+      container.style.top = '0';
+      container.style.width = '800px'; // Force standard A4 width
+      container.style.backgroundColor = 'white';
+      container.appendChild(clone);
+      document.body.appendChild(container);
+
+      // Ensure buttons are hidden in the clone (double check)
+      const buttons = clone.querySelector('[data-html2canvas-ignore="true"]');
+      if (buttons) {
+        (buttons as HTMLElement).style.display = 'none';
+      }
+
+      const opt: any = {
+        margin: [10, 10, 10, 10] as [number, number, number, number],
+        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
+      };
+
+      // Generate PDF as blob and open it in a new tab for printing
+      const pdfBlob = await html2pdf().set(opt).from(clone).output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      const printWindow = window.open(url, '_blank');
+
+      if (printWindow) {
+        printWindow.focus();
+      } else {
+        toast.error('Pop-up blocked. Please allow pop-ups to view print preview.');
+      }
+
+      // Cleanup
+      document.body.removeChild(container);
+    } catch (error: any) {
+      console.error('Error printing PDF:', error);
+      toast.error('Failed to prepare print preview', {
+        description: error?.message || 'Please try again.'
       });
     } finally {
       toast.dismiss(toastId);
@@ -819,6 +1074,16 @@ export function AppointmentDetailView({
     );
   }
 
+  // Debug log to check appointment data
+  console.log('Appointment data:', JSON.stringify(appointment, null, 2));
+
+  // Helper function to format currency with proper symbol and formatting
+  const formatCurrency = (amount: number | string): string => {
+    const num = typeof amount === 'string' ? parseFloat(amount) : amount;
+    if (isNaN(num)) return '₹0.00';
+    return `₹${num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
   return (
     <>
       {renderStatusConfirmDialog()}
@@ -834,9 +1099,13 @@ export function AppointmentDetailView({
             <div className="flex justify-between items-start">
               <div>
                 <DialogTitle className="text-xl font-semibold text-foreground">Appointment Details</DialogTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {appointment.clientName} â€¢ {format(new Date(appointment.date), 'MMM d, yyyy')} â€¢ {appointment.startTime}
-                </p>
+                <div className="text-sm text-muted-foreground mt-1">
+                  <span>{appointment.clientName}</span>
+                  <span className="mx-2">•</span>
+                  <span>{format(new Date(appointment.date), 'MMM d, yyyy')}</span>
+                  <span className="mx-2">•</span>
+                  <span>{appointment.startTime}</span>
+                </div>
               </div>
             </div>
           </DialogHeader>
@@ -922,22 +1191,28 @@ export function AppointmentDetailView({
                   </Select>
                 </div> */}
                   <div className="w-full sm:w-[200px]">
-                    <Select
-                      value={appointment.status || "scheduled"}
-                      onValueChange={handleStatusChange}
-                      disabled={isStatusChanging}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {getStatusOptions(appointment.status || 'scheduled').map(option => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {(appointment.status === 'completed' || appointment.status === 'completed without payment' || appointment.status === 'cancelled') ? (
+                      <div className="w-full h-10 px-3 py-2 border rounded-md bg-muted/20 flex items-center text-sm font-medium text-foreground cursor-default">
+                        {getStatusLabel(appointment.status)}
+                      </div>
+                    ) : (
+                      <Select
+                        value={appointment.status || "scheduled"}
+                        onValueChange={handleStatusChange}
+                        disabled={isStatusChanging}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getStatusOptions(appointment.status || 'scheduled').map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
                   </div>
                 </div>
               </div>
@@ -991,14 +1266,20 @@ export function AppointmentDetailView({
                         {/* Service Amount */}
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Service Amount</span>
-                          <span className="font-medium">â‚¹{appointment.amount?.toFixed(2) || '0.00'}</span>
+                          <span className="font-medium">{formatCurrency(totalBaseAmount)}</span>
+                        </div>
+
+                        {/* Add-on Amount */}
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Add-on Amount</span>
+                          <span className="font-medium">{formatCurrency(totalAddOnsAmount)}</span>
                         </div>
 
                         {/* Discount Amount (from appointment root) */}
                         {(appointment as any).discountAmount > 0 && (
                           <div className="flex justify-between items-center text-foreground">
                             <span>Discount Applied</span>
-                            <span className="font-medium">-â‚¹{((appointment as any).discountAmount)?.toFixed(2) || '0.00'}</span>
+                            <span className="font-medium">-{formatCurrency((appointment as any).discountAmount)}</span>
                           </div>
                         )}
 
@@ -1011,7 +1292,7 @@ export function AppointmentDetailView({
                               </svg>
                               <span>Offer ({appointment.payment.offer.code})</span>
                             </div>
-                            <span className="font-medium">-â‚¹{appointment.payment.offer.discountAmount?.toFixed(2) || '0.00'}</span>
+                            <span className="font-medium">-{formatCurrency(appointment.payment.offer.discountAmount)}</span>
                           </div>
                         )}
 
@@ -1019,46 +1300,26 @@ export function AppointmentDetailView({
                         {appointment.discount > 0 && (
                           <div className="flex justify-between items-center text-foreground">
                             <span>Discount</span>
-                            <span className="font-medium">-â‚¹{appointment.discount.toFixed(2)}</span>
+                            <span className="font-medium">-{formatCurrency(appointment.discount)}</span>
                           </div>
                         )}
 
-                        {/* Service Tax (from appointment root) */}
-                        {(appointment as any).serviceTax && (appointment as any).serviceTax > 0 && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground">Service Tax (GST)</span>
-                            <span className="font-medium">â‚¹{((appointment as any).serviceTax)?.toFixed(2) || '0.00'}</span>
-                          </div>
-                        )}
+                        {/* Service Tax (GST) */}
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Service Tax (GST)</span>
+                          <span className="font-medium">{formatCurrency((liveAppointment as any).serviceTax || (liveAppointment as any).tax || appointment.payment?.serviceTax || 0)}</span>
+                        </div>
 
-                        {/* Service Tax (from payment object - fallback) */}
-                        {!((appointment as any).serviceTax) && appointment.payment?.serviceTax && appointment.payment.serviceTax > 0 && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground">Service Tax (GST)</span>
-                            <span className="font-medium">â‚¹{appointment.payment.serviceTax.toFixed(2)}</span>
-                          </div>
-                        )}
-
-                        {/* Platform Fee (from appointment root) */}
-                        {(appointment as any).platformFee && (appointment as any).platformFee > 0 && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground">Platform Fee</span>
-                            <span className="font-medium">â‚¹{((appointment as any).platformFee)?.toFixed(2) || '0.00'}</span>
-                          </div>
-                        )}
-
-                        {/* Platform Fee (from payment object - fallback) */}
-                        {!((appointment as any).platformFee) && appointment.payment?.platformFee && appointment.payment.platformFee > 0 && (
-                          <div className="flex justify-between items-center">
-                            <span className="text-muted-foreground">Platform Fee</span>
-                            <span className="font-medium">â‚¹{appointment.payment.platformFee.toFixed(2)}</span>
-                          </div>
-                        )}
+                        {/* Platform Fee */}
+                        <div className="flex justify-between items-center">
+                          <span className="text-muted-foreground">Platform Fee</span>
+                          <span className="font-medium">{formatCurrency((liveAppointment as any).platformFee || appointment.payment?.platformFee || 0)}</span>
+                        </div>
 
                         <div className="border-t pt-2 mt-2">
                           <div className="flex justify-between items-center font-semibold text-base">
                             <span>Total Amount</span>
-                            <span className="text-foreground">â‚¹{((appointment as any).finalAmount || appointment.totalAmount)?.toFixed(2) || '0.00'}</span>
+                            <span className="text-foreground">{formatCurrency(totalAmount)}</span>
                           </div>
                         </div>
 
@@ -1087,7 +1348,7 @@ export function AppointmentDetailView({
                         <div className="flex justify-between items-center py-2 px-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
                           <span className="text-sm font-medium text-green-900 dark:text-green-100">Amount Paid:</span>
                           <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                            â‚¹{paidAmount.toFixed(2)}
+                            {formatCurrency(paidAmount)}
                           </span>
                         </div>
 
@@ -1095,7 +1356,7 @@ export function AppointmentDetailView({
                         <div className="flex justify-between items-center py-2 px-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
                           <span className="text-sm font-medium text-orange-900 dark:text-orange-100">Amount Remaining:</span>
                           <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
-                            â‚¹{remainingAmount.toFixed(2)}
+                            {formatCurrency(remainingAmount)}
                           </span>
                         </div>
 
@@ -1108,7 +1369,7 @@ export function AppointmentDetailView({
                               </svg>
                               <span>Amount Paid {appointment.payment?.paymentMode === 'online' ? '(Online)' : ''}</span>
                             </div>
-                            <span className="font-medium">â‚¹{(appointment.payment?.paid ?? 0).toFixed(2)}</span>
+                            <span className="font-medium">{formatCurrency(appointment.payment?.paid ?? 0)}</span>
                           </div>
                         )}
 
@@ -1117,7 +1378,7 @@ export function AppointmentDetailView({
                           <div className="flex justify-between items-center">
                             <span className="font-semibold text-base">Amount to Collect</span>
                             <span className="text-xl font-bold text-foreground">
-                              â‚¹{remainingAmount.toFixed(2)}
+                              {formatCurrency(remainingAmount)}
                             </span>
                           </div>
                         </div>
@@ -1134,21 +1395,21 @@ export function AppointmentDetailView({
                         <div className="flex justify-between items-center py-2 px-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
                           <span className="text-sm font-medium text-blue-900 dark:text-blue-100">Total Amount</span>
                           <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">
-                            â‚¹{((appointment as any).finalAmount || appointment.totalAmount || 0).toFixed(2)}
+                            {formatCurrency(totalAmount)}
                           </span>
                         </div>
 
                         <div className="flex justify-between items-center py-2 px-3 bg-green-50 dark:bg-green-950/30 rounded-lg">
                           <span className="text-sm font-medium text-green-900 dark:text-green-100">Amount Paid</span>
                           <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                            â‚¹{paidAmount.toFixed(2)}
+                            {formatCurrency(paidAmount)}
                           </span>
                         </div>
 
                         <div className="flex justify-between items-center py-2 px-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg">
                           <span className="text-sm font-medium text-orange-900 dark:text-orange-100">Amount Remaining</span>
                           <span className="text-sm font-semibold text-orange-700 dark:text-orange-300">
-                            â‚¹{remainingAmount.toFixed(2)}
+                            {formatCurrency(remainingAmount)}
                           </span>
                         </div>
 
@@ -1169,7 +1430,7 @@ export function AppointmentDetailView({
                                 case 'completed': return 'PAID';
                                 case 'pending':
                                   if (amountPaid > 0 && totalAmount > 0) {
-                                    return `PARTIAL (â‚¹${amountPaid.toFixed(2)})`;
+                                    return `PARTIAL (${formatCurrency(amountPaid)})`;
                                   }
                                   return 'UNPAID';
                                 default: return status.toUpperCase();
@@ -1186,7 +1447,7 @@ export function AppointmentDetailView({
                         <div>
                           <label className="text-sm font-medium mb-2 block">Collecting Amount (Manual Entry)</label>
                           <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground font-medium">â‚¹</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground font-medium">₹</span>
                             <Input
                               type="number"
                               value={paymentData.amount}
@@ -1206,7 +1467,7 @@ export function AppointmentDetailView({
                           </div>
                           <div className="flex justify-between items-center mt-1.5">
                             <p className="text-xs text-foreground/80">
-                              Remaining Balance: â‚¹{remainingAmount.toFixed(2)}
+                              Remaining Balance: {formatCurrency(remainingAmount)}
                             </p>
                             {paymentData.amount !== remainingAmount && remainingAmount > 0 && (
                               <button
@@ -1222,7 +1483,7 @@ export function AppointmentDetailView({
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                               </svg>
-                              Amount exceeds remaining balance by â‚¹{(paymentData.amount - remainingAmount).toFixed(2)}
+                              Amount exceeds remaining balance by {formatCurrency(paymentData.amount - remainingAmount)}
                             </p>
                           )}
                         </div>
@@ -1297,7 +1558,7 @@ export function AppointmentDetailView({
                                   </div>
                                 </div>
                               </div>
-                              <p className="text-sm font-medium text-center">Scan QR code to pay â‚¹{paymentData.amount.toFixed(2)}</p>
+                              <p className="text-sm font-medium text-center">Scan QR code to pay {formatCurrency(paymentData.amount)}</p>
                               <p className="text-xs text-foreground/80 mt-1">Or enter UPI ID manually</p>
                             </div>
                           </div>
@@ -1345,7 +1606,7 @@ export function AppointmentDetailView({
                                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
-                                Confirm Payment â‚¹{paymentData.amount.toFixed(2)}
+                                Confirm Payment {formatCurrency(paymentData.amount)}
                               </>
                             )}
                           </Button>
@@ -1364,7 +1625,7 @@ export function AppointmentDetailView({
                           </div>
                           <div>
                             <p className="font-semibold text-foreground">Payment Complete</p>
-                            <p className="text-sm text-foreground/80">Full payment of â‚¹{appointment.totalAmount?.toFixed(2)} has been received.</p>
+                            <p className="text-sm text-foreground/80">Full payment of {formatCurrency(appointment.totalAmount)} has been received.</p>
                           </div>
                         </div>
                       </div>
@@ -1395,7 +1656,7 @@ export function AppointmentDetailView({
                         <div key={idx} className="flex items-start justify-between p-3 rounded-lg border bg-card/50">
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold text-foreground">â‚¹{Number(p.amount || 0).toFixed(2)}</span>
+                              <span className="text-sm font-semibold text-foreground">{formatCurrency(p.amount)}</span>
                               <span className="text-xs text-muted-foreground">â€¢ {String(p.paymentMethod || 'cash').toUpperCase()}</span>
                             </div>
                             <div className="text-xs text-muted-foreground mt-0.5">{dateStr}</div>
@@ -1452,54 +1713,76 @@ export function AppointmentDetailView({
                     </div>
 
                     {/* Show single service or multi-service header */}
-                    {!(appointment.isMultiService || (appointment.serviceItems && appointment.serviceItems.length > 1)) ? (
-                      <div className="bg-background p-3 rounded-lg border shadow-sm">
-                        <div className="flex items-center space-x-3">
-                          <div className="p-2 bg-primary/10 rounded-lg">
-                            <Scissors className="h-5 w-5 text-foreground" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Service</p>
+                    <div className="bg-background p-3 rounded-lg border shadow-sm">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <Scissors className="h-5 w-5 text-foreground" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            {((appointment.serviceItems || []).length > 1) ? 'Services' : 'Service'}
+                          </p>
+                          {((appointment.serviceItems || []).length > 1) ? (
+                            <p className="text-lg font-semibold text-foreground">
+                              Multi-Service ({(appointment.serviceItems || []).length} Services)
+                            </p>
+                          ) : (
                             <p className="text-lg font-semibold text-foreground">
                               {appointment.serviceName || 'No service specified'}
                             </p>
-                          </div>
+                          )}
                         </div>
                       </div>
-                    ) : (
-                      <div className="bg-background p-3 rounded-lg border shadow-sm">
-                        <div className="flex items-center space-x-3 mb-3">
-                          <div className="p-2 bg-primary/10 rounded-lg">
-                            <ClipboardList className="h-5 w-5 text-foreground" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Services</p>
-                            <p className="text-lg font-semibold text-foreground">
-                              Multi-Service ({appointment.serviceItems?.length || 0} Services)
-                            </p>
-                          </div>
-                        </div>
 
-                        {/* Display all service items */}
-                        {appointment.serviceItems && appointment.serviceItems.length > 0 && (
-                          <div className="space-y-2 mt-3">
-                            {appointment.serviceItems.map((item: ServiceItem, index: number) => (
-                              <div key={item._id || index} className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-muted">
-                                <div className="flex-1">
-                                  <div className="font-medium text-sm">{item.serviceName}</div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {item.staffName} â€¢ {item.startTime} - {item.endTime} ({item.duration} min)
+                      {/* Service Items List */}
+                      {(appointment.serviceItems || []).length > 0 && (
+                        <div className="mt-3 space-y-3">
+                          {(appointment.serviceItems || []).map((item, index) => {
+                            // Ensure addOns is always an array
+                            const itemAddOns = Array.isArray(item.addOns) ? item.addOns : [];
+
+                            return (
+                              <div key={item._id || index} className="p-3 bg-muted/20 rounded-lg border border-muted/30">
+                                <div className="flex justify-between items-start">
+                                  <div>
+                                    <p className="font-medium text-foreground">{item.serviceName}</p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {item.staffName} • {item.startTime} - {item.endTime} ({item.duration} min)
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-medium font-mono">{formatCurrency(item.amount || 0)}</p>
                                   </div>
                                 </div>
-                                <div className="text-right ml-2">
-                                  <div className="font-semibold text-sm">â‚¹{item.amount?.toFixed(2) || '0.00'}</div>
-                                </div>
+
+                                {/* Add-ons section */}
+                                {itemAddOns.length > 0 && (
+                                  <div className="mt-2 pt-2 border-t border-muted/30">
+                                    <p className="text-xs font-medium text-muted-foreground mb-1">Add-ons:</p>
+                                    <div className="space-y-1">
+                                      {itemAddOns.map((addOn, addOnIndex) => (
+                                        <div
+                                          key={`${item._id || 'item'}-addon-${addOnIndex}`}
+                                          className="flex justify-between items-center text-xs pl-2"
+                                        >
+                                          <span className="text-muted-foreground">
+                                            + {addOn.name} ({addOn.duration} min)
+                                          </span>
+                                          <span className="font-medium font-mono">
+                                            {formatCurrency(addOn.price || 0)}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
 
                     <div className="bg-background p-3 rounded-lg border shadow-sm">
                       <div className="flex items-center space-x-3">
@@ -1524,7 +1807,12 @@ export function AppointmentDetailView({
                           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Date & Time</p>
                           <div className="space-y-1">
                             <p className="text-lg font-semibold text-foreground">
-                              {format(new Date(appointment.date), 'EEEE, MMMM d, yyyy')}
+                              {new Date(appointment.date).toLocaleDateString('en-US', {
+                                weekday: 'long',
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric'
+                              })}
                             </p>
                             <div className="flex items-center text-foreground/80">
                               <Clock className="h-4 w-4 mr-1.5 text-foreground" />
@@ -1620,37 +1908,52 @@ export function AppointmentDetailView({
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Service Amount:</span>
-                    <span>â‚¹{Number(((liveAppointment as any)?.amount ?? appointment.amount) || 0).toFixed(2)}</span>
+                    <span className="font-mono">{formatCurrency(totalBaseAmount)}</span>
                   </div>
 
-                  {appointment.discount && appointment.discount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Add-on Amount:</span>
+                    <span className="font-mono">{formatCurrency(totalAddOnsAmount)}</span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Service Tax (GST):</span>
+                    <span className="font-mono">{formatCurrency((liveAppointment as any).serviceTax || (liveAppointment as any).tax || appointment.payment?.serviceTax || 0)}</span>
+                  </div>
+
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Platform Fee:</span>
+                    <span className="font-mono">{formatCurrency((liveAppointment as any).platformFee || appointment.payment?.platformFee || 0)}</span>
+                  </div>
+
+                  {appointment.discount > 0 && (
                     <div className="flex justify-between text-green-600 dark:text-green-400">
                       <span>Discount:</span>
-                      <span>-â‚¹{appointment.discount.toFixed(2)}</span>
+                      <span className="font-mono">-{formatCurrency(appointment.discount)}</span>
                     </div>
                   )}
 
                   <div className="flex justify-between font-medium pt-2 border-t mt-2">
                     <span>Total Amount:</span>
-                    <span>â‚¹{Number(totalAmount || (liveAppointment as any)?.totalAmount || appointment.totalAmount || 0).toFixed(2)}</span>
+                    <span className="font-mono">{formatCurrency(totalAmount)}</span>
                   </div>
 
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Amount Paid:</span>
-                    <span>â‚¹{paidAmount.toFixed(2)}</span>
+                    <span className="font-mono">{formatCurrency(paidAmount)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Amount Remaining:</span>
-                    <span>â‚¹{remainingAmount.toFixed(2)}</span>
+                    <span className="font-mono">{formatCurrency(remainingAmount)}</span>
                   </div>
                   <div className="flex justify-between text-sm mt-2">
                     <span className="text-muted-foreground">Payment Status:</span>
                     <span className="capitalize">
                       {(() => {
-                        const status = (overridePayment?.paymentStatus ?? (liveAppointment as any)?.paymentStatus ?? 'pending') as string;
+                        const status = (overridePayment?.paymentStatus ?? (liveAppointment as any).paymentStatus ?? 'pending') as string;
                         if (status === 'completed') return 'paid';
-                        if (status === 'pending') return paidAmount > 0 ? `partial (â‚¹${paidAmount.toFixed(2)})` : 'unpaid';
-                        if (status === 'partial') return `partial (â‚¹${paidAmount.toFixed(2)})`;
+                        if (status === 'pending') return paidAmount > 0 ? `partial (${formatCurrency(paidAmount)})` : 'unpaid';
+                        if (status === 'partial') return `partial (${formatCurrency(paidAmount)})`;
                         return status;
                       })()}
                     </span>
@@ -1663,14 +1966,14 @@ export function AppointmentDetailView({
                 <Button variant="outline" onClick={onClose}>
                   Close
                 </Button>
-                <div className="flex flex-wrap gap-2">
-                  {/* Invoice Button */}
+
+                {/* Invoice Button */}
+                {(appointment.status === 'completed' || appointment.status === 'completed without payment') && (
                   <Button
                     variant="outline"
                     className="gap-2 bg-white hover:bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 dark:border-gray-600"
                     onClick={() => {
-                      // TODO: Implement invoice generation
-                      console.log('Generate invoice for', appointment._id);
+                      setShowInvoice(true);
                     }}
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
@@ -1684,6 +1987,8 @@ export function AppointmentDetailView({
                     </svg>
                     Invoice
                   </Button>
+                )}
+                <div className="flex flex-wrap gap-2">
 
                   {/* Collect Payment Button */}
                   {/* {remainingAmount > 0 && (
@@ -1771,7 +2076,11 @@ export function AppointmentDetailView({
                               {appt.service}
                             </h4>
                             <p className="text-sm text-muted-foreground">
-                              {format(appt.date, 'MMM d, yyyy')} â€¢ {appt.startTime}
+                              {new Date(appt.date).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })} • {appt.startTime}
                             </p>
                           </div>
                           <Badge variant={appt.status === 'completed' ? 'default' : 'secondary'}>
@@ -1902,6 +2211,43 @@ export function AppointmentDetailView({
               {isStatusChanging ? 'Cancelling...' : 'Confirm Cancellation'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showInvoice} onOpenChange={setShowInvoice}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto w-full p-0">
+          <div className="sticky top-0 z-10 flex justify-end gap-2 p-4 bg-background border-b shadow-sm print:hidden">
+            <Button size="sm" variant="outline" onClick={handlePrintPdf}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleDownloadPdf}>
+              <Download className="h-4 w-4 mr-2" />
+              Download
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setShowInvoice(false)} title="Close Invoice">
+              <X className="h-4 w-4 mr-2" />
+              Close
+            </Button>
+          </div>
+          <div className="p-6">
+            {isVendorLoading ? (
+              <div className="flex justify-center items-center h-40">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : (
+              showInvoice && vendorProfile && invoiceData && (
+                <AppointmentInvoice
+                  invoiceData={invoiceData}
+                  vendorName={vendorProfile?.data?.businessName || 'Salon'}
+                  vendorProfile={vendorProfile || {}}
+                  taxRate={0}
+                  isOrderSaved={true}
+                  onEmailClick={() => console.log('Email clicked')}
+                  onRebookClick={() => console.log('Rebook clicked')}
+                />
+              ))}
+          </div>
         </DialogContent>
       </Dialog>
     </>

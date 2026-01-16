@@ -28,19 +28,19 @@ const NewAppointmentForm = dynamic(
 
 export default function AppointmentsPage() {
   const dispatch = useAppDispatch();
-  
+
   // Hide body scrollbar when component mounts
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     document.documentElement.style.overflow = 'hidden';
-    
+
     return () => {
       // Restore scrollbar when component unmounts
       document.body.style.overflow = 'auto';
       document.documentElement.style.overflow = 'auto';
     };
   }, []);
-  
+
   // RTK Query hooks for appointments
   const { data: appointmentsData = [], isLoading, isError, refetch } = glowvitaApi.useGetAppointmentsQuery(
     {
@@ -59,9 +59,9 @@ export default function AppointmentsPage() {
   const [deleteAppointment, { isLoading: isDeleting }] = glowvitaApi.useDeleteAppointmentMutation();
   // Use backend payments collect endpoint so each payment is recorded with timestamped history
   const [collectPayment] = glowvitaApi.useCollectPaymentMutation();
-  
+
   const appointments = Array.isArray(appointmentsData) ? appointmentsData : [];
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -84,9 +84,9 @@ export default function AppointmentsPage() {
   });
 
   const filteredAppointments = useMemo(() => {
-    return appointments.filter(appt => 
-      (appt.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-       appt.service?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    return appointments.filter(appt =>
+      (appt.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        appt.service?.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (statusFilter === 'all' || appt.status === statusFilter || (statusFilter === 'completed without payment' && appt.status === 'completed without payment'))
     );
   }, [appointments, searchTerm, statusFilter]);
@@ -112,13 +112,13 @@ export default function AppointmentsPage() {
       if (modalType === 'edit' && selectedAppointment?._id) {
         // For updates, we need to separate the ID and exclude metadata fields
         const { _id, createdAt, updatedAt, ...updates } = appointmentData;
-        
+
         // Call the update mutation with properly structured data
         await updateAppointment({
           _id: selectedAppointment._id, // Use the ID from selectedAppointment
           ...updates                    // Spread the rest of the appointment data
         }).unwrap();
-        
+
         toast.success('Appointment updated successfully');
       } else {
         // For new appointments, ensure we're not sending _id or other metadata fields
@@ -126,7 +126,7 @@ export default function AppointmentsPage() {
         await createAppointment(newAppointment).unwrap();
         toast.success('Appointment created successfully');
       }
-      
+
       // Refresh the appointments list
       refetch();
       handleCloseModal();
@@ -138,7 +138,7 @@ export default function AppointmentsPage() {
 
   const handleDeleteAppointment = async () => {
     if (!selectedAppointment?._id) return;
-    
+
     try {
       await deleteAppointment(selectedAppointment._id).unwrap();
       toast.success('Appointment deleted successfully');
@@ -157,7 +157,7 @@ export default function AppointmentsPage() {
     const totalAmount = (appointment as any).finalAmount || appointment.totalAmount || 0;
     const paidAmount = (appointment as any).amountPaid || appointment.payment?.paid || 0;
     const remainingAmount = Math.max(0, totalAmount - paidAmount);
-    
+
     setPaymentData({
       amount: remainingAmount,
       paymentMethod: 'cash',
@@ -206,349 +206,349 @@ export default function AppointmentsPage() {
     if (status === 'completed without payment') {
       return 'Completed Without Payment';
     }
-    return status.split('_').map(word => 
+    return status.split('_').map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
 
   return (
-    <div className="bg-background min-h-screen flex flex-col">
-      <div className="flex-1 overflow-hidden">
-        <div className="container mx-auto px-4 py-6 h-full flex flex-col">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold">Appointments</h1>
-            <p className="text-gray-500">Manage your appointments</p>
-          </div>
-
-          {/* Appointment Stats Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Appointments</CardTitle>
-                <CalendarCheck className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{appointments.length}</div>
-                <p className="text-xs text-muted-foreground">All scheduled appointments</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Confirmed</CardTitle>
-                <UserCheck className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  {appointments.filter(a => a.status === 'confirmed').length}
-                </div>
-                <p className="text-xs text-muted-foreground">Upcoming confirmed bookings</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Completed</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">
-                  {appointments.filter(a => a.status === 'completed' || a.status === 'completed without payment').length}
-                </div>
-                <p className="text-xs text-muted-foreground">Successfully completed</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
-                <CalendarX className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-600">
-                  {appointments.filter(a => a.status === 'cancelled').length}
-                </div>
-                <p className="text-xs text-muted-foreground">Cancelled by client or staff</p>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Search appointments..."
-                  className="pl-10 w-full"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="scheduled">Scheduled</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="completed without payment">Completed without payment</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
+    <>
+      <div className="bg-background min-h-screen flex flex-col">
+        <div className="flex-1 overflow-hidden">
+          <div className="container mx-auto px-4 py-6 h-full flex flex-col">
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold">Appointments</h1>
+              <p className="text-gray-500">Manage your appointments</p>
             </div>
-            <Button onClick={() => handleOpenModal('add')} className="w-full md:w-auto">
-              <Plus className="mr-2 h-4 w-4" /> New Appointment
-            </Button>
-          </div>
 
-          {/* Appointments Table */}
-          <div className="flex-1 flex flex-col min-h-0">
-            <Card className="flex-1 flex flex-col min-h-0">
-              <CardContent className="p-0 flex-1 flex flex-col min-h-0">
-                <div className="flex-1 overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Client</TableHead>
-                        <TableHead>Services</TableHead>
-                        <TableHead>Staff</TableHead>
-                        <TableHead>Date & Time</TableHead>
-                        <TableHead>Duration</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Partial Payment</TableHead>
-                        <TableHead>Payment Method</TableHead>
-                        <TableHead>Payment Status</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {isLoading ? (
+            {/* Appointment Stats Cards */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Appointments</CardTitle>
+                  <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{appointments.length}</div>
+                  <p className="text-xs text-muted-foreground">All scheduled appointments</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Confirmed</CardTitle>
+                  <UserCheck className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {appointments.filter(a => a.status === 'confirmed').length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Upcoming confirmed bookings</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                  <CheckCircle className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600">
+                    {appointments.filter(a => a.status === 'completed' || a.status === 'completed without payment').length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Successfully completed</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
+                  <CalendarX className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">
+                    {appointments.filter(a => a.status === 'cancelled').length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Cancelled by client or staff</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+              <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="text"
+                    placeholder="Search appointments..."
+                    className="pl-10 w-full"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="scheduled">Scheduled</SelectItem>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="completed without payment">Completed without payment</SelectItem>
+                    <SelectItem value="cancelled">Cancelled</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button onClick={() => handleOpenModal('add')} className="w-full md:w-auto">
+                <Plus className="mr-2 h-4 w-4" /> New Appointment
+              </Button>
+            </div>
+
+            {/* Appointments Table */}
+            <div className="flex-1 flex flex-col min-h-0">
+              <Card className="flex-1 flex flex-col min-h-0">
+                <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+                  <div className="flex-1 overflow-auto">
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={11} className="text-center py-8">
-                            <div className="flex items-center justify-center gap-2">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                              Loading appointments...
-                            </div>
-                          </TableCell>
+                          <TableHead>Client</TableHead>
+                          <TableHead>Services</TableHead>
+                          <TableHead>Staff</TableHead>
+                          <TableHead>Date & Time</TableHead>
+                          <TableHead>Duration</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Partial Payment</TableHead>
+                          <TableHead>Payment Method</TableHead>
+                          <TableHead>Payment Status</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
-                      ) : currentItems.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
-                            {searchTerm || statusFilter !== 'all' ? 'No appointments found matching your criteria' : 'No appointments scheduled'}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        currentItems.map((appointment) => {
-                          const totalAmount = (appointment as any).finalAmount || appointment.totalAmount || 0;
-                          // Use the new amountPaid field from the appointment, fallback to payment.paid for backward compatibility
-                          const paidAmount = (appointment as any).amountPaid || appointment.payment?.paid || 0;
-                          const remainingAmount = Math.max(0, totalAmount - paidAmount);
-                          
-                          console.log('=== APPOINTMENTS PAGE PAYMENT DEBUG ===');
-                          console.log('Appointment ID:', appointment._id);
-                          console.log('totalAmount:', totalAmount);
-                          console.log('paidAmount (from appointment.amountPaid):', (appointment as any).amountPaid);
-                          console.log('paidAmount (from appointment.payment?.paid):', appointment.payment?.paid);
-                          console.log('paidAmount (final):', paidAmount);
-                          console.log('remainingAmount:', remainingAmount);
-                          console.log('Full appointment data:', appointment);
-                          
-                          return (
-                          <TableRow key={appointment._id}>
-                            <TableCell className="font-medium">
-                              {appointment.clientName}
-                              <div className="text-xs text-muted-foreground">
-                                {appointment.clientPhone || 'No phone'}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {appointment.serviceItems?.length > 0 ? (
-                                <div className="space-y-1">
-                                  {appointment.serviceItems.map((item: any, idx: number) => (
-                                    <div key={idx} className="text-sm">
-                                      {item.serviceName}
-                                      {appointment.serviceItems.length > 1 && ` (${item.duration} min)`}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="text-sm">
-                                  {appointment.serviceName}
-                                  {appointment.duration && ` (${appointment.duration} min)`}
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {appointment.serviceItems?.length > 0 ? (
-                                <div className="space-y-1">
-                                  {appointment.serviceItems.map((item: any, idx: number) => (
-                                    <div key={idx} className="text-sm">
-                                      {item.staffName}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="text-sm">
-                                  {appointment.staffName}
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <CalendarCheck className="h-4 w-4 text-gray-500" />
-                                {new Date(appointment.date).toLocaleDateString()}
-                              </div>
-                              <div className="flex items-center gap-2 text-sm text-gray-500">
-                                <Clock className="h-3 w-3" />
-                                {appointment.startTime} - {appointment.endTime}
-                              </div>
-                            </TableCell>
-                            <TableCell>{appointment.duration} min</TableCell>
-                            <TableCell>₹{totalAmount.toFixed(2)}</TableCell>
-                            <TableCell>
-                              {paidAmount > 0 && remainingAmount > 0 ? (
-                                <div className="flex flex-col text-xs">
-                                  <span className="text-green-700 font-medium">Paid: ₹{paidAmount.toFixed(2)}</span>
-                                  <span className="text-orange-700 font-medium">Remain: ₹{remainingAmount.toFixed(2)}</span>
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground text-xs">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <span className="text-sm">
-                                {(appointment as any).paymentMethod || appointment.payment?.paymentMethod || 'N/A'}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'completed' 
-                                  ? 'bg-green-100 text-green-800' :
-                                ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'pending' 
-                                  ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-red-100 text-red-800'
-                              }`}>
-                                {(() => {
-                                  // Map the backend payment status to more user-friendly terms
-                                  const status = (appointment as any).paymentStatus || appointment.payment?.paymentStatus || 'pending';
-                                  const amountPaid = Number((appointment as any).amountPaid ?? 0) || 0;
-                                  const totalAmount = Number((appointment as any).finalAmount ?? appointment.totalAmount ?? 0) || 0;
-                                  
-                                  switch (status) {
-                                    case 'completed': return 'PAID';
-                                    case 'pending': 
-                                      if (amountPaid > 0 && totalAmount > 0) {
-                                        return `PARTIAL (₹${amountPaid.toFixed(2)})`;
-                                      }
-                                      return 'UNPAID';
-                                    default: return status.toUpperCase();
-                                  }
-                                })()}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                  appointment.status === 'completed without payment' ? 'bg-orange-100 text-orange-800' :
-                                  appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                  appointment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                  appointment.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
-                                  appointment.status === 'no_show' ? 'bg-orange-100 text-orange-800' :
-                                  'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                  {formatStatus(appointment.status)}
-                                </span>
-                                {(() => {
-                                  const totalAmount = Number((appointment as any).finalAmount ?? appointment.totalAmount ?? 0) || 0;
-                                  const paidAmount = Number((appointment as any).amountPaid ?? appointment.payment?.paid ?? 0) || 0;
-                                  const isPartial = totalAmount > 0 && paidAmount > 0 && paidAmount < totalAmount;
-                                  return isPartial ? (
-                                    <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800 border border-purple-200 uppercase tracking-wide">
-                                      Partial
-                                    </span>
-                                  ) : null;
-                                })()}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-1">
-                                {remainingAmount > 0 && (
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
-                                    onClick={() => handleOpenPaymentModal(appointment)}
-                                    className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
-                                    title="Collect Payment"
-                                  >
-                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
-                                  </Button>
-                                )}
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => handleOpenModal('view', appointment)}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => handleOpenModal('edit', appointment)}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm" 
-                                  onClick={() => {
-                                    setSelectedAppointment(appointment);
-                                    setIsDeleteModalOpen(true);
-                                  }}
-                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                      </TableHeader>
+                      <TableBody>
+                        {isLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={11} className="text-center py-8">
+                              <div className="flex items-center justify-center gap-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                                Loading appointments...
                               </div>
                             </TableCell>
                           </TableRow>
-                        );
-                        })
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                        ) : currentItems.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
+                              {searchTerm || statusFilter !== 'all' ? 'No appointments found matching your criteria' : 'No appointments scheduled'}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          currentItems.map((appointment) => {
+                            const totalAmount = (appointment as any).finalAmount || appointment.totalAmount || 0;
+                            // Use the new amountPaid field from the appointment, fallback to payment.paid for backward compatibility
+                            const paidAmount = (appointment as any).amountPaid || appointment.payment?.paid || 0;
+                            const remainingAmount = Math.max(0, totalAmount - paidAmount);
 
-          {/* Pagination */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="text-sm text-muted-foreground">
-              Showing <span className="font-medium">{Math.min(firstItemIndex + 1, filteredAppointments.length)}</span> to{' '}
-              <span className="font-medium">
-                {Math.min(lastItemIndex, filteredAppointments.length)}
-              </span>{' '}
-              of <span className="font-medium">{filteredAppointments.length}</span> appointments
+                            console.log('=== APPOINTMENTS PAGE PAYMENT DEBUG ===');
+                            console.log('Appointment ID:', appointment._id);
+                            console.log('totalAmount:', totalAmount);
+                            console.log('paidAmount (from appointment.amountPaid):', (appointment as any).amountPaid);
+                            console.log('paidAmount (from appointment.payment?.paid):', appointment.payment?.paid);
+                            console.log('paidAmount (final):', paidAmount);
+                            console.log('remainingAmount:', remainingAmount);
+                            console.log('Full appointment data:', appointment);
+
+                            return (
+                              <TableRow key={appointment._id}>
+                                <TableCell className="font-medium">
+                                  {appointment.clientName}
+                                  <div className="text-xs text-muted-foreground">
+                                    {appointment.clientPhone || 'No phone'}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  {appointment.serviceItems?.length > 0 ? (
+                                    <div className="space-y-1">
+                                      {appointment.serviceItems.map((item: any, idx: number) => (
+                                        <div key={idx} className="text-sm">
+                                          {item.serviceName}
+                                          {appointment.serviceItems.length > 1 && ` (${item.duration} min)`}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="text-sm">
+                                      {appointment.serviceName}
+                                      {appointment.duration && ` (${appointment.duration} min)`}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {appointment.serviceItems?.length > 0 ? (
+                                    <div className="space-y-1">
+                                      {appointment.serviceItems.map((item: any, idx: number) => (
+                                        <div key={idx} className="text-sm">
+                                          {item.staffName}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="text-sm">
+                                      {appointment.staffName}
+                                    </div>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <CalendarCheck className="h-4 w-4 text-gray-500" />
+                                    {new Date(appointment.date).toLocaleDateString()}
+                                  </div>
+                                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                                    <Clock className="h-3 w-3" />
+                                    {appointment.startTime} - {appointment.endTime}
+                                  </div>
+                                </TableCell>
+                                <TableCell>{appointment.duration} min</TableCell>
+                                <TableCell>₹{totalAmount.toFixed(2)}</TableCell>
+                                <TableCell>
+                                  {paidAmount > 0 && remainingAmount > 0 ? (
+                                    <div className="flex flex-col text-xs">
+                                      <span className="text-green-700 font-medium">Paid: ₹{paidAmount.toFixed(2)}</span>
+                                      <span className="text-orange-700 font-medium">Remain: ₹{remainingAmount.toFixed(2)}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">—</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <span className="text-sm">
+                                    {(appointment as any).paymentMethod || appointment.payment?.paymentMethod || 'N/A'}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${((appointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'completed'
+                                    ? 'bg-green-100 text-green-800' :
+                                    ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'pending'
+                                      ? 'bg-yellow-100 text-yellow-800' :
+                                      'bg-red-100 text-red-800'
+                                    }`}>
+                                    {(() => {
+                                      // Map the backend payment status to more user-friendly terms
+                                      const status = (appointment as any).paymentStatus || appointment.payment?.paymentStatus || 'pending';
+                                      const amountPaid = Number((appointment as any).amountPaid ?? 0) || 0;
+                                      const totalAmount = Number((appointment as any).finalAmount ?? appointment.totalAmount ?? 0) || 0;
+
+                                      switch (status) {
+                                        case 'completed': return 'PAID';
+                                        case 'pending':
+                                          if (amountPaid > 0 && totalAmount > 0) {
+                                            return `PARTIAL (₹${amountPaid.toFixed(2)})`;
+                                          }
+                                          return 'UNPAID';
+                                        default: return status.toUpperCase();
+                                      }
+                                    })()}
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex items-center gap-2">
+                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                      appointment.status === 'completed without payment' ? 'bg-orange-100 text-orange-800' :
+                                        appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                          appointment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                            appointment.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
+                                              appointment.status === 'no_show' ? 'bg-orange-100 text-orange-800' :
+                                                'bg-yellow-100 text-yellow-800'
+                                      }`}>
+                                      {formatStatus(appointment.status)}
+                                    </span>
+                                    {(() => {
+                                      const totalAmount = Number((appointment as any).finalAmount ?? appointment.totalAmount ?? 0) || 0;
+                                      const paidAmount = Number((appointment as any).amountPaid ?? appointment.payment?.paid ?? 0) || 0;
+                                      const isPartial = totalAmount > 0 && paidAmount > 0 && paidAmount < totalAmount;
+                                      return isPartial ? (
+                                        <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800 border border-purple-200 uppercase tracking-wide">
+                                          Partial
+                                        </span>
+                                      ) : null;
+                                    })()}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-1">
+                                    {remainingAmount > 0 && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleOpenPaymentModal(appointment)}
+                                        className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                        title="Collect Payment"
+                                      >
+                                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                      </Button>
+                                    )}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleOpenModal('view', appointment)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleOpenModal('edit', appointment)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        setSelectedAppointment(appointment);
+                                        setIsDeleteModalOpen(true);
+                                      }}
+                                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              itemsPerPage={itemsPerPage}
-              onItemsPerPageChange={(value) => {
-                setItemsPerPage(Number(value));
-                setCurrentPage(1); // Reset to first page when changing items per page
-              }}
-              totalItems={filteredAppointments.length}
-              className="mt-0"
-            />
+
+            {/* Pagination */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="text-sm text-muted-foreground">
+                Showing <span className="font-medium">{Math.min(firstItemIndex + 1, filteredAppointments.length)}</span> to{' '}
+                <span className="font-medium">
+                  {Math.min(lastItemIndex, filteredAppointments.length)}
+                </span>{' '}
+                of <span className="font-medium">{filteredAppointments.length}</span> appointments
+              </div>
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                onItemsPerPageChange={(value) => {
+                  setItemsPerPage(Number(value));
+                  setCurrentPage(1); // Reset to first page when changing items per page
+                }}
+                totalItems={filteredAppointments.length}
+                className="mt-0"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -558,15 +558,15 @@ export default function AppointmentsPage() {
         <DialogContent className="max-w-4xl w-[95vw] sm:w-full h-[90vh] max-h-[90vh] p-0 overflow-hidden flex flex-col">
           <DialogHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-background z-10">
             <DialogTitle className="text-lg sm:text-xl">
-              {modalType === 'add' ? 'New Appointment' : 
-               modalType === 'edit' ? 'Edit Appointment' : 'Appointment Details'}
+              {modalType === 'add' ? 'New Appointment' :
+                modalType === 'edit' ? 'Edit Appointment' : 'Appointment Details'}
             </DialogTitle>
             <DialogDescription>
-              {modalType === 'add' ? 'Create a new appointment' : 
-               modalType === 'edit' ? 'Edit appointment details' : 'View appointment details'}
+              {modalType === 'add' ? 'Create a new appointment' :
+                modalType === 'edit' ? 'Edit appointment details' : 'View appointment details'}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="flex-1 overflow-y-auto px-6 pb-6 -mt-1">
             {modalType === 'view' && selectedAppointment ? (
               <div className="pr-1">
@@ -613,15 +613,15 @@ export default function AppointmentsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsDeleteModalOpen(false)}
               disabled={isDeleting}
             >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
+            <Button
+              variant="destructive"
               onClick={handleDeleteAppointment}
               disabled={isDeleting}
             >
@@ -650,7 +650,7 @@ export default function AppointmentsPage() {
               Collect payment for <strong>{selectedAppointment?.clientName}</strong>'s appointment
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedAppointment && (
             <div className="space-y-4 py-4">
               {/* Payment Summary */}
@@ -689,7 +689,7 @@ export default function AppointmentsPage() {
               {/* Payment Method */}
               <div className="space-y-2">
                 <Label htmlFor="paymentMethod">Payment Method</Label>
-                <Select 
+                <Select
                   value={paymentData.paymentMethod}
                   onValueChange={(value) => setPaymentData(prev => ({ ...prev, paymentMethod: value }))}
                 >
@@ -720,13 +720,13 @@ export default function AppointmentsPage() {
           )}
 
           <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setIsPaymentModalOpen(false)}
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleCollectPayment}
               disabled={paymentData.amount <= 0}
               className="bg-green-600 hover:bg-green-700"
@@ -739,6 +739,6 @@ export default function AppointmentsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }

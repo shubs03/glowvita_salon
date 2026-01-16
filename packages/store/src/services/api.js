@@ -157,9 +157,9 @@ export const glowvitaApi = createApi({
     "PublicVendorWorkingHours", "PublicVendorOffers", "PublicProducts",
     "PublicVendorProducts", "PublicServices", "PublicCategories", "WorkingHours", "ClientOrder", "Patient", "Appointment",
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
-    "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder","DoctorReviews",
+    "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
-     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport","SupplierReports","Products", "Regions"
+     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport","SupplierReports","Products", "Regions","PublicAllOffers", "AddOns"
   ],
 
   endpoints: (builder) => ({
@@ -348,7 +348,7 @@ export const glowvitaApi = createApi({
     getPublicVendors: builder.query({
       query: (params = {}) => {
         const queryParams = new URLSearchParams();
-        
+
         // Only append truthy parameters
         if (params.serviceName) queryParams.append("serviceName", params.serviceName);
         if (params.city) queryParams.append("city", params.city);
@@ -514,6 +514,17 @@ export const glowvitaApi = createApi({
     getPublicVendorOffers: builder.query({
       query: (vendorId) => ({ url: `/offers?businessId=${vendorId}`, method: "GET" }),
       providesTags: ["PublicVendorOffers"],
+      transformResponse: (response) => response,
+    }),
+
+    // Public All Offers (Admin + CRM) for landing page
+    getPublicAllOffers: builder.query({
+      query: (vendorId = undefined) => ({
+        url: `/all-offers`,
+        method: "GET",
+        params: vendorId ? { vendorId } : {}
+      }),
+      providesTags: ["PublicAllOffers"],
       transformResponse: (response) => response,
     }),
 
@@ -1173,8 +1184,8 @@ export const glowvitaApi = createApi({
 
     // Admin Dashboard Endpoint
     getAdminDashboardStats: builder.query({
-      query: (params) => ({ 
-        url: "/admin/dashboard", 
+      query: (params) => ({
+        url: "/admin/dashboard",
         method: "GET",
         params: params || {}
       }),
@@ -1183,7 +1194,7 @@ export const glowvitaApi = createApi({
 
     // Booking Summary Reports Endpoints
     getSellingServicesReport: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/booking-summary/selling-services",
         method: "GET",
         params: params || {}
@@ -1193,7 +1204,7 @@ export const glowvitaApi = createApi({
     }),
 
     getTotalBookingsReport: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/booking-summary/total-bookings",
         method: "GET",
         params: params || {}
@@ -1203,7 +1214,7 @@ export const glowvitaApi = createApi({
     }),
 
     getCompletedBookingsReport: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/booking-summary/completed-bookings",
         method: "GET",
         params: params || {}
@@ -1213,7 +1224,7 @@ export const glowvitaApi = createApi({
     }),
 
     getCancellationReport: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/booking-summary/cancellation",
         method: "GET",
         params: params || {}
@@ -1223,7 +1234,7 @@ export const glowvitaApi = createApi({
     }),
 
     getSalesBySalonReport: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/booking-summary/sales-by-salon",
         method: "GET",
         params: params || {}
@@ -1233,7 +1244,7 @@ export const glowvitaApi = createApi({
     }),
 
     getSalesByProductsReport: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/booking-summary/sales-by-products",
         method: "GET",
         params: params || {}
@@ -1244,7 +1255,7 @@ export const glowvitaApi = createApi({
 
     // Consolidated Sales Report
     getConsolidatedSalesReport: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/Financial-Reports/salesreport",
         method: "GET",
         params: params || {}
@@ -1252,10 +1263,10 @@ export const glowvitaApi = createApi({
       providesTags: ["ConsolidatedSalesReport"],
       transformResponse: (response) => (response && response.success ? response.data : {}),
     }),
-    
+
     // Subscription Report
     getSubscriptionReport: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/Financial-Reports/subscription-report",
         method: "GET",
         params: params || {}
@@ -1263,10 +1274,10 @@ export const glowvitaApi = createApi({
       providesTags: ["SubscriptionReport"],
       transformResponse: (response) => (response && response.success ? response.data : {}),
     }),
-    
+
     // Marketing Campaign Report
     getMarketingCampaignReport: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/marketing-reports/campaigns",
         method: "GET",
         params: params || {}
@@ -1277,7 +1288,7 @@ export const glowvitaApi = createApi({
 
     // Sales by Brand Report
     getSalesByBrandReport: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/product-reports/sales-by-brand",
         method: "GET",
         params: params || {}
@@ -1288,7 +1299,7 @@ export const glowvitaApi = createApi({
 
     // Sales by Category Report
     getSalesByCategoryReport: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/product-reports/sales-by-category",
         method: "GET",
         params: params || {}
@@ -1296,10 +1307,10 @@ export const glowvitaApi = createApi({
       providesTags: ["SalesByCategoryReport"],
       transformResponse: (response) => (response && response.success ? response.data : {}),
     }),
-    
+
     // Vendor Payable Report
     getVendorPayableReport: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/settlementreport/vendor-payable",
         method: "GET",
         params: params || {}
@@ -1307,10 +1318,10 @@ export const glowvitaApi = createApi({
       providesTags: ["VendorPayableReport"],
       transformResponse: (response) => (response && response.success ? response.data : {}),
     }),
-    
+
     // Vendor Payout Settlement Report
     getVendorPayoutSettlementReport: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/settlementreport/vendor-payout",
         method: "GET",
         params: params || {}
@@ -1318,10 +1329,10 @@ export const glowvitaApi = createApi({
       providesTags: ["VendorPayoutSettlementReport"],
       transformResponse: (response) => (response && response.success ? response.data : {}),
     }),
-    
+
     // Vendor Payout Settlement Report Product
     getVendorPayoutSettlementReportProduct: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/settlementreport/vendor-payout-product",
         method: "GET",
         params: params || {}
@@ -1329,10 +1340,10 @@ export const glowvitaApi = createApi({
       providesTags: ["VendorPayoutSettlementReportProduct"],
       transformResponse: (response) => (response && response.success ? response.data : {}),
     }),
-    
+
     // Vendor Payable to Admin Report Product
     getVendorPayableReportProduct: builder.query({
-      query: (params) => ({ 
+      query: (params) => ({
         url: "/admin/reports/settlementreport/vendor-payable-product",
         method: "GET",
         params: params || {}
@@ -1446,6 +1457,35 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["VendorNotifications"],
     }),
 
+    // Add-On Endpoints
+    getAddOns: builder.query({
+      query: () => "/crm/add-ons",
+      providesTags: ["AddOns"],
+    }),
+    createAddOn: builder.mutation({
+      query: (body) => ({
+        url: "/crm/add-ons",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["AddOns"],
+    }),
+    updateAddOn: builder.mutation({
+      query: (body) => ({
+        url: "/crm/add-ons",
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["AddOns"],
+    }),
+    deleteAddOn: builder.mutation({
+      query: (id) => ({
+        url: `/crm/add-ons?id=${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["AddOns"],
+    }),
+
     // Products endpoints
     getCrmProducts: builder.query({
       query: ({ vendorId } = {}) => ({
@@ -1458,6 +1498,10 @@ export const glowvitaApi = createApi({
     }),
     createCrmProduct: builder.mutation({
       query: (product) => ({ url: "/crm/products", method: "POST", body: product }),
+      invalidatesTags: ["CrmProducts"],
+    }),
+    createBulkCrmProducts: builder.mutation({
+      query: (products) => ({ url: "/crm/products", method: "POST", body: products }),
       invalidatesTags: ["CrmProducts"],
     }),
     updateCrmProduct: builder.mutation({
@@ -1697,6 +1741,24 @@ export const glowvitaApi = createApi({
     deleteStaff: builder.mutation({
       query: (id) => ({ url: "/crm/staff", method: "DELETE", body: { id } }),
       invalidatesTags: ["Staff"],
+    }),
+
+    // Add-Ons Endpoints
+    getAddOns: builder.query({
+      query: () => ({ url: "/crm/add-ons", method: "GET" }),
+      providesTags: ["AddOns"],
+    }),
+    createAddOn: builder.mutation({
+      query: (addOn) => ({ url: "/crm/add-ons", method: "POST", body: addOn }),
+      invalidatesTags: ["AddOns"],
+    }),
+    updateAddOn: builder.mutation({
+      query: (addOn) => ({ url: "/crm/add-ons", method: "PUT", body: addOn }),
+      invalidatesTags: ["AddOns"],
+    }),
+    deleteAddOn: builder.mutation({
+      query: (id) => ({ url: `/crm/add-ons?id=${id}`, method: "DELETE" }),
+      invalidatesTags: ["AddOns"],
     }),
 
     // Expense Endpoints
@@ -2245,10 +2307,10 @@ export const glowvitaApi = createApi({
 
     // Lock Wedding Package Mutation
     lockWeddingPackage: builder.mutation({
-      query: (lockData) => ({ 
-        url: "/scheduling/wedding-package", 
-        method: "POST", 
-        body: lockData 
+      query: (lockData) => ({
+        url: "/scheduling/wedding-package",
+        method: "POST",
+        body: lockData
       }),
     }),
 
@@ -2405,7 +2467,7 @@ export const glowvitaApi = createApi({
         return { url: `/crm/vendor/reports/all-appointments?${params.toString()}`, method: "GET" };
       },
       providesTags: ["Appointments"],
-    }),    getSummaryByServiceReport: builder.query({
+    }), getSummaryByServiceReport: builder.query({
       query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
         const params = new URLSearchParams();
         params.append('period', period);
@@ -2422,7 +2484,7 @@ export const glowvitaApi = createApi({
         return { url: `/crm/vendor/reports/summary-by-service?${params.toString()}`, method: "GET" };
       },
       providesTags: ["Appointments"],
-    }),    getCompletedAppointmentsReport: builder.query({
+    }), getCompletedAppointmentsReport: builder.query({
       query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
         const params = new URLSearchParams();
         params.append('period', period);
@@ -2458,7 +2520,7 @@ export const glowvitaApi = createApi({
       },
       providesTags: ["Appointments"],
     }),
-    
+
     // Sales Report Endpoints
     getSalesByServiceReport: builder.query({
       query: ({ period = 'all', startDate, endDate, client, service, staff, status, bookingType }) => {
@@ -2496,7 +2558,7 @@ export const glowvitaApi = createApi({
       },
       providesTags: ["Appointments"],
     }),
-    
+
     // Product Summary Report
     getProductSummaryReport: builder.query({
       query: ({ product, category, brand, status, isActive }) => {
@@ -2511,7 +2573,7 @@ export const glowvitaApi = createApi({
       },
       providesTags: ["Products"],
     }),
-    
+
     // Inventory/Stock Report
     getInventoryStockReport: builder.query({
       query: ({ product, category, brand }) => {
@@ -2524,7 +2586,7 @@ export const glowvitaApi = createApi({
       },
       providesTags: ["Products"],
     }),
-    
+
     // Sales by Product Report
     getSalesByProductReport: builder.query({
       query: ({ period = 'all', startDate, endDate, product, customer, status, category, brand }) => {
@@ -2544,7 +2606,7 @@ export const glowvitaApi = createApi({
       },
       providesTags: ["Products"],
     }),
-    
+
     // Category-wise Product Report
     getCategoryWiseProductReport: builder.query({
       query: ({ product, category, brand }) => {
@@ -2557,7 +2619,7 @@ export const glowvitaApi = createApi({
       },
       providesTags: ["Products"],
     }),
-    
+
     // Unique Values for Appointment Filters
     getUniqueClients: builder.query({
       query: () => ({
@@ -2605,6 +2667,26 @@ export const glowvitaApi = createApi({
       }),
       providesTags: ["CrmProducts"]
     }),
+
+    // Settlement Summary Report
+    getSettlementSummaryReport: builder.query({
+      query: ({ period = 'all', startDate, endDate, settlementFromDate, settlementToDate }) => {
+        const params = new URLSearchParams();
+        params.append('period', period);
+        if ((period === 'custom' || period === 'today' || period === 'week' || period === 'month' || period === 'year') && startDate && endDate) {
+          params.append('startDate', startDate);
+          params.append('endDate', endDate);
+        }
+        if (settlementFromDate) params.append('settlementFromDate', settlementFromDate);
+        if (settlementToDate) params.append('settlementToDate', settlementToDate);
+
+        return {
+          url: `/crm/vendor/reports/settlement-summary?${params.toString()}`,
+          method: 'GET'
+        };
+      },
+      providesTags: ["CrmReports"]
+    }),
   }),
 });
 
@@ -2631,6 +2713,7 @@ export const {
   useGetPublicVendorStaffQuery,
   useGetPublicVendorStaffByServiceQuery,
   useGetPublicVendorOffersQuery,
+  useGetPublicAllOffersQuery,
   useUserLoginMutation,
   useGetClientOrdersQuery,
   useCreateClientOrderMutation,
@@ -2787,6 +2870,10 @@ export const {
   useCreateStaffMutation,
   useUpdateStaffMutation,
   useDeleteStaffMutation,
+  useGetAddOnsQuery,
+  useCreateAddOnMutation,
+  useUpdateAddOnMutation,
+  useDeleteAddOnMutation,
   useGetExpensesQuery,
   useCreateExpenseMutation,
   useUpdateExpenseMutation,
@@ -2912,7 +2999,7 @@ export const {
   // Payment Collection Hook
   useCollectPaymentMutation,
 
-  
+
   // Appointment Report Hooks
   useGetAllAppointmentsReportQuery,
   useGetSummaryByServiceReportQuery,
@@ -2936,7 +3023,8 @@ export const {
   useGetUniqueProductNamesQuery,
   useGetUniqueBrandsQuery,
   useGetUniqueCategoriesQuery,
-  
+  useGetSettlementSummaryReportQuery,
+
   // Payment Collections Hook
   useGetPaymentCollectionsQuery,
   useGetSupplierProductReviewsReportQuery,

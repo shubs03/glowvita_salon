@@ -22,15 +22,12 @@ export function Footer() {
               <Link href="/apps" className="block hover:text-primary transition-colors duration-200">Mobile Apps</Link>
               <Link href="/pricing" className="block hover:text-primary transition-colors duration-200">Pricing</Link>
               <Link href="/cart" className="block hover:text-primary transition-colors duration-200">Shopping Cart</Link>
-              <Link href="#" className="block hover:text-primary transition-colors duration-200">Integrations</Link>
             </div>
           </div>
           <div className="space-y-4">
             <h4 className="font-semibold text-foreground">Company</h4>
             <div className="space-y-2 text-sm text-muted-foreground">
               <Link href="/about" className="block hover:text-primary transition-colors duration-200">About Us</Link>
-              <Link href="#" className="block hover:text-primary transition-colors duration-200">Careers</Link>
-              <Link href="#" className="block hover:text-primary transition-colors duration-200">Blog</Link>
               <Link href="/contact" className="block hover:text-primary transition-colors duration-200">Contact Us</Link>
             </div>
           </div>

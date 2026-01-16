@@ -73,42 +73,46 @@ interface ProductCartItem extends Product {
 export default function SalesPage() {
   const { user, role } = useCrmAuth();
   const userRole = role || user?.role;
-  
+
   // Determine initial active tab based on user role
   // Suppliers only have products, so default to products tab
   const initialTab = userRole === 'supplier' ? 'products' : 'services';
-  
+
   // Tab state
   const [activeTab, setActiveTab] = useState<'services' | 'products'>(initialTab as any);
-  
+
   // Shared states between tabs
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [serviceCart, setServiceCart] = useState<ServiceCartItem[]>([]);
   const [productCart, setProductCart] = useState<ProductCartItem[]>([]);
-  
+
+  // Force re-render when selectedClient changes
+  const selectedClientId = selectedClient?._id;
+
+
   // Determine which tabs to show based on user role
   const showServicesTab = userRole !== 'supplier';
   const showProductsTab = true; // Both vendors and suppliers can have products
-  
+
   // If supplier, only show products tab
   const availableTabs = [];
   if (showServicesTab) availableTabs.push('services');
   if (showProductsTab) availableTabs.push('products');
-  
+
   // If current tab is not available, switch to the first available tab
   if (!availableTabs.includes(activeTab) && availableTabs.length > 0) {
     setActiveTab(availableTabs[0] as any);
   }
-  
+
   // Debug logging to check role
   console.log('Sales Page - User Role:', userRole);
   console.log('Sales Page - Show Services Tab:', showServicesTab);
   console.log('Sales Page - Show Products Tab:', showProductsTab);
-  
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Sales Overview</h1>
-      
+
       {/* Tab Navigation - Show for vendors (multiple tabs) and suppliers (single Products tab) */}
       <div className="mb-6">
         <div className="border-b">
@@ -116,11 +120,10 @@ export default function SalesPage() {
             {showServicesTab && (
               <button
                 onClick={() => setActiveTab('services')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'services'
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'services'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
-                }`}
+                  }`}
               >
                 Services
               </button>
@@ -128,11 +131,10 @@ export default function SalesPage() {
             {showProductsTab && (
               <button
                 onClick={() => setActiveTab('products')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'products'
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'products'
                     ? 'border-primary text-primary'
                     : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
-                }`}
+                  }`}
               >
                 Products
               </button>
@@ -140,17 +142,17 @@ export default function SalesPage() {
           </nav>
         </div>
       </div>
-      
+
       {/* Tab Content */}
       {activeTab === 'services' && showServicesTab ? (
-        <ServicesTab 
+        <ServicesTab
           cart={serviceCart}
           setCart={setServiceCart}
           selectedClient={selectedClient}
           setSelectedClient={setSelectedClient}
         />
       ) : activeTab === 'products' && showProductsTab ? (
-        <ProductsTab 
+        <ProductsTab
           cart={productCart}
           setCart={setProductCart}
           selectedClient={selectedClient}

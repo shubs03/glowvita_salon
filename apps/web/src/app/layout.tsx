@@ -24,6 +24,7 @@ export default function RootLayout({
   
   const marketingPages = [
     '/',
+    '/salons',
     '/apps',
     '/all-products',
     '/pricing',

@@ -6,4 +6,6 @@ export { RevenueChart } from './RevenueChart';
 export { SalesChart } from './SalesChart';
 export { StatCard } from './StatCard';
 export { TopServicesChart } from './TopServicesChart';
+export { TopSellingProductsChart } from './TopSellingProductsChart';
 export { UpcomingAppointments } from './UpcomingAppointments';
+export { VendorDashboard, SupplierDashboard, DoctorDashboard } from './role-specific';

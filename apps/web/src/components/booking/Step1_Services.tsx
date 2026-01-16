@@ -15,7 +15,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@repo/ui/dialog';
+import { Checkbox } from "@repo/ui/checkbox";
+import { Label } from "@repo/ui/label";
 
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
   const steps = ['Services', 'Select Professional', 'Time Slot'];
@@ -103,6 +106,10 @@ export function Step1_Services({
   // Replaced: internal bookingMode with prop
   // const [bookingMode, setBookingMode] = useState<'salon' | 'home'>('salon');
 
+  const [isAddonModalOpen, setIsAddonModalOpen] = useState(false);
+  const [currentServiceForAddons, setCurrentServiceForAddons] = useState<Service | null>(null);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
+
   // Use provided categories or fallback to default
   const displayCategories = categories?.length > 0 ? categories : defaultCategories;
 
@@ -111,48 +118,91 @@ export function Step1_Services({
     ? (services || [])
     : (servicesByCategory[activeCategory] || []);
 
+  console.log('Step1_Services debug:', {
+    servicesCount: services?.length,
+    firstService: services?.[0],
+    firstServiceAddons: services?.[0]?.addOns
+  });
+
   // Use valid wedding packages
   const displayWeddingPackages = validWeddingPackages;
 
   // Handle service selection
   const handleSelectService = (service: Service) => {
-
     // Check if service is available for home or wedding (support both formats)
     const isHomeService = service.homeService?.available || service.serviceHomeService?.available;
     const isWeddingService = service.weddingService?.available || service.serviceWeddingService?.available;
-
-    // Check if service is already selected
-    const isSelected = selectedServices.some(s => s.id === service.id);
 
     // ENFORCED MODE LOGIC
     if (bookingMode === 'home') {
       // If in Home Mode, can ONLY select home-available services
       if (!isHomeService) {
-        // Show warning/toast and prevent selection
-        // Since we don't have toast imported here, we could use an alert or just return
-        // Ideally we should disable these buttons in UI, but as a safety check:
         console.warn("Cannot select salon-only service in Home booking mode");
         return;
       }
+    }
 
-      // Auto-assign 'home' option
-      const serviceWithOption = {
-        ...service,
-        selectedServiceOption: 'home' as const
-      };
+    // Prepare service with option based on mode
+    const serviceWithOption = {
+      ...service,
+      selectedServiceOption: bookingMode === 'home' ? ('home' as const) : ('salon' as const)
+    };
 
-      onSelectService(serviceWithOption);
+    // Check if service has add-ons and is not already selected (to allow toggling off)
+    // If it's already selected, we just toggle it off (remove it), no need to show add-ons modal again
+    // Unless we want to allow editing add-ons? For now, standard behavior is remove.
+    const isSelected = selectedServices.some(s => s.id === service.id);
 
+    if (!isSelected && service.addOns && service.addOns.length > 0) {
+      setCurrentServiceForAddons(serviceWithOption);
+      setSelectedAddonIds([]); // Reset selected add-ons
+      setIsAddonModalOpen(true);
     } else {
-      // Salon Mode (Default)
-      // Auto-assign 'salon' option
-      const serviceWithOption = {
-        ...service,
-        selectedServiceOption: 'salon' as const
-      };
-
+      // If no add-ons or already selected (deselecting), proceed normally
       onSelectService(serviceWithOption);
     }
+  };
+
+  const confirmAddonSelection = () => {
+    if (currentServiceForAddons) {
+      const selectedAddonsList = currentServiceForAddons.addOns?.filter(addon =>
+        selectedAddonIds.includes(addon._id)
+      ) || [];
+
+      const originalService = services.find(s => s.id === currentServiceForAddons.id);
+      const baseDurationString = originalService ? (originalService.duration) : (currentServiceForAddons.duration);
+      const baseDuration = parseInt(String(baseDurationString).match(/\d+/)?.[0] || '0', 10);
+
+      const totalAddonsDuration = selectedAddonsList.reduce((total, addon) => total + (addon.duration || 0), 0);
+
+      const serviceWithAddons = {
+        ...currentServiceForAddons,
+        selectedAddons: selectedAddonsList,
+        duration: `${baseDuration + totalAddonsDuration} min`,
+      };
+
+      onSelectService(serviceWithAddons);
+      setIsAddonModalOpen(false);
+      setCurrentServiceForAddons(null);
+      setSelectedAddonIds([]);
+    }
+  };
+
+  const skipAddonSelection = () => {
+    if (currentServiceForAddons) {
+      onSelectService({ ...currentServiceForAddons, selectedAddons: [] }); // Add without add-ons
+      setIsAddonModalOpen(false);
+      setCurrentServiceForAddons(null);
+      setSelectedAddonIds([]);
+    }
+  };
+
+  const toggleAddon = (addonId: string) => {
+    setSelectedAddonIds(prev =>
+      prev.includes(addonId)
+        ? prev.filter(id => id !== addonId)
+        : [...prev, addonId]
+    );
   };
 
   // Removed: handleHomeServiceOptionSelect, handleModalCancel - no longer needed
@@ -460,6 +510,13 @@ export function Step1_Services({
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                           <Plus className="h-3 w-3 mr-1" />
                           Addon
+                        </span>
+                      )}
+                      {/* Swiggy-style Customisable Badge */}
+                      {service.addOns && service.addOns.length > 0 && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                          <span className="mr-1 text-[10px]">✨</span>
+                          Customisable
                         </span>
                       )}
                     </div>
@@ -985,6 +1042,81 @@ export function Step1_Services({
               </DialogFooter>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add-ons Selection Modal */}
+      <Dialog open={isAddonModalOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsAddonModalOpen(false);
+          setCurrentServiceForAddons(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Customize your service</DialogTitle>
+            <DialogDescription>
+              Would you like to add any extras to <strong>{currentServiceForAddons?.name}</strong>?
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 max-h-[60vh] overflow-y-auto space-y-3">
+            {currentServiceForAddons?.addOns?.map((addon) => (
+              <div
+                key={addon._id}
+                className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  toggleAddon(addon._id);
+                }}
+              >
+                <Checkbox
+                  checked={selectedAddonIds.includes(addon._id)}
+                  className="mt-1 pointer-events-none"
+                />
+                <div className="flex-1 grid gap-1 pointer-events-none">
+                  <span className="font-medium">
+                    {addon.name}
+                  </span>
+                  {addon.description && (
+                    <p className="text-sm text-muted-foreground">
+                      {addon.description}
+                    </p>
+                  )}
+                </div>
+                <div className="font-semibold text-primary pointer-events-none">
+                  +₹{addon.price}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAddonModalOpen(false);
+                setCurrentServiceForAddons(null);
+                setSelectedAddonIds([]);
+              }}
+              className="sm:order-1 border-destructive text-destructive hover:bg-destructive/10"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={skipAddonSelection}
+              className="sm:order-2"
+            >
+              Skip
+            </Button>
+            <Button
+              onClick={confirmAddonSelection}
+              className="sm:order-3"
+            >
+              Add with extras
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

@@ -31,7 +31,7 @@ const WhyChooseUs = () => {
   ];
 
   return (
-    <section className="py-20 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="py-10 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
       {/* Section Header */}
       <div className="mb-16">
         <div className="flex items-center gap-4 mb-4">
@@ -52,7 +52,7 @@ const WhyChooseUs = () => {
           return (
             <div
               key={index}
-              className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 group hover:border-primary/50"
+              className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group hover:border-primary/50"
             >
               <div className="flex items-center gap-4">
                 <div className="bg-primary/10 text-primary p-3 rounded-2xl flex-shrink-0 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-300">
@@ -76,7 +76,7 @@ const WhyChooseUs = () => {
             return (
               <div
                 key={index + 3}
-                className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 group hover:border-primary/50"
+                className="bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group hover:border-primary/50"
               >
                 <div className="flex items-center gap-4">
                   <div className="bg-primary/10 text-primary p-3 rounded-2xl flex-shrink-0 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-300">

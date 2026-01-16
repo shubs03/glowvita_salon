@@ -54,7 +54,7 @@ const Testimonials2 = () => {
   }, [isAutoPlaying]);
 
   return (
-    <section className="py-16 px-6 lg:px-8 max-w-7xl mx-auto bg-background pb-24">
+    <section className="py-10 px-6 lg:px-8 max-w-7xl mx-auto bg-background pb-20">
 
       {/* Section Header */}
       <div className="mb-16">
@@ -69,7 +69,7 @@ const Testimonials2 = () => {
       </div>
 
       {/* Testimonials Container */}
-      <div className="relative max-w-6xl mx-auto">
+      <div className="relative max-w-7xl mx-auto">
         {/* Static Background Card */}
         <div className="bg-gradient-to-br from-primary/80 via-primary/90 to-primary/70 rounded-3xl p-10 md:p-16 shadow-2xl relative overflow-visible z-0 border border-primary/20">
 

@@ -70,31 +70,31 @@ export function ClientFeedback() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Client</TableHead>
-                <TableHead>Comment</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Rating</TableHead>
+                <TableHead className="w-[120px]">Client</TableHead>
+                <TableHead className="w-[auto]">Comment</TableHead>
+                <TableHead className="w-[60px]">Type</TableHead>
+                <TableHead className="w-[80px] text-right">Rating</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {feedback.map((item, index) => (
                 <TableRow key={index}>
-                  <TableCell>
-                    <div className="font-medium">{item.client}</div>
-                    <div className="text-xs text-muted-foreground">{item.date}</div>
+                  <TableCell className="w-[120px]">
+                    <div className="font-medium truncate">{item.client}</div>
+                    <div className="text-xs text-muted-foreground truncate">{item.date}</div>
                   </TableCell>
-                  <TableCell>
-                    <p className="text-sm text-muted-foreground truncate max-w-xs">&ldquo;{item.comment}&rdquo;</p>
+                  <TableCell className="w-[auto]">
+                    <p className="text-sm text-muted-foreground truncate max-w-[150px]">&ldquo;{item.comment}&rdquo;</p>
                   </TableCell>
-                  <TableCell>
-                    <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+                  <TableCell className="w-[60px]">
+                    <span className="inline-flex items-center justify-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
                       {item.entityType}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="w-[80px] text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <span className="text-sm font-medium">{item.rating}.0</span>
-                      <FaStar className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                      <span className="text-sm font-medium">{item.rating}</span>
+                      <FaStar className="h-3 w-3 text-yellow-400 fill-yellow-400" />
                     </div>
                   </TableCell>
                 </TableRow>

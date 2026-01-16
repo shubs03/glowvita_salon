@@ -23,6 +23,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const pathname = usePathname();
   const [showPlansDialog, setShowPlansDialog] = useState(false);
   const [showBanner, setShowBanner] = useState(false);
+  const [forceRefresh, setForceRefresh] = useState(0);
   const dispatch = useAppDispatch();
   const tokenRefreshInterval = useRef<NodeJS.Timeout | null>(null);
   const [refreshToken] = useRefreshTokenMutation();
@@ -31,7 +32,7 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   const { isExpired, daysRemaining, willExpireSoon } = useSubscriptionCheck();
 
   // Fetch the user's profile on mount only
-  const { data: profileData, isSuccess, isLoading: isProfileLoading } = useGetProfileQuery(undefined, {
+  const { data: profileData, isSuccess, isLoading: isProfileLoading, refetch: refetchProfile } = useGetProfileQuery(undefined, {
     skip: !isCrmAuthenticated,
   });
 
@@ -72,15 +73,18 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   // Check subscription status on route change (instant detection)
   useEffect(() => {
     if (isExpired && isCrmAuthenticated) {
-      setShowBanner(true);
-      // Redirect to salon profile if not already there
-      if (!pathname.startsWith('/salon-profile')) {
+      // Show banner on all pages except sales page
+      setShowBanner(!pathname.startsWith('/sales'));
+      
+      // Redirect to salon profile if not already there and not on sales page
+      // Sales page should remain accessible even with expired subscription
+      if (!pathname.startsWith('/salon-profile') && !pathname.startsWith('/sales')) {
         router.push('/salon-profile');
       }
     } else {
       setShowBanner(false);
     }
-  }, [isExpired, pathname, isCrmAuthenticated, router]);
+  }, [isExpired, pathname, isCrmAuthenticated, router, forceRefresh, user]);
 
   const subscription = (user as any)?.subscription;
 
@@ -179,20 +183,19 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
         isOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         isMobile={isMobile}
-        isSubExpired={isExpired}
-        className={cn(isExpired && 'pointer-events-none filter blur-sm')}
-      />
+        isSubExpired={isExpired && !pathname.startsWith('/sales')}
+        className={cn(isExpired && !pathname.startsWith('/sales') && 'pointer-events-none filter blur-sm')} />
 
       <div className={cn(
         "flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden transition-all duration-300",
         !isMobile && (isSidebarOpen ? "lg:ml-64" : "lg:ml-20"),
         showBanner && "mt-[88px]" // Offset for banner height
       )}>
-        <Header toggleSidebar={toggleSidebar} subscription={subscription} isSubExpired={isExpired} />
+        <Header toggleSidebar={toggleSidebar} subscription={subscription} isSubExpired={isExpired && !pathname.startsWith('/sales')} />
 
         <main className={cn(
           "flex-1 overflow-y-auto overflow-x-hidden bg-muted/20",
-          isExpired && 'pointer-events-none filter blur-sm'
+          isExpired && !pathname.startsWith('/sales') && 'pointer-events-none filter blur-sm'
         )}>
           <div className="w-full max-w-none overflow-hidden min-h-full">
             {children}
@@ -203,7 +206,15 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
       {subscription && (
         <SubscriptionPlansDialog
           open={showPlansDialog}
-          onOpenChange={setShowPlansDialog}
+          onOpenChange={(open) => {
+            setShowPlansDialog(open);
+            // When the dialog closes, refresh the subscription status
+            if (!open) {
+              setForceRefresh(prev => prev + 1); // Trigger a refresh
+              // Also refetch the profile to ensure latest subscription status
+              refetchProfile();
+            }
+          }}
           subscription={subscription}
           userType={(role as any) || 'vendor'}
         />

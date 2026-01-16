@@ -146,6 +146,53 @@ export const POST = withSubscriptionCheck(async (req) => {
         // Fetch vendor's region to inherit
         const VendorModel = (await import("@repo/lib/models/Vendor/Vendor.model")).default;
         const vendor = await VendorModel.findById(vendorId).select('regionId');
+        // Process service items (for multi-service appointments)
+        let serviceItems = [];
+        if (body.serviceItems && Array.isArray(body.serviceItems)) {
+            serviceItems = body.serviceItems.map(item => ({
+                service: item.service || item._id || item.id,
+                serviceName: item.serviceName || item.name,
+                staff: item.staff || body.staff,
+                staffName: item.staffName || body.staffName,
+                startTime: item.startTime || body.startTime,
+                endTime: item.endTime || body.endTime,
+                duration: item.duration || body.duration,
+                amount: item.amount || item.price || 0,
+                // Include add-ons if they exist
+                addOns: item.selectedAddons?.map(addon => ({
+                    name: addon.name,
+                    price: addon.price,
+                    duration: addon.duration || 0,
+                    _id: addon._id || addon.id
+                })) || []
+            }));
+        } else {
+            // For single service appointments, create a single service item
+            serviceItems = [{
+                service: body.service,
+                serviceName: body.serviceName,
+                staff: body.staff,
+                staffName: body.staffName,
+                startTime: body.startTime,
+                endTime: body.endTime,
+                duration: body.duration,
+                amount: body.amount,
+                // Include add-ons if they exist in the main body
+                addOns: body.selectedAddons?.map(addon => ({
+                    name: addon.name,
+                    price: addon.price,
+                    duration: addon.duration || 0,
+                    _id: addon._id || addon.id
+                })) || []
+            }];
+        }
+
+        // Calculate total amount including add-ons
+        const baseAmount = Number(body.amount) || 0;
+        const addOnsAmount = serviceItems.reduce((sum, item) => {
+            return sum + (item.addOns?.reduce((addonSum, addon) => addonSum + (Number(addon.price) || 0), 0) || 0);
+        }, 0);
+        const totalAmount = baseAmount + addOnsAmount;
 
         // Set default values
         const appointmentData = {
@@ -153,18 +200,21 @@ export const POST = withSubscriptionCheck(async (req) => {
             vendorId,
             regionId: vendor?.regionId,
             status: body.status || 'scheduled',
-            amount: Number(body.amount) || 0,
+            amount: baseAmount,
+            addOnsAmount,
             discount: Number(body.discount) || 0,
             tax: Number(body.tax) || 0,
-            totalAmount: (Number(body.amount) || 0) - (Number(body.discount) || 0) + (Number(body.tax) || 0),
+            totalAmount,
             notes: body.notes || '',
-            mode: 'offline' // CRM bookings are always offline mode
+            mode: 'offline', // CRM bookings are always offline mode
+            serviceItems // Include the processed service items
         };
 
         const newAppointment = await AppointmentModel.create(appointmentData);
         const populatedAppointment = await AppointmentModel.findById(newAppointment._id)
             .populate('staff', 'fullName position')
-            .populate('service', 'name duration price');
+            .populate('service', 'name duration price')
+            .populate('serviceItems.service', 'name duration price');
 
         return NextResponse.json(
             { message: "Appointment created successfully", appointment: populatedAppointment },
