@@ -47,7 +47,8 @@ import {
   CheckCircle,
   Info,
   ChevronRight,
-  Heart
+  Heart,
+  Plus
 } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { BookingSummary } from "@/components/booking/BookingSummary";
@@ -189,7 +190,7 @@ function BookingPageContent() {
   // Wrapper to handle mode switching with cleanup
   const handleBookingModeChange = (mode: 'salon' | 'home') => {
     console.log(`=== Switching booking mode to: ${mode} at step ${currentStep} ===`);
-    
+
     setBookingMode(mode);
 
     if (mode === 'salon') {
@@ -349,10 +350,16 @@ function BookingPageContent() {
       setTotalAmount(priceBreakdown.finalTotal);
     } else {
       const amount = selectedServices.reduce((sum, service) => {
-        const price = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+        const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
           parseFloat(service.discountedPrice) :
           parseFloat(service.price || '0');
-        return sum + price;
+
+        const addonsPrice = service.selectedAddons?.reduce((addonSum, addon) => {
+          const addonPriceValue = addon.price !== null && addon.price !== undefined ? (typeof addon.price === 'string' ? parseFloat(addon.price) : addon.price) : 0;
+          return addonSum + addonPriceValue;
+        }, 0) || 0;
+
+        return sum + servicePrice + addonsPrice;
       }, 0);
       setTotalAmount(amount);
     }
@@ -515,7 +522,7 @@ function BookingPageContent() {
     }
 
   };
-  
+
   const handleAddressDetailsFetched = (locationData: HomeServiceLocation) => {
     console.log("✅ Address details fetched - setting location data");
     console.log("Setting homeServiceLocation to:", locationData);
@@ -623,24 +630,24 @@ function BookingPageContent() {
           setHomeServiceLocation(locationData as any);
           setShowLocationModal(false);
           setShowMapSelector(false); // Reset map selector state
-          
+
           // After setting location, if we have a time selected, try to proceed
           if (selectedTime) {
             if (isAuthenticated) {
               setIsConfirmationModalOpen(true);
             } else {
-                // Save booking data to sessionStorage before redirecting to login
-                const bookingData = {
-                  selectedServices,
-                  serviceStaffAssignments,
-                  selectedStaff,
-                  selectedDate: selectedDate.toISOString(),
-                  selectedTime,
-                  salonId,
-                  homeServiceLocation: locationData
-                };
-                sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
-                router.push(`/client-login?redirect=/book/${salonId}`);
+              // Save booking data to sessionStorage before redirecting to login
+              const bookingData = {
+                selectedServices,
+                serviceStaffAssignments,
+                selectedStaff,
+                selectedDate: selectedDate.toISOString(),
+                selectedTime,
+                salonId,
+                homeServiceLocation: locationData
+              };
+              sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+              router.push(`/client-login?redirect=/book/${salonId}`);
             }
           }
         } else {
@@ -1197,6 +1204,9 @@ function BookingPageContent() {
   // Update the handleFinalBookingConfirmation function to use enhanced booking
   const handleFinalBookingConfirmation = async () => {
     console.log('=== handleFinalBookingConfirmation Called ===');
+    console.log('Selected Services:', selectedServices);
+    console.log('Selected Services Count:', selectedServices.length);
+    console.log('Service Staff Assignments:', serviceStaffAssignments);
     console.log('Selected Time:', selectedTime);
     console.log('Selected Wedding Package:', selectedWeddingPackage);
     console.log('Home Service Location:', homeServiceLocation);
@@ -1277,9 +1287,21 @@ function BookingPageContent() {
       return;
     }
 
-    // Calculate end time
-    const duration = convertDurationToMinutes(primaryService.duration);
-    const endTime = calculateEndTime(selectedTime, duration);
+    // Calculate total duration including add-ons for ALL selected services
+    let totalDuration = 0;
+    if (selectedWeddingPackage) {
+      totalDuration = convertDurationToMinutes(primaryService.duration);
+    } else {
+      totalDuration = selectedServices.reduce((acc, service) => {
+        const serviceDuration = convertDurationToMinutes(service.duration);
+        const addOnsDuration = service.selectedAddons?.reduce(
+          (sum, addon) => sum + (addon.duration || 0), 0
+        ) || 0;
+        return acc + serviceDuration + addOnsDuration;
+      }, 0);
+    }
+
+    const endTime = calculateEndTime(selectedTime, totalDuration);
 
     // Check if any selected service is a home service or if wedding package is for wedding venue
     const isHomeService = selectedWeddingPackage
@@ -1327,19 +1349,42 @@ function BookingPageContent() {
       date: selectedDate instanceof Date ? selectedDate.toISOString() : new Date(selectedDate).toISOString(),
       startTime: selectedTime,
       endTime: endTime,
-      duration: duration,
+      duration: totalDuration,
       amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
         Number(primaryService.discountedPrice) :
         Number(primaryService.price),
-      totalAmount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
-        Number(primaryService.discountedPrice) :
-        Number(primaryService.price),
+      totalAmount: (() => {
+        // Calculate total including add-ons
+        return selectedServices.reduce((total, service) => {
+          const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+            Number(service.discountedPrice) :
+            Number(service.price);
+
+          const addonsPrice = service.selectedAddons
+            ? service.selectedAddons.reduce((sum, addon) => sum + (addon.price || 0), 0)
+            : 0;
+
+          return total + servicePrice + addonsPrice;
+        }, 0);
+      })(),
       platformFee: priceBreakdown?.platformFee || 0,
       serviceTax: priceBreakdown?.serviceTax || 0,
+      taxRate: priceBreakdown?.taxFeeSettings?.serviceTax || 0,
       discountAmount: priceBreakdown?.discountAmount || 0,
-      finalAmount: priceBreakdown?.finalTotal || (primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
-        Number(primaryService.discountedPrice) :
-        Number(primaryService.price)),
+      finalAmount: priceBreakdown?.finalTotal || (() => {
+        // Calculate total including add-ons
+        return selectedServices.reduce((total, service) => {
+          const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+            Number(service.discountedPrice) :
+            Number(service.price);
+
+          const addonsPrice = service.selectedAddons
+            ? service.selectedAddons.reduce((sum, addon) => sum + (addon.price || 0), 0)
+            : 0;
+
+          return total + servicePrice + addonsPrice;
+        }, 0);
+      })(),
       paymentMethod: paymentMethod, // Use selected payment method
       paymentStatus: 'pending',
       status: 'scheduled',
@@ -1355,46 +1400,65 @@ function BookingPageContent() {
           staffName: staffName,
           startTime: selectedTime,
           endTime: endTime,
-          duration: duration,
+          duration: totalDuration,
           amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
             Number(primaryService.discountedPrice) :
             Number(primaryService.price)
         }))
-        : // For regular services
-        selectedServices.map(service => {
-          // For multi-service, find the specific staff assignment for this service
-          let serviceStaffId = null;
-          let serviceStaffName = "Any Professional";
+        : // For regular services (including single service)
+        (() => {
+          let currentStartTime = selectedTime;
+          return selectedServices.map(service => {
+            console.log('Processing service for serviceItems:', service.name, 'Add-ons:', service.selectedAddons);
+            // For multi-service, find the specific staff assignment for this service
+            let serviceStaffId = null;
+            let serviceStaffName = "Any Professional";
 
-          if (isMultiService) {
-            const assignment = serviceStaffAssignments.find(a => a.service.id === service.id);
-            if (assignment) {
-              serviceStaffId = assignment.staff ? assignment.staff.id : null;
-              serviceStaffName = assignment.staff ? assignment.staff.name : "Any Professional";
+            if (isMultiService) {
+              const assignment = serviceStaffAssignments.find(a => a.service.id === service.id);
+              if (assignment) {
+                serviceStaffId = assignment.staff ? assignment.staff.id : null;
+                serviceStaffName = assignment.staff ? assignment.staff.name : "Any Professional";
+              }
+            } else {
+              // For single service, use the selectedStaff
+              serviceStaffId = selectedStaff?.id || null;
+              serviceStaffName = selectedStaff?.name || "Any Professional";
             }
-          } else {
-            // For single service, use the selectedStaff
-            serviceStaffId = selectedStaff?.id || null;
-            serviceStaffName = selectedStaff?.name || "Any Professional";
-          }
 
-          return {
-            service: service.id,
-            serviceName: service.name,
-            staff: serviceStaffId,
-            staffName: serviceStaffName,
-            startTime: selectedTime, // This would need to be more specific for multi-service
-            endTime: calculateEndTime(selectedTime, convertDurationToMinutes(service.duration)), // This would need to be more specific for multi-service
-            duration: convertDurationToMinutes(service.duration),
-            amount: service.discountedPrice !== null && service.discountedPrice !== undefined ?
-              Number(service.discountedPrice) :
-              Number(service.price)
-          };
-        }),
+            const serviceDuration = convertDurationToMinutes(service.duration);
+            const addOnsDuration = service.selectedAddons ?
+              service.selectedAddons.reduce((sum, addon) => sum + (addon.duration || 0), 0) : 0;
+            const totalServiceDuration = serviceDuration + addOnsDuration;
+
+            const itemStartTime = currentStartTime;
+            const itemEndTime = calculateEndTime(itemStartTime, totalServiceDuration);
+
+            // Update currentStartTime for the next service
+            currentStartTime = itemEndTime;
+
+            return {
+              service: service.id,
+              serviceName: service.name,
+              staff: serviceStaffId,
+              staffName: serviceStaffName,
+              startTime: itemStartTime,
+              endTime: itemEndTime,
+              duration: serviceDuration,
+              amount: service.discountedPrice !== null && service.discountedPrice !== undefined ?
+                Number(service.discountedPrice) :
+                Number(service.price),
+              addOns: service.selectedAddons ? service.selectedAddons.map(addon => ({
+                name: addon.name,
+                price: addon.price,
+                duration: addon.duration || 0,
+                _id: addon._id || (addon as any).id
+              })) : []
+            };
+          });
+        })(),
       isMultiService: isMultiService,
-      // STRICT FIX: Only set isHomeService to true if bookingMode is 'home' AND location is provided.
-      // This prevents "Phantom Home Mode" where bookingMode is 'home' but user is booking for salon.
-      isHomeService: bookingMode === 'home' && !!homeServiceLocation,
+      isHomeService: isHomeService,
       isWeddingService: isWeddingService,
       // Add home service location if it's a home service - ensure proper structure
       ...(bookingMode === 'home' && homeServiceLocation ? {
@@ -1419,14 +1483,11 @@ function BookingPageContent() {
     // DEBUG: Log the complete appointment data being sent
     console.log("=== COMPLETE APPOINTMENT DATA ===");
     console.log("Full appointment data:", JSON.stringify(appointmentData, null, 2));
+    console.log("serviceItems count:", appointmentData.serviceItems?.length);
+    console.log("serviceItems:", appointmentData.serviceItems);
     console.log("isHomeService flag:", appointmentData.isHomeService);
     console.log("homeServiceLocation in data:", appointmentData.homeServiceLocation);
     console.log("================================");
-
-    // DEBUG: Log the complete appointment data being sent
-    console.log("=== APPOINTMENT DATA BEING SENT ===");
-    console.log("Full appointment data:", JSON.stringify(appointmentData, null, 2));
-    console.log("===================================");
     try {
       // Determine if this is a home service based on booking mode and location availability
       // Payment method should NOT affect whether it's a home service or not
@@ -1558,10 +1619,17 @@ function BookingPageContent() {
             lat: Number(homeServiceLocation.coordinates?.lat || homeServiceLocation.lat || locationForm.lat || 0),
             lng: Number(homeServiceLocation.coordinates?.lng || homeServiceLocation.lng || locationForm.lng || 0)
           } : null,
-          duration: duration,
+          duration: totalDuration,
           amount: appointmentData.amount,
           totalAmount: appointmentData.totalAmount,
-          finalAmount: appointmentData.finalAmount
+          finalAmount: appointmentData.finalAmount,
+          platformFee: appointmentData.platformFee,
+          serviceTax: appointmentData.serviceTax,
+          taxRate: appointmentData.taxRate,
+          addOns: primaryService.selectedAddons || [],
+          // Include all service items with their add-ons for multi-service bookings
+          serviceItems: appointmentData.serviceItems,
+          isMultiService: isMultiService
         }).unwrap();
 
         if (lockResult.success) {
@@ -1659,12 +1727,15 @@ function BookingPageContent() {
           amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
             Number(primaryService.discountedPrice) :
             Number(primaryService.price),
-          totalAmount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
+          totalAmount: priceBreakdown?.subtotal || (primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
             Number(primaryService.discountedPrice) :
-            Number(primaryService.price),
-          finalAmount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
+            Number(primaryService.price)),
+          finalAmount: priceBreakdown?.finalTotal || (primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
             Number(primaryService.discountedPrice) :
-            Number(primaryService.price)
+            Number(primaryService.price)),
+          platformFee: priceBreakdown?.platformFee || 0,
+          serviceTax: priceBreakdown?.serviceTax || 0,
+          taxRate: priceBreakdown?.taxFeeSettings?.serviceTax || 0
         };
 
         console.log("Acquiring slot lock with data:", lockData);
@@ -1997,18 +2068,30 @@ function BookingPageContent() {
               duration: schedule.duration,
               amount: schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ?
                 parseFloat(schedule.service.discountedPrice) :
-                parseFloat(schedule.service.price)
+                parseFloat(schedule.service.price),
+              // Include selected add-ons for this service item, preserving original add-on IDs
+              addOns: Array.isArray((schedule.service as any).selectedAddons)
+                ? (schedule.service as any).selectedAddons.map((addon: any) => ({
+                  name: addon.name,
+                  price: Number(addon.price) || 0,
+                  duration: addon.duration ? Number(addon.duration) : 0,
+                  _id: addon._id || (addon as any).id
+                }))
+                : []
             };
           });
 
           console.log("Service items:", serviceItems);
 
-          // Calculate total amount for all services
+          // Calculate total amount for all services including add-ons
           const totalAmount = finalServiceSchedule.reduce((sum, schedule) => {
-            const price = schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ?
+            const basePrice = schedule.service.discountedPrice !== null && schedule.service.discountedPrice !== undefined ?
               parseFloat(schedule.service.discountedPrice) :
               parseFloat(schedule.service.price);
-            return sum + price;
+            const addonsTotal = Array.isArray((schedule.service as any).selectedAddons)
+              ? (schedule.service as any).selectedAddons.reduce((addonSum: number, addon: any) => addonSum + (Number(addon.price) || 0), 0)
+              : 0;
+            return sum + basePrice + addonsTotal;
           }, 0);
 
           console.log("Total amount:", totalAmount);
@@ -2745,6 +2828,7 @@ function BookingPageContent() {
             />
           ) : (
             <TimeSlotSelector
+              selectedServices={selectedServices}
               selectedDate={selectedDate}
               onSelectDate={setSelectedDate}
               selectedTime={selectedTime}
@@ -2763,6 +2847,9 @@ function BookingPageContent() {
               weddingPackage={selectedWeddingPackage}
               weddingPackageServices={selectedWeddingPackage ? (weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services) : undefined}
               onLockAcquired={setSlotLockToken}
+              platformFee={priceBreakdown?.platformFee}
+              serviceTax={priceBreakdown?.serviceTax}
+              taxRate={priceBreakdown?.taxRate}
             />
           );
           break;
@@ -2942,11 +3029,18 @@ function BookingPageContent() {
         } catch (error) {
           console.error('Error calculating prices:', error);
           // Set a default price breakdown to prevent blank screen
-          const subtotal = validServices.reduce((sum, service) => {
-            const price = service.discountedPrice !== null && service.discountedPrice !== undefined ?
-              parseFloat(service.discountedPrice) :
-              parseFloat(service.price || '0');
-            return sum + price;
+          const breakdown = await calculateBookingAmount(validServices, offer, taxFeeSettings);
+          const subtotal = selectedServices.reduce((acc, service) => {
+            const servicePrice = service.discountedPrice !== undefined && service.discountedPrice !== null
+              ? parseFloat(String(service.discountedPrice))
+              : parseFloat(String(service.price || '0'));
+
+            const addonsPrice = service.selectedAddons?.reduce((addonSum, addon) => {
+              const addonPriceValue = addon.price !== null && addon.price !== undefined ? parseFloat(String(addon.price)) : 0;
+              return addonSum + addonPriceValue;
+            }, 0) || 0;
+
+            return acc + servicePrice + addonsPrice;
           }, 0);
 
           const defaultBreakdown = {
@@ -3280,25 +3374,42 @@ function BookingPageContent() {
               <CardContent className="space-y-4 pt-4">
                 <div className="space-y-3">
                   {selectedServices.map((service) => (
-                    <div key={service.id} className="flex items-center justify-between p-3 bg-white/50 rounded-lg border border-gray-100 hover:bg-white/80 transition-colors">
-                      <div className="flex-1">
-                        <div className="font-semibold flex items-center gap-2">
-                          <Scissors className="h-4 w-4 text-primary" />
-                          {service.name}
+                    <div key={service.id} className="space-y-2">
+                      <div className="flex items-center justify-between p-3 bg-white/50 rounded-lg border border-gray-100 hover:bg-white/80 transition-colors">
+                        <div className="flex-1">
+                          <div className="font-semibold flex items-center gap-2">
+                            <Scissors className="h-4 w-4 text-primary" />
+                            {service.name}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                            <Clock className="h-3 w-3" />
+                            {service.duration}
+                            {service.staff && service.staff.length > 0 && (
+                              <>
+                                <span>•</span>
+                                <User className="h-3 w-3" />
+                                {service.staff.length} staff available
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                          <Clock className="h-3 w-3" />
-                          {service.duration}
-                          {service.staff && service.staff.length > 0 && (
-                            <>
-                              <span>•</span>
-                              <User className="h-3 w-3" />
-                              {service.staff.length} staff available
-                            </>
-                          )}
-                        </div>
+                        <div className="font-semibold text-primary">₹{service.price}</div>
                       </div>
-                      <div className="font-semibold text-primary">₹{service.price}</div>
+
+                      {/* Display Add-ons */}
+                      {service.selectedAddons && service.selectedAddons.length > 0 && (
+                        <div className="pl-4 ml-2 border-l-2 border-primary/20 space-y-2">
+                          {service.selectedAddons.map((addon) => (
+                            <div key={addon._id} className="flex items-center justify-between p-2 bg-white/30 rounded-lg border border-gray-100 hover:bg-white/60 transition-colors">
+                              <div className="flex items-center gap-2 text-sm">
+                                <Plus className="h-3 w-3 text-muted-foreground" />
+                                <span>{addon.name}</span>
+                              </div>
+                              <div className="text-sm text-muted-foreground">₹{addon.price}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

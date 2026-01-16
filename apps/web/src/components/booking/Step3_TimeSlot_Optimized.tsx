@@ -10,16 +10,16 @@ import { Service, StaffMember, WeddingPackage } from '@/hooks/useBookingData';
 import { format, addDays } from 'date-fns';
 
 // Breadcrumb navigation component
-const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage }: { 
-  currentStep: number; 
+const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage }: {
+  currentStep: number;
   setCurrentStep: (step: number) => void;
   isWeddingPackage?: boolean;
 }) => {
   // Wedding packages skip step 2 (staff selection)
-  const steps = isWeddingPackage 
+  const steps = isWeddingPackage
     ? ['Select Package', 'Select Date & Time', 'Confirm Booking']
     : ['Select Service', 'Select Professional', 'Select Date & Time', 'Confirm Booking'];
-  
+
   return (
     <nav className="flex items-center text-sm font-medium text-muted-foreground mb-6">
       {steps.map((step, index) => (
@@ -85,6 +85,7 @@ interface Step3TimeSlotProps {
   vendorId?: string;
   salonId?: string;
   service?: Service | null;
+  selectedServices?: Service[];
   selectedService?: Service | null;
   isHomeService?: boolean;
   isWeddingService?: boolean;
@@ -93,6 +94,9 @@ interface Step3TimeSlotProps {
   weddingPackageServices?: any[];
   homeServiceLocation?: any;
   onLockAcquired?: (lockToken: string) => void; // Callback when lock is acquired
+  platformFee?: number;
+  serviceTax?: number;
+  taxRate?: number;
 }
 
 export const Step3_TimeSlot = memo(({
@@ -111,6 +115,7 @@ export const Step3_TimeSlot = memo(({
   vendorId,
   salonId,
   service,
+  selectedServices,
   selectedService,
   isHomeService = false,
   isWeddingService = false,
@@ -118,7 +123,10 @@ export const Step3_TimeSlot = memo(({
   weddingPackage,
   weddingPackageServices,
   homeServiceLocation,
-  onLockAcquired
+  onLockAcquired,
+  platformFee = 0,
+  serviceTax = 0,
+  taxRate = 0
 }: Step3TimeSlotProps) => {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
@@ -129,7 +137,7 @@ export const Step3_TimeSlot = memo(({
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [isStale, setIsStale] = useState(false);
   const dateScrollerRef = useRef<HTMLDivElement>(null);
-  
+
   // Use salonId or vendorId (they're the same)
   const effectiveVendorId = vendorId || salonId;
   // Use service or selectedService
@@ -152,7 +160,7 @@ export const Step3_TimeSlot = memo(({
           .filter(Boolean)
           .join(',');
       }
-      
+
       const params = new URLSearchParams({
         vendorId: effectiveVendorId,
         staffId: selectedStaff?.id || 'any',
@@ -184,8 +192,8 @@ export const Step3_TimeSlot = memo(({
     } finally {
       setIsLoadingSlots(false);
     }
-  }, [effectiveVendorId, selectedDate, effectiveService, selectedStaff, isHomeService, isWeddingService, 
-      isWeddingPackage, weddingPackage, weddingPackageServices, homeServiceLocation]);
+  }, [effectiveVendorId, selectedDate, effectiveService, selectedStaff, isHomeService, isWeddingService,
+    isWeddingPackage, weddingPackage, weddingPackageServices, homeServiceLocation]);
 
   // Fetch slots on mount and when dependencies change
   useEffect(() => {
@@ -209,7 +217,7 @@ export const Step3_TimeSlot = memo(({
       const now = new Date().getTime();
       const lastRefreshTime = lastRefresh.getTime();
       const ageSeconds = (now - lastRefreshTime) / 1000;
-      
+
       setIsStale(ageSeconds > 60);
     }, 10000); // Check every 10 seconds
 
@@ -253,9 +261,9 @@ export const Step3_TimeSlot = memo(({
 
       // Prepare lock request
       // For wedding packages, use the package ID and get service IDs from package services
-      const effectiveService = service || selectedService;
+      const effectiveService = service || selectedService || (selectedServices && selectedServices[0]);
       let serviceIdForLock = effectiveService?.id;
-      
+
       // If it's a wedding package, we still need a serviceId for the lock
       // Use the first service from the package or the package ID itself
       if (isWeddingPackage && weddingPackage) {
@@ -270,12 +278,12 @@ export const Step3_TimeSlot = memo(({
           serviceIdForLock = weddingPackage.id || weddingPackage._id;
         }
       }
-      
+
       // For wedding packages, use the wedding-package specific lock endpoint
       // which doesn't create a temporary appointment
       if (isWeddingPackage && weddingPackage) {
         console.log('Using wedding package lock endpoint');
-        
+
         const weddingLockRequest = {
           packageId: weddingPackage.id || weddingPackage._id,
           selectedSlot: {
@@ -318,24 +326,59 @@ export const Step3_TimeSlot = memo(({
         });
 
         console.log('Wedding package slot locked successfully');
-        
+
         // Notify parent component about the lock token
         if (onLockAcquired && lockData.lockId) {
           onLockAcquired(lockData.lockId);
         }
-        
+
         // Trigger the next step by calling onSelectTime
         onSelectTime(slot.startTime);
         toast.success('Slot locked! You have 30 minutes to complete booking.');
-        
+
         // Remove locked slot from available slots (optimistic update)
         setSlots(prev => prev.filter(s => s.startTime !== slot.startTime));
-        
+
         return;
       }
 
       // For regular services, use the standard booking lock endpoint
       // Build lock request - only include location if it's actually for a home service
+      // Calculate amounts and add-ons from selectedServices state
+      let serviceAmount = 0;
+      let addOnsAmount = 0;
+      const addOns: { _id: string; name: string; price: number; duration: number; }[] = [];
+
+      if (selectedServices && selectedServices.length > 0) {
+        selectedServices.forEach(service => {
+          const basePrice = service.discountedPrice !== null && service.discountedPrice !== undefined
+            ? Number(service.discountedPrice)
+            : Number(service.price || 0);
+          serviceAmount += basePrice;
+
+          if (service.selectedAddons) {
+            service.selectedAddons.forEach(addon => {
+              const addonPrice = Number(addon.price) || 0;
+              addOnsAmount += addonPrice;
+              addOns.push({
+                _id: addon._id || (addon as any).id,
+                name: addon.name,
+                price: addonPrice,
+                duration: addon.duration || 0
+              });
+            });
+          }
+        });
+      } else if (effectiveService) {
+        // Fallback for single service if selectedServices is not populated
+        const basePrice = effectiveService.discountedPrice !== null && effectiveService.discountedPrice !== undefined
+          ? Number(effectiveService.discountedPrice)
+          : Number(effectiveService.price || 0);
+        serviceAmount += basePrice;
+      }
+
+      const totalAmount = serviceAmount + addOnsAmount;
+
       const lockRequest: any = {
         vendorId: effectiveVendorId,
         staffId: selectedStaff?.id || 'any',
@@ -350,10 +393,23 @@ export const Step3_TimeSlot = memo(({
         isHomeService,
         isWeddingService: isWeddingService,
         duration: slot.duration || effectiveService?.duration,
-        amount: slot.services?.reduce((sum, s) => sum + (s.amount || 0), 0) || 0,
-        totalAmount: slot.services?.reduce((sum, s) => sum + (s.amount || 0), 0) || 0,
-        finalAmount: slot.services?.reduce((sum, s) => sum + (s.amount || 0), 0) || 0
+        amount: serviceAmount,
+        addOnsAmount: addOnsAmount,
+        totalAmount: totalAmount,
+        finalAmount: totalAmount + (platformFee || 0) + (serviceTax || 0),
+        platformFee: platformFee || 0,
+        serviceTax: serviceTax || 0,
+        taxRate: taxRate || 0,
+        addOns: addOns,
+        selectedAddOns: addOns, // Ensure this is passed as well
       };
+
+      // Only include location if it's actually provided and valid
+      if (isHomeService && homeServiceLocation && homeServiceLocation.lat && homeServiceLocation.lng) {
+        lockRequest.location = homeServiceLocation;
+      }
+
+      console.log('Sending lock request:', lockRequest);
 
       // Only include location if it's actually provided and valid
       if (isHomeService && homeServiceLocation && homeServiceLocation.lat && homeServiceLocation.lng) {
@@ -393,14 +449,14 @@ export const Step3_TimeSlot = memo(({
     } catch (error: any) {
       console.error('Slot lock error:', error);
       toast.error(error.message || 'This slot was just booked. Please select another time.');
-      
+
       // Refresh slots to get updated availability
       await fetchSlots();
     } finally {
       setIsLocking(false);
     }
-  }, [effectiveVendorId, selectedStaff, selectedService, service, selectedDate, isHomeService, isWeddingService, 
-      isWeddingPackage, weddingPackage, weddingPackageServices, homeServiceLocation, onSelectTime, fetchSlots, isLocking]);
+  }, [effectiveVendorId, selectedStaff, selectedService, service, selectedServices, selectedDate, isHomeService, isWeddingService,
+    isWeddingPackage, weddingPackage, weddingPackageServices, homeServiceLocation, onSelectTime, fetchSlots, isLocking]);
 
   // Release lock manually
   const handleReleaseLock = useCallback(async () => {
@@ -449,14 +505,14 @@ export const Step3_TimeSlot = memo(({
   }, [slots]);
 
   const displaySlots = useMemo(() => {
-    return selectedStaff?.id === 'any' || !selectedStaff 
+    return selectedStaff?.id === 'any' || !selectedStaff
       ? Object.values(groupedSlots)
       : slots;
   }, [selectedStaff, slots, groupedSlots]);
 
   // Generate available dates (next 60 days)
   const dates = useMemo(() => Array.from({ length: 60 }, (_, i) => addDays(new Date(), i)), []);
-  
+
   const currentMonthYear = useMemo(() => format(selectedDate, 'MMMM yyyy'), [selectedDate]);
 
   // Handle date scroll
@@ -645,49 +701,49 @@ export const Step3_TimeSlot = memo(({
             <div className="max-h-64 overflow-y-auto pr-2 no-scrollbar">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                 {displaySlots.map((slot) => {
-                const isSelected = selectedTime === slot.startTime;
-                const isLocked = lockedSlot?.slot.startTime === slot.startTime;
+                  const isSelected = selectedTime === slot.startTime;
+                  const isLocked = lockedSlot?.slot.startTime === slot.startTime;
 
-                return (
-                  <button
-                    key={slot.startTime}
-                    onClick={() => !isLocked && handleTimeSelect(slot)}
-                    disabled={isLocking || isLocked}
-                    className={cn(
-                      "p-3 border-2 rounded-lg transition-all text-left",
-                      isLocked 
-                        ? "border-green-500 bg-green-50 cursor-default" 
-                        : isSelected
-                        ? "border-primary bg-primary/5"
-                        : "border-gray-200 hover:border-primary hover:bg-primary/5",
-                      isLocking && "opacity-50 cursor-not-allowed"
-                    )}
-                  >
-                    <div className="font-semibold text-sm">
-                      {slot.startTime}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      {slot.duration} min
-                    </div>
-                    {slot.travelTime && slot.travelTime > 0 && (
-                      <div className="text-xs text-blue-600 mt-1">
-                        +{slot.travelTime} min travel
+                  return (
+                    <button
+                      key={slot.startTime}
+                      onClick={() => !isLocked && handleTimeSelect(slot)}
+                      disabled={isLocking || isLocked}
+                      className={cn(
+                        "p-3 border-2 rounded-lg transition-all text-left",
+                        isLocked
+                          ? "border-green-500 bg-green-50 cursor-default"
+                          : isSelected
+                            ? "border-primary bg-primary/5"
+                            : "border-gray-200 hover:border-primary hover:bg-primary/5",
+                        isLocking && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <div className="font-semibold text-sm">
+                        {slot.startTime}
                       </div>
-                    )}
-                    {slot.staffCount && slot.staffCount > 1 && (
-                      <div className="text-xs text-purple-600 mt-1">
-                        {slot.staffCount} staff available
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {slot.duration} min
                       </div>
-                    )}
-                    {isLocked && (
-                      <div className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                        <Lock className="h-3 w-3" />
-                        Locked
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
+                      {slot.travelTime && slot.travelTime > 0 && (
+                        <div className="text-xs text-blue-600 mt-1">
+                          +{slot.travelTime} min travel
+                        </div>
+                      )}
+                      {slot.staffCount && slot.staffCount > 1 && (
+                        <div className="text-xs text-purple-600 mt-1">
+                          {slot.staffCount} staff available
+                        </div>
+                      )}
+                      {isLocked && (
+                        <div className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                          <Lock className="h-3 w-3" />
+                          Locked
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}

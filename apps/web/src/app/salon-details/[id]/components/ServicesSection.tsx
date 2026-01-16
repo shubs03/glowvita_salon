@@ -31,7 +31,8 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
         duration: service.duration || 60,
         category: service.category?.name || service.category || "Other",
         description: service.description || "",
-        image: service.image || "https://placehold.co/200x200/png?text=" + (service.name || "Service").replace(/\s/g, '+')
+        image: service.image || "https://placehold.co/200x200/png?text=" + (service.name || "Service").replace(/\s/g, '+'),
+        addOns: service.addOns || []
       }));
     }
     return [];

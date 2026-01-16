@@ -60,10 +60,18 @@ export function BookingSummary({
   const subtotal = weddingPackage
     ? (weddingPackage.discountedPrice || weddingPackage.totalPrice || 0)
     : (priceBreakdown?.subtotal ?? selectedServices.reduce((acc, service) => {
-      const price = service.discountedPrice !== null && service.discountedPrice !== undefined ?
-        service.discountedPrice :
-        (service.price || 0);
-      return acc + parseFloat(String(price) || '0');
+      const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+        parseFloat(String(service.discountedPrice)) :
+        parseFloat(String(service.price || '0'));
+
+      const addonsPrice = service.selectedAddons
+        ? service.selectedAddons.reduce((sum, addon) => {
+          const price = typeof addon.price === 'string' ? parseFloat(addon.price) : (addon.price || 0);
+          return sum + price;
+        }, 0)
+        : 0;
+
+      return acc + servicePrice + addonsPrice;
     }, 0));
 
   const total = priceBreakdown?.finalTotal ?? subtotal;
@@ -130,9 +138,22 @@ export function BookingSummary({
                 ))
               ) : (
                 selectedServices.map((service: Service) => (
-                  <div key={service.id} className="flex justify-between items-center text-sm">
-                    <span className="line-clamp-2">{service.name}</span>
-                    <span className="font-medium">₹{service.price}</span>
+                  <div key={service.id} className="space-y-1">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="line-clamp-2">{service.name}</span>
+                      <span className="font-medium">₹{service.price}</span>
+                    </div>
+                    {/* Display Add-ons */}
+                    {service.selectedAddons && service.selectedAddons.length > 0 && (
+                      <div className="pl-3 border-l-2 border-primary/20 space-y-1">
+                        {service.selectedAddons.map((addon) => (
+                          <div key={addon._id} className="flex justify-between items-center text-xs text-muted-foreground">
+                            <span>+ {addon.name}</span>
+                            <span>₹{addon.price}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))
               )}
@@ -258,13 +279,34 @@ export function BookingSummary({
             </div>
           ) : (
             <div className="p-3 bg-secondary/50 rounded-md">
-              <div className="flex items-center gap-3">
+              <div className="flex items-start gap-3">
                 <div className="p-2 bg-primary/10 rounded-md"><Scissors className="h-4 w-4 text-primary" /></div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Services</p>
-                  <p className="font-medium text-sm">
-                    {selectedServices.length > 0 ? selectedServices.map(s => s.name).join(', ') : 'No services selected'}
-                  </p>
+                <div className="w-full">
+                  <p className="text-xs text-muted-foreground mb-1">Services</p>
+                  {selectedServices.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedServices.map((service) => (
+                        <div key={service.id} className="space-y-1">
+                          <div className="flex justify-between items-center">
+                            <p className="font-medium text-sm">{service.name}</p>
+                            <span className="text-sm">₹{service.discountedPrice || service.price}</span>
+                          </div>
+                          {service.selectedAddons && service.selectedAddons.length > 0 && (
+                            <div className="pl-3 border-l-2 border-primary/20 space-y-1">
+                              {service.selectedAddons.map((addon) => (
+                                <div key={addon._id} className="flex justify-between items-center text-xs text-muted-foreground">
+                                  <span>+ {addon.name}</span>
+                                  <span>₹{addon.price}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="font-medium text-sm">No services selected</p>
+                  )}
                 </div>
               </div>
             </div>
