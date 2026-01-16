@@ -9,6 +9,9 @@
       "@repo/config/*": [
         "../../packages/config/*"
       ],
+      "@repo/store/*": [
+        "../../packages/store/src/*"
+      ],
       "@repo/*": [
         "../../packages/*/src"
       ]

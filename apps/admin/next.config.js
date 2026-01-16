@@ -9,6 +9,8 @@ const nextConfig = {
   webpack: (config, { isServer }) => {
     config.resolve.alias['@repo/config'] = path.resolve(__dirname, '../../packages/config');
     config.resolve.alias['@repo/lib'] = path.resolve(__dirname, '../../packages/lib/src');
+    config.resolve.alias['@repo/store/api'] = path.resolve(__dirname, '../../packages/store/src/services/api.js');
+    config.resolve.alias['@repo/store/slices/adminAuthSlice'] = path.resolve(__dirname, '../../packages/store/src/slices/Admin/adminAuthSlice.js');
     config.resolve.alias['@repo/store'] = path.resolve(__dirname, '../../packages/store/src');
     config.resolve.alias['@repo/utils'] = path.resolve(__dirname, '../../packages/utils/src');
     // Handle canvas.node binary files
@@ -58,9 +60,7 @@ const nextConfig = {
       },
     ],
   },
-  experimental: {
-    serverActions: true,
-  },
+
   env: {
     NEXT_PUBLIC_MAPBOX_API_KEY: process.env.MAPBOX_API_KEY,
   }
