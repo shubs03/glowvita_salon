@@ -246,9 +246,11 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     router.push('/auth/register');
   };
 
+  console.log("mapbox token ", MAPBOX_TOKEN)
+
   useEffect(() => {
     if (!isMapOpen || !MAPBOX_TOKEN) return;
-
+    console.log("mapbox token", MAPBOX_TOKEN);
     const initMap = () => {
       if (!mapContainer.current) return;
 
