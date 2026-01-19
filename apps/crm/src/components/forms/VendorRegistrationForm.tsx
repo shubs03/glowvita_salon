@@ -15,7 +15,7 @@ import { Textarea } from '@repo/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../../packages/config/config';
+import { NEXT_PUBLIC_MAPBOX_API_KEY } from '@repo/config/config';
 
 const MAPBOX_TOKEN = NEXT_PUBLIC_MAPBOX_API_KEY;
 

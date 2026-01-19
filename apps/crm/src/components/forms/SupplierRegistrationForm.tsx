@@ -12,7 +12,7 @@ import { cn } from '@repo/ui/cn';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
-import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../../packages/config/config';
+import { NEXT_PUBLIC_MAPBOX_API_KEY } from '@repo/config/config';
 
 // Mapbox access token
 const MAPBOX_TOKEN = NEXT_PUBLIC_MAPBOX_API_KEY;
