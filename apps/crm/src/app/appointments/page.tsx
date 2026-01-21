@@ -361,7 +361,7 @@ export default function AppointmentsPage() {
                                 <TableCell className="font-medium">
                                   {appointment.clientName}
                                   <div className="text-xs text-muted-foreground">
-                                    {appointment.clientPhone || 'No phone'}
+                                    {appointment.clientPhone || (typeof appointment.client === 'object' && (appointment.client as any)?.phone) || 'No phone'}
                                   </div>
                                 </TableCell>
                                 <TableCell>
