@@ -199,6 +199,7 @@ export default function CalendarPage() {
       discount: appt.discount || 0,
       tax: appt.tax || 0,
       totalAmount: appt.totalAmount || appt.amount || 0,
+      finalAmount: appt.finalAmount || appt.totalAmount || appt.amount || 0,
       mode: appt.mode, // Only include if it exists in backend
       // Multi-service appointment fields
       isMultiService: appt.isMultiService || false,
@@ -639,71 +640,75 @@ export default function CalendarPage() {
                 View Details
               </button>
 
-              <div className="relative">
+              {(appointment.status !== 'completed' && appointment.status !== 'completed without payment' && appointment.status !== 'cancelled') && (
+                <div className="relative">
+                  <button
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowStatusMenu(!showStatusMenu);
+                    }}
+                  >
+                    <div className="flex items-center">
+                      <CheckCircle2 className="mr-2 h-4 w-4 text-blue-500" />
+                      <span>Change Status</span>
+                    </div>
+                    <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showStatusMenu ? 'rotate-180' : ''}`} />
+                  </button>
+
+                  {showStatusMenu && (
+                    <div className="absolute left-0 right-0 mt-1 w-full bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-30">
+                      <div className="py-1">
+                        {['confirmed', 'cancelled'].map((status) => (
+                          <button
+                            key={status}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(status);
+                            }}
+                            disabled={isUpdatingStatus}
+                            className={cn(
+                              'w-full text-left px-4 py-2 text-sm flex items-center transition-colors',
+                              status === 'cancelled' || status === 'no-show'
+                                ? 'text-red-600 hover:bg-red-50'
+                                : status === 'completed'
+                                  ? 'text-green-600 hover:bg-green-50'
+                                  : status === 'confirmed'
+                                    ? 'text-blue-600 hover:bg-blue-50'
+                                    : 'text-yellow-600 hover:bg-yellow-50',
+                              isUpdatingStatus && 'opacity-50 cursor-not-allowed'
+                            )}
+                          >
+                            {status === 'cancelled' ? (
+                              <XCircle className="mr-2 h-4 w-4" />
+                            ) : (
+                              <CheckCircle2 className="mr-2 h-4 w-4" />
+                            )}
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                            {isUpdatingStatus && status === appointment.status && (
+                              <Loader2 className="ml-2 h-4 w-4 animate-spin" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(appointment.status !== 'completed' && appointment.status !== 'completed without payment') && (
                 <button
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center justify-between"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setShowStatusMenu(!showStatusMenu);
+                    onEdit();
+                    setIsOpen(false);
                   }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                 >
-                  <div className="flex items-center">
-                    <CheckCircle2 className="mr-2 h-4 w-4 text-blue-500" />
-                    <span>Change Status</span>
-                  </div>
-                  <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${showStatusMenu ? 'rotate-180' : ''}`} />
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Reschedule/Edit Appointment
                 </button>
-
-                {showStatusMenu && (
-                  <div className="absolute left-0 right-0 mt-1 w-full bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-30">
-                    <div className="py-1">
-                      {['confirmed', 'cancelled'].map((status) => (
-                        <button
-                          key={status}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStatusChange(status);
-                          }}
-                          disabled={isUpdatingStatus}
-                          className={cn(
-                            'w-full text-left px-4 py-2 text-sm flex items-center transition-colors',
-                            status === 'cancelled' || status === 'no-show'
-                              ? 'text-red-600 hover:bg-red-50'
-                              : status === 'completed'
-                                ? 'text-green-600 hover:bg-green-50'
-                                : status === 'confirmed'
-                                  ? 'text-blue-600 hover:bg-blue-50'
-                                  : 'text-yellow-600 hover:bg-yellow-50',
-                            isUpdatingStatus && 'opacity-50 cursor-not-allowed'
-                          )}
-                        >
-                          {status === 'cancelled' ? (
-                            <XCircle className="mr-2 h-4 w-4" />
-                          ) : (
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                          )}
-                          {status.charAt(0).toUpperCase() + status.slice(1)}
-                          {isUpdatingStatus && status === appointment.status && (
-                            <Loader2 className="ml-2 h-4 w-4 animate-spin" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit();
-                  setIsOpen(false);
-                }}
-                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Reschedule/Edit Appointment
-              </button>
+              )}
             </div>
           </div>
         )}
@@ -961,9 +966,9 @@ export default function CalendarPage() {
 
                         {/* Price */}
                         <div className="text-right">
-                          <p className="text-sm font-medium text-gray-500">Total</p>
+                          <p className="text-sm font-medium text-gray-500">Final Amount</p>
                           <p className="text-lg font-semibold text-gray-900">
-                            ${appointment.totalAmount?.toFixed(2) || '0.00'}
+                            ₹{appointment.finalAmount?.toFixed(2) || appointment.totalAmount?.toFixed(2) || '0.00'}
                           </p>
                         </div>
                       </div>

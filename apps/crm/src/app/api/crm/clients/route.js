@@ -15,25 +15,25 @@ export const GET = withSubscriptionCheck(async (req) => {
         const vendorId = req.user.userId.toString();
         const url = new URL(req.url);
         const clientId = url.searchParams.get('id');
-        
+
         // If client ID is provided, fetch single client with all details
         if (clientId) {
             const client = await ClientModel.findOne({ _id: clientId, vendorId }).lean();
 
             if (!client) {
-                return NextResponse.json({ 
+                return NextResponse.json({
                     success: false,
-                    message: "Client not found" 
+                    message: "Client not found"
                 }, { status: 404 });
             }
 
             // Ensure birthdayDate is included in the response
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: true,
                 data: client
             }, { status: 200 });
         }
-        
+
         // Otherwise fetch all clients (existing functionality)
         const searchTerm = url.searchParams.get('search');
         const status = url.searchParams.get('status');
@@ -45,11 +45,11 @@ export const GET = withSubscriptionCheck(async (req) => {
         // Fetch offline clients from ClientModel
         if (source === 'offline' || source === 'all') {
             const query = { vendorId };
-            
+
             if (status && status !== 'all') {
                 query.status = status;
             }
-            
+
             if (searchTerm) {
                 query.$or = [
                     { fullName: { $regex: searchTerm, $options: 'i' } },
@@ -73,7 +73,7 @@ export const GET = withSubscriptionCheck(async (req) => {
                 source: 'offline'
             }));
 
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: true,
                 data: clientsWithSource,
                 pagination: {
@@ -89,16 +89,16 @@ export const GET = withSubscriptionCheck(async (req) => {
         if (source === 'online') {
             try {
                 // Find all unique user IDs who have appointments with this vendor
-                const appointments = await AppointmentModel.find({ 
+                const appointments = await AppointmentModel.find({
                     vendorId: vendorId,
                     client: { $exists: true, $ne: null }
                 }).select('client').lean();
-                
+
                 const userIds = [...new Set(appointments.map(appt => appt.client.toString()))];
-                
+
                 // Fetch user details for these IDs
                 const query = { _id: { $in: userIds } };
-                
+
                 if (searchTerm) {
                     query.$or = [
                         { firstName: { $regex: searchTerm, $options: 'i' } },
@@ -138,7 +138,7 @@ export const GET = withSubscriptionCheck(async (req) => {
                     source: 'online'
                 }));
 
-                return NextResponse.json({ 
+                return NextResponse.json({
                     success: true,
                     data: onlineClients,
                     pagination: {
@@ -150,24 +150,24 @@ export const GET = withSubscriptionCheck(async (req) => {
                 }, { status: 200 });
             } catch (error) {
                 console.error('Error fetching online clients:', error);
-                return NextResponse.json({ 
+                return NextResponse.json({
                     success: false,
-                    message: "Failed to fetch online clients", 
-                    error: error.message 
+                    message: "Failed to fetch online clients",
+                    error: error.message
                 }, { status: 500 });
             }
         }
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: false,
-            message: "Invalid source parameter" 
+            message: "Invalid source parameter"
         }, { status: 400 });
     } catch (error) {
         console.error('Error fetching clients:', error);
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: false,
-            message: "Failed to fetch clients", 
-            error: error.message 
+            message: "Failed to fetch clients",
+            error: error.message
         }, { status: 500 });
     }
 }, ['vendor', 'supplier']);
@@ -182,9 +182,9 @@ export const POST = withSubscriptionCheck(async (req) => {
         const requiredFields = ['fullName', 'email', 'phone'];
         for (const field of requiredFields) {
             if (!body[field]) {
-                return NextResponse.json({ 
+                return NextResponse.json({
                     success: false,
-                    message: `${field} is required` 
+                    message: `${field} is required`
                 }, { status: 400 });
             }
         }
@@ -200,9 +200,9 @@ export const POST = withSubscriptionCheck(async (req) => {
 
         if (existingClient) {
             const conflictField = existingClient.email === body.email.toLowerCase() ? 'email' : 'phone';
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: false,
-                message: `Client with this ${conflictField} already exists` 
+                message: `Client with this ${conflictField} already exists`
             }, { status: 409 });
         }
 
@@ -211,14 +211,14 @@ export const POST = withSubscriptionCheck(async (req) => {
         if (body.profilePicture) {
             const fileName = `client-${vendorId}-${Date.now()}`;
             const imageUrl = await uploadBase64(body.profilePicture, fileName);
-            
+
             if (!imageUrl) {
                 return NextResponse.json(
                     { success: false, message: "Failed to upload profile picture" },
                     { status: 500 }
                 );
             }
-            
+
             profilePictureUrl = imageUrl;
         }
 
@@ -241,7 +241,7 @@ export const POST = withSubscriptionCheck(async (req) => {
             address: body.address?.trim() || '',
             status: 'New'
         };
-        
+
         console.log('Creating client with regionId:', clientData.regionId);
 
         const client = new ClientModel(clientData);
@@ -255,26 +255,26 @@ export const POST = withSubscriptionCheck(async (req) => {
         delete clientResponse.notes;
         delete clientResponse.searchText;
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: true,
             message: "Client created successfully",
-            data: clientResponse 
+            data: clientResponse
         }, { status: 201 });
     } catch (error) {
         console.error('Error creating client:', error);
-        
+
         if (error.code === 11000) {
             const field = Object.keys(error.keyPattern)[0];
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: false,
-                message: `Client with this ${field} already exists` 
+                message: `Client with this ${field} already exists`
             }, { status: 409 });
         }
-        
-        return NextResponse.json({ 
+
+        return NextResponse.json({
             success: false,
-            message: "Failed to create client", 
-            error: error.message 
+            message: "Failed to create client",
+            error: error.message
         }, { status: 500 });
     }
 }, ['vendor', 'supplier']);
@@ -287,18 +287,18 @@ export const PUT = withSubscriptionCheck(async (req) => {
         const { _id: clientId, ...updateData } = body;
 
         if (!clientId) {
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: false,
-                message: "Client ID is required" 
+                message: "Client ID is required"
             }, { status: 400 });
         }
 
         // Find the client and verify ownership
         const client = await ClientModel.findOne({ _id: clientId, vendorId });
         if (!client) {
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: false,
-                message: "Client not found" 
+                message: "Client not found"
             }, { status: 404 });
         }
 
@@ -320,12 +320,12 @@ export const PUT = withSubscriptionCheck(async (req) => {
             if (orConditions.length > 0) {
                 conflictQuery.$or = orConditions;
                 const existingClient = await ClientModel.findOne(conflictQuery);
-                
+
                 if (existingClient) {
                     const conflictField = existingClient.email === updateData.email?.toLowerCase() ? 'email' : 'phone';
-                    return NextResponse.json({ 
+                    return NextResponse.json({
                         success: false,
-                        message: `Another client with this ${conflictField} already exists` 
+                        message: `Another client with this ${conflictField} already exists`
                     }, { status: 409 });
                 }
             }
@@ -334,8 +334,8 @@ export const PUT = withSubscriptionCheck(async (req) => {
         // Prepare update data
         const sanitizedUpdateData = {};
         const allowedFields = [
-            'fullName', 'email', 'phone', 'birthdayDate', 'gender', 
-            'country', 'occupation', 'profilePicture', 'address', 
+            'fullName', 'email', 'phone', 'birthdayDate', 'gender',
+            'country', 'occupation', 'profilePicture', 'address',
             'status'
         ];
 
@@ -357,24 +357,24 @@ export const PUT = withSubscriptionCheck(async (req) => {
                 // Upload new image to VPS
                 const fileName = `client-${vendorId}-${Date.now()}`;
                 const imageUrl = await uploadBase64(updateData.profilePicture, fileName);
-                
+
                 if (!imageUrl) {
                     return NextResponse.json(
                         { success: false, message: "Failed to upload profile picture" },
                         { status: 500 }
                     );
                 }
-                
+
                 // Delete old image from VPS if it exists
                 if (client.profilePicture) {
                     await deleteFile(client.profilePicture);
                 }
-                
+
                 sanitizedUpdateData.profilePicture = imageUrl;
             } else {
                 // If image is null/empty, remove it
                 sanitizedUpdateData.profilePicture = '';
-                
+
                 // Delete old image from VPS if it exists
                 if (client.profilePicture) {
                     await deleteFile(client.profilePicture);
@@ -400,26 +400,26 @@ export const PUT = withSubscriptionCheck(async (req) => {
         delete clientResponse.notes;
         delete clientResponse.searchText;
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: true,
             message: "Client updated successfully",
             data: clientResponse
         }, { status: 200 });
     } catch (error) {
         console.error('Error updating client:', error);
-        
+
         if (error.code === 11000) {
             const field = Object.keys(error.keyPattern)[0];
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: false,
-                message: `Another client with this ${field} already exists` 
+                message: `Another client with this ${field} already exists`
             }, { status: 409 });
         }
-        
-        return NextResponse.json({ 
+
+        return NextResponse.json({
             success: false,
-            message: "Failed to update client", 
-            error: error.message 
+            message: "Failed to update client",
+            error: error.message
         }, { status: 500 });
     }
 }, ['vendor', 'supplier']);
@@ -432,39 +432,39 @@ export const DELETE = withSubscriptionCheck(async (req) => {
         const { id: clientId } = body;
 
         if (!clientId) {
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: false,
-                message: "Client ID is required" 
+                message: "Client ID is required"
             }, { status: 400 });
         }
 
-        const client = await ClientModel.findOneAndDelete({ 
-            _id: clientId, 
-            vendorId 
+        const client = await ClientModel.findOneAndDelete({
+            _id: clientId,
+            vendorId
         });
 
         if (!client) {
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: false,
-                message: "Client not found" 
+                message: "Client not found"
             }, { status: 404 });
         }
-        
+
         // Delete profile picture from VPS if it exists
         if (client.profilePicture) {
             await deleteFile(client.profilePicture);
         }
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: true,
-            message: "Client deleted successfully" 
+            message: "Client deleted successfully"
         }, { status: 200 });
     } catch (error) {
         console.error('Error deleting client:', error);
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: false,
-            message: "Failed to delete client", 
-            error: error.message 
+            message: "Failed to delete client",
+            error: error.message
         }, { status: 500 });
     }
 }, ['vendor', 'supplier']);
