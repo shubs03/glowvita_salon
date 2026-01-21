@@ -16,7 +16,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "vendor", "staff", "doctor", "supplier"]);
 
 // POST a new category
 export const POST = authMiddlewareAdmin(
@@ -30,12 +30,12 @@ export const POST = authMiddlewareAdmin(
 
     try {
       let imageUrl = null;
-      
+
       // Upload image to VPS if provided
       if (image) {
         const fileName = `category-${Date.now()}`;
         imageUrl = await uploadBase64(image, fileName);
-        
+
         if (!imageUrl) {
           return Response.json(
             { message: "Failed to upload image" },
@@ -43,11 +43,11 @@ export const POST = authMiddlewareAdmin(
           );
         }
       }
-      
-      const newCategory = await CategoryModel.create({ 
-        name, 
-        description, 
-        categoryImage: imageUrl 
+
+      const newCategory = await CategoryModel.create({
+        name,
+        description,
+        categoryImage: imageUrl
       });
       return Response.json(newCategory, { status: 201 });
     } catch (error) {
@@ -56,7 +56,7 @@ export const POST = authMiddlewareAdmin(
         { status: 500 }
       );
     }
-  }, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+  }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "vendor", "staff", "doctor", "supplier"]);
 
 // PUT (update) a category by ID
 export const PUT = authMiddlewareAdmin(
@@ -86,24 +86,24 @@ export const PUT = authMiddlewareAdmin(
           // Upload new image to VPS
           const fileName = `category-${Date.now()}`;
           const imageUrl = await uploadBase64(updateData.image, fileName);
-          
+
           if (!imageUrl) {
             return Response.json(
               { message: "Failed to upload image" },
               { status: 500 }
             );
           }
-          
+
           // Delete old image from VPS if it exists
           if (existingCategory.categoryImage) {
             await deleteFile(existingCategory.categoryImage);
           }
-          
+
           updateData.categoryImage = imageUrl;
         } else {
           // If image is null/empty, remove it
           updateData.categoryImage = null;
-          
+
           // Delete old image from VPS if it exists
           if (existingCategory.categoryImage) {
             await deleteFile(existingCategory.categoryImage);
@@ -117,7 +117,7 @@ export const PUT = authMiddlewareAdmin(
         updateData,
         { new: true }
       );
-      
+
       return Response.json(updatedCategory, { status: 200 });
     } catch (error) {
       return Response.json(
@@ -149,12 +149,12 @@ export const DELETE = authMiddlewareAdmin(
           { status: 404 }
         );
       }
-      
+
       // Delete image from VPS if it exists
       if (deletedCategory.categoryImage) {
         await deleteFile(deletedCategory.categoryImage);
       }
-      
+
       return Response.json(
         { message: "Category deleted successfully" },
         { status: 200 }

@@ -11,9 +11,9 @@ import { CheckCircle, Eye, XCircle, Users, ThumbsUp, Hourglass, ThumbsDown, Tras
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from '@repo/ui/badge';
 import { Skeleton } from "@repo/ui/skeleton";
-import { 
-  useGetSuppliersQuery, 
-  useUpdateSupplierMutation, 
+import {
+  useGetSuppliersQuery,
+  useUpdateSupplierMutation,
   useDeleteSupplierMutation,
   useGetDoctorsQuery,
   useUpdateDoctorMutation,
@@ -25,7 +25,9 @@ import {
   useGetVendorProductApprovalsQuery,
   useUpdateVendorProductStatusMutation,
   useGetSupplierProductApprovalsQuery,
-  useUpdateSupplierProductStatusMutation
+  useUpdateSupplierProductStatusMutation,
+  useGetPendingWeddingPackagesQuery,
+  useUpdateWeddingPackageStatusMutation
 } from '@repo/store/api';
 import { toast } from 'sonner';
 import DocumentStatusManager from '../../components/DocumentStatusManager';
@@ -91,6 +93,16 @@ type Service = {
   description: string;
 };
 
+type WeddingPackage = {
+  _id: string;
+  name: string;
+  vendorName: string;
+  totalPrice: number;
+  discountedPrice: number | null;
+  status: "pending" | "approved" | "disapproved";
+  description: string;
+};
+
 type Product = {
   _id: string;
   productImage: string;
@@ -141,7 +153,7 @@ type Supplier = {
 };
 
 type ActionType = 'approve' | 'reject' | 'delete';
-type ItemType = 'vendor' | 'service' | 'vendor-product' | 'supplier-product' | 'doctor' | 'supplier';
+type ItemType = 'vendor' | 'service' | 'vendor-product' | 'supplier-product' | 'doctor' | 'supplier' | 'wedding-package';
 
 export default function VendorApprovalPage() {
   // RTK Query hooks
@@ -151,14 +163,18 @@ export default function VendorApprovalPage() {
   const { data: doctorsData = [], isLoading: doctorsLoading } = useGetDoctorsQuery(undefined);
   const { data: pendingServices = [], isLoading: servicesLoading, refetch: refetchPendingServices } = useGetPendingServicesQuery(undefined);
   const [updateServiceStatus] = useUpdateServiceStatusMutation();
-  
+
   // Vendor product approvals
   const { data: vendorProductData, isLoading: vendorProductsLoading, error: vendorProductsError, refetch: refetchVendorProducts } = useGetVendorProductApprovalsQuery(undefined);
   const [updateVendorProductStatus] = useUpdateVendorProductStatusMutation();
-  
+
   // Supplier product approvals
   const { data: supplierProductData, isLoading: supplierProductsLoading, error: supplierProductsError, refetch: refetchSupplierProducts } = useGetSupplierProductApprovalsQuery(undefined);
   const [updateSupplierProductStatus] = useUpdateSupplierProductStatusMutation();
+
+  // Wedding package approvals
+  const { data: pendingWeddingPackages = [], isLoading: weddingPackagesLoading, refetch: refetchPendingWeddingPackages } = useGetPendingWeddingPackagesQuery(undefined);
+  const [updateWeddingPackageStatus] = useUpdateWeddingPackageStatusMutation();
 
   const [updateSupplier] = useUpdateSupplierMutation();
   const [deleteSupplier] = useDeleteSupplierMutation();
@@ -170,8 +186,8 @@ export default function VendorApprovalPage() {
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  
-  const [selectedItem, setSelectedItem] = useState<Vendor | Service | Product | Doctor | Supplier | null>(null);
+
+  const [selectedItem, setSelectedItem] = useState<Vendor | Service | Product | Doctor | Supplier | WeddingPackage | null>(null);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [actionType, setActionType] = useState<ActionType | null>(null);
   const [itemType, setItemType] = useState<ItemType | null>(null);
@@ -181,7 +197,7 @@ export default function VendorApprovalPage() {
   const pendingVendors = vendors.filter((v: Vendor) => {
     // Include vendors with Pending or Disabled status
     if (v.status === 'Pending' || v.status === 'Disabled') return true;
-    
+
     // Also include vendors who have documents with pending status
     const documents = v.documents;
     if (documents) {
@@ -191,18 +207,18 @@ export default function VendorApprovalPage() {
         // Check if document exists (not null or undefined) and not empty string
         const isUploaded = documents[docType] && documents[docType] !== '';
         const isPending = status === 'pending' && isUploaded;
-        
+
         // Debug logging
         if (isPending) {
           console.log(`Vendor ${v.businessName} has pending document: ${docType}`);
         }
-        
+
         return isPending;
       });
-      
+
       return hasPendingDocuments;
     }
-    
+
     return false;
   });
 
@@ -211,22 +227,24 @@ export default function VendorApprovalPage() {
   const firstItemIndex = lastItemIndex - itemsPerPage;
   const currentVendors = pendingVendors.slice(firstItemIndex, lastItemIndex);
   const currentServices = pendingServices.slice(firstItemIndex, lastItemIndex);
+  const currentWeddingPackages = pendingWeddingPackages.slice(firstItemIndex, lastItemIndex);
   const currentDoctors = pendingDoctors.slice(firstItemIndex, lastItemIndex);
   const currentSuppliers = pendingSuppliers.slice(firstItemIndex, lastItemIndex);
 
   const totalVendorPages = Math.ceil(pendingVendors.length / itemsPerPage);
   const totalServicePages = Math.ceil(pendingServices.length / itemsPerPage);
+  const totalWeddingPackagePages = Math.ceil(pendingWeddingPackages.length / itemsPerPage);
   const totalDoctorPages = Math.ceil(pendingDoctors.length / itemsPerPage);
   const totalSupplierPages = Math.ceil(pendingSuppliers.length / itemsPerPage);
 
-  const handleActionClick = (item: Vendor | Service | Product | Doctor | Supplier, type: ItemType, action: ActionType) => {
+  const handleActionClick = (item: Vendor | Service | Product | Doctor | Supplier | WeddingPackage, type: ItemType, action: ActionType) => {
     setSelectedItem(item);
     setItemType(type);
     setActionType(action);
     setIsActionModalOpen(true);
   };
 
-  const handleViewClick = (item: Vendor | Service | Product | Doctor | Supplier, type: ItemType) => {
+  const handleViewClick = (item: Vendor | Service | Product | Doctor | Supplier | WeddingPackage, type: ItemType) => {
     setSelectedItem(item);
     setItemType(type);
     setIsViewModalOpen(true);
@@ -298,6 +316,12 @@ export default function VendorApprovalPage() {
           toast.success(`Product "${product.productName}" has been ${newStatus}.`);
           refetchSupplierProducts();
         }
+      } else if (itemType === 'wedding-package') {
+        const pkg = selectedItem as WeddingPackage;
+        const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
+        await updateWeddingPackageStatus({ packageId: pkg._id, status: newStatus }).unwrap();
+        toast.success(`Wedding Package "${pkg.name}" has been ${newStatus}.`);
+        refetchPendingWeddingPackages();
       }
     } catch (error) {
       toast.error('Error', { description: `Failed to perform action on ${itemType}.` });
@@ -312,7 +336,13 @@ export default function VendorApprovalPage() {
   const getModalContent = () => {
     if (!actionType || !selectedItem || !itemType) return { title: '', description: '', buttonText: '' };
 
-    const itemName = (selectedItem as any).businessName || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).name || `${(selectedItem as any).firstName} ${(selectedItem as any).lastName}`;
+    const itemName = (selectedItem as any).businessName ||
+      (selectedItem as any).serviceName ||
+      (selectedItem as any).productName ||
+      (selectedItem as any).name ||
+      (selectedItem as any).supplierName ||
+      `${(selectedItem as any).firstName || ''} ${(selectedItem as any).lastName || ''}`.trim() ||
+      'N/A';
 
     switch (actionType) {
       case 'approve':
@@ -354,7 +384,7 @@ export default function VendorApprovalPage() {
   const totalSupplierProductPages = Math.ceil(pendingSupplierProducts.length / itemsPerPage);
 
   // Check if any of the main data is still loading
-  const isMainDataLoading = vendorsLoading || suppliersLoading || doctorsLoading || servicesLoading || vendorProductsLoading || supplierProductsLoading;
+  const isMainDataLoading = vendorsLoading || suppliersLoading || doctorsLoading || servicesLoading || weddingPackagesLoading || vendorProductsLoading || supplierProductsLoading;
 
   if (isMainDataLoading) {
     return (
@@ -460,12 +490,23 @@ export default function VendorApprovalPage() {
             <p className="text-xs text-muted-foreground">Suppliers awaiting review</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Packages</CardTitle>
+            <ThumbsUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingWeddingPackages.length}</div>
+            <p className="text-xs text-muted-foreground">Packages to approve</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="vendor-approvals">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-7">
           <TabsTrigger value="vendor-approvals" className="text-xs md:text-sm">Vendors</TabsTrigger>
           <TabsTrigger value="service-approvals" className="text-xs md:text-sm">Services</TabsTrigger>
+          <TabsTrigger value="wedding-package-approvals" className="text-xs md:text-sm">Wedding Packages</TabsTrigger>
           <TabsTrigger value="vendor-product-approvals" className="text-xs md:text-sm">Vendor Products</TabsTrigger>
           <TabsTrigger value="supplier-product-approvals" className="text-xs md:text-sm">Supplier Products</TabsTrigger>
           <TabsTrigger value="doctor-approvals" className="text-xs md:text-sm">Doctors</TabsTrigger>
@@ -630,6 +671,82 @@ export default function VendorApprovalPage() {
                 itemsPerPage={itemsPerPage}
                 onItemsPerPageChange={setItemsPerPage}
                 totalItems={pendingServices.length}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="wedding-package-approvals">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Wedding Package Approvals</CardTitle>
+              <CardDescription>Wedding packages submitted by vendors waiting for approval.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Package Name</TableHead>
+                      <TableHead className="text-xs">Vendor</TableHead>
+                      <TableHead className="text-xs">Price</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-right text-xs">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {weddingPackagesLoading ? (
+                      [...Array(3)].map((_, i) => (
+                        <TableRow key={i}>
+                          {[...Array(5)].map((_, j) => (
+                            <TableCell key={j}>
+                              <Skeleton className="h-5 w-full" />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : currentWeddingPackages.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center">No pending wedding package approvals.</TableCell>
+                      </TableRow>
+                    ) : (
+                      currentWeddingPackages.map((pkg: WeddingPackage) => (
+                        <TableRow key={pkg._id}>
+                          <TableCell className="font-medium text-xs max-w-[120px] truncate">{pkg.name || 'N/A'}</TableCell>
+                          <TableCell className="text-xs max-w-[100px] truncate">{pkg.vendorName || 'N/A'}</TableCell>
+                          <TableCell className="text-xs">{pkg.totalPrice ? `₹${pkg.totalPrice.toFixed(2)}` : 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
+                              {pkg.status || 'pending'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleViewClick(pkg, 'wedding-package')}>
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">View</span>
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(pkg, 'wedding-package', 'approve')}>
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <span className="sr-only">Approve</span>
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(pkg, 'wedding-package', 'reject')}>
+                              <XCircle className="h-4 w-4 text-red-600" />
+                              <span className="sr-only">Reject</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              <Pagination
+                className="mt-4"
+                currentPage={currentPage}
+                totalPages={totalWeddingPackagePages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                onItemsPerPageChange={setItemsPerPage}
+                totalItems={pendingWeddingPackages.length}
               />
             </CardContent>
           </Card>
@@ -1122,18 +1239,18 @@ export default function VendorApprovalPage() {
                   <span className="font-semibold text-muted-foreground">Updated At</span>
                   <span className="col-span-2">{(selectedItem as Vendor).updatedAt ? new Date((selectedItem as Vendor).updatedAt).toLocaleString() : 'N/A'}</span>
                 </div>
-                
+
                 {/* Document Status Manager */}
                 <div className="col-span-3 mt-4">
-                  <DocumentStatusManager 
-                    vendor={selectedItem as Vendor} 
+                  <DocumentStatusManager
+                    vendor={selectedItem as Vendor}
                     onUpdate={() => {
                       refetchVendors();
-                    }} 
+                    }}
                   />
                 </div>
-                
-                
+
+
               </>
             )}
             {itemType === 'service' && selectedItem && (
@@ -1154,6 +1271,31 @@ export default function VendorApprovalPage() {
                 <div className="grid grid-cols-3 items-center gap-4">
                   <span className="font-semibold text-muted-foreground">Status</span>
                   <span className="col-span-2">{(selectedItem as Service).status || 'N/A'}</span>
+                </div>
+              </>
+            )}
+            {itemType === 'wedding-package' && selectedItem && (
+              <>
+                <h3 className="text-lg font-semibold">{(selectedItem as WeddingPackage).name || 'N/A'}</h3>
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <span className="font-semibold text-muted-foreground">Vendor</span>
+                  <span className="col-span-2">{(selectedItem as WeddingPackage).vendorName || 'N/A'}</span>
+                </div>
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <span className="font-semibold text-muted-foreground">Total Price</span>
+                  <span className="col-span-2">{(selectedItem as WeddingPackage).totalPrice ? `₹${(selectedItem as WeddingPackage).totalPrice.toFixed(2)}` : 'N/A'}</span>
+                </div>
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <span className="font-semibold text-muted-foreground">Discounted Price</span>
+                  <span className="col-span-2">{(selectedItem as WeddingPackage)?.discountedPrice != null ? `₹${((selectedItem as WeddingPackage).discountedPrice as number).toFixed(2)}` : 'N/A'}</span>
+                </div>
+                <div className="grid grid-cols-3 items-start gap-4">
+                  <span className="font-semibold text-muted-foreground">Description</span>
+                  <p className="col-span-2">{(selectedItem as WeddingPackage).description || 'N/A'}</p>
+                </div>
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <span className="font-semibold text-muted-foreground">Status</span>
+                  <span className="col-span-2">{(selectedItem as WeddingPackage).status || 'N/A'}</span>
                 </div>
               </>
             )}

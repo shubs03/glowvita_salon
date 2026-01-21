@@ -72,7 +72,7 @@ export async function POST(request) {
 
     response.cookies.set('admin_access_token', accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV !== 'production',
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       path: '/',
       maxAge: 60 * 60 * 24, // 1 day

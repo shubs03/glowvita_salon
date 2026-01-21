@@ -11,44 +11,45 @@ import { Skeleton } from "@repo/ui/skeleton";
 import { Input } from '@repo/ui/input';
 import { Plus, Search, FileDown, Eye, Edit, Trash2, Users, UserPlus } from 'lucide-react';
 import { StaffFormModal } from '@/components/StaffFormModal';
+import { ExportButtons } from '@/components/ExportButtons';
 import { useGetStaffQuery, useDeleteStaffMutation } from '@repo/store/api';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 export type Staff = {
-  _id: string;
-  fullName: string;
-  position: string;
-  mobileNo: string;
-  emailAddress: string;
-  photo?: string;
-  status: 'Active' | 'Inactive';
-  sundayAvailable?: boolean;
-  sundaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
-  mondayAvailable?: boolean;
-  mondaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
-  tuesdayAvailable?: boolean;
-  tuesdaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
-  wednesdayAvailable?: boolean;
-  wednesdaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
-  thursdayAvailable?: boolean;
-  thursdaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
-  fridayAvailable?: boolean;
-  fridaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
-  saturdayAvailable?: boolean;
-  saturdaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
-  blockedTimes?: Array<{
-    _id?: string;
-    date: Date | string;
-    startTime: string;
-    endTime: string;
-    startMinutes: number;
-    endMinutes: number;
-    reason: string;
-    isRecurring: boolean;
-    recurringType?: string;
-    isActive: boolean;
-  }>;
+    _id: string;
+    fullName: string;
+    position: string;
+    mobileNo: string;
+    emailAddress: string;
+    photo?: string;
+    status: 'Active' | 'Inactive';
+    sundayAvailable?: boolean;
+    sundaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
+    mondayAvailable?: boolean;
+    mondaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
+    tuesdayAvailable?: boolean;
+    tuesdaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
+    wednesdayAvailable?: boolean;
+    wednesdaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
+    thursdayAvailable?: boolean;
+    thursdaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
+    fridayAvailable?: boolean;
+    fridaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
+    saturdayAvailable?: boolean;
+    saturdaySlots?: Array<{ startTime: string; endTime: string; startMinutes: number; endMinutes: number }>;
+    blockedTimes?: Array<{
+        _id?: string;
+        date: Date | string;
+        startTime: string;
+        endTime: string;
+        startMinutes: number;
+        endMinutes: number;
+        reason: string;
+        isRecurring: boolean;
+        recurringType?: string;
+        isActive: boolean;
+    }>;
 };
 
 export default function StaffPage() {
@@ -60,7 +61,7 @@ export default function StaffPage() {
     console.log("Staff List:", staffList)
 
     const [deleteStaff, { isLoading: isDeleting }] = useDeleteStaffMutation();
-    
+
     // Refetch staff data when the page becomes visible to ensure latest data
     useEffect(() => {
         const handleVisibilityChange = () => {
@@ -68,7 +69,7 @@ export default function StaffPage() {
                 refetch();
             }
         };
-        
+
         document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -81,11 +82,11 @@ export default function StaffPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    
+
     const filteredStaff = useMemo(() => {
         if (!staffList) return [];
-        return staffList.filter((staff: Staff) => 
-            staff.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        return staffList.filter((staff: Staff) =>
+            staff.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
             staff.emailAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
             staff.mobileNo.includes(searchTerm)
         );
@@ -105,9 +106,9 @@ export default function StaffPage() {
         setSelectedStaff(staff);
         setIsDeleteModalOpen(true);
     };
-    
+
     const handleConfirmDelete = async () => {
-        if(selectedStaff) {
+        if (selectedStaff) {
             try {
                 await deleteStaff(selectedStaff._id).unwrap();
                 toast.success("Staff member deleted successfully.");
@@ -120,15 +121,15 @@ export default function StaffPage() {
             }
         }
     };
-    
+
     const getStatusColor = (status: Staff['status']) => {
         switch (status) {
-          case 'Active': return 'bg-green-100 text-green-800';
-          default: return 'bg-gray-100 text-gray-800';
+            case 'Active': return 'bg-green-100 text-green-800';
+            default: return 'bg-gray-100 text-gray-800';
         }
     };
 
-    if(isLoading) {
+    if (isLoading) {
         return (
             <div className="p-4 sm:p-6 lg:p-8">
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
@@ -136,7 +137,7 @@ export default function StaffPage() {
                         <Skeleton className="h-8 w-64" />
                     </div>
                 </div>
-                
+
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
                     {[...Array(2)].map((_, i) => (
                         <Card key={i}>
@@ -219,7 +220,7 @@ export default function StaffPage() {
         );
     }
 
-    if(isError) {
+    if (isError) {
         return <div>Error loading staff data.</div>
     }
 
@@ -238,7 +239,7 @@ export default function StaffPage() {
                         <p className="text-xs text-muted-foreground">Total team members</p>
                     </CardContent>
                 </Card>
-                 <Card>
+                <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Active Staff</CardTitle>
                         <UserPlus className="h-4 w-4 text-muted-foreground" />
@@ -258,20 +259,28 @@ export default function StaffPage() {
                             <CardDescription>View, add, and manage your staff members.</CardDescription>
                         </div>
                         <div className="flex gap-2 flex-wrap">
-                             <div className="relative">
+                            <div className="relative">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input 
-                                    type="search" 
+                                <Input
+                                    type="search"
                                     placeholder="Search by name, email, or phone..."
                                     className="w-full md:w-80 pl-8"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
-                            <Button variant="outline">
-                                <FileDown className="mr-2 h-4 w-4" />
-                                Export
-                            </Button>
+                            <ExportButtons
+                                data={filteredStaff}
+                                filename="staff_export"
+                                title="Staff Report"
+                                columns={[
+                                    { header: 'Name', key: 'fullName' },
+                                    { header: 'Email', key: 'emailAddress' },
+                                    { header: 'Phone', key: 'mobileNo' },
+                                    { header: 'Position', key: 'position' },
+                                    { header: 'Status', key: 'status' }
+                                ]}
+                            />
                             <Button onClick={() => handleOpenModal()}>
                                 <Plus className="mr-2 h-4 w-4" />
                                 Add Staff
@@ -333,16 +342,16 @@ export default function StaffPage() {
                 </CardContent>
             </Card>
 
-            <StaffFormModal 
-                isOpen={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
+            <StaffFormModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
                 staff={selectedStaff}
                 onSuccess={() => {
                     setIsModalOpen(false);
                     refetch();
                 }}
             />
-            
+
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
                 <DialogContent>
                     <DialogHeader>

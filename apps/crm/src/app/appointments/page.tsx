@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { Plus, Search, FileDown, Eye, Edit, Trash2, CalendarCheck, CalendarX, UserCheck, Clock, CheckCircle, User } from 'lucide-react';
+import { Plus, Search, FileDown, Eye, Edit, Trash2, CalendarCheck, CalendarX, UserCheck, Clock, CheckCircle, User, X } from 'lucide-react';
 import { Textarea } from '@repo/ui/textarea';
 import { useAppDispatch } from '@repo/store/hooks';
 import { glowvitaApi } from '@repo/store/api';
@@ -17,6 +17,7 @@ import { startOfDay, endOfDay } from 'date-fns';
 import dynamic from 'next/dynamic';
 import { toast } from 'sonner';
 import { AppointmentDetailCard } from './components/AppointmentDetailCard';
+import { ExportButtons } from '@/components/ExportButtons';
 import { Appointment, AppointmentStatus } from '../../../../../packages/types/src/appointment';
 
 const NewAppointmentForm = dynamic(
@@ -298,9 +299,51 @@ export default function AppointmentsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={() => handleOpenModal('add')} className="w-full md:w-auto">
-                <Plus className="mr-2 h-4 w-4" /> New Appointment
-              </Button>
+              <div className="flex gap-2 w-full md:w-auto">
+                <ExportButtons
+                  data={filteredAppointments}
+                  filename="appointments_export"
+                  title="Appointments Report"
+                  columns={[
+                    { header: 'Client', key: 'clientName' },
+                    {
+                      header: 'Services',
+                      key: 'serviceName',
+                      transform: (val, item) => item.serviceItems?.length > 0
+                        ? item.serviceItems.map((s: any) => s.serviceName).join(', ')
+                        : val
+                    },
+                    {
+                      header: 'Staff',
+                      key: 'staffName',
+                      transform: (val, item) => item.serviceItems?.length > 0
+                        ? item.serviceItems.map((s: any) => s.staffName).join(', ')
+                        : val
+                    },
+                    {
+                      header: 'Date',
+                      key: 'date',
+                      transform: (val) => new Date(val).toLocaleDateString()
+                    },
+                    {
+                      header: 'Time',
+                      key: 'startTime',
+                      transform: (val, item) => `${val} - ${item.endTime}`
+                    },
+                    { header: 'Duration (min)', key: 'duration' },
+                    {
+                      header: 'Amount',
+                      key: 'totalAmount',
+                      transform: (val, item) => `₹${((item as any).finalAmount || val || 0).toFixed(2)}`
+                    },
+                    { header: 'Status', key: 'status' }
+                  ]}
+                  className="w-full md:w-auto"
+                />
+                <Button onClick={() => handleOpenModal('add')} className="w-full md:w-auto flex-1 md:flex-none">
+                  <Plus className="mr-2 h-4 w-4" /> New Appointment
+                </Button>
+              </div>
             </div>
 
             {/* Appointments Table */}
@@ -551,20 +594,30 @@ export default function AppointmentsPage() {
             </div>
           </div>
         </div>
-      </div>
+      </div >
 
       {/* Appointment Form Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      < Dialog open={isModalOpen} onOpenChange={setIsModalOpen} >
         <DialogContent className="max-w-4xl w-[95vw] sm:w-full h-[90vh] max-h-[90vh] p-0 overflow-hidden flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-background z-10">
-            <DialogTitle className="text-lg sm:text-xl">
-              {modalType === 'add' ? 'New Appointment' :
-                modalType === 'edit' ? 'Edit Appointment' : 'Appointment Details'}
-            </DialogTitle>
-            <DialogDescription>
-              {modalType === 'add' ? 'Create a new appointment' :
-                modalType === 'edit' ? 'Edit appointment details' : 'View appointment details'}
-            </DialogDescription>
+          <DialogHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-background z-10 flex flex-row items-center justify-between">
+            <div className="flex-1">
+              <DialogTitle className="text-lg sm:text-xl">
+                {modalType === 'add' ? 'New Appointment' :
+                  modalType === 'edit' ? 'Edit Appointment' : 'Appointment Details'}
+              </DialogTitle>
+              <DialogDescription>
+                {modalType === 'add' ? 'Create a new appointment' :
+                  modalType === 'edit' ? 'Edit appointment details' : 'View appointment details'}
+              </DialogDescription>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+              onClick={handleCloseModal}
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-6 pb-6 -mt-1">
@@ -600,10 +653,10 @@ export default function AppointmentsPage() {
             )}
           </div>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Delete Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+      < Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen} >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Delete Appointment</DialogTitle>
@@ -639,10 +692,10 @@ export default function AppointmentsPage() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
 
       {/* Payment Collection Modal */}
-      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+      < Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen} >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Collect Payment</DialogTitle>
@@ -738,7 +791,7 @@ export default function AppointmentsPage() {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </Dialog >
     </>
   );
 }
