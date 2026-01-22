@@ -439,7 +439,7 @@ vendorSchema.statics.findByIdWithSubscription = function (id) {
 vendorSchema.index({ status: 1 });
 vendorSchema.index({ location: "2dsphere" }); // Geospatial index for location-based queries
 vendorSchema.index({ 'subscription.status': 1, 'subscription.endDate': 1 });
-vendorSchema.index({ email: 1 });
+// Email index removed as it is already defined in the schema with unique: true
 
 const VendorModel =
   mongoose.models.Vendor || mongoose.model("Vendor", vendorSchema);

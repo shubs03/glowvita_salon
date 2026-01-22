@@ -5,6 +5,7 @@ import { calculateVendorTravelTime } from "@repo/lib/modules/scheduling/Enhanced
 import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import ServiceModel from "@repo/lib/models/admin/Service";
 import StaffModel from "@repo/lib/models/staffModel";
+import AddOnModel from "@repo/lib/models/Vendor/AddOn.model";
 import WeddingPackageModel from "@repo/lib/models/Vendor/WeddingPackage.model";
 import { validateService, validateStaff, validateAppointment, validateWeddingPackage } from "@repo/lib/modules/validation/ValidationEngine";
 import { AppError, formatErrorResponse } from "@repo/lib/modules/error/ErrorHandler";
@@ -273,12 +274,14 @@ async function handleServiceDiscovery(searchParams) {
   const vendorId = searchParams.get('vendorId');
 
   if (!vendorId) {
-    return formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
+    const errorRes = formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
+    return Response.json(errorRes, { status: 400 });
   }
 
   // Validate vendor ID format
   if (!/^[0-9a-fA-F]{24}$/.test(vendorId)) {
-    return formatErrorResponse(new AppError('Invalid vendor ID format', 'INVALID_VENDOR_ID', 'CLIENT_ERROR', 400));
+    const errorRes = formatErrorResponse(new AppError('Invalid vendor ID format', 'INVALID_VENDOR_ID', 'CLIENT_ERROR', 400));
+    return Response.json(errorRes, { status: 400 });
   }
 
   const cacheKey = `services_vendor_${vendorId}`;
@@ -353,7 +356,7 @@ async function handleServiceDiscovery(searchParams) {
       weddingService: service.weddingService || { available: false, charges: null },
       onlineBooking: service.onlineBooking !== false, // Default to true if not explicitly false
       addOns: service.addOns || [],
-      isAddon: service.category?.toLowerCase().includes('addon') || false
+      isAddon: (categoryName && typeof categoryName === 'string') ? categoryName.toLowerCase().includes('addon') : false
     };
   });
 
@@ -415,12 +418,14 @@ async function handleStaffDiscovery(searchParams) {
   const vendorId = searchParams.get('vendorId');
 
   if (!vendorId) {
-    return formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
+    const errorRes = formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
+    return Response.json(errorRes, { status: 400 });
   }
 
   // Validate vendor ID format
   if (!/^[0-9a-fA-F]{24}$/.test(vendorId)) {
-    return formatErrorResponse(new AppError('Invalid vendor ID format', 'INVALID_VENDOR_ID', 'CLIENT_ERROR', 400));
+    const errorRes = formatErrorResponse(new AppError('Invalid vendor ID format', 'INVALID_VENDOR_ID', 'CLIENT_ERROR', 400));
+    return Response.json(errorRes, { status: 400 });
   }
 
   const cacheKey = `staff_vendor_${vendorId}`;
@@ -504,18 +509,21 @@ async function handleSlotDiscovery(searchParams) {
     // Validate required parameters
     if (!vendorId) {
       console.error('Missing vendorId');
-      return formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
+      const err = formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
+      return Response.json(err, { status: 400 });
     }
 
     if (!date) {
       console.error('Missing date');
-      return formatErrorResponse(new AppError('Date is required', 'MISSING_DATE', 'CLIENT_ERROR', 400));
+      const err = formatErrorResponse(new AppError('Date is required', 'MISSING_DATE', 'CLIENT_ERROR', 400));
+      return Response.json(err, { status: 400 });
     }
 
     // Parse date
     const parsedDate = new Date(date);
     if (isNaN(parsedDate.getTime())) {
-      return formatErrorResponse(new AppError('Invalid date format', 'INVALID_DATE_FORMAT', 'CLIENT_ERROR', 400));
+      const err = formatErrorResponse(new AppError('Invalid date format', 'INVALID_DATE_FORMAT', 'CLIENT_ERROR', 400));
+      return Response.json(err, { status: 400 });
     }
 
     // Get services - for wedding packages, we'll pass minimal info since package has duration
@@ -523,13 +531,27 @@ async function handleSlotDiscovery(searchParams) {
     if (serviceIds.length > 0 && !isWeddingService) {
       // Only fetch detailed services for non-wedding bookings
       try {
-        services = await ServiceModel.find({
-          _id: { $in: serviceIds }
-        }).lean();
-        console.log(`Found ${services.length} regular services`);
+        // First try to find in VendorServices collection where services are stored as subdocuments
+        const VendorServicesModel = (await import("@repo/lib/models/Vendor/VendorServices.model")).default;
+        const vendorServicesDoc = await VendorServicesModel.findOne({ vendor: vendorId }).lean();
+        
+        if (vendorServicesDoc && vendorServicesDoc.services) {
+          services = vendorServicesDoc.services.filter(s => 
+            serviceIds.includes(s._id.toString())
+          );
+        }
+        
+        console.log(`Found ${services.length} regular services in VendorServices`);
+        
+        // Fallback to ServiceModel if not found (legacy or different structure)
+        if (services.length === 0) {
+          services = await ServiceModel.find({ _id: { $in: serviceIds } }).lean();
+          console.log(`Found ${services.length} regular services in ServiceModel fallback`);
+        }
       } catch (error) {
         console.error('Error fetching services:', error);
-        return formatErrorResponse(new AppError('Failed to fetch services', 'SERVICE_FETCH_ERROR', 'SERVER_ERROR', 500));
+        const err = formatErrorResponse(new AppError('Failed to fetch services', 'SERVICE_FETCH_ERROR', 'SERVER_ERROR', 500));
+        return Response.json(err, { status: 500 });
       }
     }
 
@@ -606,12 +628,13 @@ async function handleSlotDiscovery(searchParams) {
     } catch (error) {
       console.error('Error generating slots:', error);
       console.error('Error stack:', error.stack);
-      return formatErrorResponse(new AppError(
+      const err = formatErrorResponse(new AppError(
         `Failed to generate slots: ${error.message}`,
         'SLOT_GENERATION_ERROR',
         'SERVER_ERROR',
         500
       ));
+      return Response.json(err, { status: 500 });
     }
 
     // Cache the results
@@ -623,12 +646,13 @@ async function handleSlotDiscovery(searchParams) {
     console.error('=== CRITICAL ERROR in handleSlotDiscovery ===');
     console.error('Error:', topLevelError);
     console.error('Stack:', topLevelError.stack);
-    return formatErrorResponse(new AppError(
+    const err = formatErrorResponse(new AppError(
       `Server error: ${topLevelError.message}`,
       'INTERNAL_ERROR',
       'SERVER_ERROR',
       500
     ));
+    return Response.json(err, { status: 500 });
   }
 }
 
@@ -643,7 +667,8 @@ async function handleWeddingPackageDiscovery(searchParams) {
 
   // Validate required parameters
   if (!vendorId) {
-    return formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
+    const errorRes = formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
+    return Response.json(errorRes, { status: 400 });
   }
 
   const cacheKey = `wedding_packages_${vendorId}_${packageId || 'all'}_${isActive || 'all'}`;
@@ -710,22 +735,26 @@ async function handleQuoteRequest(body) {
 
   // Validate required parameters
   if (!vendorId) {
-    return formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
+    const errorRes = formatErrorResponse(new AppError('Vendor ID is required', 'MISSING_VENDOR_ID', 'CLIENT_ERROR', 400));
+    return Response.json(errorRes, { status: 400 });
   }
 
   if (!date) {
-    return formatErrorResponse(new AppError('Date is required', 'MISSING_DATE', 'CLIENT_ERROR', 400));
+    const errorRes = formatErrorResponse(new AppError('Date is required', 'MISSING_DATE', 'CLIENT_ERROR', 400));
+    return Response.json(errorRes, { status: 400 });
   }
 
   // Parse date
   const parsedDate = new Date(date);
   if (isNaN(parsedDate.getTime())) {
-    return formatErrorResponse(new AppError('Invalid date format', 'INVALID_DATE_FORMAT', 'CLIENT_ERROR', 400));
+    const errorRes = formatErrorResponse(new AppError('Invalid date format', 'INVALID_DATE_FORMAT', 'CLIENT_ERROR', 400));
+    return Response.json(errorRes, { status: 400 });
   }
 
   // For wedding services, package ID is required
   if (isWeddingService && !packageId) {
-    return formatErrorResponse(new AppError('Package ID is required for wedding services', 'MISSING_PACKAGE_ID', 'CLIENT_ERROR', 400));
+    const errorRes = formatErrorResponse(new AppError('Package ID is required for wedding services', 'MISSING_PACKAGE_ID', 'CLIENT_ERROR', 400));
+    return Response.json(errorRes, { status: 400 });
   }
 
   // Get services if service IDs are provided
@@ -744,7 +773,8 @@ async function handleQuoteRequest(body) {
     // Generate wedding package slots and quote
     const weddingPackage = await WeddingPackageModel.findById(packageId);
     if (!weddingPackage) {
-      return formatErrorResponse(new AppError('Wedding package not found', 'PACKAGE_NOT_FOUND', 'CLIENT_ERROR', 404));
+      const errorRes = formatErrorResponse(new AppError('Wedding package not found', 'PACKAGE_NOT_FOUND', 'CLIENT_ERROR', 404));
+      return Response.json(errorRes, { status: 404 });
     }
 
     slots = await generateWeddingPackageSlots({
@@ -770,7 +800,8 @@ async function handleQuoteRequest(body) {
   } else {
     // Generate regular service quote
     if (serviceIds.length === 0) {
-      return formatErrorResponse(new AppError('At least one service ID is required', 'MISSING_SERVICE_IDS', 'CLIENT_ERROR', 400));
+      const errorRes = formatErrorResponse(new AppError('At least one service ID is required', 'MISSING_SERVICE_IDS', 'CLIENT_ERROR', 400));
+      return Response.json(errorRes, { status: 400 });
     }
 
     // Calculate total price and duration
@@ -845,7 +876,7 @@ async function handleSlotLock(body) {
     const {
       vendorId,
       staffId,
-      serviceId,
+      serviceId: rawServiceId,
       serviceName,
       date,
       startTime,
@@ -869,6 +900,9 @@ async function handleSlotLock(body) {
       addOns = [],
       selectedAddOns
     } = body;
+
+    // Resolve "combo" to a real service ID if possible to avoid CastError
+    const serviceId = rawServiceId === "combo" ? (body.serviceItems?.[0]?.service || rawServiceId) : rawServiceId;
 
     const effectiveAddOns = addOns && addOns.length > 0 ? addOns : selectedAddOns || [];
     console.log('Effective AddOns:', effectiveAddOns);
@@ -1126,11 +1160,14 @@ async function handleBookingConfirmation(body) {
     console.error('Error during appointment confirmation:', error);
     // Handle specific error cases with appropriate user messages
     if (error.message === 'Invalid lock token') {
-      return formatErrorResponse(new AppError('The selected time slot has expired. Please try again.', 'INVALID_LOCK_TOKEN', 'CONFLICT', 409));
+      const errorRes = formatErrorResponse(new AppError('The selected time slot has expired. Please try again.', 'INVALID_LOCK_TOKEN', 'CONFLICT', 409));
+      return Response.json(errorRes, { status: 409 });
     } else if (error.message === 'Lock has expired') {
-      return formatErrorResponse(new AppError('The selected time slot has expired. Please try again.', 'LOCK_EXPIRED', 'CONFLICT', 409));
+      const errorRes = formatErrorResponse(new AppError('The selected time slot has expired. Please try again.', 'LOCK_EXPIRED', 'CONFLICT', 409));
+      return Response.json(errorRes, { status: 409 });
     } else if (error.message === 'Appointment not found') {
-      return formatErrorResponse(new AppError('Appointment not found. Please try again.', 'APPOINTMENT_NOT_FOUND', 'NOT_FOUND', 404));
+      const errorRes = formatErrorResponse(new AppError('Appointment not found. Please try again.', 'APPOINTMENT_NOT_FOUND', 'NOT_FOUND', 404));
+      return Response.json(errorRes, { status: 404 });
     } else {
       throw error; // Re-throw other errors
     }
@@ -1154,7 +1191,8 @@ async function handleWeddingPackageCustomization(body) {
   } = body;
 
   if (!packageId || !customizedServices) {
-    return formatErrorResponse(new AppError('Package ID and customized services are required', 'MISSING_REQUIRED_FIELDS', 'CLIENT_ERROR', 400));
+    const errorRes = formatErrorResponse(new AppError('Package ID and customized services are required', 'MISSING_REQUIRED_FIELDS', 'CLIENT_ERROR', 400));
+    return Response.json(errorRes, { status: 400 });
   }
 
   // Import the EnhancedWeddingPackageModel dynamically
@@ -1164,7 +1202,8 @@ async function handleWeddingPackageCustomization(body) {
   const weddingPackage = await EnhancedWeddingPackageModel.findById(packageId);
 
   if (!weddingPackage) {
-    return formatErrorResponse(new AppError('Wedding package not found', 'PACKAGE_NOT_FOUND', 'CLIENT_ERROR', 404));
+    const errorRes = formatErrorResponse(new AppError('Wedding package not found', 'PACKAGE_NOT_FOUND', 'CLIENT_ERROR', 404));
+    return Response.json(errorRes, { status: 404 });
   }
 
   // Apply customizations
@@ -1192,7 +1231,8 @@ async function handleWeddingPackageUpdate(body) {
   } = body;
 
   if (!packageId) {
-    return formatErrorResponse(new AppError('Package ID is required', 'MISSING_PACKAGE_ID', 'CLIENT_ERROR', 400));
+    const errorRes = formatErrorResponse(new AppError('Package ID is required', 'MISSING_PACKAGE_ID', 'CLIENT_ERROR', 400));
+    return Response.json(errorRes, { status: 400 });
   }
 
   // Import the EnhancedWeddingPackageModel dynamically
@@ -1206,7 +1246,8 @@ async function handleWeddingPackageUpdate(body) {
   );
 
   if (!updatedPackage) {
-    return formatErrorResponse(new AppError('Wedding package not found', 'PACKAGE_NOT_FOUND', 'CLIENT_ERROR', 404));
+    const errorRes = formatErrorResponse(new AppError('Wedding package not found', 'PACKAGE_NOT_FOUND', 'CLIENT_ERROR', 404));
+    return Response.json(errorRes, { status: 404 });
   }
 
   // Populate service details
@@ -1246,7 +1287,8 @@ async function handleBookingCancellation(body) {
   );
 
   if (!appointment) {
-    return formatErrorResponse(new AppError('Appointment not found', 'APPOINTMENT_NOT_FOUND', 'CLIENT_ERROR', 404));
+    const errorRes = formatErrorResponse(new AppError('Appointment not found', 'APPOINTMENT_NOT_FOUND', 'CLIENT_ERROR', 404));
+    return Response.json(errorRes, { status: 404 });
   }
 
   // Release any associated lock
@@ -1270,7 +1312,8 @@ async function handleTravelTimeRequest(body) {
 
   // Validate required parameters
   if (!vendorId || !customerLocation) {
-    return formatErrorResponse(new AppError('Vendor ID and customer location are required', 'MISSING_REQUIRED_FIELDS', 'CLIENT_ERROR', 400));
+    const errorRes = formatErrorResponse(new AppError('Vendor ID and customer location are required', 'MISSING_REQUIRED_FIELDS', 'CLIENT_ERROR', 400));
+    return Response.json(errorRes, { status: 400 });
   }
 
   try {

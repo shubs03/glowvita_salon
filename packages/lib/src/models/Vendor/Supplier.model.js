@@ -215,7 +215,7 @@ supplierSchema.statics.findByIdWithSubscription = function (id) {
 
 // Indexes for performance
 supplierSchema.index({ 'subscription.status': 1, 'subscription.endDate': 1 });
-supplierSchema.index({ email: 1 });
+// Email index removed as it is already defined in the schema with unique: true
 supplierSchema.index({ status: 1 });
 
 const SupplierModel = mongoose.models.Supplier || mongoose.model("Supplier", supplierSchema);
