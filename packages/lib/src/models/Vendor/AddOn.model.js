@@ -48,6 +48,6 @@ if (mongoose.models.AddOn) {
     delete mongoose.models.AddOn;
 }
 
-const AddOnModel = mongoose.model("AddOn", addOnSchema);
+const AddOnModel = mongoose.models.AddOn || mongoose.model("AddOn", addOnSchema);
 
 export default AddOnModel;

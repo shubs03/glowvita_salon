@@ -21,8 +21,8 @@ export const GET = async (req) => {
         console.log('GET appointments - vendorId:', vendorId, 'staffId:', staffId, 'date:', date, 'userId:', userId);
 
         // Base query - either vendorId or userId is required
-        const query = {
-            status: { $in: ['confirmed', 'pending', 'scheduled'] } // Only include active appointments
+        const query = { 
+            status: { $in: ['confirmed', 'pending', 'scheduled','cancelled','completed'] } // Only include active appointments
         };
 
         // If userId is provided, filter by userId/clientId
@@ -298,7 +298,7 @@ export const POST = async (req) => {
             vendorId: body.vendorId,
             client: body.client || body.userId || null, // Either client or userId or null
             clientName: body.clientName,
-            service: body.service,
+            service: body.service === "combo" ? (body.serviceItems?.[0]?.service || body.service) : body.service,
             serviceName: body.serviceName,
             staff: body.staff !== undefined ? body.staff : null, // This can be null
             staffName: body.staffName || "Any Professional", // Provide default if not present

@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import ServiceModel from "../admin/Service.model.js";
 import StaffModel from "../Vendor/Staff.model.js";
+import AddOnModel from "../Vendor/AddOn.model.js";
 
 // Ensure the Service and Staff models are registered
 const Service = mongoose.models.Service || ServiceModel;
@@ -47,7 +48,10 @@ const serviceItemSchema = new mongoose.Schema({
     name: { type: String, required: true },
     price: { type: Number, required: true },
     duration: { type: Number }, // duration in minutes
-    _id: { type: mongoose.Schema.Types.ObjectId } // original addon ID
+    _id: { 
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AddOn",
+    } // original addon ID
   }],
   // Additional fields for enhanced booking
   travelTime: {
@@ -147,7 +151,11 @@ const appointmentSchema = new mongoose.Schema(
       name: { type: String, required: true },
       price: { type: Number, required: true },
       duration: { type: Number, default: 0 },
-      _id: { type: mongoose.Schema.Types.ObjectId, required: true }
+      _id: {
+         type: mongoose.Schema.Types.ObjectId, 
+         ref: "AddOn",
+         required: true 
+        }
     }],
     totalAmount: {
       type: Number,
