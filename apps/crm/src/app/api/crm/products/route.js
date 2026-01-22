@@ -135,9 +135,8 @@ const getProducts = async (req) => {
 export const GET = authMiddlewareCrm(getProducts, ["vendor", "supplier"]);
 
 // POST - Create new product
-const createProduct = async (req) => {
+const createProduct = async (req, body) => {
     try {
-        const body = await req.json();
         const { 
             productName, 
             description, 
@@ -257,9 +256,8 @@ const createProduct = async (req) => {
 };
 
 // Bulk create products
-const bulkCreateProducts = async (req) => {
+const bulkCreateProducts = async (req, body) => {
     try {
-        const body = await req.json();
         const { products } = body;
         
         if (!Array.isArray(products) || products.length === 0) {
@@ -395,10 +393,10 @@ export const POST = authMiddlewareCrm(async (req) => {
     
     if (body && Array.isArray(body.products) && body.products.length > 0) {
       // This is a bulk request
-      return bulkCreateProducts(req);
+      return bulkCreateProducts(req, body);
     } else {
       // This is a single product request
-      return createProduct(req);
+      return createProduct(req, body);
     }
   } catch (error) {
     console.error('Error in POST handler:', error);

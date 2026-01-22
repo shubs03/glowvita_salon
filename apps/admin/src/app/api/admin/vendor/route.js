@@ -711,6 +711,23 @@ export const PATCH = authMiddlewareAdmin(
         return Response.json({ message: "Vendor not found" }, { status: 404 });
       }
 
+      // If vendor is being approved, automatically approve all their pending services
+      if (status === "Approved") {
+        try {
+          const VendorServicesModel = (await import('@repo/lib/models/Vendor/VendorServices.model')).default;
+          
+          // Update all pending services for this vendor to approved status
+          await VendorServicesModel.updateMany(
+            { vendor: id, "services.status": "pending" },
+            { $set: { "services.$[elem].status": "approved", "services.$[elem].updatedAt": new Date() } },
+            { arrayFilters: [{ "elem.status": "pending" }] }
+          );
+        } catch (error) {
+          console.error('Error updating vendor services status:', error);
+          // Continue anyway, don't fail the vendor approval due to service update failure
+        }
+      }
+
       return Response.json({
         message: `Vendor ${status === "Approved" ? "Approved" : "Disapproved"} successfully`,
         vendor: updatedVendor,

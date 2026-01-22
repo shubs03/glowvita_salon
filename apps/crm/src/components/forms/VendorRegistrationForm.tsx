@@ -115,6 +115,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
 
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registerVendor, { isLoading }] = useVendorRegisterMutation();
 
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -162,7 +163,9 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
   const validateStep1 = () => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.firstName) newErrors.firstName = 'First name is required';
+    else if (!/^[a-zA-Z\s]+$/.test(formData.firstName)) newErrors.firstName = 'First name can only contain letters and spaces';
     if (!formData.lastName) newErrors.lastName = 'Last name is required';
+    else if (!/^[a-zA-Z\s]+$/.test(formData.lastName)) newErrors.lastName = 'Last name can only contain letters and spaces';
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -172,15 +175,22 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
       newErrors.phone = 'Phone is required';
     } else if (!/^\d{10}$/.test(formData.phone)) {
       newErrors.phone = 'Phone must be 10 digits';
+    } else if (!/^[0-9]+$/.test(formData.phone)) {
+      newErrors.phone = 'Phone can only contain numbers';
     }
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character';
     }
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
+    } else if (formData.confirmPassword && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(formData.confirmPassword)) {
+      newErrors.confirmPassword = 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character';
     }
+    if (formData.referredByCode && formData.referredByCode.trim() !== '' && (!/^[a-zA-Z0-9_]+$/.test(formData.referredByCode) || formData.referredByCode.length < 6 || formData.referredByCode.length > 20)) newErrors.referredByCode = 'Referral code must be 6-20 characters long and contain only letters, numbers, and underscores';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -188,6 +198,9 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
   const validateStep2 = () => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.businessName) newErrors.businessName = 'Business name is required';
+    else if (!/^[a-zA-Z0-9\s&.,'-]+$/.test(formData.businessName)) newErrors.businessName = 'Business name can only contain letters, numbers, spaces, and common punctuation (&.,\'-)';
+    if (formData.website && formData.website.trim() !== '' && !/^(https?:\/\/)?([a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.)+[a-zA-Z]{2,}(\/[\w-@\+%.~#?&//=]*)?$/.test(formData.website)) newErrors.website = 'Please enter a valid website URL';
+
     if (!formData.category) newErrors.category = 'Salon category is required';
     if (formData.subCategories.length === 0) newErrors.subCategories = 'At least one sub-category is required';
     setErrors(newErrors);
@@ -359,7 +372,8 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
         const context = data.features[0].context || [];
         const state = context.find((c: any) => c.id.includes('region'))?.text || '';
         const city = context.find((c: any) => c.id.includes('place'))?.text || '';
-        setFormData(prev => ({ ...prev, address, state: state || prev.state, city: city || prev.city }));
+        const pincode = context.find((c: any) => c.id.includes('postcode'))?.text || '';
+        setFormData(prev => ({ ...prev, address, state: state || prev.state, city: city || prev.city, pincode: pincode || prev.pincode }));
       }
     } catch (error) { console.error('Error fetching address:', error); }
   };
@@ -373,6 +387,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
       address: result.place_name,
       state: result.context?.find(c => c.id.includes('region'))?.text || prev.state,
       city: result.context?.find(c => c.id.includes('place'))?.text || prev.city,
+      pincode: result.context?.find(c => c.id.includes('postcode'))?.text || prev.pincode,
     }));
     if (map.current && map.current.getCanvas()) {
       map.current.setCenter(coordinates);
@@ -466,12 +481,16 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                     </Button>
                     {renderError('password')}
                   </div>
-                  <div>
-                    <Input name="confirmPassword" type="password" placeholder="Confirm Password" onChange={handleChange} value={formData.confirmPassword} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                  <div className="relative">
+                    <Input name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} placeholder="Confirm Password" onChange={handleChange} value={formData.confirmPassword} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg w-full" />
+                    <Button type="button" variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
+                    </Button>
                     {renderError('confirmPassword')}
                   </div>
                 </div>
                 <Input name="referredByCode" placeholder="Referral Code (Optional)" onChange={handleChange} value={formData.referredByCode} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                {renderError('referredByCode')}
               </div>
             )}
 
@@ -527,9 +546,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                   <div>
                     <Input name="website" placeholder="https://example.com" onChange={handleChange} value={formData.website} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
-                  </div>
-                  <div>
-                    <Input name="referredByCode" placeholder="Enter referral code if any" onChange={handleChange} value={formData.referredByCode} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    {renderError('website')}
                   </div>
                 </div>
               </div>
