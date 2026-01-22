@@ -11,8 +11,8 @@
   "dependencies": {
     "@react-google-maps/api": "^2.20.7",
     "@reduxjs/toolkit": "^2.2.5",
-    "@repo/lib": "*",
     "@repo/config": "*",
+    "@repo/lib": "*",
     "@repo/store": "*",
     "@repo/ui": "*",
     "js-cookie": "^3.0.5",
@@ -27,10 +27,12 @@
   "devDependencies": {
     "@repo/eslint-config-custom": "*",
     "@repo/typescript-config": "*",
+    "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.19",
+    "canvas-confetti": "^1.9.4",
     "postcss": "^8.4.38",
     "styled-jsx": "^5.1.1",
     "tailwindcss": "^3.4.1",

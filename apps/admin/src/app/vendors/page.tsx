@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import { VendorEditForm, type Vendor } from "../../components/VendorEditForm";
 import { toast } from "sonner";
+import { cn } from "@repo/ui/cn";
 import {
   useCreateVendorMutation,
   useGetVendorsQuery,
@@ -218,6 +219,28 @@ export default function VendorManagementPage() {
   const disapprovedVendors = vendorsArray.filter(
     (v: Vendor) => v?.status === "Disapproved"
   ).length;
+
+  const getUnapprovedDocuments = (vendor: Vendor) => {
+    const documents = vendor.documents;
+    if (!documents) return [];
+
+    const mandatoryDocs = [
+      { key: 'aadharCard', label: 'Aadhar Card' },
+      { key: 'panCard', label: 'PAN Card' },
+      { key: 'udyogAadhar', label: 'Udyog Aadhar' },
+      { key: 'udhayamCert', label: 'Udhayam Certificate' },
+      { key: 'shopLicense', label: 'Shop License' }
+    ] as const;
+
+    return mandatoryDocs
+      .filter(doc => {
+        const isUploaded = documents[doc.key] && documents[doc.key] !== '';
+        // In the Vendor model, the status is usually stored as docType + 'Status'
+        const status = (documents as any)[`${doc.key}Status`] || 'pending';
+        return isUploaded && status !== 'approved';
+      })
+      .map(doc => doc.label);
+  };
 
   if (error)
     return (
@@ -459,7 +482,12 @@ export default function VendorManagementPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleActionClick(vendor, "approve")}
-                          className="text-blue-600 hover:text-blue-700"
+                          className={cn("text-blue-600 hover:text-blue-700", getUnapprovedDocuments(vendor).length > 0 && "text-gray-400 opacity-50")}
+                          disabled={getUnapprovedDocuments(vendor).length > 0}
+                          title={getUnapprovedDocuments(vendor).length > 0
+                            ? `Mandatory documents pending: ${getUnapprovedDocuments(vendor).join(', ')}`
+                            : 'Approve Vendor'
+                          }
                         >
                           <CheckCircle className="h-4 w-4" />
                           <span className="sr-only">Approve</span>

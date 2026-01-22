@@ -428,80 +428,190 @@ export const PUT = authMiddlewareAdmin(
       documents,
     } = body;
 
-    // Build update object only with provided fields
-    const updateData = {
-      updatedAt: Date.now(),
-    };
+    // Validate required fields
+    if (
+      !firstName ||
+      !lastName ||
+      !businessName ||
+      !email ||
+      !phone ||
+      !state ||
+      !city ||
+      !pincode ||
+      !category ||
+      !subCategories ||
+      subCategories.length === 0 ||
+      !address
+    ) {
+      return Response.json(
+        { message: "All required fields must be provided" },
+        { status: 400 }
+      );
+    }
 
-    // Validate and add basic fields if provided
-    if (firstName !== undefined) {
-      if (!firstName) return Response.json({ message: "First name is required" }, { status: 400 });
-      updateData.firstName = firstName;
+    // Validate formats
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      return Response.json(
+        { message: "Please enter a valid email address" },
+        { status: 400 }
+      );
     }
-    if (lastName !== undefined) {
-      if (!lastName) return Response.json({ message: "Last name is required" }, { status: 400 });
-      updateData.lastName = lastName;
+    if (!/^\d{10}$/.test(phone)) {
+      return Response.json(
+        { message: "Please enter a valid 10-digit phone number" },
+        { status: 400 }
+      );
     }
-    if (businessName !== undefined) {
-      if (!businessName) return Response.json({ message: "Business name is required" }, { status: 400 });
-      updateData.businessName = businessName;
+    if (!/^\d{6}$/.test(pincode)) {
+      return Response.json(
+        { message: "Please enter a valid 6-digit pincode" },
+        { status: 400 }
+      );
     }
-    if (email !== undefined) {
-      if (!/^\S+@\S+\.\S+$/.test(email)) return Response.json({ message: "Valid email is required" }, { status: 400 });
-      updateData.email = email;
+    if (website && !/^https?:\/\/[^\s$.?#].[^\s]*$/.test(website)) {
+      return Response.json(
+        { message: "Please enter a valid URL" },
+        { status: 400 }
+      );
     }
-    if (phone !== undefined) {
-      if (!/^\d{10}$/.test(phone)) return Response.json({ message: "Valid 10-digit phone is required" }, { status: 400 });
-      updateData.phone = phone;
+    if (password && password.length < 8) {
+      return Response.json(
+        { message: "Password must be at least 8 characters" },
+        { status: 400 }
+      );
     }
-    if (state !== undefined) {
-      if (!state) return Response.json({ message: "State is required" }, { status: 400 });
-      updateData.state = state;
+    if (!["unisex", "men", "women"].includes(category)) {
+      return Response.json({ message: "Invalid category" }, { status: 400 });
     }
-    if (city !== undefined) {
-      if (!city) return Response.json({ message: "City is required" }, { status: 400 });
-      updateData.city = city;
+    if (
+      !subCategories.every((sc) =>
+        ["at-salon", "at-home", "custom-location"].includes(sc)
+      )
+    ) {
+      return Response.json(
+        { message: "Invalid subCategories" },
+        { status: 400 }
+      );
     }
-    if (pincode !== undefined) {
-      if (!/^\d{6}$/.test(pincode)) return Response.json({ message: "Valid 6-digit pincode is required" }, { status: 400 });
-      updateData.pincode = pincode;
+    if (profileImage && !profileImage.startsWith("http") && !isValidBase64Image(profileImage)) {
+      return Response.json(
+        {
+          message:
+            "Invalid profile image format. Must be base64 encoded image.",
+        },
+        { status: 400 }
+      );
     }
-    if (category !== undefined) {
-      if (!["unisex", "men", "women"].includes(category)) return Response.json({ message: "Invalid category" }, { status: 400 });
-      updateData.category = category;
+    if (gallery && Array.isArray(gallery)) {
+      for (const image of gallery) {
+        if (
+          image &&
+          !image.startsWith("http") && // allow existing uploaded URLs
+          !isValidBase64Image(image)   // validate only new Base64 uploads
+        ) {
+          return Response.json(
+            { message: "Invalid gallery image format. Must be base64 encoded image." },
+            { status: 400 }
+          );
+        }
+      }
     }
-    if (subCategories !== undefined) {
-      if (!Array.isArray(subCategories) || subCategories.length === 0) return Response.json({ message: "At least one sub-category is required" }, { status: 400 });
-      updateData.subCategories = subCategories;
+    if (
+      bankDetails?.ifscCode &&
+      !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankDetails.ifscCode)
+    ) {
+      return Response.json(
+        { message: "Please enter a valid IFSC code" },
+        { status: 400 }
+      );
     }
-    if (address !== undefined) {
-      if (!address) return Response.json({ message: "Address is required" }, { status: 400 });
-      updateData.address = address;
-    }
-    if (website !== undefined) updateData.website = website || null;
-    if (description !== undefined) updateData.description = description || null;
-    if (password) updateData.password = await bcrypt.hash(password, 10);
-    if (body.location !== undefined) updateData.location = body.location;
-    if (body.regionId !== undefined) updateData.regionId = validateAndLockRegion(req.user, body.regionId);
 
-    // Handle profile image
-    if (profileImage !== undefined) {
-      if (profileImage && !profileImage.startsWith("http")) {
-        if (!isValidBase64Image(profileImage)) return Response.json({ message: "Invalid profile image format" }, { status: 400 });
-        const existingVendor = await VendorModel.findById(id);
-        const fileName = `vendor-${id}-profile`;
-        const profileImageUrl = await processBase64Image(profileImage, fileName, existingVendor?.profileImage);
-        if (!profileImageUrl) return Response.json({ message: "Failed to upload profile image" }, { status: 500 });
-        updateData.profileImage = profileImageUrl;
-      } else {
-        updateData.profileImage = profileImage;
+    // Check for duplicate email or phone (excluding current vendor)
+    if (email || phone) {
+      const existingVendor = await VendorModel.findOne({
+        $or: [{ email }, { phone }],
+        _id: { $ne: id },
+      });
+      if (existingVendor) {
+        return Response.json(
+          { message: "Email or phone number already in use" },
+          { status: 400 }
+        );
       }
     }
 
-    // Handle gallery
-    if (gallery !== undefined && Array.isArray(gallery)) {
+    // Transform subscription fields (resolve plan ObjectId)
+    let planId = null;
+    if (subscription?.package) {
+      const planDoc = await PlanModel.findOne({ name: subscription.package });
+      planId = planDoc ? planDoc._id : null;
+    }
+    const subscriptionData = subscription
+      ? {
+        plan: planId, // ObjectId reference
+        status: subscription.isActive ? "Active" : "Pending",
+        expires: subscription.endDate ? new Date(subscription.endDate) : null,
+      }
+      : {
+        plan: (await PlanModel.findOne({ name: "Basic" }))?._id || null,
+        status: "Pending",
+        expires: null,
+      };
+
+    // Transform bankDetails
+    const bankDetailsData = bankDetails
+      ? {
+        bankName: bankDetails.bankName || null,
+        accountNumber: bankDetails.accountNumber || null,
+        ifscCode: bankDetails.ifscCode || null,
+        accountHolder: bankDetails.accountHolder || null,
+      }
+      : {
+        bankName: null,
+        accountNumber: null,
+        ifscCode: null,
+        accountHolder: null,
+      };
+
+    // Transform documents safely
+    const documentsArray = Array.isArray(documents) ? documents : [];
+
+    const documentsData = {
+      aadharCard: documentsArray.find((d) => d.type === "aadhar")?.file || null,
+      panCard: documentsArray.find((d) => d.type === "pan")?.file || null,
+      udyogAadhar: documentsArray.find((d) => d.type === "gst")?.file || null,
+      shopLicense:
+        documentsArray.find((d) => d.type === "license")?.file || null,
+      udhayamCert:
+        documentsArray.find((d) => d.type === "udhayam")?.file || null,
+      otherDocs:
+        documentsArray.filter((d) => d.type === "other").map((d) => d.file) ||
+        [],
+    };
+
+    // Handle profile image upload if provided
+    let profileImageUrl = profileImage;
+    if (profileImage && !profileImage.startsWith('http')) {
+      // Get existing vendor to get old image URL for deletion
       const existingVendor = await VendorModel.findById(id);
-      const galleryUrls = [];
+      const fileName = `vendor-${id}-profile`;
+      profileImageUrl = await processBase64Image(profileImage, fileName, existingVendor?.profileImage);
+
+      if (profileImageUrl === null && profileImage) {
+        return Response.json(
+          { message: "Failed to upload profile image" },
+          { status: 500 }
+        );
+      }
+    }
+
+    // Handle gallery images upload if provided
+    let galleryUrls = gallery || [];
+    if (gallery && Array.isArray(gallery)) {
+      galleryUrls = [];
+      // Get existing vendor to get old gallery URLs for deletion
+      const existingVendor = await VendorModel.findById(id);
+
       for (let i = 0; i < gallery.length; i++) {
         const image = gallery[i];
         if (image && !image.startsWith('http')) {
@@ -509,7 +619,12 @@ export const PUT = authMiddlewareAdmin(
           const fileName = `vendor-${id}-gallery-${i}`;
           const oldImageUrl = existingVendor?.gallery?.[i] || null;
           const imageUrl = await processBase64Image(image, fileName, oldImageUrl);
-          galleryUrls.push(imageUrl || image);
+
+          if (imageUrl) {
+            galleryUrls.push(imageUrl);
+          } else {
+            galleryUrls.push(image);
+          }
         } else {
           galleryUrls.push(image);
         }
@@ -517,52 +632,27 @@ export const PUT = authMiddlewareAdmin(
       updateData.gallery = galleryUrls;
     }
 
-    // Handle subscription
-    if (subscription !== undefined) {
-      let planId = null;
-      if (subscription?.package) {
-        const planDoc = await PlanModel.findOne({ name: subscription.package });
-        planId = planDoc ? planDoc._id : null;
-      }
-      updateData.subscription = {
-        plan: planId || (await PlanModel.findOne({ name: "Basic" }))?._id || null,
-        status: subscription?.isActive ? "Active" : (subscription?.status || "Pending"),
-        expires: subscription?.endDate ? new Date(subscription.endDate) : (subscription?.expires ? new Date(subscription.expires) : null),
-      };
-    }
-
-    // Handle bank details
-    if (bankDetails !== undefined) {
-      if (bankDetails?.ifscCode && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankDetails.ifscCode)) {
-        return Response.json({ message: "Invalid IFSC code" }, { status: 400 });
-      }
-      updateData.bankDetails = {
-        bankName: bankDetails?.bankName || null,
-        accountNumber: bankDetails?.accountNumber || null,
-        ifscCode: bankDetails?.ifscCode || null,
-        accountHolder: bankDetails?.accountHolder || null,
-      };
-    }
-
-    // Handle documents
-    if (documents !== undefined) {
+    // Handle document uploads if provided
+    const documentsDataWithUrls = { ...documentsData };
+    if (documents && Array.isArray(documents)) {
+      // Get existing vendor to get old document URLs for deletion
       const existingVendor = await VendorModel.findById(id);
-      const documentsData = existingVendor?.documents ? { ...existingVendor.documents } : {};
 
-      const docsArray = Array.isArray(documents) ? documents : [];
-      for (const doc of docsArray) {
+      for (const doc of documents) {
         if (doc.file && !doc.file.startsWith('http')) {
           const fileName = `vendor-${id}-${doc.type}`;
+          // Get the old document URL if it exists
           const docField = doc.type === 'aadhar' ? 'aadharCard' :
             doc.type === 'pan' ? 'panCard' :
               doc.type === 'gst' ? 'udyogAadhar' :
                 doc.type === 'license' ? 'shopLicense' :
                   doc.type === 'udhayam' ? 'udhayamCert' : null;
 
-          if (docField) {
-            const oldDocUrl = documentsData[docField];
-            const docUrl = await processBase64Image(doc.file, fileName, oldDocUrl);
-            if (docUrl) documentsData[docField] = docUrl;
+          const oldDocUrl = docField && existingVendor?.documents ? existingVendor.documents[docField] : null;
+          const docUrl = await processBase64Image(doc.file, fileName, oldDocUrl);
+
+          if (docUrl) {
+            documentsDataWithUrls[docField] = docUrl;
           }
         }
       }
@@ -636,6 +726,39 @@ export const PATCH = authMiddlewareAdmin(
       const updateData = {
         status: status,
       };
+
+      // If status is "Approved", check if all uploaded documents are approved
+      if (status === "Approved") {
+        const vendor = await VendorModel.findById(id);
+        if (!vendor) {
+          return Response.json({ message: "Vendor not found" }, { status: 404 });
+        }
+
+        const documents = vendor.documents || {};
+        const mandatoryDocs = [
+          { key: "aadharCard", label: "Aadhar Card" },
+          { key: "panCard", label: "PAN Card" },
+          { key: "udyogAadhar", label: "Udyog Aadhar" },
+          { key: "udhayamCert", label: "Udhayam Certificate" },
+          { key: "shopLicense", label: "Shop License" },
+        ];
+
+        const pendingOrRejectedDocs = mandatoryDocs.filter((doc) => {
+          const isUploaded = documents[doc.key] && documents[doc.key] !== "";
+          const status = documents[`${doc.key}Status`];
+          return isUploaded && status !== "approved";
+        });
+
+        if (pendingOrRejectedDocs.length > 0) {
+          const docLabels = pendingOrRejectedDocs.map((doc) => doc.label).join(", ");
+          return Response.json(
+            {
+              message: `Cannot approve vendor. The following documents are not approved: ${docLabels}`,
+            },
+            { status: 400 }
+          );
+        }
+      }
 
       const updatedVendor = await VendorModel.findByIdAndUpdate(
         id,

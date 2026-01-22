@@ -97,6 +97,8 @@ interface Step3TimeSlotProps {
   platformFee?: number;
   serviceTax?: number;
   taxRate?: number;
+  couponCode?: string | null;
+  discountAmount?: number;
 }
 
 export const Step3_TimeSlot = memo(({
@@ -126,7 +128,9 @@ export const Step3_TimeSlot = memo(({
   onLockAcquired,
   platformFee = 0,
   serviceTax = 0,
-  taxRate = 0
+  taxRate = 0,
+  couponCode = null,
+  discountAmount = 0
 }: Step3TimeSlotProps) => {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
@@ -393,15 +397,17 @@ export const Step3_TimeSlot = memo(({
         isHomeService,
         isWeddingService: isWeddingService,
         duration: slot.duration || effectiveService?.duration,
-        amount: serviceAmount,
-        addOnsAmount: addOnsAmount,
-        totalAmount: totalAmount,
-        finalAmount: totalAmount + (platformFee || 0) + (serviceTax || 0),
-        platformFee: platformFee || 0,
-        serviceTax: serviceTax || 0,
-        taxRate: taxRate || 0,
-        addOns: addOns,
-        selectedAddOns: addOns, // Ensure this is passed as well
+        amount: Math.round(serviceAmount),
+        addOnsAmount: Math.round(addOnsAmount),
+        totalAmount: Math.round(totalAmount),
+        finalAmount: Math.round((totalAmount + (platformFee || 0) + (serviceTax || 0)) - (discountAmount || 0)),
+        platformFee: Math.round(platformFee || 0),
+        serviceTax: Math.round(serviceTax || 0),
+        taxRate: taxRate,
+        couponCode,
+        discountAmount: Math.round(discountAmount || 0),
+        addOns: selectedService?.selectedAddons || addOns, // Ensure this is passed as well
+        selectedAddOns: addOns, // Keep this as is, assuming it's for the final list
       };
 
       // Only include location if it's actually provided and valid

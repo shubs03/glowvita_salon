@@ -1766,6 +1766,22 @@ export const glowvitaApi = createApi({
       query: (addOn) => ({ url: "/crm/add-ons", method: "POST", body: addOn }),
       invalidatesTags: ["AddOns"],
     }),
+    getStaffEarnings: builder.query({
+      query: ({ id, startDate, endDate }) => {
+        let url = `/crm/staff/earnings/${id}`;
+        const params = new URLSearchParams();
+        if (startDate) params.append("startDate", startDate);
+        if (endDate) params.append("endDate", endDate);
+        const queryString = params.toString();
+        if (queryString) url += `?${queryString}`;
+        return { url, method: "GET" };
+      },
+      providesTags: ["Staff"],
+    }),
+    recordStaffPayout: builder.mutation({
+      query: ({ id, ...body }) => ({ url: `/crm/staff/earnings/${id}`, method: "POST", body }),
+      invalidatesTags: ["Staff"],
+    }),
     updateAddOn: builder.mutation({
       query: (addOn) => ({ url: "/crm/add-ons", method: "PUT", body: addOn }),
       invalidatesTags: ["AddOns"],
@@ -3041,6 +3057,10 @@ export const {
   useGetUniqueBrandsQuery,
   useGetUniqueCategoriesQuery,
   useGetSettlementSummaryReportQuery,
+
+  // Staff Earnings Hooks
+  useGetStaffEarningsQuery,
+  useRecordStaffPayoutMutation,
 
   // Payment Collections Hook
   useGetPaymentCollectionsQuery,

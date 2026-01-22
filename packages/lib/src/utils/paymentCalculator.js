@@ -99,26 +99,22 @@ export async function calculateBookingAmount(
       }
     }
 
-    // Calculate amount after discount (this is what platform fee and GST will be calculated on)
-    const amountAfterDiscount = subtotal - discountAmount;
-    console.log('Amount after discount:', amountAfterDiscount);
-
-    // Calculate platform fee (calculated on amount after discount)
+    // Calculate platform fee (calculated on subtotal - user wants discount applied last)
     let platformFee = 0;
     if (taxFeeSettings && taxFeeSettings.platformFeeEnabled) {
       if (taxFeeSettings.platformFeeType === 'percentage') {
-        platformFee = (amountAfterDiscount * taxFeeSettings.platformFee) / 100;
+        platformFee = (subtotal * taxFeeSettings.platformFee) / 100;
       } else {
         platformFee = taxFeeSettings.platformFee;
       }
       console.log('Calculated platform fee:', platformFee);
     }
 
-    // Calculate GST (calculated on amount after discount + platform fee)
+    // Calculate GST (calculated on subtotal + platform fee)
     let serviceTax = 0; // This is GST
     if (taxFeeSettings && taxFeeSettings.serviceTaxEnabled) {
-      // GST is calculated on the amount after discount and platform fee
-      const amountForGST = amountAfterDiscount + platformFee;
+      // GST is calculated on the subtotal and platform fee
+      const amountForGST = subtotal + platformFee;
       if (taxFeeSettings.serviceTaxType === 'percentage') {
         serviceTax = (amountForGST * taxFeeSettings.serviceTax) / 100;
       } else {
@@ -146,8 +142,11 @@ export async function calculateBookingAmount(
     // Total tax is the sum of GST and vendor service taxes
     const totalTax = serviceTax + vendorServiceTaxTotal;
 
-    // Calculate final total
-    const finalTotal = amountAfterDiscount + platformFee + totalTax;
+    // Calculate amount after discount (for tracking purposes, though finalTotal is calculated differently now)
+    const amountAfterDiscount = subtotal - discountAmount;
+
+    // Calculate final total (subtract discount from the sum of everything else)
+    const finalTotal = (subtotal + platformFee + totalTax) - discountAmount;
 
     console.log('Final calculation breakdown:', {
       subtotal,
@@ -161,14 +160,14 @@ export async function calculateBookingAmount(
     });
 
     return {
-      subtotal: parseFloat(subtotal.toFixed(2)),
-      discountAmount: parseFloat(discountAmount.toFixed(2)),
-      amountAfterDiscount: parseFloat(amountAfterDiscount.toFixed(2)),
-      platformFee: parseFloat(platformFee.toFixed(2)),
-      serviceTax: parseFloat(serviceTax.toFixed(2)), // This is GST
-      vendorServiceTax: parseFloat(vendorServiceTaxTotal.toFixed(2)),
-      totalTax: parseFloat(totalTax.toFixed(2)),
-      finalTotal: parseFloat(finalTotal.toFixed(2)),
+      subtotal: Math.round(subtotal),
+      discountAmount: Math.round(discountAmount),
+      amountAfterDiscount: Math.round(amountAfterDiscount),
+      platformFee: Math.round(platformFee),
+      serviceTax: Math.round(serviceTax), // This is GST
+      vendorServiceTax: Math.round(vendorServiceTaxTotal),
+      totalTax: Math.round(totalTax),
+      finalTotal: Math.round(finalTotal),
       taxFeeSettings
     };
   } catch (error) {
@@ -182,14 +181,14 @@ export async function calculateBookingAmount(
     }, 0);
 
     return {
-      subtotal: parseFloat(subtotal.toFixed(2)),
+      subtotal: Math.round(subtotal),
       discountAmount: 0,
-      amountAfterDiscount: parseFloat(subtotal.toFixed(2)),
+      amountAfterDiscount: Math.round(subtotal),
       platformFee: 0,
       serviceTax: 0,
       vendorServiceTax: 0,
       totalTax: 0,
-      finalTotal: parseFloat(subtotal.toFixed(2)),
+      finalTotal: Math.round(subtotal),
       taxFeeSettings: null
     };
   }

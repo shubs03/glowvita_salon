@@ -80,6 +80,7 @@ export default function StaffPage() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalTab, setModalTab] = useState('personal');
     const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
@@ -97,8 +98,9 @@ export default function StaffPage() {
     const currentItems = filteredStaff.slice(firstItemIndex, lastItemIndex);
     const totalPages = Math.ceil(filteredStaff.length / itemsPerPage);
 
-    const handleOpenModal = (staff?: Staff) => {
+    const handleOpenModal = (staff?: Staff, tab: string = 'personal') => {
         setSelectedStaff(staff || null);
+        setModalTab(tab);
         setIsModalOpen(true);
     };
 
@@ -321,6 +323,9 @@ export default function StaffPage() {
                                             <Button variant="ghost" size="icon" onClick={() => handleOpenModal(staff)}>
                                                 <Edit className="h-4 w-4" />
                                             </Button>
+                                            <Button variant="ghost" size="icon" onClick={() => handleOpenModal(staff, 'earnings')}>
+                                                <Eye className="h-4 w-4" />
+                                            </Button>
                                             <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(staff)}>
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>
@@ -346,6 +351,8 @@ export default function StaffPage() {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 staff={selectedStaff}
+                initialTab={modalTab}
+                hideTabs={modalTab === 'earnings'}
                 onSuccess={() => {
                     setIsModalOpen(false);
                     refetch();

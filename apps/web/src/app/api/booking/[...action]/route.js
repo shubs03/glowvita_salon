@@ -867,7 +867,9 @@ async function handleSlotLock(body) {
       serviceTax = 0,
       taxRate = 0,
       addOns = [],
-      selectedAddOns
+      selectedAddOns,
+      couponCode = null,
+      discountAmount = 0
     } = body;
 
     const effectiveAddOns = addOns && addOns.length > 0 ? addOns : selectedAddOns || [];
@@ -1030,6 +1032,8 @@ async function handleSlotLock(body) {
       platformFee: platformFee || 0,
       serviceTax: serviceTax || 0,
       taxRate: taxRate || 0,
+      couponCode: couponCode,
+      discountAmount: discountAmount || 0,
       // For multi-service, don't include top-level addOns as they're in serviceItems
       // For single service, keep addOns for backward compatibility
       ...(isMultiService ? {} : { addOns: effectiveAddOns }),
@@ -1107,7 +1111,10 @@ async function handleBookingConfirmation(body) {
   const {
     appointmentId,
     lockId,
-    paymentDetails
+    paymentDetails,
+    couponCode,
+    discountAmount,
+    finalAmount
   } = body;
 
   console.log('Received confirmation request:', body);
@@ -1121,7 +1128,7 @@ async function handleBookingConfirmation(body) {
   let confirmResult;
   try {
     // Pass lockId as lockToken to match the function signature
-    confirmResult = await confirmAppointment(appointmentId, lockId, paymentDetails);
+    confirmResult = await confirmAppointment(appointmentId, lockId, paymentDetails, { couponCode, discountAmount, finalAmount });
   } catch (error) {
     console.error('Error during appointment confirmation:', error);
     // Handle specific error cases with appropriate user messages

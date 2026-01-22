@@ -17,241 +17,246 @@ import { StaffMember, WorkingHours, TimeSlot, Service, ServiceStaffAssignment, c
 import { useGetPublicAppointmentsQuery } from '@repo/store/api';
 
 const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
-    const steps = ['Services', 'Select Professionals', 'Time Slot'];
-    return (
-        <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
-            {steps.map((step, index) => (
-                <React.Fragment key={step}>
-                    <button
-                        onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
-                        className={cn(
-                            "transition-colors",
-                            currentStep > index + 1 ? "hover:text-primary" : "cursor-default",
-                            currentStep === index + 1 && "text-primary font-semibold"
-                        )}
-                    >
-                        {step}
-                    </button>
-                    {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
-                </React.Fragment>
-            ))}
-        </nav>
-    );
+  const steps = ['Services', 'Select Professionals', 'Time Slot'];
+  return (
+    <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
+      {steps.map((step, index) => (
+        <React.Fragment key={step}>
+          <button
+            onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
+            className={cn(
+              "transition-colors",
+              currentStep > index + 1 ? "hover:text-primary" : "cursor-default",
+              currentStep === index + 1 && "text-primary font-semibold"
+            )}
+          >
+            {step}
+          </button>
+          {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
+        </React.Fragment>
+      ))}
+    </nav>
+  );
 };
 
 interface Step3MultiServiceTimeSlotProps {
-    selectedDate: Date;
-    onSelectDate: (date: Date) => void;
-    selectedTime: string | null;
-    onSelectTime: (time: string | null) => void;
-    currentStep: number;
-    setCurrentStep: (step: number) => void;
-    serviceStaffAssignments: ServiceStaffAssignment[];
-    staff: StaffMember[];
-    workingHours: WorkingHours[];
-    isLoading: boolean;
-    error?: any;
-    selectedServices: Service[];
-    vendorId?: string;
+  selectedDate: Date;
+  onSelectDate: (date: Date) => void;
+  selectedTime: string | null;
+  onSelectTime: (time: string | null) => void;
+  currentStep: number;
+  setCurrentStep: (step: number) => void;
+  serviceStaffAssignments: ServiceStaffAssignment[];
+  staff: StaffMember[];
+  workingHours: WorkingHours[];
+  isLoading: boolean;
+  error?: any;
+  selectedServices: Service[];
+  vendorId?: string;
+  platformFee?: number;
+  serviceTax?: number;
+  taxRate?: number;
+  couponCode?: string | null;
+  discountAmount?: number;
 }
 
 // Helper function to generate time slots based on working hours
 const generateTimeSlots = (startTime: string, endTime: string, interval: number = 30): string[] => {
-    const slots: string[] = [];
-    const start = new Date(`2023-01-01 ${startTime}`);
-    const end = new Date(`2023-01-01 ${endTime}`);
-    
-    let current = new Date(start);
-    while (current < end) {
-        slots.push(format(current, 'HH:mm'));
-        current.setMinutes(current.getMinutes() + interval);
-    }
-    
-    return slots;
+  const slots: string[] = [];
+  const start = new Date(`2023-01-01 ${startTime}`);
+  const end = new Date(`2023-01-01 ${endTime}`);
+
+  let current = new Date(start);
+  while (current < end) {
+    slots.push(format(current, 'HH:mm'));
+    current.setMinutes(current.getMinutes() + interval);
+  }
+
+  return slots;
 };
 
 // Helper function to generate time slots from staff slots
 const generateTimeSlotsFromStaffSlots = (slots: any[]): string[] => {
-    const timeSlots: string[] = [];
-    slots.forEach(slot => {
-        // Convert start and end times to Date objects for easier manipulation
-        const start = new Date(`2023-01-01 ${slot.startTime}`);
-        const end = new Date(`2023-01-01 ${slot.endTime}`);
-        
-        // Generate 30-minute intervals between start and end times
-        let current = new Date(start);
-        while (current < end) {
-            timeSlots.push(format(current, 'HH:mm'));
-            current.setMinutes(current.getMinutes() + 30);
-        }
-    });
-    return timeSlots;
+  const timeSlots: string[] = [];
+  slots.forEach(slot => {
+    // Convert start and end times to Date objects for easier manipulation
+    const start = new Date(`2023-01-01 ${slot.startTime}`);
+    const end = new Date(`2023-01-01 ${slot.endTime}`);
+
+    // Generate 30-minute intervals between start and end times
+    let current = new Date(start);
+    while (current < end) {
+      timeSlots.push(format(current, 'HH:mm'));
+      current.setMinutes(current.getMinutes() + 30);
+    }
+  });
+  return timeSlots;
 };
 
 // Helper function to get day name from date
 const getDayName = (date: Date): string => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return days[getDay(date)];
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  return days[getDay(date)];
 };
 
 // Helper function to check if a time slot is blocked for a staff member
 const isTimeSlotBlocked = (staff: StaffMember | null, date: Date, time: string): boolean => {
-    if (!staff || !staff.blockedTimes || staff.blockedTimes.length === 0) {
-        return false;
-    }
-    
-    const dateString = format(date, 'yyyy-MM-dd');
-    const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
-    
-    return staff.blockedTimes.some(blocked => {
-        const blockedDate = new Date(blocked.date);
-        const blockedDateString = format(blockedDate, 'yyyy-MM-dd');
-        
-        return (
-            blockedDateString === dateString &&
-            timeMinutes >= blocked.startMinutes &&
-            timeMinutes < blocked.endMinutes
-        );
-    });
+  if (!staff || !staff.blockedTimes || staff.blockedTimes.length === 0) {
+    return false;
+  }
+
+  const dateString = format(date, 'yyyy-MM-dd');
+  const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+
+  return staff.blockedTimes.some(blocked => {
+    const blockedDate = new Date(blocked.date);
+    const blockedDateString = format(blockedDate, 'yyyy-MM-dd');
+
+    return (
+      blockedDateString === dateString &&
+      timeMinutes >= blocked.startMinutes &&
+      timeMinutes < blocked.endMinutes
+    );
+  });
 };
 
 // Helper function to check if a time slot conflicts with existing appointments FOR A SPECIFIC STAFF
 const isTimeSlotBookedForStaff = (appointments: any[], date: Date, time: string, staffId: string, serviceDuration: number = 60): boolean => {
-    console.log(`\n🔍 isTimeSlotBookedForStaff - Checking ${time} for staff ${staffId} (duration: ${serviceDuration}min)`);
-    
-    if (!appointments || appointments.length === 0) {
-        console.log('  ✅ No appointments to check');
-        return false;
-    }
-    
-    const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
-    const endTimeMinutes = timeMinutes + serviceDuration;
-    const dateString = format(date, 'yyyy-MM-dd');
-    
-    console.log(`  📅 Checking slot: ${time} (${timeMinutes}min) to ${Math.floor(endTimeMinutes/60)}:${String(endTimeMinutes%60).padStart(2,'0')} (${endTimeMinutes}min)`);
-    console.log(`  📆 Date: ${dateString}`);
-    console.log(`  👤 Staff ID to match: ${staffId}`);
-    console.log(`  📋 Total appointments: ${appointments.length}`);
-    
-    const result = appointments.some((appointment, idx) => {
-        console.log(`\n  Checking appointment ${idx + 1}:`, {
-            id: appointment._id,
-            startTime: appointment.startTime,
-            endTime: appointment.endTime,
-            staff: appointment.staff,
-            status: appointment.status
-        });
-        
-        // Check if appointment status is active (confirmed, pending, or scheduled)
-        const status = (appointment.status || appointment.appointmentStatus || '').toLowerCase();
-        const isActive = status === 'confirmed' || status === 'pending' || status === 'scheduled';
-        
-        if (!isActive) {
-            console.log(`    ⏭️ Skipping - status is "${status}" (not active)`);
-            return false;
-        }
-        
-        // Check if appointment is on the same date
-        const appointmentDateString = format(new Date(appointment.date), 'yyyy-MM-dd');
-        if (appointmentDateString !== dateString) {
-            console.log(`    ⏭️ Skipping - different date (${appointmentDateString} vs ${dateString})`);
-            return false;
-        }
-        
-        // Extract staff ID - handle different formats (ObjectId, string, or populated object)
-        let appointmentStaffId = null;
-        if (appointment.staff) {
-            if (typeof appointment.staff === 'string') {
-                appointmentStaffId = appointment.staff;
-            } else if (appointment.staff._id) {
-                appointmentStaffId = appointment.staff._id.toString ? appointment.staff._id.toString() : appointment.staff._id;
-            } else if (appointment.staff.id) {
-                appointmentStaffId = appointment.staff.id.toString ? appointment.staff.id.toString() : appointment.staff.id;
-            } else if (appointment.staff.toString) {
-                appointmentStaffId = appointment.staff.toString();
-            }
-        }
-        
-        console.log(`    👤 Appointment staff ID: ${appointmentStaffId}`);
-        
-        // Only check appointments for this specific staff member
-        if (appointmentStaffId !== staffId) {
-            console.log(`    ⏭️ Skipping - different staff (${appointmentStaffId} vs ${staffId})`);
-            return false;
-        }
-        
-        // Check for time overlap
-        const appointmentStartMinutes = parseInt(appointment.startTime.split(':')[0]) * 60 + parseInt(appointment.startTime.split(':')[1]);
-        const appointmentEndMinutes = parseInt(appointment.endTime.split(':')[0]) * 60 + parseInt(appointment.endTime.split(':')[1]);
-        
-        console.log(`    ⏰ Appointment time: ${appointment.startTime} (${appointmentStartMinutes}min) to ${appointment.endTime} (${appointmentEndMinutes}min)`);
-        console.log(`    🔄 Checking overlap: (${timeMinutes} < ${appointmentEndMinutes}) && (${endTimeMinutes} > ${appointmentStartMinutes})`);
-        
-        // Check if the new time slot overlaps with existing appointment
-        // Overlap occurs if: newStart < existingEnd AND newEnd > existingStart
-        const hasOverlap = (timeMinutes < appointmentEndMinutes && endTimeMinutes > appointmentStartMinutes);
-        console.log(`    ${hasOverlap ? '❌ OVERLAP DETECTED!' : '✅ No overlap'}`);
-        
-        return hasOverlap;
+  console.log(`\n🔍 isTimeSlotBookedForStaff - Checking ${time} for staff ${staffId} (duration: ${serviceDuration}min)`);
+
+  if (!appointments || appointments.length === 0) {
+    console.log('  ✅ No appointments to check');
+    return false;
+  }
+
+  const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+  const endTimeMinutes = timeMinutes + serviceDuration;
+  const dateString = format(date, 'yyyy-MM-dd');
+
+  console.log(`  📅 Checking slot: ${time} (${timeMinutes}min) to ${Math.floor(endTimeMinutes / 60)}:${String(endTimeMinutes % 60).padStart(2, '0')} (${endTimeMinutes}min)`);
+  console.log(`  📆 Date: ${dateString}`);
+  console.log(`  👤 Staff ID to match: ${staffId}`);
+  console.log(`  📋 Total appointments: ${appointments.length}`);
+
+  const result = appointments.some((appointment, idx) => {
+    console.log(`\n  Checking appointment ${idx + 1}:`, {
+      id: appointment._id,
+      startTime: appointment.startTime,
+      endTime: appointment.endTime,
+      staff: appointment.staff,
+      status: appointment.status
     });
-    
-    console.log(`\n  📊 Final result for ${time}: ${result ? '❌ BOOKED (unavailable)' : '✅ AVAILABLE'}\n`);
-    return result;
+
+    // Check if appointment status is active (confirmed, pending, or scheduled)
+    const status = (appointment.status || appointment.appointmentStatus || '').toLowerCase();
+    const isActive = status === 'confirmed' || status === 'pending' || status === 'scheduled';
+
+    if (!isActive) {
+      console.log(`    ⏭️ Skipping - status is "${status}" (not active)`);
+      return false;
+    }
+
+    // Check if appointment is on the same date
+    const appointmentDateString = format(new Date(appointment.date), 'yyyy-MM-dd');
+    if (appointmentDateString !== dateString) {
+      console.log(`    ⏭️ Skipping - different date (${appointmentDateString} vs ${dateString})`);
+      return false;
+    }
+
+    // Extract staff ID - handle different formats (ObjectId, string, or populated object)
+    let appointmentStaffId = null;
+    if (appointment.staff) {
+      if (typeof appointment.staff === 'string') {
+        appointmentStaffId = appointment.staff;
+      } else if (appointment.staff._id) {
+        appointmentStaffId = appointment.staff._id.toString ? appointment.staff._id.toString() : appointment.staff._id;
+      } else if (appointment.staff.id) {
+        appointmentStaffId = appointment.staff.id.toString ? appointment.staff.id.toString() : appointment.staff.id;
+      } else if (appointment.staff.toString) {
+        appointmentStaffId = appointment.staff.toString();
+      }
+    }
+
+    console.log(`    👤 Appointment staff ID: ${appointmentStaffId}`);
+
+    // Only check appointments for this specific staff member
+    if (appointmentStaffId !== staffId) {
+      console.log(`    ⏭️ Skipping - different staff (${appointmentStaffId} vs ${staffId})`);
+      return false;
+    }
+
+    // Check for time overlap
+    const appointmentStartMinutes = parseInt(appointment.startTime.split(':')[0]) * 60 + parseInt(appointment.startTime.split(':')[1]);
+    const appointmentEndMinutes = parseInt(appointment.endTime.split(':')[0]) * 60 + parseInt(appointment.endTime.split(':')[1]);
+
+    console.log(`    ⏰ Appointment time: ${appointment.startTime} (${appointmentStartMinutes}min) to ${appointment.endTime} (${appointmentEndMinutes}min)`);
+    console.log(`    🔄 Checking overlap: (${timeMinutes} < ${appointmentEndMinutes}) && (${endTimeMinutes} > ${appointmentStartMinutes})`);
+
+    // Check if the new time slot overlaps with existing appointment
+    // Overlap occurs if: newStart < existingEnd AND newEnd > existingStart
+    const hasOverlap = (timeMinutes < appointmentEndMinutes && endTimeMinutes > appointmentStartMinutes);
+    console.log(`    ${hasOverlap ? '❌ OVERLAP DETECTED!' : '✅ No overlap'}`);
+
+    return hasOverlap;
+  });
+
+  console.log(`\n  📊 Final result for ${time}: ${result ? '❌ BOOKED (unavailable)' : '✅ AVAILABLE'}\n`);
+  return result;
 };
 
 // Helper function to check if a time slot conflicts with existing appointments
 const isTimeSlotBooked = (appointments: any[], date: Date, time: string, staff: StaffMember | null, serviceDuration: number = 60): boolean => {
-    console.log('isTimeSlotBooked called:', {
-      appointmentsReceived: appointments?.length || 0,
-      appointmentsData: appointments?.slice(0, 3), // Log first 3 appointments
-      date: format(date, 'yyyy-MM-dd'),
-      time,
-      staffId: staff?.id,
-      staffName: staff?.name
-    });
-    
-    if (!appointments || appointments.length === 0) {
-        console.log('isTimeSlotBooked: No appointments, slot is available');
-        return false;
+  console.log('isTimeSlotBooked called:', {
+    appointmentsReceived: appointments?.length || 0,
+    appointmentsData: appointments?.slice(0, 3), // Log first 3 appointments
+    date: format(date, 'yyyy-MM-dd'),
+    time,
+    staffId: staff?.id,
+    staffName: staff?.name
+  });
+
+  if (!appointments || appointments.length === 0) {
+    console.log('isTimeSlotBooked: No appointments, slot is available');
+    return false;
+  }
+
+  // For multi-service, we always have a specific staff assigned, so use the simpler check
+  if (staff) {
+    const result = isTimeSlotBookedForStaff(appointments, date, time, staff.id, serviceDuration);
+    console.log(`isTimeSlotBooked: Result for staff ${staff.name} at ${time} = ${result}`);
+    return result;
+  }
+
+  // Fallback: check all appointments
+  const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
+  const endTimeMinutes = timeMinutes + serviceDuration;
+  const dateString = format(date, 'yyyy-MM-dd');
+
+  return appointments.some(appointment => {
+    // Check if appointment status is active (confirmed, pending, or scheduled)
+    const status = (appointment.status || appointment.appointmentStatus || '').toLowerCase();
+    const isActive = status === 'confirmed' || status === 'pending' || status === 'scheduled';
+
+    if (!isActive) {
+      return false;
     }
-    
-    // For multi-service, we always have a specific staff assigned, so use the simpler check
-    if (staff) {
-        const result = isTimeSlotBookedForStaff(appointments, date, time, staff.id, serviceDuration);
-        console.log(`isTimeSlotBooked: Result for staff ${staff.name} at ${time} = ${result}`);
-        return result;
+
+    const appointmentDateString = format(new Date(appointment.date), 'yyyy-MM-dd');
+    if (appointmentDateString !== dateString) {
+      return false;
     }
-    
-    // Fallback: check all appointments
-    const timeMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
-    const endTimeMinutes = timeMinutes + serviceDuration;
-    const dateString = format(date, 'yyyy-MM-dd');
-    
-    return appointments.some(appointment => {
-        // Check if appointment status is active (confirmed, pending, or scheduled)
-        const status = (appointment.status || appointment.appointmentStatus || '').toLowerCase();
-        const isActive = status === 'confirmed' || status === 'pending' || status === 'scheduled';
-        
-        if (!isActive) {
-            return false;
-        }
-        
-        const appointmentDateString = format(new Date(appointment.date), 'yyyy-MM-dd');
-        if (appointmentDateString !== dateString) {
-            return false;
-        }
-        
-        const appointmentStartMinutes = parseInt(appointment.startTime.split(':')[0]) * 60 + parseInt(appointment.startTime.split(':')[1]);
-        const appointmentEndMinutes = parseInt(appointment.endTime.split(':')[0]) * 60 + parseInt(appointment.endTime.split(':')[1]);
-        
-        return (timeMinutes < appointmentEndMinutes && endTimeMinutes > appointmentStartMinutes);
-    });
+
+    const appointmentStartMinutes = parseInt(appointment.startTime.split(':')[0]) * 60 + parseInt(appointment.startTime.split(':')[1]);
+    const appointmentEndMinutes = parseInt(appointment.endTime.split(':')[0]) * 60 + parseInt(appointment.endTime.split(':')[1]);
+
+    return (timeMinutes < appointmentEndMinutes && endTimeMinutes > appointmentStartMinutes);
+  });
 };
 
 // Helper function to check if a time slot is available for all assigned staff members
 const isTimeSlotAvailableForAllStaff = (
-  time: string, 
-  date: Date, 
+  time: string,
+  date: Date,
   assignments: ServiceStaffAssignment[],
   duration: number,
   existingAppointments: any[] = []
@@ -261,21 +266,21 @@ const isTimeSlotAvailableForAllStaff = (
   console.log(`  Date: ${format(date, 'yyyy-MM-dd')}`);
   console.log(`  Total Duration: ${duration} min`);
   console.log(`  Appointments to check: ${existingAppointments?.length || 0}`);
-  
+
   // If no staff assigned, time slot is available
   if (!assignments || assignments.length === 0) {
     console.log('  ✅ No assignments, time slot is available\n');
     return true;
   }
-  
+
   // CORRECTED LOGIC FOR MULTI-SERVICE WITH DIFFERENT STAFF:
   // We need to check each service's time range with its assigned staff
   // Calculate sequential service times starting from the selected time
   let currentStartTime = time;
   let currentStartMinutes = parseInt(time.split(':')[0]) * 60 + parseInt(time.split(':')[1]);
-  
+
   console.log('\n  📋 Service Schedule:');
-  
+
   // Check each service assignment sequentially
   for (let i = 0; i < assignments.length; i++) {
     const assignment = assignments[i];
@@ -284,15 +289,15 @@ const isTimeSlotAvailableForAllStaff = (
     const serviceEndHours = Math.floor(serviceEndMinutes / 60);
     const serviceEndMins = serviceEndMinutes % 60;
     const serviceEndTime = `${String(serviceEndHours).padStart(2, '0')}:${String(serviceEndMins).padStart(2, '0')}`;
-    
+
     console.log(`\n  Service ${i + 1}: ${assignment.service.name}`);
     console.log(`    Staff: ${assignment.staff ? assignment.staff.name : 'Any Professional'}`);
     console.log(`    Time: ${currentStartTime} - ${serviceEndTime} (${serviceDuration} min)`);
-    
+
     // Calculate how many 30-min slots this service needs
     const slotsNeeded = Math.ceil(serviceDuration / 30);
     console.log(`    Slots needed: ${slotsNeeded}`);
-    
+
     // Generate time slots to check for THIS service
     const timeSlotsToCheck: string[] = [];
     for (let j = 0; j < slotsNeeded; j++) {
@@ -302,17 +307,17 @@ const isTimeSlotAvailableForAllStaff = (
       const slotTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
       timeSlotsToCheck.push(slotTime);
     }
-    
+
     console.log(`    Checking slots: ${timeSlotsToCheck.join(', ')}`);
-    
+
     // Check if this staff member is available for THEIR specific service time
     if (assignment.staff) {
       const staffMember = assignment.staff;
-      
+
       // Check EACH time slot needed for THIS service
       for (const slotTime of timeSlotsToCheck) {
         console.log(`      ⏱️  Checking slot: ${slotTime} for ${staffMember.name}`);
-        
+
         // Check if this specific time slot is blocked for this staff member
         const isBlocked = isTimeSlotBlocked(staffMember, date, slotTime);
         if (isBlocked) {
@@ -320,7 +325,7 @@ const isTimeSlotAvailableForAllStaff = (
           console.log('  ❌ Time slot NOT available\n');
           return false;
         }
-        
+
         // Check if staff member has existing appointments overlapping this slot
         // Use a 30-minute duration for each slot check
         const isBooked = isTimeSlotBooked(existingAppointments, date, slotTime, staffMember, 30);
@@ -329,18 +334,18 @@ const isTimeSlotAvailableForAllStaff = (
           console.log('  ❌ Time slot NOT available\n');
           return false;
         }
-        
+
         console.log(`      ✅ Slot ${slotTime} is available for ${staffMember.name}`);
       }
-      
+
       console.log(`    ✅ All slots available for ${staffMember.name}`);
     }
-    
+
     // Move to next service's start time
     currentStartTime = serviceEndTime;
     currentStartMinutes = serviceEndMinutes;
   }
-  
+
   console.log('\n  ✅ All services can be scheduled - time slot is AVAILABLE\n');
   return true;
 };
@@ -353,10 +358,10 @@ const calculateSequentialTimeSlots = (
   staff: StaffMember[]
 ): { startTime: string; endTime: string; schedule: Array<{ service: Service; staff: StaffMember; startTime: string; endTime: string }> } | null => {
   console.log('Calculating sequential time slots for assignments:', assignments);
-  
+
   // Group services by staff member
   const staffServiceMap: { [key: string]: { staff: StaffMember; services: Service[] } } = {};
-  
+
   for (const assignment of assignments) {
     if (assignment.staff) {
       const staffId = assignment.staff.id;
@@ -370,20 +375,20 @@ const calculateSequentialTimeSlots = (
       }
     }
   }
-  
+
   console.log('Staff service map:', staffServiceMap);
-  
+
   // Calculate total duration for each staff member
   const staffDurations: { [key: string]: number } = {};
   Object.keys(staffServiceMap).forEach(staffId => {
     const entry = staffServiceMap[staffId];
-    const totalDuration = entry.services.reduce((sum: number, service: Service) => 
+    const totalDuration = entry.services.reduce((sum: number, service: Service) =>
       sum + convertDurationToMinutes(service.duration), 0);
     staffDurations[staffId] = totalDuration;
   });
-  
+
   console.log('Staff durations:', staffDurations);
-  
+
   // For now, we'll keep the existing logic but add better logging
   // In a more advanced implementation, we would calculate the actual sequential schedule
   return null;
@@ -395,17 +400,17 @@ const convertDurationToMinutes = (duration: string | number): number => {
   if (typeof duration === 'string') {
     const match = duration.match(/(\d+)\s*(min|hour|hours)/);
     if (!match) return 60; // default to 60 minutes
-    
+
     const value = parseInt(match[1]);
     const unit = match[2];
-    
+
     if (unit === 'min') return value;
     if (unit === 'hour' || unit === 'hours') return value * 60;
   } else if (typeof duration === 'number') {
     // If duration is already a number, assume it's in minutes
     return duration;
   }
-  
+
   return 60; // default to 60 minutes
 };
 
@@ -422,14 +427,19 @@ export function Step3_MultiServiceTimeSlot({
   isLoading,
   error,
   selectedServices,
-  vendorId
+  vendorId,
+  platformFee = 0,
+  serviceTax = 0,
+  taxRate = 0,
+  couponCode = null,
+  discountAmount = 0
 }: Step3MultiServiceTimeSlotProps) {
   const dateScrollerRef = useRef<HTMLDivElement>(null);
   const lastRefetchTimestamp = useRef<number>(Date.now());
 
   // Generate available dates (next 60 days)
   const dates = useMemo(() => Array.from({ length: 60 }, (_, i) => addDays(new Date(), i)), []);
-  
+
   const currentMonthYear = useMemo(() => format(selectedDate, 'MMMM yyyy'), [selectedDate]);
 
   // Get all assigned staff IDs for fetching appointments
@@ -458,22 +468,22 @@ export function Step3_MultiServiceTimeSlot({
   // Also refetch when the component mounts to get the most recent appointments
   useEffect(() => {
     let isMounted = true;
-    
+
     const fetchData = async () => {
       if (vendorId && isMounted) {
         try {
           // Check if an appointment was just created
           const appointmentJustCreated = typeof window !== 'undefined' && sessionStorage.getItem('appointmentJustCreated') === 'true';
-          
+
           // Add a small delay to ensure any pending writes are completed
           // This is especially important after appointment creation
           const delay = appointmentJustCreated ? 1500 : 100; // Longer delay if appointment was just created
           await new Promise(resolve => setTimeout(resolve, delay));
-          
+
           console.log('Step3_MultiServiceTimeSlot: Refetching appointments data');
           await refetch();
           lastRefetchTimestamp.current = Date.now();
-          
+
           // Clear the flag after refetching
           if (appointmentJustCreated && typeof window !== 'undefined') {
             console.log('Step3_MultiServiceTimeSlot: Cleared appointmentJustCreated flag after refetching');
@@ -484,18 +494,18 @@ export function Step3_MultiServiceTimeSlot({
         }
       }
     };
-    
+
     fetchData();
-    
+
     // Refetch when the document becomes visible again (e.g., after switching tabs)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && vendorId && isMounted) {
         fetchData();
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    
+
     // Periodically refetch appointments to ensure we have the latest data
     // This helps catch any appointments that might have been created by other users
     const intervalId = setInterval(() => {
@@ -503,7 +513,7 @@ export function Step3_MultiServiceTimeSlot({
         fetchData();
       }
     }, 30000); // Refetch every 30 seconds
-    
+
     // Cleanup function to prevent state updates on unmounted component
     return () => {
       isMounted = false;
@@ -515,7 +525,7 @@ export function Step3_MultiServiceTimeSlot({
   // Additional check for appointment creation flag with a shorter interval
   useEffect(() => {
     let isMounted = true;
-    
+
     const checkForNewAppointments = async () => {
       if (vendorId && isMounted && typeof window !== 'undefined' && sessionStorage.getItem('appointmentJustCreated') === 'true') {
         console.log('Step3_MultiServiceTimeSlot: Detected new appointment creation, forcing refetch');
@@ -531,13 +541,13 @@ export function Step3_MultiServiceTimeSlot({
         }
       }
     };
-    
+
     // Check immediately when component mounts
     checkForNewAppointments();
-    
+
     // Check periodically
-      const intervalId = setInterval(checkForNewAppointments, 5000);
-    
+    const intervalId = setInterval(checkForNewAppointments, 5000);
+
     return () => {
       isMounted = false;
       clearInterval(intervalId);
@@ -572,7 +582,7 @@ export function Step3_MultiServiceTimeSlot({
       serviceStaffAssignments: serviceStaffAssignments,
       totalDuration: totalDuration
     });
-    
+
     console.log('Step3_MultiServiceTimeSlot - Appointments data for filtering:', {
       existingAppointmentsCount: existingAppointments?.length || 0,
       existingAppointments: existingAppointments,
@@ -585,10 +595,10 @@ export function Step3_MultiServiceTimeSlot({
         service: apt.service?.name || apt.serviceName
       }))
     });
-    
+
     // Group services by staff member for sequential scheduling information
     const staffServiceMap: { [key: string]: { staff: StaffMember; services: Service[] } } = {};
-    
+
     for (const assignment of serviceStaffAssignments) {
       if (assignment.staff) {
         const staffId = assignment.staff.id;
@@ -602,16 +612,16 @@ export function Step3_MultiServiceTimeSlot({
         }
       }
     }
-    
+
     // Calculate total duration for each staff member
     const staffDurations: { [key: string]: number } = {};
     Object.keys(staffServiceMap).forEach(staffId => {
       const entry = staffServiceMap[staffId];
-      const totalDuration = entry.services.reduce((sum: number, service: Service) => 
+      const totalDuration = entry.services.reduce((sum: number, service: Service) =>
         sum + convertDurationToMinutes(service.duration), 0);
       staffDurations[staffId] = totalDuration;
     });
-    
+
     // Calculate sequential schedule information for logging
     if (Object.keys(staffServiceMap).length > 1) {
       console.log('=== SERVICE SEQUENCING INFORMATION ===');
@@ -626,7 +636,7 @@ export function Step3_MultiServiceTimeSlot({
       });
       console.log('====================================');
     }
-    
+
     // If no working hours data, return fallback slots
     if (!workingHours || workingHours.length === 0) {
       console.log('Step3_MultiServiceTimeSlot - No working hours data, using fallback time slots');
@@ -634,20 +644,20 @@ export function Step3_MultiServiceTimeSlot({
     }
 
     const dayName = getDayName(selectedDate);
-    
+
     // Check if all assigned staff members are the same
     const assignedStaff = serviceStaffAssignments
       .map(assignment => assignment.staff)
       .filter(staff => staff !== null && staff !== undefined) as StaffMember[];
-    
-    const allSameStaff = assignedStaff.length > 0 && 
+
+    const allSameStaff = assignedStaff.length > 0 &&
       assignedStaff.every(staff => staff.id === assignedStaff[0].id);
-    
+
     // If all services are assigned to the same staff member, use their specific working hours
     if (allSameStaff && assignedStaff.length > 0) {
       const staffMember = assignedStaff[0];
       console.log(`Step3_MultiServiceTimeSlot - Using staff-specific hours for ${dayName} for staff ${staffMember.name}`);
-      
+
       // Get the staff's slots for the selected day
       let staffSlots: TimeSlot[] = [];
       switch (dayName.toLowerCase()) {
@@ -673,13 +683,13 @@ export function Step3_MultiServiceTimeSlot({
           staffSlots = staffMember.sundaySlots || [];
           break;
       }
-      
+
       // If staff has specific slots, use them
       if (staffSlots.length > 0) {
         console.log('Step3_MultiServiceTimeSlot - Using staff slots:', staffSlots);
         let slots = generateTimeSlotsFromStaffSlots(staffSlots);
         console.log('Step3_MultiServiceTimeSlot - Generated slots from staff slots:', slots);
-        
+
         // Filter out past time slots for current date
         const today = new Date();
         const isToday = selectedDate.toDateString() === today.toDateString();
@@ -688,7 +698,7 @@ export function Step3_MultiServiceTimeSlot({
           slots = slots.filter(slot => slot > currentTime);
           console.log('Step3_MultiServiceTimeSlot - Filtered past time slots for today:', slots);
         }
-        
+
         // Filter out blocked time slots for the selected staff and check availability for duration
         console.log(`\n🔍 Checking ${slots.length} staff-specific time slots for total duration of ${totalDuration} minutes...`);
         const filteredSlots = slots.filter((slot: string) => {
@@ -697,7 +707,7 @@ export function Step3_MultiServiceTimeSlot({
             console.log(`❌ ${slot} is BLOCKED for ${staffMember.name}`);
             return false;
           }
-          
+
           // Check if ALL required time slots are available for the full duration
           const isAvailable = isTimeSlotAvailableForAllStaff(slot, selectedDate, serviceStaffAssignments, totalDuration, existingAppointments);
           if (isAvailable) {
@@ -709,14 +719,14 @@ export function Step3_MultiServiceTimeSlot({
         });
         console.log(`\n📋 Step3_MultiServiceTimeSlot - Final available slots: ${filteredSlots.length} slots`);
         console.log('Available times:', filteredSlots);
-        
+
         // Return the filtered slots (no need for additional filtering since isTimeSlotAvailableForAllStaff already checks all required slots)
         return filteredSlots;
       }
     }
-    
+
     // Use vendor working hours as fallback
-    const dayWorkingHours = workingHours.find((wh: WorkingHours) => 
+    const dayWorkingHours = workingHours.find((wh: WorkingHours) =>
       wh.dayOfWeek.toLowerCase() === dayName.toLowerCase()
     );
 
@@ -729,7 +739,7 @@ export function Step3_MultiServiceTimeSlot({
 
     let slots = generateTimeSlots(dayWorkingHours.startTime, dayWorkingHours.endTime);
     console.log('Step3_MultiServiceTimeSlot - Generated slots from vendor hours:', slots);
-    
+
     // Filter out past time slots for current date
     const today = new Date();
     const isToday = selectedDate.toDateString() === today.toDateString();
@@ -738,7 +748,7 @@ export function Step3_MultiServiceTimeSlot({
       slots = slots.filter(slot => slot > currentTime);
       console.log('Step3_MultiServiceTimeSlot - Filtered past time slots for today:', slots);
     }
-    
+
     // Filter out blocked time slots and check availability for all assigned staff
     // The isTimeSlotAvailableForAllStaff function now checks ALL required time slots for the full duration
     console.log(`\n🔍 Checking ${slots.length} time slots for total duration of ${totalDuration} minutes...`);
@@ -755,15 +765,15 @@ export function Step3_MultiServiceTimeSlot({
     });
     console.log(`\n📋 Step3_MultiServiceTimeSlot - Final available slots: ${filteredSlots.length} slots`);
     console.log('Available times:', filteredSlots);
-    
+
     // Return the filtered slots (no need for additional filtering since isTimeSlotAvailableForAllStaff already checks all required slots)
     const validSlots = filteredSlots;
-    
+
     // Log the corrected understanding of how services will be sequenced
     if (validSlots.length > 0 && assignedStaff.length > 1) {
       console.log('=== CORRECTED SERVICE SEQUENCING ===');
       console.log('When customer selects a time slot, services will be sequenced as follows:');
-      
+
       Object.keys(staffServiceMap).forEach(staffId => {
         const entry = staffServiceMap[staffId];
         const staffName = entry.staff.name;
@@ -777,7 +787,7 @@ export function Step3_MultiServiceTimeSlot({
       });
       console.log('====================================');
     }
-    
+
     // Ensure we always return an array
     return Array.isArray(validSlots) ? validSlots : [];
   }, [selectedDate, workingHours, serviceStaffAssignments, totalDuration, existingAppointments, lastRefetchTimestamp.current]);
@@ -785,17 +795,17 @@ export function Step3_MultiServiceTimeSlot({
   // Check if a date is available based on working hours and staff availability
   const isDateAvailable = (date: Date): boolean => {
     if (!workingHours || workingHours.length === 0) return true;
-    
+
     const dayName = getDayName(date);
-    const dayWorkingHours = workingHours.find((wh: WorkingHours) => 
+    const dayWorkingHours = workingHours.find((wh: WorkingHours) =>
       wh.dayOfWeek.toLowerCase() === dayName.toLowerCase()
     );
-    
+
     // Check if all assigned staff are available on this day
     const assignedStaff = serviceStaffAssignments
       .map(assignment => assignment.staff)
       .filter(staff => staff !== null && staff !== undefined) as StaffMember[];
-    
+
     for (const staffMember of assignedStaff) {
       const dayKey = `${dayName.toLowerCase()}Available` as keyof StaffMember;
       // Check if the property exists and is set to false
@@ -804,7 +814,7 @@ export function Step3_MultiServiceTimeSlot({
         return false;
       }
     }
-    
+
     const result = dayWorkingHours?.isAvailable || false;
     console.log(`Step3_MultiServiceTimeSlot - Date ${format(date, 'yyyy-MM-dd')} availability:`, result);
     return result;
@@ -821,9 +831,9 @@ export function Step3_MultiServiceTimeSlot({
     // Scroll the selected date into view
     const selectedDateElement = document.getElementById(`date-${format(selectedDate, 'yyyy-MM-dd')}`);
     if (selectedDateElement && dateScrollerRef.current) {
-        const container = dateScrollerRef.current;
-        const scrollLeft = selectedDateElement.offsetLeft - container.offsetLeft - (container.offsetWidth / 2) + (selectedDateElement.offsetWidth / 2);
-        container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+      const container = dateScrollerRef.current;
+      const scrollLeft = selectedDateElement.offsetLeft - container.offsetLeft - (container.offsetWidth / 2) + (selectedDateElement.offsetWidth / 2);
+      container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
     }
   }, [selectedDate]);
 
@@ -856,7 +866,7 @@ export function Step3_MultiServiceTimeSlot({
           </div>
           <p className="text-muted-foreground">Choose a date and time slot that works for you.</p>
         </div>
-        
+
         <div className="flex items-center justify-center py-12">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -881,7 +891,7 @@ export function Step3_MultiServiceTimeSlot({
           </div>
           <p className="text-muted-foreground">Choose a date and time slot that works for you.</p>
         </div>
-        
+
         <div className="flex items-center justify-center py-12">
           <div className="flex flex-col items-center gap-4">
             <AlertCircle className="h-8 w-8 text-destructive" />
@@ -906,7 +916,7 @@ export function Step3_MultiServiceTimeSlot({
           </div>
           <p className="text-muted-foreground">Choose a date and time slot that works for you.</p>
         </div>
-        
+
         <div className="flex items-center justify-center py-12">
           <div className="flex flex-col items-center gap-4">
             <AlertCircle className="h-8 w-8 text-destructive" />
@@ -933,74 +943,74 @@ export function Step3_MultiServiceTimeSlot({
           ))}
         </div>
       </div>
-      
+
       {/* Date Scroller with Month and Navigation */}
       <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold text-lg">{currentMonthYear}</h3>
-          <div className="flex gap-1">
-               <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('left')}>
-                  <ChevronLeft className="h-4 w-4" />
-              </Button>
-               <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('right')}>
-                  <ChevronRight className="h-4 w-4" />
-              </Button>
-          </div>
+        <h3 className="font-semibold text-lg">{currentMonthYear}</h3>
+        <div className="flex gap-1">
+          <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('left')}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('right')}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       <div id="date-scroller" ref={dateScrollerRef} className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar">
-          {dates.map((date: Date) => {
-              const isAvailable = isDateAvailable(date);
-              return (
-                  <Button
-                      key={date.toISOString()}
-                      id={`date-${format(date, 'yyyy-MM-dd')}`}
-                      variant={isSameDay(date, selectedDate) ? 'default' : 'outline'}
-                      className={cn(
-                          "flex flex-col h-auto px-4 py-2 flex-shrink-0 rounded-xl shadow-sm",
-                          !isAvailable && "opacity-50 cursor-not-allowed"
-                      )}
-                      onClick={() => isAvailable && onSelectDate(date)}
-                      disabled={!isAvailable}
-                  >
-                      <span className="font-semibold">{format(date, 'EEE')}</span>
-                      <span className="text-2xl font-bold my-1">{format(date, 'd')}</span>
-                      <span className="text-xs">{format(date, 'MMM')}</span>
-                  </Button>
-              );
-          })}
+        {dates.map((date: Date) => {
+          const isAvailable = isDateAvailable(date);
+          return (
+            <Button
+              key={date.toISOString()}
+              id={`date-${format(date, 'yyyy-MM-dd')}`}
+              variant={isSameDay(date, selectedDate) ? 'default' : 'outline'}
+              className={cn(
+                "flex flex-col h-auto px-4 py-2 flex-shrink-0 rounded-xl shadow-sm",
+                !isAvailable && "opacity-50 cursor-not-allowed"
+              )}
+              onClick={() => isAvailable && onSelectDate(date)}
+              disabled={!isAvailable}
+            >
+              <span className="font-semibold">{format(date, 'EEE')}</span>
+              <span className="text-2xl font-bold my-1">{format(date, 'd')}</span>
+              <span className="text-xs">{format(date, 'MMM')}</span>
+            </Button>
+          );
+        })}
       </div>
 
       {/* Time Slots */}
       <div className="mt-6">
-          <div className="flex items-center gap-3 mb-4">
-               <div className="p-3 bg-primary/10 rounded-full text-primary">
-                  <Clock className="h-5 w-5" />
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-3 bg-primary/10 rounded-full text-primary">
+            <Clock className="h-5 w-5" />
+          </div>
+          <h3 className="font-semibold text-lg">Available Slots for {format(selectedDate, 'MMMM d')}</h3>
+        </div>
+        <div className="max-h-64 overflow-y-auto pr-2 no-scrollbar">
+          {availableTimeSlots.length > 0 ? (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+              {availableTimeSlots.map((time: string) => (
+                <Button
+                  key={time}
+                  variant={selectedTime === time ? 'default' : 'outline'}
+                  className="h-12 text-base font-semibold rounded-lg shadow-sm"
+                  onClick={() => onSelectTime(time)}
+                >
+                  {time}
+                </Button>
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <div className="flex flex-col items-center gap-2">
+                <Clock className="h-8 w-8 text-muted-foreground" />
+                <p className="text-muted-foreground">No available time slots for this date.</p>
+                <p className="text-sm text-muted-foreground">Please select a different date.</p>
               </div>
-              <h3 className="font-semibold text-lg">Available Slots for {format(selectedDate, 'MMMM d')}</h3>
-          </div>
-          <div className="max-h-64 overflow-y-auto pr-2 no-scrollbar">
-              {availableTimeSlots.length > 0 ? (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                      {availableTimeSlots.map((time: string) => (
-                          <Button
-                              key={time}
-                              variant={selectedTime === time ? 'default' : 'outline'}
-                              className="h-12 text-base font-semibold rounded-lg shadow-sm"
-                              onClick={() => onSelectTime(time)}
-                          >
-                              {time}
-                          </Button>
-                      ))}
-                  </div>
-              ) : (
-                  <div className="flex items-center justify-center py-8">
-                      <div className="flex flex-col items-center gap-2">
-                          <Clock className="h-8 w-8 text-muted-foreground" />
-                          <p className="text-muted-foreground">No available time slots for this date.</p>
-                          <p className="text-sm text-muted-foreground">Please select a different date.</p>
-                      </div>
-                  </div>
-              )}
-          </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
