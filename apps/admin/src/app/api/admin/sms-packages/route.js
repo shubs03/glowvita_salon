@@ -17,7 +17,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // POST a new SMS package
 export const POST = authMiddlewareAdmin(async (req) => {
@@ -58,7 +58,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // PUT update an SMS package
 export const PUT = authMiddlewareAdmin(async (req) => {
@@ -98,7 +98,7 @@ export const PUT = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // DELETE an SMS package
 export const DELETE = authMiddlewareAdmin(async (req) => {
@@ -132,4 +132,4 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

@@ -1,37 +1,83 @@
 // middlewares/auth.js
 import jwt from "jsonwebtoken";
 import AdminUserModel from "@repo/lib/models/admin/AdminUser";
+import VendorModel from "@repo/lib/models/Vendor.model";
+import StaffModel from "@repo/lib/models/Vendor/Staff.model";
+import DoctorModel from "@repo/lib/models/Vendor/Docters.model";
+import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 import _db from "@repo/lib/db";
-import { JWT_SECRET_ADMIN } from "@repo/config/config";
+import {
+  JWT_SECRET_ADMIN,
+  JWT_SECRET_VENDOR,
+  JWT_SECRET_DOCTOR,
+  JWT_SECRET_SUPPLIER
+} from "@repo/config/config";
 
 
 export function authMiddlewareAdmin(handler, allowedRoles = []) {
   return async (req, ctx) => {
     await _db();
 
-    const token = req.headers.get("authorization")?.split(" ")[1];
+    let token = req.headers.get("authorization")?.split(" ")[1];
+
+    // If no header, try to get from cookies
+    if (!token) {
+      token = req.cookies?.get('admin_access_token')?.value;
+    }
+
     if (!token) {
       return Response.json({ message: "Unauthorized: No token provided" }, { status: 401 });
     }
 
     try {
-      if (!JWT_SECRET_ADMIN) {
-        throw new Error("JWT_SECRET_ADMIN is not defined on the server.");
-      }
-      
-      const decoded = jwt.verify(token, JWT_SECRET_ADMIN);
-      const admin = await AdminUserModel.findById(decoded.userId).select("-password");
-
-      if (!admin) {
-        return Response.json({ message: "Unauthorized: Admin not found" }, { status: 401 });
+      const decoded = jwt.decode(token);
+      if (!decoded || !decoded.role) {
+        return Response.json({ message: "Invalid token structure" }, { status: 401 });
       }
 
-      // Role check for admin panel (superadmin, admin, etc.)
-      if (allowedRoles.length && !allowedRoles.includes(admin.roleName)) {
+      let secret;
+      let Model;
+      const role = decoded.role;
+
+      // Determine secret and model based on role
+      if (role === 'admin' || role === 'SUPER_ADMIN' || role === 'REGIONAL_ADMIN') {
+        secret = JWT_SECRET_ADMIN;
+        Model = AdminUserModel;
+      } else if (role === 'vendor' || role === 'staff') {
+        secret = JWT_SECRET_VENDOR;
+        Model = role === 'vendor' ? VendorModel : StaffModel;
+      } else if (role === 'doctor') {
+        secret = JWT_SECRET_DOCTOR;
+        Model = DoctorModel;
+      } else if (role === 'supplier') {
+        secret = JWT_SECRET_SUPPLIER;
+        Model = SupplierModel;
+      } else {
+        return Response.json({ message: "Unauthorized: Invalid role" }, { status: 401 });
+      }
+
+      if (!secret) {
+        throw new Error(`JWT secret for role ${role} is not defined on the server.`);
+      }
+
+      const verified = jwt.verify(token, secret);
+      const user = await Model.findById(verified.userId || verified.id).select("-password");
+
+      if (!user) {
+        return Response.json({ message: `Unauthorized: ${role} not found` }, { status: 401 });
+      }
+
+      // Role check (allowedRoles usually contains specific admin roles or 'vendor' etc.)
+      const userRoleLabel = user.roleName || user.role || role;
+      if (allowedRoles.length && !allowedRoles.includes(userRoleLabel)) {
         return Response.json({ message: "Forbidden: You do not have permission to access this resource" }, { status: 403 });
       }
 
-      req.user = admin;
+      req.user = user;
+      req.user.userId = user._id;
+      req.user.roleName = userRoleLabel;
+      req.user.permissions = verified.permissions || user.permissions || [];
+      req.user.assignedRegions = verified.regions || user.assignedRegions || [];
       return handler(req, ctx);
     } catch (err) {
       console.error("Auth Middleware Error:", err.message);

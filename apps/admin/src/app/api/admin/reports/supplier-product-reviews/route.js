@@ -3,14 +3,19 @@ import ReviewModel from "@repo/lib/models/Review/Review.model";
 import ProductModel from "@repo/lib/models/Vendor/Product.model";
 import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 import { authMiddlewareAdmin } from '../../../../../../src/middlewareAdmin';
+import { buildRegionQueryFromRequest } from "@repo/lib";
 
 await _db();
 
 // GET - Fetch all reviews for supplier products with aggregated data for reporting
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
-    // Get all supplier products
-    const supplierProducts = await ProductModel.find({ origin: 'Supplier' })
+    // Get all supplier products (scoped by region)
+    const regionQuery = buildRegionQueryFromRequest(req);
+    const supplierProducts = await ProductModel.find({ 
+      ...regionQuery,
+      origin: 'Supplier' 
+    })
       .populate('vendorId', 'shopName firstName lastName email')
       .select('productName productImages price category vendorId reviewCount rating createdAt stock status');
 
@@ -163,4 +168,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }
     });
   }
-});
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

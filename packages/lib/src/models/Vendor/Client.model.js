@@ -8,6 +8,12 @@ const clientSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    regionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Region",
+      required: true,
+      index: true,
+    },
     fullName: {
       type: String,
       required: true,
@@ -103,9 +109,22 @@ clientSchema.index({
   occupation: "text",
 });
 
-// Pre-save middleware (empty now as we removed searchText)
-clientSchema.pre("save", function (next) {
-  next();
+// Pre-save middleware to automate regionId inheritance
+clientSchema.pre("save", async function (next) {
+  try {
+    // 1. Inherit regionId from Vendor if missing
+    if (!this.regionId && this.vendorId) {
+      const Vendor = mongoose.models.Vendor || (await import('./Vendor.model.js')).default;
+      const vendor = await Vendor.findById(this.vendorId).select('regionId');
+      if (vendor && vendor.regionId) {
+        this.regionId = vendor.regionId;
+      }
+    }
+    next();
+  } catch (error) {
+    console.error("Error in Client pre-save middleware:", error);
+    next(error);
+  }
 });
 
 // Instance methods

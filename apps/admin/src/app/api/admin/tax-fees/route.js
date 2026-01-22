@@ -55,7 +55,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // PATCH update tax fee settings
 export const PATCH = authMiddlewareAdmin(async (req) => {
@@ -96,7 +96,7 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
   } finally {
     session.endSession();
   }
-}, ["superadmin", "admin", "supplier"]);
+}, ["SUPER_ADMIN"]);
 
 // POST create new tax fee settings
 export const POST = authMiddlewareAdmin(async (req) => {
@@ -121,4 +121,4 @@ export const POST = authMiddlewareAdmin(async (req) => {
   } finally {
     session.endSession();
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN"]);

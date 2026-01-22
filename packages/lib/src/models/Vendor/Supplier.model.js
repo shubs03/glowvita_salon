@@ -51,6 +51,12 @@ const supplierSchema = new mongoose.Schema({
     enum: ["Approved", "Pending", "Rejected"],
     default: "Pending",
   },
+  regionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Region",
+    required: true,
+    index: true,
+  },
   subscription: {
     plan: {
       type: mongoose.Schema.Types.ObjectId,
@@ -107,7 +113,7 @@ const supplierSchema = new mongoose.Schema({
 
 
 // Pre-save middleware to auto-update subscription status and ensure consistency
-supplierSchema.pre("save", async function (next) {
+supplierSchema.pre("validate", async function (next) {
   // Auto-update subscription status based on endDate
   if (this.subscription && this.subscription.endDate) {
     const now = new Date();
@@ -155,6 +161,19 @@ supplierSchema.pre("save", async function (next) {
     } catch (error) {
       console.error("Error assigning default subscription to supplier:", error);
       // Don't block supplier creation if subscription assignment fails
+    }
+  }
+
+  // Auto-assign regionId based on location if missing or location changed
+  if (!this.regionId || this.isModified("location")) {
+    try {
+      const { assignRegion } = await import("../../utils/assignRegion.js");
+      const assignedRegionId = await assignRegion(this.city, this.state, this.location);
+      if (assignedRegionId) {
+        this.regionId = assignedRegionId;
+      }
+    } catch (error) {
+      console.error("[SupplierModel] Error auto-assigning region:", error);
     }
   }
 

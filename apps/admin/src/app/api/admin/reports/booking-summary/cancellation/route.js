@@ -3,6 +3,8 @@ import _db from '@repo/lib/db';
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import { authMiddlewareAdmin } from "../../../../../../middlewareAdmin";
+import { getRegionQuery } from "@repo/lib/utils/regionQuery";
+import { buildRegionQueryFromRequest } from "@repo/lib";
 
 // Initialize database connection
 const initDb = async () => {
@@ -28,6 +30,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const saleType = searchParams.get('saleType'); // 'online', 'offline', or 'all'
     const vendorId = searchParams.get('vendor'); // vendor filter
     const city = searchParams.get('city'); // city filter
+    const regionId = searchParams.get('regionId'); // region filter
     
     console.log("Cancellation Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, saleType });
     
@@ -103,6 +106,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     };
     
     const vendorFilter = await buildVendorFilter(vendorId);
+    const regionQuery = getRegionQuery(req.user, regionId);
     
     // Build city filter
     const buildCityFilter = (city) => {
@@ -120,6 +124,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       ...dateFilter,
       ...modeFilter,
       ...vendorFilter,
+      ...regionQuery,
       status: "cancelled"
     };
     
@@ -154,8 +159,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
     }));
     
     // Vendor-specific cancellation counts with city information and booking/payment modes
-    // First, get all vendors for city filtering if needed
-    const allVendors = await VendorModel.find({}, 'businessName city');
+    // First, get all vendors for city filtering if needed (scoped by region)
+    const regionalVendorQuery = buildRegionQueryFromRequest(req);
+    const allVendors = await VendorModel.find(regionalVendorQuery, 'businessName city');
     
     // Filter vendors by city if city filter is applied
     let filteredVendorIds = null;
@@ -241,4 +247,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       error: error.message
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

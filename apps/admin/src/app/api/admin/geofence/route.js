@@ -66,7 +66,7 @@ export const POST = authMiddlewareAdmin(
       { status: 201 }
     );
   },
-  ["superadmin", "admin"] // Both superadmin and admin can create fences
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"] // Both superadmin and admin can create fences
 );
 
 export const GET = authMiddlewareAdmin(
@@ -128,7 +128,7 @@ export const GET = authMiddlewareAdmin(
       }
     });
   },
-  ["superadmin", "admin", "manager"] // Multiple roles can view
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "manager"] // Multiple roles can view
 );
 
 export const PUT = authMiddlewareAdmin(
@@ -196,7 +196,7 @@ export const PUT = authMiddlewareAdmin(
       geoFence: updatedGeoFence
     });
   },
-  ["superadmin", "admin"] // Only superadmin and admin can update
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"] // Only superadmin and admin can update
 );
 
 export const DELETE = authMiddlewareAdmin(
@@ -224,5 +224,5 @@ export const DELETE = authMiddlewareAdmin(
       deletedFence: deleted
     });
   },
-  ["superadmin"] // Only superadmin can delete fences
+  ["SUPER_ADMIN"] // Only superadmin can delete fences
 );

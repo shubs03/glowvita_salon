@@ -5,6 +5,7 @@ const initialState = {
   isAdminAuthenticated: false,
   admin: null,
   token: null,
+  selectedRegion: null,
 };
 
 // Function to safely load state from localStorage
@@ -85,12 +86,16 @@ const adminAuthSlice = createSlice({
         });
       }
     },
+    setSelectedRegion: (state, action) => {
+      state.selectedRegion = action.payload;
+    },
   },
 });
 
 // Selectors
 export const selectToken = (state) => state.adminAuth.token;
 export const selectCurrentAdmin = (state) => state.adminAuth.admin;
+export const selectSelectedRegion = (state) => state.adminAuth.selectedRegion;
 
-export const { setAdminAuth, clearAdminAuth } = adminAuthSlice.actions;
+export const { setAdminAuth, clearAdminAuth, setSelectedRegion } = adminAuthSlice.actions;
 export default adminAuthSlice.reducer;

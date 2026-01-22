@@ -97,6 +97,11 @@ if (isServer && mongoose && mongoose.model) {
       required: true,
       refPath: 'businessType' // Dynamic reference to Vendor/Doctor/Supplier model based on businessType
     },
+    regionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Region",
+      index: true,
+    },
     createdAt: {
       type: Date,
       default: Date.now,

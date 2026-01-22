@@ -46,7 +46,13 @@ export async function POST(request) {
     }
 
     // Generate tokens
-    const { accessToken, refreshToken } = generateTokens(user._id, "admin");
+    const { accessToken, refreshToken } = generateTokens(
+      user._id,
+      "admin",
+      user.permissions || [],
+      user.assignedRegions || [],
+      user.roleName
+    );
 
     // Remove password from response
     const { password: _, ...safeUser } = user.toObject();
@@ -66,7 +72,7 @@ export async function POST(request) {
 
     response.cookies.set('admin_access_token', accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV !== 'production',
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       path: '/',
       maxAge: 60 * 60 * 24, // 1 day

@@ -78,11 +78,30 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
   }
 
   const permissions = admin?.permissions || [];
-  const isSuperAdmin = admin?.roleName === 'superadmin';
+  const isSuperAdmin = admin?.roleName === 'SUPER_ADMIN';
   
-  const visibleNavItems = isSuperAdmin 
-    ? sidebarNavItems 
-    : sidebarNavItems.filter(item => permissions.includes(item.permission));
+  const hasModuleAccess = (modulePermission: string) => {
+    if (isSuperAdmin) return true;
+    
+    // Check for :all permission
+    if (permissions.includes(`${modulePermission}:all`)) return true;
+    
+    // Check for :view permission
+    if (permissions.includes(`${modulePermission}:view`)) return true;
+    
+    // Check if user has edit or delete (which implies view)
+    if (permissions.includes(`${modulePermission}:edit`) || 
+        permissions.includes(`${modulePermission}:delete`)) {
+      return true;
+    }
+    
+    // Legacy: check for module permission without action
+    if (permissions.includes(modulePermission)) return true;
+    
+    return false;
+  };
+  
+  const visibleNavItems = sidebarNavItems.filter(item => hasModuleAccess(item.permission));
 
   const SidebarContent = () => (
     <div className={cn(

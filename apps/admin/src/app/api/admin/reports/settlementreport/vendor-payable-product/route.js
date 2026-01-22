@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import ClientOrderModel from '@repo/lib/models/user/ClientOrder.model';
 import { authMiddlewareAdmin } from '../../../../../../middlewareAdmin';
+import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 
 // Initialize database connection
 const initDb = async () => {
@@ -27,6 +28,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const city = searchParams.get('city'); // City filter
     const businessName = searchParams.get('businessName'); // Business name filter (vendor/supplier)
     const userType = searchParams.get('userType'); // 'vendor', 'supplier', or 'all'
+    const regionId = searchParams.get('regionId'); // Region filter
     
     console.log("Vendor Payable to Admin Report - Product Filter parameters:", { 
       filterType, 
@@ -87,8 +89,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
     console.log("Date filter:", dateFilter);
     
     // Create the main filter for client orders
+    const regionQuery = getRegionQuery(req.user, regionId);
     const mainFilter = {
       ...dateFilter,
+      ...regionQuery,
       status: 'Delivered', // Only include delivered orders
     };
 
@@ -213,7 +217,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Get unique cities for filter dropdown
     const cityPipeline = [
-      { $match: { status: 'Delivered' } },
+      { $match: { ...regionQuery, status: 'Delivered' } },
       {
         $lookup: {
           from: "crm_products",
@@ -260,7 +264,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Get unique business names for filter dropdown
     const businessNamePipeline = [
-      { $match: { status: 'Delivered' } },
+      { $match: { ...regionQuery, status: 'Delivered' } },
       {
         $lookup: {
           from: "crm_products",
@@ -341,4 +345,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       error: error.message
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

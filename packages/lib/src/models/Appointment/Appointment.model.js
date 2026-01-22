@@ -58,6 +58,11 @@ const serviceItemSchema = new mongoose.Schema({
     type: Number, // in kilometers
     default: 0,
   },
+  // Staff commission tracking per service item
+  staffCommission: {
+    rate: { type: Number, default: 0 },
+    amount: { type: Number, default: 0 }
+  },
   distanceMeters: {
     type: Number, // in meters
     default: 0,
@@ -78,6 +83,12 @@ const appointmentSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Vendor",
       required: true,
+    },
+    regionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Region",
+      required: true,
+      index: true,
     },
     client: {
       type: mongoose.Schema.Types.ObjectId,
@@ -138,13 +149,13 @@ const appointmentSchema = new mongoose.Schema(
       duration: { type: Number, default: 0 },
       _id: { type: mongoose.Schema.Types.ObjectId, required: true }
     }],
-    discount: {
-      type: Number,
-      default: 0,
-    },
     totalAmount: {
       type: Number,
       required: true,
+    },
+    couponCode: {
+      type: String,
+      default: null,
     },
     // Payment-related fields
     platformFee: {
@@ -166,6 +177,11 @@ const appointmentSchema = new mongoose.Schema(
     finalAmount: {
       type: Number,
       required: true,
+    },
+    // Staff commission tracking for legacy/single service appointments
+    staffCommission: {
+      rate: { type: Number, default: 0 },
+      amount: { type: Number, default: 0 }
     },
     // Fields to track payment progress
     amountPaid: {
@@ -451,9 +467,53 @@ appointmentSchema.index(
   { sparse: true }
 );
 
+// Pre-save middleware to automate regionId inheritance and status updates
+appointmentSchema.pre('save', async function (next) {
+  try {
+    // 1. Inherit regionId from Vendor if missing
+    if (!this.regionId && this.vendorId) {
+      // Use standard connection to avoid missing models during registration
+      const Vendor = mongoose.models.Vendor || (await import('../Vendor/Vendor.model.js')).default;
+      const vendor = await Vendor.findById(this.vendorId).select('regionId');
+      if (vendor && vendor.regionId) {
+        this.regionId = vendor.regionId;
+      }
+    }
+
+    // 2. Auto-complete past appointments
+    if (this.bookingDate && this.endTime && this.status !== 'completed' && this.status !== 'cancelled') {
+      const now = new Date();
+      const endDateTime = new Date(this.bookingDate);
+      const [hours, minutes] = this.endTime.split(':');
+      endDateTime.setHours(parseInt(hours), parseInt(minutes), 0);
+
+      if (endDateTime < now) {
+        this.status = 'completed';
+      }
+    }
+
+    this.updatedAt = new Date();
+    next();
+  } catch (error) {
+    console.error("Error in Appointment pre-save middleware:", error);
+    next(error);
+  }
+});
+
 // Ensure the model is only defined once
 const AppointmentModel =
   mongoose.models.Appointment ||
   mongoose.model("Appointment", appointmentSchema);
+
+// If the model was already registered (e.g. in Next.js dev), 
+// ensure it has the new couponCode field
+if (mongoose.models.Appointment && AppointmentModel.schema && !AppointmentModel.schema.paths.couponCode) {
+  AppointmentModel.schema.add({
+    couponCode: {
+      type: String,
+      default: null,
+    }
+  });
+}
 
 export default AppointmentModel;

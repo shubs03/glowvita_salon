@@ -9,6 +9,7 @@ import { glowvitaApi } from '@repo/store/api';
 import { startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { AppointmentDetailCard } from './components/AppointmentDetailCard';
+import { ExportButtons } from '@/components/ExportButtons';
 import { Appointment } from '../../../../../packages/types/src/appointment';
 
 // Import new components
@@ -208,6 +209,51 @@ export default function AppointmentsPage() {
                     Manage your appointments and track scheduling
                   </p>
                 </div>
+              </div>
+              <div className="flex gap-2 w-full md:w-auto">
+                <ExportButtons
+                  data={filteredAppointments}
+                  filename="appointments_export"
+                  title="Appointments Report"
+                  columns={[
+                    { header: 'Client', key: 'clientName' },
+                    {
+                      header: 'Services',
+                      key: 'serviceName',
+                      transform: (val, item) => item.serviceItems?.length > 0
+                        ? item.serviceItems.map((s: any) => s.serviceName).join(', ')
+                        : val
+                    },
+                    {
+                      header: 'Staff',
+                      key: 'staffName',
+                      transform: (val, item) => item.serviceItems?.length > 0
+                        ? item.serviceItems.map((s: any) => s.staffName).join(', ')
+                        : val
+                    },
+                    {
+                      header: 'Date',
+                      key: 'date',
+                      transform: (val) => new Date(val).toLocaleDateString()
+                    },
+                    {
+                      header: 'Time',
+                      key: 'startTime',
+                      transform: (val, item) => `${val} - ${item.endTime}`
+                    },
+                    { header: 'Duration (min)', key: 'duration' },
+                    {
+                      header: 'Amount',
+                      key: 'totalAmount',
+                      transform: (val, item) => `₹${((item as any).finalAmount || val || 0).toFixed(2)}`
+                    },
+                    { header: 'Status', key: 'status' }
+                  ]}
+                  className="w-full md:w-auto"
+                />
+                <Button onClick={() => handleOpenModal('add')} className="w-full md:w-auto flex-1 md:flex-none">
+                  <Plus className="mr-2 h-4 w-4" /> New Appointment
+                </Button>
               </div>
             </div>
 

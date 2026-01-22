@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { useAuth } from '@/hooks/useAuth';
+import { useApiErrorHandler } from '@/hooks/useApiErrorHandler';
 import { sidebarNavItems } from '@/lib/routes';
 import { cn } from '@repo/ui/cn';
 
@@ -15,6 +16,9 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   const { admin, isLoading, isAdminAuthenticated } = useAuth();
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  
+  // Enable global API error handling
+  useApiErrorHandler();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -47,11 +51,18 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
       }
              
       // Check if the user has permission
-      const isSuperAdmin = admin.roleName === 'superadmin';
-      const hasPermission = admin.permissions?.includes(requiredPermission);
+      const isSuperAdmin = admin.roleName === 'SUPER_ADMIN';
+      
+      // Check for various permission formats
+      const hasAccess = isSuperAdmin || 
+        admin.permissions?.includes(`${requiredPermission}:all`) ||
+        admin.permissions?.includes(`${requiredPermission}:view`) ||
+        admin.permissions?.includes(`${requiredPermission}:edit`) ||
+        admin.permissions?.includes(`${requiredPermission}:delete`) ||
+        admin.permissions?.includes(requiredPermission);
 
-      // If user is not superadmin and does not have the required permission, redirect
-      if (!isSuperAdmin && !hasPermission) {
+      // If user doesn't have access, redirect
+      if (!hasAccess) {
         router.push('/');
       }
     }

@@ -19,6 +19,7 @@ interface PriceBreakdown {
   vendorServiceTax: number;
   totalTax: number;
   finalTotal: number;
+  couponCode?: string | null;
 }
 
 interface BookingSummaryProps {
@@ -36,6 +37,8 @@ interface BookingSummaryProps {
   weddingPackageMode?: 'default' | 'customized' | null;
   customizedPackageServices?: Service[];
   onEditPackage?: () => void; // New prop for editing wedding package
+  onRemoveAddon?: (serviceId: string, addonId: string) => void; // New prop for removing addons
+  couponCode?: string | null;
 }
 
 export function BookingSummary({
@@ -52,7 +55,9 @@ export function BookingSummary({
   weddingPackage,
   weddingPackageMode,
   customizedPackageServices,
-  onEditPackage
+  onEditPackage,
+  onRemoveAddon,
+  couponCode: propCouponCode
 }: BookingSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -147,9 +152,23 @@ export function BookingSummary({
                     {service.selectedAddons && service.selectedAddons.length > 0 && (
                       <div className="pl-3 border-l-2 border-primary/20 space-y-1">
                         {service.selectedAddons.map((addon) => (
-                          <div key={addon._id} className="flex justify-between items-center text-xs text-muted-foreground">
+                          <div key={addon._id} className="flex justify-between items-center text-xs text-muted-foreground group">
                             <span>+ {addon.name}</span>
-                            <span>₹{addon.price}</span>
+                            <div className="flex items-center gap-1">
+                              <span>₹{addon.price}</span>
+                              {onRemoveAddon && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onRemoveAddon(service.id, addon._id);
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded"
+                                  title="Remove addon"
+                                >
+                                  <X className="h-3 w-3 text-destructive" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -170,7 +189,7 @@ export function BookingSummary({
           <div className="flex items-center justify-between mt-auto">
             <div>
               <button onClick={() => setIsExpanded(!isExpanded)} className="flex items-center gap-1">
-                <span className="text-lg font-bold">₹{total.toFixed(2)}</span>
+                <span className="text-lg font-bold">₹{Math.round(total)}</span>
                 {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
               </button>
               <p className="text-xs text-muted-foreground">Total (incl. tax)</p>
@@ -294,9 +313,23 @@ export function BookingSummary({
                           {service.selectedAddons && service.selectedAddons.length > 0 && (
                             <div className="pl-3 border-l-2 border-primary/20 space-y-1">
                               {service.selectedAddons.map((addon) => (
-                                <div key={addon._id} className="flex justify-between items-center text-xs text-muted-foreground">
+                                <div key={addon._id} className="flex justify-between items-center text-xs text-muted-foreground group">
                                   <span>+ {addon.name}</span>
-                                  <span>₹{addon.price}</span>
+                                  <div className="flex items-center gap-1">
+                                    <span>₹{addon.price}</span>
+                                    {onRemoveAddon && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onRemoveAddon(service.id, addon._id);
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-destructive/10 rounded"
+                                        title="Remove addon"
+                                      >
+                                        <X className="h-3 w-3 text-destructive" />
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                             </div>
@@ -355,36 +388,68 @@ export function BookingSummary({
           </h4>
 
           <div className="bg-secondary/30 rounded-lg p-4 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span>₹{subtotal.toFixed(2)}</span>
-            </div>
+            {/* Itemized Services and Addons */}
+            {!weddingPackage && selectedServices.length > 0 && (
+              <div className="space-y-2 pb-2 border-b border-border/50">
+                {selectedServices.map((service) => {
+                  const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined
+                    ? parseFloat(String(service.discountedPrice))
+                    : parseFloat(String(service.price || '0'));
 
-            {priceBreakdown && priceBreakdown.discountAmount > 0 && (
-              <div className="flex justify-between text-sm text-green-600">
-                <span className="text-muted-foreground">Discount</span>
-                <span>-₹{priceBreakdown.discountAmount.toFixed(2)}</span>
+                  return (
+                    <div key={service.id} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-foreground">{service.name}</span>
+                        <span className="font-medium">₹{Math.round(servicePrice)}</span>
+                      </div>
+                      {service.selectedAddons && service.selectedAddons.length > 0 && (
+                        <div className="pl-3 space-y-1">
+                          {service.selectedAddons.map((addon) => (
+                            <div key={addon._id} className="flex justify-between text-xs text-muted-foreground">
+                              <span>+ {addon.name}</span>
+                              <span>₹{Math.round(typeof addon.price === 'string' ? parseFloat(addon.price) : (addon.price || 0))}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
+
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Subtotal</span>
+              <span>₹{Math.round(subtotal)}</span>
+            </div>
 
             {priceBreakdown && priceBreakdown.platformFee > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Platform Fee</span>
-                <span>₹{priceBreakdown.platformFee.toFixed(2)}</span>
+                <span>₹{Math.round(priceBreakdown.platformFee)}</span>
               </div>
             )}
 
             {priceBreakdown && priceBreakdown.serviceTax > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">GST</span>
-                <span>₹{priceBreakdown.serviceTax.toFixed(2)}</span>
+                <span>₹{Math.round(priceBreakdown.serviceTax)}</span>
               </div>
             )}
 
             {priceBreakdown && priceBreakdown.vendorServiceTax > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Vendor Service Tax</span>
-                <span>₹{priceBreakdown.vendorServiceTax.toFixed(2)}</span>
+                <span>₹{Math.round(priceBreakdown.vendorServiceTax)}</span>
+              </div>
+            )}
+
+            {priceBreakdown && priceBreakdown.discountAmount > 0 && (
+              <div className="flex justify-between text-sm text-green-600 font-medium">
+                <span className="text-muted-foreground">
+                  Discount {propCouponCode || priceBreakdown.couponCode ? `(${propCouponCode || priceBreakdown.couponCode})` : ''}
+                </span>
+                <span>-₹{Math.round(priceBreakdown.discountAmount)}</span>
               </div>
             )}
 
@@ -392,7 +457,7 @@ export function BookingSummary({
 
             <div className="flex justify-between font-semibold">
               <span>Total Amount</span>
-              <span className="text-primary">₹{total.toFixed(2)}</span>
+              <span className="text-primary">₹{Math.round(total)}</span>
             </div>
           </div>
         </div>

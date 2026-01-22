@@ -79,6 +79,7 @@ export const POST = async (req) => {
     // Create consultation record
     const consultation = await DoctorConsultation.create({
       doctorId,
+      regionId: doctor.regionId,
       doctorName: doctorName || doctor.name,
       doctorSpecialty: doctorSpecialty || (doctor.specialties && doctor.specialties[0]) || 'General',
       doctorImage: body.doctorImage,

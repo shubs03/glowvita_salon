@@ -1,9 +1,9 @@
 
 import {
-    FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaBox, FaUserMd, 
-    FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags, 
-    FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaSync,
-    FaMapMarkedAlt, FaBell
+  FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaBox, FaUserMd,
+  FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags,
+  FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaSync,
+  FaMapMarkedAlt, FaBell
 } from "react-icons/fa";
 import { FaListUl } from "react-icons/fa";
 import { IconType } from "react-icons";
@@ -52,7 +52,7 @@ export const sidebarNavItems: NavItem[] = [
     Icon: FaTruck,
     permission: "supplier-management",
   },
-   {
+  {
     title: "Geo-fencing",
     href: "/geo-fencing",
     Icon: FaMapMarkedAlt,
@@ -65,12 +65,18 @@ export const sidebarNavItems: NavItem[] = [
     permission: "admin-roles",
   },
   {
+    title: "Regions",
+    href: "/regions",
+    Icon: FaMapMarkedAlt,
+    permission: "admin-roles", // Grouped with admin roles for now
+  },
+  {
     title: "Offers & Coupons",
     href: "/offers-coupons",
     Icon: FaTags,
     permission: "offers-coupons",
   },
-   {
+  {
     title: "Subscription Management",
     href: "/subscription-management",
     Icon: FaSync,
@@ -82,7 +88,7 @@ export const sidebarNavItems: NavItem[] = [
     Icon: FaUserFriends,
     permission: "referral-management",
   },
-   {
+  {
     title: "Dropdowns",
     href: "/dropdown-management",
     Icon: FaListUl,

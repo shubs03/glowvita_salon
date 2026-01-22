@@ -106,6 +106,10 @@ export const POST = authMiddlewareAdmin(
       }
     }
 
+    // Validate and lock region
+    const { validateAndLockRegion, buildRegionQueryFromRequest } = await import("@repo/lib");
+    const finalRegionId = validateAndLockRegion(req.user, body.regionId);
+
     // Create offer
     const newOffer = await OfferModel.create({
       code: finalCode,
@@ -118,6 +122,7 @@ export const POST = authMiddlewareAdmin(
       applicableCategories: categories,
       offerImage: imageUrl || null,
       isCustomCode: isCustom,
+      regionId: finalRegionId,
     });
 
     return Response.json(
@@ -125,13 +130,15 @@ export const POST = authMiddlewareAdmin(
       { status: 201 }
     );
   },
-  ["superadmin"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );
 
 // Get All Offers
 export const GET = authMiddlewareAdmin(
-  async () => {
-    const offers = await OfferModel.find().lean(); // Use .lean() for read-only operations
+  async (req) => {
+    const { buildRegionQueryFromRequest } = await import("@repo/lib");
+    const query = buildRegionQueryFromRequest(req);
+    const offers = await OfferModel.find(query).lean(); // Use .lean() for read-only operations
     const currentDate = new Date();
 
     const sanitizedOffers = offers.map(offer => {
@@ -154,7 +161,7 @@ export const GET = authMiddlewareAdmin(
 
     return Response.json(sanitizedOffers);
   },
-  ["superadmin", "admin"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );
 
 // Update Offer
@@ -251,7 +258,7 @@ export const PUT = authMiddlewareAdmin(
 
     return Response.json(updatedOffer);
   },
-  ["superadmin"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );
 
 
@@ -272,5 +279,5 @@ export const DELETE = authMiddlewareAdmin(
 
     return Response.json({ message: "Offer deleted successfully" });
   },
-  ["superadmin"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );

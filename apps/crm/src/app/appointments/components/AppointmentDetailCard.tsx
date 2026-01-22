@@ -40,7 +40,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
   const totalAmount = (appointment as any).finalAmount ?? appointment.totalAmount ?? appointment.amount ?? 0;
   const paidAmount = (appointment as any).amountPaid ?? (appointment as any).payment?.paid ?? 0;
   const remainingAmount = Math.max(0, Number(totalAmount) - Number(paidAmount));
-  const discountAmount = (appointment as any).discountAmount ?? appointment.discount ?? 0;
+  const discountAmount = (appointment as any).discountAmount ?? 0;
   const serviceTax = (appointment as any).serviceTax ?? 0;
   const platformFee = (appointment as any).platformFee ?? 0;
   const paymentMethod = (appointment as any).paymentMethod ?? (appointment as any).payment?.paymentMethod ?? null;
@@ -108,7 +108,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
           price: appointment.amount,
           quantity: 1,
           totalPrice: appointment.amount,
-          discount: appointment.discount || 0,
+          discount: (appointment as any).discountAmount || 0,
           staff: appointment.staffName,
           duration: appointment.duration,
           type: 'service'

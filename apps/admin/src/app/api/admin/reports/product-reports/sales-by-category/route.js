@@ -5,6 +5,7 @@ import ProductModel from '@repo/lib/models/Vendor/Product.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
 import { authMiddlewareAdmin } from "../../../../../../middlewareAdmin";
+import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 
 // Initialize database connection
 const initDb = async () => {
@@ -31,6 +32,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const city = searchParams.get('city'); // City filter
     const userType = searchParams.get('userType'); // 'vendor', 'supplier', or 'all'
     const businessName = searchParams.get('businessName'); // Business name filter
+    const regionId = searchParams.get('regionId'); // Region filter
     
     console.log("Sales by Category Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, saleType, city, userType, businessName });
     
@@ -97,11 +99,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
     };
     
     const modeFilter = buildModeFilter(saleType);
+    const regionQuery = getRegionQuery(req.user, regionId);
     
     // Combine all filters
     const combinedFilter = {
       ...dateFilter,
       ...modeFilter,
+      ...regionQuery,
       status: "Delivered" // Only count delivered orders
     };
     
@@ -390,4 +394,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       error: error.message
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

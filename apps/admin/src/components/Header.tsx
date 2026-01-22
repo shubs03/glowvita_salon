@@ -22,6 +22,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import { useState } from "react";
+import RegionSelector from "./RegionSelector";
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
@@ -90,6 +91,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
       </Button>
 
       <div className="flex items-center gap-2 md:gap-4 ml-auto">
+        <RegionSelector />
         <ThemeToggle />
         
         {/* Notification Bell with Dropdown */}

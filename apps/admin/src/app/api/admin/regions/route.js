@@ -1,0 +1,98 @@
+import { NextResponse } from "next/server";
+import _db from "@repo/lib/db";
+import RegionModel from "@repo/lib/models/admin/Region";
+import { authMiddlewareAdmin } from "../../../../middlewareAdmin";
+import { hasPermission, forbiddenResponse } from "@repo/lib";
+
+// GET all regions
+export const GET = authMiddlewareAdmin(async (req) => {
+  if (!hasPermission(req.user, "admin-roles:view")) {
+    return forbiddenResponse();
+  }
+  try {
+    await _db();
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get("page")) || 1;
+    const limit = parseInt(searchParams.get("limit")) || 20;
+    const skip = (page - 1) * limit;
+
+    const regions = await RegionModel.find({})
+      .sort({ name: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    const total = await RegionModel.countDocuments({});
+
+    return NextResponse.json({
+      success: true,
+      data: regions,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error("GET Regions Error:", error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}, ["SUPER_ADMIN"]);
+
+// POST create region
+export const POST = authMiddlewareAdmin(async (req) => {
+  if (!hasPermission(req.user, "admin-roles:edit")) {
+    return forbiddenResponse();
+  }
+  try {
+    await _db();
+    const body = await req.json();
+    const { name, code, description, geometry, cities, states } = body;
+
+    if (!name || !code) {
+      return NextResponse.json({ success: false, error: "Name and code are required" }, { status: 400 });
+    }
+
+    const newRegion = await RegionModel.create({ 
+      name, 
+      code, 
+      description,
+      geometry,
+      cities,
+      states
+    });
+
+    return NextResponse.json({ success: true, data: newRegion }, { status: 201 });
+  } catch (error) {
+    console.error("POST Region Error:", error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}, ["SUPER_ADMIN"]);
+
+// PUT update region
+export const PUT = authMiddlewareAdmin(async (req) => {
+  if (!hasPermission(req.user, "admin-roles:edit")) {
+    return forbiddenResponse();
+  }
+  try {
+    await _db();
+    const body = await req.json();
+    const { id, ...updateData } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: "Region ID is required" }, { status: 400 });
+    }
+
+    const updatedRegion = await RegionModel.findByIdAndUpdate(id, updateData, { new: true }).lean();
+
+    if (!updatedRegion) {
+      return NextResponse.json({ success: false, error: "Region not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: updatedRegion });
+  } catch (error) {
+    console.error("PUT Region Error:", error);
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}, ["SUPER_ADMIN"]);

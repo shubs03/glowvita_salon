@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import _db from "@repo/lib/db";
 import ClientModel from "@repo/lib/models/Vendor/Client.model";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 
 // Initialize database connection
 const initDb = async () => {
@@ -22,12 +23,16 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Get query parameters
     const url = new URL(req.url);
     const vendorId = url.searchParams.get('vendorId');
+    const regionId = url.searchParams.get('regionId');
     const limit = parseInt(url.searchParams.get('limit')) || 100;
     const page = parseInt(url.searchParams.get('page')) || 1;
     const skip = (page - 1) * limit;
     
+    // Build region query
+    const regionQuery = getRegionQuery(req.user, regionId);
+    
     // Build query
-    let query = {};
+    let query = { ...regionQuery };
     if (vendorId) {
       query.vendorId = vendorId;
     }
@@ -60,7 +65,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       error: error.message 
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // POST, PUT, DELETE methods are not implemented for read-only access
 export const POST = () => NextResponse.json({ success: false, message: "Method not allowed" }, { status: 405 });

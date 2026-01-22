@@ -11,6 +11,12 @@ const smsTransactionSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  regionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Region',
+    required: true,
+    index: true
+  },
   packageId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "SmsPackage",
@@ -79,9 +85,29 @@ smsTransactionSchema.pre("validate", function(next) {
   next();
 });
 
-smsTransactionSchema.pre("save", function (next) {
-  this.updatedAt = new Date();
-  next();
+smsTransactionSchema.pre("save", async function (next) {
+  try {
+    // 1. Inherit regionId if missing
+    if (!this.regionId && this.userId) {
+      let ParentModel;
+      if (this.userType === 'vendor') {
+        ParentModel = mongoose.models.Vendor || (await import('../Vendor/Vendor.model.js')).default;
+      } else {
+        ParentModel = mongoose.models.Supplier || (await import('../Vendor/Supplier.model.js')).default;
+      }
+      
+      const parent = await ParentModel.findById(this.userId).select('regionId');
+      if (parent && parent.regionId) {
+        this.regionId = parent.regionId;
+      }
+    }
+
+    this.updatedAt = new Date();
+    next();
+  } catch (error) {
+    console.error("Error in SmsTransaction pre-save middleware:", error);
+    next(error);
+  }
 });
 
 // Index for efficient querying

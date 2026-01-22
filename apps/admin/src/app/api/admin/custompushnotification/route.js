@@ -45,7 +45,7 @@ export const POST = authMiddlewareAdmin(
       { status: 201 }
     );
   },
-  ["superadmin"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );
 
 export const GET = authMiddlewareAdmin(
@@ -53,7 +53,7 @@ export const GET = authMiddlewareAdmin(
     const notifications = await NotificationModel.find().sort({ createdAt: -1 });
     return Response.json(notifications);
   },
-  ["superadmin"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );
 
 export const PUT = authMiddlewareAdmin(
@@ -72,7 +72,7 @@ export const PUT = authMiddlewareAdmin(
 
     return Response.json(updatedNotification);
   },
-  ["superadmin"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );
 
 export const DELETE = authMiddlewareAdmin(
@@ -86,5 +86,5 @@ export const DELETE = authMiddlewareAdmin(
 
     return Response.json({ message: "Notification deleted successfully" });
   },
-  ["superadmin"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );

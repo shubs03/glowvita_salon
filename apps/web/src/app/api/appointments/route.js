@@ -8,9 +8,9 @@ await _db();
 // GET existing appointments for checking availability
 export const GET = async (req) => {
     try {
-        
+
         const { searchParams } = new URL(req.url);
-        const vendorId = searchParams.get('vendorId'); 
+        const vendorId = searchParams.get('vendorId');
         const staffId = searchParams.get('staffId');
         const doctorId = searchParams.get('doctorId');
         const date = searchParams.get('date');
@@ -21,7 +21,7 @@ export const GET = async (req) => {
         console.log('GET appointments - vendorId:', vendorId, 'staffId:', staffId, 'date:', date, 'userId:', userId);
 
         // Base query - either vendorId or userId is required
-        const query = { 
+        const query = {
             status: { $in: ['confirmed', 'pending', 'scheduled'] } // Only include active appointments
         };
 
@@ -31,11 +31,11 @@ export const GET = async (req) => {
                 { client: userId },
                 { userId: userId }
             ];
-        } 
+        }
         // If vendorId is provided, filter by vendorId (existing behavior)
         else if (vendorId) {
             query.vendorId = vendorId;
-        } 
+        }
         // If neither userId nor vendorId is provided, return error
         else {
             return NextResponse.json(
@@ -52,7 +52,7 @@ export const GET = async (req) => {
             startOfDay.setHours(0, 0, 0, 0);
             const endOfDay = new Date(searchDate);
             endOfDay.setHours(23, 59, 59, 999);
-            
+
             query.date = {
                 $gte: startOfDay,
                 $lte: endOfDay
@@ -71,7 +71,7 @@ export const GET = async (req) => {
         }
 
         console.log('Final query:', JSON.stringify(query, null, 2));
-    
+
         // Fetch appointments with populated vendor data
         const appointments = await AppointmentModel.find(query)
             .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId amount totalAmount finalAmount platformFee serviceTax discountAmount vendorId')
@@ -86,7 +86,7 @@ export const GET = async (req) => {
             let duration = apt.duration || 60;
             // Updated to use finalAmount if available, otherwise totalAmount, otherwise amount
             let price = apt.finalAmount || apt.totalAmount || apt.amount || 0;
-            
+
             // If there are service items, use the first one for main service info
             if (apt.serviceItems && apt.serviceItems.length > 0) {
                 const firstService = apt.serviceItems[0];
@@ -101,11 +101,11 @@ export const GET = async (req) => {
                     price = serviceItemsTotal;
                 }
             }
-            
+
             // Get salon information from vendor data
             const salonName = apt.vendorId?.businessName || 'Glowvita Salon';
             const salonAddress = apt.vendorId?.address || '123 Beauty Street, Salon City';
-            
+
             // Status transformation - ensure proper capitalization and allowed values
             let status = apt.status || 'Confirmed';
             if (typeof status === 'string') {
@@ -118,19 +118,19 @@ export const GET = async (req) => {
             } else {
                 status = 'Confirmed';
             }
-            
+
             // For time slot checking, we need the actual appointment times
             // CRITICAL: For multi-service appointments, startTime is from FIRST service, endTime is from LAST service
             let startTime = apt.startTime;
             let endTime = apt.endTime;
-            
+
             if (apt.serviceItems && apt.serviceItems.length > 0) {
                 // Use first service's startTime (appointment begins with first service)
                 startTime = apt.serviceItems[0].startTime || startTime;
                 // Use LAST service's endTime (appointment ends with last service)
                 const lastService = apt.serviceItems[apt.serviceItems.length - 1];
                 endTime = lastService.endTime || endTime;
-                
+
                 console.log(`Multi-service appointment ${apt._id}:`, {
                     firstServiceStart: apt.serviceItems[0].startTime,
                     lastServiceEnd: lastService.endTime,
@@ -139,7 +139,7 @@ export const GET = async (req) => {
                     totalServices: apt.serviceItems.length
                 });
             }
-            
+
             return {
                 _id: apt._id,
                 id: apt._id.toString(),
@@ -173,26 +173,26 @@ export const GET = async (req) => {
 
         // Add CORS headers
         const response = NextResponse.json(transformedAppointments, { status: 200 });
-        
+
         response.headers.set('Access-Control-Allow-Origin', '*');
         response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
         response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-        
+
         return response;
     } catch (error) {
         console.error('Error fetching appointments:', error);
         console.error('Error stack:', error.stack);
-        
+
         // Add CORS headers to error response
         const response = NextResponse.json(
             { message: "Error fetching appointments", error: error.message },
             { status: 500 }
         );
-        
+
         response.headers.set('Access-Control-Allow-Origin', '*');
         response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
         response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-        
+
         return response;
     }
 };
@@ -203,7 +203,7 @@ import { calculateVendorTravelTime } from '@repo/lib/modules/scheduling/Enhanced
 // POST a new appointment from public web booking
 export const POST = async (req) => {
     try {
-      
+
         const body = await req.json();
 
         console.log('POST request - creating public appointment:', body);
@@ -218,39 +218,39 @@ export const POST = async (req) => {
 
         // Required fields validation (client is handled separately)
         const requiredFields = [
-          'vendorId',
-          'clientName',
-          'service',
-          'serviceName',
-          'staff',
-          'staffName',
-          'date',
-          'startTime',
-          'endTime',
-          'duration',
-          'amount',
-          'totalAmount'
+            'vendorId',
+            'clientName',
+            'service',
+            'serviceName',
+            'staff',
+            'staffName',
+            'date',
+            'startTime',
+            'endTime',
+            'duration',
+            'amount',
+            'totalAmount'
         ];
-        
+
         const missingFields = requiredFields.filter(field => {
-          // Special handling for staff field - it can be null but must be present
-          if (field === 'staff') {
-            // Staff can be null but must be present in the body
-            return body[field] === undefined;
-          }
-          if (field === 'staffName') {
-            // StaffName can be null/empty but must be present in the body
-            return body[field] === undefined;
-          }
-          // For all other fields, they must be present and not null/undefined
-          return !body[field] && body[field] !== 0 && body[field] !== false;
+            // Special handling for staff field - it can be null but must be present
+            if (field === 'staff') {
+                // Staff can be null but must be present in the body
+                return body[field] === undefined;
+            }
+            if (field === 'staffName') {
+                // StaffName can be null/empty but must be present in the body
+                return body[field] === undefined;
+            }
+            // For all other fields, they must be present and not null/undefined
+            return !body[field] && body[field] !== 0 && body[field] !== false;
         });
-        
+
         if (missingFields.length > 0) {
             console.log('Missing fields:', missingFields);
             console.log('Body received:', body);
             return NextResponse.json(
-                { message: `Missing required fields: ${missingFields.join(', ')}` }, 
+                { message: `Missing required fields: ${missingFields.join(', ')}` },
                 { status: 400 }
             );
         }
@@ -260,7 +260,7 @@ export const POST = async (req) => {
         if (!body.client && !body.userId) {
             console.log('No client field found in body:', body);
             return NextResponse.json(
-                { message: "Missing client field (client or userId required)" }, 
+                { message: "Missing client field (client or userId required)" },
                 { status: 400 }
             );
         }
@@ -269,9 +269,9 @@ export const POST = async (req) => {
         let travelTimeInfo = null;
         const isHomeService = body.isHomeService || false;
         const homeServiceLocation = body.homeServiceLocation || null;
-        
+
         console.log('Processing appointment - isHomeService:', isHomeService, 'location:', homeServiceLocation);
-        
+
         if (isHomeService && homeServiceLocation && homeServiceLocation.lat && homeServiceLocation.lng) {
             try {
                 console.log('Calculating travel time for home service...');
@@ -323,7 +323,7 @@ export const POST = async (req) => {
             isWeddingService: body.isWeddingService || false,
             mode: 'online' // Web bookings are always online mode
         };
-        
+
         // Add home service location if it's a home service
         if (isHomeService && homeServiceLocation) {
             appointmentData.homeServiceLocation = {
@@ -337,7 +337,7 @@ export const POST = async (req) => {
             };
             console.log('Added home service location to appointment:', appointmentData.homeServiceLocation);
         }
-        
+
         // Add travel time information if available
         if (travelTimeInfo) {
             appointmentData.travelTime = travelTimeInfo.timeInMinutes || 0;
@@ -349,7 +349,7 @@ export const POST = async (req) => {
                 distanceMeters: appointmentData.distanceMeters
             });
         }
-        
+
         // Add travel time to serviceItems if it's a multi-service appointment
         if (appointmentData.isMultiService && appointmentData.serviceItems && appointmentData.serviceItems.length > 0 && travelTimeInfo) {
             appointmentData.serviceItems = appointmentData.serviceItems.map((item, index) => ({
@@ -361,14 +361,12 @@ export const POST = async (req) => {
             }));
         }
 
-        console.log('Creating appointment with data:', appointmentData);
-        console.log('Final appointment data before saving:', {
-            isHomeService: appointmentData.isHomeService,
-            homeServiceLocation: appointmentData.homeServiceLocation,
-            travelTime: appointmentData.travelTime,
-            travelDistance: appointmentData.travelDistance,
-            distanceMeters: appointmentData.distanceMeters
-        });
+        // Fetch vendor to get regionId
+        const vendor = await VendorModel.findById(body.vendorId).select('regionId').lean();
+        if (vendor && vendor.regionId) {
+            appointmentData.regionId = vendor.regionId;
+            console.log('Set regionId for appointment:', vendor.regionId);
+        }
 
         const newAppointment = await AppointmentModel.create(appointmentData);
         console.log('Appointment created successfully with ID:', newAppointment._id);
@@ -378,7 +376,7 @@ export const POST = async (req) => {
             travelTime: newAppointment.travelTime,
             travelDistance: newAppointment.travelDistance
         });
-        
+
         // Populate the appointment with related data
         // For multi-service appointments, we need to populate serviceItems properly
         const populatedAppointment = await AppointmentModel.findById(newAppointment._id)
@@ -400,26 +398,26 @@ export const POST = async (req) => {
             { message: "Appointment created successfully", appointment: populatedAppointment },
             { status: 201 }
         );
-        
+
         response.headers.set('Access-Control-Allow-Origin', '*');
         response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
         response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-        
+
         return response;
     } catch (error) {
         console.error('Error creating appointment:', error);
         console.error('Error stack:', error.stack);
-        
+
         // Add CORS headers to error response
         const response = NextResponse.json(
             { message: "Error creating appointment", error: error.message },
             { status: 500 }
         );
-        
+
         response.headers.set('Access-Control-Allow-Origin', '*');
         response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
         response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-        
+
         return response;
     }
 };

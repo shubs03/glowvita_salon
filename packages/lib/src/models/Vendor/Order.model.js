@@ -20,6 +20,7 @@ const orderSchema = new mongoose.Schema({
   // For B2B: Vendor buying from Supplier
   vendorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vendor' }, // The buyer
   supplierId: { type: mongoose.Schema.Types.ObjectId, ref: 'Supplier' }, // The seller
+  regionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Region', index: true, required: true },
 
   items: [orderItemSchema],
   totalAmount: { type: Number, required: true },
@@ -43,11 +44,31 @@ const orderSchema = new mongoose.Schema({
   }],
 }, { timestamps: true });
 
-// Add initial status to history before saving
-orderSchema.pre('save', function(next) {
+// Add initial status to history before saving and inherit regionId
+orderSchema.pre('save', async function(next) {
   if (this.isNew) {
     this.statusHistory.push({ status: 'Pending', notes: 'Order placed.' });
   }
+
+  // 1. Inherit regionId if missing
+  if (!this.regionId) {
+    try {
+      // Determine parents
+      const sellerId = this.supplierId || this.vendorId;
+      const sellerModelName = this.supplierId ? 'Supplier' : 'Vendor';
+
+      if (sellerId) {
+        const SellerModel = mongoose.models[sellerModelName] || (await import(`./${sellerModelName}.model.js`)).default;
+        const seller = await SellerModel.findById(sellerId).select('regionId');
+        if (seller && seller.regionId) {
+          this.regionId = seller.regionId;
+        }
+      }
+    } catch (error) {
+      console.error("[OrderModel] Error inheriting regionId:", error);
+    }
+  }
+
   next();
 });
 

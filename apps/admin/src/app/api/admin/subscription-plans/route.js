@@ -32,7 +32,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
       { status: 400 }
     );
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN"]);
 
 // PATCH update a subscription plan
 export const PATCH = authMiddlewareAdmin(async (req) => {
@@ -65,7 +65,7 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       { status: 400 }
     );
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN"]);
 
 // DELETE a subscription plan
 export const DELETE = authMiddlewareAdmin(async (req) => {
@@ -100,4 +100,4 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
       { status: 400 }
     );
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN"]);

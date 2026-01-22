@@ -8,6 +8,12 @@ const doctorConsultationSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  regionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Region',
+    required: true,
+    index: true
+  },
   doctorName: {
     type: String,
     required: true,
@@ -220,19 +226,33 @@ doctorConsultationSchema.index({ userId: 1, appointmentDate: -1 });
 doctorConsultationSchema.index({ phoneNumber: 1, appointmentDate: -1 });
 doctorConsultationSchema.index({ consultationType: 1, status: 1, appointmentDate: 1 });
 
-// Pre-save middleware to update timestamps
-doctorConsultationSchema.pre('save', function(next) {
-  this.updatedAt = new Date();
-  
-  if (this.isModified('status')) {
-    if (this.status === 'completed') {
-      this.completedAt = new Date();
-    } else if (this.status === 'cancelled') {
-      this.cancelledAt = new Date();
+// Pre-save middleware to update timestamps and inherit regionId
+doctorConsultationSchema.pre('save', async function(next) {
+  try {
+    // 1. Inherit regionId from Doctor if missing
+    if (!this.regionId && this.doctorId) {
+      const Doctor = mongoose.models.Doctor || (await import('./Docters.model.js')).default;
+      const doctor = await Doctor.findById(this.doctorId).select('regionId');
+      if (doctor && doctor.regionId) {
+        this.regionId = doctor.regionId;
+      }
     }
+
+    this.updatedAt = new Date();
+    
+    if (this.isModified('status')) {
+      if (this.status === 'completed') {
+        this.completedAt = new Date();
+      } else if (this.status === 'cancelled') {
+        this.cancelledAt = new Date();
+      }
+    }
+    
+    next();
+  } catch (error) {
+    console.error("Error in DoctorConsultation pre-save middleware:", error);
+    next(error);
   }
-  
-  next();
 });
 
 // Static method to get consultations by doctor

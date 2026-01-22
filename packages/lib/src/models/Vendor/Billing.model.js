@@ -81,6 +81,14 @@ const billingItemSchema = new mongoose.Schema({
     name: {
       type: String,
       trim: true
+    },
+    staffCommissionRate: {
+      type: Number,
+      default: 0
+    },
+    staffCommissionAmount: {
+      type: Number,
+      default: 0
     }
   }
 }, { _id: false });
@@ -94,7 +102,7 @@ const billingSchema = new mongoose.Schema({
     ref: 'Vendor',
     index: true
   },
-  
+
   // Invoice information
   invoiceNumber: {
     type: String,
@@ -102,7 +110,7 @@ const billingSchema = new mongoose.Schema({
     unique: true,
     index: true
   },
-  
+
   // Reference to client
   clientId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -110,7 +118,7 @@ const billingSchema = new mongoose.Schema({
     ref: 'Client',
     index: true
   },
-  
+
   clientInfo: {
     fullName: {
       type: String,
@@ -134,13 +142,13 @@ const billingSchema = new mongoose.Schema({
       trim: true
     }
   },
-  
+
   // Billing items (services and/or products)
   items: {
     type: [billingItemSchema],
     required: true
   },
-  
+
   // Financial details
   subtotal: {
     type: Number,
@@ -172,7 +180,7 @@ const billingSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
-  
+
   // Payment information
   paymentMethod: {
     type: String,
@@ -185,7 +193,7 @@ const billingSchema = new mongoose.Schema({
     default: 'Pending',
     index: true
   },
-  
+
   // Type of billing (counter bill, online order, etc.)
   billingType: {
     type: String,
@@ -193,13 +201,13 @@ const billingSchema = new mongoose.Schema({
     default: 'Counter Bill',
     index: true
   },
-  
+
   // Additional notes
   notes: {
     type: String,
     trim: true
   },
-  
+
   // Timestamps
   createdAt: {
     type: Date,
@@ -225,19 +233,19 @@ billingSchema.pre("save", function (next) {
 });
 
 // Static method to generate unique invoice numbers
-billingSchema.statics.generateInvoiceNumber = async function(vendorId) {
+billingSchema.statics.generateInvoiceNumber = async function (vendorId) {
   const crypto = require('crypto');
-  
+
   // Get current date in YYYYMMDD format
   const date = new Date();
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   const dateStr = `${year}${month}${day}`;
-  
+
   // Extract first 4 characters of vendorId and convert to uppercase
   const vendorCode = vendorId.toString().slice(0, 4).toUpperCase();
-  
+
   // Generate random sections (2-3 sections with mixed case letters and numbers)
   const generateRandomSection = (length) => {
     return crypto.randomBytes(length)
@@ -246,21 +254,21 @@ billingSchema.statics.generateInvoiceNumber = async function(vendorId) {
       .replace(/\//g, 'B')
       .substring(0, length);
   };
-  
+
   // Create 2-3 random sections
   const section1 = generateRandomSection(8);
   const section2 = generateRandomSection(8);
-  
+
   // Randomly decide whether to include a third section (50% chance)
   const includeThirdSection = Math.random() > 0.5;
   const section3 = includeThirdSection ? `-${generateRandomSection(8)}` : '';
-  
+
   // Construct the invoice number
   return `#INV-${dateStr}-${vendorCode}-${section1}-${section2}${section3}`;
 };
 
 // Instance method to update payment status
-billingSchema.methods.updatePaymentStatus = function(status, paymentMethod = null) {
+billingSchema.methods.updatePaymentStatus = function (status, paymentMethod = null) {
   this.paymentStatus = status;
   if (paymentMethod) {
     this.paymentMethod = paymentMethod;
@@ -272,7 +280,7 @@ billingSchema.methods.updatePaymentStatus = function(status, paymentMethod = nul
 };
 
 // Instance method to add a note
-billingSchema.methods.addNote = function(note) {
+billingSchema.methods.addNote = function (note) {
   if (!this.notes) {
     this.notes = note;
   } else {
@@ -282,16 +290,16 @@ billingSchema.methods.addNote = function(note) {
 };
 
 // Static method to get billing summary for a vendor
-billingSchema.statics.getVendorSummary = async function(vendorId, startDate, endDate) {
+billingSchema.statics.getVendorSummary = async function (vendorId, startDate, endDate) {
   const match = { vendorId: new mongoose.Types.ObjectId(vendorId) };
-  
+
   if (startDate && endDate) {
     match.createdAt = {
       $gte: new Date(startDate),
       $lte: new Date(endDate)
     };
   }
-  
+
   return this.aggregate([
     { $match: match },
     {

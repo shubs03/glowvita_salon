@@ -11,36 +11,11 @@ import AddAdminForm, { AdminUser } from '@/components/AddAdminForm';
 import { useGetAdminsQuery, useGetSuperDataQuery } from '../../../../../packages/store/src/services/api.js';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { closeModal, openModal } from '../../../../../packages/store/src/slices/modalSlice.js';
+import { useGetRegionsQuery } from '@repo/store/services/api';
+import Link from 'next/link';
+import { MapPin } from 'lucide-react';
 
-const rolesData = [
-  {
-    id: 'role_1',
-    roleName: "Super Admin",
-    permissions: "All Access",
-    isActive: true,
-  },
-  {
-    id: 'role_2',
-    roleName: "admin",
-    permissions: "View Customers, View Vendors", 
-    isActive: true,
-  },
-  {
-    roleName: "Editor",
-    permissions: "Manage FAQ, Manage Offers",
-    isActive: false,
-  },
-  {
-    roleName: "Staff",
-    permissions: "View Payouts, View Reports",
-    isActive: true,
-  },
-  {
-    roleName: "Viewer",
-    permissions: "View Payouts, View Reports",
-    isActive: true,
-  },
-];
+// No hardcoded rolesData here anymore
 
   
 
@@ -58,6 +33,8 @@ export default function AdminRolesPage() {
   const { isOpen, modalType, data } = useAppSelector((state : any) => state.modal);
   const { data: admins, isLoading, isError } = useGetAdminsQuery(undefined);
   const { data: superData = [] } = useGetSuperDataQuery(undefined);
+  const { data: regionsResponse } = useGetRegionsQuery({});
+  const regions = regionsResponse?.data || [];
 
   const designations = useMemo(() => {
     return superData.filter((item: any) => item.type === 'designation').map((item: any) => ({ roleName: item.name }));
@@ -183,10 +160,18 @@ export default function AdminRolesPage() {
                   Add, edit, and assign permissions to admin users.
                 </CardDescription>
               </div>
-              <Button onClick={() => dispatch(openModal({ modalType: 'addAdmin' }))}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add New Admin
-              </Button>
+              <div className="flex items-center gap-2">
+                <Link href="/regions">
+                  <Button variant="outline">
+                    <MapPin className="mr-2 h-4 w-4" />
+                    Manage Regions
+                  </Button>
+                </Link>
+                <Button onClick={() => dispatch(openModal({ modalType: 'addAdmin' }))}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add New Admin
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -197,6 +182,8 @@ export default function AdminRolesPage() {
                     <TableHead>Full Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Regions</TableHead>
+                    <TableHead>Permissions</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -219,6 +206,33 @@ export default function AdminRolesPage() {
                       </TableCell>
                       <TableCell>{admin.emailAddress}</TableCell>
                       <TableCell>{admin.roleName}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {admin.assignedRegions && admin.assignedRegions.length > 0 ? (
+                            admin.assignedRegions.map((regionId: string) => {
+                              const region = regions.find((r: any) => r._id === regionId);
+                              return (
+                                <span key={regionId} className="px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-medium border border-indigo-100">
+                                  {region ? region.name : 'Unknown'}
+                                </span>
+                              );
+                            })
+                          ) : (
+                            <span className="text-muted-foreground text-xs italic">All Access</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1 max-w-[200px]">
+                          {admin.roleName === 'SUPER_ADMIN' ? (
+                            <span className="text-xs text-blue-600 font-medium">All Access</span>
+                          ) : admin.permissions && admin.permissions.length > 0 ? (
+                            <span className="text-xs text-muted-foreground">{admin.permissions.length} actions enabled</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">No permissions</span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <span
                           className={`px-2 py-1 rounded-full text-xs font-semibold ${

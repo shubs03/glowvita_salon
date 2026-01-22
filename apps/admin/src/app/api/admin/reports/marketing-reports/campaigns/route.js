@@ -4,8 +4,11 @@ import SmsTransaction from "@repo/lib/models/Marketing/SmsPurchaseHistory.model"
 import Vendor from "@repo/lib/models/Vendor/Vendor.model";
 import Supplier from "@repo/lib/models/Vendor/Supplier.model";
 import SMSPackage from "@repo/lib/models/Marketing/SmsPackage.model";
+import { authMiddlewareAdmin } from "../../../../../../middlewareAdmin";
+import { getRegionQuery } from "@repo/lib/utils/regionQuery";
+import { buildRegionQueryFromRequest } from "@repo/lib";
 
-export async function GET(request) {
+export const GET = authMiddlewareAdmin(async (request) => {
   try {
     await dbConnect();
     
@@ -18,6 +21,8 @@ export async function GET(request) {
     const userType = searchParams.get("userType"); // Changed from businessType to match frontend
     const packageName = searchParams.get("packageName");
     const businessName = searchParams.get("businessName"); // Add businessName filter
+    const regionId = searchParams.get("regionId");
+    const regionQuery = getRegionQuery(request.user, regionId);
     
     // Build query filters
     let matchConditions = {};
@@ -86,6 +91,13 @@ export async function GET(request) {
           userInfo: { $exists: true, $ne: null }
         }
       },
+      // Apply region filter - map regionId to userInfo.regionId
+      ...(Object.keys(regionQuery).length > 0 ? [{
+        $match: Object.keys(regionQuery).reduce((acc, key) => {
+          acc[`userInfo.${key}`] = regionQuery[key];
+          return acc;
+        }, {})
+      }] : []),
       // Apply city filter if provided
       ...(city && city !== "all" ? [{
         $match: {
@@ -160,18 +172,20 @@ export async function GET(request) {
     let supplierCities = [];
     let allCities = [];
     
+    const distinctQuery = buildRegionQueryFromRequest(request);
+    
     if (!userType || userType === "all") {
       // Get cities from both vendors and suppliers
-      vendorCities = await Vendor.distinct("city", {});
-      supplierCities = await Supplier.distinct("city", {});
+      vendorCities = await Vendor.distinct("city", distinctQuery);
+      supplierCities = await Supplier.distinct("city", distinctQuery);
       allCities = [...new Set([...vendorCities, ...supplierCities])];
     } else if (userType === "vendor") {
       // Get cities only from vendors
-      vendorCities = await Vendor.distinct("city", {});
+      vendorCities = await Vendor.distinct("city", distinctQuery);
       allCities = vendorCities;
     } else if (userType === "supplier") {
       // Get cities only from suppliers
-      supplierCities = await Supplier.distinct("city", {});
+      supplierCities = await Supplier.distinct("city", distinctQuery);
       allCities = supplierCities;
     }
     
@@ -184,9 +198,9 @@ export async function GET(request) {
     
     // Get all business names for filter dropdown
     // Get all vendor business names
-    const vendorBusinessNames = await Vendor.distinct("businessName", {});
+    const vendorBusinessNames = await Vendor.distinct("businessName", distinctQuery);
     // Get all supplier shop names
-    const supplierShopNames = await Supplier.distinct("shopName", {});
+    const supplierShopNames = await Supplier.distinct("shopName", distinctQuery);
     // Combine and deduplicate all business names
     const businessNames = [...new Set([...vendorBusinessNames, ...supplierShopNames])].filter(name => name && name !== 'N/A');
     
@@ -206,4 +220,4 @@ export async function GET(request) {
       { status: 500 }
     );
   }
-}
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

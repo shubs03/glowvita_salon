@@ -136,7 +136,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       error: error.message 
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // POST, PUT, DELETE methods are not implemented for read-only access
 export const POST = () => NextResponse.json({ success: false, message: "Method not allowed" }, { status: 405 });

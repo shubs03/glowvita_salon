@@ -221,8 +221,13 @@ export async function PUT(request) {
       ? (typeof teamMembers[0] === 'string' ? teamMembers[0] : teamMembers[0].name || teamMembers[0].firstName || 'Wedding Team')
       : 'Wedding Team';
     
+    // Fetch Vendor Region
+    const VendorModel = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
+    const vendor = await VendorModel.findById(weddingPackage.vendorId).select('regionId').lean();
+    
     const appointment = new AppointmentModel({
       vendorId: weddingPackage.vendorId,
+      regionId: vendor?.regionId || null, // <--- Added Region ID
       clientId: customerDetails?.userId || null,
       clientName: clientName || customerDetails?.name || 'Guest',
       clientEmail: customerDetails?.email || null,

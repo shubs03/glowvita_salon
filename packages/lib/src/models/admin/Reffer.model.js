@@ -115,6 +115,11 @@ const referralSchema = new mongoose.Schema({
     enum: ['Pending', 'Completed', 'Bonus Paid'],
     required: true,
   },
+  regionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Region",
+    index: true,
+  },
   bonus: {
     type: String,
     required: true,

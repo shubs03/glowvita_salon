@@ -62,7 +62,8 @@ import {
   useCreateServiceMutation,
   useGetStaffQuery,
   useGetAddOnsQuery,
-  useGetSuperDataQuery
+  useGetSuperDataQuery,
+  useCreateAddOnMutation
 } from "@repo/store/api";
 import Image from "next/image";
 import { Skeleton } from "@repo/ui/skeleton";
@@ -124,6 +125,7 @@ interface Service {
   tax?: { enabled: boolean; type: string; value: number | null };
   onlineBooking?: boolean;
   image?: string;
+  serviceImage?: string;
   status?: string;
   addOns?: string[];
   createdAt?: string;
@@ -149,7 +151,12 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState<{
+    name?: string;
+    description?: string;
+    image?: string;
+    submit?: string;
+  }>({});
 
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
   const [createService, { isLoading: isCreatingService }] = useCreateServiceMutation();
@@ -165,19 +172,36 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
       const reader = new FileReader();
       reader.onloadend = () => {
         setImage(reader.result as string);
+        setErrors(prev => ({ ...prev, image: undefined }));
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleCreate = async () => {
-    // Reset error
-    setError("");
-
+  const validate = () => {
+    const newErrors: typeof errors = {};
     if (!name.trim()) {
-      setError("Name is required");
-      return;
+      newErrors.name = "Name is required";
+    } else if (name.trim().length < 3) {
+      newErrors.name = "Name must be at least 3 characters";
     }
+
+    if (!description.trim()) {
+      newErrors.description = "Description is required";
+    } else if (description.trim().length < 10) {
+      newErrors.description = "Description must be at least 10 characters";
+    }
+
+    if (!image) {
+      newErrors.image = `${itemType} image is required`;
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleCreate = async () => {
+    if (!validate()) return;
 
     try {
       let newItem;
@@ -188,7 +212,7 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
         );
 
         if (isDuplicate) {
-          setError("A category with this name already exists");
+          setErrors({ name: "A category with this name already exists" });
           return;
         }
 
@@ -202,7 +226,7 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
         );
 
         if (isDuplicate) {
-          setError("A service with this name already exists in this category");
+          setErrors({ name: "A service with this name already exists in this category" });
           return;
         }
 
@@ -213,13 +237,13 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
       setName("");
       setDescription("");
       setImage("");
+      setErrors({});
       onItemCreated(newItem);
       onClose();
     } catch (error: any) {
       console.error(`Failed to create ${itemType}`, error);
-      // Extract error message from the response
       const errorMessage = error?.data?.error || error?.data?.message || error?.message || `Failed to create ${itemType}`;
-      setError(errorMessage);
+      setErrors({ submit: errorMessage });
     }
   };
 
@@ -239,11 +263,16 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
               id={`new-${itemType}-name`}
               placeholder={`e.g., Hair Styling`}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+                setName(val);
+                if (errors.name) setErrors(prev => ({ ...prev, name: undefined }));
+              }}
+              className={errors.name ? "border-red-500" : ""}
               disabled={isLoading}
             />
-            {error && (
-              <p className="text-sm text-red-500">{error}</p>
+            {errors.name && (
+              <p className="text-xs text-red-500">{errors.name}</p>
             )}
           </div>
           <div className="space-y-2">
@@ -252,21 +281,300 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
               id={`new-${itemType}-description`}
               placeholder="A brief description."
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^a-zA-Z\s\.,!\?']+/g, "");
+                setDescription(val);
+                if (errors.description) setErrors(prev => ({ ...prev, description: undefined }));
+              }}
+              className={errors.description ? "border-red-500" : ""}
               disabled={isLoading}
             />
+            {errors.description && (
+              <p className="text-xs text-red-500">{errors.description}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="image">{itemType} Image</Label>
-            <Input id="image" type="file" onChange={handleImageChange} disabled={isLoading} />
+            <Input
+              id="image"
+              type="file"
+              onChange={handleImageChange}
+              className={errors.image ? "border-red-500 text-red-500" : ""}
+              disabled={isLoading}
+            />
+            {errors.image && (
+              <p className="text-xs text-red-500">{errors.image}</p>
+            )}
           </div>
+          {errors.submit && (
+            <p className="text-sm text-red-500 bg-red-50 p-2 rounded">{errors.submit}</p>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={handleCreate} disabled={isLoading || !name.trim()}>
+          <Button onClick={handleCreate} disabled={isLoading}>
             {isLoading ? "Creating..." : "Create"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+interface AddOnQuickCreateModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  serviceId: string;
+  serviceName: string;
+  allServices: Service[];
+  vendorId: string;
+}
+
+const AddOnQuickCreateModal = ({ isOpen, onClose, serviceId, serviceName, allServices, vendorId }: AddOnQuickCreateModalProps) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    price: "",
+    duration: "",
+    status: "active",
+    selectedServices: [serviceId],
+  });
+  const [serviceSearch, setServiceSearch] = useState("");
+
+  const [createAddOn, { isLoading: isCreating }] = useCreateAddOnMutation();
+  const [updateVendorServices, { isLoading: isUpdating }] = useUpdateVendorServicesMutation();
+
+  const isSaving = isCreating || isUpdating;
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        name: "",
+        price: "",
+        duration: "",
+        status: "active",
+        selectedServices: [serviceId],
+      });
+      setServiceSearch("");
+    }
+  }, [isOpen, serviceId]);
+
+  const filteredServices = useMemo(() => {
+    return allServices.filter((service: Service) =>
+      service.name.toLowerCase().includes(serviceSearch.toLowerCase())
+    );
+  }, [allServices, serviceSearch]);
+
+  const handleServiceToggle = (svcId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      selectedServices: prev.selectedServices.includes(svcId)
+        ? prev.selectedServices.filter(id => id !== svcId)
+        : [...prev.selectedServices, svcId]
+    }));
+  };
+
+  const handleSelectAll = () => {
+    if (formData.selectedServices.length === allServices.length) {
+      setFormData(prev => ({ ...prev, selectedServices: [serviceId] }));
+    } else {
+      setFormData(prev => ({ ...prev, selectedServices: allServices.map(s => s._id) }));
+    }
+  };
+
+  const handleSave = async () => {
+    if (!formData.name.trim()) {
+      toast.error("Please enter addon name");
+      return;
+    }
+
+    if (!formData.price || Number(formData.price) <= 0) {
+      toast.error("Please enter a valid price");
+      return;
+    }
+
+    if (!formData.duration || Number(formData.duration) <= 0) {
+      toast.error("Please enter a valid duration");
+      return;
+    }
+
+    if (formData.selectedServices.length === 0) {
+      toast.error("Please select at least one service");
+      return;
+    }
+
+    try {
+      // Step 1: Create the addon with selected services
+      const addonPayload = {
+        name: formData.name,
+        price: Number(formData.price),
+        duration: Number(formData.duration),
+        status: formData.status,
+        services: formData.selectedServices,
+      };
+
+      const createdAddOn = await createAddOn(addonPayload).unwrap();
+      const newAddonId = createdAddOn._id || createdAddOn.addOn?._id;
+
+      if (!newAddonId) {
+        throw new Error("Failed to get addon ID from response");
+      }
+
+      // Step 2: Update each selected service to include this addon
+      const servicesToUpdate = allServices
+        .filter(service => formData.selectedServices.includes(service._id))
+        .map(service => ({
+          ...service,
+          _id: service._id,
+          category: service.category?._id || service.category,
+          addOns: [...(service.addOns || []), newAddonId],
+        }));
+
+      if (servicesToUpdate.length > 0) {
+        await updateVendorServices({
+          vendor: vendorId,
+          services: servicesToUpdate,
+        }).unwrap();
+      }
+
+      const serviceCount = formData.selectedServices.length;
+      toast.success(
+        `Add-on "${formData.name}" created and linked to ${serviceCount} service${serviceCount > 1 ? 's' : ''}!`
+      );
+      onClose();
+    } catch (error: any) {
+      console.error("Failed to create add-on", error);
+      const errorMessage = error?.data?.message || error?.message || "Failed to create add-on";
+      toast.error(errorMessage);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Create Add-On</DialogTitle>
+          <DialogDescription>
+            Create a new add-on and select which services it applies to.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4 flex-1 overflow-y-auto">
+          {/* Addon Details */}
+          <div className="space-y-4 pb-4 border-b">
+            <div className="space-y-2">
+              <Label htmlFor="addon-name">Add-On Name *</Label>
+              <Input
+                id="addon-name"
+                placeholder="e.g., Hair Wash, Deep Conditioning"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                disabled={isSaving}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="addon-price">Price (₹) *</Label>
+                <Input
+                  id="addon-price"
+                  type="number"
+                  placeholder="e.g., 100"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  disabled={isSaving}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="addon-duration">Duration (min) *</Label>
+                <Input
+                  id="addon-duration"
+                  type="number"
+                  placeholder="e.g., 15"
+                  value={formData.duration}
+                  onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                  disabled={isSaving}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Service Selection */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label>Apply to Services *</Label>
+              <Badge variant="secondary">
+                {formData.selectedServices.length} selected
+              </Badge>
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search services..."
+                className="pl-8"
+                value={serviceSearch}
+                onChange={(e) => setServiceSearch(e.target.value)}
+                disabled={isSaving}
+              />
+            </div>
+
+            <div className="border rounded-md">
+              <div className="p-3 border-b bg-muted/50">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="select-all-services"
+                    checked={formData.selectedServices.length === allServices.length}
+                    onCheckedChange={handleSelectAll}
+                    disabled={isSaving}
+                  />
+                  <Label htmlFor="select-all-services" className="font-semibold cursor-pointer">
+                    Select All Services
+                  </Label>
+                </div>
+              </div>
+              <div className="max-h-[200px] overflow-y-auto p-3 space-y-2">
+                {filteredServices.length > 0 ? (
+                  filteredServices.map((service: Service) => (
+                    <div key={service._id} className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded-md">
+                      <Checkbox
+                        id={`service-${service._id}`}
+                        checked={formData.selectedServices.includes(service._id)}
+                        onCheckedChange={() => handleServiceToggle(service._id)}
+                        disabled={isSaving}
+                      />
+                      <Label htmlFor={`service-${service._id}`} className="flex-1 cursor-pointer">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{service.name}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {service.categoryName || "Uncategorized"}
+                          </Badge>
+                        </div>
+                      </Label>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No services found
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {serviceId && formData.selectedServices.includes(serviceId) && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+                <p className="text-sm text-blue-900 dark:text-blue-100">
+                  <span className="font-semibold">{serviceName}</span> is pre-selected
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isSaving}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={isSaving || !formData.name.trim()}>
+            {isSaving ? "Creating..." : "Create & Link Add-On"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -386,8 +694,19 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   }, [service, isOpen, type]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
+    let { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
+
+    // Sanitize based on field type requirements
+    if (name === "name" || name === "description") {
+      // Name and Description: Alphabets and spaces only (allowing some punctuation for description)
+      const regex = name === "name" ? /[^a-zA-Z\s]/g : /[^a-zA-Z\s\.,!\?']+/g;
+      value = value.replace(regex, "");
+    } else if (name === "price" || name === "discountedPrice" || name === "bookingInterval") {
+      // Numeric fields: Digits only
+      value = value.replace(/[^0-9]/g, "");
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -395,7 +714,20 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   };
 
   const handleSelectChange = (name: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const newState = { ...prev, [name]: value };
+
+      // If the service name is being changed, sync image and description from master service
+      if (name === "name") {
+        const selectedService = servicesForCategory.find((s: Service) => s.name === value);
+        if (selectedService) {
+          newState.image = selectedService.serviceImage || selectedService.image || "";
+          newState.description = selectedService.description || "";
+        }
+      }
+
+      return newState;
+    });
   };
 
   const handleCategoryChange = (categoryId: string) => {
@@ -410,11 +742,15 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   };
 
   const handleNestedChange = (parent: string, child: string, value: any) => {
+    let sanitizedValue = value;
+    if (child === "charges" && typeof value === "string") {
+      sanitizedValue = value.replace(/[^0-9]/g, "");
+    }
     setFormData((prev) => ({
       ...prev,
       [parent]: {
         ...(prev as any)[parent] || {},
-        [child]: value,
+        [child]: sanitizedValue,
       },
     }));
   };
@@ -424,9 +760,14 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
     setFormData((prev) => ({ ...prev, category: newCategory }));
   };
 
-  const handleServiceCreated = (newService: Service) => {
+  const handleServiceCreated = (newService: any) => {
     refetchServices();
-    setFormData((prev) => ({ ...prev, name: newService.name || "" }));
+    setFormData((prev) => ({
+      ...prev,
+      name: newService.name || "",
+      description: newService.description || "",
+      image: newService.serviceImage || newService.image || ""
+    }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -657,10 +998,22 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
       </div>
       <div className="space-y-2">
         <Label htmlFor="image">Service Image</Label>
-        {formData.image && !formData.image.startsWith('data:') && (
-          <Image src={formData.image} alt="Current Service Image" width={100} height={100} className="mb-2" />
+        {formData.image && (
+          <div className="relative w-24 h-24 mb-2 border rounded overflow-hidden">
+            <Image
+              src={formData.image}
+              alt="Service Preview"
+              fill
+              className="object-cover"
+            />
+          </div>
         )}
         <Input id="image" type="file" onChange={handleImageChange} />
+        {formData.image && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Current image selected (upload another to change)
+          </p>
+        )}
       </div>
       <DialogFooter className="flex justify-end pt-4">
         <Button variant="outline" onClick={onClose} disabled={isSaving}>
@@ -1077,6 +1430,8 @@ export default function ServicesPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [isAddOnModalOpen, setIsAddOnModalOpen] = useState(false);
+  const [selectedServiceForAddOn, setSelectedServiceForAddOn] = useState<Service | null>(null);
 
   const filteredServices = useMemo(() => {
     return services.filter(
@@ -1116,6 +1471,17 @@ export default function ServicesPage() {
       console.error("Failed to delete service", error);
     }
     dispatch(setDeleteModalOpen({ isOpen: false, selectedService: null }));
+  };
+
+  const handleAddOnClick = (service: Service) => {
+    setSelectedServiceForAddOn(service);
+    setIsAddOnModalOpen(true);
+  };
+
+  const handleAddOnModalClose = () => {
+    setIsAddOnModalOpen(false);
+    setSelectedServiceForAddOn(null);
+    refetch();
   };
 
   const handleVisibilityToggle = async (service: any) => {
@@ -1351,6 +1717,9 @@ export default function ServicesPage() {
                         <Button variant="ghost" size="icon" onClick={() => handleOpenModal("edit", service)}>
                           <Edit className="h-4 w-4" />
                         </Button>
+                        <Button variant="ghost" size="icon" className="text-green-600" onClick={() => handleAddOnClick(service)} title="Add Addon">
+                          <Plus className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(service)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -1389,6 +1758,15 @@ export default function ServicesPage() {
         onClose={handleCloseModal}
         service={selectedService}
         type={modalType}
+      />
+
+      <AddOnQuickCreateModal
+        isOpen={isAddOnModalOpen}
+        onClose={handleAddOnModalClose}
+        serviceId={selectedServiceForAddOn?._id || ""}
+        serviceName={selectedServiceForAddOn?.name || ""}
+        allServices={services}
+        vendorId={user?._id || ""}
       />
 
       <Dialog

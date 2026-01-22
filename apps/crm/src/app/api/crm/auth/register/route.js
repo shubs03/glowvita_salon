@@ -240,9 +240,15 @@ export async function POST(req) {
     const subscriptionEndDate = new Date();
     subscriptionEndDate.setDate(subscriptionEndDate.getDate() + trialPlan.duration);
 
-    // 6️⃣ Create vendor with minimal required data + any other data provided
-    // Ensure location and baseLocation have proper default values
+    // 6️⃣ Auto-Assign Region based on City/State/Location
+    // Ensure location has proper default values
     const locationData = location || { lat: 0, lng: 0 };
+    
+    const { assignRegion } = await import("@repo/lib/utils/assignRegion.js");
+    // Pass locationData for geospatial matching
+    const regionId = await assignRegion(city, state, locationData);
+
+    // 7️⃣ Create vendor with minimal required data + any other data provided
     
     const newVendor = await VendorModel.create({
       firstName,
@@ -265,6 +271,7 @@ export async function POST(req) {
       description: description || null,
       profileImage: profileImage || null,
       website: website || null,
+      regionId, // <--- Assigned Region
       subscription: {
         plan: trialPlan._id,
         status: 'Active',

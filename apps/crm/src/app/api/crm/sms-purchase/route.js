@@ -298,6 +298,8 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       await supplier.save();
       
       console.log('Updated SMS balance:', supplier.smsBalance);
+      purchaseHistory.regionId = supplier.regionId;
+      await purchaseHistory.save();
     } else {
       console.log('Searching for vendor with ID:', validatedVendorId);
       const vendor = await VendorModel.findById(validatedVendorId);
@@ -323,6 +325,8 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       await vendor.save();
       
       console.log('Updated SMS balance:', vendor.smsBalance);
+      purchaseHistory.regionId = vendor.regionId;
+      await purchaseHistory.save();
     }
     
     const newBalance = userType === 'supplier' ? 

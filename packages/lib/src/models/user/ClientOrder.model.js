@@ -27,6 +27,12 @@ const ClientOrderSchema = new mongoose.Schema({
     required: true,
     index: true,
   },
+  regionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Region',
+    required: true,
+    index: true,
+  },
   items: [OrderItemSchema],
   totalAmount: {
     type: Number,
@@ -88,8 +94,27 @@ const ClientOrderSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
+ClientOrderSchema.pre('save', async function (next) {
+  try {
+    // 1. Inherit regionId from Vendor if missing
+    if (!this.regionId && this.vendorId) {
+      const Vendor = mongoose.models.Vendor || (await import('../Vendor/Vendor.model.js')).default;
+      const vendor = await Vendor.findById(this.vendorId).select('regionId');
+      if (vendor && vendor.regionId) {
+        this.regionId = vendor.regionId;
+      }
+    }
+
+    this.updatedAt = new Date();
+    next();
+  } catch (error) {
+    console.error("Error in ClientOrder pre-save middleware:", error);
+    next(error);
+  }
+});
+
 const ClientOrderModel = mongoose.models.ClientOrder || mongoose.model('ClientOrder', ClientOrderSchema);
 
 export default ClientOrderModel;
 
-    
+      

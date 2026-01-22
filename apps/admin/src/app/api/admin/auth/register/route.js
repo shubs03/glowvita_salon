@@ -48,7 +48,7 @@ export async function POST(req) {
       designation,
       profileImage: profileImage || "", // optional
       password: hashedPassword,
-      role: role || "admin", // default role if not provided
+      roleName: role || "REGIONAL_ADMIN", // default role if not provided
     });
 
     await newAdmin.save();

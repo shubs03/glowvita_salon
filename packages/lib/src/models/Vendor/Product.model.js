@@ -82,6 +82,12 @@ const productSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'rejected', 'disapproved'],
     default: 'pending',
   },
+  regionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Region",
+    required: true,
+    index: true,
+  },
   origin: {
     type: String,
     required: true,
@@ -100,9 +106,29 @@ const productSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-productSchema.pre('save', function (next) {
-  this.updatedAt = new Date();
-  next();
+productSchema.pre('save', async function (next) {
+  try {
+    // 1. Inherit regionId from Parent (Vendor or Supplier) if missing
+    if (!this.regionId && this.vendorId) {
+      let ParentModel;
+      if (this.origin === 'Vendor') {
+        ParentModel = mongoose.models.Vendor || (await import('./Vendor.model.js')).default;
+      } else {
+        ParentModel = mongoose.models.Supplier || (await import('./Supplier.model.js')).default;
+      }
+      
+      const parent = await ParentModel.findById(this.vendorId).select('regionId');
+      if (parent && parent.regionId) {
+        this.regionId = parent.regionId;
+      }
+    }
+
+    this.updatedAt = new Date();
+    next();
+  } catch (error) {
+    console.error("Error in Product pre-save middleware:", error);
+    next(error);
+  }
 });
 
 const ProductModel = mongoose.models.Product || mongoose.model('Product', productSchema, 'crm_products');

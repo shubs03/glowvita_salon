@@ -180,6 +180,21 @@ export const POST = authMiddlewareCrm(
       businessId = user.vendorId;
     }
 
+    // Fetch business owner's region to inherit
+    let parentRegionId = null;
+    try {
+      const Model = businessType === 'vendor' 
+        ? (await import("@repo/lib/models/Vendor/Vendor.model")).default
+        : businessType === 'doctor'
+          ? (await import("@repo/lib/models/Vendor/Docters.model")).default
+          : (await import("@repo/lib/models/Vendor/Supplier.model")).default;
+      
+      const parent = await Model.findById(businessId).select('regionId');
+      parentRegionId = parent?.regionId;
+    } catch (err) {
+      console.error("Error inheriting region for offer:", err);
+    }
+
     // Create offer
     const newOffer = await CRMOfferModel.create({
       code: finalCode,
@@ -198,6 +213,7 @@ export const POST = authMiddlewareCrm(
       isCustomCode: isCustom,
       businessType: businessType,
       businessId: businessId,
+      regionId: parentRegionId,
     });
 
     return Response.json(

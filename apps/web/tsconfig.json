@@ -3,11 +3,29 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@repo/lib/*": ["../../packages/lib/src/*"],
-      "@repo/store/*": ["../../packages/store/src/*"]
+      "@/*": [
+        "src/*"
+      ],
+      "@repo/config/*": [
+        "../../packages/config/*"
+      ],
+      "@repo/lib/*": [
+        "../../packages/lib/src/*"
+      ],
+      "@repo/store/*": [
+        "../../packages/store/src/*"
+      ]
     }
   },
-  "include": ["./next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "../packages/ui/src/globals.css", "../crm/src/components/landing/CoreFeatures.tsx"],
-  "exclude": ["node_modules"]
+  "include": [
+    "./next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "../packages/ui/src/globals.css",
+    "../crm/src/components/landing/CoreFeatures.tsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

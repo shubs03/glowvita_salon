@@ -3,6 +3,7 @@ import _db from '@repo/lib/db';
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import { authMiddlewareAdmin } from "../../../../../../middlewareAdmin";
+import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 
 // Initialize database connection
 const initDb = async () => {
@@ -28,6 +29,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const saleType = searchParams.get('saleType'); // 'online', 'offline', or 'all'
     const city = searchParams.get('city'); // City filter
     const vendorName = searchParams.get('vendor'); // Vendor filter
+    const regionId = searchParams.get('regionId'); // Region filter
     
     console.log("Completed Bookings Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, saleType, city });
     
@@ -103,12 +105,14 @@ export const GET = authMiddlewareAdmin(async (req) => {
     };
     
     const vendorFilter = await buildVendorFilter(vendorName);
+    const regionQuery = getRegionQuery(req.user, regionId);
     
     // Combine all filters
     const combinedFilter = {
       ...dateFilter,
       ...modeFilter,
       ...vendorFilter,
+      ...regionQuery,
       status: "completed"
     };
     
@@ -438,4 +442,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       error: error.message
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

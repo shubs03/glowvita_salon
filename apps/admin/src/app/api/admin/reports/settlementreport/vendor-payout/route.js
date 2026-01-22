@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import { authMiddlewareAdmin } from '../../../../../../middlewareAdmin';
+import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 
 // Initialize database connection
 const initDb = async () => {
@@ -26,6 +27,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const endDateParam = searchParams.get('endDate'); // Custom date range end
     const city = searchParams.get('city'); // City filter
     const vendorName = searchParams.get('vendor'); // Vendor filter
+    const regionId = searchParams.get('regionId'); // Region filter
     
     console.log("Vendor Payout Settlement Report Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, city, vendorName });
     
@@ -80,8 +82,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
     }
 
     // Create the main filter for appointments - focusing on completed appointments where admin pays to vendor
+    const regionQuery = getRegionQuery(req.user, regionId);
     const mainFilter = {
       ...dateFilter,
+      ...regionQuery,
       mode: 'online', // Only online appointments
       paymentMethod: 'Pay Online', // Only Pay Online appointments
       status: { $in: ['completed'] }, // Only include completed appointments
@@ -153,7 +157,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Get unique cities for filter dropdown
     const cityPipeline = [
-      { $match: { status: { $in: ['completed'] }, paymentStatus: { $in: ['completed'] } } },
+      { $match: { ...regionQuery, status: { $in: ['completed'] }, paymentStatus: { $in: ['completed'] } } },
       {
         $lookup: {
           from: "vendors",
@@ -172,7 +176,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Get unique vendors for filter dropdown
     const vendorPipeline = [
-      { $match: { status: { $in: ['completed'] }, paymentStatus: { $in: ['completed'] } } },
+      { $match: { ...regionQuery, status: { $in: ['completed'] }, paymentStatus: { $in: ['completed'] } } },
       {
         $lookup: {
           from: "vendors",
@@ -230,4 +234,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       error: error.message
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

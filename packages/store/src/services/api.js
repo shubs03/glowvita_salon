@@ -159,11 +159,50 @@ export const glowvitaApi = createApi({
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
-    "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products",
-    "PublicAllOffers", "AddOns"
+    "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "Regions", "PublicAllOffers", "AddOns", "PendingWeddingPackages"
   ],
 
   endpoints: (builder) => ({
+    // Regions Endpoints
+    getRegions: builder.query({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append("page", params.page);
+        if (params.limit) queryParams.append("limit", params.limit);
+        const queryString = queryParams.toString();
+        return {
+          url: `/admin/regions${queryString ? `?${queryString}` : ""}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["Regions"],
+    }),
+
+    createRegion: builder.mutation({
+      query: (regionData) => ({
+        url: "/admin/regions",
+        method: "POST",
+        body: regionData,
+      }),
+      invalidatesTags: ["Regions"],
+    }),
+
+    updateRegion: builder.mutation({
+      query: (regionData) => ({
+        url: "/admin/regions",
+        method: "PUT",
+        body: regionData,
+      }),
+      invalidatesTags: ["Regions"],
+    }),
+
+    deleteRegion: builder.mutation({
+      query: (id) => ({
+        url: `/admin/regions?id=${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Regions"],
+    }),
     getProfile: builder.query({
       query: () => `/crm/auth/profile`,
       providesTags: ['User'],
@@ -509,6 +548,20 @@ export const glowvitaApi = createApi({
         body: { serviceId, status },
       }),
       invalidatesTags: ["PendingServices", "VendorServices"],
+    }),
+
+    // Wedding Package Approval Endpoints
+    getPendingWeddingPackages: builder.query({
+      query: () => ({ url: "/admin/wedding-packages/approval", method: "GET" }),
+      providesTags: ["PendingWeddingPackages"],
+    }),
+    updateWeddingPackageStatus: builder.mutation({
+      query: ({ packageId, status }) => ({
+        url: "/admin/wedding-packages/approval",
+        method: "PATCH",
+        body: { packageId, status },
+      }),
+      invalidatesTags: ["PendingWeddingPackages", "VendorWeddingPackages", "PublicVendorWeddingPackages"],
     }),
 
     // Admin
@@ -1712,6 +1765,22 @@ export const glowvitaApi = createApi({
     createAddOn: builder.mutation({
       query: (addOn) => ({ url: "/crm/add-ons", method: "POST", body: addOn }),
       invalidatesTags: ["AddOns"],
+    }),
+    getStaffEarnings: builder.query({
+      query: ({ id, startDate, endDate }) => {
+        let url = `/crm/staff/earnings/${id}`;
+        const params = new URLSearchParams();
+        if (startDate) params.append("startDate", startDate);
+        if (endDate) params.append("endDate", endDate);
+        const queryString = params.toString();
+        if (queryString) url += `?${queryString}`;
+        return { url, method: "GET" };
+      },
+      providesTags: ["Staff"],
+    }),
+    recordStaffPayout: builder.mutation({
+      query: ({ id, ...body }) => ({ url: `/crm/staff/earnings/${id}`, method: "POST", body }),
+      invalidatesTags: ["Staff"],
     }),
     updateAddOn: builder.mutation({
       query: (addOn) => ({ url: "/crm/add-ons", method: "PUT", body: addOn }),
@@ -2955,6 +3024,9 @@ export const {
   useCreateWeddingPackageMutation,
   useUpdateWeddingPackageMutation,
   useDeleteWeddingPackageMutation,
+  // New Wedding Package Approval Hooks
+  useGetPendingWeddingPackagesQuery,
+  useUpdateWeddingPackageStatusMutation,
 
 
   // Payment Collection Hook
@@ -2986,6 +3058,10 @@ export const {
   useGetUniqueCategoriesQuery,
   useGetSettlementSummaryReportQuery,
 
+  // Staff Earnings Hooks
+  useGetStaffEarningsQuery,
+  useRecordStaffPayoutMutation,
+
   // Payment Collections Hook
   useGetPaymentCollectionsQuery,
   useGetSupplierProductReviewsReportQuery,
@@ -2997,4 +3073,10 @@ export const {
   useGetSupplierConfirmedOrdersReportQuery,
   useGetSupplierPlatformCollectionsReportQuery,
   useGetSupplierProductSalesReportQuery,
+
+  // Regions Hooks
+  useGetRegionsQuery,
+  useCreateRegionMutation,
+  useUpdateRegionMutation,
+  useDeleteRegionMutation,
 } = glowvitaApi;

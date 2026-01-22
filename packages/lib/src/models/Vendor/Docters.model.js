@@ -74,10 +74,26 @@ const doctorSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  location: {
+    lat: {
+      type: Number,
+      required: true,
+    },
+    lng: {
+      type: Number,
+      required: true,
+    },
+  },
   status: {
     type: String,
     enum: ["Approved", "Pending", "Rejected"],
     default: "Pending",
+  },
+  regionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Region",
+    required: true,
+    index: true,
   },
   subscription: {
     plan: {
@@ -203,7 +219,7 @@ const doctorSchema = new mongoose.Schema({
 });
 
 // Pre-save middleware to auto-update subscription status based on endDate
-doctorSchema.pre('save', function (next) {
+doctorSchema.pre('validate', async function (next) {
   if (this.subscription && this.subscription.endDate) {
     const now = new Date();
     const endDate = new Date(this.subscription.endDate);
@@ -211,6 +227,19 @@ doctorSchema.pre('save', function (next) {
     // Auto-update status to Expired if endDate has passed
     if (endDate <= now && this.subscription.status !== 'Expired') {
       this.subscription.status = 'Expired';
+    }
+  }
+
+  // Auto-assign regionId based on location if missing or location changed
+  if (!this.regionId || this.isModified("location")) {
+    try {
+      const { assignRegion } = await import("../../utils/assignRegion.js");
+      const assignedRegionId = await assignRegion(this.city, this.state, this.location);
+      if (assignedRegionId) {
+        this.regionId = assignedRegionId;
+      }
+    } catch (error) {
+      console.error("[DoctorModel] Error auto-assigning region:", error);
     }
   }
 
@@ -256,7 +285,7 @@ doctorSchema.virtual('specialization').get(function () {
 
 // Indexes for performance
 doctorSchema.index({ 'subscription.status': 1, 'subscription.endDate': 1 });
-doctorSchema.index({ email: 1 });
+// Email index removed as it is already defined in the schema with unique: true
 doctorSchema.index({ status: 1 });
 
 const DoctorModel = mongoose.models.Doctor || mongoose.model("Doctor", doctorSchema);

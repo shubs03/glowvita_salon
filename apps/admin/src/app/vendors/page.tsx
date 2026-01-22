@@ -38,6 +38,8 @@ import {
   XCircle,
 } from "lucide-react";
 import { VendorEditForm, type Vendor } from "../../components/VendorEditForm";
+import { toast } from "sonner";
+import { cn } from "@repo/ui/cn";
 import {
   useCreateVendorMutation,
   useGetVendorsQuery,
@@ -90,19 +92,22 @@ export default function VendorManagementPage() {
     setFormModalOpen(true);
   };
 
-  const handleFormSubmit = async (vendorData: Vendor) => {
+  const handleFormSubmit = async (vendorData: any) => {
     try {
       if (selectedVendor) {
         // Edit mode
         await updateVendor({ id: selectedVendor._id, ...vendorData }).unwrap();
+        toast.success("Vendor updated successfully");
       } else {
         // Create mode
         await createVendor(vendorData).unwrap();
+        toast.success("Vendor created successfully");
+        handleCloseModal();
       }
       refetch(); // Refetch data to show updates
-      handleCloseModal();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to save vendor:", err);
+      toast.error(err?.data?.message || "Failed to save vendor");
     }
   };
 
@@ -148,8 +153,10 @@ export default function VendorManagementPage() {
       refetch(); // Refetch data
       setIsActionModalOpen(false);
       setSelectedVendor(null);
-    } catch (err) {
+      toast.success(`Vendor ${actionType}d successfully`);
+    } catch (err: any) {
       console.error(`Failed to ${actionType} vendor:`, err);
+      toast.error(err?.data?.message || `Failed to ${actionType} vendor`);
     }
   };
 
@@ -212,6 +219,28 @@ export default function VendorManagementPage() {
   const disapprovedVendors = vendorsArray.filter(
     (v: Vendor) => v?.status === "Disapproved"
   ).length;
+
+  const getUnapprovedDocuments = (vendor: Vendor) => {
+    const documents = vendor.documents;
+    if (!documents) return [];
+
+    const mandatoryDocs = [
+      { key: 'aadharCard', label: 'Aadhar Card' },
+      { key: 'panCard', label: 'PAN Card' },
+      { key: 'udyogAadhar', label: 'Udyog Aadhar' },
+      { key: 'udhayamCert', label: 'Udhayam Certificate' },
+      { key: 'shopLicense', label: 'Shop License' }
+    ] as const;
+
+    return mandatoryDocs
+      .filter(doc => {
+        const isUploaded = documents[doc.key] && documents[doc.key] !== '';
+        // In the Vendor model, the status is usually stored as docType + 'Status'
+        const status = (documents as any)[`${doc.key}Status`] || 'pending';
+        return isUploaded && status !== 'approved';
+      })
+      .map(doc => doc.label);
+  };
 
   if (error)
     return (
@@ -405,15 +434,14 @@ export default function VendorManagementPage() {
                       <TableCell>{vendor.phone}</TableCell>
                       <TableCell>
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            vendor.status === "Active"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                              : vendor.status === "Approved"
-                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                                : vendor.status === "Disapproved"
-                                  ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                                  : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
-                          }`}
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${vendor.status === "Active"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                            : vendor.status === "Approved"
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                              : vendor.status === "Disapproved"
+                                ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                                : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
+                            }`}
                         >
                           {vendor.status || "Pending"}
                         </span>
@@ -454,7 +482,12 @@ export default function VendorManagementPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleActionClick(vendor, "approve")}
-                          className="text-blue-600 hover:text-blue-700"
+                          className={cn("text-blue-600 hover:text-blue-700", getUnapprovedDocuments(vendor).length > 0 && "text-gray-400 opacity-50")}
+                          disabled={getUnapprovedDocuments(vendor).length > 0}
+                          title={getUnapprovedDocuments(vendor).length > 0
+                            ? `Mandatory documents pending: ${getUnapprovedDocuments(vendor).join(', ')}`
+                            : 'Approve Vendor'
+                          }
                         >
                           <CheckCircle className="h-4 w-4" />
                           <span className="sr-only">Approve</span>
@@ -546,8 +579,8 @@ export default function VendorManagementPage() {
             <Button
               variant={
                 actionType === "delete" ||
-                actionType === "disable" ||
-                actionType === "disapprove"
+                  actionType === "disable" ||
+                  actionType === "disapprove"
                   ? "destructive"
                   : "default"
               }

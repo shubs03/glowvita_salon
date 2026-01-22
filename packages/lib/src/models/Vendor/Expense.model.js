@@ -8,6 +8,12 @@ const ExpenseSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    regionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Region",
+      required: true,
+      index: true,
+    },
     expenseType: {
       type: String,
       required: true,
@@ -55,6 +61,22 @@ const ExpenseSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+ExpenseSchema.pre("save", async function (next) {
+  try {
+    // 1. Inherit regionId from Vendor if missing
+    if (!this.regionId && this.vendorId) {
+      const Vendor = mongoose.models.Vendor || (await import("./Vendor.model.js")).default;
+      const vendor = await Vendor.findById(this.vendorId).select("regionId");
+      if (vendor && vendor.regionId) {
+        this.regionId = vendor.regionId;
+      }
+    }
+    next();
+  } catch (error) {
+    console.error("Error in Expense pre-save middleware:", error);
+    next(error);
+  }
+});
 
 // Index for efficient querying
 ExpenseSchema.index({ vendorId: 1, date: -1 });

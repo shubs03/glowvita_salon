@@ -77,6 +77,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       if (city) url.searchParams.set('city', city);
       if (userType) url.searchParams.set('userType', userType); // Add userType filter
       if (businessName) url.searchParams.set('businessName', businessName); // Add businessName filter
+      if (searchParams.get('regionId')) url.searchParams.set('regionId', searchParams.get('regionId')); // Add regionId filter
       
       return new Request(url.href, {
         method: 'GET',
@@ -536,4 +537,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       error: error.message
     }, { status: 500 });
   }
-}, ["superadmin", "admin"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
