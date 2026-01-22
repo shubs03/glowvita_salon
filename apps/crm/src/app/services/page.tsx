@@ -125,6 +125,7 @@ interface Service {
   tax?: { enabled: boolean; type: string; value: number | null };
   onlineBooking?: boolean;
   image?: string;
+  serviceImage?: string;
   status?: string;
   addOns?: string[];
   createdAt?: string;
@@ -150,7 +151,12 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
-  const [error, setError] = useState("");
+  const [errors, setErrors] = useState<{
+    name?: string;
+    description?: string;
+    image?: string;
+    submit?: string;
+  }>({});
 
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateCategoryMutation();
   const [createService, { isLoading: isCreatingService }] = useCreateServiceMutation();
@@ -166,19 +172,36 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
       const reader = new FileReader();
       reader.onloadend = () => {
         setImage(reader.result as string);
+        setErrors(prev => ({ ...prev, image: undefined }));
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleCreate = async () => {
-    // Reset error
-    setError("");
-
+  const validate = () => {
+    const newErrors: typeof errors = {};
     if (!name.trim()) {
-      setError("Name is required");
-      return;
+      newErrors.name = "Name is required";
+    } else if (name.trim().length < 3) {
+      newErrors.name = "Name must be at least 3 characters";
     }
+
+    if (!description.trim()) {
+      newErrors.description = "Description is required";
+    } else if (description.trim().length < 10) {
+      newErrors.description = "Description must be at least 10 characters";
+    }
+
+    if (!image) {
+      newErrors.image = `${itemType} image is required`;
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleCreate = async () => {
+    if (!validate()) return;
 
     try {
       let newItem;
@@ -189,7 +212,7 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
         );
 
         if (isDuplicate) {
-          setError("A category with this name already exists");
+          setErrors({ name: "A category with this name already exists" });
           return;
         }
 
@@ -203,7 +226,7 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
         );
 
         if (isDuplicate) {
-          setError("A service with this name already exists in this category");
+          setErrors({ name: "A service with this name already exists in this category" });
           return;
         }
 
@@ -214,13 +237,13 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
       setName("");
       setDescription("");
       setImage("");
+      setErrors({});
       onItemCreated(newItem);
       onClose();
     } catch (error: any) {
       console.error(`Failed to create ${itemType}`, error);
-      // Extract error message from the response
       const errorMessage = error?.data?.error || error?.data?.message || error?.message || `Failed to create ${itemType}`;
-      setError(errorMessage);
+      setErrors({ submit: errorMessage });
     }
   };
 
@@ -240,11 +263,16 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
               id={`new-${itemType}-name`}
               placeholder={`e.g., Hair Styling`}
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+                setName(val);
+                if (errors.name) setErrors(prev => ({ ...prev, name: undefined }));
+              }}
+              className={errors.name ? "border-red-500" : ""}
               disabled={isLoading}
             />
-            {error && (
-              <p className="text-sm text-red-500">{error}</p>
+            {errors.name && (
+              <p className="text-xs text-red-500">{errors.name}</p>
             )}
           </div>
           <div className="space-y-2">
@@ -253,20 +281,40 @@ const AddItemModal = ({ isOpen, onClose, onItemCreated, itemType, categoryId }: 
               id={`new-${itemType}-description`}
               placeholder="A brief description."
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^a-zA-Z\s\.,!\?']+/g, "");
+                setDescription(val);
+                if (errors.description) setErrors(prev => ({ ...prev, description: undefined }));
+              }}
+              className={errors.description ? "border-red-500" : ""}
               disabled={isLoading}
             />
+            {errors.description && (
+              <p className="text-xs text-red-500">{errors.description}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="image">{itemType} Image</Label>
-            <Input id="image" type="file" onChange={handleImageChange} disabled={isLoading} />
+            <Input
+              id="image"
+              type="file"
+              onChange={handleImageChange}
+              className={errors.image ? "border-red-500 text-red-500" : ""}
+              disabled={isLoading}
+            />
+            {errors.image && (
+              <p className="text-xs text-red-500">{errors.image}</p>
+            )}
           </div>
+          {errors.submit && (
+            <p className="text-sm text-red-500 bg-red-50 p-2 rounded">{errors.submit}</p>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={handleCreate} disabled={isLoading || !name.trim()}>
+          <Button onClick={handleCreate} disabled={isLoading}>
             {isLoading ? "Creating..." : "Create"}
           </Button>
         </DialogFooter>
@@ -646,8 +694,19 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   }, [service, isOpen, type]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
+    let { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
+
+    // Sanitize based on field type requirements
+    if (name === "name" || name === "description") {
+      // Name and Description: Alphabets and spaces only (allowing some punctuation for description)
+      const regex = name === "name" ? /[^a-zA-Z\s]/g : /[^a-zA-Z\s\.,!\?']+/g;
+      value = value.replace(regex, "");
+    } else if (name === "price" || name === "discountedPrice" || name === "bookingInterval") {
+      // Numeric fields: Digits only
+      value = value.replace(/[^0-9]/g, "");
+    }
+
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
@@ -655,7 +714,20 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   };
 
   const handleSelectChange = (name: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((prev) => {
+      const newState = { ...prev, [name]: value };
+
+      // If the service name is being changed, sync image and description from master service
+      if (name === "name") {
+        const selectedService = servicesForCategory.find((s: Service) => s.name === value);
+        if (selectedService) {
+          newState.image = selectedService.serviceImage || selectedService.image || "";
+          newState.description = selectedService.description || "";
+        }
+      }
+
+      return newState;
+    });
   };
 
   const handleCategoryChange = (categoryId: string) => {
@@ -670,11 +742,15 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   };
 
   const handleNestedChange = (parent: string, child: string, value: any) => {
+    let sanitizedValue = value;
+    if (child === "charges" && typeof value === "string") {
+      sanitizedValue = value.replace(/[^0-9]/g, "");
+    }
     setFormData((prev) => ({
       ...prev,
       [parent]: {
         ...(prev as any)[parent] || {},
-        [child]: value,
+        [child]: sanitizedValue,
       },
     }));
   };
@@ -684,9 +760,14 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
     setFormData((prev) => ({ ...prev, category: newCategory }));
   };
 
-  const handleServiceCreated = (newService: Service) => {
+  const handleServiceCreated = (newService: any) => {
     refetchServices();
-    setFormData((prev) => ({ ...prev, name: newService.name || "" }));
+    setFormData((prev) => ({
+      ...prev,
+      name: newService.name || "",
+      description: newService.description || "",
+      image: newService.serviceImage || newService.image || ""
+    }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -917,10 +998,22 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
       </div>
       <div className="space-y-2">
         <Label htmlFor="image">Service Image</Label>
-        {formData.image && !formData.image.startsWith('data:') && (
-          <Image src={formData.image} alt="Current Service Image" width={100} height={100} className="mb-2" />
+        {formData.image && (
+          <div className="relative w-24 h-24 mb-2 border rounded overflow-hidden">
+            <Image
+              src={formData.image}
+              alt="Service Preview"
+              fill
+              className="object-cover"
+            />
+          </div>
         )}
         <Input id="image" type="file" onChange={handleImageChange} />
+        {formData.image && (
+          <p className="text-xs text-muted-foreground mt-1">
+            Current image selected (upload another to change)
+          </p>
+        )}
       </div>
       <DialogFooter className="flex justify-end pt-4">
         <Button variant="outline" onClick={onClose} disabled={isSaving}>

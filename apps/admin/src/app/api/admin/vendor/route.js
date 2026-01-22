@@ -20,30 +20,30 @@ const isValidBase64Image = (str) => {
 // Utility function to process base64 image and upload it
 // Also deletes the old image if a new one is uploaded
 const processBase64Image = async (base64String, fileName, oldImageUrl = null) => {
-    if (!base64String) return null;
-    
-    // Check if it's already a URL (not base64)
-    if (base64String.startsWith('http')) {
-        return base64String; // Already uploaded, return as is
+  if (!base64String) return null;
+
+  // Check if it's already a URL (not base64)
+  if (base64String.startsWith('http')) {
+    return base64String; // Already uploaded, return as is
+  }
+
+  // Upload the base64 image and return the URL
+  const imageUrl = await uploadBase64(base64String, fileName);
+
+  // If upload was successful and there's an old image, delete the old one
+  if (imageUrl && oldImageUrl && oldImageUrl.startsWith('http')) {
+    try {
+      // Attempt to delete the old file
+      // We don't await this as we don't want to fail the whole operation if deletion fails
+      deleteFile(oldImageUrl).catch(err => {
+        console.warn('Failed to delete old image:', err);
+      });
+    } catch (err) {
+      console.warn('Error deleting old image:', err);
     }
-    
-    // Upload the base64 image and return the URL
-    const imageUrl = await uploadBase64(base64String, fileName);
-    
-    // If upload was successful and there's an old image, delete the old one
-    if (imageUrl && oldImageUrl && oldImageUrl.startsWith('http')) {
-        try {
-            // Attempt to delete the old file
-            // We don't await this as we don't want to fail the whole operation if deletion fails
-            deleteFile(oldImageUrl).catch(err => {
-                console.warn('Failed to delete old image:', err);
-            });
-        } catch (err) {
-            console.warn('Error deleting old image:', err);
-        }
-    }
-    
-    return imageUrl;
+  }
+
+  return imageUrl;
 };
 // Create Vendor
 export const POST = authMiddlewareAdmin(
@@ -197,37 +197,37 @@ export const POST = authMiddlewareAdmin(
     }
     const subscriptionData = subscription
       ? {
-          plan: planId, // ObjectId reference
-          status: subscription.isActive ? "Active" : "Pending",
-          expires: subscription.endDate ? new Date(subscription.endDate) : null,
-        }
+        plan: planId, // ObjectId reference
+        status: subscription.isActive ? "Active" : "Pending",
+        expires: subscription.endDate ? new Date(subscription.endDate) : null,
+      }
       : {
-          plan: (await PlanModel.findOne({ name: "Basic" }))?._id || null,
-          status: "Pending",
-          expires: null,
-        };
+        plan: (await PlanModel.findOne({ name: "Basic" }))?._id || null,
+        status: "Pending",
+        expires: null,
+      };
 
     // Transform bankDetails
     const bankDetailsData = bankDetails
       ? {
-          bankName: bankDetails.bankName || null,
-          accountNumber: bankDetails.accountNumber || null,
-          ifscCode: bankDetails.ifscCode || null,
-          accountHolder: bankDetails.accountHolder || null,
-        }
+        bankName: bankDetails.bankName || null,
+        accountNumber: bankDetails.accountNumber || null,
+        ifscCode: bankDetails.ifscCode || null,
+        accountHolder: bankDetails.accountHolder || null,
+      }
       : {
-          bankName: null,
-          accountNumber: null,
-          ifscCode: null,
-          accountHolder: null,
-        };
+        bankName: null,
+        accountNumber: null,
+        ifscCode: null,
+        accountHolder: null,
+      };
 
     // Handle profile image upload if provided
     let profileImageUrl = profileImage;
     if (profileImage) {
       const fileName = `vendor-${Date.now()}-profile`;
       profileImageUrl = await processBase64Image(profileImage, fileName);
-      
+
       if (!profileImageUrl) {
         return Response.json(
           { message: "Failed to upload profile image" },
@@ -235,7 +235,7 @@ export const POST = authMiddlewareAdmin(
         );
       }
     }
-    
+
     // Handle gallery images upload if provided
     let galleryUrls = gallery || [];
     if (gallery && Array.isArray(gallery)) {
@@ -245,7 +245,7 @@ export const POST = authMiddlewareAdmin(
         if (image) {
           const fileName = `vendor-${Date.now()}-gallery-${i}`;
           const imageUrl = await processBase64Image(image, fileName);
-          
+
           if (imageUrl) {
             galleryUrls.push(imageUrl);
           } else {
@@ -256,10 +256,10 @@ export const POST = authMiddlewareAdmin(
         }
       }
     }
-    
+
     // Transform documents safely
     const documentsArray = Array.isArray(documents) ? documents : [];
-    
+
     // Handle document uploads if provided
     const documentsData = {
       aadharCard: documentsArray.find((d) => d.type === "aadhar")?.file || null,
@@ -279,22 +279,22 @@ export const POST = authMiddlewareAdmin(
       shopLicenseStatus: documentsArray.find((d) => d.type === "license")?.file ? "pending" : undefined,
       udhayamCertStatus: documentsArray.find((d) => d.type === "udhayam")?.file ? "pending" : undefined,
     };
-    
+
     // Process document uploads
     if (documentsArray.length > 0) {
       for (const doc of documentsArray) {
         if (doc.file && !doc.file.startsWith('http')) {
           const fileName = `vendor-${Date.now()}-${doc.type}`;
           const docUrl = await processBase64Image(doc.file, fileName);
-          
+
           if (docUrl) {
             // Update the document field with the uploaded URL
-            const docField = doc.type === 'aadhar' ? 'aadharCard' : 
-                           doc.type === 'pan' ? 'panCard' : 
-                           doc.type === 'gst' ? 'udyogAadhar' : 
-                           doc.type === 'license' ? 'shopLicense' : 
-                           doc.type === 'udhayam' ? 'udhayamCert' : null;
-            
+            const docField = doc.type === 'aadhar' ? 'aadharCard' :
+              doc.type === 'pan' ? 'panCard' :
+                doc.type === 'gst' ? 'udyogAadhar' :
+                  doc.type === 'license' ? 'shopLicense' :
+                    doc.type === 'udhayam' ? 'udhayamCert' : null;
+
             if (docField) {
               documentsData[docField] = docUrl;
             }
@@ -358,7 +358,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
   }
   const url = new URL(req.url);
   const vendorIdParam = url.searchParams.get('vendorId');
-  
+
   console.log('[Vendor GET] Request from user:', {
     userId: req.user._id,
     roleName: req.user.roleName,
@@ -366,7 +366,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     vendorIdParam,
     requestUrl: req.url
   });
-  
+
   // If vendorId is provided, fetch clients for that vendor
   if (vendorIdParam) {
     try {
@@ -374,14 +374,14 @@ export const GET = authMiddlewareAdmin(async (req) => {
         .sort({ lastVisit: -1, createdAt: -1 })
         .select('-emergencyContact -socialMediaLinks -tags -notes')
         .lean();
-      
+
       return Response.json(clients);
     } catch (error) {
       console.error('Error fetching vendor clients:', error);
       return Response.json({ error: 'Failed to fetch clients' }, { status: 500 });
     }
   }
-  
+
   // Otherwise fetch all vendors with region filter
   const regionQuery = buildRegionQueryFromRequest(req);
   console.log('[Vendor GET] Query:', regionQuery);
@@ -539,30 +539,30 @@ export const PUT = authMiddlewareAdmin(
     }
     const subscriptionData = subscription
       ? {
-          plan: planId, // ObjectId reference
-          status: subscription.isActive ? "Active" : "Pending",
-          expires: subscription.endDate ? new Date(subscription.endDate) : null,
-        }
+        plan: planId, // ObjectId reference
+        status: subscription.isActive ? "Active" : "Pending",
+        expires: subscription.endDate ? new Date(subscription.endDate) : null,
+      }
       : {
-          plan: (await PlanModel.findOne({ name: "Basic" }))?._id || null,
-          status: "Pending",
-          expires: null,
-        };
+        plan: (await PlanModel.findOne({ name: "Basic" }))?._id || null,
+        status: "Pending",
+        expires: null,
+      };
 
     // Transform bankDetails
     const bankDetailsData = bankDetails
       ? {
-          bankName: bankDetails.bankName || null,
-          accountNumber: bankDetails.accountNumber || null,
-          ifscCode: bankDetails.ifscCode || null,
-          accountHolder: bankDetails.accountHolder || null,
-        }
+        bankName: bankDetails.bankName || null,
+        accountNumber: bankDetails.accountNumber || null,
+        ifscCode: bankDetails.ifscCode || null,
+        accountHolder: bankDetails.accountHolder || null,
+      }
       : {
-          bankName: null,
-          accountNumber: null,
-          ifscCode: null,
-          accountHolder: null,
-        };
+        bankName: null,
+        accountNumber: null,
+        ifscCode: null,
+        accountHolder: null,
+      };
 
     // Transform documents safely
     const documentsArray = Array.isArray(documents) ? documents : [];
@@ -587,7 +587,7 @@ export const PUT = authMiddlewareAdmin(
       const existingVendor = await VendorModel.findById(id);
       const fileName = `vendor-${id}-profile`;
       profileImageUrl = await processBase64Image(profileImage, fileName, existingVendor?.profileImage);
-      
+
       if (profileImageUrl === null && profileImage) {
         return Response.json(
           { message: "Failed to upload profile image" },
@@ -595,14 +595,14 @@ export const PUT = authMiddlewareAdmin(
         );
       }
     }
-    
+
     // Handle gallery images upload if provided
     let galleryUrls = gallery || [];
     if (gallery && Array.isArray(gallery)) {
       galleryUrls = [];
       // Get existing vendor to get old gallery URLs for deletion
       const existingVendor = await VendorModel.findById(id);
-      
+
       for (let i = 0; i < gallery.length; i++) {
         const image = gallery[i];
         if (image && !image.startsWith('http')) {
@@ -610,7 +610,7 @@ export const PUT = authMiddlewareAdmin(
           // Get the old image URL for this position if it exists
           const oldImageUrl = existingVendor?.gallery && existingVendor.gallery[i] ? existingVendor.gallery[i] : null;
           const imageUrl = await processBase64Image(image, fileName, oldImageUrl);
-          
+
           if (imageUrl) {
             galleryUrls.push(imageUrl);
           } else {
@@ -621,26 +621,26 @@ export const PUT = authMiddlewareAdmin(
         }
       }
     }
-    
+
     // Handle document uploads if provided
     const documentsDataWithUrls = { ...documentsData };
     if (documents && Array.isArray(documents)) {
       // Get existing vendor to get old document URLs for deletion
       const existingVendor = await VendorModel.findById(id);
-      
+
       for (const doc of documents) {
         if (doc.file && !doc.file.startsWith('http')) {
           const fileName = `vendor-${id}-${doc.type}`;
           // Get the old document URL if it exists
-          const docField = doc.type === 'aadhar' ? 'aadharCard' : 
-                         doc.type === 'pan' ? 'panCard' : 
-                         doc.type === 'gst' ? 'udyogAadhar' : 
-                         doc.type === 'license' ? 'shopLicense' : 
-                         doc.type === 'udhayam' ? 'udhayamCert' : null;
-          
+          const docField = doc.type === 'aadhar' ? 'aadharCard' :
+            doc.type === 'pan' ? 'panCard' :
+              doc.type === 'gst' ? 'udyogAadhar' :
+                doc.type === 'license' ? 'shopLicense' :
+                  doc.type === 'udhayam' ? 'udhayamCert' : null;
+
           const oldDocUrl = docField && existingVendor?.documents ? existingVendor.documents[docField] : null;
           const docUrl = await processBase64Image(doc.file, fileName, oldDocUrl);
-          
+
           if (docUrl) {
             documentsDataWithUrls[docField] = docUrl;
           }
@@ -734,6 +734,39 @@ export const PATCH = authMiddlewareAdmin(
         status: status,
       };
 
+      // If status is "Approved", check if all uploaded documents are approved
+      if (status === "Approved") {
+        const vendor = await VendorModel.findById(id);
+        if (!vendor) {
+          return Response.json({ message: "Vendor not found" }, { status: 404 });
+        }
+
+        const documents = vendor.documents || {};
+        const mandatoryDocs = [
+          { key: "aadharCard", label: "Aadhar Card" },
+          { key: "panCard", label: "PAN Card" },
+          { key: "udyogAadhar", label: "Udyog Aadhar" },
+          { key: "udhayamCert", label: "Udhayam Certificate" },
+          { key: "shopLicense", label: "Shop License" },
+        ];
+
+        const pendingOrRejectedDocs = mandatoryDocs.filter((doc) => {
+          const isUploaded = documents[doc.key] && documents[doc.key] !== "";
+          const status = documents[`${doc.key}Status`];
+          return isUploaded && status !== "approved";
+        });
+
+        if (pendingOrRejectedDocs.length > 0) {
+          const docLabels = pendingOrRejectedDocs.map((doc) => doc.label).join(", ");
+          return Response.json(
+            {
+              message: `Cannot approve vendor. The following documents are not approved: ${docLabels}`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
       const updatedVendor = await VendorModel.findByIdAndUpdate(
         id,
         { $set: updateData },
@@ -749,7 +782,7 @@ export const PATCH = authMiddlewareAdmin(
         vendor: updatedVendor,
       });
     }
-    
+
     // Check if this is a document status update
     else if (vendorId && documentType && status) {
       // Validate required fields
@@ -762,10 +795,10 @@ export const PATCH = authMiddlewareAdmin(
 
       // Validate document type
       const validDocumentTypes = [
-        'aadharCard', 'udyogAadhar', 'udhayamCert', 
+        'aadharCard', 'udyogAadhar', 'udhayamCert',
         'shopLicense', 'panCard'
       ];
-      
+
       if (!validDocumentTypes.includes(documentType)) {
         return Response.json(
           { message: "Invalid document type" },
@@ -817,7 +850,7 @@ export const PATCH = authMiddlewareAdmin(
         vendor: updatedVendor,
       });
     }
-    
+
     // Invalid request
     else {
       return Response.json(

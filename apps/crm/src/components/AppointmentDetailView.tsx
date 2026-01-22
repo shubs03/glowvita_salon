@@ -1140,7 +1140,7 @@ export function AppointmentDetailView({
             <TabsContent value="details" className="p-6 pt-4 space-y-4">
               <div className="flex flex-col sm:flex-row justify-between gap-3">
                 <div className="w-full flex flex-col sm:flex-row gap-3">
-                  {(remainingAmount > 0 && (overridePayment?.paymentStatus ?? (liveAppointment as any).paymentStatus) !== 'completed') && (
+                  {(remainingAmount > 0 && (overridePayment?.paymentStatus ?? (liveAppointment as any).paymentStatus) !== 'completed' && appointment.status !== 'completed' && appointment.status !== 'cancelled') && (
                     <Button
                       variant="outline"
                       className="w-full sm:w-auto"
@@ -1159,14 +1159,16 @@ export function AppointmentDetailView({
                       {isCollectingPayment ? 'Hide Payment' : 'Collect Payment'}
                     </Button>
                   )}
-                  <Button
-                    variant="outline"
-                    className="w-full sm:w-auto"
-                    onClick={() => setIsRescheduling(true)}
-                  >
-                    <CalendarPlus className="w-4 h-4 mr-2" />
-                    Reschedule
-                  </Button>
+                  {appointment.status !== 'completed' && (
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      onClick={() => setIsRescheduling(true)}
+                    >
+                      <CalendarPlus className="w-4 h-4 mr-2" />
+                      Reschedule
+                    </Button>
+                  )}
                   {/* <div className="w-full sm:w-[200px]">
                   <Select 
                     value={appointment.status || "scheduled"}
@@ -1228,8 +1230,8 @@ export function AppointmentDetailView({
                     {appointment.payment?.bookingSource && (
                       <Badge variant="outline" className="text-xs font-medium">
                         {appointment.payment.bookingSource === 'web' ? 'ðŸŒ Online Booking' :
-                          appointment.payment.bookingSource === 'phone' ? 'ðŸ“ž Phone Booking' :
-                            'ðŸš¶ Walk-in'}
+                          appointment.payment.bookingSource === 'phone' ? '📞 Phone Booking' :
+                            '🚶 Walk-in'}
                       </Badge>
                     )}
                   </div>
@@ -1657,7 +1659,7 @@ export function AppointmentDetailView({
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <span className="text-sm font-semibold text-foreground">{formatCurrency(p.amount)}</span>
-                              <span className="text-xs text-muted-foreground">â€¢ {String(p.paymentMethod || 'cash').toUpperCase()}</span>
+                              <span className="text-xs text-muted-foreground">• {String(p.paymentMethod || 'cash').toUpperCase()}</span>
                             </div>
                             <div className="text-xs text-muted-foreground mt-0.5">{dateStr}</div>
                             {(p.notes || p.transactionId) && (

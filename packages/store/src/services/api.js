@@ -159,7 +159,7 @@ export const glowvitaApi = createApi({
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
-    "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "Regions", "PublicAllOffers", "AddOns"
+    "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "Regions", "PublicAllOffers", "AddOns", "PendingWeddingPackages"
   ],
 
   endpoints: (builder) => ({
@@ -548,6 +548,20 @@ export const glowvitaApi = createApi({
         body: { serviceId, status },
       }),
       invalidatesTags: ["PendingServices", "VendorServices"],
+    }),
+
+    // Wedding Package Approval Endpoints
+    getPendingWeddingPackages: builder.query({
+      query: () => ({ url: "/admin/wedding-packages/approval", method: "GET" }),
+      providesTags: ["PendingWeddingPackages"],
+    }),
+    updateWeddingPackageStatus: builder.mutation({
+      query: ({ packageId, status }) => ({
+        url: "/admin/wedding-packages/approval",
+        method: "PATCH",
+        body: { packageId, status },
+      }),
+      invalidatesTags: ["PendingWeddingPackages", "VendorWeddingPackages", "PublicVendorWeddingPackages"],
     }),
 
     // Admin
@@ -3010,6 +3024,9 @@ export const {
   useCreateWeddingPackageMutation,
   useUpdateWeddingPackageMutation,
   useDeleteWeddingPackageMutation,
+  // New Wedding Package Approval Hooks
+  useGetPendingWeddingPackagesQuery,
+  useUpdateWeddingPackageStatusMutation,
 
 
   // Payment Collection Hook

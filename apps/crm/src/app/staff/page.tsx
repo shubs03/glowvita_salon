@@ -11,6 +11,7 @@ import { Skeleton } from "@repo/ui/skeleton";
 import { Input } from '@repo/ui/input';
 import { Plus, Search, FileDown, Eye, Edit, Trash2, Users, UserPlus } from 'lucide-react';
 import { StaffFormModal } from '@/components/StaffFormModal';
+import { ExportButtons } from '@/components/ExportButtons';
 import { useGetStaffQuery, useDeleteStaffMutation } from '@repo/store/api';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
@@ -270,10 +271,18 @@ export default function StaffPage() {
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
-                            <Button variant="outline">
-                                <FileDown className="mr-2 h-4 w-4" />
-                                Export
-                            </Button>
+                            <ExportButtons
+                                data={filteredStaff}
+                                filename="staff_export"
+                                title="Staff Report"
+                                columns={[
+                                    { header: 'Name', key: 'fullName' },
+                                    { header: 'Email', key: 'emailAddress' },
+                                    { header: 'Phone', key: 'mobileNo' },
+                                    { header: 'Position', key: 'position' },
+                                    { header: 'Status', key: 'status' }
+                                ]}
+                            />
                             <Button onClick={() => handleOpenModal()}>
                                 <Plus className="mr-2 h-4 w-4" />
                                 Add Staff

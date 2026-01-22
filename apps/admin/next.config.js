@@ -1,5 +1,7 @@
 const path = require('path');
 require('dotenv').config({ path: '../../.env' });
+const libPackageJson = require('../../packages/lib/package.json');
+const storePackageJson = require('../../packages/store/package.json');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -8,11 +10,29 @@ const nextConfig = {
   poweredByHeader: false,
   webpack: (config, { isServer }) => {
     config.resolve.alias['@repo/config'] = path.resolve(__dirname, '../../packages/config');
-    config.resolve.alias['@repo/lib'] = path.resolve(__dirname, '../../packages/lib/src');
-    config.resolve.alias['@repo/store/api'] = path.resolve(__dirname, '../../packages/store/src/services/api.js');
-    config.resolve.alias['@repo/store/slices/adminAuthSlice'] = path.resolve(__dirname, '../../packages/store/src/slices/Admin/adminAuthSlice.js');
-    config.resolve.alias['@repo/store'] = path.resolve(__dirname, '../../packages/store/src');
-    config.resolve.alias['@repo/utils'] = path.resolve(__dirname, '../../packages/utils/src');
+
+    // Dynamic aliases from @repo/lib exports
+    if (libPackageJson.exports) {
+      Object.keys(libPackageJson.exports).forEach(key => {
+        if (key.startsWith('./')) {
+          const aliasKey = key.replace('.', '@repo/lib') + '$';
+          const targetPath = path.resolve(__dirname, '../../packages/lib', libPackageJson.exports[key]);
+          config.resolve.alias[aliasKey] = targetPath;
+        }
+      });
+    }
+
+    // Dynamic aliases from @repo/store exports
+    if (storePackageJson.exports) {
+      Object.keys(storePackageJson.exports).forEach(key => {
+        if (key.startsWith('./')) {
+          const aliasKey = key.replace('.', '@repo/store') + '$';
+          const targetPath = path.resolve(__dirname, '../../packages/store', storePackageJson.exports[key]);
+          config.resolve.alias[aliasKey] = targetPath;
+        }
+      });
+    }
+
     // Handle canvas.node binary files
     config.module.rules.push({
       test: /\.node$/,
