@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#a4de6c", "#d0ed57"];
+const COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316", "#84CC16", "#06B6D4"];
 
 interface TopServiceData {
   service: string;
@@ -122,11 +122,11 @@ export function TopServicesChart({
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-background border border-border p-2 rounded shadow-sm">
-          <p className="font-semibold">{data.service}</p>
-          <p>Services Sold: {data.serviceSold}</p>
-          <p>Total Sales: ₹{data.totalSales.toFixed(2)}</p>
-          <p>Percentage: {data.percentage.toFixed(1)}%</p>
+        <div className="bg-background border border-border p-3 rounded-lg shadow-lg">
+          <p className="font-semibold text-foreground">{data.service}</p>
+          <p className="text-sm text-muted-foreground">Services Sold: {data.serviceSold}</p>
+          <p className="text-sm text-muted-foreground">Total Sales: ₹{data.totalSales.toFixed(2)}</p>
+          <p className="text-sm text-muted-foreground">Percentage: {data.percentage.toFixed(1)}%</p>
         </div>
       );
     }
@@ -158,7 +158,7 @@ export function TopServicesChart({
                 cy="50%"
                 labelLine={false}
                 outerRadius={100}
-                fill="#8884d8"
+                fill="hsl(var(--primary))"
                 dataKey="totalSales"
                 nameKey="service"
                 label={({ service, percentage }) => `${service}: ${percentage.toFixed(0)}%`}
