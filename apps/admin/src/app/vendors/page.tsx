@@ -38,6 +38,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { VendorEditForm, type Vendor } from "../../components/VendorEditForm";
+import { toast } from "sonner";
 import { cn } from "@repo/ui/cn";
 import {
   useCreateVendorMutation,
@@ -91,19 +92,22 @@ export default function VendorManagementPage() {
     setFormModalOpen(true);
   };
 
-  const handleFormSubmit = async (vendorData: Vendor) => {
+  const handleFormSubmit = async (vendorData: any) => {
     try {
       if (selectedVendor) {
         // Edit mode
         await updateVendor({ id: selectedVendor._id, ...vendorData }).unwrap();
+        toast.success("Vendor updated successfully");
       } else {
         // Create mode
         await createVendor(vendorData).unwrap();
+        toast.success("Vendor created successfully");
+        handleCloseModal();
       }
       refetch(); // Refetch data to show updates
-      handleCloseModal();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to save vendor:", err);
+      toast.error(err?.data?.message || "Failed to save vendor");
     }
   };
 
@@ -149,8 +153,10 @@ export default function VendorManagementPage() {
       refetch(); // Refetch data
       setIsActionModalOpen(false);
       setSelectedVendor(null);
-    } catch (err) {
+      toast.success(`Vendor ${actionType}d successfully`);
+    } catch (err: any) {
       console.error(`Failed to ${actionType} vendor:`, err);
+      toast.error(err?.data?.message || `Failed to ${actionType} vendor`);
     }
   };
 

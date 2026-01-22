@@ -397,6 +397,15 @@ export const PUT = authMiddlewareAdmin(
       return forbiddenResponse();
     }
     const body = await req.json();
+    const id = body.id || body._id;
+
+    if (!id) {
+      return Response.json(
+        { message: "Vendor ID is required for update" },
+        { status: 400 }
+      );
+    }
+
     const {
       firstName,
       lastName,
@@ -606,9 +615,9 @@ export const PUT = authMiddlewareAdmin(
       for (let i = 0; i < gallery.length; i++) {
         const image = gallery[i];
         if (image && !image.startsWith('http')) {
+          if (!isValidBase64Image(image)) continue;
           const fileName = `vendor-${id}-gallery-${i}`;
-          // Get the old image URL for this position if it exists
-          const oldImageUrl = existingVendor?.gallery && existingVendor.gallery[i] ? existingVendor.gallery[i] : null;
+          const oldImageUrl = existingVendor?.gallery?.[i] || null;
           const imageUrl = await processBase64Image(image, fileName, oldImageUrl);
 
           if (imageUrl) {
@@ -620,6 +629,7 @@ export const PUT = authMiddlewareAdmin(
           galleryUrls.push(image);
         }
       }
+      updateData.gallery = galleryUrls;
     }
 
     // Handle document uploads if provided
@@ -646,45 +656,28 @@ export const PUT = authMiddlewareAdmin(
           }
         }
       }
-    } else {
-      // If no documents provided, keep existing document data
-      const existingVendor = await VendorModel.findById(id);
-      if (existingVendor?.documents) {
-        Object.assign(documentsDataWithUrls, existingVendor.documents);
+      updateData.documents = documentsData;
+    }
+
+    // Check for duplicate email/phone
+    if (email || phone) {
+      const conflictQuery = { _id: { $ne: id }, $or: [] };
+      if (email) conflictQuery.$or.push({ email });
+      if (phone) conflictQuery.$or.push({ phone });
+
+      if (conflictQuery.$or.length > 0) {
+        const existingConflict = await VendorModel.findOne(conflictQuery);
+        if (existingConflict) {
+          return Response.json({ message: "Email or phone number already in use" }, { status: 400 });
+        }
       }
     }
 
-    // Hash password if provided
-    const updateData = {
-      firstName,
-      lastName,
-      businessName,
-      email,
-      phone,
-      state,
-      city,
-      pincode,
-      category,
-      subCategories,
-      password: password ? await bcrypt.hash(password, 10) : undefined,
-      website: website || null,
-      address,
-      description: description || null,
-      profileImage: profileImageUrl || null,
-      subscription: subscriptionData,
-      gallery: galleryUrls,
-      bankDetails: bankDetailsData,
-      documents: documentsDataWithUrls,
-      regionId: validateAndLockRegion(req.user, body.regionId),
-      updatedAt: Date.now(),
-    };
-
-    // Remove undefined fields to avoid overwriting with undefined
-    if (!password) delete updateData.password;
-
-    const updatedVendor = await VendorModel.findByIdAndUpdate(id, updateData, {
-      new: true,
-    }).select("-password");
+    const updatedVendor = await VendorModel.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true }
+    ).select("-password");
 
     if (!updatedVendor) {
       return Response.json({ message: "Vendor not found" }, { status: 404 });
@@ -775,6 +768,23 @@ export const PATCH = authMiddlewareAdmin(
 
       if (!updatedVendor) {
         return Response.json({ message: "Vendor not found" }, { status: 404 });
+      }
+
+      // If vendor is being approved, automatically approve all their pending services
+      if (status === "Approved") {
+        try {
+          const VendorServicesModel = (await import('@repo/lib/models/Vendor/VendorServices.model')).default;
+          
+          // Update all pending services for this vendor to approved status
+          await VendorServicesModel.updateMany(
+            { vendor: id, "services.status": "pending" },
+            { $set: { "services.$[elem].status": "approved", "services.$[elem].updatedAt": new Date() } },
+            { arrayFilters: [{ "elem.status": "pending" }] }
+          );
+        } catch (error) {
+          console.error('Error updating vendor services status:', error);
+          // Continue anyway, don't fail the vendor approval due to service update failure
+        }
       }
 
       return Response.json({

@@ -129,9 +129,7 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
       {/* Center Section */}
       <div className="flex-1 flex items-center justify-center lg:justify-start lg:ml-8">
         <div className="flex items-center gap-6">
-          <h1 className="text-xl font-bold text-foreground">
-            {currentPage}
-          </h1>
+
           {/* --- DEBUG INFO --- */}
           {/* <div className="fixed top-20 right-4 bg-yellow-200 text-black p-2 rounded-lg shadow-lg z-50 text-xs">
             <p className="font-bold">Subscription Debug:</p>
@@ -140,22 +138,6 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
             <p>End Date: {subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString() : 'N/A'}</p>
           </div> */}
           {/* --- END DEBUG INFO --- */}
-
-          {/* Quick Stats Pills */}
-          <div className="hidden xl:flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs font-semibold hover:scale-105 transition-all duration-300 cursor-pointer">
-              <TrendingUp className="h-3 w-3" />
-              <span>+12% Today</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold hover:scale-105 transition-all duration-300 cursor-pointer">
-              <Calendar className="h-3 w-3" />
-              <span>8 Appointments</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-50 border border-orange-200 text-orange-700 text-xs font-semibold hover:scale-105 transition-all duration-300 cursor-pointer">
-              <Clock className="h-3 w-3" />
-              <span>Next: 2:30 PM</span>
-            </div>
-          </div>
         </div>
       </div>
 

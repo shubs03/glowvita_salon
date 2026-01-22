@@ -138,9 +138,11 @@ interface TabProps {
   errors: Partial<Record<keyof Vendor, string>>;
   setFormData: React.Dispatch<React.SetStateAction<Vendor>>;
   isEditMode: boolean;
+  onSave?: (data: Partial<Vendor>) => void;
+  isSaving?: boolean;
 }
 
-const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxChange, errors, setFormData, isEditMode }: TabProps) => {
+const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxChange, errors, setFormData, isEditMode, onSave, isSaving }: TabProps) => {
   const [isMapOpen, setIsMapOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
@@ -309,8 +311,13 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert('File size should not exceed 2MB');
+      const validTypes = ['image/jpeg', 'image/png'];
+      if (!validTypes.includes(file.type)) {
+        toast.error('Please upload a JPG or PNG image');
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size should not exceed 5MB');
         return;
       }
       const reader = new FileReader();
@@ -374,12 +381,12 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
                   <input
                     id="profileImage"
                     type="file"
-                    accept="image/jpeg,image/png,image/gif"
+                    accept="image/jpeg,image/png"
                     className="hidden"
                     onChange={handleImageUpload}
                   />
                 </Label>
-                <p className="text-xs text-gray-500">JPG, GIF or PNG. Max size of 2MB</p>
+                <p className="text-xs text-gray-500">JPG or PNG. Max size of 5MB</p>
               </div>
             </div>
           </div>
@@ -486,12 +493,12 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address <span className="text-red-500">*</span></Label>
-              <Input id="email" name="email" type="email" value={formData.email || ''} onChange={handleInputChange} className={errors.email ? 'border-red-500' : ''} />
+              <Input id="email" name="email" type="email" value={formData.email || ''} onChange={handleInputChange} readOnly={isEditMode} className={`${errors.email ? 'border-red-500' : ''} ${isEditMode ? 'bg-gray-100 cursor-not-allowed' : ''}`} />
               {errors.email && <p className="text-sm text-red-500 mt-1">{errors.email}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Mobile Number <span className="text-red-500">*</span></Label>
-              <Input id="phone" name="phone" type="tel" value={formData.phone || ''} onChange={handleInputChange} className={errors.phone ? 'border-red-500' : ''} />
+              <Input id="phone" name="phone" type="tel" value={formData.phone || ''} onChange={handleInputChange} maxLength={10} className={errors.phone ? 'border-red-500' : ''} />
               {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}
             </div>
           </div>
@@ -562,6 +569,25 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
             <Textarea id="address" name="address" value={formData.address || ''} onChange={handleInputChange} placeholder="Enter complete salon address" className={errors.address ? 'border-red-500' : ''} />
             {errors.address && <p className="text-sm text-red-500 mt-1">{errors.address}</p>}
           </div>
+
+          {isEditMode && (
+            <div className="flex justify-end pt-4 border-t">
+              <Button
+                type="button"
+                onClick={() => onSave?.(formData)}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Personal Info'
+                )}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -940,8 +966,8 @@ const GalleryTab = ({ vendor }: { vendor: Vendor | null }) => {
 };
 
 // Add BankDetailsTab component for view-only mode
-const BankDetailsTab = ({ vendor }: { vendor: Vendor | null }) => {
-  if (!vendor) return <div>No vendor data available</div>;
+const BankDetailsTab = ({ formData, handleInputChange, onSave, isSaving }: { formData: Vendor, handleInputChange: any, onSave?: (data: any) => void, isSaving?: boolean }) => {
+  if (!formData) return <div>No vendor data available</div>;
 
   return (
     <Card>
@@ -954,34 +980,54 @@ const BankDetailsTab = ({ vendor }: { vendor: Vendor | null }) => {
           <div className="space-y-2">
             <Label>Account Holder Name</Label>
             <Input
-              value={vendor.bankDetails?.accountHolder || ''}
-              readOnly
+              name="bankDetails.accountHolder"
+              value={formData.bankDetails?.accountHolder || ''}
+              onChange={handleInputChange}
             />
           </div>
           <div className="space-y-2">
             <Label>Account Number</Label>
             <Input
-              value={vendor.bankDetails?.accountNumber || ''}
-              readOnly
+              name="bankDetails.accountNumber"
+              value={formData.bankDetails?.accountNumber || ''}
+              onChange={handleInputChange}
             />
           </div>
           <div className="space-y-2">
             <Label>Bank Name</Label>
             <Input
-              value={vendor.bankDetails?.bankName || ''}
-              readOnly
+              name="bankDetails.bankName"
+              value={formData.bankDetails?.bankName || ''}
+              onChange={handleInputChange}
             />
           </div>
           <div className="space-y-2">
             <Label>IFSC Code</Label>
             <Input
-              value={vendor.bankDetails?.ifscCode || ''}
-              readOnly
+              name="bankDetails.ifscCode"
+              value={formData.bankDetails?.ifscCode || ''}
+              onChange={handleInputChange}
             />
           </div>
         </div>
+        <div className="flex justify-end pt-4 border-t">
+          <Button
+            type="button"
+            onClick={() => onSave?.(formData.bankDetails)}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Bank Details'
+            )}
+          </Button>
+        </div>
       </CardContent>
-    </Card>
+    </Card >
   );
 };
 
@@ -1489,7 +1535,7 @@ interface VendorEditFormProps {
   isOpen: boolean;
   onClose: () => void;
   vendor: Vendor | null;
-  onSubmit: (vendor: Vendor) => void;
+  onSubmit: (vendor: any) => void | Promise<void>;
   onSuccess: () => void; // Added onSuccess prop
 }
 
@@ -1519,6 +1565,7 @@ const getInitialFormData = (): Vendor => ({
 export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }: VendorEditFormProps) {
   const [formData, setFormData] = useState<Vendor>(getInitialFormData());
   const [errors, setErrors] = useState<Partial<Record<keyof Vendor, string>>>({});
+  const [isSavingTab, setIsSavingTab] = useState(false);
   const isEditMode = !!vendor;
 
   useEffect(() => {
@@ -1530,7 +1577,32 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }:
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+
+    let processedValue = value;
+
+    // Mobile Number Restriction: Max 10 digits and numbers only
+    if (name === 'phone') {
+      const numbersOnly = value.replace(/\D/g, '');
+      processedValue = numbersOnly.slice(0, 10);
+    }
+
+    // Name Restrictions: Only alphabets and spaces
+    if (name === 'firstName' || name === 'lastName') {
+      processedValue = value.replace(/[^a-zA-Z\s]/g, '');
+    }
+
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: {
+          ...(prev[parent as keyof Vendor] as any || {}),
+          [child]: processedValue
+        }
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: processedValue }));
+    }
   };
 
   const handleCheckboxChange = (field: 'subCategories', id: SubCategory, checked: boolean) => {
@@ -1543,22 +1615,102 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }:
   };
 
   const validateForm = () => {
-    // A more robust validation would go here
-    const requiredFields: (keyof Vendor)[] = ['firstName', 'lastName', 'email', 'phone', 'businessName', 'category', 'state', 'city', 'pincode', 'address'];
     const newErrors: Partial<Record<keyof Vendor, string>> = {};
     let isValid = true;
+
+    // Required fields check
+    const requiredFields: (keyof Vendor)[] = ['firstName', 'lastName', 'email', 'phone', 'businessName', 'category', 'state', 'city', 'pincode', 'address'];
     for (const field of requiredFields) {
       if (!formData[field as keyof typeof formData]) {
         newErrors[field] = 'This field is required';
         isValid = false;
       }
     }
+
+    // Business Name validation: only letters, numbers, spaces
+    if (formData.businessName && !/^[a-zA-Z0-9\s]+$/.test(formData.businessName)) {
+      newErrors.businessName = 'Only letters, numbers, and spaces allowed';
+      isValid = false;
+    }
+
+    // First Name validation: only alphabets
+    if (formData.firstName && !/^[a-zA-Z\s]+$/.test(formData.firstName)) {
+      newErrors.firstName = 'Only alphabets allowed';
+      isValid = false;
+    }
+
+    // Last Name validation: only alphabets
+    if (formData.lastName && !/^[a-zA-Z\s]+$/.test(formData.lastName)) {
+      newErrors.lastName = 'Only alphabets allowed';
+      isValid = false;
+    }
+
+    // Email validation
+    if (formData.email && !/^\S+@\S+\.\S+$/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+      isValid = false;
+    }
+
+    // Phone validation: exactly 10 digits
+    if (formData.phone && !/^\d{10}$/.test(formData.phone)) {
+      newErrors.phone = 'Mobile number must be exactly 10 digits';
+      isValid = false;
+    }
+
     if (!isEditMode && !formData.password) {
       newErrors.password = "Password is required for new vendors";
       isValid = false;
     }
+
     setErrors(newErrors);
     return isValid;
+  };
+  const handleSavePersonal = async (data: any) => {
+    if (!validateForm()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      setIsSavingTab(true);
+      // Only include fields relevant to Personal/Business tab
+      const personalFields: (keyof Vendor)[] = [
+        'firstName', 'lastName', 'email', 'phone', 'businessName',
+        'category', 'subCategories', 'description', 'profileImage',
+        'website', 'state', 'city', 'pincode', 'address', 'location'
+      ];
+
+      const updatePayload: any = { id: vendor?._id };
+      personalFields.forEach(field => {
+        if (data[field] !== undefined) {
+          updatePayload[field] = data[field];
+        }
+      });
+
+      // We use the same onSubmit but with partial data
+      // Since we refactored the API, it will handle this correctly.
+      await onSubmit(updatePayload);
+      toast.success("Personal information updated successfully");
+      // Don't close modal, just keep it open as per user "each tab independent"
+    } catch (err) {
+      console.error("Failed to save personal info:", err);
+      toast.error("Failed to save personal information");
+    } finally {
+      setIsSavingTab(false);
+    }
+  };
+
+  const handleSaveBank = async (bankDetails: BankDetails) => {
+    try {
+      setIsSavingTab(true);
+      await onSubmit({ id: vendor?._id, bankDetails });
+      toast.success("Bank details updated successfully");
+    } catch (err) {
+      console.error("Failed to save bank info:", err);
+      toast.error("Failed to save bank information");
+    } finally {
+      setIsSavingTab(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1603,6 +1755,8 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }:
                 errors={errors}
                 setFormData={setFormData}
                 isEditMode={isEditMode}
+                onSave={handleSavePersonal}
+                isSaving={isSavingTab}
               />
             </TabsContent>
             <TabsContent value="subscription">
@@ -1620,11 +1774,12 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }:
               )}
             </TabsContent>
             <TabsContent value="bank">
-              {isEditMode ? (
-                <BankDetailsTab vendor={vendor} />
-              ) : (
-                <BankDetailsTab vendor={formData} />
-              )}
+              <BankDetailsTab
+                formData={formData}
+                handleInputChange={handleInputChange}
+                onSave={handleSaveBank}
+                isSaving={isSavingTab}
+              />
             </TabsContent>
             <TabsContent value="documents">
               {isEditMode ? (
@@ -1637,10 +1792,12 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }:
               <ClientsTab vendor={vendor} />
             </TabsContent>
           </Tabs>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit">{vendor ? 'Save Changes' : 'Create Vendor'}</Button>
-          </DialogFooter>
+          {!isEditMode && (
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+              <Button type="submit">Create Vendor</Button>
+            </DialogFooter>
+          )}
         </form>
       </DialogContent>
     </Dialog>
