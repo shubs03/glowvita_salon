@@ -9,7 +9,7 @@ import { useCreateDoctorMutation, useGetSuperDataQuery } from '@repo/store/api';
 import { Label } from '@repo/ui/label';
 import { Checkbox } from '@repo/ui/checkbox';
 import { Skeleton } from '@repo/ui/skeleton';
-import { CheckCircle, Stethoscope, User, HeartPulse, Microscope, ArrowRight, ArrowLeft } from 'lucide-react';
+import { CheckCircle, Stethoscope, User, HeartPulse, Microscope, ArrowRight, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 
 interface FormData {
@@ -76,7 +76,9 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
   const { data: dropdownData = [], isLoading: isLoadingDropdowns } = useGetSuperDataQuery(undefined);
   
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
-  
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const [formData, setFormData] = useState<FormData>({
     name: '',
     email: '',
@@ -214,7 +216,11 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
 
   const validateStep1 = () => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
-    if (!formData.name) newErrors.name = 'Name is required';
+    if (!formData.name) {
+      newErrors.name = 'Name is required';
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.name)) {
+      newErrors.name = 'Name can only contain letters and spaces';
+    }
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -224,16 +230,23 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
       newErrors.phone = 'Phone is required';
     } else if (!/^\d{10}$/.test(formData.phone)) {
       newErrors.phone = 'Phone must be 10 digits';
+    } else if (!/^[0-9]+$/.test(formData.phone)) {
+      newErrors.phone = 'Phone can only contain numbers';
     }
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character';
     }
     if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
+    } else if (formData.confirmPassword && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(formData.confirmPassword)) {
+      newErrors.confirmPassword = 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character';
     }
     if (!formData.registrationNumber) newErrors.registrationNumber = 'Registration number is required';
+    if (formData.referredByCode && formData.referredByCode.trim() !== '' && (!/^[a-zA-Z0-9_]+$/.test(formData.referredByCode) || formData.referredByCode.length < 6 || formData.referredByCode.length > 20)) newErrors.referredByCode = 'Referral code must be 6-20 characters long and contain only letters, numbers, and underscores';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -242,7 +255,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.doctorType) newErrors.doctorType = 'Doctor type is required';
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return Object.keys(newErrors).length === 0;  
   };
 
   const validateStep3 = () => {
@@ -385,32 +398,50 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-              <div>
+              <div className="relative">
                 <Input 
                   id="password"
                   name="password" 
-                  type="password" 
+                  type={showPassword ? "text" : "password"} 
                   placeholder="Password (min. 8 characters)" 
                   onChange={handleChange} 
                   value={formData.password}
                   onKeyDown={handleInputKeyDown}
-                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg w-full"
                   required
                 />
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10" 
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
+                </Button>
                 {renderError('password')}
               </div>
-              <div>
+              <div className="relative">
                 <Input 
                   id="confirmPassword"
                   name="confirmPassword" 
-                  type="password" 
+                  type={showConfirmPassword ? "text" : "password"} 
                   placeholder="Confirm Password" 
                   onChange={handleChange} 
                   value={formData.confirmPassword}
                   onKeyDown={handleInputKeyDown}
-                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg w-full"
                   required
                 />
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="icon" 
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10" 
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
+                </Button>
                 {renderError('confirmPassword')}
               </div>
             </div>
@@ -424,6 +455,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                 onKeyDown={handleInputKeyDown}
                 className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
               />
+              {renderError('referredByCode')}
             </div>
           </div>
         );
@@ -457,7 +489,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                       }
                     </div>
                     <h4 className="font-semibold text-xs sm:text-sm">{type.name}</h4>
-                    <p className="text-xs text-gray-600 text-xs">{type.description}</p>
+                    <p className="text-gray-600 text-xs">{type.description}</p>
                   </div>
                 ))}
               </div>

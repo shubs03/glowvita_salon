@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@repo/ui/button";
-import { ArrowRight, Menu, X, User, LayoutDashboard, Calendar, ShoppingCart, Star, Wallet, Settings, LogOut, ChevronDown, Gift } from "lucide-react";
+import { ArrowRight, Menu, X, User, LayoutDashboard, Calendar, ShoppingCart, Star, Wallet, Settings, LogOut, ChevronDown, Gift, Users, FileText, Stethoscope, Box, Heart, Receipt, DollarSign, Bell, Truck, Store, HelpCircle, PlusSquare, Clock, Scissors, Megaphone } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@repo/ui/cn";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
@@ -46,47 +46,340 @@ interface MarketingHeaderProps {
   customMenuItems?: MenuItemProps[];
 }
 
-const profileNavItems = [
-  {
-    id: "overview",
-    label: "Overview",
-    icon: LayoutDashboard,
-    href: "/profile",
-  },
-  {
-    id: "appointments",
-    label: "My Appointments",
-    icon: Calendar,
-    href: "/profile/appointments",
-  },
-  {
-    id: "consultations",
-    label: "My Consultations",
-    icon: Calendar,
-    href: "/profile/consultations",
-  },
-  {
-    id: "orders",
-    label: "My Orders",
-    icon: ShoppingCart,
-    href: "/profile/orders",
-  },
-  { id: "cart", label: "My Cart", icon: ShoppingCart, href: "/profile/cart" },
-  { id: "reviews", label: "My Reviews", icon: Star, href: "/profile/reviews" },
-  {
-    id: "referrals",
-    label: "Refer & Earn",
-    icon: Gift,
-    href: "/profile/referrals",
-  },
-  { id: "wallet", label: "Wallet", icon: Wallet, href: "/profile/wallet" },
-  {
-    id: "settings",
-    label: "Account Settings",
-    icon: Settings,
-    href: "/profile/settings",
-  },
-];
+// Role-specific navigation items mapped to Lucide icons
+const getRoleSpecificNavItems = (role: string, permissions: string[] = []) => {
+  const baseItems = [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      href: "/dashboard",
+    },
+    {
+      id: "profile",
+      label: "Profile Settings",
+      icon: Settings,
+      href: "/salon-profile",
+    },
+  ];
+
+  const roleItemsMap: Record<string, any[]> = {
+    vendor: [
+      {
+        id: "calendar",
+        label: "Calendar",
+        icon: Calendar,
+        href: "/calendar",
+      },
+      {
+        id: "appointments",
+        label: "Appointments",
+        icon: Calendar,
+        href: "/appointments",
+      },
+      {
+        id: "staff",
+        label: "Staff Management",
+        icon: Users,
+        href: "/staff",
+      },
+      {
+        id: "clients",
+        label: "Clients",
+        icon: Users,
+        href: "/clients",
+      },
+      {
+        id: "customer-summary",
+        label: "Customer Summary",
+        icon: Users,
+        href: "/customers/summary",
+      },
+      {
+        id: "services",
+        label: "Services",
+        icon: Scissors,
+        href: "/services",
+      },
+      {
+        id: "addons",
+        label: "Add-ons",
+        icon: PlusSquare,
+        href: "/add-ons",
+      },
+      {
+        id: "wedding-packages",
+        label: "Wedding Packages",
+        icon: Heart,
+        href: "/wedding-packages",
+      },
+      {
+        id: "products",
+        label: "Products",
+        icon: Box,
+        href: "/products",
+      },
+      {
+        id: "product-questions",
+        label: "Product Questions",
+        icon: HelpCircle,
+        href: "/product-questions",
+      },
+      {
+        id: "reviews",
+        label: "Reviews",
+        icon: Star,
+        href: "/reviews",
+      },
+      {
+        id: "marketplace",
+        label: "Marketplace",
+        icon: Store,
+        href: "/marketplace",
+      },
+      {
+        id: "sales",
+        label: "Sales",
+        icon: DollarSign,
+        href: "/sales",
+      },
+      {
+        id: "invoice-management",
+        label: "Invoice Management",
+        icon: Receipt,
+        href: "/invoice-management",
+      },
+      {
+        id: "orders",
+        label: "Orders",
+        icon: ShoppingCart,
+        href: "/orders",
+      },
+      {
+        id: "shipping",
+        label: "Shipping",
+        icon: Truck,
+        href: "/shipping",
+      },
+      {
+        id: "settlements",
+        label: "Settlements",
+        icon: DollarSign,
+        href: "/settlements",
+      },
+      {
+        id: "expenses",
+        label: "Expenses",
+        icon: Receipt,
+        href: "/expenses",
+      },
+      {
+        id: "offers-coupons",
+        label: "Offers & Coupons",
+        icon: Gift,
+        href: "/offers-coupons",
+      },
+      {
+        id: "referrals",
+        label: "Referrals",
+        icon: Users,
+        href: "/referrals",
+      },
+      {
+        id: "marketing",
+        label: "Marketing",
+        icon: Megaphone,
+        href: "/marketing",
+      },
+      {
+        id: "notifications",
+        label: "Notifications",
+        icon: Bell,
+        href: "/push-notifications",
+      },
+      {
+        id: "reports",
+        label: "Reports",
+        icon: FileText,
+        href: "/reports",
+      },
+    ],
+    doctor: [
+      {
+        id: "calendar",
+        label: "Calendar",
+        icon: Calendar,
+        href: "/calendar",
+      },
+      {
+        id: "appointments",
+        label: "Appointments",
+        icon: Calendar,
+        href: "/appointments",
+      },
+      {
+        id: "patients",
+        label: "Patients",
+        icon: Users,
+        href: "/patients",
+      },
+      {
+        id: "consultations",
+        label: "Consultations",
+        icon: Stethoscope,
+        href: "/consultations",
+      },
+      {
+        id: "timetable",
+        label: "Timetable",
+        icon: Clock,
+        href: "/timetable",
+      },
+      {
+        id: "doctor-staff",
+        label: "Staff Management",
+        icon: Users,
+        href: "/doctor-staff",
+      },
+      {
+        id: "earnings",
+        label: "Earnings",
+        icon: DollarSign,
+        href: "/earnings",
+      },
+      {
+        id: "expenses",
+        label: "Expenses",
+        icon: Receipt,
+        href: "/expenses",
+      },
+      {
+        id: "doctor-reviews",
+        label: "Patient Reviews",
+        icon: Star,
+        href: "/doctor-reviews",
+      },
+      {
+        id: "doctor-offers",
+        label: "Offers & Coupons",
+        icon: Gift,
+        href: "/offers-coupons",
+      },
+      {
+        id: "notifications",
+        label: "Notifications",
+        icon: Bell,
+        href: "/push-notifications",
+      },
+      {
+        id: "doctor-referrals",
+        label: "Referrals",
+        icon: Users,
+        href: "/doctor-referrals",
+      },
+      {
+        id: "doctor-reports",
+        label: "Reports",
+        icon: FileText,
+        href: "/doctor-reports",
+      },
+    ],
+    supplier: [
+      {
+        id: "supplier-products",
+        label: "Products",
+        icon: Box,
+        href: "/supplier-products",
+      },
+      {
+        id: "product-questions",
+        label: "Product Questions",
+        icon: HelpCircle,
+        href: "/product-questions",
+      },
+      {
+        id: "reviews",
+        label: "Reviews",
+        icon: Star,
+        href: "/reviews",
+      },
+      {
+        id: "orders",
+        label: "Orders",
+        icon: ShoppingCart,
+        href: "/orders",
+      },
+      {
+        id: "sales",
+        label: "Sales",
+        icon: DollarSign,
+        href: "/sales",
+      },
+      {
+        id: "expenses",
+        label: "Expenses",
+        icon: Receipt,
+        href: "/expenses",
+      },
+      {
+        id: "offers-coupons",
+        label: "Offers & Coupons",
+        icon: Gift,
+        href: "/offers-coupons",
+      },
+      {
+        id: "referrals",
+        label: "Referrals",
+        icon: Users,
+        href: "/referrals",
+      },
+      {
+        id: "marketing",
+        label: "Marketing",
+        icon: Megaphone,
+        href: "/marketing",
+      },
+      {
+        id: "notifications",
+        label: "Notifications",
+        icon: Bell,
+        href: "/push-notifications",
+      },
+      {
+        id: "reports",
+        label: "Reports",
+        icon: FileText,
+        href: "/reports",
+      },
+    ],
+    staff: [], // Staff will get filtered permissions-based items
+  };
+
+  const roleItems = roleItemsMap[role] || [];
+  
+  // For staff, filter by permissions
+  if (role === 'staff' && permissions.length > 0) {
+    // Map staff permissions to corresponding nav items
+    const permissionToNavItemMap: Record<string, string> = {
+      'dashboard_view': 'dashboard',
+      'calendar_view': 'calendar',
+      'appointments_view': 'appointments',
+      'clients_view': 'clients',
+      'services_view': 'services',
+      'products_view': 'products',
+      'orders_view': 'orders',
+      'reports_view': 'reports',
+    };
+    
+    const allowedItemIds = permissions
+      .map(perm => permissionToNavItemMap[perm])
+      .filter(Boolean);
+    
+    return [...baseItems, ...roleItems.filter(item => allowedItemIds.includes(item.id))];
+  }
+  
+  return [...baseItems, ...roleItems];
+};
 
 const navItems = [
   { label: "Apps", href: "/apps" },
@@ -105,7 +398,7 @@ export function MarketingHeader({
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const { isCrmAuthenticated: isAuthenticated, user, isLoading } = useCrmAuth();
+  const { isCrmAuthenticated: isAuthenticated, user, isLoading, role, permissions } = useCrmAuth();
   const dispatch = useAppDispatch();
   const router = useRouter();
   const pathname = usePathname();
@@ -147,12 +440,12 @@ export function MarketingHeader({
       dispatch(clearCrmAuth());
       toast.success("You have been logged out.");
       // Redirect to CRM login page
-      router.push("/crm/login");
+      router.push("/login");
     } catch (error) {
       console.error("Logout error:", error);
       toast.error("Error during logout. Please try again.");
       // Still redirect to CRM login even if there was an error
-      router.push("/crm/login");
+      router.push("/login");
     } finally {
       setIsLoggingOut(false);
       setShowLogoutModal(false);
@@ -181,6 +474,9 @@ export function MarketingHeader({
   }, [isHomePage]);
 
   const isActiveRoute = (href: string) => pathname === href;
+
+  // Get role-specific navigation items
+  const roleNavItems = getRoleSpecificNavItems(role || '', permissions || []);
 
   return (
     <>
@@ -292,8 +588,8 @@ export function MarketingHeader({
                           </div>
                         </div>
                       </DropdownMenuLabel>
-                      <DropdownMenuGroup className="p-2">
-                        {profileNavItems.map((item) => (
+                      <DropdownMenuGroup className="p-2 max-h-96 overflow-y-auto">
+                        {roleNavItems.map((item) => (
                           <DropdownMenuItem
                             key={item.id}
                             asChild
@@ -325,7 +621,7 @@ export function MarketingHeader({
                     className="hover:bg-primary/10 text-md px-3"
                     asChild
                   >
-                    <Link href="/crm/login">Login</Link>
+                    <Link href="/login">Login</Link>
                   </Button>
                 )}
               </>

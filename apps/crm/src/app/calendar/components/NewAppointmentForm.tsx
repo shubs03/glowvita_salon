@@ -943,8 +943,8 @@ export default function NewAppointmentForm({
           amount: firstService.price || 0,
           totalAmount: calculateTotalAmount(
             firstService.price || 0,
-            prev.discount,
-            prev.tax
+            prev.discount || 0,
+            prev.tax || 0
           )
         }));
       }
@@ -1110,7 +1110,7 @@ export default function NewAppointmentForm({
       services: updatedServices,
       duration: totalDuration,
       amount: totalAmount,
-      totalAmount: calculateTotalAmount(totalAmount, prev.discount, prev.tax),
+      totalAmount: calculateTotalAmount(totalAmount, prev.discount || 0, prev.tax || 0),
       endTime: calculateEndTime(prev.startTime, totalDuration)
     }));
 
@@ -1143,7 +1143,7 @@ export default function NewAppointmentForm({
       services: recalculatedServices,
       duration: totalDuration,
       amount: totalAmount,
-      totalAmount: calculateTotalAmount(totalAmount, prev.discount, prev.tax),
+      totalAmount: calculateTotalAmount(totalAmount, prev.discount || 0, prev.tax || 0),
       endTime: calculateEndTime(prev.startTime, totalDuration)
     }));
   };
