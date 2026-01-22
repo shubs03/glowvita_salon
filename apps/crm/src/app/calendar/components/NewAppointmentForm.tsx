@@ -943,8 +943,8 @@ export default function NewAppointmentForm({
           amount: firstService.price || 0,
           totalAmount: calculateTotalAmount(
             firstService.price || 0,
-            prev.discount,
-            prev.tax
+            prev.discount || 0,
+            prev.tax || 0
           )
         }));
       }
@@ -1110,7 +1110,7 @@ export default function NewAppointmentForm({
       services: updatedServices,
       duration: totalDuration,
       amount: totalAmount,
-      totalAmount: calculateTotalAmount(totalAmount, prev.discount, prev.tax),
+      totalAmount: calculateTotalAmount(totalAmount, prev.discount || 0, prev.tax || 0),
       endTime: calculateEndTime(prev.startTime, totalDuration)
     }));
 
@@ -1143,7 +1143,7 @@ export default function NewAppointmentForm({
       services: recalculatedServices,
       duration: totalDuration,
       amount: totalAmount,
-      totalAmount: calculateTotalAmount(totalAmount, prev.discount, prev.tax),
+      totalAmount: calculateTotalAmount(totalAmount, prev.discount || 0, prev.tax || 0),
       endTime: calculateEndTime(prev.startTime, totalDuration)
     }));
   };
@@ -2006,7 +2006,7 @@ export default function NewAppointmentForm({
                           <div className="flex justify-between w-full">
                             <span>{appointmentData.serviceName}</span>
                             <span className="ml-2 text-sm text-gray-500">
-                              ${appointmentData.amount?.toFixed(2) || '0.00'}
+                              ₹{appointmentData.amount?.toFixed(2) || '0.00'}
                             </span>
                           </div>
                         )}
@@ -2018,7 +2018,7 @@ export default function NewAppointmentForm({
                           <div className="flex justify-between w-full">
                             <span>{service.name}</span>
                             <span className="ml-2 text-sm text-gray-500">
-                              ${service.price?.toFixed(2) || '0.00'} • {service.duration}min
+                              ₹{service.price?.toFixed(2) || '0.00'} • {service.duration}min
                             </span>
                           </div>
                         </SelectItem>
@@ -2043,7 +2043,7 @@ export default function NewAppointmentForm({
                   const s = services.find((sv) => (sv.id === appointmentData.service || sv._id === appointmentData.service));
                   if (!s) return null;
                   return (
-                    <div className="text-[11px] text-gray-600 dark:text-gray-400 mt-1">Selected: {s.name} • {s.duration} min • ${s.price?.toFixed(2) || '0.00'}</div>
+                    <div className="text-[11px] text-gray-600 dark:text-gray-400 mt-1">Selected: {s.name} • {s.duration} min • ₹{s.price?.toFixed(2) || '0.00'}</div>
                   );
                 })()}
 
@@ -2064,7 +2064,7 @@ export default function NewAppointmentForm({
                           <div className="flex-1">
                             <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">{serviceItem.serviceName}</p>
                             <p className="text-[11px] text-gray-600 dark:text-gray-400">
-                              {serviceItem.staffName} • ${serviceItem.amount.toFixed(2)} • {serviceItem.duration} min
+                              {serviceItem.staffName} • ₹{serviceItem.amount.toFixed(2)} • {serviceItem.duration} min
                             </p>
                             <p className="text-[11px] text-gray-500 dark:text-gray-400">
                               {serviceItem.startTime} → {serviceItem.endTime}
@@ -2115,7 +2115,7 @@ export default function NewAppointmentForm({
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
-                            ${appointmentData.amount.toFixed(2)}
+                            ₹{appointmentData.amount.toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -2180,7 +2180,7 @@ export default function NewAppointmentForm({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           <div className="space-y-2">
             <Label htmlFor="amount" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Amount ($)
+              Amount (₹)
             </Label>
             <Input
               id="amount"
@@ -2196,7 +2196,7 @@ export default function NewAppointmentForm({
 
           <div className="space-y-2">
             <Label htmlFor="discount" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Discount ($) <span className="text-gray-400 text-xs">(Optional)</span>
+              Discount (₹) <span className="text-gray-400 text-xs">(Optional)</span>
             </Label>
             <Input
               id="discount"
@@ -2212,7 +2212,7 @@ export default function NewAppointmentForm({
 
           <div className="space-y-2">
             <Label htmlFor="tax" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Tax ($)
+              Tax (₹)
             </Label>
             <Input
               id="tax"
@@ -2228,7 +2228,7 @@ export default function NewAppointmentForm({
 
           <div className="space-y-2">
             <Label htmlFor="totalAmount" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Total Amount ($)
+              Total Amount (₹)
             </Label>
             <Input
               id="totalAmount"

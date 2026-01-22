@@ -210,7 +210,7 @@ interface DoctorProfile {
 // SUB-COMPONENTS FOR TABS
 const TravelSettingsTab = ({ vendor, setVendor }: any) => {
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
-  
+
   const handleSave = async () => {
     try {
       const result: any = await updateVendorProfile({
@@ -220,7 +220,7 @@ const TravelSettingsTab = ({ vendor, setVendor }: any) => {
         travelSpeed: vendor.travelSpeed,
         baseLocation: vendor.baseLocation,
       }).unwrap();
-      
+
       if (result.success) {
         toast.success(result.message);
       } else {
@@ -257,7 +257,7 @@ const TravelSettingsTab = ({ vendor, setVendor }: any) => {
           </Select>
           <p className="text-xs text-muted-foreground">Select how you provide services to customers</p>
         </div>
-        
+
         <div className="space-y-2">
           <Label htmlFor="travelRadius">Travel Radius (km)</Label>
           <Input
@@ -273,7 +273,7 @@ const TravelSettingsTab = ({ vendor, setVendor }: any) => {
           />
           <p className="text-xs text-muted-foreground">Maximum distance you can travel for home services</p>
         </div>
-        
+
         <div className="space-y-2">
           <Label htmlFor="travelSpeed">Average Travel Speed (km/h)</Label>
           <Input
@@ -289,7 +289,7 @@ const TravelSettingsTab = ({ vendor, setVendor }: any) => {
           />
           <p className="text-xs text-muted-foreground">Your average travel speed for time estimation (default: 30 km/h)</p>
         </div>
-        
+
         <div className="space-y-4">
           <Label>Base Location</Label>
           <div className="grid grid-cols-2 gap-4">
@@ -301,13 +301,13 @@ const TravelSettingsTab = ({ vendor, setVendor }: any) => {
                 step="any"
                 value={vendor.baseLocation?.lat || vendor.location?.lat || ''}
                 onChange={(e) =>
-                  setVendor({ 
-                    ...vendor, 
-                    baseLocation: { 
-                      ...vendor.baseLocation, 
+                  setVendor({
+                    ...vendor,
+                    baseLocation: {
+                      ...vendor.baseLocation,
                       lat: Number(e.target.value),
                       lng: vendor.baseLocation?.lng || vendor.location?.lng || 0
-                    } 
+                    }
                   })
                 }
                 placeholder="e.g., 19.0760"
@@ -321,12 +321,12 @@ const TravelSettingsTab = ({ vendor, setVendor }: any) => {
                 step="any"
                 value={vendor.baseLocation?.lng || vendor.location?.lng || ''}
                 onChange={(e) =>
-                  setVendor({ 
-                    ...vendor, 
-                    baseLocation: { 
+                  setVendor({
+                    ...vendor,
+                    baseLocation: {
                       lat: vendor.baseLocation?.lat || vendor.location?.lat || 0,
                       lng: Number(e.target.value)
-                    } 
+                    }
                   })
                 }
                 placeholder="e.g., 72.8777"
@@ -335,7 +335,7 @@ const TravelSettingsTab = ({ vendor, setVendor }: any) => {
           </div>
           <p className="text-xs text-muted-foreground">Your starting location for travel calculations (shop/home address)</p>
         </div>
-        
+
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex gap-2">
             <MapPin className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
@@ -734,26 +734,47 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    // In a real app, you would upload the files to a server and get URLs
-    // For now, we'll convert to base64 strings for demonstration
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     const newImages: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      // Convert file to base64
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = error => reject(error);
-      });
-      newImages.push(base64);
+
+      // File type validation
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        toast.error(`Invalid file type: ${file.name}. Only JPG, JPEG, PNG, and WEBP are allowed.`);
+        continue;
+      }
+
+      // File size validation
+      if (file.size > MAX_FILE_SIZE) {
+        toast.error(`File too large: ${file.name}. Maximum size allowed is 5MB.`);
+        continue;
+      }
+
+      // In a real app, you would upload the files to a server and get URLs
+      // For now, we'll convert to base64 strings for demonstration
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = error => reject(error);
+        });
+        newImages.push(base64);
+      } catch (error) {
+        console.error('Error reading file:', error);
+        toast.error(`Failed to read file: ${file.name}`);
+      }
     }
 
-    setVendor((prev: any) => ({
-      ...prev,
-      gallery: [...(prev.gallery || []), ...newImages]
-    }));
+    if (newImages.length > 0) {
+      setVendor((prev: any) => ({
+        ...prev,
+        gallery: [...(prev.gallery || []), ...newImages]
+      }));
+    }
   };
 
   const openPreview = (src: string) => {
@@ -781,6 +802,17 @@ const GalleryTab = ({ gallery, setVendor }: { gallery: string[]; setVendor: any 
               browse to upload
             </label>
           </Button>
+          <div className="mt-3 space-y-1">
+            <p className="text-[11px] font-bold text-red-600 uppercase tracking-wider">Instruction:</p>
+            <div className="bg-red-50 border border-red-200 p-2 rounded-md space-y-1">
+              <p className="text-[11px] text-red-700 font-medium">
+                • Max file size: <span className="font-bold underline">5MB</span>
+              </p>
+              <p className="text-[11px] text-red-700 font-medium">
+                • Accepted Formats: <span className="font-bold">JPG, JPEG, PNG, WEBP</span>
+              </p>
+            </div>
+          </div>
           <Input
             id="gallery-upload"
             type="file"
@@ -982,25 +1014,45 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
   const handleDocumentUpload = async (docType: string, file: File | null) => {
     if (!file) return;
 
-    // Convert file to base64
-    const base64 = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = error => reject(error);
-    });
+    const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'application/pdf'];
 
-    setVendor((prev: any) => ({
-      ...prev,
-      documents: {
-        ...prev.documents,
-        [docType]: base64,
-        // Reset status when a new document is uploaded
-        [`${docType}Status`]: 'pending',
-        [`${docType}RejectionReason`]: null,
-        [`${docType}AdminRejectionReason`]: null
-      }
-    }));
+    // File type validation
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast.error(`Invalid file type. Only JPG, JPEG, and PDF are allowed for documents.`);
+      return;
+    }
+
+    // File size validation
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error(`File too large. Maximum size allowed is 5MB.`);
+      return;
+    }
+
+    try {
+      // Convert file to base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = error => reject(error);
+      });
+
+      setVendor((prev: any) => ({
+        ...prev,
+        documents: {
+          ...prev.documents,
+          [docType]: base64,
+          // Reset status when a new document is uploaded
+          [`${docType}Status`]: 'pending',
+          [`${docType}RejectionReason`]: null,
+          [`${docType}AdminRejectionReason`]: null
+        }
+      }));
+    } catch (error) {
+      console.error('Error reading document:', error);
+      toast.error('Failed to read document file');
+    }
   };
 
   const handleRemoveDocument = (docType: string) => {
@@ -1050,6 +1102,13 @@ const DocumentsTab = ({ documents, setVendor }: { documents: any; setVendor: any
         <CardTitle>Business Documents</CardTitle>
         <CardDescription>
           Upload and manage your verification documents. Documents will be reviewed by our team.
+          <div className="mt-4 p-3 bg-red-50 border-l-4 border-red-500 rounded-r-md">
+            <p className="text-xs font-bold text-red-700 uppercase mb-1">Upload Requirements:</p>
+            <ul className="text-[11px] text-red-600 list-disc list-inside space-y-0.5 font-medium">
+              <li>File formats: <span className="font-bold">JPG, JPEG, PDF</span></li>
+              <li>Maximum file size: <span className="font-bold text-red-700 underline">5MB</span></li>
+            </ul>
+          </div>
         </CardDescription>
       </CardHeader>
       <CardContent>

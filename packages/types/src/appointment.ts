@@ -45,7 +45,6 @@ export interface Appointment {
   notes: string;
   status: AppointmentStatus;
   amount: number;
-  discount: number;
   tax: number;
   totalAmount: number;
   paymentStatus?: string;
@@ -57,6 +56,7 @@ export interface Appointment {
   platformFee?: number;
   serviceTax?: number;
   discountAmount?: number;
+  discount?: number;
   finalAmount?: number;
   payment?: {
     paid?: number;

@@ -7,13 +7,36 @@ import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
-import { CheckCircle, Eye, XCircle, Users, ThumbsUp, Hourglass, ThumbsDown, Trash2 } from 'lucide-react';
+import {
+  CheckCircle,
+  Eye,
+  XCircle,
+  Users,
+  ThumbsUp,
+  Hourglass,
+  ThumbsDown,
+  Trash2,
+  Mail,
+  Phone,
+  Globe,
+  MapPin,
+  Calendar,
+  Hash,
+  Briefcase,
+  Info,
+  User,
+  Tags,
+  Map as MapIcon,
+  CreditCard,
+  FileText
+} from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from '@repo/ui/badge';
 import { Skeleton } from "@repo/ui/skeleton";
-import { 
-  useGetSuppliersQuery, 
-  useUpdateSupplierMutation, 
+import { cn } from "@repo/ui/cn";
+import {
+  useGetSuppliersQuery,
+  useUpdateSupplierMutation,
   useDeleteSupplierMutation,
   useGetDoctorsQuery,
   useUpdateDoctorMutation,
@@ -25,7 +48,9 @@ import {
   useGetVendorProductApprovalsQuery,
   useUpdateVendorProductStatusMutation,
   useGetSupplierProductApprovalsQuery,
-  useUpdateSupplierProductStatusMutation
+  useUpdateSupplierProductStatusMutation,
+  useGetPendingWeddingPackagesQuery,
+  useUpdateWeddingPackageStatusMutation
 } from '@repo/store/api';
 import { toast } from 'sonner';
 import DocumentStatusManager from '../../components/DocumentStatusManager';
@@ -91,6 +116,16 @@ type Service = {
   description: string;
 };
 
+type WeddingPackage = {
+  _id: string;
+  name: string;
+  vendorName: string;
+  totalPrice: number;
+  discountedPrice: number | null;
+  status: "pending" | "approved" | "disapproved";
+  description: string;
+};
+
 type Product = {
   _id: string;
   productImage: string;
@@ -141,7 +176,7 @@ type Supplier = {
 };
 
 type ActionType = 'approve' | 'reject' | 'delete';
-type ItemType = 'vendor' | 'service' | 'vendor-product' | 'supplier-product' | 'doctor' | 'supplier';
+type ItemType = 'vendor' | 'service' | 'vendor-product' | 'supplier-product' | 'doctor' | 'supplier' | 'wedding-package';
 
 export default function VendorApprovalPage() {
   // RTK Query hooks
@@ -151,14 +186,18 @@ export default function VendorApprovalPage() {
   const { data: doctorsData = [], isLoading: doctorsLoading } = useGetDoctorsQuery(undefined);
   const { data: pendingServices = [], isLoading: servicesLoading, refetch: refetchPendingServices } = useGetPendingServicesQuery(undefined);
   const [updateServiceStatus] = useUpdateServiceStatusMutation();
-  
+
   // Vendor product approvals
   const { data: vendorProductData, isLoading: vendorProductsLoading, error: vendorProductsError, refetch: refetchVendorProducts } = useGetVendorProductApprovalsQuery(undefined);
   const [updateVendorProductStatus] = useUpdateVendorProductStatusMutation();
-  
+
   // Supplier product approvals
   const { data: supplierProductData, isLoading: supplierProductsLoading, error: supplierProductsError, refetch: refetchSupplierProducts } = useGetSupplierProductApprovalsQuery(undefined);
   const [updateSupplierProductStatus] = useUpdateSupplierProductStatusMutation();
+
+  // Wedding package approvals
+  const { data: pendingWeddingPackages = [], isLoading: weddingPackagesLoading, refetch: refetchPendingWeddingPackages } = useGetPendingWeddingPackagesQuery(undefined);
+  const [updateWeddingPackageStatus] = useUpdateWeddingPackageStatusMutation();
 
   const [updateSupplier] = useUpdateSupplierMutation();
   const [deleteSupplier] = useDeleteSupplierMutation();
@@ -170,8 +209,8 @@ export default function VendorApprovalPage() {
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
-  
-  const [selectedItem, setSelectedItem] = useState<Vendor | Service | Product | Doctor | Supplier | null>(null);
+
+  const [selectedItem, setSelectedItem] = useState<Vendor | Service | Product | Doctor | Supplier | WeddingPackage | null>(null);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [actionType, setActionType] = useState<ActionType | null>(null);
   const [itemType, setItemType] = useState<ItemType | null>(null);
@@ -181,7 +220,7 @@ export default function VendorApprovalPage() {
   const pendingVendors = vendors.filter((v: Vendor) => {
     // Include vendors with Pending or Disabled status
     if (v.status === 'Pending' || v.status === 'Disabled') return true;
-    
+
     // Also include vendors who have documents with pending status
     const documents = v.documents;
     if (documents) {
@@ -191,42 +230,65 @@ export default function VendorApprovalPage() {
         // Check if document exists (not null or undefined) and not empty string
         const isUploaded = documents[docType] && documents[docType] !== '';
         const isPending = status === 'pending' && isUploaded;
-        
+
         // Debug logging
         if (isPending) {
           console.log(`Vendor ${v.businessName} has pending document: ${docType}`);
         }
-        
+
         return isPending;
       });
-      
+
       return hasPendingDocuments;
     }
-    
+
     return false;
   });
+
+  const getUnapprovedDocuments = (vendor: Vendor) => {
+    const documents = vendor.documents;
+    if (!documents) return [];
+
+    const mandatoryDocs = [
+      { key: 'aadharCard', label: 'Aadhar Card' },
+      { key: 'panCard', label: 'PAN Card' },
+      { key: 'udyogAadhar', label: 'Udyog Aadhar' },
+      { key: 'udhayamCert', label: 'Udhayam Certificate' },
+      { key: 'shopLicense', label: 'Shop License' }
+    ] as const;
+
+    return mandatoryDocs
+      .filter(doc => {
+        const isUploaded = documents[doc.key] && documents[doc.key] !== '';
+        const status = (documents as any)[`${doc.key}Status`];
+        return isUploaded && status !== 'approved';
+      })
+      .map(doc => doc.label);
+  };
 
   // Pagination logic
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
   const currentVendors = pendingVendors.slice(firstItemIndex, lastItemIndex);
   const currentServices = pendingServices.slice(firstItemIndex, lastItemIndex);
+  const currentWeddingPackages = pendingWeddingPackages.slice(firstItemIndex, lastItemIndex);
   const currentDoctors = pendingDoctors.slice(firstItemIndex, lastItemIndex);
   const currentSuppliers = pendingSuppliers.slice(firstItemIndex, lastItemIndex);
 
   const totalVendorPages = Math.ceil(pendingVendors.length / itemsPerPage);
   const totalServicePages = Math.ceil(pendingServices.length / itemsPerPage);
+  const totalWeddingPackagePages = Math.ceil(pendingWeddingPackages.length / itemsPerPage);
   const totalDoctorPages = Math.ceil(pendingDoctors.length / itemsPerPage);
   const totalSupplierPages = Math.ceil(pendingSuppliers.length / itemsPerPage);
 
-  const handleActionClick = (item: Vendor | Service | Product | Doctor | Supplier, type: ItemType, action: ActionType) => {
+  const handleActionClick = (item: Vendor | Service | Product | Doctor | Supplier | WeddingPackage, type: ItemType, action: ActionType) => {
     setSelectedItem(item);
     setItemType(type);
     setActionType(action);
     setIsActionModalOpen(true);
   };
 
-  const handleViewClick = (item: Vendor | Service | Product | Doctor | Supplier, type: ItemType) => {
+  const handleViewClick = (item: Vendor | Service | Product | Doctor | Supplier | WeddingPackage, type: ItemType) => {
     setSelectedItem(item);
     setItemType(type);
     setIsViewModalOpen(true);
@@ -298,6 +360,12 @@ export default function VendorApprovalPage() {
           toast.success(`Product "${product.productName}" has been ${newStatus}.`);
           refetchSupplierProducts();
         }
+      } else if (itemType === 'wedding-package') {
+        const pkg = selectedItem as WeddingPackage;
+        const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
+        await updateWeddingPackageStatus({ packageId: pkg._id, status: newStatus }).unwrap();
+        toast.success(`Wedding Package "${pkg.name}" has been ${newStatus}.`);
+        refetchPendingWeddingPackages();
       }
     } catch (error) {
       toast.error('Error', { description: `Failed to perform action on ${itemType}.` });
@@ -312,7 +380,13 @@ export default function VendorApprovalPage() {
   const getModalContent = () => {
     if (!actionType || !selectedItem || !itemType) return { title: '', description: '', buttonText: '' };
 
-    const itemName = (selectedItem as any).businessName || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).name || `${(selectedItem as any).firstName} ${(selectedItem as any).lastName}`;
+    const itemName = (selectedItem as any).businessName ||
+      (selectedItem as any).serviceName ||
+      (selectedItem as any).productName ||
+      (selectedItem as any).name ||
+      (selectedItem as any).supplierName ||
+      `${(selectedItem as any).firstName || ''} ${(selectedItem as any).lastName || ''}`.trim() ||
+      'N/A';
 
     switch (actionType) {
       case 'approve':
@@ -354,7 +428,7 @@ export default function VendorApprovalPage() {
   const totalSupplierProductPages = Math.ceil(pendingSupplierProducts.length / itemsPerPage);
 
   // Check if any of the main data is still loading
-  const isMainDataLoading = vendorsLoading || suppliersLoading || doctorsLoading || servicesLoading || vendorProductsLoading || supplierProductsLoading;
+  const isMainDataLoading = vendorsLoading || suppliersLoading || doctorsLoading || servicesLoading || weddingPackagesLoading || vendorProductsLoading || supplierProductsLoading;
 
   if (isMainDataLoading) {
     return (
@@ -460,12 +534,23 @@ export default function VendorApprovalPage() {
             <p className="text-xs text-muted-foreground">Suppliers awaiting review</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Packages</CardTitle>
+            <ThumbsUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{pendingWeddingPackages.length}</div>
+            <p className="text-xs text-muted-foreground">Packages to approve</p>
+          </CardContent>
+        </Card>
       </div>
 
       <Tabs defaultValue="vendor-approvals">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-7">
           <TabsTrigger value="vendor-approvals" className="text-xs md:text-sm">Vendors</TabsTrigger>
           <TabsTrigger value="service-approvals" className="text-xs md:text-sm">Services</TabsTrigger>
+          <TabsTrigger value="wedding-package-approvals" className="text-xs md:text-sm">Wedding Packages</TabsTrigger>
           <TabsTrigger value="vendor-product-approvals" className="text-xs md:text-sm">Vendor Products</TabsTrigger>
           <TabsTrigger value="supplier-product-approvals" className="text-xs md:text-sm">Supplier Products</TabsTrigger>
           <TabsTrigger value="doctor-approvals" className="text-xs md:text-sm">Doctors</TabsTrigger>
@@ -531,8 +616,16 @@ export default function VendorApprovalPage() {
                               <Eye className="h-4 w-4" />
                               <span className="sr-only">View</span>
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, 'vendor', 'approve')}>
-                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleActionClick(vendor, 'vendor', 'approve')}
+                              disabled={getUnapprovedDocuments(vendor).length > 0}
+                              title={getUnapprovedDocuments(vendor).length > 0
+                                ? `Approve documents first: ${getUnapprovedDocuments(vendor).join(', ')}`
+                                : 'Approve Vendor'}
+                            >
+                              <CheckCircle className={cn("h-4 w-4", getUnapprovedDocuments(vendor).length > 0 ? "text-gray-400" : "text-green-600")} />
                               <span className="sr-only">Approve</span>
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleActionClick(vendor, 'vendor', 'reject')}>
@@ -630,6 +723,82 @@ export default function VendorApprovalPage() {
                 itemsPerPage={itemsPerPage}
                 onItemsPerPageChange={setItemsPerPage}
                 totalItems={pendingServices.length}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="wedding-package-approvals">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Wedding Package Approvals</CardTitle>
+              <CardDescription>Wedding packages submitted by vendors waiting for approval.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Package Name</TableHead>
+                      <TableHead className="text-xs">Vendor</TableHead>
+                      <TableHead className="text-xs">Price</TableHead>
+                      <TableHead className="text-xs">Status</TableHead>
+                      <TableHead className="text-right text-xs">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {weddingPackagesLoading ? (
+                      [...Array(3)].map((_, i) => (
+                        <TableRow key={i}>
+                          {[...Array(5)].map((_, j) => (
+                            <TableCell key={j}>
+                              <Skeleton className="h-5 w-full" />
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : currentWeddingPackages.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center">No pending wedding package approvals.</TableCell>
+                      </TableRow>
+                    ) : (
+                      currentWeddingPackages.map((pkg: WeddingPackage) => (
+                        <TableRow key={pkg._id}>
+                          <TableCell className="font-medium text-xs max-w-[120px] truncate">{pkg.name || 'N/A'}</TableCell>
+                          <TableCell className="text-xs max-w-[100px] truncate">{pkg.vendorName || 'N/A'}</TableCell>
+                          <TableCell className="text-xs">{pkg.totalPrice ? `₹${pkg.totalPrice.toFixed(2)}` : 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
+                              {pkg.status || 'pending'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" onClick={() => handleViewClick(pkg, 'wedding-package')}>
+                              <Eye className="h-4 w-4" />
+                              <span className="sr-only">View</span>
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(pkg, 'wedding-package', 'approve')}>
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <span className="sr-only">Approve</span>
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(pkg, 'wedding-package', 'reject')}>
+                              <XCircle className="h-4 w-4 text-red-600" />
+                              <span className="sr-only">Reject</span>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              <Pagination
+                className="mt-4"
+                currentPage={currentPage}
+                totalPages={totalWeddingPackagePages}
+                onPageChange={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                onItemsPerPageChange={setItemsPerPage}
+                totalItems={pendingWeddingPackages.length}
               />
             </CardContent>
           </Card>
@@ -1033,248 +1202,498 @@ export default function VendorApprovalPage() {
             <DialogTitle>View Details</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4 text-sm">
-            {itemType === 'vendor' && selectedItem && (
-              <>
-                <div className="flex items-center gap-4">
-                  <Image
-                    src={(selectedItem as Vendor).profileImage || 'https://placehold.co/100x100.png'}
-                    alt={(selectedItem as Vendor).businessName || 'Vendor'}
-                    width={80}
-                    height={80}
-                    className="rounded-lg"
-                    onClick={() => handleImageClick((selectedItem as Vendor).profileImage || 'https://placehold.co/100x100.png')}
-                  />
-                  <div>
-                    <h3 className="text-lg font-semibold">{(selectedItem as Vendor).businessName || 'N/A'}</h3>
-                    <p className="text-muted-foreground">{`${(selectedItem as Vendor).firstName} ${(selectedItem as Vendor).lastName}` || 'N/A'}</p>
+            {(() => {
+              // Derive the current data from the vendors/suppliers/doctors lists to ensure
+              // the modal updates reactively when data is refetched.
+              let currentDetails = selectedItem;
+              if (itemType === 'vendor' && selectedItem) {
+                currentDetails = vendors.find((v: Vendor) => v._id === (selectedItem as Vendor)._id) || selectedItem;
+              } else if (itemType === 'doctor' && selectedItem) {
+                currentDetails = doctorsData.find((d: Doctor) => d._id === (selectedItem as Doctor)._id) || selectedItem;
+              } else if (itemType === 'supplier' && selectedItem) {
+                currentDetails = suppliersData.find((s: Supplier) => s._id === (selectedItem as Supplier)._id) || selectedItem;
+              }
+
+              if (!currentDetails) return null;
+
+              if (itemType === 'vendor') {
+                const vendor = currentDetails as Vendor;
+                return (
+                  <div className="space-y-6">
+                    {/* Header Section */}
+                    <div className="flex flex-col md:flex-row items-center md:items-start gap-6 pb-6 border-b">
+                      <div className="relative group">
+                        <Image
+                          src={vendor.profileImage || 'https://placehold.co/100x100.png'}
+                          alt={vendor.businessName || 'Vendor'}
+                          width={120}
+                          height={120}
+                          className="rounded-2xl object-cover shadow-md border-2 border-primary/10 transition-transform duration-300 group-hover:scale-105 cursor-pointer"
+                          onClick={() => handleImageClick(vendor.profileImage || 'https://placehold.co/100x100.png')}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl pointer-events-none">
+                          <Eye className="text-white h-6 w-6" />
+                        </div>
+                      </div>
+                      <div className="flex-1 text-center md:text-left space-y-2">
+                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                          <h3 className="text-2xl font-bold font-headline">{vendor.businessName || 'N/A'}</h3>
+                          <Badge variant={vendor.status === 'Approved' ? 'secondary' : 'default'} className={cn(
+                            "px-3 py-0.5 text-xs font-semibold",
+                            vendor.status === 'Approved' ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                          )}>
+                            {vendor.status || 'Pending'}
+                          </Badge>
+                          {vendor.subscription?.status === 'Active' && (
+                            <Badge className="bg-blue-100 text-blue-700 px-3 py-0.5 text-xs font-semibold">
+                              <CreditCard className="mr-1.5 h-3 w-3" />
+                              Active Subscription
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-muted-foreground flex items-center justify-center md:justify-start gap-2">
+                          <User className="h-4 w-4" />
+                          <span className="font-medium text-foreground">{`${vendor.firstName} ${vendor.lastName}`}</span>
+                          <span className="text-xs px-2 py-0.5 bg-secondary rounded-full font-mono">{vendor._id.substring(0, 10)}...</span>
+                        </p>
+                        <div className="flex flex-wrap justify-center md:justify-start gap-2 pt-1">
+                          <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary">
+                            <Briefcase className="mr-1.5 h-3 w-3" />
+                            {vendor.category || 'N/A'}
+                          </Badge>
+                          {vendor.subCategories?.map(sub => (
+                            <Badge key={sub} variant="secondary" className="bg-gray-100 text-gray-600 text-[10px] uppercase tracking-wider px-2 py-0">
+                              {sub.replace(/-/g, ' ')}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Contact Info Group */}
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-semibold text-primary flex items-center gap-2 uppercase tracking-wide">
+                          <Info className="h-4 w-4" /> Contact Details
+                        </h4>
+                        <div className="bg-secondary/30 rounded-xl p-4 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center shadow-sm">
+                              <Mail className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Email Address</span>
+                              <span className="text-sm font-medium truncate max-w-[200px]">{vendor.email || 'N/A'}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center shadow-sm">
+                              <Phone className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Phone Number</span>
+                              <span className="text-sm font-medium">{vendor.phone || 'N/A'}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center shadow-sm">
+                              <Globe className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Website</span>
+                              <span className="text-sm font-medium">
+                                {vendor.website ? (
+                                  <a href={vendor.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                    {vendor.website}
+                                  </a>
+                                ) : 'Not provided'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Location Group */}
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-semibold text-primary flex items-center gap-2 uppercase tracking-wide">
+                          <MapIcon className="h-4 w-4" /> Location
+                        </h4>
+                        <div className="bg-secondary/30 rounded-xl p-4 space-y-3">
+                          <div className="flex items-start gap-3">
+                            <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center shadow-sm mt-0.5">
+                              <MapPin className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Full Address</span>
+                              <span className="text-sm font-medium leading-relaxed">{vendor.address || 'N/A'}</span>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">City / Pincode</span>
+                              <span className="text-sm font-medium">{`${vendor.city || 'N/A'} - ${vendor.pincode || 'N/A'}`}</span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">State</span>
+                              <span className="text-sm font-medium">{vendor.state || 'N/A'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Description & Metadata Group */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+                      <div className="md:col-span-2 space-y-3">
+                        <h4 className="text-sm font-semibold text-primary flex items-center gap-2 uppercase tracking-wide">
+                          <FileText className="h-4 w-4" /> Business Description
+                        </h4>
+                        <div className="bg-secondary/30 rounded-xl p-4">
+                          <p className="text-sm text-muted-foreground italic leading-relaxed">
+                            "{vendor.description || 'No description provided by the vendor.'}"
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <h4 className="text-sm font-semibold text-primary flex items-center gap-2 uppercase tracking-wide">
+                          <Calendar className="h-4 w-4" /> Timeline
+                        </h4>
+                        <div className="bg-secondary/30 rounded-xl p-4 space-y-3">
+                          <div className="flex flex-col">
+                            <span className="text-[10px] text-muted-foreground uppercase font-semibold">Registration Date</span>
+                            <span className="text-xs font-medium">{vendor.createdAt ? new Date(vendor.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Document Management Section */}
+                    <div className="pt-6 border-t mt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-bold flex items-center gap-2">
+                          <Tags className="h-5 w-5 text-primary" />
+                          Business Documents
+                        </h4>
+                        <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-tighter">
+                          Verification Required
+                        </Badge>
+                      </div>
+                      <div className="bg-secondary/10 rounded-2xl p-1">
+                        <DocumentStatusManager
+                          vendor={vendor}
+                          onUpdate={() => refetchVendors()}
+                        />
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Vendor ID</span>
-                  <span className="col-span-2">{(selectedItem as Vendor)._id || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Email</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).email || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Phone</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).phone || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-start gap-4">
-                  <span className="font-semibold text-muted-foreground">Address</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).address || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">City</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).city || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">State</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).state || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Pincode</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).pincode || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Category</span>
-                  <span className="col-span-2"><Badge>{(selectedItem as Vendor).category || 'N/A'}</Badge></span>
-                </div>
-                <div className="grid grid-cols-3 items-start gap-4">
-                  <span className="font-semibold text-muted-foreground">Sub-Categories</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).subCategories?.join(', ') || 'None'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Description</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).description || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Website</span>
-                  <span className="col-span-2">
-                    {(selectedItem as Vendor).website ? (
-                      <a
-                        href={(selectedItem as Vendor).website || '#'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        {(selectedItem as Vendor).website}
-                      </a>
-                    ) : (
-                      'N/A'
+                );
+              }
+
+              if (itemType === 'doctor') {
+                const doctor = currentDetails as Doctor;
+                return (
+                  <div className="space-y-6">
+                    <div className="flex flex-col md:flex-row items-center md:items-start gap-6 pb-6 border-b">
+                      <div className="relative group">
+                        <Image
+                          src={doctor.profileImage || "https://placehold.co/100x100.png"}
+                          alt={doctor.name || 'Doctor'}
+                          width={120}
+                          height={120}
+                          className="rounded-2xl object-cover shadow-md border-2 border-primary/10 transition-transform duration-300 group-hover:scale-105 cursor-pointer"
+                          onClick={() => handleImageClick(doctor.profileImage || "https://placehold.co/100x100.png")}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl pointer-events-none">
+                          <Eye className="text-white h-6 w-6" />
+                        </div>
+                      </div>
+                      <div className="flex-1 text-center md:text-left space-y-2">
+                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                          <h3 className="text-2xl font-bold font-headline">{doctor.name || 'N/A'}</h3>
+                          <Badge variant={doctor.status === 'Approved' ? 'secondary' : 'default'} className={cn(
+                            "px-3 py-0.5 text-xs font-semibold",
+                            doctor.status === 'Approved' ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                          )}>
+                            {doctor.status || 'Pending'}
+                          </Badge>
+                        </div>
+                        <p className="text-muted-foreground flex items-center justify-center md:justify-start gap-2">
+                          <Briefcase className="h-4 w-4" />
+                          <span className="font-medium text-foreground">{doctor.clinicName || 'N/A'}</span>
+                        </p>
+                        <div className="flex flex-wrap justify-center md:justify-start gap-2 pt-1">
+                          <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary uppercase text-[10px] tracking-wider font-bold">
+                            {doctor.specialization || 'N/A'}
+                          </Badge>
+                          <Badge className="bg-gray-100 text-gray-600 border-none px-2 py-0 text-[10px] uppercase font-bold tracking-wider">
+                            {doctor.experience || 'N/A'} Experience
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-semibold text-primary flex items-center gap-2 uppercase tracking-wide">
+                          <Info className="h-4 w-4" /> Professional Info
+                        </h4>
+                        <div className="bg-secondary/30 rounded-xl p-4 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <Hash className="h-4 w-4 text-primary/60" />
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Reg. Number</span>
+                              <span className="text-sm font-medium">{doctor.registrationNumber || 'N/A'}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <CheckCircle className="h-4 w-4 text-primary/60" />
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Qualification</span>
+                              <span className="text-sm font-medium">{doctor.qualification || 'N/A'}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Mail className="h-4 w-4 text-primary/60" />
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Email</span>
+                              <span className="text-sm font-medium">{doctor.email || 'N/A'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-semibold text-primary flex items-center gap-2 uppercase tracking-wide">
+                          <MapPin className="h-4 w-4" /> Practice Location
+                        </h4>
+                        <div className="bg-secondary/30 rounded-xl p-4 space-y-3">
+                          <div className="flex items-start gap-3">
+                            <MapPin className="h-4 w-4 text-primary/60 mt-0.5" />
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Location</span>
+                              <span className="text-sm font-medium leading-relaxed">{[doctor.city, doctor.state, doctor.pincode].filter(Boolean).join(', ') || 'N/A'}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Phone className="h-4 w-4 text-primary/60" />
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Phone</span>
+                              <span className="text-sm font-medium">{doctor.phone || 'N/A'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (itemType === 'supplier') {
+                const supplier = currentDetails as Supplier;
+                return (
+                  <div className="space-y-6">
+                    <div className="pb-6 border-b">
+                      <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                          <h3 className="text-2xl font-bold font-headline">{supplier.supplierName || 'N/A'}</h3>
+                          <p className="text-muted-foreground flex items-center gap-2 mt-1 lowercase">
+                            <Hash className="h-3 w-3" /> {supplier._id}
+                          </p>
+                        </div>
+                        <Badge className={cn(
+                          "px-4 py-1.5 text-sm font-bold uppercase tracking-widest",
+                          supplier.status === 'Approved' ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"
+                        )}>
+                          {supplier.status || 'Pending'}
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-semibold text-primary flex items-center gap-2 uppercase tracking-wide">
+                          <User className="h-4 w-4" /> Owner Information
+                        </h4>
+                        <div className="bg-secondary/30 rounded-xl p-4 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary text-xs">
+                              {supplier.firstName?.charAt(0)}{supplier.lastName?.charAt(0)}
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Full Name</span>
+                              <span className="text-sm font-medium">{[supplier.firstName, supplier.lastName].filter(Boolean).join(' ') || 'N/A'}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Mail className="h-4 w-4 text-primary/60" />
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Email</span>
+                              <span className="text-sm font-medium uppercase text-xs">{supplier.email || 'N/A'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <h4 className="text-sm font-semibold text-primary flex items-center gap-2 uppercase tracking-wide">
+                          <Briefcase className="h-4 w-4" /> Business Info
+                        </h4>
+                        <div className="bg-secondary/30 rounded-xl p-4 space-y-3">
+                          <div className="flex items-center gap-3">
+                            <Tags className="h-4 w-4 text-primary/60" />
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Supplier Type</span>
+                              <Badge variant="outline" className="w-fit text-[10px] font-bold mt-0.5">{supplier.supplierType || 'N/A'}</Badge>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <FileText className="h-4 w-4 text-primary/60" />
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Reg. Number</span>
+                              <span className="text-sm font-medium">{supplier.businessRegistrationNo || 'N/A'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {supplier.licenseFile && (
+                      <div className="pt-4">
+                        <a
+                          href={supplier.licenseFile}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center gap-2 w-full py-3 bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-xl text-primary font-bold text-sm transition-colors"
+                        >
+                          <Eye className="h-4 w-4" /> View Business License
+                        </a>
+                      </div>
                     )}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Status</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).status || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Subscription Status</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).subscription?.status || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Created At</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).createdAt ? new Date((selectedItem as Vendor).createdAt).toLocaleString() : 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Updated At</span>
-                  <span className="col-span-2">{(selectedItem as Vendor).updatedAt ? new Date((selectedItem as Vendor).updatedAt).toLocaleString() : 'N/A'}</span>
-                </div>
-                
-                {/* Document Status Manager */}
-                <div className="col-span-3 mt-4">
-                  <DocumentStatusManager 
-                    vendor={selectedItem as Vendor} 
-                    onUpdate={() => {
-                      refetchVendors();
-                    }} 
-                  />
-                </div>
-                
-                
-              </>
-            )}
-            {itemType === 'service' && selectedItem && (
-              <>
-                <h3 className="text-lg font-semibold">{(selectedItem as Service).serviceName || 'N/A'}</h3>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Vendor</span>
-                  <span className="col-span-2">{(selectedItem as Service).vendorName || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Price</span>
-                  <span className="col-span-2">{(selectedItem as Service).price ? `₹${(selectedItem as Service).price.toFixed(2)}` : 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-start gap-4">
-                  <span className="font-semibold text-muted-foreground">Description</span>
-                  <p className="col-span-2">{(selectedItem as Service).description || 'N/A'}</p>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Status</span>
-                  <span className="col-span-2">{(selectedItem as Service).status || 'N/A'}</span>
-                </div>
-              </>
-            )}
-            {(itemType === 'vendor-product' || itemType === 'supplier-product') && selectedItem && (
-              <>
-                <div className="flex items-center gap-4">
-                  <Image
-                    src={(selectedItem as Product).productImage || 'https://placehold.co/100x100.png'}
-                    alt={(selectedItem as Product).productName || 'Product'}
-                    width={80}
-                    height={80}
-                    className="rounded-lg"
-                    onClick={() => handleImageClick((selectedItem as Product).productImage || 'https://placehold.co/100x100.png')}
-                  />
-                  <div>
-                    <h3 className="text-lg font-semibold">{(selectedItem as Product).productName || 'N/A'}</h3>
                   </div>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Product ID</span>
-                  <span className="col-span-2">{(selectedItem as Product)._id || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Category</span>
-                  <span className="col-span-2"><Badge>{(selectedItem as Product).category?.name || 'N/A'}</Badge></span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Price</span>
-                  <span className="col-span-2">{(selectedItem as Product).price ? `₹${(selectedItem as Product).price.toFixed(2)}` : 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Sale Price</span>
-                  <span className="col-span-2">{(selectedItem as Product).salePrice ? `₹${(selectedItem as Product).salePrice.toFixed(2)}` : 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Stock</span>
-                  <span className="col-span-2">{(selectedItem as Product).stock != null ? `${(selectedItem as Product).stock} units` : 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-start gap-4">
-                  <span className="font-semibold text-muted-foreground">Description</span>
-                  <p className="col-span-2">{(selectedItem as Product).description || 'N/A'}</p>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Status</span>
-                  <span className="col-span-2">{(selectedItem as Product).status || 'N/A'}</span>
-                </div>
-              </>
-            )}
-            {itemType === 'doctor' && selectedItem && (
-              <>
-                <div className="flex items-start gap-4">
-                  <Image
-                    src={(selectedItem as Doctor).profileImage || "https://placehold.co/100x100.png"}
-                    alt={(selectedItem as Doctor).name || 'Doctor'}
-                    width={80}
-                    height={80}
-                    className="rounded-lg"
-                    onClick={() => handleImageClick((selectedItem as Doctor).profileImage || "https://placehold.co/100x100.png")}
-                  />
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold">{(selectedItem as Doctor).name || 'N/A'}</h3>
-                    <p className="text-sm text-muted-foreground">{(selectedItem as Doctor).clinicName || 'N/A'}</p>
-                    <Badge variant="outline" className="mt-2">{(selectedItem as Doctor).specialization || 'N/A'}</Badge>
+                );
+              }
+
+              if (itemType === 'service') {
+                const service = currentDetails as Service;
+                return (
+                  <div className="space-y-6">
+                    <div className="pb-6 border-b flex justify-between items-start">
+                      <div>
+                        <h3 className="text-2xl font-bold font-headline">{service.serviceName || 'N/A'}</h3>
+                        <p className="text-muted-foreground flex items-center gap-1.5 mt-1 font-medium italic">
+                          By {service.vendorName || 'Independent Vendor'}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-3xl font-black text-primary">₹{service.price?.toFixed(2)}</div>
+                        <Badge variant="outline" className="uppercase font-bold tracking-tighter text-[10px] mt-1">
+                          Base Price
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="bg-secondary/20 rounded-2xl p-6 space-y-4">
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                        <Info className="h-4 w-4" /> Description
+                      </h4>
+                      <p className="text-muted-foreground leading-relaxed italic border-l-4 border-primary/20 pl-4 py-1">
+                        {service.description || 'No description provided for this service.'}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <div className="mt-4 border-t pt-4 grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2">
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Email:</span><span>{(selectedItem as Doctor).email || 'N/A'}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Phone:</span><span>{(selectedItem as Doctor).phone || 'N/A'}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Gender:</span><span>{(selectedItem as Doctor).gender || 'N/A'}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Reg. No:</span><span>{(selectedItem as Doctor).registrationNumber || 'N/A'}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Experience:</span><span>{(selectedItem as Doctor).experience || 'N/A'}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Qualification:</span><span>{(selectedItem as Doctor).qualification || 'N/A'}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Availability:</span><span>{(selectedItem as Doctor).doctorAvailability || 'N/A'}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Consultation Time:</span><span>{(selectedItem as Doctor).physicalConsultationStartTime && (selectedItem as Doctor).physicalConsultationEndTime ? `${(selectedItem as Doctor).physicalConsultationStartTime} - ${(selectedItem as Doctor).physicalConsultationEndTime}` : 'N/A'}</span></div>
-                  <div className="flex justify-between border-b py-1 md:col-span-2"><span className="text-muted-foreground">Location:</span><span>{[(selectedItem as Doctor).city, (selectedItem as Doctor).state, (selectedItem as Doctor).pincode].filter(Boolean).join(', ') || 'N/A'}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Assistant Name:</span><span>{(selectedItem as Doctor).assistantName || 'N/A'}</span></div>
-                  <div className="flex justify-between border-b py-1"><span className="text-muted-foreground">Assistant Contact:</span><span>{(selectedItem as Doctor).assistantContact || 'N/A'}</span></div>
-                </div>
-              </>
-            )}
-            {itemType === 'supplier' && selectedItem && (
-              <>
-                <h3 className="text-lg font-semibold">{(selectedItem as Supplier).supplierName || 'N/A'}</h3>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Supplier ID</span>
-                  <span className="col-span-2">{(selectedItem as Supplier)._id || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Owner</span>
-                  <span className="col-span-2">{[(selectedItem as Supplier).firstName, (selectedItem as Supplier).lastName].filter(Boolean).join(' ') || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Contact</span>
-                  <span className="col-span-2">{[(selectedItem as Supplier).email, (selectedItem as Supplier).phone].filter(Boolean).join(', ') || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Business Reg. No.</span>
-                  <span className="col-span-2">{(selectedItem as Supplier).businessRegistrationNo || 'N/A'}</span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Supplier Type</span>
-                  <span className="col-span-2"><Badge>{(selectedItem as Supplier).supplierType || 'N/A'}</Badge></span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">License</span>
-                  <span className="col-span-2">
-                    {(selectedItem as Supplier).licenseFile ? (
-                      <a href={(selectedItem as Supplier).licenseFile} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                        View License
-                      </a>
-                    ) : (
-                      'N/A'
-                    )}
-                  </span>
-                </div>
-                <div className="grid grid-cols-3 items-center gap-4">
-                  <span className="font-semibold text-muted-foreground">Status</span>
-                  <span className="col-span-2">{(selectedItem as Supplier).status || 'N/A'}</span>
-                </div>
-              </>
-            )}
+                );
+              }
+
+              if (itemType === 'wedding-package') {
+                const pkg = currentDetails as WeddingPackage;
+                return (
+                  <div className="space-y-6">
+                    <div className="pb-6 border-b flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="text-2xl font-bold font-headline text-primary">{pkg.name || 'N/A'}</h3>
+                        <p className="text-muted-foreground flex items-center gap-1.5 mt-1 font-medium">
+                          Created by <span className="text-foreground font-bold underline decoration-primary/20">{pkg.vendorName || 'N/A'}</span>
+                        </p>
+                      </div>
+                      <div className="text-right space-y-1">
+                        <div className="text-xs text-muted-foreground font-bold uppercase line-through opacity-50">₹{pkg.totalPrice?.toFixed(2)}</div>
+                        <div className="text-4xl font-black text-primary">₹{pkg.discountedPrice?.toFixed(2)}</div>
+                        <Badge className="bg-green-100 text-green-700 border-none font-black text-[10px] uppercase tracking-tighter">
+                          Package Discount Applied
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10">
+                      <h4 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2 mb-4">
+                        <FileText className="h-4 w-4" /> Package Inclusions & Details
+                      </h4>
+                      <div className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                        {pkg.description || 'No specific inclusions listed for this package.'}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (itemType === 'vendor-product' || itemType === 'supplier-product') {
+                const product = currentDetails as Product;
+                return (
+                  <div className="space-y-8">
+                    <div className="flex flex-col md:flex-row gap-8 pb-6 border-b">
+                      <div className="relative group mx-auto md:mx-0">
+                        <Image
+                          src={product.productImage || 'https://placehold.co/200x200.png'}
+                          alt={product.productName || 'Product'}
+                          width={240}
+                          height={240}
+                          className="rounded-3xl object-cover shadow-xl border-4 border-background transition-transform duration-500 group-hover:scale-105"
+                          onClick={() => handleImageClick(product.productImage || 'https://placehold.co/200x200.png')}
+                        />
+                        <div className="absolute inset-4 rounded-2xl bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+                      </div>
+                      <div className="flex-1 space-y-6">
+                        <div className="space-y-2">
+                          <Badge variant="outline" className="bg-secondary/50 text-xs font-bold px-3 py-1">
+                            {product.category?.name || 'Uncategorized'}
+                          </Badge>
+                          <h3 className="text-3xl font-black font-headline leading-tight">{product.productName || 'N/A'}</h3>
+                        </div>
+
+                        <div className="flex items-end gap-4 p-4 bg-primary/5 rounded-2xl border border-primary/10 w-fit">
+                          <div className="space-y-1">
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Pricing</p>
+                            <div className="flex items-center gap-3">
+                              <span className="text-4xl font-black text-primary">₹{product.salePrice?.toFixed(2)}</span>
+                              <span className="text-lg text-muted-foreground line-through opacity-50 font-bold">₹{product.price?.toFixed(2)}</span>
+                            </div>
+                          </div>
+                          <div className="pl-4 border-l border-primary/20 space-y-1">
+                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Availability</p>
+                            <span className={cn(
+                              "text-sm font-black px-3 py-1 rounded-full",
+                              product.stock > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                            )}>
+                              {product.stock > 0 ? `${product.stock} IN STOCK` : 'OUT OF STOCK'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <h4 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                            <Info className="h-4 w-4" /> Product Details
+                          </h4>
+                          <p className="text-muted-foreground leading-relaxed italic">
+                            "{product.description || 'No description available.'}"
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return null;
+            })()}
           </div>
           <DialogFooter>
             <Button onClick={() => setIsViewModalOpen(false)}>Close</Button>

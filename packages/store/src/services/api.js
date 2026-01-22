@@ -159,7 +159,7 @@ export const glowvitaApi = createApi({
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
-     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport","SupplierReports","Products", "Regions","PublicAllOffers", "AddOns"
+    "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "Regions", "PublicAllOffers", "AddOns", "PendingWeddingPackages"
   ],
 
   endpoints: (builder) => ({
@@ -548,6 +548,20 @@ export const glowvitaApi = createApi({
         body: { serviceId, status },
       }),
       invalidatesTags: ["PendingServices", "VendorServices"],
+    }),
+
+    // Wedding Package Approval Endpoints
+    getPendingWeddingPackages: builder.query({
+      query: () => ({ url: "/admin/wedding-packages/approval", method: "GET" }),
+      providesTags: ["PendingWeddingPackages"],
+    }),
+    updateWeddingPackageStatus: builder.mutation({
+      query: ({ packageId, status }) => ({
+        url: "/admin/wedding-packages/approval",
+        method: "PATCH",
+        body: { packageId, status },
+      }),
+      invalidatesTags: ["PendingWeddingPackages", "VendorWeddingPackages", "PublicVendorWeddingPackages"],
     }),
 
     // Admin
@@ -1751,6 +1765,22 @@ export const glowvitaApi = createApi({
     createAddOn: builder.mutation({
       query: (addOn) => ({ url: "/crm/add-ons", method: "POST", body: addOn }),
       invalidatesTags: ["AddOns"],
+    }),
+    getStaffEarnings: builder.query({
+      query: ({ id, startDate, endDate }) => {
+        let url = `/crm/staff/earnings/${id}`;
+        const params = new URLSearchParams();
+        if (startDate) params.append("startDate", startDate);
+        if (endDate) params.append("endDate", endDate);
+        const queryString = params.toString();
+        if (queryString) url += `?${queryString}`;
+        return { url, method: "GET" };
+      },
+      providesTags: ["Staff"],
+    }),
+    recordStaffPayout: builder.mutation({
+      query: ({ id, ...body }) => ({ url: `/crm/staff/earnings/${id}`, method: "POST", body }),
+      invalidatesTags: ["Staff"],
     }),
     updateAddOn: builder.mutation({
       query: (addOn) => ({ url: "/crm/add-ons", method: "PUT", body: addOn }),
@@ -2994,6 +3024,9 @@ export const {
   useCreateWeddingPackageMutation,
   useUpdateWeddingPackageMutation,
   useDeleteWeddingPackageMutation,
+  // New Wedding Package Approval Hooks
+  useGetPendingWeddingPackagesQuery,
+  useUpdateWeddingPackageStatusMutation,
 
 
   // Payment Collection Hook
@@ -3024,6 +3057,10 @@ export const {
   useGetUniqueBrandsQuery,
   useGetUniqueCategoriesQuery,
   useGetSettlementSummaryReportQuery,
+
+  // Staff Earnings Hooks
+  useGetStaffEarningsQuery,
+  useRecordStaffPayoutMutation,
 
   // Payment Collections Hook
   useGetPaymentCollectionsQuery,

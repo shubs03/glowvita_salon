@@ -17,14 +17,14 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "vendor", "staff", "doctor", "supplier"]);
 
 // POST a new service
 export const POST = authMiddlewareAdmin(async (req) => {
   const body = await req.json();
-  const { name, description, category , image} = body;
+  const { name, description, category, image } = body;
 
-  if (!name || !category ) {
+  if (!name || !category) {
     return Response.json(
       { message: "Name and category are required" },
       { status: 400 }
@@ -33,12 +33,12 @@ export const POST = authMiddlewareAdmin(async (req) => {
 
   try {
     let imageUrl = null;
-    
+
     // Upload image to VPS if provided
     if (image) {
       const fileName = `service-${Date.now()}`;
       imageUrl = await uploadBase64(image, fileName);
-      
+
       if (!imageUrl) {
         return Response.json(
           { message: "Failed to upload image" },
@@ -46,7 +46,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
         );
       }
     }
-    
+
     const newService = await ServiceModel.create({
       name,
       description,
@@ -60,7 +60,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "vendor", "staff", "doctor", "supplier"]);
 
 // PUT (update) a service by ID
 export const PUT = authMiddlewareAdmin(
@@ -88,24 +88,24 @@ export const PUT = authMiddlewareAdmin(
           // Upload new image to VPS
           const fileName = `service-${Date.now()}`;
           const imageUrl = await uploadBase64(updateData.image, fileName);
-          
+
           if (!imageUrl) {
             return Response.json(
               { message: "Failed to upload image" },
               { status: 500 }
             );
           }
-          
+
           // Delete old image from VPS if it exists
           if (existingService.serviceImage) {
             await deleteFile(existingService.serviceImage);
           }
-          
+
           updateData.serviceImage = imageUrl;
         } else {
           // If image is null/empty, remove it
           updateData.serviceImage = null;
-          
+
           // Delete old image from VPS if it exists
           if (existingService.serviceImage) {
             await deleteFile(existingService.serviceImage);
@@ -119,7 +119,7 @@ export const PUT = authMiddlewareAdmin(
         updateData,
         { new: true }
       );
-      
+
       return Response.json(updatedService, { status: 200 });
     } catch (error) {
       return Response.json(
@@ -148,12 +148,12 @@ export const DELETE = authMiddlewareAdmin(
       if (!deletedService) {
         return Response.json({ message: "Service not found" }, { status: 404 });
       }
-      
+
       // Delete image from VPS if it exists
       if (deletedService.serviceImage) {
         await deleteFile(deletedService.serviceImage);
       }
-      
+
       return Response.json(
         { message: "Service deleted successfully" },
         { status: 200 }

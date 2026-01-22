@@ -62,6 +62,11 @@ const serviceItemSchema = new mongoose.Schema({
     type: Number, // in kilometers
     default: 0,
   },
+  // Staff commission tracking per service item
+  staffCommission: {
+    rate: { type: Number, default: 0 },
+    amount: { type: Number, default: 0 }
+  },
   distanceMeters: {
     type: Number, // in meters
     default: 0,
@@ -152,13 +157,13 @@ const appointmentSchema = new mongoose.Schema(
          required: true 
         }
     }],
-    discount: {
-      type: Number,
-      default: 0,
-    },
     totalAmount: {
       type: Number,
       required: true,
+    },
+    couponCode: {
+      type: String,
+      default: null,
     },
     // Payment-related fields
     platformFee: {
@@ -177,9 +182,18 @@ const appointmentSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    discount: {
+      type: Number,
+      default: 0,
+    },
     finalAmount: {
       type: Number,
       required: true,
+    },
+    // Staff commission tracking for legacy/single service appointments
+    staffCommission: {
+      rate: { type: Number, default: 0 },
+      amount: { type: Number, default: 0 }
     },
     // Fields to track payment progress
     amountPaid: {
@@ -489,7 +503,7 @@ appointmentSchema.pre('save', async function (next) {
         this.status = 'completed';
       }
     }
-    
+
     this.updatedAt = new Date();
     next();
   } catch (error) {
@@ -502,5 +516,16 @@ appointmentSchema.pre('save', async function (next) {
 const AppointmentModel =
   mongoose.models.Appointment ||
   mongoose.model("Appointment", appointmentSchema);
+
+// If the model was already registered (e.g. in Next.js dev), 
+// ensure it has the new couponCode field
+if (mongoose.models.Appointment && AppointmentModel.schema && !AppointmentModel.schema.paths.couponCode) {
+  AppointmentModel.schema.add({
+    couponCode: {
+      type: String,
+      default: null,
+    }
+  });
+}
 
 export default AppointmentModel;

@@ -48,7 +48,8 @@ import {
   Info,
   ChevronRight,
   Heart,
-  Plus
+  Plus,
+  Tag
 } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { BookingSummary } from "@/components/booking/BookingSummary";
@@ -455,6 +456,21 @@ function BookingPageContent() {
     setIsServiceSelectionOpen(false);
   };
 
+  // Handle addon removal
+  const handleRemoveAddon = (serviceId: string, addonId: string) => {
+    setSelectedServices(prev =>
+      prev.map(service =>
+        service.id === serviceId
+          ? {
+            ...service,
+            selectedAddons: service.selectedAddons?.filter(addon => addon._id !== addonId) || []
+          }
+          : service
+      )
+    );
+    toast.success('Add-on removed successfully');
+  };
+
   // Handle vendor selection
   const handleVendorSelection = () => {
     setIsVendorSelectionOpen(false);
@@ -704,8 +720,8 @@ function BookingPageContent() {
 
         // Calculate savings for the message
         const savings = result.data.type === 'percentage'
-          ? (totalAmount * result.data.value / 100).toFixed(2)
-          : result.data.value.toFixed(2);
+          ? Math.round(totalAmount * result.data.value / 100)
+          : Math.round(result.data.value);
 
         toast.success(`Offer ${result.data.code} applied successfully! You saved ₹${savings}.`);
         // Hide the dropdown after successful application
@@ -726,7 +742,7 @@ function BookingPageContent() {
     setAppliedOffer(selectedOffer);
     setShowOfferDropdown(false);
     setOfferSearchTerm('');
-    const savings = selectedOffer.type === 'percentage' ? (totalAmount * selectedOffer.value / 100).toFixed(2) : selectedOffer.value.toFixed(2);
+    const savings = selectedOffer.type === 'percentage' ? Math.round(totalAmount * selectedOffer.value / 100) : Math.round(selectedOffer.value);
     toast.success(`Offer ${selectedOffer.code} applied successfully! You saved ₹${savings}.`);
   };
 
@@ -1125,12 +1141,12 @@ function BookingPageContent() {
         startTime: selectedTime,
         endTime: endTime,
         duration: packageDuration,
-        amount: selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice,
-        totalAmount: selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice,
+        amount: Math.round(selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice),
+        totalAmount: Math.round(selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice),
         platformFee: 0,
         serviceTax: 0,
-        discountAmount: selectedWeddingPackage.totalPrice - (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice),
-        finalAmount: selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice,
+        discountAmount: Math.round(selectedWeddingPackage.totalPrice - (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice)),
+        finalAmount: Math.round(selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice),
         paymentMethod: paymentMethod,
         paymentStatus: 'pending',
         status: 'scheduled',
@@ -1351,11 +1367,11 @@ function BookingPageContent() {
       endTime: endTime,
       duration: totalDuration,
       amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
-        Number(primaryService.discountedPrice) :
-        Number(primaryService.price),
-      totalAmount: (() => {
-        // Calculate total including add-ons
-        return selectedServices.reduce((total, service) => {
+        Math.round(Number(primaryService.discountedPrice)) :
+        Math.round(Number(primaryService.price)),
+      totalAmount: Math.round(((() => {
+        // Calculate subtotal including add-ons
+        const subtotal = selectedServices.reduce((total, service) => {
           const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
             Number(service.discountedPrice) :
             Number(service.price);
@@ -1366,14 +1382,15 @@ function BookingPageContent() {
 
           return total + servicePrice + addonsPrice;
         }, 0);
-      })(),
-      platformFee: priceBreakdown?.platformFee || 0,
-      serviceTax: priceBreakdown?.serviceTax || 0,
+        return subtotal;
+      })())),
+      platformFee: Math.round(priceBreakdown?.platformFee || 0),
+      serviceTax: Math.round(priceBreakdown?.serviceTax || 0),
       taxRate: priceBreakdown?.taxFeeSettings?.serviceTax || 0,
-      discountAmount: priceBreakdown?.discountAmount || 0,
-      finalAmount: priceBreakdown?.finalTotal || (() => {
-        // Calculate total including add-ons
-        return selectedServices.reduce((total, service) => {
+      discountAmount: Math.round(priceBreakdown?.discountAmount || 0),
+      finalAmount: Math.round(priceBreakdown?.finalTotal || (() => {
+        // Fallback calculation if priceBreakdown is not available
+        const subtotal = selectedServices.reduce((total, service) => {
           const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
             Number(service.discountedPrice) :
             Number(service.price);
@@ -1384,7 +1401,13 @@ function BookingPageContent() {
 
           return total + servicePrice + addonsPrice;
         }, 0);
-      })(),
+
+        const discount = priceBreakdown?.discountAmount || 0;
+        const fee = priceBreakdown?.platformFee || 0;
+        const tax = priceBreakdown?.serviceTax || 0;
+
+        return (subtotal + fee + tax) - discount;
+      })()),
       paymentMethod: paymentMethod, // Use selected payment method
       paymentStatus: 'pending',
       status: 'scheduled',
@@ -1446,11 +1469,11 @@ function BookingPageContent() {
               endTime: itemEndTime,
               duration: serviceDuration,
               amount: service.discountedPrice !== null && service.discountedPrice !== undefined ?
-                Number(service.discountedPrice) :
-                Number(service.price),
+                Math.round(Number(service.discountedPrice)) :
+                Math.round(Number(service.price)),
               addOns: service.selectedAddons ? service.selectedAddons.map(addon => ({
                 name: addon.name,
-                price: addon.price,
+                price: Math.round(addon.price || 0),
                 duration: addon.duration || 0,
                 _id: addon._id || (addon as any).id
               })) : []
@@ -1629,7 +1652,9 @@ function BookingPageContent() {
           addOns: primaryService.selectedAddons || [],
           // Include all service items with their add-ons for multi-service bookings
           serviceItems: appointmentData.serviceItems,
-          isMultiService: isMultiService
+          isMultiService: isMultiService,
+          couponCode: appliedOffer?.code || offerCode,
+          discountAmount: priceBreakdown?.discountAmount || 0
         }).unwrap();
 
         if (lockResult.success) {
@@ -1640,7 +1665,10 @@ function BookingPageContent() {
             paymentDetails: {
               method: paymentMethod,
               status: 'pending'
-            }
+            },
+            couponCode: appliedOffer?.code || offerCode,
+            discountAmount: priceBreakdown?.discountAmount || 0,
+            finalAmount: priceBreakdown?.finalTotal || 0
           }).unwrap();
 
           toast.success("Booking confirmed!");
@@ -1725,17 +1753,19 @@ function BookingPageContent() {
           } : null,
           duration: convertDurationToMinutes(primaryService.duration),
           amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
+            Math.round(Number(primaryService.discountedPrice)) :
+            Math.round(Number(primaryService.price)),
+          totalAmount: Math.round(priceBreakdown?.subtotal || (primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
             Number(primaryService.discountedPrice) :
-            Number(primaryService.price),
-          totalAmount: priceBreakdown?.subtotal || (primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
+            Number(primaryService.price))),
+          finalAmount: Math.round(priceBreakdown?.finalTotal || (primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
             Number(primaryService.discountedPrice) :
-            Number(primaryService.price)),
-          finalAmount: priceBreakdown?.finalTotal || (primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
-            Number(primaryService.discountedPrice) :
-            Number(primaryService.price)),
-          platformFee: priceBreakdown?.platformFee || 0,
-          serviceTax: priceBreakdown?.serviceTax || 0,
-          taxRate: priceBreakdown?.taxFeeSettings?.serviceTax || 0
+            Number(primaryService.price))),
+          platformFee: Math.round(priceBreakdown?.platformFee || 0),
+          serviceTax: Math.round(priceBreakdown?.serviceTax || 0),
+          taxRate: priceBreakdown?.taxFeeSettings?.serviceTax || 0,
+          couponCode: appliedOffer?.code || offerCode,
+          discountAmount: priceBreakdown?.discountAmount || 0
         };
 
         console.log("Acquiring slot lock with data:", lockData);
@@ -1745,7 +1775,10 @@ function BookingPageContent() {
           // Confirm the booking
           const confirmResult = await confirmBooking({
             appointmentId: lockResult.appointmentId,
-            lockId: lockResult.lockId
+            lockId: lockResult.lockId,
+            couponCode: appliedOffer?.code || offerCode,
+            discountAmount: priceBreakdown?.discountAmount || 0,
+            finalAmount: priceBreakdown?.finalTotal || 0
           }).unwrap();
 
           // Handle online payment if selected
@@ -2171,6 +2204,7 @@ function BookingPageContent() {
             platformFee: priceBreakdown?.platformFee || 0,
             serviceTax: priceBreakdown?.serviceTax || 0,
             taxRate: priceBreakdown?.taxFeeSettings?.serviceTax || 0,
+            couponCode: appliedOffer?.code || offerCode,
             discountAmount: priceBreakdown?.discountAmount || 0,
             finalAmount: priceBreakdown?.finalTotal || totalAmount,
             paymentMethod: method,
@@ -2825,6 +2859,11 @@ function BookingPageContent() {
               error={null}
               selectedServices={selectedServices}
               vendorId={salonId as string}
+              platformFee={priceBreakdown?.platformFee}
+              serviceTax={priceBreakdown?.serviceTax}
+              taxRate={priceBreakdown?.taxRate}
+              couponCode={appliedOffer?.code || offerCode}
+              discountAmount={priceBreakdown?.discountAmount || 0}
             />
           ) : (
             <TimeSlotSelector
@@ -2850,6 +2889,8 @@ function BookingPageContent() {
               platformFee={priceBreakdown?.platformFee}
               serviceTax={priceBreakdown?.serviceTax}
               taxRate={priceBreakdown?.taxRate}
+              couponCode={appliedOffer?.code || offerCode}
+              discountAmount={priceBreakdown?.discountAmount || 0}
             />
           );
           break;
@@ -3210,6 +3251,8 @@ function BookingPageContent() {
               weddingPackageMode={weddingPackageMode}
               customizedPackageServices={customizedPackageServices}
               onEditPackage={handleCustomizePackage}
+              onRemoveAddon={handleRemoveAddon}
+              couponCode={appliedOffer?.code || offerCode}
             />
           </div>
         </aside>
@@ -3231,6 +3274,8 @@ function BookingPageContent() {
           weddingPackageMode={weddingPackageMode}
           customizedPackageServices={customizedPackageServices}
           onEditPackage={handleCustomizePackage}
+          onRemoveAddon={handleRemoveAddon}
+          couponCode={appliedOffer?.code || offerCode}
         />
       </div>
 
@@ -3400,12 +3445,22 @@ function BookingPageContent() {
                       {service.selectedAddons && service.selectedAddons.length > 0 && (
                         <div className="pl-4 ml-2 border-l-2 border-primary/20 space-y-2">
                           {service.selectedAddons.map((addon) => (
-                            <div key={addon._id} className="flex items-center justify-between p-2 bg-white/30 rounded-lg border border-gray-100 hover:bg-white/60 transition-colors">
+                            <div key={addon._id} className="flex items-center justify-between p-2 bg-white/30 rounded-lg border border-gray-100 hover:bg-white/60 transition-colors group">
                               <div className="flex items-center gap-2 text-sm">
                                 <Plus className="h-3 w-3 text-muted-foreground" />
                                 <span>{addon.name}</span>
                               </div>
-                              <div className="text-sm text-muted-foreground">₹{addon.price}</div>
+                              <div className="flex items-center gap-2">
+                                <div className="text-sm text-muted-foreground">₹{addon.price}</div>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleRemoveAddon(service.id, addon._id)}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -3418,7 +3473,7 @@ function BookingPageContent() {
                     <Wallet className="h-5 w-5 text-primary" />
                     Subtotal
                   </div>
-                  <div className="text-primary">₹{totalAmount.toFixed(2)}</div>
+                  <div className="text-primary">₹{Math.round(totalAmount)}</div>
                 </div>
               </CardContent>
             </Card>
@@ -3728,13 +3783,34 @@ function BookingPageContent() {
                       <Wallet className="h-4 w-4 text-muted-foreground" />
                       Subtotal
                     </div>
-                    <div className="font-medium">₹{totalAmount.toFixed(2)}</div>
+                    <div className="font-medium">₹{Math.round(totalAmount)}</div>
                   </div>
+
+                  {priceBreakdown && priceBreakdown.platformFee > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Info className="h-4 w-4" />
+                        Platform Fee
+                      </div>
+                      <div className="font-medium">₹{Math.round(priceBreakdown.platformFee)}</div>
+                    </div>
+                  )}
+
+                  {priceBreakdown && priceBreakdown.serviceTax > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Info className="h-4 w-4" />
+                        GST
+                      </div>
+                      <div className="font-medium">₹{Math.round(priceBreakdown.serviceTax)}</div>
+                    </div>
+                  )}
+
                   {appliedOffer && (
                     <div className="flex items-center justify-between text-sm text-green-600 bg-green-50/50 p-3 rounded-lg border border-green-100">
                       <div className="flex items-center gap-2">
                         <div className="bg-green-100 p-1 rounded-full">
-                          <Star className="h-4 w-4 text-green-600" />
+                          <Tag className="h-4 w-4 text-green-600" />
                         </div>
                         <div>
                           <div className="font-semibold">Discount Applied</div>
@@ -3742,7 +3818,7 @@ function BookingPageContent() {
                         </div>
                       </div>
                       <div className="font-semibold text-lg">
-                        -₹{(appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value).toFixed(2)}
+                        -₹{Math.round(priceBreakdown?.discountAmount || (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value))}
                       </div>
                     </div>
                   )}
@@ -3751,13 +3827,15 @@ function BookingPageContent() {
                       <CreditCard className="h-5 w-5 text-primary" />
                       Total Amount
                     </div>
-                    <div className="text-primary">
-                      ₹{(
-                        totalAmount -
-                        (appliedOffer ?
+                    <div className="text-primary font-bold text-xl">
+                      ₹{Math.round(priceBreakdown?.finalTotal || (
+                        totalAmount +
+                        (priceBreakdown?.platformFee || 0) +
+                        (priceBreakdown?.serviceTax || 0) -
+                        (priceBreakdown?.discountAmount || (appliedOffer ?
                           (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value)
-                          : 0)
-                      ).toFixed(2)}
+                          : 0))
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -3925,7 +4003,7 @@ function BookingPageContent() {
                         {service.duration}
                       </div>
                     </div>
-                    <div className="font-semibold">₹{service.price}</div>
+                    <div className="font-semibold">₹{Math.round(Number(service.price))}</div>
                   </div>
                 ))}
               </CardContent>
@@ -3941,25 +4019,25 @@ function BookingPageContent() {
               <CardContent className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
                   <div>Subtotal</div>
-                  <div>₹{totalAmount.toFixed(2)}</div>
+                  <div>₹{Math.round(totalAmount)}</div>
                 </div>
                 {appliedOffer && (
                   <div className="flex items-center justify-between text-green-600">
                     <div>Discount ({appliedOffer.code})</div>
                     <div className="font-medium">
-                      -₹{(appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value).toFixed(2)}
+                      -₹{Math.round(appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value)}
                     </div>
                   </div>
                 )}
                 <div className="flex items-center justify-between pt-2 border-t font-semibold">
                   <div>Total Paid</div>
                   <div className="text-primary">
-                    ₹{(
+                    ₹{Math.round(
                       totalAmount -
                       (appliedOffer ?
                         (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value)
                         : 0)
-                    ).toFixed(2)}
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -4026,10 +4104,10 @@ function BookingPageContent() {
                         <>
                           <div className="flex items-center justify-end gap-2">
                             <span className="text-muted-foreground line-through text-sm">
-                              ₹{schedule.service.price}
+                              ₹{Math.round(Number(schedule.service.price))}
                             </span>
                             <span className="font-semibold text-lg">
-                              ₹{schedule.service.discountedPrice}
+                              ₹{Math.round(Number(schedule.service.discountedPrice))}
                             </span>
                           </div>
                           <div className="text-xs text-green-600 font-medium mt-1">
@@ -4045,7 +4123,7 @@ function BookingPageContent() {
                         </>
                       ) : (
                         <div className="font-semibold text-lg">
-                          ₹{schedule.service.price}
+                          ₹{Math.round(Number(schedule.service.price))}
                         </div>
                       )}
                     </div>
@@ -4060,12 +4138,12 @@ function BookingPageContent() {
                   <div>
                     <div className="text-sm text-primary/80">Total Amount</div>
                     <div className="text-2xl font-bold text-primary">
-                      ₹{priceBreakdown?.finalTotal.toFixed(2) || selectedServices.reduce((acc, s) => {
+                      ₹{priceBreakdown?.finalTotal ? Math.round(priceBreakdown.finalTotal) : Math.round(selectedServices.reduce((acc, s) => {
                         const price = s.discountedPrice !== null && s.discountedPrice !== undefined ?
                           parseFloat(s.discountedPrice) :
                           parseFloat(s.price || '0');
                         return acc + price;
-                      }, 0).toFixed(2)}
+                      }, 0))}
                     </div>
                   </div>
                   <div className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium">

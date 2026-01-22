@@ -215,16 +215,16 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
     const VendorModel = (await import('../../models/Vendor/Vendor.model.js')).default;
     let vendorRegionId = null;
     try {
-        if (cleanAppointmentData.vendorId && isValidObjectId(cleanAppointmentData.vendorId)) {
-            const vendor = await VendorModel.findById(cleanAppointmentData.vendorId).select('regionId').lean();
-            if (vendor && vendor.regionId) {
-                vendorRegionId = vendor.regionId;
-            }
+      if (cleanAppointmentData.vendorId && isValidObjectId(cleanAppointmentData.vendorId)) {
+        const vendor = await VendorModel.findById(cleanAppointmentData.vendorId).select('regionId').lean();
+        if (vendor && vendor.regionId) {
+          vendorRegionId = vendor.regionId;
         }
+      }
     } catch (err) {
-        console.error("Error fetching vendor region for appointment:", err);
+      console.error("Error fetching vendor region for appointment:", err);
     }
-    
+
     // Add lock information to appointment data
     const tempAppointmentData = {
       ...cleanAppointmentData, // Spread the original data first
@@ -244,12 +244,14 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
       startTime: cleanAppointmentData.startTime || '00:00',
       endTime: cleanAppointmentData.endTime || '00:00',
       duration: cleanAppointmentData.duration || 0,
-      amount: cleanAppointmentData.amount || 0,
-      totalAmount: cleanAppointmentData.totalAmount || cleanAppointmentData.amount || 0,
-      finalAmount: cleanAppointmentData.finalAmount || cleanAppointmentData.totalAmount || cleanAppointmentData.amount || 0,
-      platformFee: cleanAppointmentData.platformFee || 0,
-      serviceTax: cleanAppointmentData.serviceTax || 0,
+      amount: Math.round(cleanAppointmentData.amount || 0),
+      totalAmount: Math.round(cleanAppointmentData.totalAmount || cleanAppointmentData.amount || 0),
+      finalAmount: Math.round(cleanAppointmentData.finalAmount || cleanAppointmentData.totalAmount || cleanAppointmentData.amount || 0),
+      platformFee: Math.round(cleanAppointmentData.platformFee || 0),
+      serviceTax: Math.round(cleanAppointmentData.serviceTax || 0),
       taxRate: cleanAppointmentData.taxRate || 0,
+      couponCode: cleanAppointmentData.couponCode || null,
+      discountAmount: Math.round(cleanAppointmentData.discountAmount || 0),
       mode: 'online', // Web bookings are always online
       isHomeService: cleanAppointmentData.isHomeService || false,
       isWeddingService: cleanAppointmentData.isWeddingService || false,
@@ -330,6 +332,11 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
 
     // Create a temporary appointment in the database
     const tempAppointment = new Appointment(tempAppointmentData);
+
+    // Explicitly set these fields to ensure they are captured even if schema was recently updated
+    if (tempAppointmentData.couponCode) tempAppointment.couponCode = tempAppointmentData.couponCode;
+    if (tempAppointmentData.discountAmount) tempAppointment.discountAmount = tempAppointmentData.discountAmount;
+
     console.log('Temporary appointment before save:', tempAppointment);
     const savedAppointment = await tempAppointment.save();
     console.log('Temporary appointment after save:', savedAppointment);
@@ -353,9 +360,10 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
  * @param {string} appointmentId - Appointment ID
  * @param {string} lockToken - Lock token
  * @param {Object} paymentDetails - Payment details
+ * @param {Object} couponData - Optional coupon data { couponCode, discountAmount }
  * @returns {Promise<Object>} - Confirmed appointment
  */
-export async function confirmAppointment(appointmentId, lockToken, paymentDetails) {
+export async function confirmAppointment(appointmentId, lockToken, paymentDetails, couponData = {}) {
   try {
     // Import the Appointment model
     const Appointment = (await import('../../models/Appointment/Appointment.model.js')).default;
@@ -397,6 +405,18 @@ export async function confirmAppointment(appointmentId, lockToken, paymentDetail
     // Set payment details and confirmation time
     appointment.paymentDetails = paymentDetails;
     appointment.confirmedAt = new Date();
+
+    // Update coupon data if provided in confirmation request
+    if (couponData.couponCode) {
+      appointment.couponCode = couponData.couponCode;
+    }
+    if (couponData.discountAmount !== undefined) {
+      appointment.discountAmount = Math.round(couponData.discountAmount);
+    }
+    if (couponData.finalAmount !== undefined) {
+      console.log(`Setting finalAmount for appointment ${appointmentId}: ${couponData.finalAmount} (discount: ${couponData.discountAmount})`);
+      appointment.finalAmount = Math.round(couponData.finalAmount);
+    }
 
     // Preserve home service location and travel time data
     const homeServiceLocationData = appointment.homeServiceLocation || {};

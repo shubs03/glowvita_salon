@@ -16,7 +16,7 @@ const extractAppointmentId = (url, params) => {
             return id;
         }
     }
-    
+
     // Fallback: try to extract from URL path
     const urlObj = new URL(url);
     const pathSegments = urlObj.pathname.split('/');
@@ -28,7 +28,7 @@ const extractAppointmentId = (url, params) => {
             return potentialId;
         }
     }
-    
+
     return null;
 };
 
@@ -50,9 +50,9 @@ export const GET = withSubscriptionCheck(async (req, { params }) => {
                 _id: id,
                 vendorId: vendorId
             })
-            .populate('client', 'name email phone')
-            .populate('staff', 'fullName position')
-            .populate('service', 'name duration price');
+                .populate('client', 'name email phone')
+                .populate('staff', 'fullName position')
+                .populate('service', 'name duration price');
 
             if (!appointment) {
                 return NextResponse.json(
@@ -106,30 +106,30 @@ export const POST = withSubscriptionCheck(async (req) => {
 
         // Required fields validation
         const requiredFields = [
-          'clientName',
-          'service',
-          'serviceName',
-          'staff',
-          'staffName',
-          'date',
-          'startTime',
-          'endTime',
-          'duration',
-          'amount',
-          'totalAmount'
+            'clientName',
+            'service',
+            'serviceName',
+            'staff',
+            'staffName',
+            'date',
+            'startTime',
+            'endTime',
+            'duration',
+            'amount',
+            'totalAmount'
         ];
-        
+
         const missingFields = requiredFields.filter(field => {
-          // Special handling for staff field - it can be null but must be present
-          if (field === 'staff') {
-            return body[field] === undefined;
-          }
-          return !body[field];
+            // Special handling for staff field - it can be null but must be present
+            if (field === 'staff') {
+                return body[field] === undefined;
+            }
+            return !body[field];
         });
-        
+
         if (missingFields.length > 0) {
             return NextResponse.json(
-                { message: `Missing required fields: ${missingFields.join(', ')}` }, 
+                { message: `Missing required fields: ${missingFields.join(', ')}` },
                 { status: 400 }
             );
         }
@@ -234,7 +234,7 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
     try {
         const vendorId = req.user.userId;
         const appointmentId = params?.id;
-        
+
         if (!appointmentId) {
             return NextResponse.json(
                 { success: false, message: 'Appointment ID is required' },
@@ -243,10 +243,10 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
         }
 
         const requestBody = await req.json();
-        
+
         // Handle both direct updates and updates in an 'updates' object
         const updateData = requestBody.updates || requestBody;
-        
+
         if (!updateData || Object.keys(updateData).length === 0) {
             return NextResponse.json(
                 { success: false, message: 'No update data provided' },
@@ -289,15 +289,15 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
         // Update the appointment
         const updatedAppointment = await AppointmentModel.findByIdAndUpdate(
             appointmentId,
-            { 
+            {
                 $set: updateData,
                 $currentDate: { updatedAt: true }
             },
             { new: true, runValidators: false } // Disable validation to avoid issues with existing appointments
         )
-        .populate('client', 'name email phone')
-        .populate('service', 'name duration price')
-        .populate('staff', 'name email phone');
+            .populate('client', 'name email phone')
+            .populate('service', 'name duration price')
+            .populate('staff', 'name email phone');
 
         if (!updatedAppointment) {
             throw new Error('Failed to update appointment');
@@ -312,8 +312,8 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
     } catch (error) {
         console.error('Error updating appointment:', error);
         return NextResponse.json(
-            { 
-                success: false, 
+            {
+                success: false,
                 message: 'Failed to update appointment',
                 error: process.env.NODE_ENV === 'development' ? error.message : undefined
             },
@@ -328,7 +328,7 @@ export const DELETE = withSubscriptionCheck(async (req, { params }) => {
         console.log('=== DELETE REQUEST START ===');
         const vendorId = req.user.userId;
         const appointmentId = extractAppointmentId(req.url, params);
-        
+
         console.log('DELETE Request URL:', req.url);
         console.log('DELETE Request params:', params);
         console.log('Extracted appointment ID:', appointmentId);
@@ -336,7 +336,7 @@ export const DELETE = withSubscriptionCheck(async (req, { params }) => {
         if (!appointmentId) {
             console.error('No appointment ID found for deletion');
             return NextResponse.json(
-                { 
+                {
                     message: "Appointment ID is required for deletion",
                     receivedUrl: req.url,
                     receivedParams: params
@@ -345,23 +345,23 @@ export const DELETE = withSubscriptionCheck(async (req, { params }) => {
             );
         }
 
-        const deletedAppointment = await AppointmentModel.findOneAndDelete({ 
-            _id: appointmentId, 
-            vendorId: vendorId 
+        const deletedAppointment = await AppointmentModel.findOneAndDelete({
+            _id: appointmentId,
+            vendorId: vendorId
         });
 
         if (!deletedAppointment) {
             return NextResponse.json(
-                { message: "Appointment not found or access denied" }, 
+                { message: "Appointment not found or access denied" },
                 { status: 404 }
             );
         }
 
         return NextResponse.json(
-            { 
+            {
                 message: "Appointment deleted successfully",
                 appointment: deletedAppointment
-            }, 
+            },
             { status: 200 }
         );
     } catch (error) {
@@ -379,7 +379,7 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
         const vendorId = req.user.userId;
         const body = await req.json();
         const appointmentId = extractAppointmentId(req.url, params) || body._id;
-        
+
         console.log('PATCH Request - ID:', appointmentId);
         console.log('PATCH Request - body:', body);
 
@@ -403,11 +403,11 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
         if (body.status === 'cancelled') {
             const cancellationReasonText = body.cancellationReason || 'No reason provided';
             const cancellationNote = `[${new Date().toISOString()}] Appointment cancelled: ${cancellationReasonText}`;
-            
+
             // Get the existing appointment to append to the notes
             const existingAppointment = await AppointmentModel.findOne({ _id: appointmentId, vendorId });
             const existingNotes = existingAppointment?.notes || '';
-            
+
             const updateObj = {
                 $set: {
                     status: 'cancelled',
@@ -422,8 +422,8 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                 updateObj,
                 { new: true, runValidators: false } // Disable validation to avoid issues with existing appointments
             )
-            .populate('staff', 'fullName position')
-            .populate('service', 'name duration price');
+                .populate('staff', 'fullName position')
+                .populate('service', 'name duration price');
 
             if (!updatedAppointment) {
                 return NextResponse.json(
@@ -437,13 +437,60 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                 appointment: updatedAppointment
             });
         } else {
+            // Logic for completing an appointment and calculating staff commission
+            const updateFields = { status: body.status };
+
+            if (body.status === 'completed') {
+                try {
+                    // Fetch current appointment to get staff and service details
+                    const currentAppt = await AppointmentModel.findOne({ _id: appointmentId, vendorId });
+
+                    if (currentAppt && currentAppt.staff) {
+                        const { default: StaffModel } = await import('@repo/lib/models/Vendor/Staff.model');
+                        const staffMember = await StaffModel.findById(currentAppt.staff);
+
+                        if (staffMember && staffMember.commission) {
+                            const rate = staffMember.commissionRate || 0;
+                            // Calculate based on final amount or total amount (excluding tax/platform fee if needed, but using total here)
+                            const commissionAmount = (currentAppt.finalAmount * rate) / 100;
+
+                            updateFields.staffCommission = {
+                                rate: rate,
+                                amount: commissionAmount
+                            };
+
+                            // Also update service items if they exist
+                            if (currentAppt.serviceItems && currentAppt.serviceItems.length > 0) {
+                                updateFields.serviceItems = currentAppt.serviceItems.map(item => {
+                                    // Logic could be more complex here to handle different staff per item, 
+                                    // but for now assumming primary staff or simplistic model
+                                    if (item.staff && item.staff.toString() === staffMember._id.toString()) {
+                                        return {
+                                            ...item,
+                                            staffCommission: {
+                                                rate: rate,
+                                                amount: (item.amount * rate) / 100
+                                            }
+                                        };
+                                    }
+                                    return item;
+                                });
+                            }
+                        }
+                    }
+                } catch (commissionError) {
+                    console.error("Error calculating commission during completion:", commissionError);
+                    // Don't block completion if commission calc fails, but log it
+                }
+            }
+
             const updatedAppointment = await AppointmentModel.findOneAndUpdate(
                 { _id: appointmentId, vendorId },
-                { $set: { status: body.status } },
+                { $set: updateFields },
                 { new: true, runValidators: false } // Disable validation to avoid issues with existing appointments
             )
-            .populate('staff', 'fullName position')
-            .populate('service', 'name duration price');
+                .populate('staff', 'fullName position')
+                .populate('service', 'name duration price');
 
             if (!updatedAppointment) {
                 return NextResponse.json(

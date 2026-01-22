@@ -10,64 +10,64 @@ await _db();
 
 // Utility function to process multiple base64 images and upload them
 const processMultipleImages = async (images, vendorId, prefix = 'product') => {
-    if (!images || !Array.isArray(images) || images.length === 0) {
-        return [];
+  if (!images || !Array.isArray(images) || images.length === 0) {
+    return [];
+  }
+
+  const uploadedUrls = [];
+
+  for (let i = 0; i < images.length; i++) {
+    const imageData = images[i];
+
+    // Skip if empty or already a URL
+    if (!imageData) continue;
+    if (imageData.startsWith('http')) {
+      uploadedUrls.push(imageData);
+      continue;
     }
-    
-    const uploadedUrls = [];
-    
-    for (let i = 0; i < images.length; i++) {
-        const imageData = images[i];
-        
-        // Skip if empty or already a URL
-        if (!imageData) continue;
-        if (imageData.startsWith('http')) {
-            uploadedUrls.push(imageData);
-            continue;
-        }
-        
-        try {
-            const fileName = `${prefix}-${vendorId}-${Date.now()}-${i}`;
-            const imageUrl = await uploadBase64(imageData, fileName);
-            if (imageUrl) {
-                uploadedUrls.push(imageUrl);
-            }
-        } catch (error) {
-            console.error(`Failed to upload image ${i}:`, error);
-            // Continue with other images even if one fails
-        }
+
+    try {
+      const fileName = `${prefix}-${vendorId}-${Date.now()}-${i}`;
+      const imageUrl = await uploadBase64(imageData, fileName);
+      if (imageUrl) {
+        uploadedUrls.push(imageUrl);
+      }
+    } catch (error) {
+      console.error(`Failed to upload image ${i}:`, error);
+      // Continue with other images even if one fails
     }
-    
-    return uploadedUrls;
+  }
+
+  return uploadedUrls;
 };
 
 // Utility function to process base64 image and upload it
 // Also deletes the old image if a new one is uploaded
 const processBase64Image = async (base64String, fileName, oldImageUrl = null) => {
-    if (!base64String) return null;
-    
-    // Check if it's already a URL (not base64)
-    if (base64String.startsWith('http')) {
-        return base64String; // Already uploaded, return as is
+  if (!base64String) return null;
+
+  // Check if it's already a URL (not base64)
+  if (base64String.startsWith('http')) {
+    return base64String; // Already uploaded, return as is
+  }
+
+  // Upload the base64 image and return the URL
+  const imageUrl = await uploadBase64(base64String, fileName);
+
+  // If upload was successful and there's an old image, delete the old one
+  if (imageUrl && oldImageUrl && oldImageUrl.startsWith('http')) {
+    try {
+      // Attempt to delete the old file
+      // We don't await this as we don't want to fail the whole operation if deletion fails
+      deleteFile(oldImageUrl).catch(err => {
+        console.warn('Failed to delete old image:', err);
+      });
+    } catch (err) {
+      console.warn('Error deleting old image:', err);
     }
-    
-    // Upload the base64 image and return the URL
-    const imageUrl = await uploadBase64(base64String, fileName);
-    
-    // If upload was successful and there's an old image, delete the old one
-    if (imageUrl && oldImageUrl && oldImageUrl.startsWith('http')) {
-        try {
-            // Attempt to delete the old file
-            // We don't await this as we don't want to fail the whole operation if deletion fails
-            deleteFile(oldImageUrl).catch(err => {
-                console.warn('Failed to delete old image:', err);
-            });
-        } catch (err) {
-            console.warn('Error deleting old image:', err);
-        }
-    }
-    
-    return imageUrl;
+  }
+
+  return imageUrl;
 };
 
 // GET - Fetch products for the current user (vendor or supplier)
@@ -76,7 +76,7 @@ const getProducts = async (req) => {
     // Get user ID from authenticated user (or from query parameters if available)
     const searchParams = req.nextUrl?.searchParams;
     const queryUserId = searchParams?.get('userId');
-    
+
     // Try to get the vendor ID from multiple possible places
     const vendorId = queryUserId || req.user?._id || req.user?.userId;
     const userRole = req.user?.role;
@@ -90,12 +90,12 @@ const getProducts = async (req) => {
         data: []
       });
     }
-    
+
     // Filter products by the current user's ID
     const origin = userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : null;
     const query = { vendorId: vendorId };
     if (origin) query.origin = origin;
-    
+
     // Use safe database query
     let products;
     try {
@@ -124,10 +124,10 @@ const getProducts = async (req) => {
     });
   } catch (error) {
     console.error("Error fetching products:", error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
-      message: "Error fetching products", 
-      error: error.message 
+      message: "Error fetching products",
+      error: error.message
     }, { status: 500 });
   }
 };
@@ -135,9 +135,8 @@ const getProducts = async (req) => {
 export const GET = authMiddlewareCrm(getProducts, ["vendor", "supplier"]);
 
 // POST - Create new product
-const createProduct = async (req) => {
+const createProduct = async (req, body) => {
     try {
-        const body = await req.json();
         const { 
             productName, 
             description, 
@@ -159,121 +158,120 @@ const createProduct = async (req) => {
         } = body;
         const userRole = req.user?.role;
 
-        if (!productName || !category || price === undefined || stock === undefined) {
-            return NextResponse.json(
-                { success: false, message: "Missing required fields: productName, category, price, and stock are required" },
-                { status: 400 }
-            );
-        }
-
-        if (price < 0 || stock < 0 || (salePrice && salePrice < 0)) {
-            return NextResponse.json(
-                { success: false, message: "Price, stock, and sale price cannot be negative" },
-                { status: 400 }
-            );
-        }
-
-        let categoryDoc = await ProductCategoryModel.findOne({ name: category });
-        if (!categoryDoc) {
-             return NextResponse.json(
-                { success: false, message: `Category '${category}' not found` },
-                { status: 400 }
-            );
-        }
-        
-        // Make sure we have a valid vendor ID (either from _id or userId field in the JWT payload)
-        const vendorId = req.user._id || req.user.userId;
-        
-        if (!vendorId) {
-            return NextResponse.json(
-                { success: false, message: "Unable to determine vendor ID from authentication" },
-                { status: 400 }
-            );
-        }
-        
-        // Handle product images upload - now supports multiple images
-        let productImageUrls = [];
-        if (productImages) {
-            // Ensure it's an array
-            const imagesArray = Array.isArray(productImages) ? productImages : [productImages];
-            productImageUrls = await processMultipleImages(imagesArray, vendorId, 'product');
-        }
-
-        // Process keyIngredients - convert comma-separated string to array
-        let processedKeyIngredients = [];
-        if (keyIngredients) {
-            if (typeof keyIngredients === 'string') {
-                processedKeyIngredients = keyIngredients.split(',').map(i => i.trim()).filter(i => i.length > 0);
-            } else if (Array.isArray(keyIngredients)) {
-                processedKeyIngredients = keyIngredients;
-            }
-        }
-
-        // Fetch owner's region to inherit
-        let parentRegionId = null;
-        try {
-            const Model = userRole === 'supplier' 
-                ? (await import("@repo/lib/models/Vendor/Supplier.model")).default
-                : (await import("@repo/lib/models/Vendor/Vendor.model")).default;
-            
-            const parent = await Model.findById(vendorId).select('regionId');
-            parentRegionId = parent?.regionId;
-        } catch (err) {
-            console.error("Error inheriting region for product:", err);
-        }
-
-        const newProduct = new ProductModel({
-            vendorId: vendorId,
-            regionId: parentRegionId,
-            origin: userRole.charAt(0).toUpperCase() + userRole.slice(1),
-            productName: productName.trim(),
-            description: description?.trim() || '',
-            category: categoryDoc._id,
-            categoryDescription: categoryDescription?.trim() || '',
-            price: Number(price),
-            salePrice: Number(salePrice) || 0,
-            stock: Number(stock),
-            productImages: productImageUrls,
-            isActive: Boolean(isActive),
-            status: status === 'disapproved' ? 'rejected' : (status || 'pending'),
-            size: size?.trim() || '',
-            sizeMetric: sizeMetric?.trim() || '',
-            keyIngredients: processedKeyIngredients,
-            forBodyPart: forBodyPart?.trim() || '',
-            bodyPartType: bodyPartType?.trim() || '',
-            productForm: productForm?.trim() || '',
-            brand: brand?.trim() || '',
-            createdBy: vendorId,
-            updatedBy: vendorId,
-        });
-
-        const savedProduct = await newProduct.save();
-
-        const responseProduct = {
-            ...savedProduct.toObject(),
-            status: savedProduct.status === 'rejected' ? 'disapproved' : savedProduct.status,
-            category: categoryDoc.name
-        };
-
-        return NextResponse.json({
-            success: true,
-            message: 'Product created successfully',
-            data: responseProduct
-        }, { status: 201 });
-
-    } catch (error) {
-        console.error('Error creating product:', error);
-        return NextResponse.json(
-            { success: false, message: 'Error creating product', error: error.message },
-            { status: 500 }
-        );
+    if (!productName || !category || price === undefined || stock === undefined) {
+      return NextResponse.json(
+        { success: false, message: "Missing required fields: productName, category, price, and stock are required" },
+        { status: 400 }
+      );
     }
+
+    if (price < 0 || stock < 0 || (salePrice && salePrice < 0)) {
+      return NextResponse.json(
+        { success: false, message: "Price, stock, and sale price cannot be negative" },
+        { status: 400 }
+      );
+    }
+
+    let categoryDoc = await ProductCategoryModel.findOne({ name: category });
+    if (!categoryDoc) {
+      return NextResponse.json(
+        { success: false, message: `Category '${category}' not found` },
+        { status: 400 }
+      );
+    }
+
+    // Make sure we have a valid vendor ID (either from _id or userId field in the JWT payload)
+    const vendorId = req.user._id || req.user.userId;
+
+    if (!vendorId) {
+      return NextResponse.json(
+        { success: false, message: "Unable to determine vendor ID from authentication" },
+        { status: 400 }
+      );
+    }
+
+    // Handle product images upload - now supports multiple images
+    let productImageUrls = [];
+    if (productImages) {
+      // Ensure it's an array
+      const imagesArray = Array.isArray(productImages) ? productImages : [productImages];
+      productImageUrls = await processMultipleImages(imagesArray, vendorId, 'product');
+    }
+
+    // Process keyIngredients - convert comma-separated string to array
+    let processedKeyIngredients = [];
+    if (keyIngredients) {
+      if (typeof keyIngredients === 'string') {
+        processedKeyIngredients = keyIngredients.split(',').map(i => i.trim()).filter(i => i.length > 0);
+      } else if (Array.isArray(keyIngredients)) {
+        processedKeyIngredients = keyIngredients;
+      }
+    }
+
+    // Fetch owner's region to inherit
+    let parentRegionId = null;
+    try {
+      const Model = userRole === 'supplier'
+        ? (await import("@repo/lib/models/Vendor/Supplier.model")).default
+        : (await import("@repo/lib/models/Vendor/Vendor.model")).default;
+
+      const parent = await Model.findById(vendorId).select('regionId');
+      parentRegionId = parent?.regionId;
+    } catch (err) {
+      console.error("Error inheriting region for product:", err);
+    }
+
+    const newProduct = new ProductModel({
+      vendorId: vendorId,
+      regionId: parentRegionId,
+      origin: userRole.charAt(0).toUpperCase() + userRole.slice(1),
+      productName: productName.trim(),
+      description: description?.trim() || '',
+      category: categoryDoc._id,
+      categoryDescription: categoryDescription?.trim() || '',
+      price: Number(price),
+      salePrice: Number(salePrice) || 0,
+      stock: Number(stock),
+      productImages: productImageUrls,
+      isActive: Boolean(isActive),
+      status: status === 'disapproved' ? 'rejected' : (status || 'pending'),
+      size: size?.trim() || '',
+      sizeMetric: sizeMetric?.trim() || '',
+      keyIngredients: processedKeyIngredients,
+      forBodyPart: forBodyPart?.trim() || '',
+      bodyPartType: bodyPartType?.trim() || '',
+      productForm: productForm?.trim() || '',
+      brand: brand?.trim() || '',
+      createdBy: vendorId,
+      updatedBy: vendorId,
+    });
+
+    const savedProduct = await newProduct.save();
+
+    const responseProduct = {
+      ...savedProduct.toObject(),
+      status: savedProduct.status === 'rejected' ? 'disapproved' : savedProduct.status,
+      category: categoryDoc.name
+    };
+
+    return NextResponse.json({
+      success: true,
+      message: 'Product created successfully',
+      data: responseProduct
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error('Error creating product:', error);
+    return NextResponse.json(
+      { success: false, message: 'Error creating product', error: error.message },
+      { status: 500 }
+    );
+  }
 };
 
 // Bulk create products
-const bulkCreateProducts = async (req) => {
+const bulkCreateProducts = async (req, body) => {
     try {
-        const body = await req.json();
         const { products } = body;
         
         if (!Array.isArray(products) || products.length === 0) {
@@ -406,13 +404,13 @@ const bulkCreateProducts = async (req) => {
 export const POST = authMiddlewareCrm(async (req) => {
   try {
     const body = await req.json();
-    
+
     if (body && Array.isArray(body.products) && body.products.length > 0) {
       // This is a bulk request
-      return bulkCreateProducts(req);
+      return bulkCreateProducts(req, body);
     } else {
       // This is a single product request
-      return createProduct(req);
+      return createProduct(req, body);
     }
   } catch (error) {
     console.error('Error in POST handler:', error);
@@ -426,36 +424,36 @@ export const POST = authMiddlewareCrm(async (req) => {
 // PUT (update) a product
 export const PUT = authMiddlewareCrm(async (req) => {
   try {
-    const { 
-        id, 
-        productImages, // Now expecting an array
-        category, 
-        status, 
-        size,
-        sizeMetric,
-        keyIngredients,
-        forBodyPart,
-        bodyPartType,
-        productForm,
-        brand,
-        ...updateData 
+    const {
+      id,
+      productImages, // Now expecting an array
+      category,
+      status,
+      size,
+      sizeMetric,
+      keyIngredients,
+      forBodyPart,
+      bodyPartType,
+      productForm,
+      brand,
+      ...updateData
     } = await req.json();
 
     if (!id) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         success: false,
-        message: "ID is required for update" 
+        message: "ID is required for update"
       }, { status: 400 });
     }
-    
+
     if (updateData.price !== undefined && updateData.price < 0) {
-        return NextResponse.json({ success: false, message: "Price cannot be negative" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "Price cannot be negative" }, { status: 400 });
     }
     if (updateData.stock !== undefined && updateData.stock < 0) {
-        return NextResponse.json({ success: false, message: "Stock cannot be negative" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "Stock cannot be negative" }, { status: 400 });
     }
     if (updateData.salePrice !== undefined && updateData.salePrice < 0) {
-        return NextResponse.json({ success: false, message: "Sale price cannot be negative" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "Sale price cannot be negative" }, { status: 400 });
     }
 
     let categoryId = updateData.category;
@@ -466,84 +464,84 @@ export const PUT = authMiddlewareCrm(async (req) => {
       }
       categoryId = categoryDoc._id;
     }
-    
+
     // Make sure we have a valid vendor ID (either from _id or userId field in the JWT payload)
     const vendorId = req.user._id || req.user.userId;
-    
+
     if (!vendorId) {
-        return NextResponse.json(
-            { success: false, message: "Unable to determine vendor ID from authentication" },
-            { status: 400 }
-        );
+      return NextResponse.json(
+        { success: false, message: "Unable to determine vendor ID from authentication" },
+        { status: 400 }
+      );
     }
-    
+
     const existingProduct = await ProductModel.findOne({ _id: id, vendorId: vendorId });
     if (!existingProduct) {
       return NextResponse.json({ success: false, message: "Product not found or you don't have permission to update it" }, { status: 404 });
     }
 
     const finalUpdateData = {
-        ...updateData,
-        updatedBy: vendorId,
-        updatedAt: new Date()
+      ...updateData,
+      updatedBy: vendorId,
+      updatedAt: new Date()
     };
 
     // Handle product images upload - now supports multiple images
     if (productImages !== undefined) {
-        if (productImages && productImages.length > 0) {
-            // Ensure it's an array
-            const imagesArray = Array.isArray(productImages) ? productImages : [productImages];
-            
-            // Separate existing URLs from new base64 images
-            const existingUrls = imagesArray.filter(img => img && img.startsWith('http'));
-            const newBase64Images = imagesArray.filter(img => img && !img.startsWith('http'));
-            
-            // Upload new images
-            const newUploadedUrls = await processMultipleImages(newBase64Images, vendorId, 'product');
-            
-            // Combine existing and new URLs
-            finalUpdateData.productImages = [...existingUrls, ...newUploadedUrls];
-            
-            // Delete removed images (images that were in old array but not in new array)
-            const oldImages = existingProduct.productImages || [];
-            const removedImages = oldImages.filter(oldImg => !finalUpdateData.productImages.includes(oldImg));
-            
-            for (const removedImg of removedImages) {
-                if (removedImg && removedImg.startsWith('http')) {
-                    try {
-                        await deleteFile(removedImg);
-                    } catch (err) {
-                        console.warn('Failed to delete removed image:', err);
-                    }
-                }
+      if (productImages && productImages.length > 0) {
+        // Ensure it's an array
+        const imagesArray = Array.isArray(productImages) ? productImages : [productImages];
+
+        // Separate existing URLs from new base64 images
+        const existingUrls = imagesArray.filter(img => img && img.startsWith('http'));
+        const newBase64Images = imagesArray.filter(img => img && !img.startsWith('http'));
+
+        // Upload new images
+        const newUploadedUrls = await processMultipleImages(newBase64Images, vendorId, 'product');
+
+        // Combine existing and new URLs
+        finalUpdateData.productImages = [...existingUrls, ...newUploadedUrls];
+
+        // Delete removed images (images that were in old array but not in new array)
+        const oldImages = existingProduct.productImages || [];
+        const removedImages = oldImages.filter(oldImg => !finalUpdateData.productImages.includes(oldImg));
+
+        for (const removedImg of removedImages) {
+          if (removedImg && removedImg.startsWith('http')) {
+            try {
+              await deleteFile(removedImg);
+            } catch (err) {
+              console.warn('Failed to delete removed image:', err);
             }
-        } else {
-            // If productImages is empty array, remove all images
-            finalUpdateData.productImages = [];
-            
-            // Delete all old images
-            const oldImages = existingProduct.productImages || [];
-            for (const oldImg of oldImages) {
-                if (oldImg && oldImg.startsWith('http')) {
-                    try {
-                        await deleteFile(oldImg);
-                    } catch (err) {
-                        console.warn('Failed to delete old image:', err);
-                    }
-                }
-            }
+          }
         }
+      } else {
+        // If productImages is empty array, remove all images
+        finalUpdateData.productImages = [];
+
+        // Delete all old images
+        const oldImages = existingProduct.productImages || [];
+        for (const oldImg of oldImages) {
+          if (oldImg && oldImg.startsWith('http')) {
+            try {
+              await deleteFile(oldImg);
+            } catch (err) {
+              console.warn('Failed to delete old image:', err);
+            }
+          }
+        }
+      }
     }
 
     // Process keyIngredients - convert comma-separated string to array
     if (keyIngredients !== undefined) {
-        if (typeof keyIngredients === 'string') {
-            finalUpdateData.keyIngredients = keyIngredients.split(',').map(i => i.trim()).filter(i => i.length > 0);
-        } else if (Array.isArray(keyIngredients)) {
-            finalUpdateData.keyIngredients = keyIngredients;
-        } else {
-            finalUpdateData.keyIngredients = [];
-        }
+      if (typeof keyIngredients === 'string') {
+        finalUpdateData.keyIngredients = keyIngredients.split(',').map(i => i.trim()).filter(i => i.length > 0);
+      } else if (Array.isArray(keyIngredients)) {
+        finalUpdateData.keyIngredients = keyIngredients;
+      } else {
+        finalUpdateData.keyIngredients = [];
+      }
     }
 
     // Add the new fields to finalUpdateData if they are provided
@@ -554,8 +552,8 @@ export const PUT = authMiddlewareCrm(async (req) => {
     if (productForm !== undefined) finalUpdateData.productForm = productForm?.trim() || '';
     if (brand !== undefined) finalUpdateData.brand = brand?.trim() || '';
 
-    if(categoryId) finalUpdateData.category = categoryId;
-    if(status) finalUpdateData.status = status === 'disapproved' ? 'rejected' : status;
+    if (categoryId) finalUpdateData.category = categoryId;
+    if (status) finalUpdateData.status = status === 'disapproved' ? 'rejected' : status;
 
     const updatedProduct = await ProductModel.findByIdAndUpdate(id, finalUpdateData, { new: true, runValidators: true }).populate('category', 'name');
 
@@ -583,11 +581,11 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     console.log("Request body:", body);
     console.log("Request body type:", typeof body);
     console.log("Body keys:", Object.keys(body));
-    
+
     // Extract ID from the body object { id: '...' }
     let id = body.id || body._id;
     console.log("Raw ID extracted:", id, "Type:", typeof id);
-    
+
     // Convert to string if it's not already
     if (id && typeof id === 'object' && id.toString) {
       console.log("ID is an object, converting with toString()");
@@ -596,7 +594,7 @@ export const DELETE = authMiddlewareCrm(async (req) => {
       console.log("Converting ID to string with String()");
       id = String(id);
     }
-    
+
     console.log("Extracted ID after conversion:", id, "Type:", typeof id, "Length:", id?.length);
 
     if (!id) {
@@ -610,26 +608,26 @@ export const DELETE = authMiddlewareCrm(async (req) => {
     console.log("Full user object:", JSON.stringify(req.user, null, 2));
     const vendorId = req.user._id || req.user.userId;
     console.log("Vendor ID from request:", vendorId);
-    
+
     if (!vendorId) {
-        console.log("Unable to determine vendor ID from authentication");
-        return NextResponse.json(
-            { success: false, message: "Unable to determine vendor ID from authentication" },
-            { status: 400 }
-        );
+      console.log("Unable to determine vendor ID from authentication");
+      return NextResponse.json(
+        { success: false, message: "Unable to determine vendor ID from authentication" },
+        { status: 400 }
+      );
     }
-    
+
     console.log("Attempting to delete product with ID:", id, "for vendor:", vendorId);
-    
+
     // Validate ObjectId format - trim whitespace first
     const trimmedId = id?.trim();
     console.log("Trimmed ID:", trimmedId, "Original length:", id?.length, "Trimmed length:", trimmedId?.length);
-    
+
     if (!trimmedId || !mongoose.Types.ObjectId.isValid(trimmedId)) {
       console.log("Invalid product ID format:", trimmedId, "Type:", typeof trimmedId, "Length:", trimmedId?.length);
       console.log("Is valid ObjectId:", mongoose.Types.ObjectId.isValid(trimmedId));
-      return NextResponse.json({ 
-        success: false, 
+      return NextResponse.json({
+        success: false,
         message: "Invalid product ID format. Please try again.",
         debug: {
           receivedId: id,
@@ -639,15 +637,15 @@ export const DELETE = authMiddlewareCrm(async (req) => {
         }
       }, { status: 400 });
     }
-    
+
     // Use the trimmed ID for the rest of the operation
     id = trimmedId;
-    
+
     if (!mongoose.Types.ObjectId.isValid(vendorId)) {
       console.log("Invalid vendor ID format:", vendorId);
       return NextResponse.json({ success: false, message: "Invalid vendor ID format" }, { status: 400 });
     }
-    
+
     let deletedProduct;
     try {
       deletedProduct = await ProductModel.findOneAndDelete({ _id: id, vendorId: vendorId });
@@ -662,7 +660,7 @@ export const DELETE = authMiddlewareCrm(async (req) => {
       console.log("Product not found or user doesn't have permission to delete it");
       return NextResponse.json({ success: false, message: "Product not found or you don't have permission to delete it" }, { status: 404 });
     }
-    
+
     // Delete all product images from VPS if they exist
     if (deletedProduct.productImages && Array.isArray(deletedProduct.productImages)) {
       for (const imageUrl of deletedProduct.productImages) {
@@ -675,7 +673,7 @@ export const DELETE = authMiddlewareCrm(async (req) => {
         }
       }
     }
-    
+
     return NextResponse.json({ success: true, message: "Product deleted successfully" });
   } catch (error) {
     console.error("Error deleting product:", error);

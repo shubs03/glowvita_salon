@@ -38,7 +38,6 @@ type Appointment = {
   status?: AppointmentStatus;
   paymentStatus?: string;
   amount?: number;
-  discount?: number;
   tax?: number;
   totalAmount?: number;
   // Additional payment fields
@@ -222,7 +221,6 @@ export default function DailySchedulePage() {
         status: appt.status || 'scheduled',
         paymentStatus: appt.paymentStatus || 'pending',
         amount: appt.amount || 0,
-        discount: appt.discount || 0,
         tax: appt.tax || 0,
         totalAmount: appt.totalAmount || appt.amount || 0,
         mode: appt.mode, // Only include if it exists in backend
