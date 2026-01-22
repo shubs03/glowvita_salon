@@ -143,28 +143,30 @@ export function UpcomingAppointments({
       </CardHeader>
       <CardContent>
         {appointments.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Client</TableHead>
-                <TableHead>Service</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Time</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {appointments.slice(0, 5).map((appt, index) => (
-                <TableRow key={index}>
-                  <TableCell>
-                    <div className="font-medium">{appt.name}</div>
-                  </TableCell>
-                  <TableCell>{appt.service}</TableCell>
-                  <TableCell>{appt.date}</TableCell>
-                  <TableCell className="text-right font-medium">{appt.time}</TableCell>
+          <div className="overflow-x-auto">
+            <Table className="min-w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Service</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Time</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {appointments.slice(0, 5).map((appt, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="whitespace-nowrap">
+                      <div className="font-medium truncate max-w-[100px]">{appt.name}</div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap truncate max-w-[120px]">{appt.service}</TableCell>
+                    <TableCell className="whitespace-nowrap">{appt.date}</TableCell>
+                    <TableCell className="text-right font-medium whitespace-nowrap">{appt.time}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         ) : (
           <div className="flex items-center justify-center h-[300px] text-muted-foreground">
             No upcoming appointments

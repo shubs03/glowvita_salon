@@ -67,40 +67,42 @@ export function ClientFeedback() {
       </CardHeader>
       <CardContent>
         {feedback.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[120px]">Client</TableHead>
-                <TableHead className="w-[auto]">Comment</TableHead>
-                <TableHead className="w-[60px]">Type</TableHead>
-                <TableHead className="w-[80px] text-right">Rating</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {feedback.map((item, index) => (
-                <TableRow key={index}>
-                  <TableCell className="w-[120px]">
-                    <div className="font-medium truncate">{item.client}</div>
-                    <div className="text-xs text-muted-foreground truncate">{item.date}</div>
-                  </TableCell>
-                  <TableCell className="w-[auto]">
-                    <p className="text-sm text-muted-foreground truncate max-w-[150px]">&ldquo;{item.comment}&rdquo;</p>
-                  </TableCell>
-                  <TableCell className="w-[60px]">
-                    <span className="inline-flex items-center justify-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
-                      {item.entityType}
-                    </span>
-                  </TableCell>
-                  <TableCell className="w-[80px] text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <span className="text-sm font-medium">{item.rating}</span>
-                      <FaStar className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                    </div>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table className="min-w-full">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="whitespace-nowrap">Client</TableHead>
+                  <TableHead className="whitespace-nowrap">Comment</TableHead>
+                  <TableHead className="whitespace-nowrap">Type</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Rating</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {feedback.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="whitespace-nowrap">
+                      <div className="font-medium truncate max-w-[100px]">{item.client}</div>
+                      <div className="text-xs text-muted-foreground truncate max-w-[100px]">{item.date}</div>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <p className="text-sm text-muted-foreground truncate max-w-[150px]">&ldquo;{item.comment}&rdquo;</p>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <span className="inline-flex items-center justify-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                        {item.entityType}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1">
+                        <span className="text-sm font-medium">{item.rating}</span>
+                        <FaStar className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         ) : (
           <div className="flex items-center justify-center h-[300px] text-muted-foreground">
             No client feedback available
