@@ -119,6 +119,17 @@ const staffSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
+    commissionRate: {
+      type: Number,
+      default: 0, // Percentage (e.g., 10 for 10%)
+      min: 0,
+      max: 100,
+    },
+    // Tracking when commission was enabled
+    commissionEnabledDate: {
+      type: Date,
+      default: null,
+    },
     bankDetails: {
       type: bankDetailsSchema,
       default: () => ({}),
@@ -254,22 +265,22 @@ staffSchema.statics.adjustSlotsToVendorHours = function (staffSlots, vendorOpenM
   if (!staffSlots || staffSlots.length === 0) {
     return [];
   }
-  
+
   // If invalid vendor hours, return empty array
-  if (vendorOpenMinutes === undefined || vendorCloseMinutes === undefined || 
-      vendorOpenMinutes >= vendorCloseMinutes) {
+  if (vendorOpenMinutes === undefined || vendorCloseMinutes === undefined ||
+    vendorOpenMinutes >= vendorCloseMinutes) {
     return [];
   }
-  
+
   const updatedSlots = [];
-  
+
   // Adjust each staff slot to fit within vendor hours
   for (const slot of staffSlots) {
     // Skip invalid slots
     if (!slot || slot.startMinutes === undefined || slot.endMinutes === undefined) {
       continue;
     }
-    
+
     // Only keep slots that fall within the new vendor hours
     if (slot.startMinutes >= vendorOpenMinutes && slot.endMinutes <= vendorCloseMinutes) {
       updatedSlots.push(slot);
@@ -302,7 +313,7 @@ staffSchema.statics.adjustSlotsToVendorHours = function (staffSlots, vendorOpenM
     }
     // Slots completely outside vendor hours are discarded
   }
-  
+
   return updatedSlots;
 };
 
@@ -313,11 +324,11 @@ staffSchema.pre("save", async function (next) {
     if (this.$locals.skipValidation) {
       return next();
     }
-    
+
     // Only validate if working hours slots are being modified
     const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     let needsValidation = false;
-    
+
     for (const day of dayNames) {
       const dayField = `${day}Slots`;
       if (this.isModified(dayField) && this[dayField] && this[dayField].length > 0) {
@@ -325,35 +336,35 @@ staffSchema.pre("save", async function (next) {
         break;
       }
     }
-    
+
     if (needsValidation) {
       // Dynamically import VendorWorkingHours to avoid circular dependency
       const { default: VendorWorkingHours } = await import('./VendorWorkingHours.model.js');
-      
+
       for (const day of dayNames) {
         const dayAvailableField = `${day}Available`;
         const dayField = `${day}Slots`;
-        
+
         // Only validate if the day is available and has slots defined
         if (this[dayAvailableField] && this.isModified(dayAvailableField) && this[dayField] && this[dayField].length > 0) {
           // Get vendor working hours for the specific day
           const vendorHours = await VendorWorkingHours.getVendorHoursForDay(this.vendorId, day);
-          
+
           // If vendor is closed on this day, staff cannot work
           if (!vendorHours) {
             return next(new Error(`Vendor is closed on ${day}. Staff cannot be scheduled.`));
           }
-          
+
           // Validate each staff slot
           for (const slot of this[dayField]) {
             const staffStartMinutes = this.constructor.timeToMinutes(slot.startTime);
             const staffEndMinutes = this.constructor.timeToMinutes(slot.endTime);
-            
+
             // Check if staff hours are within vendor hours
             if (staffStartMinutes < vendorHours.openMinutes || staffEndMinutes > vendorHours.closeMinutes) {
               return next(new Error(`Staff working hours must be within vendor hours (${vendorHours.openTime} - ${vendorHours.closeTime}) on ${day}`));
             }
-            
+
             // Check if staff start time is before end time
             if (staffStartMinutes >= staffEndMinutes) {
               return next(new Error(`Staff start time must be before end time on ${day}`));
@@ -362,7 +373,7 @@ staffSchema.pre("save", async function (next) {
         }
       }
     }
-    
+
     next();
   } catch (error) {
     next(error);
@@ -490,10 +501,10 @@ staffSchema.statics.findAvailableStaff = function (
   return this.find(query)
     .select(
       "fullName position yearOfExperience rating " +
-        dayField +
-        " " +
-        day.toLowerCase() +
-        "Slots blockedTimes"
+      dayField +
+      " " +
+      day.toLowerCase() +
+      "Slots blockedTimes"
     )
     .sort({ rating: -1, yearOfExperience: -1 })
     .limit(options.limit || 50);
@@ -513,11 +524,11 @@ staffSchema.statics.findByAvailabilityPattern = function (vendorId, pattern) {
 staffSchema.statics.updateStaffAvailabilityForDay = async function (vendorId, day, isAvailable, timeSlots = []) {
   const dayAvailableField = `${day}Available`;
   const daySlotsField = `${day}Slots`;
-  
+
   return await this.updateMany(
     { vendorId: vendorId },
-    { 
-      $set: { 
+    {
+      $set: {
         [dayAvailableField]: isAvailable,
         [daySlotsField]: isAvailable ? timeSlots : []
       }
