@@ -2,19 +2,22 @@
 "use client";
 
 import { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
+import { Card, CardContent, CardHeader } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
-import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Skeleton } from "@repo/ui/skeleton";
-import { Input } from '@repo/ui/input';
-import { Plus, Search, FileDown, Eye, Edit, Trash2, Users, UserPlus } from 'lucide-react';
+import { Eye, Edit, Trash2 } from 'lucide-react';
 import { StaffFormModal } from '@/components/StaffFormModal';
-import { ExportButtons } from '@/components/ExportButtons';
 import { useGetStaffQuery, useDeleteStaffMutation } from '@repo/store/api';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
+
+// Import new components
+import StaffStatsCards from './components/StaffStatsCards';
+import StaffFiltersToolbar from './components/StaffFiltersToolbar';
+import StaffTable from './components/StaffTable';
+import StaffPaginationControls from './components/StaffPaginationControls';
 
 export type Staff = {
     _id: string;
@@ -79,6 +82,7 @@ export default function StaffPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [searchTerm, setSearchTerm] = useState('');
+    const [positionFilter, setPositionFilter] = useState('all');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalTab, setModalTab] = useState('personal');
     const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
@@ -86,12 +90,27 @@ export default function StaffPage() {
 
     const filteredStaff = useMemo(() => {
         if (!staffList) return [];
-        return staffList.filter((staff: Staff) =>
-            staff.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            staff.emailAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            staff.mobileNo.includes(searchTerm)
-        );
-    }, [staffList, searchTerm]);
+        return staffList.filter((staff: Staff) => {
+            const matchesSearch = staff.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                staff.emailAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                staff.mobileNo.includes(searchTerm);
+            const matchesPosition = positionFilter === 'all' || staff.position.toLowerCase().includes(positionFilter.toLowerCase());
+            return matchesSearch && matchesPosition;
+        });
+    }, [staffList, searchTerm, positionFilter]);
+
+    // Extract unique positions for the filter dropdown
+    const positions = useMemo(() => {
+        const uniquePositions: string[] = [];
+        const seen = new Set<string>();
+        staffList.forEach((staff: Staff) => {
+            if (!seen.has(staff.position)) {
+                seen.add(staff.position);
+                uniquePositions.push(staff.position);
+            }
+        });
+        return uniquePositions;
+    }, [staffList]);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -133,7 +152,8 @@ export default function StaffPage() {
 
     if (isLoading) {
         return (
-            <div className="p-4 sm:p-6 lg:p-8">
+            <div className="min-h-screen bg-background">
+                <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
                     <div>
                         <Skeleton className="h-8 w-64" />
@@ -176,8 +196,8 @@ export default function StaffPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow className="bg-secondary hover:bg-secondary">
-                                        {["Name", "Contact", "Position", "Status", "Actions"].map((_, i) => (
-                                            <TableHead key={i}>
+                                        {["Name", "Email", "Phone", "Position", "Status", "Actions"].map((_, i) => (
+                                            <TableHead key={i} className={i < 3 ? (i === 0 ? "min-w-[120px]" : (i === 1 ? "min-w-[150px]" : "min-w-[120px]")) : ""}>
                                                 <Skeleton className="h-5 w-full" />
                                             </TableHead>
                                         ))}
@@ -186,15 +206,17 @@ export default function StaffPage() {
                                 <TableBody>
                                     {[...Array(5)].map((_, i) => (
                                         <TableRow key={i} className="hover:bg-muted/50">
-                                            <TableCell className="font-medium py-3">
+                                            <TableCell className="font-medium py-3 min-w-[120px] max-w-[150px]">
                                                 <div className="flex items-center gap-3">
                                                     <Skeleton className="w-10 h-10 rounded-full" />
                                                     <Skeleton className="h-5 w-32" />
                                                 </div>
                                             </TableCell>
-                                            <TableCell>
+                                            <TableCell className="min-w-[150px] max-w-[180px]">
                                                 <Skeleton className="h-5 w-full mb-1" />
-                                                <Skeleton className="h-4 w-24" />
+                                            </TableCell>
+                                            <TableCell className="min-w-[120px] max-w-[150px]">
+                                                <Skeleton className="h-5 w-full mb-1" />
                                             </TableCell>
                                             <TableCell>
                                                 <Skeleton className="h-5 w-full" />
@@ -218,6 +240,7 @@ export default function StaffPage() {
                         </div>
                     </CardContent>
                 </Card>
+                </div>
             </div>
         );
     }
@@ -227,127 +250,61 @@ export default function StaffPage() {
     }
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8">
-            <h1 className="text-2xl font-bold font-headline mb-6">Staff Management</h1>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{staffList.length}</div>
-                        <p className="text-xs text-muted-foreground">Total team members</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Active Staff</CardTitle>
-                        <UserPlus className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-green-600">{staffList.filter((s: Staff) => s.status === 'Active').length}</div>
-                        <p className="text-xs text-muted-foreground">Currently active members</p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <Card>
-                <CardHeader>
-                    <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+        <div className="min-h-screen bg-background">
+            <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
+                {/* Enhanced Header Section matching marketplace design */}
+                <div className="mb-6">
+                    <div className="flex items-center gap-4 mb-6">
                         <div>
-                            <CardTitle>All Staff</CardTitle>
-                            <CardDescription>View, add, and manage your staff members.</CardDescription>
-                        </div>
-                        <div className="flex gap-2 flex-wrap">
-                            <div className="relative">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    type="search"
-                                    placeholder="Search by name, email, or phone..."
-                                    className="w-full md:w-80 pl-8"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                            <ExportButtons
-                                data={filteredStaff}
-                                filename="staff_export"
-                                title="Staff Report"
-                                columns={[
-                                    { header: 'Name', key: 'fullName' },
-                                    { header: 'Email', key: 'emailAddress' },
-                                    { header: 'Phone', key: 'mobileNo' },
-                                    { header: 'Position', key: 'position' },
-                                    { header: 'Status', key: 'status' }
-                                ]}
-                            />
-                            <Button onClick={() => handleOpenModal()}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Add Staff
-                            </Button>
+                            <h1 className="text-3xl font-bold font-headline mb-1 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
+                                Staff Management
+                            </h1>
+                            <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl">
+                                View, add, and manage your staff members.
+                            </p>
                         </div>
                     </div>
-                </CardHeader>
-                <CardContent>
-                    <div className="overflow-x-auto no-scrollbar rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-secondary hover:bg-secondary">
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Contact</TableHead>
-                                    <TableHead>Position</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {currentItems.map((staff: Staff) => (
-                                    <TableRow key={staff._id} className="hover:bg-muted/50">
-                                        <TableCell className="font-medium flex items-center gap-3 py-3">
-                                            <img src={staff.photo || `https://placehold.co/40x40.png?text=${staff.fullName[0]}`} alt={staff.fullName} className="w-10 h-10 rounded-full object-cover" />
-                                            <span className="font-semibold">{staff.fullName}</span>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div>{staff.emailAddress}</div>
-                                            <div className="text-sm text-muted-foreground">{staff.mobileNo}</div>
-                                        </TableCell>
-                                        <TableCell>{staff.position}</TableCell>
-                                        <TableCell>
-                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(staff.status)}`}>
-                                                {staff.status}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => handleOpenModal(staff)}>
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" onClick={() => handleOpenModal(staff, 'earnings')}>
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-                                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(staff)}>
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-                    <Pagination
-                        className="mt-4"
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={setCurrentPage}
-                        itemsPerPage={itemsPerPage}
-                        onItemsPerPageChange={setItemsPerPage}
-                        totalItems={filteredStaff.length}
-                    />
-                </CardContent>
-            </Card>
+                </div>
 
-            <StaffFormModal
+                {/* Staff Stats Cards */}
+                <StaffStatsCards staffList={staffList} />
+
+                {/* Filters Toolbar */}
+                <StaffFiltersToolbar
+                  searchTerm={searchTerm}
+                  positionFilter={positionFilter}
+                  onSearchChange={setSearchTerm}
+                  onPositionChange={setPositionFilter}
+                  onAddStaff={() => handleOpenModal()}
+                  exportData={filteredStaff}
+                  positions={positions}
+                />
+
+                {/* Staff Table */}
+                <div className="flex-1 flex flex-col min-h-0">
+                    <Card className="flex-1 flex flex-col min-h-0">
+                        <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+                            <StaffTable
+                                currentItems={currentItems}
+                                searchTerm={searchTerm}
+                                onOpenModal={handleOpenModal}
+                                onDeleteClick={handleDeleteClick}
+                            />
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Pagination Controls */}
+                <StaffPaginationControls
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  itemsPerPage={itemsPerPage}
+                  totalItems={filteredStaff.length}
+                  onPageChange={setCurrentPage}
+                  onItemsPerPageChange={setItemsPerPage}
+                />
+
+                <StaffFormModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 staff={selectedStaff}
@@ -375,6 +332,7 @@ export default function StaffPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            </div>
         </div>
     );
 }
