@@ -160,6 +160,7 @@ export default function SupplierDashboard({
           title="Total Revenue"
           value={metrics ? formatCurrency(metrics.totalRevenue) : '₹0'}
           change={hasNoData ? "No data" : "+8.5%"}
+          subtitle={hasNoData ? "No data" : "+8.5%"}
           icon={FaDollarSign}
           iconColor="text-green-500"
         />
@@ -167,6 +168,7 @@ export default function SupplierDashboard({
           title="Total Orders"
           value={metrics ? formatNumber(metrics.totalOrders) : '0'}
           change={hasNoData ? "No data" : "+12.2%"}
+          subtitle={hasNoData ? "No data" : "+12.2%"}
           icon={FaClipboardList}
           iconColor="text-blue-500"
         />
@@ -174,6 +176,7 @@ export default function SupplierDashboard({
           title="Total Products"
           value={metrics ? formatNumber(metrics.totalProducts) : '0'}
           change={hasNoData ? "No data" : "+5.7%"}
+          subtitle={hasNoData ? "No data" : "+5.7%"}
           icon={FaBoxOpen}
           iconColor="text-purple-500"
         />
@@ -181,6 +184,7 @@ export default function SupplierDashboard({
           title="Pending Orders"
           value={metrics ? formatNumber(metrics.pendingOrders) : '0'}
           change={hasNoData ? "No data" : "-2.3%"}
+          subtitle={hasNoData ? "No data" : "-2.3%"}
           icon={FaClock}
           iconColor="text-orange-500"
         />
@@ -188,6 +192,7 @@ export default function SupplierDashboard({
           title="Shipped Orders"
           value={metrics ? formatNumber(metrics.shippedOrders) : '0'}
           change={hasNoData ? "No data" : "+15.7%"}
+          subtitle={hasNoData ? "No data" : "+15.7%"}
           icon={FaTruck}
           iconColor="text-teal-500"
         />
@@ -195,6 +200,7 @@ export default function SupplierDashboard({
           title="Delivered Orders"
           value={metrics ? formatNumber(metrics.deliveredOrders) : '0'}
           change={hasNoData ? "No data" : "+18.2%"}
+          subtitle={hasNoData ? "No data" : "+18.2%"}
           icon={FaStore}
           iconColor="text-green-500"
         />
@@ -202,6 +208,7 @@ export default function SupplierDashboard({
           title="Cancelled Orders"
           value={metrics ? formatNumber(metrics.cancelledOrders) : '0'}
           change={hasNoData ? "No data" : "-3.1%"}
+          subtitle={hasNoData ? "No data" : "-3.1%"}
           icon={FaBan}
           iconColor="text-red-500"
         />
@@ -209,6 +216,7 @@ export default function SupplierDashboard({
           title="Avg Order Value"
           value={metrics ? formatCurrency(metrics.avgOrderValue) : '₹0'}
           change={hasNoData ? "No data" : "+6.4%"}
+          subtitle={hasNoData ? "No data" : "+6.4%"}
           icon={FaShoppingBag}
           iconColor="text-indigo-500"
         />

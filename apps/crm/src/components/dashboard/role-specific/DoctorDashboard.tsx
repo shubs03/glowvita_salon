@@ -1,10 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { 
-  StatCard, 
-  SalesChart, 
-  UpcomingAppointments, 
-  ClientFeedback, 
+import {
+  StatCard,
+  SalesChart,
+  UpcomingAppointments,
+  ClientFeedback,
   TopServicesChart,
   TopSellingProductsChart,
   DynamicDateFilter
@@ -64,9 +64,9 @@ interface DoctorDashboardProps {
   startDate: string;
   endDate: string;
   onFilterChange: (
-    newFilterType: 'preset' | 'custom', 
-    newPresetPeriod?: 'day' | 'month' | 'year' | 'all', 
-    newStartDate?: string, 
+    newFilterType: 'preset' | 'custom',
+    newPresetPeriod?: 'day' | 'month' | 'year' | 'all',
+    newStartDate?: string,
     newEndDate?: string
   ) => void;
 }
@@ -138,9 +138,9 @@ export default function DoctorDashboard({
   }
 
   // Check if we have metrics but all values are zero
-  const hasNoData = metrics && 
-    metrics.totalPatients === 0 && 
-    metrics.totalAppointments === 0 && 
+  const hasNoData = metrics &&
+    metrics.totalPatients === 0 &&
+    metrics.totalAppointments === 0 &&
     metrics.completedAppointments === 0 &&
     metrics.pendingAppointments === 0 &&
     metrics.totalRevenue === 0;
@@ -151,23 +151,24 @@ export default function DoctorDashboard({
         <h1 className="text-2xl font-bold tracking-tight text-foreground">Doctor Dashboard</h1>
         <div className="flex flex-col gap-4">
           {/* Dynamic Date Filter Component */}
-          <DynamicDateFilter 
+          <DynamicDateFilter
             filterType={filterType}
             presetPeriod={presetPeriod}
             startDate={startDate}
             endDate={endDate}
             onFilterChange={onFilterChange}
           />
-          
+
         </div>
       </div>
-      
+
       {/* Stats Cards - Specific to Doctor Dashboard */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-8 mb-6">
         <StatCard
           title="Total Patients"
           value={metrics ? formatNumber(metrics.totalPatients) : '0'}
           change={hasNoData ? "No data" : "+12.5%"}
+          subtitle={hasNoData ? "No data" : "+12.5%"}
           icon={FaUserMd}
           iconColor="text-blue-500"
         />
@@ -175,6 +176,7 @@ export default function DoctorDashboard({
           title="Total Appointments"
           value={metrics ? formatNumber(metrics.totalAppointments) : '0'}
           change={hasNoData ? "No data" : "+15.2%"}
+          subtitle={hasNoData ? "No data" : "+15.2%"}
           icon={FaCalendarCheck}
           iconColor="text-green-500"
         />
@@ -182,6 +184,7 @@ export default function DoctorDashboard({
           title="Completed"
           value={metrics ? formatNumber(metrics.completedAppointments) : '0'}
           change={hasNoData ? "No data" : "+8.3%"}
+          subtitle={hasNoData ? "No data" : "+8.3%"}
           icon={FaCheckCircle}
           iconColor="text-teal-500"
         />
@@ -189,6 +192,7 @@ export default function DoctorDashboard({
           title="Pending"
           value={metrics ? formatNumber(metrics.pendingAppointments) : '0'}
           change={hasNoData ? "No data" : "+5.7%"}
+          subtitle={hasNoData ? "No data" : "+5.7%"}
           icon={FaClock}
           iconColor="text-orange-500"
         />
@@ -196,6 +200,7 @@ export default function DoctorDashboard({
           title="Cancelled"
           value={metrics ? formatNumber(metrics.cancelledAppointments) : '0'}
           change={hasNoData ? "No data" : "-3.7%"}
+          subtitle={hasNoData ? "No data" : "-3.7%"}
           icon={FaTimesCircle}
           iconColor="text-red-500"
         />
@@ -203,6 +208,7 @@ export default function DoctorDashboard({
           title="Total Revenue"
           value={metrics ? formatCurrency(metrics.totalRevenue) : '₹0'}
           change={hasNoData ? "No data" : "+10.7%"}
+          subtitle={hasNoData ? "No data" : "+10.7%"}
           icon={FaRupeeSign}
           iconColor="text-indigo-500"
         />
@@ -210,6 +216,7 @@ export default function DoctorDashboard({
           title="Today's Revenue"
           value={metrics ? formatCurrency(metrics.todayRevenue) : '₹0'}
           change={hasNoData ? "No data" : "+5.2%"}
+          subtitle={hasNoData ? "No data" : "+5.2%"}
           icon={FaChartLine}
           iconColor="text-purple-500"
         />
@@ -217,6 +224,7 @@ export default function DoctorDashboard({
           title="Avg Consult Time"
           value={metrics ? `${Math.round(metrics.averageConsultationTime)} min` : '0 min'}
           change={hasNoData ? "No data" : "-2.1%"}
+          subtitle={hasNoData ? "No data" : "-2.1%"}
           icon={FaClock}
           iconColor="text-gray-500"
         />
@@ -247,23 +255,23 @@ export default function DoctorDashboard({
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <TopServicesChart 
+        <TopServicesChart
           filterType={filterType}
           presetPeriod={presetPeriod}
           startDate={startDate}
           endDate={endDate}
         />
-        <SalesChart 
+        <SalesChart
           filterType={filterType}
           presetPeriod={presetPeriod}
           startDate={startDate}
           endDate={endDate}
         />
       </div>
-      
+
       {/* Patient Statistics and Appointments */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <UpcomingAppointments 
+        <UpcomingAppointments
           filterType={filterType}
           presetPeriod={presetPeriod}
           startDate={startDate}
