@@ -528,6 +528,16 @@ export const glowvitaApi = createApi({
       transformResponse: (response) => response,
     }),
 
+    // Multi-Service Slot Discovery for booking flow
+    getMultiServiceSlots: builder.mutation({
+      query: (body) => ({
+        url: "/booking/slots/multi",
+        method: "POST",
+        body
+      }),
+      transformResponse: (response) => response,
+    }),
+
     // Admin Panel Endpoints
     getUsers: builder.query({
       query: () => ({
@@ -2744,6 +2754,7 @@ export const {
   useGetPublicVendorStaffByServiceQuery,
   useGetPublicVendorOffersQuery,
   useGetPublicAllOffersQuery,
+  useGetMultiServiceSlotsMutation,
   useUserLoginMutation,
   useGetClientOrdersQuery,
   useCreateClientOrderMutation,
