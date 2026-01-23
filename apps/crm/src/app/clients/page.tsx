@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
+import { Badge } from "@repo/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
@@ -16,9 +17,29 @@ import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
 import { Select } from '@repo/ui/select';
 import { Plus, Search, FileDown, Eye, Edit, Trash2, Users, UserPlus, UserX, ShoppingBag, Calendar, User, Star, CreditCard, Package, PieChart, MessageCircle, Clock, Scissors, UserCheck, FileText, Timer, Briefcase, CheckCircle, AlertTriangle, Copy, FileSpreadsheet, Printer, Download } from 'lucide-react';
-import { useGetClientsQuery, useCreateClientMutation, useUpdateClientMutation, useDeleteClientMutation, useGetAppointmentsQuery } from '@repo/store/api';
+import { useGetClientsQuery, useCreateClientMutation, useUpdateClientMutation, useDeleteClientMutation, useGetAppointmentsQuery, useGetCrmReviewsQuery, useGetCrmClientOrdersQuery } from '@repo/store/api';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
+
+type Review = {
+    _id: string;
+    entityId: string;
+    entityType: 'product' | 'service' | 'salon' | 'doctor';
+    entityDetails?: {
+        _id: string;
+        productName?: string;
+        serviceName?: string;
+        salonName?: string;
+        name?: string;
+        price?: number;
+    };
+    userId: string;
+    userName: string;
+    rating: number;
+    comment: string;
+    isApproved: boolean;
+    createdAt: string;
+};
 
 type Client = {
     _id: string;
@@ -318,28 +339,143 @@ export default function ClientsPage() {
         return [];
     }, [appointmentsResponse]);
 
-    // Compute bookings and totals per client strictly by client ID
-    const { bookingsById, totalsById } = useMemo(() => {
+    // Fetch reviews for this vendor
+    const { data: reviewsResponse, isLoading: isLoadingReviews } = useGetCrmReviewsQuery({ filter: 'all', entityType: 'all' });
+
+    // Fetch client orders
+    const { data: clientOrdersResponse, isLoading: isLoadingOrders } = useGetCrmClientOrdersQuery({});
+
+    // Normalize reviews into an array
+    const allReviews: Review[] = useMemo(() => {
+        const r: any = reviewsResponse;
+        if (Array.isArray(r)) return r;
+        if (r?.success && Array.isArray(r?.reviews)) return r.reviews;
+        if (Array.isArray(r?.reviews)) return r.reviews;
+        if (Array.isArray(r?.data?.reviews)) return r.data.reviews;
+        return [];
+    }, [reviewsResponse]);
+
+    // Compute bookings and totals per client
+    const { bookingsById, totalsById, completedById, cancelledById } = useMemo(() => {
         const countsById = new Map<string, number>();
         const totalsById = new Map<string, number>();
+        const completedCountById = new Map<string, number>();
+        const cancelledCountById = new Map<string, number>();
+
+        // Create lookup maps for online customers specifically (who might have ID mismatches)
+        const emailToClientId = new Map<string, string>();
+        const phoneToClientId = new Map<string, string>();
+        const nameToClientId = new Map<string, string>();
+        const allClientIds = new Set<string>();
+
+        [...offlineClients, ...onlineClients].forEach(c => {
+            const id = String(c._id);
+            allClientIds.add(id);
+            if (c.email) emailToClientId.set(c.email.toLowerCase().trim(), id);
+            if (c.phone) phoneToClientId.set(c.phone.replace(/\D/g, ''), id);
+            if (c.fullName) nameToClientId.set(c.fullName.toLowerCase().trim(), id);
+        });
 
         (appointments || []).forEach((appt: any) => {
             const rawClientId = appt?.client?._id ?? appt?.client ?? appt?.clientId ?? appt?.client_id;
-            const clientId = rawClientId != null ? String(rawClientId) : '';
-            if (!clientId) return; // count only when appointment has a client ID
+            let clientId = rawClientId != null ? String(rawClientId) : '';
 
-            const amount = Number(appt?.totalAmount ?? appt?.amount ?? appt?.price ?? 0) || 0;
+            // If no ID match with known clients, try matching by email, phone, or name
+            if (!clientId || !allClientIds.has(clientId)) {
+                const apptEmail = (appt?.client?.email || appt?.clientEmail || '').toLowerCase().trim();
+                const apptPhone = (appt?.client?.phone || appt?.clientPhone || (appt?.client && typeof appt.client === 'object' ? appt.client.phone : '') || '').replace(/\D/g, '');
+                const apptName = (appt?.client?.name || appt?.clientName || '').toLowerCase().trim();
+
+                if (apptEmail && emailToClientId.has(apptEmail)) {
+                    clientId = emailToClientId.get(apptEmail)!;
+                } else if (apptPhone && phoneToClientId.has(apptPhone)) {
+                    clientId = phoneToClientId.get(apptPhone)!;
+                } else if (apptName && nameToClientId.has(apptName)) {
+                    clientId = nameToClientId.get(apptName)!;
+                }
+            }
+
+            if (!clientId) return;
+
+            const amount = Number(appt?.finalAmount ?? appt?.totalAmount ?? appt?.amount ?? appt?.price ?? 0) || 0;
+            const status = String(appt?.status || '').toLowerCase();
 
             countsById.set(clientId, (countsById.get(clientId) || 0) + 1);
 
-            // Only count towards total sales/spent if the appointment is completed
-            if (appt.status === 'completed') {
+            if (status === 'completed') {
                 totalsById.set(clientId, (totalsById.get(clientId) || 0) + amount);
+                completedCountById.set(clientId, (completedCountById.get(clientId) || 0) + 1);
+            } else if (status === 'cancelled') {
+                cancelledCountById.set(clientId, (cancelledCountById.get(clientId) || 0) + 1);
             }
         });
 
-        return { bookingsById: countsById, totalsById };
-    }, [appointments]);
+        return {
+            bookingsById: countsById,
+            totalsById,
+            completedById: completedCountById,
+            cancelledById: cancelledCountById
+        };
+    }, [appointments, offlineClients, onlineClients]);
+
+    // Normalize orders into an array
+    const allClientOrders: any[] = useMemo(() => {
+        const r: any = clientOrdersResponse;
+        if (Array.isArray(r)) return r;
+        if (Array.isArray(r?.data)) return r.data;
+        return [];
+    }, [clientOrdersResponse]);
+
+    // Get appointments for the selected profile client with robust matching
+    const profileClientAppointments = useMemo(() => {
+        if (!profileClient || !appointments) return [];
+
+        return appointments.filter((appt: any) => {
+            const rawClientId = appt?.client?._id ?? appt?.client ?? appt?.clientId ?? appt?.client_id;
+            const apptClientId = rawClientId != null ? String(rawClientId) : '';
+            const targetId = String(profileClient._id);
+
+            if (apptClientId === targetId) return true;
+
+            // Fallback: match by email or phone
+            const apptEmail = (appt?.client?.email || appt?.clientEmail || '').toLowerCase().trim();
+            const clientEmail = (profileClient.email || '').toLowerCase().trim();
+            if (apptEmail && clientEmail && apptEmail === clientEmail) return true;
+
+            const apptPhone = (appt?.client?.phone || appt?.clientPhone || (appt?.client && typeof appt.client === 'object' ? appt.client.phone : '') || '').replace(/\D/g, '');
+            const clientPhone = (profileClient.phone || '').replace(/\D/g, '');
+            if (apptPhone && clientPhone && apptPhone === clientPhone) return true;
+
+            // Final fallback: match by name
+            const apptName = (appt?.client?.name || appt?.clientName || (appt?.client && typeof appt.client === 'object' ? appt.client.name : '') || '').toLowerCase().trim();
+            const clientName = (profileClient.fullName || '').toLowerCase().trim();
+            if (apptName && clientName && apptName === clientName) return true;
+
+            return false;
+        });
+    }, [profileClient, appointments]);
+
+    // Get orders for the selected profile client with robust matching
+    const profileClientOrders = useMemo(() => {
+        if (!profileClient || !allClientOrders) return [];
+
+        return allClientOrders.filter((order: any) => {
+            // Priority 1: Match by userId (online customer ID mismatch check)
+            const targetId = String(profileClient._id);
+            if (order.userId && String(order.userId) === targetId) return true;
+
+            // Fallback: match by email or phone
+            const orderEmail = (order.email || '').toLowerCase().trim();
+            const clientEmail = (profileClient.email || '').toLowerCase().trim();
+            if (orderEmail && clientEmail && orderEmail === clientEmail) return true;
+
+            const orderPhone = (order.contactNumber || order.phone || '').replace(/\D/g, '');
+            const clientPhone = (profileClient.phone || '').replace(/\D/g, '');
+            if (orderPhone && clientPhone && orderPhone === clientPhone) return true;
+
+            return false;
+        });
+    }, [profileClient, allClientOrders]);
 
     const handleOpenModal = (client?: Client) => {
         if (client) {
@@ -1497,23 +1633,24 @@ export default function ClientsPage() {
                                                 </div>
                                                 <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg border shadow-sm hover:shadow-md transition-shadow text-center">
                                                     <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-green-600 mb-1 sm:mb-2">
-                                                        {(appointments || []).filter((appt: any) => {
-                                                            const rawClientId = appt?.client?._id ?? appt?.client ?? appt?.clientId ?? appt?.client_id;
-                                                            return String(rawClientId || '') === String(profileClient?._id) && appt?.status === 'completed';
-                                                        }).length}
+                                                        {completedById.get(String(profileClient._id)) || 0}
                                                     </div>
                                                     <div className="text-xs sm:text-xs md:text-sm text-gray-500 font-medium">Completed</div>
                                                 </div>
                                                 <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg border shadow-sm hover:shadow-md transition-shadow text-center">
                                                     <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-red-600 mb-1 sm:mb-2">
-                                                        {(appointments || []).filter((appt: any) => {
-                                                            const rawClientId = appt?.client?._id ?? appt?.client ?? appt?.clientId ?? appt?.client_id;
-                                                            return String(rawClientId || '') === String(profileClient?._id) && appt?.status === 'cancelled';
-                                                        }).length}
+                                                        {cancelledById.get(String(profileClient._id)) || 0}
                                                     </div>
                                                     <div className="text-xs sm:text-xs md:text-sm text-gray-500 font-medium">Cancelled</div>
                                                 </div>
-
+                                                <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg border shadow-sm hover:shadow-md transition-shadow text-center">
+                                                    <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-yellow-600 mb-1 sm:mb-2">
+                                                        {(allReviews || []).filter((review: Review) => {
+                                                            return String(review.userId) === String(profileClient?._id);
+                                                        }).length}
+                                                    </div>
+                                                    <div className="text-xs sm:text-xs md:text-sm text-gray-500 font-medium">Total Reviews</div>
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -1576,10 +1713,7 @@ export default function ClientsPage() {
 
                                             {/* Horizontal Tabs */}
                                             {(() => {
-                                                const clientAppts = (appointments || []).filter((appt: any) => {
-                                                    const rawClientId = appt?.client?._id ?? appt?.client ?? appt?.clientId ?? appt?.client_id;
-                                                    return String(rawClientId || '') === String(profileClient._id);
-                                                });
+                                                const clientAppts = profileClientAppointments;
 
                                                 const now = new Date();
                                                 const upcoming = clientAppts.filter((appt: any) => {
@@ -1701,32 +1835,197 @@ export default function ClientsPage() {
 
                                     {activeTab === 'orders' && (
                                         <div className="space-y-4 sm:space-y-6 max-h-[60vh] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-                                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Orders</h3>
-
-                                            <div className="bg-white p-3 sm:p-4 rounded-lg border">
-                                                <div className="text-center py-6 sm:py-8">
-                                                    <div className="flex justify-center mb-3 sm:mb-4">
-                                                        <Package className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300" />
-                                                    </div>
-                                                    <p className="text-gray-500 text-sm sm:text-base">No orders yet</p>
-                                                    <p className="text-xs sm:text-sm text-gray-400 mt-2">Orders will appear here once the client makes a purchase</p>
-                                                </div>
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="text-base sm:text-lg font-semibold text-gray-900">Orders</h3>
+                                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100">
+                                                    {profileClientOrders.length} {profileClientOrders.length === 1 ? 'Order' : 'Orders'}
+                                                </Badge>
                                             </div>
+
+                                            {profileClientOrders.length > 0 ? (
+                                                <div className="space-y-4">
+                                                    {profileClientOrders.map((order: any, i: number) => (
+                                                        <div key={order._id || i} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                                                                <div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Package className="w-4 h-4 text-emerald-600" />
+                                                                        <p className="font-bold text-gray-900">Order #{String(order._id || '').slice(-6).toUpperCase()}</p>
+                                                                    </div>
+                                                                    <p className="text-xs text-gray-500 mt-0.5">
+                                                                        {new Date(order.createdAt).toLocaleDateString(undefined, {
+                                                                            year: 'numeric',
+                                                                            month: 'short',
+                                                                            day: 'numeric',
+                                                                            hour: '2-digit',
+                                                                            minute: '2-digit'
+                                                                        })}
+                                                                    </p>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${order.status === 'Delivered' ? 'bg-green-100 text-green-700' :
+                                                                        order.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
+                                                                            order.status === 'Shipped' ? 'bg-blue-100 text-blue-700' :
+                                                                                'bg-yellow-100 text-yellow-700'
+                                                                        }`}>
+                                                                        {order.status || 'Pending'}
+                                                                    </span>
+                                                                    <p className="text-lg font-bold text-emerald-600">₹{Number(order.totalAmount || 0).toFixed(2)}</p>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="border-t border-gray-50 pt-3">
+                                                                <div className="space-y-2">
+                                                                    {(order.items || []).map((item: any, idx: number) => (
+                                                                        <div key={idx} className="flex justify-between items-center text-sm">
+                                                                            <div className="flex items-center gap-3">
+                                                                                <div className="w-8 h-8 rounded bg-gray-50 flex items-center justify-center text-[10px] text-gray-400 border border-gray-100 overflow-hidden">
+                                                                                    {item.image ? (
+                                                                                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                                                                                    ) : (
+                                                                                        <ShoppingBag className="w-4 h-4" />
+                                                                                    )}
+                                                                                </div>
+                                                                                <div>
+                                                                                    <p className="text-gray-800 font-medium">{item.name}</p>
+                                                                                    <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
+                                                                                </div>
+                                                                            </div>
+                                                                            <p className="text-gray-900 font-semibold">₹{Number(item.price || 0).toFixed(2)}</p>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+
+                                                            {order.shippingAddress && (
+                                                                <div className="mt-4 p-3 bg-gray-50/50 rounded-lg border border-gray-100">
+                                                                    <div className="flex items-start gap-2">
+                                                                        <div className="mt-0.5">
+                                                                            <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                            </svg>
+                                                                        </div>
+                                                                        <p className="text-[11px] text-gray-600 line-clamp-2">{order.shippingAddress}</p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="bg-white p-6 sm:p-10 rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center text-center">
+                                                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                                                        <Package className="h-8 w-8 text-gray-300" />
+                                                    </div>
+                                                    <p className="text-gray-500 font-medium">No orders yet</p>
+                                                    <p className="text-xs text-gray-400 mt-1">Orders will appear here once the client makes a purchase from your store.</p>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 
                                     {activeTab === 'reviews' && (
                                         <div className="space-y-4 sm:space-y-6 max-h-[60vh] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-                                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Reviews</h3>
+                                            <h3 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                                <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                                                Reviews Given by Client
+                                            </h3>
 
-                                            <div className="bg-white p-3 sm:p-4 rounded-lg border">
-                                                <div className="text-center py-6 sm:py-8">
-                                                    <div className="flex justify-center mb-3 sm:mb-4">
-                                                        <Star className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300" />
-                                                    </div>
-                                                    <p className="text-gray-500 text-sm sm:text-base">No reviews yet</p>
-                                                    <p className="text-xs sm:text-sm text-gray-400 mt-2">Reviews will appear here once the client leaves feedback</p>
-                                                </div>
+                                            <div className="space-y-4">
+                                                {(() => {
+                                                    const clientReviews = (allReviews || []).filter((review: Review) => {
+                                                        // Priority 1: Match by userId (for online customers)
+                                                        if (profileClient?._id && review.userId && String(review.userId) === String(profileClient._id)) {
+                                                            return true;
+                                                        }
+
+                                                        // Priority 2: Match by username/fullName as fallback
+                                                        // This helps if the CRM online customer _id doesn't perfectly match the review userId
+                                                        if (profileClient?.fullName && review.userName &&
+                                                            review.userName.toLowerCase().trim() === profileClient.fullName.toLowerCase().trim()) {
+                                                            return true;
+                                                        }
+
+                                                        return false;
+                                                    });
+
+                                                    if (clientReviews.length === 0) {
+                                                        return (
+                                                            <div className="bg-white p-6 sm:p-10 rounded-xl border border-dashed border-gray-300 flex flex-col items-center justify-center text-center">
+                                                                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                                                                    <MessageCircle className="h-8 w-8 text-gray-300" />
+                                                                </div>
+                                                                <p className="text-gray-500 font-medium">No reviews found</p>
+                                                                <p className="text-xs text-gray-400 mt-1">This client hasn't left any reviews for your services or products yet.</p>
+                                                            </div>
+                                                        );
+                                                    }
+
+                                                    return clientReviews.map((review: Review) => {
+                                                        const entityName =
+                                                            review.entityDetails?.productName ||
+                                                            review.entityDetails?.serviceName ||
+                                                            review.entityDetails?.salonName ||
+                                                            review.entityDetails?.name ||
+                                                            'General Review';
+
+                                                        return (
+                                                            <div key={review._id} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200">
+                                                                <div className="flex justify-between items-start mb-3">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="flex">
+                                                                            {[...Array(5)].map((_, i) => (
+                                                                                <Star
+                                                                                    key={i}
+                                                                                    className={`w-3.5 h-3.5 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-200'}`}
+                                                                                />
+                                                                            ))}
+                                                                        </div>
+                                                                        <span className="text-xs font-bold text-gray-700 bg-yellow-50 px-1.5 py-0.5 rounded border border-yellow-100">
+                                                                            {review.rating}/5
+                                                                        </span>
+                                                                    </div>
+                                                                    <span className="text-[10px] text-gray-400 font-medium">
+                                                                        {new Date(review.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                                    </span>
+                                                                </div>
+
+                                                                <div className="flex items-center gap-2 mb-3">
+                                                                    <div className={`p-1.5 rounded-md ${review.entityType === 'product' ? 'bg-blue-50 text-blue-600' :
+                                                                        review.entityType === 'service' ? 'bg-purple-50 text-purple-600' :
+                                                                            review.entityType === 'doctor' ? 'bg-indigo-50 text-indigo-600' :
+                                                                                'bg-pink-50 text-pink-600'
+                                                                        }`}>
+                                                                        {review.entityType === 'product' ? <Package className="w-3.5 h-3.5" /> :
+                                                                            review.entityType === 'service' ? <Scissors className="w-3.5 h-3.5" /> :
+                                                                                review.entityType === 'doctor' ? <User className="w-3.5 h-3.5" /> :
+                                                                                    <Briefcase className="w-3.5 h-3.5" />}
+                                                                    </div>
+                                                                    <p className="text-xs font-semibold text-gray-700 truncate max-w-[200px]">
+                                                                        {entityName}
+                                                                    </p>
+                                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 capitalize border-gray-200 text-gray-500">
+                                                                        {review.entityType}
+                                                                    </Badge>
+                                                                </div>
+
+                                                                <div className="bg-gray-50/50 p-3 rounded-lg border border-gray-50 italic text-sm text-gray-600 relative">
+                                                                    <span className="absolute -top-2 -left-1 text-gray-200 text-2xl font-serif">"</span>
+                                                                    {review.comment}
+                                                                    <span className="absolute -bottom-4 -right-1 text-gray-200 text-2xl font-serif">"</span>
+                                                                </div>
+
+                                                                {!review.isApproved && (
+                                                                    <div className="mt-3 flex items-center gap-1.5 text-[10px] text-amber-600 font-medium bg-amber-50 w-fit px-2 py-0.5 rounded border border-amber-100">
+                                                                        <Clock className="w-3 h-3" />
+                                                                        Pending Approval
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    });
+                                                })()}
                                             </div>
                                         </div>
                                     )}
@@ -1739,7 +2038,7 @@ export default function ClientsPage() {
                                                     <div>
                                                         <p className="text-emerald-100 font-medium mb-1 text-xs uppercase tracking-wide">Total Payment</p>
                                                         <h3 className="text-2xl sm:text-3xl font-bold tracking-tight">₹{(totalsById.get(String(profileClient._id)) || 0).toFixed(2)}</h3>
-                                                    </div>
+                                                        this things show                                                     </div>
                                                     <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm shadow-inner">
                                                         <CreditCard className="w-6 h-6 text-white" />
                                                     </div>
@@ -1760,10 +2059,9 @@ export default function ClientsPage() {
 
                                                 <div className="overflow-y-auto p-2 sm:p-4 space-y-3 flex-1" style={{ scrollbarWidth: 'thin' }}>
                                                     {(() => {
-                                                        const items = (appointments || [])
+                                                        const items = profileClientAppointments
                                                             .filter((appt: any) => {
-                                                                const rawClientId = appt?.client?._id ?? appt?.client ?? appt?.clientId ?? appt?.client_id;
-                                                                return String(rawClientId || '') === String(profileClient._id) && appt?.status === 'completed';
+                                                                return String(appt?.status || '').toLowerCase() === 'completed';
                                                             })
                                                             .sort((a: any, b: any) => {
                                                                 const ad = new Date(a?.date || a?.createdAt || 0).getTime();
@@ -1788,7 +2086,7 @@ export default function ClientsPage() {
                                                             const d = rawDate ? new Date(rawDate) : null;
                                                             const dateStr = d ? d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : '';
                                                             const timeStr = appt?.startTime || (d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
-                                                            const amount = Number(appt?.totalAmount ?? appt?.amount ?? appt?.price ?? 0) || 0;
+                                                            const amount = Number(appt?.finalAmount ?? appt?.totalAmount ?? appt?.amount ?? appt?.price ?? 0) || 0;
                                                             const serviceName = appt?.serviceName || appt?.service?.name || 'Appointment';
 
                                                             return (

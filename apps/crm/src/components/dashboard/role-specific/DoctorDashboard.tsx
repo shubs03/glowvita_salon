@@ -1,10 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { 
-  StatCard, 
-  SalesChart, 
-  UpcomingAppointments, 
-  ClientFeedback, 
+import {
+  StatCard,
+  SalesChart,
+  UpcomingAppointments,
+  ClientFeedback,
   TopServicesChart,
   TopSellingProductsChart,
   DynamicDateFilter
@@ -64,9 +64,9 @@ interface DoctorDashboardProps {
   startDate: string;
   endDate: string;
   onFilterChange: (
-    newFilterType: 'preset' | 'custom', 
-    newPresetPeriod?: 'day' | 'month' | 'year' | 'all', 
-    newStartDate?: string, 
+    newFilterType: 'preset' | 'custom',
+    newPresetPeriod?: 'day' | 'month' | 'year' | 'all',
+    newStartDate?: string,
     newEndDate?: string
   ) => void;
 }
@@ -162,9 +162,9 @@ export default function DoctorDashboard({
   }
 
   // Check if we have metrics but all values are zero
-  const hasNoData = metrics && 
-    metrics.totalPatients === 0 && 
-    metrics.totalAppointments === 0 && 
+  const hasNoData = metrics &&
+    metrics.totalPatients === 0 &&
+    metrics.totalAppointments === 0 &&
     metrics.completedAppointments === 0 &&
     metrics.pendingAppointments === 0 &&
     metrics.totalRevenue === 0;
@@ -184,123 +184,131 @@ export default function DoctorDashboard({
             </div>
             <div className="w-full md:w-auto space-y-4">
               {/* Dynamic Date Filter Component */}
-              <DynamicDateFilter 
+              <DynamicDateFilter
                 filterType={filterType}
                 presetPeriod={presetPeriod}
                 startDate={startDate}
                 endDate={endDate}
                 onFilterChange={onFilterChange}
               />
-              
+
             </div>
           </div>
         </div>
 
-      {/* Stats Cards - Arranged in sequence per Doctor Dashboard Metric Definition Standard */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatCard
-          title="Total Patients"
-          value={metrics ? formatNumber(metrics.totalPatients) : '0'}
-          subtitle="Patient count"
-          change={hasNoData ? "No data" : "+12.5%"}
-          icon={FaUserMd}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Total Appointments"
-          value={metrics ? formatNumber(metrics.totalAppointments) : '0'}
-          subtitle="Appointment count"
-          change={hasNoData ? "No data" : "+15.2%"}
-          icon={FaCalendarCheck}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Completed"
-          value={metrics ? formatNumber(metrics.completedAppointments) : '0'}
-          subtitle="Completed appointments"
-          change={hasNoData ? "No data" : "+8.3%"}
-          icon={FaCheckCircle}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Pending"
-          value={metrics ? formatNumber(metrics.pendingAppointments) : '0'}
-          subtitle="Pending appointments"
-          change={hasNoData ? "No data" : "+5.7%"}
-          icon={FaClock}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Cancelled"
-          value={metrics ? formatNumber(metrics.cancelledAppointments) : '0'}
-          subtitle="Cancelled appointments"
-          change={hasNoData ? "No data" : "-3.7%"}
-          icon={FaTimesCircle}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Total Revenue"
-          value={metrics ? formatCurrency(metrics.totalRevenue) : '₹0'}
-          subtitle="Overall earnings"
-          change={hasNoData ? "No data" : "+10.7%"}
-          icon={FaRupeeSign}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Today's Revenue"
-          value={metrics ? formatCurrency(metrics.todayRevenue) : '₹0'}
-          subtitle="Daily earnings"
-          change={hasNoData ? "No data" : "+5.2%"}
-          icon={FaChartLine}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Avg Consult Time"
-          value={metrics ? `${Math.round(metrics.averageConsultationTime)} min` : '0 min'}
-          subtitle="Average duration"
-          change={hasNoData ? "No data" : "-2.1%"}
-          icon={FaClock}
-          iconColor="text-primary"
-        />
+        {/* Stats Cards - Arranged in sequence per Doctor Dashboard Metric Definition Standard */}
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 mb-6">
+          <StatCard
+            title="Total Patients"
+            value={metrics ? formatNumber(metrics.totalPatients) : '0'}
+            subtitle="Patient count"
+            change={hasNoData ? "No data" : "+12.5%"}
+            subtitle={hasNoData ? "No data" : "+12.5%"}
+            icon={FaUserMd}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Total Appointments"
+            value={metrics ? formatNumber(metrics.totalAppointments) : '0'}
+            subtitle="Appointment count"
+            change={hasNoData ? "No data" : "+15.2%"}
+            subtitle={hasNoData ? "No data" : "+15.2%"}
+            icon={FaCalendarCheck}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Completed"
+            value={metrics ? formatNumber(metrics.completedAppointments) : '0'}
+            subtitle="Completed appointments"
+            change={hasNoData ? "No data" : "+8.3%"}
+            subtitle={hasNoData ? "No data" : "+8.3%"}
+            icon={FaCheckCircle}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Pending"
+            value={metrics ? formatNumber(metrics.pendingAppointments) : '0'}
+            subtitle="Pending appointments"
+            change={hasNoData ? "No data" : "+5.7%"}
+            subtitle={hasNoData ? "No data" : "+5.7%"}
+            icon={FaClock}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Cancelled"
+            value={metrics ? formatNumber(metrics.cancelledAppointments) : '0'}
+            subtitle="Cancelled appointments"
+            change={hasNoData ? "No data" : "-3.7%"}
+            subtitle={hasNoData ? "No data" : "-3.7%"}
+            icon={FaTimesCircle}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Total Revenue"
+            value={metrics ? formatCurrency(metrics.totalRevenue) : '₹0'}
+            subtitle="Overall earnings"
+            change={hasNoData ? "No data" : "+10.7%"}
+            subtitle={hasNoData ? "No data" : "+10.7%"}
+            icon={FaRupeeSign}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Today's Revenue"
+            value={metrics ? formatCurrency(metrics.todayRevenue) : '₹0'}
+            subtitle="Daily earnings"
+            change={hasNoData ? "No data" : "+5.2%"}
+            subtitle={hasNoData ? "No data" : "+5.2%"}
+            icon={FaChartLine}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Avg Consult Time"
+            value={metrics ? `${Math.round(metrics.averageConsultationTime)} min` : '0 min'}
+            subtitle="Average duration"
+            change={hasNoData ? "No data" : "-2.1%"}
+            subtitle={hasNoData ? "No data" : "-2.1%"}
+            icon={FaClock}
+            iconColor="text-primary"
+          />
+        </div>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <TopServicesChart
+            filterType={filterType}
+            presetPeriod={presetPeriod}
+            startDate={startDate}
+            endDate={endDate}
+          />
+          <TopSellingProductsChart
+            filterType={filterType}
+            presetPeriod={presetPeriod}
+            startDate={startDate}
+            endDate={endDate}
+          />
+        </div>
+
+        {/* Revenue Overview Chart */}
+        <div className="mb-6">
+          <SalesChart
+            filterType={filterType}
+            presetPeriod={presetPeriod}
+            startDate={startDate}
+            endDate={endDate}
+          />
+        </div>
+
+        {/* Tables */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <UpcomingAppointments
+            filterType={filterType}
+            presetPeriod={presetPeriod}
+            startDate={startDate}
+            endDate={endDate}
+          />
+          <ClientFeedback />
+        </div>
       </div>
-
-      {/* Charts */}
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <TopServicesChart 
-      filterType={filterType}
-      presetPeriod={presetPeriod}
-      startDate={startDate}
-      endDate={endDate}
-    />
-    <TopSellingProductsChart
-      filterType={filterType}
-      presetPeriod={presetPeriod}
-      startDate={startDate}
-      endDate={endDate}
-    />
-  </div>
-
-  {/* Revenue Overview Chart */ }
-  <div className="mb-6">
-    <SalesChart 
-      filterType={filterType}
-      presetPeriod={presetPeriod}
-      startDate={startDate}
-      endDate={endDate}
-    />
-  </div>
-
-  {/* Tables */ }
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-    <UpcomingAppointments 
-      filterType={filterType}
-      presetPeriod={presetPeriod}
-      startDate={startDate}
-      endDate={endDate}
-    />
-    <ClientFeedback />
-  </div>
-</div>
-</div>
+    </div>
   );
 }

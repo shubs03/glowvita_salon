@@ -18,6 +18,7 @@ interface InvoiceData {
     total: number;
     balance: number;
     paymentMethod: string | null;
+    couponCode?: string;
 }
 
 interface AppointmentInvoiceProps {
@@ -182,14 +183,9 @@ export function AppointmentInvoice({
                                 <td className="border border-black p-2 text-right text-sm font-semibold text-black print:text-xs print:p-1">₹{item.totalPrice.toFixed(2)}</td>
                             </tr>
                         ))}
-                        {/* Payment Summary Rows */}
                         <tr className="border border-black">
                             <td className="border border-black p-2 text-right font-semibold text-black text-sm print:text-xs print:p-1" colSpan={4}>Subtotal:</td>
                             <td className="border border-black p-2 text-right text-sm font-semibold text-black print:text-xs print:p-1">₹{invoiceData.originalSubtotal?.toFixed(2) || invoiceData.subtotal.toFixed(2)}</td>
-                        </tr>
-                        <tr className="border border-black">
-                            <td className="border border-black p-2 text-right font-semibold text-green-600 text-sm print:text-xs print:p-1" colSpan={4}>Discount:</td>
-                            <td className="border border-black p-2 text-right text-sm font-semibold text-green-600 print:text-xs print:p-1">-₹{(invoiceData.discount || 0).toFixed(2)}</td>
                         </tr>
                         <tr className="border border-black">
                             <td className="border border-black p-2 text-right font-semibold text-black text-sm print:text-xs print:p-1" colSpan={4}>Tax ({taxRate}%):</td>
@@ -198,6 +194,10 @@ export function AppointmentInvoice({
                         <tr className="border border-black">
                             <td className="border border-black p-2 text-right font-semibold text-black text-sm print:text-xs print:p-1" colSpan={4}>Platform Fee:</td>
                             <td className="border border-black p-2 text-right text-sm font-semibold text-black print:text-xs print:p-1">₹{invoiceData.platformFee.toFixed(2)}</td>
+                        </tr>
+                        <tr className="border border-black">
+                            <td className="border border-black p-2 text-right font-semibold text-green-600 text-sm print:text-xs print:p-1" colSpan={4}>Discount{invoiceData.couponCode ? `(${invoiceData.couponCode})` : ''}:</td>
+                            <td className="border border-black p-2 text-right text-sm font-semibold text-green-600 print:text-xs print:p-1">-₹{(invoiceData.discount || 0).toFixed(2)}</td>
                         </tr>
                         <tr className="border border-black bg-gray-200">
                             <td className="border border-black p-2 text-right font-bold text-black text-sm print:text-xs print:p-1" colSpan={4}>Total:</td>
