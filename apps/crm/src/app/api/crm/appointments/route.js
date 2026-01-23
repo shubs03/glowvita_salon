@@ -46,21 +46,47 @@ export const GET = withSubscriptionCheck(async (req, { params }) => {
 
         // If ID is provided, return single appointment
         if (id) {
-            const appointment = await AppointmentModel.findOne({
+            const appt = await AppointmentModel.findOne({
                 _id: id,
                 vendorId: vendorId
             })
-                .populate('client', 'name email phone')
                 .populate('staff', 'fullName position')
-                .populate('service', 'name duration price');
+                .populate('service', 'name duration price')
+                .lean();
 
-            if (!appointment) {
+            if (!appt) {
                 return NextResponse.json(
                     { message: "Appointment not found or access denied" },
                     { status: 404 }
                 );
             }
-            return NextResponse.json(appointment, { status: 200 });
+
+            if (appt.client) {
+                if (appt.mode === 'online') {
+                    const UserModel = (await import('@repo/lib/models/user')).default;
+                    const user = await UserModel.findById(appt.client).select('firstName lastName emailAddress mobileNo').lean();
+                    if (user) {
+                        appt.client = {
+                            _id: user._id,
+                            name: `${user.firstName} ${user.lastName}`,
+                            email: user.emailAddress,
+                            phone: user.mobileNo
+                        };
+                    }
+                } else {
+                    const client = await ClientModel.findById(appt.client).select('fullName email phone').lean();
+                    if (client) {
+                        appt.client = {
+                            _id: client._id,
+                            name: client.fullName,
+                            email: client.email,
+                            phone: client.phone
+                        };
+                    }
+                }
+            }
+
+            return NextResponse.json(appt, { status: 200 });
         }
 
         // Otherwise, return filtered list of appointments
@@ -81,10 +107,40 @@ export const GET = withSubscriptionCheck(async (req, { params }) => {
         if (staffId) query.staff = staffId;
         if (status) query.status = status;
 
-        const appointments = await AppointmentModel.find(query)
-            .populate('client', 'name email phone')
+        const rawAppointments = await AppointmentModel.find(query)
             .populate('staff', 'fullName position')
-            .populate('service', 'name duration price');
+            .populate('service', 'name duration price')
+            .lean();
+
+        const appointments = await Promise.all(rawAppointments.map(async (appt) => {
+            if (appt.client) {
+                if (appt.mode === 'online') {
+                    // Try to populate from User model for online appointments
+                    const UserModel = (await import('@repo/lib/models/user')).default;
+                    const user = await UserModel.findById(appt.client).select('firstName lastName emailAddress mobileNo').lean();
+                    if (user) {
+                        appt.client = {
+                            _id: user._id,
+                            name: `${user.firstName} ${user.lastName}`,
+                            email: user.emailAddress,
+                            phone: user.mobileNo
+                        };
+                    }
+                } else {
+                    // Try to populate from Client model for offline appointments
+                    const client = await ClientModel.findById(appt.client).select('fullName email phone').lean();
+                    if (client) {
+                        appt.client = {
+                            _id: client._id,
+                            name: client.fullName,
+                            email: client.email,
+                            phone: client.phone
+                        };
+                    }
+                }
+            }
+            return appt;
+        }));
 
         return NextResponse.json(appointments, { status: 200 });
     } catch (error) {
