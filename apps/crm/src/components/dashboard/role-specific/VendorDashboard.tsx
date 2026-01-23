@@ -186,14 +186,14 @@ export default function VendorDashboard({
               />
               
               {/* Hierarchical Date Filter */}
-              <HierarchicalDateFilter
+              {/* <HierarchicalDateFilter
                 selectedYear={selectedYear}
                 selectedMonth={selectedMonth}
                 selectedDay={selectedDay}
                 onYearChange={setSelectedYear}
                 onMonthChange={setSelectedMonth}
                 onDayChange={setSelectedDay}
-              />
+              /> */}
             </div>
           </div>
         </div>
@@ -268,14 +268,11 @@ export default function VendorDashboard({
 
       {/* Charts */}
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <TopSellingProductsChart
+    <UpcomingAppointments
       filterType={filterType}
       presetPeriod={presetPeriod}
       startDate={startDate}
       endDate={endDate}
-      selectedYear={selectedYear ?? undefined}
-      selectedMonth={selectedMonth ?? undefined}
-      selectedDay={selectedDay ?? undefined}
     />
     <TopServicesChart
       filterType={filterType}
@@ -297,11 +294,14 @@ export default function VendorDashboard({
 
   {/* Tables */ }
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-    <UpcomingAppointments
+    <TopSellingProductsChart
       filterType={filterType}
       presetPeriod={presetPeriod}
       startDate={startDate}
       endDate={endDate}
+      selectedYear={selectedYear ?? undefined}
+      selectedMonth={selectedMonth ?? undefined}
+      selectedDay={selectedDay ?? undefined}
     />
     <ClientFeedback />
   </div>

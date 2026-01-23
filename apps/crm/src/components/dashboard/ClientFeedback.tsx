@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
-import { FaStar } from 'react-icons/fa';
+import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
+import 'react-circular-progressbar/dist/styles.css';
 
 interface Feedback {
   client: string;
@@ -14,6 +14,11 @@ interface Feedback {
 export function ClientFeedback() {
   const [feedback, setFeedback] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [ratings, setRatings] = useState({
+    salon: 0,
+    product: 0,
+    service: 0
+  });
 
   useEffect(() => {
     const fetchClientFeedback = async () => {
@@ -23,6 +28,7 @@ export function ClientFeedback() {
           const result = await response.json();
           if (result.success) {
             setFeedback(result.data);
+            calculateRatings(result.data);
           }
         }
       } catch (error) {
@@ -35,6 +41,7 @@ export function ClientFeedback() {
           { client: 'David R.', comment: "Good service, but a bit of a wait.", rating: 3, date: 'Aug 18, 2024', entityType: 'Product' },
         ];
         setFeedback(mockFeedback);
+        calculateRatings(mockFeedback);
       } finally {
         setLoading(false);
       }
@@ -43,12 +50,35 @@ export function ClientFeedback() {
     fetchClientFeedback();
   }, []);
 
+  const calculateRatings = (feedbackData: Feedback[]) => {
+    const serviceReviews = feedbackData.filter(f => f.entityType === 'Service');
+    const productReviews = feedbackData.filter(f => f.entityType === 'Product');
+    
+    const avgService = serviceReviews.length > 0
+      ? serviceReviews.reduce((sum, f) => sum + f.rating, 0) / serviceReviews.length
+      : 0;
+    
+    const avgProduct = productReviews.length > 0
+      ? productReviews.reduce((sum, f) => sum + f.rating, 0) / productReviews.length
+      : 0;
+    
+    const avgSalon = feedbackData.length > 0
+      ? feedbackData.reduce((sum, f) => sum + f.rating, 0) / feedbackData.length
+      : 0;
+
+    setRatings({
+      salon: avgSalon,
+      product: avgProduct,
+      service: avgService
+    });
+  };
+
   if (loading) {
     return (
       <Card className="h-full">
         <CardHeader>
-          <CardTitle>Recent Client Feedback</CardTitle>
-          <CardDescription>What your clients are saying about their recent visits.</CardDescription>
+          <CardTitle>Client Feedback Ratings</CardTitle>
+          <CardDescription>Average ratings across all categories</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-[300px]">
@@ -62,51 +92,107 @@ export function ClientFeedback() {
   return (
     <Card className="h-full">
       <CardHeader>
-        <CardTitle>Recent Client Feedback</CardTitle>
-        <CardDescription>What your clients are saying about their recent visits.</CardDescription>
+        <CardTitle>Client Feedback Ratings</CardTitle>
+        <CardDescription>Average ratings across all categories</CardDescription>
       </CardHeader>
       <CardContent>
         {feedback.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[120px]">Client</TableHead>
-                <TableHead className="w-[auto]">Comment</TableHead>
-                <TableHead className="w-[60px]">Type</TableHead>
-                <TableHead className="w-[80px] text-right">Rating</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {feedback.map((item, index) => (
-                <TableRow key={index}>
-                  <TableCell className="w-[120px]">
-                    <div className="font-medium truncate">{item.client}</div>
-                    <div className="text-xs text-muted-foreground truncate">{item.date}</div>
-                  </TableCell>
-                  <TableCell className="w-[auto]">
-                    <p className="text-sm text-muted-foreground truncate max-w-[150px]">&ldquo;{item.comment}&rdquo;</p>
-                  </TableCell>
-                  <TableCell className="w-[60px]">
-                    <span className="inline-flex items-center justify-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
-                      {item.entityType}
-                    </span>
-                  </TableCell>
-                  <TableCell className="w-[80px] text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <span className="text-sm font-medium">{item.rating}</span>
-                      <FaStar className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-            No client feedback available
+          <div className="py-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {/* Overall Salon Rating */}
+              <div className="flex flex-col items-center gap-2">
+                <div style={{ width: 120, height: 120 }}>
+                  <CircularProgressbar
+                    value={ratings.salon * 20} // Convert 0-5 scale to 0-100 percentage
+                    text={`${ratings.salon.toFixed(1)}`}
+                    styles={buildStyles({
+                      textSize: '16px',
+                      pathColor: ratings.salon >= 4 ? 'hsl(var(--primary))' : ratings.salon >= 3 ? 'hsl(var(--accent))' : ratings.salon >= 2 ? 'hsl(var(--secondary))' : 'hsl(var(--destructive))',
+                      textColor: 'hsl(var(--foreground))',
+                      trailColor: 'hsl(var(--muted))',
+                      backgroundColor: 'transparent',
+                      pathTransitionDuration: 0.5,
+                      rotation: 0,
+                      strokeLinecap: 'round',
+                    })}
+                  />
+                </div>
+                <div className="text-center mt-2">
+                  <div className="text-sm font-medium text-muted-foreground">Overall Salon</div>
+                </div>
+              </div>
+
+              {/* Products Rating */}
+              <div className="flex flex-col items-center gap-2">
+                <div style={{ width: 120, height: 120 }}>
+                  <CircularProgressbar
+                    value={ratings.product * 20} // Convert 0-5 scale to 0-100 percentage
+                    text={`${ratings.product.toFixed(1)}`}
+                    styles={buildStyles({
+                      textSize: '16px',
+                      pathColor: ratings.product >= 4 ? 'hsl(var(--primary))' : ratings.product >= 3 ? 'hsl(var(--accent))' : ratings.product >= 2 ? 'hsl(var(--secondary))' : 'hsl(var(--destructive))',
+                      textColor: 'hsl(var(--foreground))',
+                      trailColor: 'hsl(var(--muted))',
+                      backgroundColor: 'transparent',
+                      pathTransitionDuration: 0.5,
+                      rotation: 0,
+                      strokeLinecap: 'round',
+                    })}
+                  />
+                </div>
+                <div className="text-center mt-2">
+                  <div className="text-sm font-medium text-muted-foreground">Products</div>
+                </div>
+              </div>
+
+              {/* Services Rating */}
+              <div className="flex flex-col items-center gap-2">
+                <div style={{ width: 120, height: 120 }}>
+                  <CircularProgressbar
+                    value={ratings.service * 20} // Convert 0-5 scale to 0-100 percentage
+                    text={`${ratings.service.toFixed(1)}`}
+                    styles={buildStyles({
+                      textSize: '16px',
+                      pathColor: ratings.service >= 4 ? 'hsl(var(--primary))' : ratings.service >= 3 ? 'hsl(var(--accent))' : ratings.service >= 2 ? 'hsl(var(--secondary))' : 'hsl(var(--destructive))',
+                      textColor: 'hsl(var(--foreground))',
+                      trailColor: 'hsl(var(--muted))',
+                      backgroundColor: 'transparent',
+                      pathTransitionDuration: 0.5,
+                      rotation: 0,
+                      strokeLinecap: 'round',
+                    })}
+                  />
+                </div>
+                <div className="text-center mt-2">
+                  <div className="text-sm font-medium text-muted-foreground">Services</div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Additional Summary Details */}
+            <div className="mt-6 pt-6 border-t border-border">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="text-center">
+                  <p className="font-medium text-muted-foreground">Total Reviews</p>
+                  <p className="text-lg font-bold">{feedback.length}</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-medium text-muted-foreground">Top Category</p>
+                  <p className="text-lg font-bold capitalize">{Object.entries(ratings).sort(([,a], [,b]) => b - a)[0][0]}</p>
+                </div>
+                <div className="text-center">
+                  <p className="font-medium text-muted-foreground">Avg. Rating</p>
+                  <p className="text-lg font-bold">{(feedback.reduce((sum, f) => sum + f.rating, 0) / Math.max(feedback.length, 1)).toFixed(1)}</p>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+      ) : (
+        <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+          No client feedback available
+        </div>
+      )}
+    </CardContent>
+  </Card>
+);
 }
