@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent } from "@repo/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@repo/ui/dialog';
+import { Button } from "@repo/ui/button";
+import { Plus } from "lucide-react";
 import dynamic from 'next/dynamic';
 import { useAppDispatch } from '@repo/store/hooks';
 import { glowvitaApi } from '@repo/store/api';
@@ -165,7 +167,7 @@ export default function AppointmentsPage() {
   // Payment collection handler
   const handleCollectPayment = async (amount: number, paymentMethod: string, notes: string, paymentAt: string) => {
     if (!selectedAppointment?._id) return;
-    
+
     const toastId = toast.loading('Processing payment...');
     try {
       // Call backend so it records payment history with paymentDate
@@ -198,107 +200,107 @@ export default function AppointmentsPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
-            {/* Enhanced Header Section matching marketplace design */}
-            <div className="mb-6">
-              <div className="flex items-center gap-4 mb-6">
-                <div>
-                  <h1 className="text-3xl font-bold font-headline mb-1 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
-                    Appointments
-                  </h1>
-                  <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl">
-                    Manage your appointments and track scheduling
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2 w-full md:w-auto">
-                <ExportButtons
-                  data={filteredAppointments}
-                  filename="appointments_export"
-                  title="Appointments Report"
-                  columns={[
-                    { header: 'Client', key: 'clientName' },
-                    {
-                      header: 'Services',
-                      key: 'serviceName',
-                      transform: (val, item) => item.serviceItems?.length > 0
-                        ? item.serviceItems.map((s: any) => s.serviceName).join(', ')
-                        : val
-                    },
-                    {
-                      header: 'Staff',
-                      key: 'staffName',
-                      transform: (val, item) => item.serviceItems?.length > 0
-                        ? item.serviceItems.map((s: any) => s.staffName).join(', ')
-                        : val
-                    },
-                    {
-                      header: 'Date',
-                      key: 'date',
-                      transform: (val) => new Date(val).toLocaleDateString()
-                    },
-                    {
-                      header: 'Time',
-                      key: 'startTime',
-                      transform: (val, item) => `${val} - ${item.endTime}`
-                    },
-                    { header: 'Duration (min)', key: 'duration' },
-                    {
-                      header: 'Amount',
-                      key: 'totalAmount',
-                      transform: (val, item) => `₹${((item as any).finalAmount || val || 0).toFixed(2)}`
-                    },
-                    { header: 'Status', key: 'status' }
-                  ]}
-                  className="w-full md:w-auto"
-                />
-                <Button onClick={() => handleOpenModal('add')} className="w-full md:w-auto flex-1 md:flex-none">
-                  <Plus className="mr-2 h-4 w-4" /> New Appointment
-                </Button>
-              </div>
+        {/* Enhanced Header Section matching marketplace design */}
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl font-bold font-headline mb-1 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
+                Appointments
+              </h1>
+              <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl">
+                Manage your appointments and track scheduling
+              </p>
             </div>
-
-            {/* Appointment Stats Cards */}
-            <AppointmentStatsCards appointments={appointments} />
-
-            {/* Filters Toolbar */}
-            <AppointmentFiltersToolbar
-              searchTerm={searchTerm}
-              statusFilter={statusFilter}
-              onSearchChange={setSearchTerm}
-              onStatusChange={setStatusFilter}
-              onAddAppointment={() => handleOpenModal('add')}
+          </div>
+          <div className="flex gap-2 w-full md:w-auto">
+            <ExportButtons
+              data={filteredAppointments}
+              filename="appointments_export"
+              title="Appointments Report"
+              columns={[
+                { header: 'Client', key: 'clientName' },
+                {
+                  header: 'Services',
+                  key: 'serviceName',
+                  transform: (val, item) => item.serviceItems?.length > 0
+                    ? item.serviceItems.map((s: any) => s.serviceName).join(', ')
+                    : val
+                },
+                {
+                  header: 'Staff',
+                  key: 'staffName',
+                  transform: (val, item) => item.serviceItems?.length > 0
+                    ? item.serviceItems.map((s: any) => s.staffName).join(', ')
+                    : val
+                },
+                {
+                  header: 'Date',
+                  key: 'date',
+                  transform: (val) => new Date(val).toLocaleDateString()
+                },
+                {
+                  header: 'Time',
+                  key: 'startTime',
+                  transform: (val, item) => `${val} - ${item.endTime}`
+                },
+                { header: 'Duration (min)', key: 'duration' },
+                {
+                  header: 'Amount',
+                  key: 'totalAmount',
+                  transform: (val, item) => `₹${((item as any).finalAmount || val || 0).toFixed(2)}`
+                },
+                { header: 'Status', key: 'status' }
+              ]}
+              className="w-full md:w-auto"
             />
+            <Button onClick={() => handleOpenModal('add')} className="w-full md:w-auto flex-1 md:flex-none">
+              <Plus className="mr-2 h-4 w-4" /> New Appointment
+            </Button>
+          </div>
+        </div>
 
-            {/* Appointments Table */}
-            <div className="flex-1 flex flex-col min-h-0">
-              <Card className="flex-1 flex flex-col min-h-0">
-                <CardContent className="p-0 flex-1 flex flex-col min-h-0">
-                  <AppointmentTable
-                    appointments={appointments}
-                    isLoading={isLoading}
-                    searchTerm={searchTerm}
-                    statusFilter={statusFilter}
-                    currentItems={currentItems}
-                    onOpenModal={handleOpenModal}
-                    onOpenPaymentModal={handleOpenPaymentModal}
-                    onOpenDeleteModal={handleOpenDeleteModal}
-                  />
-                </CardContent>
-              </Card>
-            </div>
+        {/* Appointment Stats Cards */}
+        <AppointmentStatsCards appointments={appointments} />
 
-            {/* Pagination Controls */}
-            <AppointmentPaginationControls
-              currentPage={currentPage}
-              totalPages={totalPages}
-              itemsPerPage={itemsPerPage}
-              totalItems={filteredAppointments.length}
-              onPageChange={setCurrentPage}
-              onItemsPerPageChange={(value) => {
-                setItemsPerPage(value);
-                setCurrentPage(1); // Reset to first page when changing items per page
-              }}
-            />
+        {/* Filters Toolbar */}
+        <AppointmentFiltersToolbar
+          searchTerm={searchTerm}
+          statusFilter={statusFilter}
+          onSearchChange={setSearchTerm}
+          onStatusChange={setStatusFilter}
+          onAddAppointment={() => handleOpenModal('add')}
+        />
+
+        {/* Appointments Table */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <Card className="flex-1 flex flex-col min-h-0">
+            <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+              <AppointmentTable
+                appointments={appointments}
+                isLoading={isLoading}
+                searchTerm={searchTerm}
+                statusFilter={statusFilter}
+                currentItems={currentItems}
+                onOpenModal={handleOpenModal}
+                onOpenPaymentModal={handleOpenPaymentModal}
+                onOpenDeleteModal={handleOpenDeleteModal}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Pagination Controls */}
+        <AppointmentPaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          itemsPerPage={itemsPerPage}
+          totalItems={filteredAppointments.length}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={(value) => {
+            setItemsPerPage(value);
+            setCurrentPage(1); // Reset to first page when changing items per page
+          }}
+        />
 
         {/* Appointment Form Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>

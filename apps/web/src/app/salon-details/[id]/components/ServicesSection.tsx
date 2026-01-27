@@ -148,6 +148,11 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
                     {service.description && (
                       <span className="ml-2">• {service.description}</span>
                     )}
+                    {isSubscriptionExpired && (
+                      <p className="text-[10px] text-red-600 font-medium mt-1">
+                        This service is temporarily closed
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="text-right ml-4">

@@ -22,8 +22,8 @@ export const GET = async (req, { params }) => {
     // Validate ID
     if (!id) {
       const response = Response.json(
-        { 
-          success: false, 
+        {
+          success: false,
           message: "Vendor ID is required",
         },
         { status: 400 }
@@ -38,17 +38,17 @@ export const GET = async (req, { params }) => {
     }
 
     // Fetch approved vendor
-    const vendor = await VendorModel.findOne({ 
+    const vendor = await VendorModel.findOne({
       _id: id,
-      status: 'Approved' 
+      status: 'Approved'
     }).select(
-      'businessName firstName lastName city state category subCategories profileImage gallery description rating clientCount revenue createdAt'
+      'businessName firstName lastName city state category subCategories profileImage gallery description rating clientCount revenue createdAt subscription'
     ).lean();
 
     if (!vendor) {
       const response = Response.json(
-        { 
-          success: false, 
+        {
+          success: false,
           message: "Vendor not found",
         },
         { status: 404 }
@@ -84,8 +84,8 @@ export const GET = async (req, { params }) => {
   } catch (error) {
     console.error('Error fetching vendor by ID:', error);
     const response = Response.json(
-      { 
-        success: false, 
+      {
+        success: false,
         message: "Failed to fetch vendor",
       },
       { status: 500 }

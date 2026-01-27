@@ -201,8 +201,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {isSubscriptionExpired && (
-          <p className="text-xs text-red-600 mt-2 text-center">
-            Not available at the moment
+          <p className="text-[10px] text-red-600 mt-2 text-center font-medium">
+            This product is temporarily closed
           </p>
         )}
       </div>

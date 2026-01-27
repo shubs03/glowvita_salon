@@ -47,7 +47,7 @@ const AppointmentFiltersToolbar = ({
             </SelectContent>
           </Select>
           <div className="flex gap-3 w-full sm:w-auto">
-            <Button 
+            <Button
               onClick={onAddAppointment}
               className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1"
             >

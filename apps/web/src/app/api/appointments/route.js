@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model";
 import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
+import UserModel from "@repo/lib/models/user/User.model";
 import _db from '@repo/lib/db';
 
 await _db();
@@ -20,21 +21,47 @@ export const GET = async (req) => {
 
         console.log('GET appointments - vendorId:', vendorId, 'staffId:', staffId, 'date:', date, 'userId:', userId);
 
-        // Base query - either vendorId or userId is required
-        const query = {
-            status: { $in: ['confirmed', 'pending', 'scheduled'] } // Only include active appointments
-        };
+        // Base query
+        const query = {};
 
-        // If userId is provided, filter by userId/clientId
+        // If userId is provided, filter by userId/clientId and include ALL statuses
         if (userId) {
-            query.$or = [
+            const orConditions = [
                 { client: userId },
                 { userId: userId }
             ];
+
+            // Try to fetch user details to also search by name/phone for unlinked appointments
+            try {
+                const user = await UserModel.findById(userId).select('firstName lastName mobileNo');
+                if (user) {
+                    const firstName = user.firstName || '';
+                    const lastName = user.lastName || '';
+                    const fullName = `${firstName} ${lastName}`.trim();
+                    console.log('Found user for expanded search:', fullName, user.mobileNo);
+
+                    // Add name match (case-insensitive)
+                    if (fullName) {
+                        orConditions.push({
+                            clientName: { $regex: new RegExp(`^${fullName}$`, 'i') }
+                        });
+                    }
+
+                    // Note: Appointment model doesn't strictly have phone at root level based on schema provided, 
+                    // but if it did, we would add it here.
+                }
+            } catch (err) {
+                console.error('Error fetching user for appointment search:', err);
+                // Continue with just ID match
+            }
+
+            query.$or = orConditions;
+            // No status filter for user history - we want to see everything including cancelled
         }
-        // If vendorId is provided, filter by vendorId (existing behavior)
+        // If vendorId is provided (without userId), it's likely for availability check or schedule view
         else if (vendorId) {
             query.vendorId = vendorId;
+            query.status = { $in: ['confirmed', 'pending', 'scheduled'] }; // Only include active appointments for availability
         }
         // If neither userId nor vendorId is provided, return error
         else {
@@ -74,12 +101,28 @@ export const GET = async (req) => {
 
         // Fetch appointments with populated vendor data
         const appointments = await AppointmentModel.find(query)
-            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId amount totalAmount finalAmount platformFee serviceTax discountAmount vendorId')
+            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId amount totalAmount finalAmount platformFee serviceTax discountAmount vendorId cancellationReason notes')
             .populate('vendorId', 'businessName address')
             .lean(); // Use lean() to get plain JavaScript objects with raw ObjectIds
 
         // Transform appointments to match frontend interface
         const transformedAppointments = appointments.map(apt => {
+            // Extract cancellation reason from notes if not in dedicated field
+            let cancellationReason = apt.cancellationReason || null;
+            if (!cancellationReason && apt.notes && apt.status && apt.status.toLowerCase() === 'cancelled') {
+                // Try to extract from notes - format: "[timestamp] Appointment cancelled: reason"
+                const notesMatch = apt.notes.match(/Appointment cancelled:\s*(.+?)(?:\n|$)/i);
+                if (notesMatch && notesMatch[1]) {
+                    cancellationReason = notesMatch[1].trim();
+                } else {
+                    // Alternative format: just look for the reason after "cancelled"
+                    const altMatch = apt.notes.match(/cancelled[:\s]+(.+?)(?:\n|$)/i);
+                    if (altMatch && altMatch[1]) {
+                        cancellationReason = altMatch[1].trim();
+                    }
+                }
+            }
+
             // For multi-service appointments, use the first service as the main service
             let service = apt.serviceName || apt.service || 'Unknown Service';
             let staff = apt.staffName || 'Any Professional';
@@ -109,10 +152,19 @@ export const GET = async (req) => {
             // Status transformation - ensure proper capitalization and allowed values
             let status = apt.status || 'Confirmed';
             if (typeof status === 'string') {
-                // Capitalize first letter
-                status = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
-                // Ensure it's one of the allowed values
-                if (!['Completed', 'Confirmed', 'Cancelled'].includes(status)) {
+                const lowerStatus = status.toLowerCase();
+
+                // Map common DB statuses to Frontend statuses
+                if (lowerStatus === 'completed' || lowerStatus === 'partially-completed') {
+                    status = 'Completed';
+                } else if (lowerStatus === 'cancelled' || lowerStatus === 'no-show') {
+                    status = 'Cancelled';
+                } else if (lowerStatus === 'scheduled') {
+                    status = 'Scheduled';
+                } else if (lowerStatus === 'pending') {
+                    status = 'Pending';
+                } else {
+                    // Default for 'confirmed' or any unknown status
                     status = 'Confirmed';
                 }
             } else {
@@ -165,7 +217,8 @@ export const GET = async (req) => {
                 serviceItems: apt.serviceItems || [],
                 vendorId: apt.vendorId?._id || apt.vendorId, // Handle both populated and non-populated cases
                 client: apt.client,
-                userId: apt.userId
+                userId: apt.userId,
+                cancellationReason: cancellationReason // Pass through cancellation reason (from field or extracted from notes)
             };
         });
 
