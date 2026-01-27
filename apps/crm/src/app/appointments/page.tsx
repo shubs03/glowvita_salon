@@ -2,21 +2,6 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@repo/ui/card";
-import { Button } from "@repo/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@repo/ui/dialog";
-import dynamic from "next/dynamic";
-import { useAppDispatch } from "@repo/store/hooks";
-import { glowvitaApi } from "@repo/store/api";
-import { startOfDay, endOfDay } from "date-fns";
-import { Plus } from "lucide-react";
-import { toast } from "sonner";
-import { AppointmentDetailCard } from "./components/AppointmentDetailCard";
 import { ExportButtons } from "@/components/ExportButtons";
 import { Appointment } from "../../../../../packages/types/src/appointment";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@repo/ui/dialog';
@@ -28,8 +13,6 @@ import { glowvitaApi } from '@repo/store/api';
 import { startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { AppointmentDetailCard } from './components/AppointmentDetailCard';
-import { ExportButtons } from '@/components/ExportButtons';
-import { Appointment } from '../../../../../packages/types/src/appointment';
 
 // Import new components
 import AppointmentStatsCards from "./components/AppointmentStatsCards";
@@ -211,8 +194,6 @@ export default function AppointmentsPage() {
     if (!selectedAppointment?._id) return;
 
     const toastId = toast.loading("Processing payment...");
-
-    const toastId = toast.loading('Processing payment...');
     try {
       // Call backend so it records payment history with paymentDate
       await collectPayment({
