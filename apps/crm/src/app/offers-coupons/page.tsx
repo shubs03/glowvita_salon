@@ -31,6 +31,12 @@ import { toast } from 'sonner';
 import { selectRootState } from '@repo/store/store';
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 
+// Import new components
+import OffersStatsCards from './components/OffersStatsCards';
+import OffersFiltersToolbar from './components/OffersFiltersToolbar';
+import OffersTable from './components/OffersTable';
+import OffersPaginationControls from './components/OffersPaginationControls';
+
 type Coupon = {
   _id: string;
   code: string;
@@ -602,202 +608,44 @@ export default function OffersCouponsPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">{getPageTitle()}</h1>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Coupons</CardTitle>
-            <Tag className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{Array.isArray(couponsData) ? couponsData.length : 0}</div>
-            <p className="text-xs text-muted-foreground">Total coupons created</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Coupons</CardTitle>
-            <CheckSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {Array.isArray(couponsData) ? couponsData.filter(c => c.status === 'Active').length : 0}
-            </div>
-            <p className="text-xs text-muted-foreground">Currently usable by customers</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Redeemed</CardTitle>
-            <Percent className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {Array.isArray(couponsData) ? couponsData.reduce((acc, c) => acc + c.redeemed, 0) : 0}
-            </div>
-            <p className="text-xs text-muted-foreground">Total times coupons were applied</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Discount Value</CardTitle>
-            <IndianRupee className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ₹{totalDiscountValue.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">Estimated value of discounts</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Offers Stats Cards */}
+      <OffersStatsCards couponsData={couponsData} />
       
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-                <CardTitle>Manage Coupons</CardTitle>
-                <CardDescription>Create, edit, and manage your promotional coupons.</CardDescription>
-            </div>
-            <Button onClick={() => handleOpenModal('addCoupon')} disabled={isCreating}>
-              <Plus className="mr-2 h-4 w-4" />
-              {getCreateButtonText()}
-            </Button>
-          </div>
+          <OffersFiltersToolbar
+            onAddCoupon={() => handleOpenModal('addCoupon')}
+            getCreateButtonText={getCreateButtonText}
+          />
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto no-scrollbar">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Code</TableHead>
-                  <TableHead>Discount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Starts On</TableHead>
-                  <TableHead>Expires On</TableHead>
-                  {userRole === 'vendor' && <TableHead>Services</TableHead>}
-                  {userRole === 'vendor' && <TableHead>Service Categories</TableHead>}
-                  {userRole === 'vendor' && <TableHead>Genders</TableHead>}
-                  {userRole === 'doctor' && <TableHead>Applicable Conditions</TableHead>}
-                  {userRole === 'supplier' && <TableHead>Min Order Amount</TableHead>}
-                  <TableHead>Image</TableHead>
-                  <TableHead>Redeemed</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {currentItems.map((coupon) => (
-                  <TableRow key={coupon._id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {coupon.code}
-                        {coupon.isCustomCode && (
-                          <span className="text-xs bg-blue-100 text-blue-800 px-1 rounded">Custom</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{formatDiscount(coupon)}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        coupon.status === "Active"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}>
-                        {coupon.status}
-                      </span>
-                    </TableCell>
-                    <TableCell>{coupon.startDate.split('T')[0]}</TableCell>
-                    <TableCell>{coupon.expires ? coupon.expires.split('T')[0] : 'N/A'}</TableCell>
-                    {userRole === 'vendor' && (
-                      <TableCell>
-                        {coupon.applicableServices && coupon.applicableServices.length > 0 
-                          ? getServiceNames(coupon.applicableServices)
-                          : 'All services'
-                        }
-                      </TableCell>
-                    )}
-                    {userRole === 'vendor' && (
-                      <TableCell>
-                        {coupon.applicableServiceCategories && coupon.applicableServiceCategories.length > 0 
-                          ? (() => {
-                              const autoCategories = getAutoCategoriesFromServices(coupon.applicableServices || []);
-                              const manualCategories = coupon.applicableServiceCategories.filter((id: string) => !autoCategories.includes(id));
-                              
-                              if (autoCategories.length > 0 && manualCategories.length > 0) {
-                                return `Auto: ${autoCategories.length}, Manual: ${manualCategories.length}`;
-                              } else if (autoCategories.length > 0) {
-                                return `Auto: ${autoCategories.length} category(ies)`;
-                              } else if (manualCategories.length > 0) {
-                                return `Manual: ${manualCategories.length} category(ies)`;
-                              }
-                              return `${coupon.applicableServiceCategories.length} category(ies)`;
-                            })()
-                          : 'All categories'
-                        }
-                      </TableCell>
-                    )}
-                    {userRole === 'vendor' && (
-                      <TableCell>
-                        {coupon.applicableCategories && coupon.applicableCategories.length > 0
-                          ? formatList(coupon.applicableCategories)
-                          : 'All genders'
-                        }
-                      </TableCell>
-                    )}
-                    {userRole === 'doctor' && (
-                      <TableCell>
-                        {coupon.applicableDiseases && coupon.applicableDiseases.length > 0 
-                          ? `${coupon.applicableDiseases.length} condition(s)` 
-                          : 'All conditions'
-                        }
-                      </TableCell>
-                    )}
-                    {userRole === 'supplier' && (
-                      <TableCell>
-                        {coupon.minOrderAmount ? `₹${coupon.minOrderAmount.toLocaleString()}` : 'No minimum'}
-                      </TableCell>
-                    )}
-                    <TableCell>
-                      {coupon.offerImage ? (
-                        <img 
-                          src={coupon.offerImage} 
-                          alt="Offer" 
-                          className="w-10 h-10 object-cover rounded"
-                        />
-                      ) : (
-                        <span className="text-gray-400 text-sm">No image</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{coupon.redeemed}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenModal('viewCoupon', coupon)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenModal('editCoupon', coupon)}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(coupon)} disabled={isDeleting}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <OffersTable
+              currentItems={currentItems}
+              userRole={userRole}
+              onOpenModal={handleOpenModal}
+              onDeleteClick={handleDeleteClick}
+              formatDiscount={formatDiscount}
+              formatList={formatList}
+              getServiceNames={getServiceNames}
+              getCategoryNames={getCategoryNames}
+              getAutoCategoriesFromServices={getAutoCategoriesFromServices}
+              isDeleting={isDeleting}
+            />
           </div>
-          <Pagination
-            className="mt-4"
+          <OffersPaginationControls
             currentPage={currentPage}
             totalPages={totalPages}
-            onPageChange={setCurrentPage}
             itemsPerPage={itemsPerPage}
-            onItemsPerPageChange={setItemsPerPage}
             totalItems={Array.isArray(couponsData) ? couponsData.length : 0}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
           />
         </CardContent>
       </Card>
 
       <Dialog open={isOpen && (modalType === 'addCoupon' || modalType === 'editCoupon' || modalType === 'viewCoupon')} onOpenChange={handleCloseModal}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
           <DialogHeader>
             <DialogTitle>
               {modalType === 'addCoupon' && getCreateButtonText()}
@@ -815,10 +663,23 @@ export default function OffersCouponsPage() {
             <div className="grid gap-4 py-4 text-sm">
               <div className="grid grid-cols-3 items-center gap-4">
                 <span className="font-semibold text-muted-foreground">Code</span>
-                <span className="col-span-2 flex items-center gap-2">
+                <span className="col-span-2">
                   {(data as Coupon)?.code || 'N/A'}
-                  {(data as Coupon)?.isCustomCode && (
-                    <span className="text-xs bg-blue-100 text-blue-800 px-1 rounded">Custom</span>
+                </span>
+              </div>
+              <div className="grid grid-cols-3 items-center gap-4">
+                <span className="font-semibold text-muted-foreground">Code Type</span>
+                <span className="col-span-2">
+                  {(data as Coupon)?.isCustomCode ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-primary"></span>
+                      <span className="text-primary font-medium">Custom Code</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full bg-primary"></span>
+                      <span className="text-primary font-medium">Auto-generated</span>
+                    </span>
                   )}
                 </span>
               </div>
