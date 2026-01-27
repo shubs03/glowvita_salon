@@ -485,16 +485,47 @@ export default function SalonDetailsPage() {
 
   // Check if vendor's subscription is expired
   const isSubscriptionExpired = useMemo(() => {
-    if (!vendorData || !vendorData.subscription) return false;
+    // If no vendor data, don't block - return false
+    if (!vendorData) return false;
 
     const subscription = vendorData.subscription;
+
+    // If no subscription data is returned (public API may not include it),
+    // assume the vendor is active since they're visible on the platform
+    if (!subscription) {
+      console.log('Subscription Check: No subscription data returned - assuming active');
+      return false; // NOT expired - assume active
+    }
+
     const now = new Date();
     const endDate = subscription.endDate ? new Date(subscription.endDate) : null;
+    const status = (subscription.status || '').toLowerCase().trim();
 
-    // Check if subscription status is Expired or if endDate has passed
-    const isStatusExpired = subscription.status?.toLowerCase() === 'expired';
-    const isDateExpired = endDate ? endDate <= now : false;
+    // If status is explicitly "active", check only the end date
+    const isStatusActive = status === 'active';
 
+    // Check if subscription status indicates it's not active
+    const expiredStatuses = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'];
+    const isStatusExpired = expiredStatuses.includes(status);
+
+    // Check if the subscription end date has passed
+    const isDateExpired = endDate ? endDate < now : false;
+
+    console.log('Subscription Check:', {
+      status,
+      isStatusActive,
+      isStatusExpired,
+      isDateExpired,
+      endDate: endDate?.toISOString(),
+      now: now.toISOString(),
+    });
+
+    // If status is active AND date hasn't expired, subscription is valid
+    if (isStatusActive && !isDateExpired) {
+      return false; // NOT expired
+    }
+
+    // If status is in expired list OR date has passed, subscription is expired
     return isStatusExpired || isDateExpired;
   }, [vendorData]);
 
@@ -540,6 +571,14 @@ export default function SalonDetailsPage() {
   };
 
   const handleBuyNow = (product: any) => {
+    // Check if subscription is expired
+    if (isSubscriptionExpired) {
+      toast.error('Purchase Unavailable', {
+        description: 'This salon is currently not available for product purchases. Please check back later.',
+      });
+      return;
+    }
+
     // Store product details in local storage
     try {
       const productWithVendor = {
@@ -561,6 +600,14 @@ export default function SalonDetailsPage() {
   };
 
   const handleAddToCart = async (product: any) => {
+    // Check if subscription is expired
+    if (isSubscriptionExpired) {
+      toast.error('Cart Unavailable', {
+        description: 'This salon is currently not available for product purchases. Please check back later.',
+      });
+      return;
+    }
+
     try {
       if (isAuthenticated && user?._id) {
         // User is authenticated - use API
@@ -815,6 +862,23 @@ export default function SalonDetailsPage() {
       />
       <PageContainer padding="none">
         <div className="container mx-auto px-4">
+          {/* Subscription Expired Banner */}
+          {isSubscriptionExpired && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 my-4 flex items-center gap-3">
+              <div className="flex-shrink-0">
+                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-red-800">Salon Currently Unavailable</h3>
+                <p className="text-sm text-red-700 mt-1">
+                  This salon is not accepting bookings or product orders at the moment. Please check back later.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Salon Name and Basic Info */}
           <section className="py-8 border-b">
             <div className="flex justify-between items-start gap-4">
@@ -1102,9 +1166,12 @@ export default function SalonDetailsPage() {
                 </div>
               </section> */}
 
-              <SpecialOffered vendorId={id}/>
+              <SpecialOffered
+                vendorId={id}
+                isSubscriptionExpired={isSubscriptionExpired}
+              />
 
-              <ServicesOffered 
+              <ServicesOffered
                 vendorId={id}
                 onBookNow={handleBookNow}
                 isSubscriptionExpired={isSubscriptionExpired}
@@ -1274,7 +1341,7 @@ export default function SalonDetailsPage() {
               </Card>
             </div>
           </div>
-            <DownloadApp/>
+          <DownloadApp />
         </div>
 
         <Dialog open={isGalleryModalOpen} onOpenChange={setIsGalleryModalOpen}>
