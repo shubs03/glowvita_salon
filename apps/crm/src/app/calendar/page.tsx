@@ -815,7 +815,7 @@ export default function CalendarPage() {
     <div className="min-h-screen bg-background">
       <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
       <div className="mb-6">
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold font-headline mb-1 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
               Bookings Calendar
@@ -824,60 +824,60 @@ export default function CalendarPage() {
               Manage your appointments and schedule.
             </p>
           </div>
-        </div>
-      </div>
-      
-      {/* Filters and Action Buttons */}
-      <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto mb-6">
-        <div className="flex gap-2">
-          <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-            <SelectTrigger className="w-full sm:w-[180px] h-12">
-              <SelectValue placeholder="Select Staff" />
-            </SelectTrigger>
-            <SelectContent>
-              {staffMembers.map((staff) => (
-                <SelectItem key={staff} value={staff}>
-                  {staff}
-                </SelectItem>
-              ))}
-              {staffData.map((staff: any) => (
-                <SelectItem key={staff.fullName} value={staff.fullName}>
-                  {staff.fullName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex gap-2">
-          {role === "doctor" ? (
-            <Button
-              onClick={handleNewAppointment}
-              className={cn(
-                "transition-colors h-10 px-4 flex-1 sm:flex-none",
-                isClinicAvailable
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-red-600 hover:bg-red-700"
+          
+          {/* Filters and Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <div className="flex gap-2">
+              <Select value={selectedStaff} onValueChange={setSelectedStaff}>
+                <SelectTrigger className="w-full sm:w-[180px] h-12">
+                  <SelectValue placeholder="Select Staff" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staffMembers.map((staff) => (
+                    <SelectItem key={staff} value={staff}>
+                      {staff}
+                    </SelectItem>
+                  ))}
+                  {staffData.map((staff: any) => (
+                    <SelectItem key={staff.fullName} value={staff.fullName}>
+                      {staff.fullName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              {role === "doctor" ? (
+                <Button
+                  onClick={handleNewAppointment}
+                  className={cn(
+                    "transition-colors h-10 px-4 flex-1 sm:flex-none",
+                    isClinicAvailable
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "bg-red-600 hover:bg-red-700"
+                  )}
+                >
+                  <Power className="mr-2 h-4 w-4" />
+                  {isClinicAvailable ? "Clinic ON" : "Clinic OFF"}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleNewAppointment}
+                  className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1"
+                  disabled={isCreating}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Booking
+                </Button>
               )}
-            >
-              <Power className="mr-2 h-4 w-4" />
-              {isClinicAvailable ? "Clinic ON" : "Clinic OFF"}
-            </Button>
-          ) : (
-            <Button
-              onClick={handleNewAppointment}
-              className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1"
-              disabled={isCreating}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              New Booking
-            </Button>
-          )}
-          <Button
-            onClick={() => handleOpenBlockTimeModal(new Date())}
-            className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1"
-          >
-            <Clock3 className="mr-2 h-4 w-4" /> Block Time
-          </Button>
+              <Button
+                onClick={() => handleOpenBlockTimeModal(new Date())}
+                className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1"
+              >
+                <Clock3 className="mr-2 h-4 w-4" /> Block Time
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
       <div className="flex flex-col lg:flex-row gap-8">
@@ -891,120 +891,122 @@ export default function CalendarPage() {
             handleDeleteAppointment={handleDeleteAppointment}
           />
         </div>
-
+      
         {/* Right Column - Calendar and Stats (Sticky) */}
         <div className="lg:w-[380px] flex-shrink-0 lg:sticky lg:top-6 lg:self-start">
           <div className="space-y-6">
-            <Card className="h-fit">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex items-center gap-2">
+            <div className="sticky top-6">
+              <Card className="h-fit">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={handlePrev}
+                          className="h-8 w-8"
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        <h2 className="text-lg font-semibold min-w-[180px] text-center">
+                          {currentDate.toLocaleString("default", {
+                            month: "long",
+                            year: "numeric",
+                          })}
+                        </h2>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={handleNext}
+                          className="h-8 w-8"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <Button
                         variant="outline"
-                        size="icon"
-                        onClick={handlePrev}
-                        className="h-8 w-8"
+                        onClick={() => setCurrentDate(new Date())}
+                        className="h-8 px-3 text-sm"
                       >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <h2 className="text-lg font-semibold min-w-[180px] text-center">
-                        {currentDate.toLocaleString("default", {
-                          month: "long",
-                          year: "numeric",
-                        })}
-                      </h2>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleNext}
-                        className="h-8 w-8"
-                      >
-                        <ChevronRight className="h-4 w-4" />
+                        Today
                       </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => setCurrentDate(new Date())}
-                      className="h-8 px-3 text-sm"
-                    >
-                      Today
-                    </Button>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isLoadingAppointments ? (
-                  <div className="flex items-center justify-center h-40">
-                    <div className="text-gray-500">Loading appointments...</div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-7 border-t border-l border-gray-200">
-                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-                      (day, index) => (
-                        <div
-                          key={`day-${index}`}
-                          className="text-center font-medium p-2 bg-muted text-xs h-15 flex items-center justify-center"
-                        >
-                          {day}
-                        </div>
-                      )
-                    )}
-                    {Array(firstDayOfMonth)
-                      .fill(null)
-                      .map((_, i) => (
-                        <div
-                          key={`blank-${i}`}
-                          className="h-10 border-r border-b bg-muted/30"
-                        ></div>
-                      ))}
-                    {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(
-                      (day) => {
-                        const date = new Date(
-                          currentDate.getFullYear(),
-                          currentDate.getMonth(),
-                          day
-                        );
-                        const isToday = isSameDay(today, date);
-                        const isSelected = isSameDay(selectedDate, date);
-                        const appointmentsForDay = appointments.filter(
-                          (a) =>
-                            isSameDay(a.date, date) &&
-                            (selectedStaff === "All Staff" ||
-                              a.staffName === selectedStaff)
-                        );
-
-                        return (
+                </CardHeader>
+                <CardContent>
+                  {isLoadingAppointments ? (
+                    <div className="flex items-center justify-center h-40">
+                      <div className="text-muted-foreground">Loading appointments...</div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-7 border-t border-l border-primary/20">
+                      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+                        (day, index) => (
                           <div
-                            key={day}
-                            className={cn(
-                              "h-10 border-r border-b border-gray-200 p-2 flex flex-col items-center cursor-pointer transition-colors",
-                              isSelected ? "bg-blue-50" : "hover:bg-gray-50"
-                            )}
-                            onClick={() => handleDayClick(day)}
+                            key={`day-${index}`}
+                            className="text-center font-medium p-2 bg-muted text-xs h-15 flex items-center justify-center"
                           >
-                            <div
-                              className={cn(
-                                "flex items-center justify-center w-6 h-6 text-xs font-medium rounded-full",
-                                isToday
-                                  ? "bg-blue-600 text-white"
-                                  : isSelected
-                                    ? "bg-blue-100 text-blue-700"
-                                    : "text-gray-700"
-                              )}
-                            >
-                              {day}
-                            </div>
-                            {/* Removed appointment dots - keeping only the date number */}
+                            {day}
                           </div>
-                        );
-                      }
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-            <AppointmentStatistics appointments={appointments} />
+                        )
+                      )}
+                      {Array(firstDayOfMonth)
+                        .fill(null)
+                        .map((_, i) => (
+                          <div
+                            key={`blank-${i}`}
+                            className="h-10 border-r border-b border-primary/20 bg-muted/30"
+                          ></div>
+                        ))}
+                      {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(
+                        (day) => {
+                          const date = new Date(
+                            currentDate.getFullYear(),
+                            currentDate.getMonth(),
+                            day
+                          );
+                          const isToday = isSameDay(today, date);
+                          const isSelected = isSameDay(selectedDate, date);
+                          const appointmentsForDay = appointments.filter(
+                            (a) =>
+                              isSameDay(a.date, date) &&
+                              (selectedStaff === "All Staff" ||
+                                a.staffName === selectedStaff)
+                          );
+      
+                          return (
+                            <div
+                              key={day}
+                              className={cn(
+                                "h-10 border-r border-b border-primary/20 p-2 flex flex-col items-center cursor-pointer transition-colors",
+                                isSelected ? "bg-primary/10" : "hover:bg-secondary/10"
+                              )}
+                              onClick={() => handleDayClick(day)}
+                            >
+                              <div
+                                className={cn(
+                                  "flex items-center justify-center w-6 h-6 text-xs font-medium rounded-full",
+                                  isToday
+                                    ? "bg-primary text-white"
+                                    : isSelected
+                                      ? "bg-primary/20 text-primary"
+                                      : "text-foreground"
+                                )}
+                              >
+                                {day}
+                              </div>
+                              {/* Removed appointment dots - keeping only the date number */}
+                            </div>
+                          );
+                        }
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+              <AppointmentStatistics appointments={appointments} />
+            </div>
           </div>
         </div>
       </div>

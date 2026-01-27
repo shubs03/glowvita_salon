@@ -36,9 +36,6 @@ export default function AppointmentListSection({
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between mb-2">
           <CardTitle className="flex items-center text-xl font-bold text-foreground">
-            <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-lg mr-3">
-              <CalendarIcon className="h-5 w-5 text-white" />
-            </div>
             All Appointments
           </CardTitle>
           <Badge variant="outline" className="bg-primary/10 text-primary font-bold px-3 py-1.5 rounded-full">
