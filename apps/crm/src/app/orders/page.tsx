@@ -66,6 +66,7 @@ export default function OrdersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [viewMode, setViewMode] = useState<'orders' | 'purchases'>('orders');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [updateOrder, { isLoading: isUpdatingStatus }] = useUpdateCrmOrderMutation();
@@ -130,10 +131,17 @@ export default function OrdersPage() {
 
   const filteredOrders = useMemo(() => {
     let dataToFilter: Order[] = [];
-    if (activeTab === 'customer-orders') dataToFilter = [...customerOrders, ...onlineCustomerOrders];
-    if (activeTab === 'my-purchases') dataToFilter = myPurchases;
-    if (activeTab === 'received-orders') dataToFilter = receivedOrders;
-
+    
+    // Determine data to filter based on viewMode first, then fall back to activeTab
+    if (viewMode === 'purchases') {
+      dataToFilter = myPurchases;
+    } else {
+      // Default to activeTab logic when not in purchases view
+      if (activeTab === 'customer-orders') dataToFilter = [...customerOrders, ...onlineCustomerOrders];
+      if (activeTab === 'my-purchases') dataToFilter = myPurchases;
+      if (activeTab === 'received-orders') dataToFilter = receivedOrders;
+    }
+    
     return dataToFilter.filter((order: Order) =>
       ((order.orderId && order.orderId.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (order.customerName && order.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -142,7 +150,7 @@ export default function OrdersPage() {
       ))) &&
       (statusFilter === 'all' || (order.status && order.status === statusFilter))
     );
-  }, [searchTerm, statusFilter, activeTab, customerOrders, myPurchases, receivedOrders, onlineCustomerOrders]);
+  }, [searchTerm, statusFilter, activeTab, viewMode, customerOrders, myPurchases, receivedOrders, onlineCustomerOrders]);
 
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -299,6 +307,8 @@ export default function OrdersPage() {
           exportData={filteredOrders}
           role={role}
           activeTab={activeTab}
+          onViewMode={viewMode}
+          onViewModeChange={setViewMode}
         />
 
         {/* Orders Table */}
@@ -309,6 +319,7 @@ export default function OrdersPage() {
               searchTerm={searchTerm}
               role={role}
               activeTab={activeTab}
+              viewMode={viewMode}
               handleViewDetails={handleViewDetails}
               handleUpdateStatus={handleUpdateStatus}
               isUpdatingStatus={isUpdatingStatus}

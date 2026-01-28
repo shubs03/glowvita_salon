@@ -49,16 +49,29 @@ export function OrderDetailsModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden p-0">
-        <DialogHeader className="p-6 pb-4 bg-gradient-to-r from-muted/30 to-muted/10">
+        <style jsx>{`
+          .modal-content::-webkit-scrollbar {
+            display: none;
+          }
+          .modal-content {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+          /* Indicate status icons are not clickable */
+          .status-timeline div div {
+            cursor: default;
+          }
+        `}</style>
+        <DialogHeader className="p-6 pb-4 bg-muted">
           <DialogTitle className="text-xl font-bold">Order Details</DialogTitle>
           <DialogDescription>
             Order ID: #{selectedOrder.orderId || `ONLINE-${selectedOrder._id.substring(0, 8).toUpperCase()}`}
           </DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto max-h-[calc(80vh-6rem)] p-6 pt-4">
+        <div className="modal-content overflow-y-auto max-h-[calc(80vh-6rem)] p-6 pt-4">
           <div className="space-y-6">
-            {/* Enhanced Status Timeline */}
-            <div className="bg-gradient-to-r from-muted/20 to-muted/10 rounded-xl p-4">
+            {/* Order Progress */}
+            <div className="status-timeline rounded-lg p-4 bg-muted">
               <h3 className="font-bold text-md mb-3 flex items-center gap-2">
                 <Package className="h-4 w-4 text-primary" />
                 Order Progress
@@ -67,9 +80,9 @@ export function OrderDetailsModal({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Order Items */}
-              <div className="lg:col-span-2">
-                <div className="bg-gradient-to-r from-background to-muted/10 rounded-xl p-4 border border-border/20">
+              {/* Order Items - Sticky */}
+              <div className="lg:col-span-2 sticky top-0">
+                <div className="rounded-lg p-4 border">
                   <h3 className="font-bold text-md mb-3 flex items-center gap-2">
                     <ShoppingCart className="h-4 w-4 text-primary" />
                     Items Ordered ({selectedOrder.items?.length || 0})
@@ -78,14 +91,14 @@ export function OrderDetailsModal({
                     {selectedOrder.items?.map((item, index) => (
                       <div 
                         key={item.productId} 
-                        className="flex items-center gap-3 p-3 bg-background rounded-lg border border-border/10"
+                        className="flex items-center gap-3 p-3 bg-background rounded-lg border"
                       >
                         <Image 
                           src={item.productImage || 'https://placehold.co/60x60.png'} 
                           alt={item.productName} 
                           width={60} 
                           height={60} 
-                          className="rounded-md object-cover border border-border/10" 
+                          className="rounded-md object-cover border" 
                         />
                         <div className="flex-1">
                           <h4 className="font-medium text-md">{item.productName}</h4>
@@ -107,7 +120,7 @@ export function OrderDetailsModal({
                     ))}
                     
                     {/* Order Total */}
-                    <div className="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-3 border border-primary/10">
+                    <div className="rounded-lg p-3 bg-muted">
                       <div className="flex justify-between items-center">
                         <span className="text-md font-semibold">Total Amount</span>
                         <span className="text-xl font-bold text-primary">₹{(selectedOrder.totalAmount || 0).toFixed(2)}</span>
@@ -120,18 +133,18 @@ export function OrderDetailsModal({
               {/* Order Information */}
               <div className="space-y-4">
                 {/* Customer Information */}
-                <div className="bg-gradient-to-r from-background to-muted/10 rounded-xl p-4 border border-border/20">
+                <div className="rounded-lg p-4 border">
                   <h3 className="font-bold text-md mb-3 flex items-center gap-2">
                     <User className="h-4 w-4 text-primary" />
                     Customer Details
                   </h3>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 p-2 bg-muted/10 rounded-lg">
+                    <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span className="font-medium text-sm">{selectedOrder.customerName || `Vendor ID: ${selectedOrder.vendorId || ''}`}</span>
                     </div>
                     {selectedOrder.customerEmail && (
-                      <div className="flex items-center gap-2 p-2 bg-muted/10 rounded-lg">
+                      <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">{selectedOrder.customerEmail}</span>
                       </div>
@@ -140,24 +153,24 @@ export function OrderDetailsModal({
                 </div>
 
                 {/* Shipping Information */}
-                <div className="bg-gradient-to-r from-background to-muted/10 rounded-xl p-4 border border-border/20">
+                <div className="rounded-lg p-4 border">
                   <h3 className="font-bold text-md mb-3 flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-primary" />
                     Shipping Address
                   </h3>
-                  <div className="p-3 bg-muted/10 rounded-lg">
+                  <div className="p-3 bg-muted rounded-lg">
                     <p className="text-sm leading-relaxed">{selectedOrder.shippingAddress || 'No shipping address provided'}</p>
                   </div>
                 </div>
 
                 {/* Cancellation Reason */}
                 {selectedOrder.status === 'Cancelled' && selectedOrder.cancellationReason && (
-                  <div className="bg-gradient-to-r from-background to-muted/10 rounded-xl p-4 border border-border/20">
+                  <div className="rounded-lg p-4 border">
                     <h3 className="font-bold text-md mb-3 flex items-center gap-2">
                       <XCircle className="h-4 w-4 text-primary" />
                       Cancellation Reason
                     </h3>
-                    <div className="p-3 bg-muted/10 rounded-lg">
+                    <div className="p-3 bg-muted rounded-lg">
                       <p className="text-sm leading-relaxed">{selectedOrder.cancellationReason}</p>
                     </div>
                   </div>
@@ -165,20 +178,20 @@ export function OrderDetailsModal({
 
                 {/* Tracking Information */}
                 {selectedOrder.trackingNumber && (
-                  <div className="bg-gradient-to-r from-background to-muted/10 rounded-xl p-4 border border-border/20">
+                  <div className="rounded-lg p-4 border">
                     <h3 className="font-bold text-md mb-3 flex items-center gap-2">
                       <Truck className="h-4 w-4 text-primary" />
                       Tracking Details
                     </h3>
                     <div className="space-y-2">
-                      <div className="flex items-center gap-2 p-2 bg-muted/10 rounded-lg">
+                      <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
                         <Building className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <p className="text-xs font-medium">Courier</p>
                           <p className="text-xs text-muted-foreground">{selectedOrder.courier || 'Not specified'}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 p-2 bg-muted/10 rounded-lg">
+                      <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
                         <Package className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <p className="text-xs font-medium">Tracking Number</p>
@@ -190,13 +203,13 @@ export function OrderDetailsModal({
                 )}
 
                 {/* Order Timeline */}
-                <div className="bg-gradient-to-r from-background to-muted/10 rounded-xl p-4 border border-border/20">
+                <div className="rounded-lg p-4 border">
                   <h3 className="font-bold text-md mb-3 flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-primary" />
                     Order Timeline
                   </h3>
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 p-2 bg-muted/10 rounded-lg">
+                    <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <div>
                         <p className="text-xs font-medium">Order Placed</p>
