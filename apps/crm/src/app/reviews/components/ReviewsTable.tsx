@@ -79,10 +79,12 @@ const ReviewsTable = ({
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[120px]">Entity</TableHead>
+              <TableHead className="min-w-[100px]">Type</TableHead>
               <TableHead className="min-w-[120px]">Customer</TableHead>
               <TableHead>Rating</TableHead>
               <TableHead className="min-w-[200px]">Review</TableHead>
               <TableHead>Date</TableHead>
+              <TableHead>Time</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -90,7 +92,7 @@ const ReviewsTable = ({
           <TableBody>
             {filteredReviews.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   {searchTerm ? 'No reviews found matching your criteria' : 'Reviews from customers for your products, services, salon, and doctors will appear here'}
                 </TableCell>
               </TableRow>
@@ -118,9 +120,11 @@ const ReviewsTable = ({
                       )}
                       <div className="min-w-0">
                         <p className="font-semibold truncate max-w-[80px]">{getEntityName(review)}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{review.entityType}</p>
                       </div>
                     </div>
+                  </TableCell>
+                  <TableCell className="min-w-[100px] capitalize">
+                    <p className="font-medium text-sm">{review.entityType}</p>
                   </TableCell>
                   <TableCell className="min-w-[120px] max-w-[150px] truncate">
                     <p className="font-medium text-sm">{review.userName}</p>
@@ -132,7 +136,7 @@ const ReviewsTable = ({
                           key={i} 
                           className={`h-4 w-4 ${
                             i < review.rating 
-                              ? 'text-yellow-400 fill-current' 
+                              ? 'text-primary fill-current' 
                               : 'text-gray-300'
                           }`} 
                         />
@@ -147,7 +151,9 @@ const ReviewsTable = ({
                     <p className="text-sm">
                       {format(new Date(review.createdAt), 'MMM dd, yyyy')}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                  </TableCell>
+                  <TableCell>
+                    <p className="text-sm">
                       {format(new Date(review.createdAt), 'hh:mm a')}
                     </p>
                   </TableCell>
