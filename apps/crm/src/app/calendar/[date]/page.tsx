@@ -1007,6 +1007,7 @@ export default function DailySchedulePage() {
           }, [dayWorkingHours, selectedDate])}
           onCreateAppointment={handleCreateNewAppointment}
           onDateChange={handleDateChange}
+          onUpdateAppointmentStatus={handleUpdateStatus}
         />
       </div>
 
