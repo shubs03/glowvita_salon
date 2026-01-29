@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import ProductModel from '@repo/lib/models/Vendor/Product.model';
-import {authMiddlewareAdmin} from '../../../../../middlewareAdmin';
+import { authMiddlewareAdmin } from '../../../../../middlewareAdmin';
 import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import ProductCategoryModel from '@repo/lib/models/admin/ProductCategory';
@@ -37,25 +37,25 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-},   ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // Approve or Reject Vendor Product
 export const PATCH = authMiddlewareAdmin(async (req) => {
   try {
-    const { productId, status } = await req.json();
+    const { productId, status, rejectionReason } = await req.json();
 
     // Validate required fields
     if (!productId || !status) {
       return Response.json(
-        { message: 'Product ID and status (approved/rejected/pending) are required' },
+        { message: 'Product ID and status (approved/rejected/disapproved/pending) are required' },
         { status: 400 }
       );
     }
 
     // Validate status value
-    if (!['pending', 'approved', 'rejected'].includes(status)) {
+    if (!['pending', 'approved', 'rejected', 'disapproved'].includes(status)) {
       return Response.json(
-        { message: 'Invalid status value. Must be pending, approved, or rejected' },
+        { message: 'Invalid status value. Must be pending, approved, rejected, or disapproved' },
         { status: 400 }
       );
     }
@@ -66,11 +66,17 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       updatedAt: new Date(), // Update timestamp
     };
 
+    if ((status === 'rejected' || status === 'disapproved') && rejectionReason) {
+      updateData.rejectionReason = rejectionReason;
+    } else if (status === 'approved') {
+      updateData.rejectionReason = null;
+    }
+
     // Find and update the product, ensuring it's a vendor product
     const updatedProduct = await ProductModel.findOneAndUpdate(
-      { _id: productId, origin: 'Vendor' },
+      { _id: new mongoose.Types.ObjectId(productId), origin: 'Vendor' },
       { $set: updateData },
-      { new: true, runValidators: true }
+      { new: true, runValidators: false }
     )
       .populate('vendorId', 'name email')
       .populate('category', 'name')
@@ -94,4 +100,4 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-},   ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

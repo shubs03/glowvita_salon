@@ -96,6 +96,7 @@ interface WeddingPackage {
   assignedStaff: string[];
   image: string | null;
   status: string;
+  rejectionReason?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -337,9 +338,13 @@ export default function WeddingPackagesPage() {
         await createPackage(packageData).unwrap();
         toast.success("Wedding package created successfully");
       } else if (modalType === "edit" && selectedPackage) {
+        const updateData = { ...formData } as any;
+        if (selectedPackage.status === 'disapproved') {
+          updateData.status = 'pending';
+        }
         await updatePackage({
           packageId: selectedPackage._id,
-          ...formData,
+          ...updateData,
         }).unwrap();
         toast.success("Wedding package updated successfully");
       }
@@ -576,6 +581,11 @@ export default function WeddingPackagesPage() {
                           >
                             {pkg.status}
                           </Badge>
+                          {pkg.status === 'disapproved' && pkg.rejectionReason && (
+                            <p className="text-[10px] text-red-500 mt-1 max-w-[150px] leading-tight" title={pkg.rejectionReason}>
+                              Reason: {pkg.rejectionReason}
+                            </p>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Switch
@@ -1044,6 +1054,6 @@ export default function WeddingPackagesPage() {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </div >
   );
 }

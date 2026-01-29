@@ -67,7 +67,7 @@ type ProductQuestion = {
 export default function ProductQuestionsPage() {
   const { role } = useCrmAuth();
   const isSupplier = role === 'supplier';
-  
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'answered' | 'unanswered'>('all');
   const [selectedQuestion, setSelectedQuestion] = useState<ProductQuestion | null>(null);
@@ -78,17 +78,18 @@ export default function ProductQuestionsPage() {
   const [questionToDelete, setQuestionToDelete] = useState<ProductQuestion | null>(null);
 
   // Fetch questions based on user role
-  const vendorQuestionsQuery = useGetCrmProductQuestionsQuery(filterStatus);
-  const supplierQuestionsQuery = useGetSupplierProductQuestionsQuery(filterStatus);
-  
+  // Fetch questions based on user role - skip the query that doesn't match the role
+  const vendorQuestionsQuery = useGetCrmProductQuestionsQuery(filterStatus, { skip: isSupplier });
+  const supplierQuestionsQuery = useGetSupplierProductQuestionsQuery(filterStatus, { skip: !isSupplier });
+
   const { data: questionsResponse, isLoading, refetch } = isSupplier ? supplierQuestionsQuery : vendorQuestionsQuery;
-  
+
   // Mutations based on user role
   const [answerVendorQuestion, { isLoading: isAnsweringVendor }] = useAnswerProductQuestionMutation();
   const [deleteVendorQuestion, { isLoading: isDeletingVendor }] = useDeleteProductQuestionMutation();
   const [answerSupplierQuestion, { isLoading: isAnsweringSupplier }] = useAnswerSupplierProductQuestionMutation();
   const [deleteSupplierQuestion, { isLoading: isDeletingSupplier }] = useDeleteSupplierProductQuestionMutation();
-  
+
   const isAnswering = isSupplier ? isAnsweringSupplier : isAnsweringVendor;
   const isDeleting = isSupplier ? isDeletingSupplier : isDeletingVendor;
 
@@ -161,7 +162,7 @@ export default function ProductQuestionsPage() {
       } else {
         await deleteVendorQuestion(questionToDelete._id).unwrap();
       }
-      
+
       toast.success('Question deleted successfully');
       setIsDeleteDialogOpen(false);
       setQuestionToDelete(null);

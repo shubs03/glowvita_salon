@@ -25,7 +25,8 @@ interface Product {
   stock?: number;
   isActive?: boolean;
   description?: string;
-  status?: "pending" | "approved" | "disapproved";
+  status?: "pending" | "approved" | "disapproved" | "rejected";
+  rejectionReason?: string;
   size?: string;
   sizeMetric?: string;
   keyIngredients?: string[];

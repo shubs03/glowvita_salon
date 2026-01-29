@@ -13,7 +13,8 @@ interface Product {
   stock?: number;
   isActive?: boolean;
   description?: string;
-  status?: 'pending' | 'approved' | 'disapproved';
+  status?: 'pending' | 'approved' | 'disapproved' | 'rejected';
+  rejectionReason?: string;
   size?: string;
   sizeMetric?: string;
   keyIngredients?: string[];
@@ -50,26 +51,26 @@ const DeleteModal = ({
             </DialogTitle>
           </DialogHeader>
         </div>
-        
+
         <div className="py-4">
           <p className="text-muted-foreground leading-relaxed">
-            Are you sure you want to delete <span className="font-semibold text-foreground">"{product?.productName}"</span>? 
+            Are you sure you want to delete <span className="font-semibold text-foreground">"{product?.productName}"</span>?
             This action cannot be undone.
           </p>
         </div>
-        
+
         <div className="-mx-6 -mb-6 px-6 pb-6 pt-4 bg-gradient-to-t from-background via-background/95 to-transparent border-t border-border/20">
           <div className="flex justify-end gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={onClose}
               className="rounded-xl border-border/40 hover:border-border/60"
             >
               Cancel
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={onDelete} 
+            <Button
+              variant="destructive"
+              onClick={onDelete}
               disabled={isDeleting}
               className="rounded-xl"
             >
