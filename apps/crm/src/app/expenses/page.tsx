@@ -1,19 +1,22 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
+import { Card, CardContent, CardHeader } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
-import { Pagination } from "@repo/ui/pagination";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Skeleton } from "@repo/ui/skeleton";
-import { Input } from '@repo/ui/input';
-import { Label } from '@repo/ui/label';
-import { Plus, Search, FileDown, Edit, Trash2, Receipt, TrendingUp, Wallet, DollarSign, Filter, X } from 'lucide-react';
+import { Edit, Trash2 } from 'lucide-react';
 import { ExpenseFormModal } from '@/components/ExpenseFormModal';
 import { useGetExpensesQuery, useDeleteExpenseMutation, useGetCrmPaymentModesQuery } from '@repo/store/api';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
+
+// Import new components
+import ExpenseStatsCards from './components/ExpenseStatsCards';
+import ExpenseFiltersToolbar from './components/ExpenseFiltersToolbar';
+import ExpenseTable from './components/ExpenseTable';
+import ExpensePaginationControls from './components/ExpensePaginationControls';
 
 export type Expense = {
     _id: string;
@@ -120,57 +123,6 @@ export default function ExpensesPage() {
         setCurrentPage(1);
     };
 
-    const hasActiveFilters = 
-        filters.paymentMode !== 'All' || 
-        filters.startDate || 
-        filters.endDate || 
-        filters.minAmount || 
-        filters.maxAmount ||
-        searchTerm;
-
-    const handleOpenModal = (expense?: Expense) => {
-        setSelectedExpense(expense || null);
-        setIsModalOpen(true);
-    };
-
-    const handleDeleteClick = (expense: Expense) => {
-        setSelectedExpense(expense);
-        setIsDeleteModalOpen(true);
-    };
-    
-    const handleConfirmDelete = async () => {
-        if(selectedExpense) {
-            try {
-                await deleteExpense(selectedExpense._id).unwrap();
-                toast.success("Expense deleted successfully.");
-                refetch();
-            } catch (err) {
-                toast.error("Failed to delete expense.");
-            } finally {
-                setIsDeleteModalOpen(false);
-                setSelectedExpense(null);
-            }
-        }
-    };
-
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-IN', { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric' 
-        });
-    };
-
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-        }).format(amount);
-    };
-
     const handleExport = () => {
         if (filteredExpenses.length === 0) {
             toast.error('No data to export');
@@ -215,28 +167,71 @@ export default function ExpensesPage() {
         }
     };
 
-    const getPaymentModeColor = (mode: string) => {
-        switch (mode) {
-            case 'Cash': return 'bg-blue-100 text-blue-800';
-            case 'Card': return 'bg-blue-100 text-blue-800';
-            case 'UPI': return 'bg-blue-100 text-blue-800';
-            case 'Net Banking': return 'bg-blue-100 text-blue-800';
-            case 'Cheque': return 'bg-blue-100 text-blue-800';
-            default: return 'bg-gray-100 text-gray-800';
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-IN', { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric' 
+        });
+    };
+
+    const formatCurrency = (amount: number) => {
+        return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(amount);
+    };
+
+    const hasActiveFilters: boolean = 
+        filters.paymentMode !== 'All' || 
+        !!filters.startDate || 
+        !!filters.endDate || 
+        !!filters.minAmount || 
+        !!filters.maxAmount ||
+        !!searchTerm;
+
+    const handleOpenModal = (expense?: Expense) => {
+        setSelectedExpense(expense || null);
+        setIsModalOpen(true);
+    };
+
+    const handleDeleteClick = (expense: Expense) => {
+        setSelectedExpense(expense);
+        setIsDeleteModalOpen(true);
+    };
+    
+    const handleConfirmDelete = async () => {
+        if(selectedExpense) {
+            try {
+                await deleteExpense(selectedExpense._id).unwrap();
+                toast.success("Expense deleted successfully.");
+                refetch();
+            } catch (err) {
+                toast.error("Failed to delete expense.");
+            } finally {
+                setIsDeleteModalOpen(false);
+                setSelectedExpense(null);
+            }
         }
     };
 
+
+
     if(isLoading) {
         return (
-            <div className="p-4 sm:p-6 lg:p-8">
+            <div className="min-h-screen bg-background">
+                <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
                 <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
                     <div>
                         <Skeleton className="h-8 w-64" />
                     </div>
                 </div>
                 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-                    {[...Array(3)].map((_, i) => (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                    {[...Array(2)].map((_, i) => (
                         <Card key={i}>
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <Skeleton className="h-4 w-24" />
@@ -266,309 +261,136 @@ export default function ExpensesPage() {
                             </div>
                         </div>
                     </CardHeader>
+                    <CardContent>
+                        <div className="overflow-x-auto no-scrollbar rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-secondary hover:bg-secondary">
+                                        {["Expense Type", "Date", "Amount", "Payment Mode", "Invoice No", "Note", "Actions"].map((_, i) => (
+                                            <TableHead key={i} className={i < 3 ? (i === 0 ? "min-w-[120px]" : "min-w-[120px]") : ""}>
+                                                <Skeleton className="h-5 w-full" />
+                                            </TableHead>
+                                        ))}
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {[...Array(5)].map((_, i) => (
+                                        <TableRow key={i} className="hover:bg-muted/50">
+                                            <TableCell className="font-medium py-3 min-w-[120px] max-w-[150px]">
+                                                <div className="flex items-center gap-3">
+                                                    <Skeleton className="w-10 h-10 rounded-full" />
+                                                    <Skeleton className="h-5 w-32" />
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="min-w-[120px] max-w-[150px]">
+                                                <Skeleton className="h-5 w-full mb-1" />
+                                            </TableCell>
+                                            <TableCell className="min-w-[120px] max-w-[150px]">
+                                                <Skeleton className="h-5 w-full mb-1" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Skeleton className="h-5 w-full" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Skeleton className="h-5 w-full" />
+                                            </TableCell>
+                                            <TableCell>
+                                                <Skeleton className="h-5 w-full" />
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-1">
+                                                    <Skeleton className="h-8 w-8 rounded" />
+                                                    <Skeleton className="h-8 w-8 rounded" />
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                        <div className="mt-4">
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                    </CardContent>
                 </Card>
+                </div>
             </div>
         );
     }
 
     if(isError) {
-        return <div className="p-4 sm:p-6 lg:p-8">Error loading expenses data.</div>
+        return <div className="min-h-screen bg-background">
+            <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
+                Error loading expenses data.
+            </div>
+        </div>
     }
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8">
-            <h1 className="text-2xl font-bold font-headline mb-6">Expense Management</h1>
+        <div className="min-h-screen bg-background">
+            <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
+                {/* Enhanced Header Section matching marketplace design */}
+                <div className="mb-6">
+                    <div className="flex items-center gap-4 mb-6">
+                        <div>
+                            <h1 className="text-3xl font-bold font-headline mb-1 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
+                                Expense Management
+                            </h1>
+                            <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl">
+                                View, add, and manage your personal expenses.
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-                        <Wallet className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{formatCurrency(totalExpenses)}</div>
-                        <p className="text-xs text-muted-foreground">All-time expenses</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">This Month</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-blue-600">{formatCurrency(currentMonthExpenses)}</div>
-                        <p className="text-xs text-muted-foreground">Current month expenses</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Records</CardTitle>
-                        <Receipt className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{filteredExpenses.length}</div>
-                        <p className="text-xs text-muted-foreground">
-                            {hasActiveFilters ? 'Filtered' : 'Total'} expense entries
-                        </p>
+            {/* Expense Stats Cards */}
+            <ExpenseStatsCards 
+                totalExpenses={totalExpenses}
+                currentMonthExpenses={currentMonthExpenses}
+                filteredExpensesCount={filteredExpenses.length}
+                hasActiveFilters={hasActiveFilters}
+            />
+
+            {/* Filters Toolbar */}
+            <ExpenseFiltersToolbar
+              searchTerm={searchTerm}
+              showFilters={showFilters}
+              filters={filters}
+              paymentModes={paymentModes}
+              isLoadingPaymentModes={isLoadingPaymentModes}
+              hasActiveFilters={hasActiveFilters}
+              onSearchChange={setSearchTerm}
+              onToggleFilters={() => setShowFilters(!showFilters)}
+              onFilterChange={handleFilterChange}
+              onClearFilters={clearFilters}
+              onExport={handleExport}
+              onAddExpense={() => handleOpenModal()}
+            />
+
+            {/* Expense Table */}
+            <div className="flex-1 flex flex-col min-h-0">
+                <Card className="flex-1 flex flex-col min-h-0">
+                    <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+                        <ExpenseTable
+                            currentItems={currentItems}
+                            searchTerm={searchTerm}
+                            hasActiveFilters={hasActiveFilters}
+                            onOpenModal={handleOpenModal}
+                            onDeleteClick={handleDeleteClick}
+                        />
                     </CardContent>
                 </Card>
             </div>
 
-            <Card>
-                <CardHeader>
-                    <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                        <div>
-                            <CardTitle>All Expenses</CardTitle>
-                            <CardDescription>View, add, and manage your personal expenses.</CardDescription>
-                        </div>
-                        <div className="flex gap-2 flex-wrap">
-                             <div className="relative">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input 
-                                    type="search" 
-                                    placeholder="Search expenses..."
-                                    className="w-full md:w-80 pl-8"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                            </div>
-                            <Button 
-                                variant={showFilters ? "default" : "outline"}
-                                onClick={() => setShowFilters(!showFilters)}
-                            >
-                                <Filter className="mr-2 h-4 w-4" />
-                                Filters
-                            </Button>
-                            <Button variant="outline" onClick={handleExport}>
-                                <FileDown className="mr-2 h-4 w-4" />
-                                Export
-                            </Button>
-                            <Button onClick={() => handleOpenModal()}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Add Expense
-                            </Button>
-                        </div>
-                    </div>
-
-                    {/* Filter Panel */}
-                    {showFilters && (
-                        <div className="mt-4 p-4 border rounded-lg bg-muted/50">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-sm font-semibold">Filter Options</h3>
-                                {hasActiveFilters && (
-                                    <Button 
-                                        variant="ghost" 
-                                        size="sm"
-                                        onClick={clearFilters}
-                                    >
-                                        <X className="mr-1 h-3 w-3" />
-                                        Clear All
-                                    </Button>
-                                )}
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {/* Payment Mode Filter */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="paymentMode">Payment Mode</Label>
-                                    <select
-                                        id="paymentMode"
-                                        value={filters.paymentMode}
-                                        onChange={(e) => handleFilterChange('paymentMode', e.target.value)}
-                                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                        disabled={isLoadingPaymentModes}
-                                    >
-                                        <option value="All">
-                                            {isLoadingPaymentModes ? 'Loading...' : 'All Payment Modes'}
-                                        </option>
-                                        {paymentModes.map((mode: any) => (
-                                            <option key={mode._id} value={mode.name}>
-                                                {mode.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-
-                                {/* Start Date Filter */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="startDate">From Date</Label>
-                                    <Input
-                                        id="startDate"
-                                        type="date"
-                                        value={filters.startDate}
-                                        onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                                    />
-                                </div>
-
-                                {/* End Date Filter */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="endDate">To Date</Label>
-                                    <Input
-                                        id="endDate"
-                                        type="date"
-                                        value={filters.endDate}
-                                        onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                                    />
-                                </div>
-
-                                {/* Min Amount Filter */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="minAmount">Min Amount (₹)</Label>
-                                    <Input
-                                        id="minAmount"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        placeholder="0"
-                                        value={filters.minAmount}
-                                        onChange={(e) => handleFilterChange('minAmount', e.target.value)}
-                                    />
-                                </div>
-
-                                {/* Max Amount Filter */}
-                                <div className="space-y-2">
-                                    <Label htmlFor="maxAmount">Max Amount (₹)</Label>
-                                    <Input
-                                        id="maxAmount"
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        placeholder="No limit"
-                                        value={filters.maxAmount}
-                                        onChange={(e) => handleFilterChange('maxAmount', e.target.value)}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Active Filter Tags */}
-                            {hasActiveFilters && (
-                                <div className="mt-4 flex flex-wrap gap-2">
-                                    {searchTerm && (
-                                        <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-xs">
-                                            <span>Search: {searchTerm}</span>
-                                            <button onClick={() => setSearchTerm('')} className="hover:text-primary/80">
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </div>
-                                    )}
-                                    {filters.paymentMode !== 'All' && (
-                                        <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-xs">
-                                            <span>Mode: {filters.paymentMode}</span>
-                                            <button onClick={() => handleFilterChange('paymentMode', 'All')} className="hover:text-primary/80">
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </div>
-                                    )}
-                                    {filters.startDate && (
-                                        <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-xs">
-                                            <span>From: {new Date(filters.startDate).toLocaleDateString('en-IN')}</span>
-                                            <button onClick={() => handleFilterChange('startDate', '')} className="hover:text-primary/80">
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </div>
-                                    )}
-                                    {filters.endDate && (
-                                        <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-xs">
-                                            <span>To: {new Date(filters.endDate).toLocaleDateString('en-IN')}</span>
-                                            <button onClick={() => handleFilterChange('endDate', '')} className="hover:text-primary/80">
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </div>
-                                    )}
-                                    {filters.minAmount && (
-                                        <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-xs">
-                                            <span>Min: ₹{filters.minAmount}</span>
-                                            <button onClick={() => handleFilterChange('minAmount', '')} className="hover:text-primary/80">
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </div>
-                                    )}
-                                    {filters.maxAmount && (
-                                        <div className="flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-xs">
-                                            <span>Max: ₹{filters.maxAmount}</span>
-                                            <button onClick={() => handleFilterChange('maxAmount', '')} className="hover:text-primary/80">
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </CardHeader>
-                <CardContent>
-                    <div className="overflow-x-auto no-scrollbar rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow className="bg-secondary hover:bg-secondary">
-                                    <TableHead>Expense Type</TableHead>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Amount</TableHead>
-                                    <TableHead>Payment Mode</TableHead>
-                                    <TableHead>Invoice No</TableHead>
-                                    <TableHead>Note</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {currentItems.length === 0 ? (
-                                    <TableRow>
-                                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                                            No expenses found. Click "Add Expense" to create your first expense record.
-                                        </TableCell>
-                                    </TableRow>
-                                ) : (
-                                    currentItems.map((expense: Expense) => (
-                                        <TableRow key={expense._id} className="hover:bg-muted/50">
-                                            <TableCell className="font-medium">
-                                                <div className="flex items-center gap-2">
-                                                    <Receipt className="h-4 w-4 text-muted-foreground" />
-                                                    <span className="font-semibold">{expense.expenseType}</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>{formatDate(expense.date)}</TableCell>
-                                            <TableCell>
-                                                <span className="">
-                                                    {formatCurrency(expense.amount)}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell>
-                                                <span className={`px-2 py-1`}>
-                                                    {expense.paymentMode}
-                                                </span>
-                                            </TableCell>
-                                            <TableCell>{expense.invoiceNo || '-'}</TableCell>
-                                            <TableCell>
-                                                <div className="max-w-[200px] truncate" title={expense.note}>
-                                                    {expense.note || '-'}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <Button variant="ghost" size="icon" onClick={() => handleOpenModal(expense)}>
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(expense)}>
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                    {filteredExpenses.length > 0 && (
-                        <Pagination
-                            className="mt-4"
-                            currentPage={currentPage}
-                            totalPages={totalPages}
-                            onPageChange={setCurrentPage}
-                            itemsPerPage={itemsPerPage}
-                            onItemsPerPageChange={setItemsPerPage}
-                            totalItems={filteredExpenses.length}
-                        />
-                    )}
-                </CardContent>
-            </Card>
+            {/* Pagination Controls */}
+            <ExpensePaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              itemsPerPage={itemsPerPage}
+              totalItems={filteredExpenses.length}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={setItemsPerPage}
+            />
 
             <ExpenseFormModal 
                 isOpen={isModalOpen} 
@@ -596,6 +418,7 @@ export default function ExpensesPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            </div>
         </div>
     );
 }

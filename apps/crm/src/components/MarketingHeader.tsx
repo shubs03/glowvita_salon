@@ -89,12 +89,12 @@ const getRoleSpecificNavItems = (role: string, permissions: string[] = []) => {
         icon: Users,
         href: "/clients",
       },
-      {
-        id: "customer-summary",
-        label: "Customer Summary",
-        icon: Users,
-        href: "/customers/summary",
-      },
+      // {
+      //   id: "customer-summary",
+      //   label: "Customer Summary",
+      //   icon: Users,
+      //   href: "/customers/summary",
+      // },
       {
         id: "services",
         label: "Services",

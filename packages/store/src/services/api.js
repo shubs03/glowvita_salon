@@ -2289,6 +2289,16 @@ export const glowvitaApi = createApi({
       invalidatesTags: ['PublicAppointments'],
     }),
 
+    // Cancel Booking Mutation
+    cancelBooking: builder.mutation({
+      query: ({ appointmentId, reason }) => ({
+        url: "/booking/booking",
+        method: "DELETE",
+        body: { appointmentId, reason }
+      }),
+      invalidatesTags: ['PublicAppointments', 'Appointments'],
+    }),
+
     // Acquire slot lock for preventing concurrent bookings
     acquireSlotLock: builder.mutation({
       query: (lockData) => ({
@@ -3027,6 +3037,8 @@ export const {
   useAcquireSlotLockMutation,
   // Confirm Booking Mutation
   useConfirmBookingMutation,
+  // Cancel Booking Mutation (added)
+  useCancelBookingMutation,
   // Lock Wedding Package Mutation
   useLockWeddingPackageMutation,
   // Public Wedding Packages Hook

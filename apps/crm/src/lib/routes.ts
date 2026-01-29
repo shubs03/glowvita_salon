@@ -19,7 +19,7 @@ export const vendorNavItems: NavItem[] = [
   { title: "Appointments", href: "/appointments", Icon: FaClipboardList, permission: 'appointments_view' },
   { title: "Staff", href: "/staff", Icon: FaUsers, permission: 'staff_view' },
   { title: "Clients", href: "/clients", Icon: FaUsers, permission: 'clients_view' },
-  { title: "Customer Summary", href: "/customers/summary", Icon: FaUsers, permission: 'clients_view' },
+  // { title: "Customer Summary", href: "/customers/summary", Icon: FaUsers, permission: 'clients_view' },
   { title: "Services", href: "/services", Icon: FaCut, permission: 'services_view' },
   { title: "Add-ons", href: "/add-ons", Icon: FaPlusSquare, permission: 'services_view' },
   { title: "Wedding Packages", href: "/wedding-packages", Icon: FaHeart, permission: 'services_view' },
