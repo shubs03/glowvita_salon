@@ -183,7 +183,7 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
             >
               <div className="relative">
                 <Bell className="h-5 w-5" />
-                <span className="absolute -top-2 -right-2 h-4 w-4 bg-red-500 rounded-full flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 h-4 w-4 bg-destructive rounded-full flex items-center justify-center">
                   <span className="text-[10px] font-bold text-white">3</span>
                 </span>
               </div>
