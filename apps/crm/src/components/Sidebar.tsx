@@ -103,11 +103,11 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
     )}>
       <div className="flex flex-col flex-grow min-h-0">
         <div className={cn(
-          "flex-shrink-0 h-16 border-b border-border/20 bg-gradient-to-r from-primary/8 to-primary/3 flex items-center relative overflow-hidden",
+          "flex-shrink-0 h-16 border-b border-border flex items-center relative overflow-hidden",
           isOpen ? "px-4 justify-between" : "px-4 justify-center"
         )}>
             <Link href="/dashboard" className={cn(
-              "group flex items-center font-bold text-lg font-headline text-foreground hover:text-primary transition-all duration-300 relative z-10",
+              "group flex items-center font-bold text-base font-headline text-foreground hover:text-primary transition-all duration-300 relative z-10",
               isOpen ? "gap-3" : "justify-center"
             )}>
                 {/* <div className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground p-2 rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:scale-110 group-hover:rotate-3 flex-shrink-0">
@@ -123,7 +123,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
             <Button
                 variant="ghost"
                 size="icon"
-                className="group relative rounded-lg transition-all duration-300 text-muted-foreground hover:text-primary hover:bg-accent flex-shrink-0"
+                className="group relative rounded-md transition-all duration-300 text-muted-foreground hover:text-primary hover:bg-accent flex-shrink-0"
                 onClick={toggleSidebar}
             >
 
@@ -139,8 +139,8 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
         {/* User Profile Section - Enhanced for Collapsed State */}
         {user && (
           <div className={cn(
-            "flex-shrink-0 border-b border-border/20 transition-all duration-300",
-            isOpen ? "p-4" : "py-4 px-3"
+            "flex-shrink-0 border-b border-border transition-all duration-300",
+            isOpen ? "p-4" : "p-2"
           )}>
             {isOpen ? (
               <div className="flex items-center gap-3 p-3 rounded-lg border border-border">
@@ -171,20 +171,14 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                 </div>
               </div>
             ) : (
-              <div className="flex justify-center group">
+              <div className="flex justify-center">
                 <div className="relative">
-                  <Avatar className="h-12 w-12 border border-border transition-all duration-300">
+                  <Avatar className="h-8 w-8 border border-border">
                     <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.name || "User"} className="object-cover" />
-                    <AvatarFallback className="bg-secondary text-primary font-bold">
+                    <AvatarFallback className="bg-secondary text-primary text-xs font-medium">
                       {(user?.businessName || user?.name || "U").charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border border-background animate-pulse"></div>
-                  <div className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-primary rounded-full border border-primary">
-                    <span className="text-[9px] font-bold text-primary-foreground uppercase tracking-wider">
-                      {role === 'vendor' ? 'P' : role?.charAt(0)}
-                    </span>
-                  </div>
                 </div>
               </div>
             )}
@@ -192,27 +186,10 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
         )}
 
         <nav className={cn(
-          "flex-grow py-4 space-y-2 min-h-0 transition-all duration-300",
+          "flex-grow py-3 space-y-1 min-h-0 transition-all duration-300",
           "no-scrollbar overflow-y-auto overflow-x-hidden", // Remove scrollbar
-          isOpen ? "px-4" : "px-3"
+          isOpen ? "px-4" : "px-2"
         )}>
-          {/* Navigation Label - Enhanced */}
-          <div className={cn(
-            "transition-all duration-300 mb-4",
-            isOpen ? "px-3 pb-3" : "px-1 pb-3"
-          )}>
-            {isOpen ? (
-              <div className="flex items-center gap-2">
-                <div className="w-1 h-4 bg-primary rounded-full"></div>
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Menu</p>
-                <div className="flex-1 h-px bg-border"></div>
-              </div>
-            ) : (
-              <div className="flex justify-center">
-                <div className="w-8 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent rounded-full"></div>
-              </div>
-            )}
-          </div>
           
           {visibleNavItems.map((item, index) => {
             const isActive = (pathname.startsWith(item.href) && item.href !== '/') || (pathname === '/' && item.href === '/');
@@ -227,8 +204,8 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                   if (isMobile && !isDisabled) toggleSidebar();
                 }}
                 className={cn(
-                  "group flex items-center text-sm rounded-xl transition-all duration-300 min-w-0 relative overflow-hidden",
-                  isOpen ? "gap-3 px-3 py-3 mx-0" : "justify-center px-2 py-3 mx-0",
+                  "group flex items-center text-sm rounded-lg transition-all duration-300 min-w-0 relative overflow-hidden",
+                  isOpen ? "gap-3 px-3 py-2 mx-0" : "justify-center px-1.5 py-2 mx-0",
                   isDisabled
                     ? 'cursor-not-allowed opacity-50'
                     : 'hover:bg-accent hover:text-accent-foreground',
@@ -241,7 +218,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                   "relative z-10 rounded-lg transition-all duration-300 flex-shrink-0",
                   "bg-muted border border-border",
                   isActive && "bg-primary text-primary-foreground",
-                  isOpen ? "p-2" : "p-2.5"
+                  isOpen ? "p-2" : "p-1.5"
                 )}>
                   <item.Icon className={cn(
                     "transition-all duration-300",
@@ -267,9 +244,9 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                 {(item.title === 'Appointments' || item.title === 'Notifications') && (
                   <div className={cn(
                     "relative z-10 transition-all duration-300",
-                    isOpen ? "ml-auto opacity-100" : "absolute top-2 right-2 opacity-100"
+                    isOpen ? "ml-auto opacity-100" : "absolute top-1.5 right-1.5 opacity-100"
                   )}>
-                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
                   </div>
                 )}
               </Link>
@@ -280,13 +257,13 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
         {/* Logout Section - Enhanced for Both States */}
         <div className={cn(
           "flex-shrink-0 border-t border-border transition-all duration-300",
-          isOpen ? "p-4" : "py-4 px-3"
+          isOpen ? "p-4" : "p-2"
         )}>
           <Button 
             variant="ghost" 
             className={cn(
-              "group w-full rounded-md text-foreground hover:bg-accent font-medium",
-              isOpen ? "gap-3 justify-start py-3" : "justify-center py-3 px-2"
+              "group w-full rounded-lg text-foreground hover:bg-accent font-medium",
+              isOpen ? "gap-3 justify-start py-2" : "justify-center py-2 px-1.5"
             )} 
             onClick={() => setShowLogoutModal(true)}
             title={!isOpen ? "Sign Out" : undefined}
