@@ -67,7 +67,7 @@ const ServicesOffered: React.FC<ServicesOfferedProps> = ({
   // Loading skeleton component
   const LoadingSkeleton = () => (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {[...Array(6)].map((_, index) => (
+      {Array.from({ length: 6 }).map((_, index) => (
         <div
           key={index}
           className="bg-card border border-border rounded-2xl p-5 animate-pulse"

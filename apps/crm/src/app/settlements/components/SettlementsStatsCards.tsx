@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@repo/ui/card";
 import { DollarSign, Hourglass, Users, RefreshCw } from 'lucide-react';
-import { PayoutData } from "./SettlementsTable";
+import { PayoutData } from "../types";
 
 interface SettlementsStatsCardsProps {
   payouts: PayoutData[];
@@ -28,7 +28,7 @@ const SettlementsStatsCards = ({ payouts }: SettlementsStatsCardsProps) => {
           </div>
         </CardContent>
       </Card>
-      
+
       <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
@@ -45,7 +45,7 @@ const SettlementsStatsCards = ({ payouts }: SettlementsStatsCardsProps) => {
           </div>
         </CardContent>
       </Card>
-      
+
       <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
@@ -60,7 +60,7 @@ const SettlementsStatsCards = ({ payouts }: SettlementsStatsCardsProps) => {
           </div>
         </CardContent>
       </Card>
-      
+
       <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
