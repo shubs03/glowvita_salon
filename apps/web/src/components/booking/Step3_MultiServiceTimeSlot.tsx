@@ -130,10 +130,13 @@ export function Step3_MultiServiceTimeSlot({
     }
 
     try {
-      // Prepare assignments payload
+      // Prepare assignments payload including addons
       const assignments = serviceStaffAssignments.map(assignment => ({
         serviceId: assignment.service.id,
-        staffId: assignment.staff?.id || 'any'
+        staffId: assignment.staff?.id || 'any',
+        // Include addons from the service object
+        addOnIds: assignment.service.selectedAddons?.map(a => a._id) || [],
+        selectedAddOns: assignment.service.selectedAddons?.map(a => a._id) || []
       }));
 
       console.log('Fetching multi-service slots with:', {

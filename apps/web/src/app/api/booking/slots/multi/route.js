@@ -37,17 +37,21 @@ function minutesToTime(minutes) {
 }
 
 // Helper: Parse duration string to minutes
-function parseDuration(duration) {
+function parseDuration(duration, defaultValue = 60) {
+  if (duration === undefined || duration === null || duration === '') return 0;
   if (typeof duration === 'number') return duration;
   if (typeof duration === 'string') {
-    const match = duration.match(/(\d+)\s*(min|hour|hours)/);
-    if (!match) return 60;
+    const match = duration.match(/(\d+)\s*(min|hour|hours)/i);
+    if (!match) {
+      const num = parseInt(duration);
+      return isNaN(num) ? defaultValue : num;
+    }
     const value = parseInt(match[1]);
-    const unit = match[2];
+    const unit = match[2].toLowerCase();
     if (unit === 'min') return value;
     if (unit === 'hour' || unit === 'hours') return value * 60;
   }
-  return 60;
+  return defaultValue;
 }
 
 // Helper: Check if staff is available on a specific day
@@ -87,12 +91,19 @@ function hasAppointmentConflict(appointments, staffId, date, startMinutes, endMi
   const dateString = date.toISOString().split('T')[0];
   
   return appointments.some(appointment => {
-    // Check if appointment is for this staff member
-    const appointmentStaffId = typeof appointment.staff === 'object' 
+    // Check if appointment is for this staff member (either primary or secondary service)
+    const isPrimaryStaff = (appointment.staff && typeof appointment.staff === 'object' 
       ? appointment.staff._id?.toString() || appointment.staff.id?.toString()
-      : appointment.staff?.toString();
+      : appointment.staff?.toString()) === staffId?.toString();
     
-    if (appointmentStaffId !== staffId.toString()) return false;
+    const isSecondaryStaff = appointment.serviceItems?.some(item => {
+      const itemStaffId = (item.staff && typeof item.staff === 'object'
+        ? item.staff._id?.toString() || item.staff.id?.toString()
+        : item.staff?.toString());
+      return itemStaffId === staffId?.toString();
+    });
+
+    if (!isPrimaryStaff && !isSecondaryStaff) return false;
     
     // Check if appointment is on the same date
     const appointmentDateString = new Date(appointment.date).toISOString().split('T')[0];
@@ -100,62 +111,88 @@ function hasAppointmentConflict(appointments, staffId, date, startMinutes, endMi
     
     // Check if appointment status is active
     const status = (appointment.status || '').toLowerCase();
-    if (!['confirmed', 'pending', 'scheduled'].includes(status)) return false;
+    if (!['confirmed', 'pending', 'scheduled', 'temp-locked'].includes(status)) return false;
     
-    // Check for time overlap
+    // Check for time overlap including travel time for external services
     const aptStart = timeToMinutes(appointment.startTime);
     const aptEnd = timeToMinutes(appointment.endTime);
     
-    return (startMinutes < aptEnd && endMinutes > aptStart);
+    // If it was a home service, it blocks time before and after for travel
+    // Calculate the full blocked window for the existing appointment
+    // Robustness: Fallback to 30 mins if it's a home service but travelTime is missing
+    const aptTravelTime = appointment.travelTime || (appointment.isHomeService ? 30 : 0);
+    const aptBufferBefore = Number(appointment.bufferBefore) || 0;
+    const aptBufferAfter = Number(appointment.bufferAfter) || 0;
+    
+    const aptBlockedStart = aptStart - aptTravelTime - aptBufferBefore;
+    const aptBlockedEnd = aptEnd + aptTravelTime + aptBufferAfter;
+    
+    return (startMinutes < aptBlockedEnd && endMinutes > aptBlockedStart);
   });
 }
 
 // Main validation: Check if a complete sequence is valid
-async function validateSequence(assignments, startMinutes, date, existingAppointments, staffCache, isHomeService, travelTimeInfo) {
-  let currentMinutes = startMinutes;
-  const sequence = [];
+async function validateSequence(assignments, startMinutes, date, existingAppointments, staffCache, isHomeService, travelTimeInfo, bufferBefore = 0, bufferAfter = 0) {
+  const travelTimeMinutes = (isHomeService && travelTimeInfo) ? travelTimeInfo.timeInMinutes : 0;
   
-  // Add travel time before first service for home services
-  if (isHomeService && travelTimeInfo) {
-    currentMinutes += travelTimeInfo.timeInMinutes;
-  }
+  // Calculate total duration for the entire sequence including all addons
+  let totalServiceDuration = 0;
+  assignments.forEach(a => {
+    const base = parseDuration(a.service.duration);
+    const addons = (a.addOnDetails || []).reduce((sum, ad) => sum + parseDuration(ad.duration, 0), 0);
+    totalServiceDuration += (base + addons);
+  });
+
+  // Calculate the FULL professional blocked period [Start - TravelTo - BufferBefore, Start + Duration + TravelBack + BufferAfter]
+  // Note: We use startMinutes as the 'at destination' time if home service.
+  // Actually, in our engine, startMinutes is the time the first service begins at the location.
+  const fullBlockedStart = startMinutes - travelTimeMinutes - bufferBefore;
+  const fullBlockedEnd = startMinutes + totalServiceDuration + travelTimeMinutes + bufferAfter;
+
+  const sequence = [];
+  let currentMinutes = startMinutes;
   
   for (const assignment of assignments) {
-    const { service, staff, staffId } = assignment;
-    const serviceDuration = parseDuration(service.duration);
+    const { service, staff, staffId, addOnDetails = [] } = assignment;
+    
+    // Calculate total duration for this service including its addons
+    const baseDuration = parseDuration(service.duration);
+    const addonsDuration = addOnDetails.reduce((sum, addon) => sum + parseDuration(addon.duration, 0), 0);
+    const serviceDuration = baseDuration + addonsDuration;
+    
     const serviceEndMinutes = currentMinutes + serviceDuration;
     
-    // Check staff availability
+    // 1. Check staff exists and is available on this day
     if (!isStaffAvailableOnDay(staff, date)) {
       return { valid: false, reason: `${staff.fullName} is not available on this day` };
     }
     
-    // Check working hours
+    // 2. Check working hours - The professional must be working from the start of travel until return from travel
     const workingHours = getStaffWorkingHours(staff, date);
-    let inWorkingHours = false;
+    let windowCovered = false;
     
     for (const period of workingHours) {
       const periodStart = timeToMinutes(period.startTime);
       const periodEnd = timeToMinutes(period.endTime);
       
-      if (currentMinutes >= periodStart && serviceEndMinutes <= periodEnd) {
-        inWorkingHours = true;
+      if (fullBlockedStart >= periodStart && fullBlockedEnd <= periodEnd) {
+        windowCovered = true;
         break;
       }
     }
     
-    if (!inWorkingHours) {
-      return { valid: false, reason: `${staff.fullName} is not working at ${minutesToTime(currentMinutes)}` };
+    if (!windowCovered) {
+      return { valid: false, reason: `${staff.fullName} window ${minutesToTime(fullBlockedStart)}-${minutesToTime(fullBlockedEnd)} is outside working hours` };
     }
     
-    // Check blocked times
-    if (isTimeSlotBlocked(staff, date, currentMinutes, serviceEndMinutes)) {
-      return { valid: false, reason: `${staff.fullName} has blocked time at ${minutesToTime(currentMinutes)}` };
+    // 3. Check blocked times against the full professional window
+    if (isTimeSlotBlocked(staff, date, fullBlockedStart, fullBlockedEnd)) {
+      return { valid: false, reason: `${staff.fullName} has blocked time within ${minutesToTime(fullBlockedStart)}-${minutesToTime(fullBlockedEnd)}` };
     }
     
-    // Check appointment conflicts
-    if (hasAppointmentConflict(existingAppointments, staffId, date, currentMinutes, serviceEndMinutes)) {
-      return { valid: false, reason: `${staff.fullName} has an existing appointment at ${minutesToTime(currentMinutes)}` };
+    // 4. Check appointment conflicts against the full professional window
+    if (hasAppointmentConflict(existingAppointments, staffId, date, fullBlockedStart, fullBlockedEnd)) {
+      return { valid: false, reason: `${staff.fullName} has a conflict between ${minutesToTime(fullBlockedStart)} and ${minutesToTime(fullBlockedEnd)} (including travel/buffers)` };
     }
     
     // Add to sequence
@@ -166,16 +203,19 @@ async function validateSequence(assignments, startMinutes, date, existingAppoint
       staffName: staff.fullName,
       startTime: minutesToTime(currentMinutes),
       endTime: minutesToTime(serviceEndMinutes),
-      duration: serviceDuration
+      duration: serviceDuration,
+      baseDuration,
+      addonsDuration,
+      addOns: addOnDetails.map(a => ({
+        id: a._id.toString(),
+        name: a.name,
+        duration: a.duration,
+        price: a.price
+      }))
     });
     
     // Move to next service start time
     currentMinutes = serviceEndMinutes;
-  }
-  
-  // Add travel time after last service for home services
-  if (isHomeService && travelTimeInfo) {
-    currentMinutes += travelTimeInfo.timeInMinutes;
   }
   
   return { valid: true, sequence, totalEndMinutes: currentMinutes };
@@ -202,6 +242,7 @@ function generateCandidateSlots(workingHours, stepMinutes = 15) {
 export async function POST(request) {
   try {
     const body = await request.json();
+    console.log('[MultiSlots] Received Request Body:', JSON.stringify(body, null, 2));
     
     const {
       vendorId,
@@ -271,9 +312,50 @@ export async function POST(request) {
     // Prepare enriched assignments with full service and staff data
     const enrichedAssignments = [];
     const staffCache = new Map();
+    const allAddOnIds = new Set();
     
+    // Extract top-level addon IDs if they exist
+    const topLevelAddOnIds = [
+      ...(Array.isArray(body.addOnIds) ? body.addOnIds : []),
+      ...(Array.isArray(body.selectedAddOns) ? body.selectedAddOns : [])
+    ];
+    topLevelAddOnIds.forEach(id => {
+      if (id) allAddOnIds.add(id.toString());
+    });
+    
+    // First pass: collect all service and staff data, and track required addons
     for (const assignment of assignments) {
-      const { serviceId, staffId } = assignment;
+      // Check both addOnIds and selectedAddOns inside assignment
+      const assigAddOns = [
+        ...(Array.isArray(assignment.addOnIds) ? assignment.addOnIds : []),
+        ...(Array.isArray(assignment.selectedAddOns) ? assignment.selectedAddOns : [])
+      ];
+      assigAddOns.forEach(id => {
+        if (id) allAddOnIds.add(id.toString());
+      });
+    }
+
+    console.log('[MultiSlots] Extracted all unique Addon IDs:', Array.from(allAddOnIds));
+
+    // Fetch addon details if any exist
+    const addonDetailsMap = new Map();
+    if (allAddOnIds.size > 0) {
+      try {
+        const AddOnModel = (await import("@repo/lib/models/Vendor/AddOn.model")).default;
+        const addOnDocs = await AddOnModel.find({ _id: { $in: Array.from(allAddOnIds) } }).lean();
+        console.log(`[MultiSlots] Fetched ${addOnDocs.length} addon documents from DB`);
+        addOnDocs.forEach(doc => {
+          console.log(`  - Addon: ${doc.name}, Duration: ${doc.duration}, ID: ${doc._id}`);
+          addonDetailsMap.set(doc._id.toString(), doc);
+        });
+      } catch (err) {
+        console.error("[MultiSlots] Error fetching addons:", err);
+      }
+    }
+    
+    for (let i = 0; i < assignments.length; i++) {
+      const assignment = assignments[i];
+      const { serviceId, staffId, addOnIds = [] } = assignment;
       
       // Find service
       const service = vendorServices.services.id(serviceId);
@@ -298,11 +380,35 @@ export async function POST(request) {
         }
         staffCache.set(staffId, staff);
       }
+
+      // Map addon IDs to full details
+      // Merge assignment-specific addons with top-level ones (if this is the first service)
+      const assignmentAddOnIds = [
+        ...(Array.isArray(assignment.addOnIds) ? assignment.addOnIds : []),
+        ...(Array.isArray(assignment.selectedAddOns) ? assignment.selectedAddOns : [])
+      ];
+
+      const combinedAddOnIds = [...new Set([
+        ...assignmentAddOnIds.map(id => id.toString()),
+        ...(i === 0 ? topLevelAddOnIds.map(id => id.toString()) : [])
+      ])];
+
+      const addOnDetails = combinedAddOnIds
+        .map(id => addonDetailsMap.get(id))
+        .filter(Boolean);
       
+      console.log(`[MultiSlots] Assignment ${i} (${service.name}):`, {
+        staff: staff.fullName,
+        addonCount: addOnDetails.length,
+        addons: addOnDetails.map(a => a.name)
+      });
+
       enrichedAssignments.push({
         service,
         staff,
-        staffId
+        staffId,
+        addOnIds: combinedAddOnIds,
+        addOnDetails
       });
     }
     
@@ -322,19 +428,28 @@ export async function POST(request) {
       }
     }
     
-    // Calculate total duration
+    // Calculate total duration including addons
     const totalServiceDuration = enrichedAssignments.reduce((sum, assignment) => {
-      return sum + parseDuration(assignment.service.duration);
+      const baseDur = parseDuration(assignment.service.duration);
+      const addOnsDur = assignment.addOnDetails.reduce((aSum, addon) => aSum + parseDuration(addon.duration, 0), 0);
+      return sum + baseDur + addOnsDur;
     }, 0);
     
     const travelTimeAddition = isHomeService && travelTimeInfo ? (travelTimeInfo.timeInMinutes * 2) : 0;
-    const totalDuration = totalServiceDuration + travelTimeAddition + bufferBefore + bufferAfter;
+    const totalDuration = totalServiceDuration + travelTimeAddition + Number(bufferBefore) + Number(bufferAfter);
     
-    console.log('Duration breakdown:', {
+    console.log('[MultiSlots] Final Duration Breakdown:', {
       serviceDuration: totalServiceDuration,
       travelTime: travelTimeAddition,
-      buffers: bufferBefore + bufferAfter,
+      buffers: Number(bufferBefore) + Number(bufferAfter),
       total: totalDuration
+    });
+
+    console.log('[MultiSlots] Enriched Assignments with Durations:');
+    enrichedAssignments.forEach((a, i) => {
+      const base = parseDuration(a.service.duration);
+      const addons = a.addOnDetails.reduce((sum, ad) => sum + parseDuration(ad.duration, 0), 0);
+      console.log(`  - Assignment ${i}: ${a.service.name} Base=${base}, Addons=${addons}, Total=${base+addons}`);
     });
     
     // Fetch existing appointments for all assigned staff
@@ -347,7 +462,7 @@ export async function POST(request) {
     const existingAppointments = await AppointmentModel.find({
       vendorId,
       date: { $gte: startOfDay, $lte: endOfDay },
-      status: { $in: ['confirmed', 'pending', 'scheduled'] }
+      status: { $in: ['confirmed', 'pending', 'scheduled', 'temp-locked'] }
     }).lean();
     
     console.log(`Found ${existingAppointments.length} existing appointments for the day`);
@@ -397,24 +512,26 @@ export async function POST(request) {
     // Validate each candidate slot
     const validSlots = [];
     
-    for (const startMinutes of candidateStartTimes) {
+    for (const activityStartMinutes of candidateStartTimes) {
+      // The SERVICE starts after travel to customer and buffer
+      const travelToMinutes = isHomeService && travelTimeInfo ? travelTimeInfo.timeInMinutes : 0;
+      const serviceStartMinutes = activityStartMinutes + travelToMinutes + Number(bufferBefore);
+      
       const validation = await validateSequence(
         enrichedAssignments,
-        startMinutes,
+        serviceStartMinutes,
         date,
         existingAppointments,
         staffCache,
         isHomeService,
-        travelTimeInfo
+        travelTimeInfo,
+        bufferBefore,
+        bufferAfter
       );
       
       if (validation.valid) {
-        const actualStartMinutes = isHomeService && travelTimeInfo 
-          ? startMinutes 
-          : startMinutes;
-        
         validSlots.push({
-          startTime: minutesToTime(actualStartMinutes),
+          startTime: minutesToTime(serviceStartMinutes),
           endTime: minutesToTime(validation.totalEndMinutes),
           totalDuration,
           serviceDuration: totalServiceDuration,

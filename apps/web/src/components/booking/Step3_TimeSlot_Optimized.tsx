@@ -165,10 +165,22 @@ export const Step3_TimeSlot = memo(({
           .join(',');
       }
 
+      // Extract addOnIds if any are selected
+      let addOnIdsParam = '';
+      if (effectiveService?.selectedAddons && effectiveService.selectedAddons.length > 0) {
+        addOnIdsParam = effectiveService.selectedAddons.map(a => a._id).join(',');
+      } else if (selectedServices && selectedServices.length > 0) {
+        const allAddOnIds = selectedServices.flatMap(s => s.selectedAddons?.map(a => a._id) || []);
+        if (allAddOnIds.length > 0) {
+          addOnIdsParam = [...new Set(allAddOnIds)].join(',');
+        }
+      }
+
       const params = new URLSearchParams({
         vendorId: effectiveVendorId,
         staffId: selectedStaff?.id || 'any',
         serviceIds: serviceIdsParam,
+        addOnIds: addOnIdsParam,
         date: selectedDate.toISOString(),
         isHomeService: isHomeService.toString(),
         isWeddingService: (isWeddingService || isWeddingPackage).toString(),
@@ -407,7 +419,8 @@ export const Step3_TimeSlot = memo(({
         couponCode,
         discountAmount: Math.round(discountAmount || 0),
         addOns: selectedService?.selectedAddons || addOns, // Ensure this is passed as well
-        selectedAddOns: addOns, // Keep this as is, assuming it's for the final list
+        addOnIds: (selectedService?.selectedAddons || addOns).map((a: any) => a._id || a.id),
+        selectedAddOns: (selectedService?.selectedAddons || addOns).map((a: any) => a._id || a.id),
       };
 
       // Only include location if it's actually provided and valid
