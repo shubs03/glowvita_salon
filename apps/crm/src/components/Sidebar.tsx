@@ -98,8 +98,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
 
   const SidebarContent = () => (
     <div className={cn(
-        "bg-background/90 backdrop-blur-xl border-r border-border/40 flex flex-col h-full overflow-hidden shadow-2xl shadow-black/10 relative transition-all duration-300",
-        "before:absolute before:inset-0 before:bg-gradient-to-b before:from-primary/5 before:via-transparent before:to-primary/3 before:opacity-80 before:pointer-events-none",
+        "bg-background border-r border-border flex flex-col h-full overflow-hidden relative transition-all duration-300",
         isOpen ? "w-64" : "w-20",
     )}>
       <div className="flex flex-col flex-grow min-h-0">
@@ -115,7 +114,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                     <LayoutGrid className="h-5 w-5 transition-transform duration-300 group-hover:rotate-12" />
                 </div> */}
                 {isOpen && (
-                  <span className="font-bold tracking-tight bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent text-4 transition-all duration-300 group-hover:scale-105">
+                  <span className="font-bold tracking-tight text-foreground text-4 transition-all duration-300">
                     GlowVita
                   </span>
                 )}
@@ -124,10 +123,10 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
             <Button
                 variant="ghost"
                 size="icon"
-                className="group relative overflow-hidden rounded-xl transition-all duration-300 hover:scale-105 bg-background/80 backdrop-blur-sm border border-border/30 shadow-md hover:shadow-lg text-muted-foreground hover:text-primary hover:bg-primary/10 hover:border-primary/30 flex-shrink-0"
+                className="group relative rounded-lg transition-all duration-300 text-muted-foreground hover:text-primary hover:bg-accent flex-shrink-0"
                 onClick={toggleSidebar}
             >
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
                 {isOpen ? (
                   <ChevronLeft className="h-4 w-4 relative z-10 transition-transform duration-300 group-hover:-translate-x-0.5" />
                 ) : (
@@ -144,27 +143,27 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
             isOpen ? "p-4" : "py-4 px-3"
           )}>
             {isOpen ? (
-              <div className="flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-muted/40 to-muted/20 backdrop-blur-sm border border-border/30 hover:border-primary/30 transition-all duration-300 group hover:shadow-lg hover:shadow-primary/10">
+              <div className="flex items-center gap-3 p-3 rounded-lg border border-border">
                 <div className="relative">
-                  <Avatar className="h-10 w-10 border-2 border-primary/20 shadow-lg shadow-primary/20 group-hover:shadow-xl group-hover:shadow-primary/30 transition-all duration-300 group-hover:scale-105">
+                  <Avatar className="h-10 w-10 border border-border">
                     <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.name || "User"} className="object-cover" />
-                    <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/20 text-primary font-bold">
+                    <AvatarFallback className="bg-secondary text-primary font-medium">
                       {(user?.businessName || user?.name || "U").charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full border-2 border-background animate-pulse shadow-lg shadow-green-500/50"></div>
+                  {/* <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full border-2 border-background animate-pulse shadow-lg shadow-green-500/50"></div> */}
                 </div>
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm font-semibold bg-gradient-to-r from-foreground to-primary bg-clip-text text-transparent truncate group-hover:scale-105 transition-transform duration-300">
+                    <p className="text-sm font-semibold text-foreground truncate transition-transform duration-300">
                       {user?.businessName || user?.name}
                     </p>
-                    <div className="px-2 py-0.5 bg-gradient-to-r from-primary/10 to-primary/20 rounded-full border border-primary/20">
+                    {/* <div className="px-2 py-0.5 bg-gradient-to-r from-primary/10 to-primary/20 rounded-full border border-primary/20">
                       <span className="text-xs font-medium text-primary uppercase tracking-wide">
                         {role === 'vendor' ? 'PRO' : role?.charAt(0).toUpperCase() + role?.slice(1)}
                       </span>
-                    </div>
+                    </div> */}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">
                     {role?.charAt(0).toUpperCase() + role?.slice(1)} Account
@@ -174,14 +173,14 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
             ) : (
               <div className="flex justify-center group">
                 <div className="relative">
-                  <Avatar className="h-12 w-12 border-2 border-primary/20 shadow-lg shadow-primary/20 group-hover:shadow-xl group-hover:shadow-primary/30 transition-all duration-300 group-hover:scale-110">
+                  <Avatar className="h-12 w-12 border border-border transition-all duration-300">
                     <AvatarImage src={user?.profileImage} alt={user?.businessName || user?.name || "User"} className="object-cover" />
-                    <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/20 text-primary font-bold">
+                    <AvatarFallback className="bg-secondary text-primary font-bold">
                       {(user?.businessName || user?.name || "U").charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full border-2 border-background animate-pulse shadow-lg shadow-green-500/50"></div>
-                  <div className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-gradient-to-r from-primary to-primary/80 rounded-full border border-primary/20 shadow-lg">
+                  <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border border-background animate-pulse"></div>
+                  <div className="absolute -top-1 -right-1 px-1.5 py-0.5 bg-primary rounded-full border border-primary">
                     <span className="text-[9px] font-bold text-primary-foreground uppercase tracking-wider">
                       {role === 'vendor' ? 'P' : role?.charAt(0)}
                     </span>
@@ -204,9 +203,9 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
           )}>
             {isOpen ? (
               <div className="flex items-center gap-2">
-                <div className="w-1 h-4 bg-gradient-to-b from-primary to-primary/50 rounded-full shadow-lg shadow-primary/30"></div>
+                <div className="w-1 h-4 bg-primary rounded-full"></div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Menu</p>
-                <div className="flex-1 h-px bg-gradient-to-r from-border/50 to-transparent"></div>
+                <div className="flex-1 h-px bg-border"></div>
               </div>
             ) : (
               <div className="flex justify-center">
@@ -232,23 +231,22 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                   isOpen ? "gap-3 px-3 py-3 mx-0" : "justify-center px-2 py-3 mx-0",
                   isDisabled
                     ? 'cursor-not-allowed opacity-50'
-                    : 'hover:bg-primary/10 hover:text-primary before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/10 before:to-primary/5 before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100',
-                  isActive && !isDisabled && "bg-gradient-to-r from-primary/15 to-primary/5 text-primary font-semibold border-r-2 border-primary shadow-lg shadow-primary/10"
+                    : 'hover:bg-accent hover:text-accent-foreground',
+                  isActive && !isDisabled && "bg-primary text-primary-foreground font-semibold"
                 )}
                 title={!isOpen ? item.title : undefined}
               >
                 {/* Icon Container - Enhanced */}
                 <div className={cn(
-                  "relative z-10 rounded-xl transition-all duration-300 flex-shrink-0 group-hover:scale-110",
-                  "bg-background/80 backdrop-blur-sm border border-border/30 shadow-md group-hover:shadow-lg",
-                  "group-hover:border-primary/40 group-hover:bg-primary/5 group-hover:rotate-3",
-                  isActive && "bg-gradient-to-br from-primary/10 to-primary/5 border-primary/40 shadow-lg shadow-primary/20",
+                  "relative z-10 rounded-lg transition-all duration-300 flex-shrink-0",
+                  "bg-muted border border-border",
+                  isActive && "bg-primary text-primary-foreground",
                   isOpen ? "p-2" : "p-2.5"
                 )}>
                   <item.Icon className={cn(
-                    "transition-all duration-300 group-hover:rotate-12",
+                    "transition-all duration-300",
                     isOpen ? "h-4 w-4" : "h-5 w-5",
-                    isActive && "text-primary"
+                    isActive && "text-primary-foreground"
                   )} />
                 </div>
                 
@@ -259,7 +257,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                 )}>
                   <span className={cn(
                     "font-medium transition-all duration-300 group-hover:scale-105 whitespace-nowrap",
-                    isActive && "bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent"
+                    isActive && "bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-primary-foreground"
                   )}>
                     {item.title}
                   </span>
@@ -271,7 +269,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                     "relative z-10 transition-all duration-300",
                     isOpen ? "ml-auto opacity-100" : "absolute top-2 right-2 opacity-100"
                   )}>
-                    <div className="w-2 h-2 bg-gradient-to-r from-red-500 to-red-600 rounded-full animate-pulse shadow-lg shadow-red-500/50"></div>
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                   </div>
                 )}
               </Link>
@@ -281,37 +279,29 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
         
         {/* Logout Section - Enhanced for Both States */}
         <div className={cn(
-          "flex-shrink-0 border-t border-border/20 bg-gradient-to-r from-muted/20 to-transparent transition-all duration-300",
+          "flex-shrink-0 border-t border-border transition-all duration-300",
           isOpen ? "p-4" : "py-4 px-3"
         )}>
           <Button 
             variant="ghost" 
             className={cn(
-              "group w-full rounded-xl text-muted-foreground hover:text-destructive transition-all duration-300 hover:bg-destructive/10 font-medium relative overflow-hidden",
-              "before:absolute before:inset-0 before:bg-gradient-to-r before:from-destructive/10 before:to-destructive/5 before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100",
+              "group w-full rounded-md text-foreground hover:bg-accent font-medium",
               isOpen ? "gap-3 justify-start py-3" : "justify-center py-3 px-2"
             )} 
             onClick={() => setShowLogoutModal(true)}
             title={!isOpen ? "Sign Out" : undefined}
           >
-            {/* Icon Container - Enhanced */}
-            <div className={cn(
-              "relative z-10 rounded-xl bg-background/80 backdrop-blur-sm border border-border/30 transition-all duration-300 flex-shrink-0",
-              "group-hover:border-destructive/30 group-hover:bg-destructive/5 group-hover:scale-110 group-hover:rotate-3 shadow-md group-hover:shadow-lg",
-              isOpen ? "p-2.5" : "p-3"
-            )}>
-              <LogOut className={cn(
-                "transition-all duration-300 group-hover:rotate-12",
-                isOpen ? "h-4 w-4" : "h-5 w-5"
-              )} />
-            </div>
+            <LogOut className={cn(
+              "transition-all duration-300 mr-2",
+              isOpen ? "h-4 w-4" : "h-5 w-5"
+            )} />
             
             {/* Text with smooth transition */}
             <div className={cn(
               "relative z-10 transition-all duration-300 overflow-hidden",
               isOpen ? "opacity-100 flex-1" : "opacity-0 w-0"
             )}>
-              <span className="font-medium transition-all duration-300 group-hover:scale-105 whitespace-nowrap">
+              <span className="font-medium transition-all duration-300 whitespace-nowrap">
                 Sign Out
               </span>
             </div>
