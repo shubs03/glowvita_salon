@@ -57,6 +57,8 @@ import { useMemo } from 'react';
 import { SubscriptionPlansDialog } from "@/components/SubscriptionPlansDialog";
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { SmsPackagesTab } from '@/components/SmsPackagesTab';
+import { QRCodeSVG } from "qrcode.react";
+import { NEXT_PUBLIC_WEB_URL } from '../../../../../packages/config/config';
 
 // TYPES
 type SalonCategory = "unisex" | "men" | "women";
@@ -141,6 +143,74 @@ const formatDate = (dateString?: string) => {
     month: 'long',
     year: 'numeric'
   }).format(date);
+};
+
+// Function to download QR code as PNG image
+const downloadQRCode = async (url: string) => {
+  try {
+    const svgElement = document.getElementById('qr-code-svg');
+    if (!svgElement) {
+      toast.error('QR code not found');
+      return;
+    }
+
+    // Get SVG as string
+    const svgString = new XMLSerializer().serializeToString(svgElement);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+      toast.error('Could not create canvas context');
+      return;
+    }
+    
+    // Set canvas size (increased resolution for better quality)
+    const size = 400; // Increased size for better quality PNG
+    canvas.width = size;
+    canvas.height = size;
+    
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    
+    // Convert SVG to data URL
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const svgUrl = URL.createObjectURL(svgBlob);
+    
+    img.onload = () => {
+      try {
+        ctx.fillStyle = '#ffffff'; // White background
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Convert to PNG and download
+        const pngUrl = canvas.toDataURL('image/png');
+        
+        const link = document.createElement('a');
+        link.href = pngUrl;
+        link.download = `qr-code-salon-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up
+        URL.revokeObjectURL(svgUrl);
+        
+        toast.success('QR code downloaded successfully!');
+      } catch (drawError) {
+        console.error('Error drawing image to canvas:', drawError);
+        toast.error('Failed to draw QR code');
+      }
+    };
+    
+    img.onerror = () => {
+      toast.error('Failed to load QR code image');
+    };
+    
+    img.src = svgUrl;
+  } catch (error) {
+    console.error('Error downloading QR code:', error);
+    toast.error('Failed to download QR code');
+  }
 };
 
 // Update SupplierProfile interface to include licenseFiles
@@ -2476,6 +2546,7 @@ export default function SalonProfilePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
 
   useEffect(() => {
     if (vendorData?.data) {
@@ -2875,6 +2946,13 @@ export default function SalonProfilePage() {
                       <Download className="mr-2 h-4 w-4" /> Download App
                     </a>
                   </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setQrModalOpen(true)}
+                  >
+                    <ImageIcon className="mr-2 h-4 w-4" /> Scan QR Code
+                  </Button>
                 </div>
               )}
             </div>
@@ -2908,6 +2986,70 @@ export default function SalonProfilePage() {
           </div>
         </div>
       )}
+
+      {/* QR Code Modal */}
+      <Dialog open={qrModalOpen} onOpenChange={setQrModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Share Salon Details</DialogTitle>
+            <DialogDescription>
+              Scan this QR code to access the salon details page.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center p-4">
+            {(role === 'vendor' && localVendor?._id) || 
+             (role === 'supplier' && localSupplier?._id) || 
+             (role === 'doctor' && localDoctor?._id) ? (
+              <div className="flex flex-col items-center">
+                <QRCodeSVG
+                  value={`${NEXT_PUBLIC_WEB_URL}/salon-details/${profileData?._id}`}
+                  id="qr-code-svg"
+                  size={250}
+                  bgColor="white"
+                  fgColor="black"
+                  level="H"
+                  includeMargin={true}
+                />
+                <div className="flex gap-2 mt-4">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${NEXT_PUBLIC_WEB_URL}/salon-details/${profileData?._id}`);
+                      toast.success('Link copied to clipboard!');
+                    }}
+                  >
+                    Copy Link
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => downloadQRCode(`${NEXT_PUBLIC_WEB_URL}/salon-details/${profileData?._id}`)}
+                  >
+                    Download QR
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-48 w-48 border border-gray-300 rounded-lg bg-gray-50">
+                <p className="text-gray-500">Loading QR code...</p>
+              </div>
+            )}
+            <p className="mt-4 text-sm text-center text-muted-foreground">
+              Scan with your camera to open the salon details page
+            </p>
+          </div>
+          <DialogFooter className="sm:justify-center">
+            <Button 
+              type="button" 
+              variant="secondary"
+              onClick={() => setQrModalOpen(false)}
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
 
 
