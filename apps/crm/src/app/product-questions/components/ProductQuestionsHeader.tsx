@@ -1,5 +1,5 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
-import { MessageSquare } from 'lucide-react';
+import { Card, CardContent } from '@repo/ui/card';
+import { MessageSquare, CheckCircle, Clock } from 'lucide-react';
 
 // Types
 type ProductQuestion = {
@@ -28,52 +28,56 @@ interface ProductQuestionsHeaderProps {
 
 const ProductQuestionsHeader = ({ questions }: ProductQuestionsHeaderProps) => {
   return (
-    <>
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Product Questions</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage and respond to customer questions about your products
-          </p>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Questions</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{questions.length}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Answered</CardTitle>
-            <MessageSquare className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {questions.filter((q: ProductQuestion) => q.isAnswered).length}
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-primary mb-1">Total Questions</p>
+              <p className="text-2xl font-bold text-primary">{questions.length}</p>
+              <p className="text-xs text-primary/70 mt-1">Total customer questions</p>
             </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
-            <MessageSquare className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {questions.filter((q: ProductQuestion) => !q.isAnswered).length}
+            <div className="p-3 bg-primary/10 rounded-full transition-colors">
+              <MessageSquare className="h-6 w-6 text-primary" />
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-secondary-foreground mb-1">Answered</p>
+              <p className="text-2xl font-bold text-secondary-foreground">
+                {questions.filter((q: ProductQuestion) => q.isAnswered).length}
+              </p>
+              <p className="text-xs text-secondary-foreground/70 mt-1">Successfully resolved</p>
+            </div>
+            <div className="p-3 bg-primary/10 rounded-full transition-colors">
+              <CheckCircle className="h-6 w-6 text-secondary-foreground" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      
+      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-secondary-foreground mb-1">Pending</p>
+              <p className="text-2xl font-bold text-secondary-foreground">
+                {questions.filter((q: ProductQuestion) => !q.isAnswered).length}
+              </p>
+              <p className="text-xs text-secondary-foreground/70 mt-1">Awaiting response</p>
+            </div>
+            <div className="p-3 bg-primary/10 rounded-full transition-colors">
+              <Clock className="h-6 w-6 text-secondary-foreground" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

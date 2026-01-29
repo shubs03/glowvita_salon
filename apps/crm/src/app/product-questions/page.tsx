@@ -149,47 +149,63 @@ export default function ProductQuestionsPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <ProductQuestionsHeader questions={questions} />
-      
-      <ProductQuestionsFilters
-        searchTerm={searchTerm}
-        filterStatus={filterStatus}
-        onSearchChange={setSearchTerm}
-        onFilterChange={setFilterStatus}
-      />
-      
-      <ProductQuestionsTable
-        questions={questions}
-        filteredQuestions={filteredQuestions}
-        searchTerm={searchTerm}
-        isLoading={isLoading}
-        onAnswerClick={handleOpenAnswerDialog}
-        onDeleteClick={(question) => {
-          setQuestionToDelete(question);
-          setIsDeleteDialogOpen(true);
-        }}
-      />
-      
-      <AnswerQuestionDialog
-        isOpen={isAnswerDialogOpen}
-        selectedQuestion={selectedQuestion}
-        answerText={answerText}
-        publishAnswer={publishAnswer}
-        isAnswering={isAnswering}
-        onOpenChange={setIsAnswerDialogOpen}
-        onAnswerTextChange={setAnswerText}
-        onPublishAnswerChange={setPublishAnswer}
-        onSubmit={handleSubmitAnswer}
-      />
-      
-      <DeleteQuestionDialog
-        isOpen={isDeleteDialogOpen}
-        questionToDelete={questionToDelete}
-        isDeleting={isDeleting}
-        onOpenChange={setIsDeleteDialogOpen}
-        onConfirm={handleDeleteQuestion}
-      />
+    <div className="min-h-screen bg-background">
+      <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Enhanced Header Section matching staff page design */}
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl font-bold font-headline mb-1 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
+                Product Questions
+              </h1>
+              <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl">
+                Manage and respond to customer questions about your products
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <ProductQuestionsHeader questions={questions} />
+        
+        <ProductQuestionsFilters
+          searchTerm={searchTerm}
+          filterStatus={filterStatus}
+          onSearchChange={setSearchTerm}
+          onFilterChange={setFilterStatus}
+        />
+        
+        <ProductQuestionsTable
+          questions={questions}
+          filteredQuestions={filteredQuestions}
+          searchTerm={searchTerm}
+          isLoading={isLoading}
+          onAnswerClick={handleOpenAnswerDialog}
+          onDeleteClick={(question) => {
+            setQuestionToDelete(question);
+            setIsDeleteDialogOpen(true);
+          }}
+        />
+        
+        <AnswerQuestionDialog
+          isOpen={isAnswerDialogOpen}
+          selectedQuestion={selectedQuestion}
+          answerText={answerText}
+          publishAnswer={publishAnswer}
+          isAnswering={isAnswering}
+          onOpenChange={setIsAnswerDialogOpen}
+          onAnswerTextChange={setAnswerText}
+          onPublishAnswerChange={setPublishAnswer}
+          onSubmit={handleSubmitAnswer}
+        />
+        
+        <DeleteQuestionDialog
+          isOpen={isDeleteDialogOpen}
+          questionToDelete={questionToDelete}
+          isDeleting={isDeleting}
+          onOpenChange={setIsDeleteDialogOpen}
+          onConfirm={handleDeleteQuestion}
+        />
+      </div>
     </div>
   );
 }

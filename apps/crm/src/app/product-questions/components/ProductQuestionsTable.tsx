@@ -1,4 +1,3 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
 import { Skeleton } from '@repo/ui/skeleton';
@@ -46,14 +45,14 @@ const ProductQuestionsTable = ({
   onDeleteClick
 }: ProductQuestionsTableProps) => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Questions List</CardTitle>
-        <CardDescription>
-          {filteredQuestions.length} question{filteredQuestions.length !== 1 ? 's' : ''} found
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 overflow-auto p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-xl font-semibold">Questions List</h3>
+          <p className="text-sm text-muted-foreground">
+            {filteredQuestions.length} question{filteredQuestions.length !== 1 ? 's' : ''} found
+          </p>
+        </div>
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3, 4, 5].map((i) => (
@@ -188,8 +187,8 @@ const ProductQuestionsTable = ({
             </Table>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };
 
