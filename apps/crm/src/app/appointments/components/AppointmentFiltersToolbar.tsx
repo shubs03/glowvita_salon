@@ -61,7 +61,17 @@ const AppointmentFiltersToolbar = ({
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
+          
           <div className="flex gap-3 w-full sm:w-auto">
+            {exportData && exportColumns && (
+              <ExportButtons
+                data={exportData}
+                filename={exportFilename || "appointments_export"}
+                title={exportTitle || "Appointments Report"}
+                columns={exportColumns}
+                className="h-12 px-4 rounded-lg"
+              />
+            )}
             <Button
               onClick={onAddAppointment}
               className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1"

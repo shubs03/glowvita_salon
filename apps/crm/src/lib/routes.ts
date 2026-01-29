@@ -30,7 +30,7 @@ export const vendorNavItems: NavItem[] = [
   { title: "Sales", href: "/sales", Icon: FaDollarSign, permission: 'sales_view' },
   { title: "Invoice Management", href: "/invoice-management", Icon: FaReceipt, permission: 'invoice_management_view' },
   { title: "Orders", href: "/orders", Icon: FaShoppingCart, permission: 'orders_view' },
-  { title: "Shipping", href: "/shipping", Icon: FaShippingFast, permission: 'shipping_view' },
+  { title: "Shipping Configurations", href: "/shipping", Icon: FaShippingFast, permission: 'shipping_view' },
   { title: "Settlements", href: "/settlements", Icon: FaMoneyCheckAlt, permission: 'settlements_view' },
   { title: "Expenses", href: "/expenses", Icon: FaReceipt, permission: 'expenses_view' },
   { title: "Offers & Coupons", href: "/offers-coupons", Icon: FaGift, permission: 'offers_view' },
