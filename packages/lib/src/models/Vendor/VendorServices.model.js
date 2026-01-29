@@ -117,6 +117,12 @@ const serviceSchema = new mongoose.Schema(
       enum: ["pending", "approved", "disapproved"],
       default: "pending",
     },
+    rejectionReason: {
+      type: String,
+      trim: true,
+      default: null,
+      maxlength: 500,
+    },
     createdAt: {
       type: Date,
       default: Date.now,

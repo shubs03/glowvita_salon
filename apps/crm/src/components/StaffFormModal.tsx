@@ -12,6 +12,7 @@ import { Checkbox } from '@repo/ui/checkbox';
 import { Card, CardHeader, CardTitle, CardContent } from '@repo/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
 import { Switch } from '@repo/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { useCreateStaffMutation, useUpdateStaffMutation, useGetWorkingHoursQuery, useGetStaffEarningsQuery, useRecordStaffPayoutMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
@@ -275,6 +276,7 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
     };
 
     const [payoutAmount, setPayoutAmount] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('Cash');
     const [payoutNotes, setPayoutNotes] = useState('');
 
     const handleRecordPayout = async () => {
@@ -287,12 +289,14 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
             await recordPayout({
                 id: staff._id,
                 amount: parseFloat(payoutAmount),
+                paymentMethod: paymentMethod,
                 notes: payoutNotes,
                 payoutDate: new Date()
             }).unwrap();
 
             toast.success("Payout recorded successfully");
             setPayoutAmount('');
+            setPaymentMethod('Cash');
             setPayoutNotes('');
             refetchEarnings();
         } catch (error: any) {
@@ -317,8 +321,8 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
                                 type="button"
                                 onClick={() => setDateFilter(filter)}
                                 className={`px-4 py-2 text-xs font-medium border first:rounded-l-lg last:rounded-r-lg ${dateFilter === filter
-                                        ? 'z-10 bg-primary text-primary-foreground ring-1 ring-primary'
-                                        : 'bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
+                                    ? 'z-10 bg-primary text-primary-foreground ring-1 ring-primary'
+                                    : 'bg-white text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50'
                                     }`}
                             >
                                 {filter.charAt(0).toUpperCase() + filter.slice(1)}
@@ -379,6 +383,22 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
                                     onChange={(e) => setPayoutAmount(e.target.value)}
                                     placeholder="Enter amount to pay"
                                 />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="paymentMethod">Payment Method</Label>
+                                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                                    <SelectTrigger id="paymentMethod">
+                                        <SelectValue placeholder="Select payment method" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Cash">Cash</SelectItem>
+                                        <SelectItem value="UPI">UPI</SelectItem>
+                                        <SelectItem value="Net Banking">Net Banking</SelectItem>
+                                        <SelectItem value="NEFT">NEFT</SelectItem>
+                                        <SelectItem value="Card">Card</SelectItem>
+                                        <SelectItem value="Check">Check</SelectItem>
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="payoutNotes">Notes</Label>
@@ -1087,7 +1107,7 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
                                 <TabsTrigger value="permissions">Access</TabsTrigger>
                                 <TabsTrigger value="timing">Timing</TabsTrigger>
                                 <TabsTrigger value="blockTime">Block</TabsTrigger>
-                                <TabsTrigger value="earnings" disabled={!staff && !hideTabs}>Earnings</TabsTrigger>
+
                             </TabsList>
                         )}
                         <TabsContent value="personal" className="py-4">

@@ -5,8 +5,9 @@ export function useSubscriptionCheck() {
     const { user } = useAppSelector(selectCrmAuth);
 
     if (!user || !user.subscription) {
+        // Assume NOT expired while loading or if data is missing to prevent UI flashes
         return {
-            isExpired: true,
+            isExpired: false,
             daysRemaining: 0,
             willExpireSoon: false,
             subscription: null
@@ -16,10 +17,38 @@ export function useSubscriptionCheck() {
     const { subscription } = user;
     const now = new Date();
     const endDate = subscription.endDate ? new Date(subscription.endDate) : null;
+    const status = (subscription.status || '').toLowerCase().trim();
 
-    // Check if subscription is expired
-    const isStatusExpired = subscription.status?.toLowerCase() === 'expired';
-    const isDateExpired = endDate ? endDate <= now : true;
+    // If status is explicitly "active", check only the end date
+    const isStatusActive = status === 'active';
+
+    // Check if subscription status indicates it's not active
+    const expiredStatuses = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'];
+    const isStatusExpired = expiredStatuses.includes(status);
+
+    // Check if the subscription end date has passed
+    const isDateExpired = endDate ? endDate <= now : false;
+
+    console.log('Subscription Check:', {
+        status,
+        isStatusActive,
+        isStatusExpired,
+        isDateExpired,
+        endDate: endDate?.toISOString(),
+        now: now.toISOString(),
+    });
+
+    // If status is active AND date hasn't expired, subscription is valid
+    if (isStatusActive && !isDateExpired) {
+        return {
+            isExpired: false,
+            daysRemaining: endDate ? Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 3600 * 24)) : 0,
+            willExpireSoon: endDate ? Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 3600 * 24)) <= 7 : false,
+            subscription
+        };
+    }
+
+    // If status is in expired list OR date has passed, subscription is expired
     const isExpired = isStatusExpired || isDateExpired;
 
     // Calculate days remaining

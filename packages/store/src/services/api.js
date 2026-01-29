@@ -552,10 +552,10 @@ export const glowvitaApi = createApi({
       providesTags: ["PendingServices"],
     }),
     updateServiceStatus: builder.mutation({
-      query: ({ serviceId, status }) => ({
+      query: ({ serviceId, status, rejectionReason }) => ({
         url: "/admin/services/service-approval",
         method: "PATCH",
-        body: { serviceId, status },
+        body: { serviceId, status, rejectionReason },
       }),
       invalidatesTags: ["PendingServices", "VendorServices"],
     }),
@@ -566,10 +566,10 @@ export const glowvitaApi = createApi({
       providesTags: ["PendingWeddingPackages"],
     }),
     updateWeddingPackageStatus: builder.mutation({
-      query: ({ packageId, status }) => ({
+      query: ({ packageId, status, rejectionReason }) => ({
         url: "/admin/wedding-packages/approval",
         method: "PATCH",
-        body: { packageId, status },
+        body: { packageId, status, rejectionReason },
       }),
       invalidatesTags: ["PendingWeddingPackages", "VendorWeddingPackages", "PublicVendorWeddingPackages"],
     }),
@@ -1411,20 +1411,20 @@ export const glowvitaApi = createApi({
 
     // Update Vendor Product Status
     updateVendorProductStatus: builder.mutation({
-      query: ({ productId, status }) => ({
+      query: ({ productId, status, rejectionReason }) => ({
         url: "/admin/product-approval/vendor",
         method: "PATCH",
-        body: { productId, status },
+        body: { productId, status, rejectionReason },
       }),
       invalidatesTags: ["Product", "CrmProducts"],
     }),
 
     // Update Supplier Product Status
     updateSupplierProductStatus: builder.mutation({
-      query: ({ productId, status }) => ({
+      query: ({ productId, status, rejectionReason }) => ({
         url: "/admin/product-approval/supplier",
         method: "PATCH",
-        body: { productId, status },
+        body: { productId, status, rejectionReason },
       }),
       invalidatesTags: ["Product", "CrmProducts"],
     }),
