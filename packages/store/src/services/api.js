@@ -2335,11 +2335,12 @@ export const glowvitaApi = createApi({
 
     // Get available slots with caching
     getAvailableSlots: builder.query({
-      query: ({ vendorId, staffId, serviceIds, date, isHomeService, location }) => {
+      query: ({ vendorId, staffId, serviceIds, addOnIds, date, isHomeService, location }) => {
         const params = new URLSearchParams({
           vendorId,
           staffId: staffId || 'any',
           ...(serviceIds && { serviceIds: Array.isArray(serviceIds) ? serviceIds.join(',') : serviceIds }),
+          ...(addOnIds && { addOnIds: Array.isArray(addOnIds) ? addOnIds.join(',') : addOnIds }),
           date: date,
           isHomeService: isHomeService?.toString() || 'false',
           ...(location?.lat && { lat: location.lat.toString() }),

@@ -75,22 +75,40 @@ export async function POST(request) {
     }
 
     // Generate referralCode for users who don't have one
-    if (userType === 'supplier' && !user.referralCode) {
-      const referralCode = await generateReferralCode(user.shopName || user.firstName, SupplierModel);
-      await SupplierModel.findByIdAndUpdate(user._id, { referralCode });
-      user.referralCode = referralCode;
+    if (!user.referralCode) {
+        let nameForCode = '';
+        if (userType === 'supplier') {
+            nameForCode = user.shopName || user.firstName;
+        } else if (userType === 'doctor') {
+            nameForCode = user.name || user.firstName;
+        } else if (userType === 'vendor') {
+            nameForCode = user.businessName || user.firstName;
+        }
+        
+        console.log(`Generating referral code for ${userType}:`, { 
+            nameForCode, 
+            hasShopName: !!user.shopName,
+            hasName: !!user.name,
+            hasBusinessName: !!user.businessName,
+            hasFirstName: !!user.firstName
+        });
+        
+        if (nameForCode) {
+            const referralCode = await generateReferralCode(nameForCode, Model);
+            await Model.findByIdAndUpdate(user._id, { referralCode });
+            user.referralCode = referralCode;
+            console.log(`Generated referral code: ${referralCode}`);
+        } else {
+            console.log(`Could not generate referral code - no name field found for ${userType}`);
+        }
     }
 
-    if (userType === 'doctor' && !user.referralCode) {
-      const referralCode = await generateReferralCode(user.name || user.firstName, DoctorModel);
-      await DoctorModel.findByIdAndUpdate(user._id, { referralCode });
-      user.referralCode = referralCode;
-    }
-
-    if (userType === 'vendor' && !user.referralCode) {
-      const referralCode = await generateReferralCode(user.businessName || user.firstName, VendorModel);
-      await VendorModel.findByIdAndUpdate(user._id, { referralCode });
-      user.referralCode = referralCode;
+    // Reload the user from the database to ensure all fields are included
+    if (user.referralCode) {
+      const reloadedUser = await Model.findById(user._id);
+      if (reloadedUser) {
+        user = reloadedUser;
+      }
     }
 
     const { accessToken, refreshToken } = generateTokens(user._id, userType, permissions);

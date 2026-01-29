@@ -935,7 +935,8 @@ function BookingPageContent() {
         // Check if this service already has an assignment
         const existingAssignment = serviceStaffAssignments.find(assignment => assignment.service.id === service.id);
         if (existingAssignment) {
-          return existingAssignment;
+          // IMPORTANT: Re-use the staff but UPDATE the service object to include latest addons/duration
+          return { ...existingAssignment, service };
         }
         // Create a new assignment with no staff selected
         return { service, staff: null };
@@ -1649,12 +1650,18 @@ function BookingPageContent() {
           platformFee: appointmentData.platformFee,
           serviceTax: appointmentData.serviceTax,
           taxRate: appointmentData.taxRate,
-          addOns: primaryService.selectedAddons || [],
+          couponCode: appliedOffer?.code || offerCode,
+          discountAmount: priceBreakdown?.discountAmount || 0,
           // Include all service items with their add-ons for multi-service bookings
           serviceItems: appointmentData.serviceItems,
+          // Extract addOnIds for backend parsing
+          addOnIds: appointmentData.serviceItems.flatMap((item: any) =>
+            item.addOns?.map((a: any) => a._id || a.id) || []
+          ),
+          selectedAddOns: appointmentData.serviceItems.flatMap((item: any) =>
+            item.addOns?.map((a: any) => a._id || a.id) || []
+          ),
           isMultiService: isMultiService,
-          couponCode: appliedOffer?.code || offerCode,
-          discountAmount: priceBreakdown?.discountAmount || 0
         }).unwrap();
 
         if (lockResult.success) {

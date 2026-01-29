@@ -2,87 +2,57 @@
 "use client";
 
 import { useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
-import { Button } from "@repo/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
-import { Pagination } from "@repo/ui/pagination";
-import { Copy, Gift, UserPlus, Users, Share2, CheckCircle, TrendingUp, Send } from 'lucide-react';
-import { Input } from '@repo/ui/input';
+import { Card, CardContent } from "@repo/ui/card";
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
-import { useGetCrmReferralsQuery, useGetCrmReferralSettingsQuery } from '@repo/store/api';
-import { Skeleton } from '@repo/ui/skeleton';
+import { useGetCrmReferralsQuery, useGetCrmReferralSettingsQuery, useGetProfileQuery } from '@repo/store/api';
+import { Referral } from './types';
 
-type Referral = {
-    _id: string;
-    referee: string;
-    date: string;
-    status: 'Pending' | 'Completed' | 'Bonus Paid';
-    bonus: string;
+// Import new components
+import ReferralStatsCards from './components/ReferralStatsCards';
+import ReferralTable from './components/ReferralTable';
+import ReferralPaginationControls from './components/ReferralPaginationControls';
+import HowItWorksSection from './components/HowItWorksSection';
+import ReferralLinkCard from './components/ReferralLinkCard';
+import HeroSection from './components/HeroSection';
+import HeaderSection from './components/HeaderSection';
+import ReferralSkeletonLoader from './components/ReferralSkeletonLoader';
+
+const getRoleContent = (role: string) => {
+    switch(role) {
+        case 'doctor':
+            return { 
+                title: 'Refer a Doctor', 
+                description: 'Earn rewards by inviting other doctors and medical professionals to join our platform.',
+                networkText: 'Strengthen your medical network.',
+                shareTip: 'Share your link with doctors and medical professionals.',
+                signupText: 'Your colleague signs up on our platform using your referral link.',
+                professionalsText: 'Strengthen your medical network.',
+                successText: 'Doctors who successfully joined'
+            };
+        case 'supplier':
+            return { 
+                title: 'Refer a Supplier', 
+                description: 'Earn rewards by inviting other suppliers and vendors to join our marketplace.',
+                networkText: 'Expand your supplier network.',
+                shareTip: 'Share your link with suppliers and vendors.',
+                signupText: 'Your partner signs up on our platform using your referral link.',
+                professionalsText: 'Expand your supplier network.',
+                successText: 'Suppliers who successfully joined'
+            };
+        case 'vendor':
+        default:
+            return { 
+                title: 'Refer a Vendor', 
+                description: 'Earn rewards by inviting other salon owners and beauty professionals to join.',
+                networkText: 'Strengthen your professional network.',
+                shareTip: 'Share your link with salon owners and beauty professionals.',
+                signupText: 'Your colleague signs up on our platform using your referral link.',
+                professionalsText: 'Strengthen your professional network.',
+                successText: 'Professionals who successfully joined'
+            };
+    }
 };
-
-const SkeletonLoader = () => (
-    <div className="p-4 sm:p-6 lg:p-8">
-        <Skeleton className="h-8 w-64 mb-6" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-            {[...Array(3)].map((_, i) => (
-                <Card key={i}>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <Skeleton className="h-4 w-2/4" />
-                        <Skeleton className="h-4 w-4 rounded-full" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-8 w-1/3 mb-2" />
-                        <Skeleton className="h-3 w-3/4" />
-                    </CardContent>
-                </Card>
-            ))}
-        </div>
-        <Card className="mb-6">
-            <CardHeader>
-                <Skeleton className="h-6 w-1/3 mb-2" />
-                <Skeleton className="h-4 w-2/3" />
-            </CardHeader>
-            <CardContent>
-                <div className="flex gap-2">
-                    <Skeleton className="h-10 flex-grow" />
-                    <Skeleton className="h-10 w-28" />
-                </div>
-            </CardContent>
-        </Card>
-        <Card>
-            <CardHeader>
-                <Skeleton className="h-6 w-1/3 mb-2" />
-                <Skeleton className="h-4 w-2/3" />
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-2">
-                    {[...Array(3)].map((_, i) => (
-                        <div key={i} className="grid grid-cols-4 gap-4">
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-4 w-full" />
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
-    </div>
-);
-
-const HowItWorksStep = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) => (
-    <div className="relative flex items-start gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-            {icon}
-        </div>
-        <div>
-            <h4 className="text-lg font-semibold">{title}</h4>
-            <p className="text-muted-foreground">{description}</p>
-        </div>
-    </div>
-);
-
 
 export default function ReferralsPage() {
     const { user, role, isLoading: isAuthLoading } = useCrmAuth();
@@ -99,12 +69,20 @@ export default function ReferralsPage() {
         skip: !user
     });
     const { data: settingsData, isLoading: isSettingsLoading } = useGetCrmReferralSettingsQuery(referralType);
+    
+    // Get profile data to ensure we have the latest referral code
+    const { data: profileData } = useGetProfileQuery(undefined, {
+        skip: !user
+    });
 
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
     
-    const referralLink = user?.referralCode && typeof window !== 'undefined'
-        ? `${window.location.origin}/auth/register?ref=${user.referralCode}`
+    // Use profile data if available, otherwise fall back to user data
+    const userData = profileData?.user || user;
+    
+    const referralLink = userData?.referralCode && typeof window !== 'undefined'
+        ? `${window.location.origin}/auth/register?ref=${userData.referralCode}`
         : "Loading your referral link...";
 
     const referrerName = useMemo(() => {
@@ -124,7 +102,7 @@ export default function ReferralsPage() {
     const totalPages = Math.ceil(referrals.length / itemsPerPage);
 
     const handleCopyLink = () => {
-        if (user?.referralCode) {
+        if (userData?.referralCode) {
             navigator.clipboard.writeText(referralLink);
             toast.success("Referral link copied to clipboard!");
         } else {
@@ -141,46 +119,10 @@ export default function ReferralsPage() {
         }
     };
 
-    const getRoleContent = () => {
-        switch(role) {
-            case 'doctor':
-                return { 
-                    title: 'Refer a Doctor', 
-                    description: 'Earn rewards by inviting other doctors and medical professionals to join our platform.',
-                    networkText: 'Strengthen your medical network.',
-                    shareTip: 'Share your link with doctors and medical professionals.',
-                    signupText: 'Your colleague signs up on our platform using your referral link.',
-                    professionalsText: 'Doctors you\'ve referred',
-                    successText: 'Doctors who successfully joined'
-                };
-            case 'supplier':
-                return { 
-                    title: 'Refer a Supplier', 
-                    description: 'Earn rewards by inviting other suppliers and vendors to join our marketplace.',
-                    networkText: 'Expand your supplier network.',
-                    shareTip: 'Share your link with suppliers and vendors.',
-                    signupText: 'Your partner signs up on our platform using your referral link.',
-                    professionalsText: 'Suppliers you\'ve referred',
-                    successText: 'Suppliers who successfully joined'
-                };
-            case 'vendor':
-            default:
-                return { 
-                    title: 'Refer a Vendor', 
-                    description: 'Earn rewards by inviting other salon owners and beauty professionals to join.',
-                    networkText: 'Strengthen your professional network.',
-                    shareTip: 'Share your link with salon owners and beauty professionals.',
-                    signupText: 'Your colleague signs up on our platform using your referral link.',
-                    professionalsText: 'Professionals you\'ve referred',
-                    successText: 'Professionals who successfully joined'
-                };
-        }
-    }
-
-    const roleContent = getRoleContent();
+    const roleContent = getRoleContent(role || 'vendor');
     
     if (isAuthLoading || isReferralsLoading || isSettingsLoading) {
-        return <SkeletonLoader />;
+        return <ReferralSkeletonLoader />;
     }
     
     if (isError) {
@@ -195,160 +137,64 @@ export default function ReferralsPage() {
     const refereeBonus = settingsData?.refereeBonus?.bonusValue || 0;
 
     return (
-        <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-            <div>
-                <h1 className="text-2xl font-bold font-headline">{roleContent.title}</h1>
-                <p className="text-muted-foreground mt-1">{roleContent.description}</p>
-            </div>
+        <div className="min-h-screen bg-background">
+            <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
+                {/* Header Section */}
+                <HeaderSection title={roleContent.title} description={roleContent.description} />
 
-            <Card className="bg-gradient-to-br from-primary/90 to-primary text-primary-foreground overflow-hidden">
-                <div className="grid md:grid-cols-2 items-center">
-                    <div className="p-8">
-                        <h2 className="text-3xl font-bold mb-2">Grow Together, Earn Together</h2>
-                        <p className="mb-6 opacity-90 max-w-md">
-                            Invite fellow professionals to our platform. When they join, you both get rewarded. It's our way of saying thank you for helping our community grow.
-                        </p>
-                        <div className="space-y-3 text-sm">
-                           {settingsData?.referrerBonus && (
-                                <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Earn ₹{referrerBonus} for every successful referral.</span></div>
-                           )}
-                           {refereeBonusEnabled && (
-                               <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>Your friend gets ₹{refereeBonus} too!</span></div>
-                           )}
-                           <div className="flex items-center gap-3"><CheckCircle className="h-5 w-5 opacity-90"/><span>{roleContent.networkText}</span></div>
-                        </div>
-                    </div>
-                    <div className="hidden md:flex items-center justify-center p-8">
-                         <Gift className="w-48 h-48 text-primary-foreground opacity-20" />
-                    </div>
+                {/* Hero Section */}
+                <HeroSection 
+                    roleContent={roleContent} 
+                    referrerBonus={referrerBonus} 
+                    refereeBonusEnabled={refereeBonusEnabled} 
+                    refereeBonus={refereeBonus} 
+                />
+                
+                {/* How It Works Section */}
+                <HowItWorksSection 
+                    roleContent={roleContent} 
+                    refereeBonusEnabled={refereeBonusEnabled} 
+                    refereeBonus={refereeBonus} 
+                    referrerBonus={referrerBonus} 
+                />
+
+                {/* Referral Link Card */}
+                <ReferralLinkCard 
+                    referralLink={referralLink} 
+                    userReferralCode={userData?.referralCode} 
+                    onCopyLink={handleCopyLink} 
+                />
+
+                {/* Referral Stats Cards */}
+                <ReferralStatsCards 
+                    totalReferrals={referrals.length} 
+                    successfulReferrals={successfulReferrals} 
+                    totalBonusEarned={totalBonusEarned}
+                    roleContent={roleContent}
+                />
+                
+                {/* Referral History Table */}
+                <div className="flex-1 flex flex-col min-h-0">
+                    <Card className="flex-1 flex flex-col min-h-0">
+                        <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+                            <ReferralTable 
+                                currentItems={currentItems} 
+                                getStatusColor={getStatusColor} 
+                            />
+                        </CardContent>
+                    </Card>
                 </div>
-            </Card>
-            
-            <Card>
-                <CardHeader>
-                    <CardTitle>How It Works</CardTitle>
-                    <CardDescription>Follow these simple steps to start earning rewards.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid md:grid-cols-3 gap-8">
-                         <HowItWorksStep 
-                            icon={<Send className="w-6 h-6" />}
-                            title="1. Share Your Link"
-                            description={`${roleContent.shareTip} ${refereeBonusEnabled ? `They'll get a ₹${refereeBonus} bonus when they sign up!` : ''}`}
-                         />
-                         <HowItWorksStep 
-                            icon={<UserPlus className="w-6 h-6" />}
-                            title="2. They Sign Up"
-                            description={`${roleContent.signupText} We'll track the referral automatically.`}
-                         />
-                         <HowItWorksStep 
-                            icon={<Gift className="w-6 h-6" />}
-                            title="3. Earn Your Bonus"
-                            description={`Once their account is approved and they meet the criteria, you'll receive a ₹${referrerBonus} bonus. It's that simple!`}
-                         />
-                    </div>
-                </CardContent>
-            </Card>
 
-            <Card className="mb-6">
-                <CardHeader>
-                    <CardTitle>Your Unique Referral Link</CardTitle>
-                    <CardDescription>Share this link with other professionals. When they sign up using this link, you'll be credited for the referral.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                        <Input value={referralLink} readOnly className="bg-secondary text-base" />
-                        <Button onClick={handleCopyLink} className="w-full sm:w-auto" disabled={!user?.referralCode}>
-                            <Copy className="mr-2 h-4 w-4" /> Copy Link
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Referrals</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{referrals.length}</div>
-                        <p className="text-xs text-muted-foreground">{roleContent.professionalsText}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Successful Referrals</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-green-600">{successfulReferrals}</div>
-                        <p className="text-xs text-muted-foreground">{roleContent.successText}</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Bonus Earned</CardTitle>
-                        <Gift className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">₹{totalBonusEarned.toLocaleString()}</div>
-                        <p className="text-xs text-muted-foreground">Bonuses paid out to you</p>
-                    </CardContent>
-                </Card>
+                {/* Pagination Controls */}
+                <ReferralPaginationControls
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    itemsPerPage={itemsPerPage}
+                    totalItems={referrals.length}
+                    onPageChange={setCurrentPage}
+                    onItemsPerPageChange={setItemsPerPage}
+                />
             </div>
-            
-            <Card>
-                <CardHeader>
-                    <CardTitle>Referral History</CardTitle>
-                    <CardDescription>Track the status of your referred professionals.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                     <div className="overflow-x-auto no-scrollbar rounded-md border">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Referred Professional</TableHead>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Bonus</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {currentItems.length > 0 ? currentItems.map((referral: Referral) => (
-                                    <TableRow key={referral._id}>
-                                        <TableCell className="font-medium">{referral.referee}</TableCell>
-                                        <TableCell>{new Date(referral.date).toLocaleDateString()}</TableCell>
-                                        <TableCell>
-                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(referral.status)}`}>
-                                                {referral.status}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-right">₹{referral.bonus}</TableCell>
-                                    </TableRow>
-                                )) : (
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                                            You haven't referred anyone yet.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
-                    </div>
-                    {referrals.length > itemsPerPage && (
-                        <Pagination
-                            className="mt-4"
-                            currentPage={currentPage}
-                            totalPages={totalPages}
-                            onPageChange={setCurrentPage}
-                            itemsPerPage={itemsPerPage}
-                            onItemsPerPageChange={setItemsPerPage}
-                            totalItems={referrals.length}
-                        />
-                    )}
-                </CardContent>
-            </Card>
         </div>
     );
 }

@@ -45,14 +45,14 @@ export default function CalendarSection({
     const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
     return (
-      <div className="grid grid-cols-7 border-t border-l border-gray-200">
+      <div className="grid grid-cols-7 border-t border-l border-primary/20">
         {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, index) => (
           <div key={`day-${index}`} className="text-center font-medium p-2 bg-muted text-xs h-20 flex items-center justify-center">
             {day}
           </div>
         ))}
         {blanks.map((_, i) => (
-          <div key={`blank-${i}`} className="h-20 border-r border-b bg-muted/30"></div>
+          <div key={`blank-${i}`} className="h-20 border-r border-b border-primary/20 bg-muted/30"></div>
         ))}
         {days.map((day) => {
           const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
@@ -68,8 +68,8 @@ export default function CalendarSection({
             <div
               key={day}
               className={cn(
-                "h-24 border-r border-b border-gray-200 p-2 flex flex-col items-center cursor-pointer transition-colors",
-                isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'
+                "h-24 border-r border-b border-primary/20 p-2 flex flex-col items-center cursor-pointer transition-colors",
+                isSelected ? 'bg-primary/10' : 'hover:bg-primary/10'
               )}
               onClick={() => handleDayClick(day)}
             >
@@ -77,10 +77,10 @@ export default function CalendarSection({
                 className={cn(
                   "flex items-center justify-center w-6 h-6 text-xs font-medium rounded-full",
                   isToday
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-primary text-white'
                     : isSelected
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-700'
+                      ? 'bg-primary/20 text-primary'
+                      : 'text-foreground'
                 )}
               >
                 {day}
@@ -140,7 +140,7 @@ export default function CalendarSection({
       <CardContent>
         {isLoadingAppointments ? (
           <div className="flex items-center justify-center h-40">
-            <div className="text-gray-500">Loading appointments...</div>
+            <div className="text-muted-foreground">Loading appointments...</div>
           </div>
         ) : (
           renderCalendar()
