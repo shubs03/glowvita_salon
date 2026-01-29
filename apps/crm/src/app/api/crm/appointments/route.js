@@ -643,8 +643,10 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
 
             if (body.status === 'completed') {
                 try {
-                    // Use the existingAppointment we already fetched
-                    const currentAppt = existingAppointment;
+                    // Fetch current appointment to get staff and service details
+                    const currentAppt = await AppointmentModel.findOne({ _id: appointmentId, vendorId })
+                        .populate('staff', 'fullName position')
+                        .populate('client', 'fullName email phone');
 
                     if (currentAppt && currentAppt.staff) {
                         const { default: StaffModel } = await import('@repo/lib/models/Vendor/Staff.model');
@@ -663,8 +665,6 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                             // Also update service items if they exist
                             if (currentAppt.serviceItems && currentAppt.serviceItems.length > 0) {
                                 updateFields.serviceItems = currentAppt.serviceItems.map(item => {
-                                    // Logic could be more complex here to handle different staff per item, 
-                                    // but for now assumming primary staff or simplistic model
                                     if (item.staff && item.staff.toString() === staffMember._id.toString()) {
                                         return {
                                             ...item,
@@ -679,9 +679,13 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                             }
                         }
                     }
-                } catch (commissionError) {
-                    console.error("Error calculating commission during completion:", commissionError);
-                    // Don't block completion if commission calc fails, but log it
+
+                    // CENTRALIZED INVOICE GENERATION LOGIC
+                    const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+                    await InvoiceModel.createFromAppointment(appointmentId, vendorId);
+                    console.log(`Ensured sequential invoice exists for appointment ${appointmentId}`);
+                } catch (invoiceError) {
+                    console.error("Error in centralized invoice generation:", invoiceError);
                 }
             }
 

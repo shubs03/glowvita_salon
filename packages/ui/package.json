@@ -33,7 +33,8 @@
     "./page-container": "./src/page-container.tsx",
     "./components/landing/ProductCard": "./src/components/landing/ProductCard.tsx",
     "./components/landing/NewProductCard": "./src/components/landing/NewProductCard.tsx",
-    "./separator": "./src/separator.tsx"
+    "./separator": "./src/separator.tsx",
+    "./scroll-area": "./src/scroll-area.tsx"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

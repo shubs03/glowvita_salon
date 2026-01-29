@@ -91,6 +91,16 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
             updateObject.clientName = updateObject.clientName;
         }
 
+        if (updateObject.status === 'completed') {
+            try {
+                const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+                await InvoiceModel.createFromAppointment(appointmentId, vendorId);
+                console.log(`Ensured sequential invoice exists for appointment ${appointmentId}`);
+            } catch (invoiceError) {
+                console.error("Error in centralized invoice generation:", invoiceError);
+            }
+        }
+
         // Capture clientEmail if provided
         if (updateData.clientEmail) {
             updateObject.clientEmail = updateData.clientEmail;

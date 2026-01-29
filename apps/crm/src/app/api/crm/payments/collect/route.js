@@ -388,6 +388,17 @@ export const POST = authMiddlewareCrm(async (req) => {
       // If the update failed for some reason, use the original appointment
       const finalAppointment = updatedAppointment || appointment;
 
+      // TRIGGER CENTRALIZED INVOICE GENERATION if appointment is completed
+      if (finalAppointment.status === 'completed') {
+        try {
+          const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+          await InvoiceModel.createFromAppointment(appointmentId, vendorId);
+          console.log(`Ensured sequential invoice exists for appointment ${appointmentId} after payment`);
+        } catch (invoiceError) {
+          console.error("Error in centralized invoice generation after payment:", invoiceError);
+        }
+      }
+
       // Verify the update was successful
       if (updatedAppointment) {
         console.log('=== UPDATE VERIFICATION ===');

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@repo/ui/button";
@@ -98,6 +98,7 @@ interface Appointment {
   finalAmount?: number;
   amountPaid?: number;
   amountRemaining?: number;
+  invoiceNumber?: string;
 }
 
 interface AppointmentDetailViewProps {
@@ -870,7 +871,7 @@ export function AppointmentDetailView({
     if (!appointment) return null;
 
     return {
-      invoiceNumber: (() => {
+      invoiceNumber: appointment.invoiceNumber || (() => {
         const dateStr = appointment.date instanceof Date
           ? appointment.date.toISOString().split('T')[0].replace(/-/g, '')
           : String(appointment.date).split('T')[0].replace(/-/g, '');

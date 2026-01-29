@@ -192,7 +192,7 @@ export default function SupplierDashboard({
           <StatCard
             title="Total Revenue"
             value={metrics ? formatCurrency(metrics.totalRevenue) : '₹0'}
-            subtitle={hasNoData ? "No data" : "Overall earnings"}
+            subtitle="Overall earnings"
             change={hasNoData ? "No data" : "+8.5%"}
             icon={FaDollarSign}
             iconColor="text-primary"
@@ -200,7 +200,7 @@ export default function SupplierDashboard({
           <StatCard
             title="Total Orders"
             value={metrics ? formatNumber(metrics.totalOrders) : '0'}
-            subtitle={hasNoData ? "No data" : "Order count"}
+            subtitle="Order count"
             change={hasNoData ? "No data" : "+12.2%"}
             icon={FaClipboardList}
             iconColor="text-primary"
@@ -208,7 +208,7 @@ export default function SupplierDashboard({
           <StatCard
             title="Total Products"
             value={metrics ? formatNumber(metrics.totalProducts) : '0'}
-            subtitle={hasNoData ? "No data" : "Product count"}
+            subtitle="Product count"
             change={hasNoData ? "No data" : "+5.7%"}
             icon={FaBoxOpen}
             iconColor="text-primary"
@@ -216,7 +216,7 @@ export default function SupplierDashboard({
           <StatCard
             title="Pending Orders"
             value={metrics ? formatNumber(metrics.pendingOrders) : '0'}
-            subtitle={hasNoData ? "No data" : "Waiting orders"}
+            subtitle="Waiting orders"
             change={hasNoData ? "No data" : "-2.3%"}
             icon={FaClock}
             iconColor="text-primary"
@@ -224,7 +224,7 @@ export default function SupplierDashboard({
           <StatCard
             title="Shipped Orders"
             value={metrics ? formatNumber(metrics.shippedOrders) : '0'}
-            subtitle={hasNoData ? "No data" : "Shipped items"}
+            subtitle="Shipped items"
             change={hasNoData ? "No data" : "+15.7%"}
             icon={FaTruck}
             iconColor="text-primary"
@@ -232,7 +232,7 @@ export default function SupplierDashboard({
           <StatCard
             title="Delivered Orders"
             value={metrics ? formatNumber(metrics.deliveredOrders) : '0'}
-            subtitle={hasNoData ? "No data" : "Delivered items"}
+            subtitle="Delivered items"
             change={hasNoData ? "No data" : "+18.2%"}
             icon={FaStore}
             iconColor="text-primary"
@@ -240,7 +240,7 @@ export default function SupplierDashboard({
           <StatCard
             title="Cancelled Orders"
             value={metrics ? formatNumber(metrics.cancelledOrders) : '0'}
-            subtitle={hasNoData ? "No data" : "Cancelled items"}
+            subtitle="Cancelled items"
             change={hasNoData ? "No data" : "-3.1%"}
             icon={FaBan}
             iconColor="text-primary"
@@ -248,7 +248,7 @@ export default function SupplierDashboard({
           <StatCard
             title="Avg Order Value"
             value={metrics ? formatCurrency(metrics.avgOrderValue) : '₹0'}
-            subtitle={hasNoData ? "No data" : "Average value"}
+            subtitle="Average value"
             change={hasNoData ? "No data" : "+6.4%"}
             icon={FaShoppingBag}
             iconColor="text-primary"

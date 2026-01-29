@@ -128,7 +128,11 @@ const appointmentSchema = new mongoose.Schema(
     },
     clientEmail: {
       type: String,
-      default: null,
+      default: '',
+    },
+    clientPhone: {
+      type: String,
+      default: '',
     },
     startTime: {
       type: String,
@@ -259,6 +263,10 @@ const appointmentSchema = new mongoose.Schema(
         "no-show",
       ],
       default: "scheduled",
+    },
+    invoiceNumber: {
+      type: String,
+      index: true,
     },
     // Fields for optimistic locking
     lockToken: {
