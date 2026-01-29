@@ -163,12 +163,23 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
         Cancelled: { color: 'bg-red-100 text-red-800' },
     };
 
-    const isAppointmentCancellable = (appointmentDate: string, status: string) => {
-        if (status === 'Cancelled' || status === 'Completed') return false;
+    const isAppointmentCancellable = (appointmentDate: string, status: string, startTime?: string) => {
+        if (['Cancelled', 'Completed', 'no_show', 'in_progress', 'partially-completed'].includes(status)) return false;
+
         const now = new Date();
         const apptDate = new Date(appointmentDate);
-        const hoursDifference = (apptDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-        return hoursDifference > 24;
+
+        // If startTime is provided (e.g. "12:30"), adjust the date to reflect this time
+        if (startTime) {
+            const [hours, minutes] = startTime.split(':').map(Number);
+            if (!isNaN(hours) && !isNaN(minutes)) {
+                apptDate.setHours(hours, minutes, 0, 0);
+            }
+        }
+
+        const minutesDifference = (apptDate.getTime() - now.getTime()) / (1000 * 60);
+        // Allow cancellation if it's more than 30 minutes before the service
+        return minutesDifference > 30;
     };
 
     // Safely parse the date for display
@@ -309,7 +320,7 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
                         <Button variant="outline" className="justify-start gap-2" onClick={handleGetDirections}>
                             <MapPin className="h-4 w-4" /> Get Directions
                         </Button>
-                        <Button variant="outline" className="justify-start gap-2" disabled={!isAppointmentCancellable(appointment.date, appointment.status)} onClick={() => onCancelClick(appointment)}>
+                        <Button variant="outline" className="justify-start gap-2" disabled={!isAppointmentCancellable(appointment.date, appointment.status, appointment.startTime)} onClick={() => onCancelClick(appointment)}>
                             <Edit className="h-4 w-4" /> Manage Appointment
                         </Button>
                         <Button variant="outline" className="justify-start gap-2" onClick={handleSalonDetails} disabled={!appointment.vendorId}>
