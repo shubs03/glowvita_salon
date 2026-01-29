@@ -1043,21 +1043,21 @@ export default function ServicesTab({
           {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search services..."
-                className="pl-8"
+                className="pl-10 h-12 rounded-lg border border-border focus:border-primary text-base"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
 
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-lg border-border hover:border-primary">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
-              <SelectContent className="max-h-60 overflow-y-auto">
+              <SelectContent className="rounded-lg border border-border/40">
                 <SelectItem value="all">All Categories</SelectItem>
                 {[...categories.slice(0, 5), ...categories.slice(5)].map((category: any) => (
                   <SelectItem key={category._id} value={category._id}>
@@ -1069,41 +1069,24 @@ export default function ServicesTab({
           </div>
 
           {/* Services Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {servicesLoading || servicesFetching ? (
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4">
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-2"></div>
-                        Loading services...
-                      </div>
-                    </TableCell>
+                    <TableHead>Service</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Duration</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
-                ) : services.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4">
-                      No services found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  services.map((service) => (
-                    <TableRow key={service._id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{service.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {service.categoryName}
-                          </div>
+                </TableHeader>
+                <TableBody>
+                  {servicesLoading || servicesFetching ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-4">
+                        <div className="flex items-center justify-center">
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary mr-2"></div>
+                          Loading services...
                         </div>
                       </TableCell>
                       <TableCell>₹{service.price.toFixed(2)}</TableCell>
@@ -1118,10 +1101,35 @@ export default function ServicesTab({
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    services.map((service) => (
+                      <TableRow key={service._id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{service.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {service.categoryName}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>₹{service.price.toFixed(2)}</TableCell>
+                        <TableCell>{service.duration} min</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            onClick={() => addToCart(service)}
+                            className="h-8 px-2"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -1143,11 +1151,11 @@ export default function ServicesTab({
             {/* Search Box */}
             <div className="mb-3">
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Search clients by name, email, or phone..."
-                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="pl-10 h-12 rounded-lg border border-border focus:border-primary text-base"
                   value={clientSearchTerm}
                   onChange={(e) => setClientSearchTerm(e.target.value)}
                   onFocus={() => setIsSearchFocused(true)}
@@ -1193,7 +1201,7 @@ export default function ServicesTab({
                 <Button
                   variant="outline"
                   onClick={() => setIsAddClientModalOpen(true)}
-                  className="w-full border-gray-300 hover:bg-gray-50 text-sm h-10"
+                  className="w-full h-12 rounded-lg border-border hover:border-primary text-base"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add New Client
@@ -1245,84 +1253,121 @@ export default function ServicesTab({
           </div>
 
           {/* Cart Items */}
-          <div className="rounded-md border mb-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Qty</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cart.length === 0 ? (
+          <div className="flex-1 flex flex-col min-h-0 mb-6">
+            <div className="flex-1 overflow-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      <ShoppingCart className="mx-auto h-12 w-12 opacity-50 mb-2" />
-                      <div>Your cart is empty</div>
-                      <div className="text-sm">Add services from the catalog</div>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Qty</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                  ) : (
+                  cart.map((item, index) => (
+                  <TableRow key={`${item._id}-${index}`}>
+                    <TableCell>
+                      <div className="cursor-pointer p-2 rounded hover:bg-muted/50" onClick={() => handleEditItemClick(item, index)}>
+                        <div className="font-medium text-green-600">{item.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {item.duration} min
+                        </div>
+                        {item.addOns && item.addOns.length > 0 && (
+                          <div className="mt-1 pl-2 border-l-2 border-primary/20">
+                            {item.addOns.map((addon, i) => (
+                              <div key={i} className="text-xs text-muted-foreground flex justify-between">
+                                <span>+ {addon.name}</span>
+                                <span>₹{addon.price}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>₹{item.price.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => updateQuantity(index, item.quantity - 1)}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <div className="mx-2 w-8 text-center">{item.quantity}</div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => updateQuantity(index, item.quantity + 1)}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>₹{item.totalPrice.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeFromCart(index)}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  cart.map((item, index) => (
-                    <TableRow key={`${item._id}-${index}`}>
-                      <TableCell>
-                        <div className="cursor-pointer p-2 rounded hover:bg-muted/50" onClick={() => handleEditItemClick(item, index)}>
-                          <div className="font-medium text-green-600">{item.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {item.duration} min
-                          </div>
-                          {item.addOns && item.addOns.length > 0 && (
-                            <div className="mt-1 pl-2 border-l-2 border-primary/20">
-                              {item.addOns.map((addon, i) => (
-                                <div key={i} className="text-xs text-muted-foreground flex justify-between">
-                                  <span>+ {addon.name}</span>
-                                  <span>₹{addon.price}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                  ) : (
+                    cart.map((item) => (
+                  <TableRow key={item._id}>
+                    <TableCell>
+                      <div className="cursor-pointer text-green-600 p-2 rounded" onClick={() => handleEditItemClick(item)}>
+                        <div className="font-medium">{item.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {item.duration} min
                         </div>
-                      </TableCell>
-                      <TableCell>₹{item.price.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateQuantity(index, item.quantity - 1)}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <div className="mx-2 w-8 text-center">{item.quantity}</div>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateQuantity(index, item.quantity + 1)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell>₹{item.totalPrice.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">
+                      </div>
+                    </TableCell>
+                    <TableCell>₹{item.price.toFixed(2)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="icon"
-                          onClick={() => removeFromCart(index)}
+                          className="h-8 w-8 p-0"
+                          onClick={() => updateQuantity(item._id, item.quantity - 1)}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Minus className="h-3 w-3" />
                         </Button>
-                      </TableCell>
-                    </TableRow>
+                        <div className="mx-2 w-8 text-center">{item.quantity}</div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 p-0"
+                          onClick={() => updateQuantity(item._id, item.quantity + 1)}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell>₹{item.totalPrice.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeFromCart(item._id)}
+                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                   ))
-                )}
-              </TableBody>
-            </Table>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
 
           {/* Order Summary */}
@@ -1355,7 +1400,7 @@ export default function ServicesTab({
                 variant="outline"
                 onClick={clearCart}
                 disabled={cart.length === 0}
-                className="flex-1"
+                className="flex-1 h-12 rounded-lg border-border hover:border-primary"
               >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Clear
@@ -1363,7 +1408,7 @@ export default function ServicesTab({
               <Button
                 onClick={processPayment}
                 disabled={cart.length === 0}
-                className="flex-1"
+                className="flex-1 h-12 rounded-lg bg-primary hover:bg-primary/90"
               >
                 Proceed to Payment
               </Button>

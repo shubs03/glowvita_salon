@@ -2,23 +2,17 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@repo/ui/card";
-import { Button } from "@repo/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@repo/ui/dialog";
-import dynamic from "next/dynamic";
-import { useAppDispatch } from "@repo/store/hooks";
-import { glowvitaApi } from "@repo/store/api";
-import { startOfDay, endOfDay } from "date-fns";
-import { Plus } from "lucide-react";
-import { toast } from "sonner";
-import { AppointmentDetailCard } from "./components/AppointmentDetailCard";
 import { ExportButtons } from "@/components/ExportButtons";
 import { Appointment } from "../../../../../packages/types/src/appointment";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@repo/ui/dialog';
+import { Button } from "@repo/ui/button";
+import { Plus } from "lucide-react";
+import dynamic from 'next/dynamic';
+import { useAppDispatch } from '@repo/store/hooks';
+import { glowvitaApi } from '@repo/store/api';
+import { startOfDay, endOfDay } from 'date-fns';
+import { toast } from 'sonner';
+import { AppointmentDetailCard } from './components/AppointmentDetailCard';
 
 // Import new components
 import AppointmentStatsCards from "./components/AppointmentStatsCards";
@@ -253,51 +247,44 @@ export default function AppointmentsPage() {
           statusFilter={statusFilter}
           onSearchChange={setSearchTerm}
           onStatusChange={setStatusFilter}
-          onAddAppointment={() => handleOpenModal("add")}
+          onAddAppointment={() => handleOpenModal('add')}
           exportData={filteredAppointments}
-          exportColumns={[
-            { header: "Client", key: "clientName" },
-            {
-              header: "Services",
-              key: "serviceName",
-              transform: (val, item) =>
-                item.serviceItems?.length > 0
-                  ? item.serviceItems
-                      .map((s: any) => s.serviceName)
-                      .join(", ")
-                  : val,
-            },
-            {
-              header: "Staff",
-              key: "staffName",
-              transform: (val, item) =>
-                item.serviceItems?.length > 0
-                  ? item.serviceItems
-                      .map((s: any) => s.staffName)
-                      .join(", ")
-                  : val,
-            },
-            {
-              header: "Date",
-              key: "date",
-              transform: (val) => new Date(val).toLocaleDateString(),
-            },
-            {
-              header: "Time",
-              key: "startTime",
-              transform: (val, item) => `${val} - ${item.endTime}`,
-            },
-            { header: "Duration (min)", key: "duration" },
-            {
-              header: "Amount",
-              key: "totalAmount",
-              transform: (val, item) =>
-                `₹${((item as any).finalAmount || val || 0).toFixed(2)}`,
-            },
-            { header: "Status", key: "status" },
-          ]}
           exportFilename="appointments_export"
           exportTitle="Appointments Report"
+          exportColumns={[
+            { header: 'Client', key: 'clientName' },
+            {
+              header: 'Services',
+              key: 'serviceName',
+              transform: (val, item) => item.serviceItems?.length > 0
+                ? item.serviceItems.map((s: any) => s.serviceName).join(', ')
+                : val
+            },
+            {
+              header: 'Staff',
+              key: 'staffName',
+              transform: (val, item) => item.serviceItems?.length > 0
+                ? item.serviceItems.map((s: any) => s.staffName).join(', ')
+                : val
+            },
+            {
+              header: 'Date',
+              key: 'date',
+              transform: (val) => new Date(val).toLocaleDateString()
+            },
+            {
+              header: 'Time',
+              key: 'startTime',
+              transform: (val, item) => `${val} - ${item.endTime}`
+            },
+            { header: 'Duration (min)', key: 'duration' },
+            {
+              header: 'Amount',
+              key: 'totalAmount',
+              transform: (val, item) => `₹${((item as any).finalAmount || val || 0).toFixed(2)}`
+            },
+            { header: 'Status', key: 'status' }
+          ]}
         />
 
         {/* Appointments Table */}
@@ -371,18 +358,18 @@ export default function AppointmentsPage() {
                   defaultValues={
                     selectedAppointment
                       ? {
-                          ...selectedAppointment,
-                          status: selectedAppointment.status as
-                            | "scheduled"
-                            | "confirmed"
-                            | "in_progress"
-                            | "completed"
-                            | "partially-completed"
-                            | "completed without payment"
-                            | "cancelled"
-                            | "no_show"
-                            | undefined,
-                        }
+                        ...selectedAppointment,
+                        status: selectedAppointment.status as
+                          | "scheduled"
+                          | "confirmed"
+                          | "in_progress"
+                          | "completed"
+                          | "partially-completed"
+                          | "completed without payment"
+                          | "cancelled"
+                          | "no_show"
+                          | undefined,
+                      }
                       : undefined
                   }
                   isEditing={modalType === "edit"}
@@ -392,9 +379,9 @@ export default function AppointmentsPage() {
                   onDelete={
                     modalType === "edit" && selectedAppointment
                       ? () => {
-                          setIsModalOpen(false);
-                          handleOpenDeleteModal(selectedAppointment!);
-                        }
+                        setIsModalOpen(false);
+                        handleOpenDeleteModal(selectedAppointment!);
+                      }
                       : undefined
                   }
                 />

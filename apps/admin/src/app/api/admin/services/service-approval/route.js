@@ -31,9 +31,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
       // Deconstruct the vendorDetails array
       { $unwind: "$vendorDetails" },
       // Apply region filter from vendorDetails
-      { 
-        $match: regionQuery.regionId ? { "vendorDetails.regionId": new mongoose.Types.ObjectId(regionQuery.regionId) } : 
-               regionQuery.regionId?.$in ? { "vendorDetails.regionId": { $in: regionQuery.regionId.$in.map(id => new mongoose.Types.ObjectId(id)) } } : {}
+      {
+        $match: regionQuery.regionId ? { "vendorDetails.regionId": new mongoose.Types.ObjectId(regionQuery.regionId) } :
+          regionQuery.regionId?.$in ? { "vendorDetails.regionId": { $in: regionQuery.regionId.$in.map(id => new mongoose.Types.ObjectId(id)) } } : {}
       },
       // Reshape the output
       {
@@ -49,7 +49,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
         }
       }
     ]);
-    
+
     return Response.json(pendingServices, { status: 200 });
   } catch (error) {
     console.error("Error fetching pending services:", error);
@@ -62,7 +62,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
 // PATCH (update status) a service by ID
 export const PATCH = authMiddlewareAdmin(async (req) => {
-  const { serviceId, status } = await req.json();
+  const body = await req.json();
+  const { serviceId, status, rejectionReason } = body;
+  console.log("Service Approval PATCH - Payload:", { serviceId, status, rejectionReason });
 
   if (!serviceId || !status) {
     return Response.json(
@@ -79,22 +81,32 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
   }
 
   try {
-    const updatedVendorService = await VendorServicesModel.findOneAndUpdate(
-      { "services._id": serviceId },
-      { 
-        $set: { 
+    // Use raw collection update to bypass any Mongoose schema sync issues
+    await VendorServicesModel.collection.updateOne(
+      { "services._id": new mongoose.Types.ObjectId(serviceId) },
+      {
+        $set: {
           "services.$.status": status,
-          "services.$.updatedAt": new Date() 
-        } 
-      },
-      { new: true }
+          "services.$.rejectionReason": status === 'disapproved' ? rejectionReason : null,
+          "services.$.updatedAt": new Date()
+        }
+      }
+    );
+
+    // Fetch the updated document to confirm and return
+    const updatedVendorService = await VendorServicesModel.findOne(
+      { "services._id": new mongoose.Types.ObjectId(serviceId) }
     );
 
     if (!updatedVendorService) {
-      return Response.json({ message: "Service not found" }, { status: 404 });
+      return Response.json({ message: "Service not found after update" }, { status: 404 });
     }
-    
+
     const updatedService = updatedVendorService.services.find(s => s._id.toString() === serviceId);
+    console.log("Service Approval PATCH - Update Result Service:", {
+      status: updatedService?.status,
+      rejectionReason: updatedService?.rejectionReason
+    });
 
     return Response.json({ message: "Service status updated successfully", service: updatedService }, { status: 200 });
   } catch (error) {

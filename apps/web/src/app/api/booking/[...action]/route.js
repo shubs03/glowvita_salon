@@ -10,12 +10,38 @@ import WeddingPackageModel from "@repo/lib/models/Vendor/WeddingPackage.model";
 import { validateService, validateStaff, validateAppointment, validateWeddingPackage } from "@repo/lib/modules/validation/ValidationEngine";
 import { AppError, formatErrorResponse } from "@repo/lib/modules/error/ErrorHandler";
 import { getCache, setCache } from "@repo/lib/modules/caching/CacheManager";
+import { sendEmail } from "../../../../../../../packages/lib/src/emailService";
+import { getCancellationTemplate } from "../../../../../../../packages/lib/src/emailTemplates";
+import UserModel from "../../../../../../../packages/lib/src/models/user/User.model";
 
 // Utility functions for internally use
 /**
  * Unified Booking API Route
  * Consolidates all booking operations into a single endpoint
  */
+
+/**
+ * Helper: Parse duration string or number to minutes
+ * @param {string|number} duration - Duration to parse
+ * @param {number} defaultValue - Default value if parsing fails
+ * @returns {number} - Duration in minutes
+ */
+const parseDuration = (duration, defaultValue = 60) => {
+  if (duration === undefined || duration === null || duration === '') return 0;
+  if (typeof duration === 'number') return duration;
+  if (typeof duration === 'string') {
+    const match = duration.match(/(\d+)\s*(min|hour|hours)/i);
+    if (!match) {
+      const num = parseInt(duration);
+      return isNaN(num) ? defaultValue : num;
+    }
+    const value = parseInt(match[1]);
+    const unit = match[2].toLowerCase();
+    if (unit === 'min') return value;
+    if (unit === 'hour' || unit === 'hours') return value * 60;
+  }
+  return defaultValue;
+};
 
 // Handle CORS preflight
 export const OPTIONS = async () => {
@@ -501,6 +527,7 @@ async function handleSlotDiscovery(searchParams) {
     const isHomeService = searchParams.get('isHomeService') === 'true';
     const isWeddingService = searchParams.get('isWeddingService') === 'true';
     const packageId = searchParams.get('packageId');
+    const addOnIds = searchParams.get('addOnIds')?.split(',') || [];
     const bufferBefore = parseInt(searchParams.get('bufferBefore')) || 0;
     const bufferAfter = parseInt(searchParams.get('bufferAfter')) || 0;
 
@@ -534,24 +561,50 @@ async function handleSlotDiscovery(searchParams) {
         // First try to find in VendorServices collection where services are stored as subdocuments
         const VendorServicesModel = (await import("@repo/lib/models/Vendor/VendorServices.model")).default;
         const vendorServicesDoc = await VendorServicesModel.findOne({ vendor: vendorId }).lean();
-        
+
         if (vendorServicesDoc && vendorServicesDoc.services) {
-          services = vendorServicesDoc.services.filter(s => 
-            serviceIds.includes(s._id.toString())
-          );
+          services = vendorServicesDoc.services
+            .filter(s => serviceIds.includes(s._id.toString()))
+            .map(s => ({ ...s, duration: parseDuration(s.duration) }));
         }
-        
+
         console.log(`Found ${services.length} regular services in VendorServices`);
-        
+
         // Fallback to ServiceModel if not found (legacy or different structure)
         if (services.length === 0) {
-          services = await ServiceModel.find({ _id: { $in: serviceIds } }).lean();
+          const rawServices = await ServiceModel.find({ _id: { $in: serviceIds } }).lean();
+          services = rawServices.map(s => ({ ...s, duration: parseDuration(s.duration) }));
           console.log(`Found ${services.length} regular services in ServiceModel fallback`);
         }
       } catch (error) {
         console.error('Error fetching services:', error);
         const err = formatErrorResponse(new AppError('Failed to fetch services', 'SERVICE_FETCH_ERROR', 'SERVER_ERROR', 500));
         return Response.json(err, { status: 500 });
+      }
+    }
+
+    // Fetch Add-ons if provided
+    let addOns = [];
+    if (addOnIds.length > 0) {
+      try {
+        const AddOnModel = (await import("@repo/lib/models/Vendor/AddOn.model")).default;
+        addOns = await AddOnModel.find({ _id: { $in: addOnIds } }).lean();
+        console.log(`Found ${addOns.length} addons to include in slot calculation`);
+
+        // Add addons to services array for duration calculation in the engine
+        // We map them to match the expected structure (id, name, duration)
+        const addOnServices = addOns.map(addon => ({
+          _id: addon._id,
+          id: addon._id.toString(),
+          name: addon.name,
+          duration: parseDuration(addon.duration),
+          price: addon.price || 0,
+          isAddon: true
+        }));
+
+        services = [...services, ...addOnServices];
+      } catch (error) {
+        console.error('Error fetching addons:', error);
       }
     }
 
@@ -567,7 +620,7 @@ async function handleSlotDiscovery(searchParams) {
     }
 
     let slots = [];
-    const cacheKey = `slots_${vendorId}_${staffId || 'any'}_${serviceIds.join('_')}_${date}_${isHomeService ? 'home' : 'salon'}_${isWeddingService ? 'wedding' : 'regular'}_${packageId || 'none'}`;
+    const cacheKey = `slots_${vendorId}_${staffId || 'any'}_${serviceIds.join('_')}_${addOnIds.join('_')}_${date}_${isHomeService ? 'home' : 'salon'}_${isWeddingService ? 'wedding' : 'regular'}_${packageId || 'none'}`;
 
     // Try to get from cache first
     const cachedSlots = await getCache(cacheKey);
@@ -829,6 +882,20 @@ async function handleQuoteRequest(body) {
           duration: addOn.duration
         });
       });
+
+      // Add addons to services array for duration calculation in the engine
+      const addOnServices = addOns.map(addon => ({
+        _id: addon._id,
+        id: addon._id.toString(),
+        name: addon.name,
+        duration: addon.duration || 0,
+        price: addon.price || 0,
+        isAddon: true
+      }));
+
+      // Ensure existing services are in plain object format if they are Mongoose documents
+      const plainServices = services.map(s => (typeof s.toObject === 'function') ? s.toObject() : s);
+      services = [...plainServices, ...addOnServices];
     }
 
     slots = await generateAnyStaffSlots({
@@ -900,14 +967,39 @@ async function handleSlotLock(body) {
       addOns = [],
       selectedAddOns,
       couponCode = null,
-      discountAmount = 0
+      discountAmount = 0,
+      bufferBefore = 0,
+      bufferAfter = 0
     } = body;
 
     // Resolve "combo" to a real service ID if possible to avoid CastError
     const serviceId = rawServiceId === "combo" ? (body.serviceItems?.[0]?.service || rawServiceId) : rawServiceId;
 
-    const effectiveAddOns = addOns && addOns.length > 0 ? addOns : selectedAddOns || [];
-    console.log('Effective AddOns:', effectiveAddOns);
+    // Handle Add-ons - Fetch full details to ensure accurate duration/price calculation
+    const rawAddOnIds = body.addOnIds || [];
+    const rawSelectedAddOns = body.selectedAddOns || [];
+    const combinedInputAddOnIds = [...new Set([...rawAddOnIds, ...rawSelectedAddOns])];
+
+    let effectiveAddOns = [];
+
+    if (combinedInputAddOnIds.length > 0) {
+      const AddOnIDs = combinedInputAddOnIds.map(a => (typeof a === 'string') ? a : (a.id || a._id || a));
+      const AddOnModel = (await import("@repo/lib/models/Vendor/AddOn.model")).default;
+      const addOnDocs = await AddOnModel.find({ _id: { $in: AddOnIDs } }).lean();
+
+      effectiveAddOns = AddOnIDs.map(id => {
+        const doc = addOnDocs.find(d => d._id.toString() === id.toString());
+        return doc ? {
+          _id: doc._id,
+          id: doc._id.toString(),
+          name: doc.name,
+          price: doc.price || 0,
+          duration: parseDuration(doc.duration)
+        } : null;
+      }).filter(Boolean);
+    }
+
+    console.log('Effective AddOns (detailed):', effectiveAddOns);
 
     // SUPPORT BOTH FIELD NAMES: If location is missing but homeServiceLocation exists, use it
     const actualLocation = location || homeServiceLocation;
@@ -936,6 +1028,10 @@ async function handleSlotLock(body) {
       return Response.json(errorResponse, { status: 400 });
     }
 
+    // Calculate additional time from addons
+    const totalAddOnsDuration = effectiveAddOns.reduce((sum, a) => sum + parseDuration(a.duration, 0), 0);
+    const totalAddOnsPrice = effectiveAddOns.reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+
     // Prepare lock data, ensuring it matches the Appointment schema structure
     // Use serviceItems from request body if provided (for multi-service bookings)
     // Otherwise, create a single-service array for backward compatibility
@@ -943,7 +1039,13 @@ async function handleSlotLock(body) {
     if (body.serviceItems && Array.isArray(body.serviceItems) && body.serviceItems.length > 0) {
       // Multi-service booking - use the serviceItems from frontend
       console.log('Using serviceItems from request body (multi-service):', body.serviceItems.length, 'services');
-      serviceItems = body.serviceItems;
+      serviceItems = body.serviceItems.map(item => ({
+        ...item,
+        // If this is the primary service, add the addons (ensure string comparison)
+        addOns: (item.service && serviceId && item.service.toString() === serviceId.toString())
+          ? effectiveAddOns
+          : (item.addOns || [])
+      }));
     } else {
       // Single service booking - create serviceItems array with the primary service
       console.log('Creating serviceItems for single service');
@@ -954,143 +1056,77 @@ async function handleSlotLock(body) {
         staffName: staffName || 'Any Professional',
         startTime,
         endTime,
-        duration,
-        amount: amount || 0,
+        duration: Number(duration) || 0,
+        amount: Number(amount) || 0,
         addOns: effectiveAddOns
       }];
     }
-
-    console.log('Constructed serviceItems:', JSON.stringify(serviceItems, null, 2));
 
     // Determine if this is a multi-service booking
     const isMultiService = body.isMultiService || (serviceItems && serviceItems.length > 1);
     console.log('isMultiService:', isMultiService, '(from body:', body.isMultiService, ', serviceItems count:', serviceItems?.length, ')');
 
-    // For multi-service bookings, recalculate sequential start/end times
-    if (isMultiService && serviceItems && serviceItems.length > 1) {
-      let currentStartTime = startTime;
+    // Fetch Base Services to ensure we have the correct base durations (avoid frontend double-counting)
+    const VendorServicesModel = (await import("@repo/lib/models/Vendor/VendorServices.model")).default;
+    const vendorServicesDoc = await VendorServicesModel.findOne({ vendor: vendorId }).lean();
+    const dbServices = vendorServicesDoc?.services || [];
 
-      serviceItems = serviceItems.map((item, index) => {
-        // Calculate duration including add-ons for this service
-        let serviceDuration = item.duration || 0;
-        if (item.addOns && Array.isArray(item.addOns)) {
-          const addOnsDuration = item.addOns.reduce((sum, addon) => sum + (addon.duration || 0), 0);
-          serviceDuration += addOnsDuration;
-        }
+    // For ALL bookings (single or multi), ensure sequential start/end times and total duration includes addons
+    let currentStartTime = startTime;
+    let finalCalculatedDuration = 0;
 
-        // Calculate end time for this service
-        const [hours, minutes] = currentStartTime.split(':').map(Number);
-        const totalMinutes = hours * 60 + minutes + serviceDuration;
-        const endHours = Math.floor(totalMinutes / 60) % 24;
-        const endMinutes = totalMinutes % 60;
-        const serviceEndTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+    serviceItems = serviceItems.map((item, index) => {
+      // Get base duration from DB or fallback to item.duration (if not double-counted)
+      // We look up by service ID to be safe
+      const dbService = dbServices.find(s => s._id.toString() === item.service.toString());
+      const baseDuration = dbService ? parseDuration(dbService.duration) : parseDuration(item.duration);
 
-        const updatedItem = {
-          ...item,
-          startTime: currentStartTime,
-          endTime: serviceEndTime
-        };
+      let serviceDuration = baseDuration;
+      if (item.addOns && Array.isArray(item.addOns)) {
+        const addOnsDuration = item.addOns.reduce((sum, addon) => sum + parseDuration(addon.duration, 0), 0);
+        serviceDuration += addOnsDuration;
+      }
 
-        // Next service starts when this one ends
-        currentStartTime = serviceEndTime;
-
-        console.log(`Service ${index + 1} (${item.serviceName}): ${updatedItem.startTime} - ${updatedItem.endTime} (${serviceDuration}min)`);
-
-        return updatedItem;
-      });
-
-      console.log('Sequential times calculated for multi-service booking');
-    }
-
-
-    // Calculate total duration and end time for multi-service bookings
-    let totalDuration = duration;
-    let calculatedEndTime = endTime;
-    let totalAddOnsAmount = addOnsAmount || 0;
-
-    if (serviceItems && serviceItems.length > 0) {
-      // Calculate total duration from all services and their add-ons
-      totalDuration = serviceItems.reduce((sum, item) => {
-        let itemDuration = item.duration || 0;
-        // Add duration of add-ons for this service
-        if (item.addOns && Array.isArray(item.addOns)) {
-          const addOnsDuration = item.addOns.reduce((addonSum, addon) => addonSum + (addon.duration || 0), 0);
-          itemDuration += addOnsDuration;
-        }
-        return sum + itemDuration;
-      }, 0);
-
-      // Calculate total add-ons amount from all services
-      totalAddOnsAmount = serviceItems.reduce((sum, item) => {
-        if (item.addOns && Array.isArray(item.addOns)) {
-          const itemAddOnsAmount = item.addOns.reduce((addonSum, addon) => addonSum + (addon.price || 0), 0);
-          return sum + itemAddOnsAmount;
-        }
-        return sum;
-      }, 0);
-
-      // Calculate end time based on total duration
-      const [hours, minutes] = startTime.split(':').map(Number);
-      const totalMinutes = hours * 60 + minutes + totalDuration;
+      // Calculate end time for this service
+      const [hours, minutes] = currentStartTime.split(':').map(Number);
+      const totalMinutes = hours * 60 + minutes + serviceDuration;
       const endHours = Math.floor(totalMinutes / 60) % 24;
       const endMinutes = totalMinutes % 60;
-      calculatedEndTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+      const serviceEndTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
 
-      console.log('Duration calculation:', {
-        totalDuration,
-        calculatedEndTime,
-        totalAddOnsAmount,
-        servicesCount: serviceItems.length,
-        isMultiService
-      });
-    }
+      const updatedItem = {
+        ...item,
+        startTime: currentStartTime,
+        endTime: serviceEndTime,
+        duration: baseDuration, // Store original base duration
+        totalDuration: serviceDuration // Total including addons
+      };
 
-    const lockData = {
-      vendorId,
-      staffId,
-      serviceId, // Keep for top-level reference if needed by other logic
-      date: appointmentDate,
-      startTime,
-      endTime: calculatedEndTime, // Use calculated end time for multi-service
-      duration: totalDuration, // Use total duration for multi-service
-      clientId: effectiveClientId,
-      clientName: effectiveClientName,
-      isHomeService: effectiveIsHomeService,
-      isWeddingService,
-      isMultiService, // Add multi-service flag
-      // Amounts
-      amount: amount || 0,
-      addOnsAmount: totalAddOnsAmount, // Use calculated total add-ons amount
-      totalAmount: totalAmount || amount || 0,
-      finalAmount: finalAmount || totalAmount || amount || 0,
-      platformFee: platformFee || 0,
-      serviceTax: serviceTax || 0,
-      taxRate: taxRate || 0,
-      couponCode: couponCode,
-      discountAmount: discountAmount || 0,
-      // For multi-service, don't include top-level addOns as they're in serviceItems
-      // For single service, keep addOns for backward compatibility
-      ...(isMultiService ? {} : { addOns: effectiveAddOns }),
-      // Service Structure
-      serviceItems: serviceItems,
-      // Location
-      ...(actualLocation && actualLocation.lat && actualLocation.lng ? { location: actualLocation } : {}),
-      // Package
-      ...(packageId ? { packageId } : {})
-    };
+      finalCalculatedDuration += serviceDuration;
 
-    // Calculate travel time for home services
-    let travelTimeInfo = null;
+      // Next service starts when this one ends
+      currentStartTime = serviceEndTime;
+
+      console.log(`Service ${index + 1} (${item.serviceName}): ${updatedItem.startTime} - ${updatedItem.endTime} (Base: ${baseDuration}min, Total: ${serviceDuration}min)`);
+
+      return updatedItem;
+    });
+
+    const calculatedEndTime = serviceItems[serviceItems.length - 1].endTime;
+
+    // Calculate travel time early to use in verification
+    let calculatedTravelTime = null;
     if (effectiveIsHomeService && actualLocation) {
       try {
         const customerLocation = {
           lat: actualLocation.lat,
           lng: actualLocation.lng
         };
-        travelTimeInfo = await calculateVendorTravelTime(vendorId, customerLocation);
+        calculatedTravelTime = await calculateVendorTravelTime(vendorId, customerLocation);
+        console.log('Lock travel time calculated:', calculatedTravelTime);
       } catch (error) {
         console.warn('Could not calculate travel time, using fallback:', error.message);
-        travelTimeInfo = {
+        calculatedTravelTime = {
           timeInMinutes: 30,
           distanceInKm: 10,
           distanceInMeters: 10000,
@@ -1099,10 +1135,91 @@ async function handleSlotLock(body) {
       }
     }
 
+    // CRITICAL: Re-verify availability with the engine now that we have the actual travel time
+    if (effectiveIsHomeService && calculatedTravelTime && staffId !== 'any') {
+      const { generateFreshaLikeSlots } = await import("@repo/lib/modules/scheduling/FreshaLikeSlotEngine");
+      try {
+        // Correctly merge addons into the services array for re-verification
+        const verificationServices = serviceItems.map(item => ({
+          id: item.service,
+          name: item.serviceName,
+          duration: parseDuration(item.duration)
+        }));
+
+        // Add addons as distinct services so the engine counts their duration
+        const addOnServices = effectiveAddOns.map(addon => ({
+          id: addon._id.toString(),
+          name: addon.name,
+          duration: parseDuration(addon.duration),
+          isAddon: true
+        }));
+
+        const validationSlots = await generateFreshaLikeSlots({
+          vendorId,
+          staffId,
+          date: appointmentDate,
+          services: [...verificationServices, ...addOnServices],
+          customerLocation: actualLocation,
+          isHomeService: true,
+          bufferBefore: Number(bufferBefore) || 0,
+          bufferAfter: Number(bufferAfter) || 0
+        });
+
+        // Check if the requested start time is still available
+        const isStillAvailable = validationSlots.some(s => s.startTime === startTime);
+        if (!isStillAvailable) {
+          console.warn(`Time slot ${startTime} no longer available with travel time of ${calculatedTravelTime.timeInMinutes} mins`);
+          // Optional: return error or continue? Fresha usually blocks.
+          // return Response.json(formatErrorResponse(new AppError('The selected time is no longer available including travel time.', 'TRAVEL_TIME_CONFLICT', 'CONFLICT', 409)), { status: 409 });
+        }
+      } catch (err) {
+        console.error("Availability re-check error:", err.message);
+      }
+    }
+
+    const lockData = {
+      vendorId,
+      staffId,
+      serviceId, // Keep for top-level reference if needed by other logic
+      serviceName: serviceName || serviceItems[0].serviceName,
+      staffName: staffName || serviceItems[0].staffName,
+      date: appointmentDate,
+      startTime,
+      endTime: calculatedEndTime,
+      duration: finalCalculatedDuration,
+      clientId: effectiveClientId,
+      clientName: effectiveClientName,
+      isHomeService: effectiveIsHomeService,
+      isWeddingService,
+      isMultiService,
+      // Amounts
+      amount: Number(amount) || serviceItems[0].amount,
+      addOnsAmount: totalAddOnsPrice,
+      totalAmount: Number(totalAmount) || (Number(amount) + totalAddOnsPrice),
+      finalAmount: Number(finalAmount) || (Number(totalAmount) || (Number(amount) + totalAddOnsPrice)),
+      platformFee: Number(platformFee) || 0,
+      serviceTax: Number(serviceTax) || 0,
+      taxRate: Number(taxRate) || 0,
+      couponCode: couponCode,
+      discountAmount: Number(discountAmount) || 0,
+      // For single service, keep addOns for backward compatibility
+      addOns: effectiveAddOns,
+      // Service Structure
+      serviceItems: serviceItems,
+      // Location
+      ...(actualLocation && actualLocation.lat && actualLocation.lng ? { location: actualLocation } : {}),
+      // Package
+      ...(packageId ? { packageId } : {}),
+      // Buffers
+      bufferBefore: Number(bufferBefore) || 0,
+      bufferAfter: Number(bufferAfter) || 0,
+      travelTimeInfo: calculatedTravelTime // Include the calculated one
+    };
+
     // Add travel time info to lock data
     const enhancedLockData = {
       ...lockData,
-      travelTimeInfo
+      travelTimeInfo: calculatedTravelTime
     };
 
     console.log('Enhanced lock data:', enhancedLockData);
@@ -1301,6 +1418,44 @@ async function handleBookingCancellation(body) {
   // Release any associated lock
   if (appointment.lockToken) {
     await releaseLock(appointment.lockToken);
+  }
+
+  // Send cancellation email
+  try {
+    const vendor = await VendorModel.findById(appointment.vendorId).select('businessName');
+    const businessName = vendor?.businessName || 'GlowVita Salon';
+
+    let clientEmail = appointment.clientEmail;
+    let clientName = appointment.clientName;
+
+    // If clientEmail is missing, check User model (for logged-in users)
+    if (!clientEmail && appointment.client) {
+      const user = await UserModel.findById(appointment.client).select('emailAddress email firstName lastName');
+      if (user) {
+        clientEmail = user.emailAddress || user.email;
+        clientName = clientName || `${user.firstName} ${user.lastName}`;
+      }
+    }
+
+    if (clientEmail) {
+      const emailHtml = getCancellationTemplate({
+        clientName,
+        businessName,
+        serviceName: appointment.serviceName,
+        date: appointment.date,
+        startTime: appointment.startTime,
+        cancellationReason: reason
+      });
+
+      await sendEmail({
+        to: clientEmail,
+        subject: `Appointment Cancelled - ${businessName}`,
+        html: emailHtml
+      });
+      console.log(`Cancellation email sent to ${clientEmail}`);
+    }
+  } catch (emailError) {
+    console.error('Error sending cancellation email:', emailError);
   }
 
   return Response.json({

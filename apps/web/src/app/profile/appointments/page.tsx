@@ -1,6 +1,8 @@
 "use client";
 
+
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { useCancelBookingMutation } from '@repo/store/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
@@ -14,59 +16,64 @@ import { Textarea } from '@repo/ui/textarea';
 import { Label } from '@repo/ui/label';
 import { cn } from '@repo/ui/cn';
 import { useUserAppointments } from '@/hooks/useUserAppointments';
+
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 // Initial appointments are now fetched from the API
 const initialAppointments: Appointment[] = [];
 
 interface Appointment {
-  id: string;
-  service: string;
-  date: string;
-  staff: string;
-  status: 'Completed' | 'Confirmed' | 'Cancelled';
-  price: number;
-  duration: number;
-  salon: {
-    name: string;
-    address: string;
-  };
-  vendorId?: string;
-  startTime?: string;
-  endTime?: string;
-  serviceItems?: Array<{
+    id: string;
     service: string;
-    serviceName: string;
-    staff: string | null;
-    staffName: string;
-    startTime: string;
-    endTime: string;
+    date: string;
+    staff: string;
+    status: 'Completed' | 'Confirmed' | 'Cancelled' | 'Pending' | 'Scheduled';
+    price: number;
     duration: number;
-    amount: number;
-  }>;
-  amount?: number;
-  totalAmount?: number;
-  platformFee?: number;
-  serviceTax?: number;
-  discountAmount?: number;
-  finalAmount?: number;
+    salon: {
+        name: string;
+        address: string;
+    };
+    vendorId?: string;
+    startTime?: string;
+    endTime?: string;
+    serviceItems?: Array<{
+        service: string;
+        serviceName: string;
+        staff: string | null;
+        staffName: string;
+        startTime: string;
+        endTime: string;
+        duration: number;
+        amount: number;
+    }>;
+    amount?: number;
+    totalAmount?: number;
+    platformFee?: number;
+    serviceTax?: number;
+    discountAmount?: number;
+    finalAmount?: number;
+    cancellationReason?: string;
 }
 
 interface AppointmentCardProps {
-  appointment: Appointment;
-  onSelect: () => void;
-  isSelected: boolean;
+    appointment: Appointment;
+    onSelect: () => void;
+    isSelected: boolean;
 }
 
 const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardProps) => {
-    const statusConfig = {
+    const statusConfig: Record<string, { icon: any, color: string }> = {
         Completed: { icon: CheckCircle, color: 'text-green-500' },
         Confirmed: { icon: Calendar, color: 'text-blue-500' },
         Cancelled: { icon: X, color: 'text-red-500' },
+        Pending: { icon: Clock, color: 'text-yellow-500' },
+        Scheduled: { icon: Calendar, color: 'text-blue-500' },
     };
     const StatusIcon = statusConfig[appointment.status]?.icon || CheckCircle;
-    console.log("appointment ",appointment);
-    
+    console.log("appointment ", appointment);
+
     // Safely parse the date
     let displayDate = 'Invalid Date';
     try {
@@ -77,7 +84,7 @@ const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardP
     } catch (e) {
         console.error('Error parsing date:', e);
     }
-    
+
     return (
         <button
             onClick={onSelect}
@@ -129,8 +136,8 @@ const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardP
 };
 
 interface AppointmentDetailsProps {
-  appointment: Appointment | null;
-  onCancelClick: (appointment: Appointment) => void;
+    appointment: Appointment | null;
+    onCancelClick: (appointment: Appointment) => void;
 }
 
 const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsProps) => {
@@ -148,19 +155,33 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
         </Card>
     );
 
-    const statusConfig = {
+    const statusConfig: Record<string, { color: string }> = {
         Completed: { color: 'bg-green-100 text-green-800' },
+        Scheduled: { color: 'bg-blue-100 text-blue-800' },
         Confirmed: { color: 'bg-blue-100 text-blue-800' },
+        Pending: { color: 'bg-yellow-100 text-yellow-800' },
         Cancelled: { color: 'bg-red-100 text-red-800' },
     };
-    
-    const isAppointmentCancellable = (appointmentDate: string) => {
+
+    const isAppointmentCancellable = (appointmentDate: string, status: string, startTime?: string) => {
+        if (['Cancelled', 'Completed', 'no_show', 'in_progress', 'partially-completed'].includes(status)) return false;
+
         const now = new Date();
         const apptDate = new Date(appointmentDate);
-        const hoursDifference = (apptDate.getTime() - now.getTime()) / (1000 * 60 * 60);
-        return hoursDifference > 24;
+
+        // If startTime is provided (e.g. "12:30"), adjust the date to reflect this time
+        if (startTime) {
+            const [hours, minutes] = startTime.split(':').map(Number);
+            if (!isNaN(hours) && !isNaN(minutes)) {
+                apptDate.setHours(hours, minutes, 0, 0);
+            }
+        }
+
+        const minutesDifference = (apptDate.getTime() - now.getTime()) / (1000 * 60);
+        // Allow cancellation if it's more than 30 minutes before the service
+        return minutesDifference > 30;
     };
-    
+
     // Safely parse the date for display
     let displayDate = 'Invalid Date';
     let displayDateTime = 'Invalid Date';
@@ -178,17 +199,17 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
     const handleAddToCalendar = () => {
         try {
             const dateObj = new Date(appointment.date);
-            
+
             // Format date for calendar event (YYYYMMDDTHHMMSS)
             const startDateTime = dateObj.toISOString().replace(/-|:|\.\d+/g, '');
-            
+
             // Calculate end time based on duration
             const endDate = new Date(dateObj.getTime() + appointment.duration * 60000);
             const endDateTime = endDate.toISOString().replace(/-|:|\.\d+/g, '');
-            
+
             // Create Google Calendar URL
             const calendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(appointment.service + ' - ' + appointment.salon.name)}&dates=${startDateTime}/${endDateTime}&details=${encodeURIComponent(`Professional: ${appointment.staff}\nLocation: ${appointment.salon.address}`)}&location=${encodeURIComponent(appointment.salon.address)}`;
-            
+
             window.open(calendarUrl, '_blank');
         } catch (error) {
             console.error('Error adding to calendar:', error);
@@ -256,6 +277,19 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
                 )}
             </CardHeader>
             <CardContent className="space-y-6">
+                {/* Show cancellation reason if cancelled */}
+                {appointment.status === 'Cancelled' && appointment.cancellationReason && (
+                    <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                        <div className="flex items-start gap-2">
+                            <Info className="h-5 w-5 text-red-500 mt-0.5" />
+                            <div>
+                                <p className="font-semibold text-red-800 text-sm">Cancellation Reason</p>
+                                <p className="text-sm text-red-700">{appointment.cancellationReason}</p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex justify-between items-start gap-4">
                     <div className="flex items-center gap-3">
                         <Calendar className="h-5 w-5 text-muted-foreground" />
@@ -281,25 +315,25 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
                     <h4 className="font-semibold">Options</h4>
                     <div className="grid grid-cols-2 gap-2">
                         <Button variant="outline" className="justify-start gap-2" onClick={handleAddToCalendar}>
-                            <Calendar className="h-4 w-4"/> Add to Calendar
+                            <Calendar className="h-4 w-4" /> Add to Calendar
                         </Button>
                         <Button variant="outline" className="justify-start gap-2" onClick={handleGetDirections}>
-                            <MapPin className="h-4 w-4"/> Get Directions
+                            <MapPin className="h-4 w-4" /> Get Directions
                         </Button>
-                        <Button variant="outline" className="justify-start gap-2" disabled={!isAppointmentCancellable(appointment.date)} onClick={() => onCancelClick(appointment)}>
-                            <Edit className="h-4 w-4"/> Manage Appointment
+                        <Button variant="outline" className="justify-start gap-2" disabled={!isAppointmentCancellable(appointment.date, appointment.status, appointment.startTime)} onClick={() => onCancelClick(appointment)}>
+                            <Edit className="h-4 w-4" /> Manage Appointment
                         </Button>
                         <Button variant="outline" className="justify-start gap-2" onClick={handleSalonDetails} disabled={!appointment.vendorId}>
-                            <LinkIcon className="h-4 w-4"/> Salon Details
+                            <LinkIcon className="h-4 w-4" /> Salon Details
                         </Button>
                     </div>
                 </div>
-                
+
                 <Separator />
 
                 <div className="space-y-3">
                     <h4 className="font-semibold">Service & Booking Summary</h4>
-                    
+
                     {/* Show service details for all appointments */}
                     <div className="space-y-3">
                         <h5 className="font-semibold text-sm">Services</h5>
@@ -337,31 +371,31 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
                             </div>
                         )}
                     </div>
-                    
+
                     {/* Display detailed pricing breakdown */}
                     <div className="space-y-2 pt-4 border-t">
                         <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Subtotal</span>
                             <span>₹{appointment.amount?.toFixed(2) || '0.00'}</span>
                         </div>
-                        
+
                         {appointment.discountAmount != null && appointment.discountAmount > 0 && (
                             <div className="flex justify-between text-sm text-green-600">
                                 <span className="text-muted-foreground">Discount</span>
                                 <span>-₹{appointment.discountAmount.toFixed(2)}</span>
                             </div>
                         )}
-                        
+
                         <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Platform Fee</span>
                             <span>₹{appointment.platformFee?.toFixed(2) || '0.00'}</span>
                         </div>
-                        
+
                         <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">GST</span>
                             <span>₹{appointment.serviceTax?.toFixed(2) || '0.00'}</span>
                         </div>
-                        
+
                         <div className="flex justify-between font-bold text-lg pt-2 border-t">
                             <span>Total Amount</span>
                             <span>₹{appointment.finalAmount?.toFixed(2) || appointment.price.toFixed(2)}</span>
@@ -381,14 +415,16 @@ export default function AppointmentsPage() {
     const [cancellationReason, setCancellationReason] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+
     const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+    const [cancelBooking, { isLoading: isCancelling }] = useCancelBookingMutation();
 
     // Update appointments when user appointments data changes
     // Use a ref to track if we've already set the initial selection to prevent infinite loops
     const hasSetInitialSelection = useRef(false);
 
     console.log("Appointments:", userAppointments)
-    
+
     useEffect(() => {
         if (userAppointments) {
             console.log("Raw user appointments data:", userAppointments);
@@ -405,7 +441,7 @@ export default function AppointmentsPage() {
     const filteredAppointments = useMemo(() => {
         return appointments.filter(appointment =>
             (appointment.service.toLowerCase().includes(searchTerm.toLowerCase()) ||
-             appointment.staff.toLowerCase().includes(searchTerm.toLowerCase())) &&
+                appointment.staff.toLowerCase().includes(searchTerm.toLowerCase())) &&
             (statusFilter === 'all' || appointment.status === statusFilter)
         );
     }, [appointments, searchTerm, statusFilter]);
@@ -415,19 +451,36 @@ export default function AppointmentsPage() {
         setIsCancelModalOpen(true);
     };
 
-    const handleConfirmCancel = () => {
-        // In a real implementation, this would call an API to cancel the appointment
-        setAppointments(appointments.map(appt => 
-            appt.id === appointmentToCancel!.id ? { ...appt, status: 'Cancelled' } : appt
-        ));
-        setIsCancelModalOpen(false);
-        setAppointmentToCancel(null);
-        setCancellationReason('');
-        if (selectedAppointment?.id === appointmentToCancel!.id) {
-            setSelectedAppointment(prev => prev ? ({ ...prev, status: 'Cancelled' }) : null);
+    const handleConfirmCancel = async () => {
+        if (!appointmentToCancel || !cancellationReason.trim()) return;
+
+        try {
+            await cancelBooking({
+                appointmentId: appointmentToCancel.id,
+                reason: cancellationReason
+            }).unwrap();
+
+            toast.success("Appointment cancelled successfully");
+
+            // Optimistic update handled by RTK Query cache invalidation
+            // But we can also update local state if needed (though setAppointments is derived from props/hook)
+            // Actually userAppointments hook will re-fetch automatically due to tag invalidation
+
+            setIsCancelModalOpen(false);
+            setAppointmentToCancel(null);
+            setCancellationReason('');
+
+            if (selectedAppointment?.id === appointmentToCancel.id) {
+                // Keep it selected but update status? Or deselect?
+                // Let's update status locally for immediate feedback until re-fetch happens
+                setSelectedAppointment(prev => prev ? ({ ...prev, status: 'Cancelled' }) : null);
+            }
+        } catch (error: any) {
+            console.error("Failed to cancel booking:", error);
+            toast.error(error?.data?.message || "Failed to cancel appointment. Please try again.");
         }
     };
-    
+
     return (
         <div className="space-y-6">
             {isLoading ? (
@@ -458,7 +511,7 @@ export default function AppointmentsPage() {
                         <StatCard icon={CheckCircle} title="Completed" value={appointments.filter(a => a.status === 'Completed').length} change="All time" />
                         <StatCard icon={X} title="Cancelled" value={appointments.filter(a => a.status === 'Cancelled').length} change="All time" />
                     </div>
-                    
+
                     <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
                         {/* Left Column: Appointments List */}
                         <div className="lg:col-span-1 flex flex-col h-full">
@@ -472,11 +525,11 @@ export default function AppointmentsPage() {
                                         <div className="relative">
                                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                             <Input
-                                              type="search"
-                                              placeholder="Search by service or staff..."
-                                              className="pl-8"
-                                              value={searchTerm}
-                                              onChange={(e) => setSearchTerm(e.target.value)}
+                                                type="search"
+                                                placeholder="Search by service or staff..."
+                                                className="pl-8"
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
                                             />
                                         </div>
                                         <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -487,6 +540,8 @@ export default function AppointmentsPage() {
                                                 <SelectItem value="all">All Status</SelectItem>
                                                 <SelectItem value="Completed">Completed</SelectItem>
                                                 <SelectItem value="Confirmed">Confirmed</SelectItem>
+                                                <SelectItem value="Pending">Pending</SelectItem>
+                                                <SelectItem value="Scheduled">Scheduled</SelectItem>
                                                 <SelectItem value="Cancelled">Cancelled</SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -494,9 +549,9 @@ export default function AppointmentsPage() {
                                     <div className="flex-1 overflow-y-auto no-scrollbar space-y-3">
                                         {filteredAppointments.length > 0 ? (
                                             filteredAppointments.map(appt => (
-                                                <AppointmentCard 
-                                                    key={appt.id} 
-                                                    appointment={appt} 
+                                                <AppointmentCard
+                                                    key={appt.id}
+                                                    appointment={appt}
                                                     onSelect={() => setSelectedAppointment(appt)}
                                                     isSelected={selectedAppointment?.id === appt.id}
                                                 />
@@ -512,7 +567,7 @@ export default function AppointmentsPage() {
                                 </CardContent>
                             </Card>
                         </div>
-                        
+
                         {/* Right Column: Appointment Details */}
                         <div className="lg:col-span-2">
                             <AppointmentDetails appointment={selectedAppointment} onCancelClick={handleCancelClick} />
@@ -531,17 +586,19 @@ export default function AppointmentsPage() {
                     </DialogHeader>
                     <div className="py-4">
                         <Label htmlFor="cancellation-reason">Reason for Cancellation</Label>
-                        <Textarea 
-                          id="cancellation-reason"
-                          value={cancellationReason}
-                          onChange={(e) => setCancellationReason(e.target.value)}
-                          placeholder="e.g., Schedule conflict"
-                          className="mt-2"
+                        <Textarea
+                            id="cancellation-reason"
+                            value={cancellationReason}
+                            onChange={(e) => setCancellationReason(e.target.value)}
+                            placeholder="e.g., Schedule conflict"
+                            className="mt-2"
                         />
                     </div>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsCancelModalOpen(false)}>No, Keep It</Button>
-                        <Button variant="destructive" onClick={handleConfirmCancel} disabled={!cancellationReason.trim()}>Yes, Cancel</Button>
+                        <Button variant="outline" onClick={() => setIsCancelModalOpen(false)} disabled={isCancelling}>No, Keep It</Button>
+                        <Button variant="destructive" onClick={handleConfirmCancel} disabled={!cancellationReason.trim() || isCancelling}>
+                            {isCancelling ? 'Cancelling...' : 'Yes, Cancel'}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

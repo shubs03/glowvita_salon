@@ -3,6 +3,11 @@ import { Types } from 'mongoose';
 import AppointmentModel from "../../../../../../../../packages/lib/src/models/Appointment/Appointment.model";
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm';
+import UserModel from "../../../../../../../../packages/lib/src/models/user/User.model";
+import { sendEmail } from "../../../../../../../../packages/lib/src/emailService";
+import { getConfirmationTemplate, getCompletionTemplate, getInvoiceTemplate, getCancellationTemplate } from "../../../../../../../../packages/lib/src/emailTemplates";
+import VendorModel from "../../../../../../../../packages/lib/src/models/Vendor/Vendor.model";
+import pdf from 'html-pdf';
 
 await _db();
 
@@ -96,6 +101,11 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
             }
         }
 
+        // Capture clientEmail if provided
+        if (updateData.clientEmail) {
+            updateObject.clientEmail = updateData.clientEmail;
+        }
+
         // Update the appointment
         // Use runValidators: false to prevent validation errors on partial updates
         // since we're only updating specific fields and not the entire document
@@ -113,6 +123,175 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
 
         if (!updatedAppointment) {
             throw new Error('Failed to update appointment');
+        }
+
+        // Send email notifications if status changed
+        const statusChanged = updateObject.status && updateObject.status !== existingAppointment.status;
+        if (statusChanged) {
+            try {
+                const vendor = await VendorModel.findById(vendorId).select('businessName address phone city state pincode');
+                const businessName = vendor?.businessName || 'GlowVita Salon';
+                const businessAddress = `${vendor?.address || ''}, ${vendor?.city || ''}, ${vendor?.state || ''}, ${vendor?.pincode || ''}`.trim().replace(/^,|,$/g, '');
+                const businessPhone = vendor?.phone || '';
+
+                let clientEmail = updatedAppointment.client?.email;
+                let clientName = updatedAppointment.client?.fullName || updatedAppointment.clientName;
+                let clientPhone = updatedAppointment.client?.phone;
+
+                console.log(`[Email Debug ID Route] Initial Client Info: Name=${clientName}, Email=${clientEmail}`);
+
+                // Fallback for online bookings where client stores User ID
+                // Use existingAppointment.client as it's the raw ID before population
+                const rawClientId = existingAppointment.client;
+
+                if (!clientEmail && rawClientId) {
+                    console.log(`[Email Debug ID Route] Client email missing, checking User model for ID: ${rawClientId}`);
+                    try {
+                        const user = await UserModel.findById(rawClientId).select('firstName lastName emailAddress email mobileNo');
+                        if (user) {
+                            clientEmail = user.emailAddress || user.email;
+                            clientName = clientName || `${user.firstName} ${user.lastName}`;
+                            clientPhone = user.mobileNo || user.phone;
+                            console.log(`[Email Debug ID Route] Found user info from User model: Name=${clientName}, Email=${clientEmail}, Phone=${clientPhone}`);
+                        }
+                    } catch (userError) {
+                        console.error('[Email Debug ID Route] Error fetching user data:', userError);
+                    }
+                }
+
+                console.log(`[Email Debug ID Route] Final Client Info for email: Name=${clientName}, Email=${clientEmail}`);
+
+                if (clientEmail) {
+                    if (updateObject.status === 'confirmed') {
+                        const emailHtml = getConfirmationTemplate({
+                            clientName,
+                            businessName,
+                            serviceName: updatedAppointment.serviceName,
+                            date: updatedAppointment.date,
+                            startTime: updatedAppointment.startTime,
+                            location: updatedAppointment.homeServiceLocation?.address || businessName
+                        });
+
+                        await sendEmail({
+                            to: clientEmail,
+                            subject: `Appointment Confirmed - ${businessName}`,
+                            html: emailHtml
+                        });
+                        console.log(`Confirmation email sent to ${clientEmail}`);
+                    } else if (updateObject.status === 'completed' || updateObject.status === 'completed without payment') {
+                        // Prepare Invoice HTML
+                        let invoiceHtml;
+                        try {
+                            console.log('Generating invoice template...');
+                            invoiceHtml = getInvoiceTemplate({
+                                clientName,
+                                clientPhone,
+                                businessName,
+                                businessAddress,
+                                businessPhone,
+                                serviceName: updatedAppointment.serviceName,
+                                date: updatedAppointment.date,
+                                startTime: updatedAppointment.startTime,
+                                amount: updatedAppointment.amount,
+                                addOnsAmount: updatedAppointment.addOnsAmount || 0,
+                                tax: updatedAppointment.serviceTax || updatedAppointment.tax || 0,
+                                platformFee: updatedAppointment.platformFee || 0,
+                                totalAmount: updatedAppointment.totalAmount,
+                                amountPaid: updatedAppointment.amountPaid || updatedAppointment.totalAmount,
+                                amountRemaining: updatedAppointment.amountRemaining || 0,
+                                paymentStatus: updatedAppointment.paymentStatus,
+                                invoiceNumber: updatedAppointment._id.toString(),
+                                paymentMethod: updatedAppointment.paymentMethod
+                            });
+                            console.log('Invoice template generated successfully.');
+                        } catch (tplError) {
+                            console.error('Error generating invoice template:', tplError);
+                            invoiceHtml = null;
+                        }
+
+                        // Generate PDF Buffer
+                        let pdfBuffer;
+                        if (invoiceHtml) {
+                            console.log('Generating Invoice PDF...');
+                            try {
+                                const pdfPromise = new Promise((resolve, reject) => {
+                                    try {
+                                        console.log('Calling pdf.create...');
+                                        const options = {
+                                            format: 'A4',
+                                            timeout: 50000
+                                        };
+
+                                        pdf.create(invoiceHtml, options).toBuffer((err, buffer) => {
+                                            if (err) {
+                                                console.error('pdf.create error callback:', err);
+                                                reject(err);
+                                            } else {
+                                                console.log('pdf.create success callback');
+                                                resolve(buffer);
+                                            }
+                                        });
+                                    } catch (err) {
+                                        console.error('pdf.create catch block:', err);
+                                        reject(err);
+                                    }
+                                });
+
+                                const timeoutPromise = new Promise((_, reject) =>
+                                    setTimeout(() => reject(new Error('PDF generation timed out (30s threshold)')), 30000)
+                                );
+
+                                pdfBuffer = await Promise.race([pdfPromise, timeoutPromise]);
+                                console.log('Invoice PDF generated, size:', pdfBuffer.length);
+                            } catch (pdfError) {
+                                console.error('⚠️ PDF Generation failed or timed out:', pdfError.message);
+                            }
+                        } else {
+                            console.warn('Skipping PDF generation due to template error.');
+                        }
+
+                        // Send completion email with attachment
+                        const completionHtml = getCompletionTemplate({
+                            clientName,
+                            businessName,
+                            serviceName: updatedAppointment.serviceName
+                        });
+
+                        await sendEmail({
+                            to: clientEmail,
+                            subject: `Appointment Completed - ${businessName}`,
+                            html: completionHtml,
+                            attachments: pdfBuffer ? [
+                                {
+                                    filename: `Invoice_${updatedAppointment._id}.pdf`,
+                                    content: pdfBuffer,
+                                    contentType: 'application/pdf'
+                                }
+                            ] : []
+                        });
+                        console.log(`Completion email sent to ${clientEmail} with invoice attachment`);
+                    } else if (updateObject.status === 'cancelled') {
+                        const emailHtml = getCancellationTemplate({
+                            clientName,
+                            businessName,
+                            serviceName: updatedAppointment.serviceName,
+                            date: updatedAppointment.date,
+                            startTime: updatedAppointment.startTime,
+                            cancellationReason: updatedAppointment.cancellationReason
+                        });
+
+                        await sendEmail({
+                            to: clientEmail,
+                            subject: `Appointment Cancelled - ${businessName}`,
+                            html: emailHtml
+                        });
+                        console.log(`Cancellation email sent to ${clientEmail}`);
+                    }
+                }
+            } catch (emailError) {
+                console.error('Error sending appointment status email:', emailError);
+                // We don't want to fail the whole request if email fails
+            }
         }
 
         return NextResponse.json({

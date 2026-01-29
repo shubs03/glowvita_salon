@@ -133,6 +133,7 @@ interface DayScheduleViewProps {
   onTimeSlotClick?: (time: string) => void;
   onCreateAppointment?: (appointment: Omit<Appointment, 'id'>) => void;
   onDateChange?: (date: Date) => void;
+  onUpdateAppointmentStatus?: (id: string, status: string, reason?: string) => void;
 }
 
 
@@ -378,7 +379,9 @@ export default function DayScheduleView({
   onAppointmentClick: onAppointmentClickProp,
   onTimeSlotClick,
   onCreateAppointment,
-  onDateChange
+  onDateChange,
+  onUpdateAppointmentStatus,
+  blockedTimes = []
 }: DayScheduleViewProps) {
   // Hooks must be called at the top level
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
@@ -1786,13 +1789,23 @@ export default function DayScheduleView({
               }}
               onClose={handleCloseDetailView}
               onStatusChange={(status, reason) => {
-                handleUpdateStatus(status as any);
+                if (onUpdateAppointmentStatus) {
+                  onUpdateAppointmentStatus(selectedAppointment.id || (selectedAppointment as any)._id, status, reason);
+                } else {
+                  handleUpdateStatus(status as any);
+                }
               }}
               onCollectPayment={handleCollectPayment}
               onUpdateAppointment={async (updatedAppointment) => {
                 // Update the selectedAppointment state with the new data
                 setSelectedAppointment(updatedAppointment as Appointment || null);
                 console.log('Appointment updated:', updatedAppointment);
+
+                // If status changed or payment collected, notify parent to refresh
+                if (onUpdateAppointmentStatus && updatedAppointment.status) {
+                  // Pass the potentially new status to trigger refetch in parent
+                  onUpdateAppointmentStatus(updatedAppointment.id || (updatedAppointment as any)._id, updatedAppointment.status);
+                }
               }}
             />
           </DialogContent>

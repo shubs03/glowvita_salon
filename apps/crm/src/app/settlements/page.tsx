@@ -1,38 +1,34 @@
 
 "use client";
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
+import { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent } from "@repo/ui/card";
+import { ExportButtons } from "@/components/ExportButtons";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@repo/ui/dialog';
 import { Button } from "@repo/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
-import { Pagination } from "@repo/ui/pagination";
-import { Eye, CheckCircle, RefreshCw, AlertCircle, X, Plus, DollarSign, Users, Hourglass } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@repo/ui/dialog";
-import { Input } from "@repo/ui/input";
-import { Label } from '@repo/ui/label';
+import { glowvitaApi } from '@repo/store/api';
+import { useAppDispatch } from '@repo/store/hooks';
+import { toast } from 'sonner';
+import { Plus } from "lucide-react";
 
-interface Transaction {
-  type: 'receive' | 'pay';
-  amount: number;
-  date: string;
-  description: string;
-}
+// Import new components
+import SettlementsStatsCards from "./components/SettlementsStatsCards";
+import SettlementsFiltersToolbar from "./components/SettlementsFiltersToolbar";
+import SettlementsTableNew from "./components/SettlementsTableNew";
+import SettlementsPaginationControls from "./components/SettlementsPaginationControls";
+import SettlementsDetailCard from "./components/SettlementsDetailCard";
+import SettlementsPaymentModal from "./components/SettlementsPaymentModal";
 
-interface PayoutData {
-  id: string;
-  vendor: string;
-  contactNo: string;
-  ownerName: string;
-  adminReceiveAmount: number;
-  adminPayAmount: number;
-  pendingAmount: number;
-  totalSettlement: number;
-  status: string;
-  transactions: Transaction[];
-}
+// Import the original PayoutData interface
+import { PayoutData } from "./types";
 
-const payoutData: PayoutData[] = [
-  {
+export default function SettlementsPage() {
+  const dispatch = useAppDispatch();
+
+  // RTK Query hooks for settlements
+  // TODO: Implement the actual settlements API in the store
+  // For now, using a mock implementation
+  const settlementsData: PayoutData[] = [{
     id: "TXN7483982",
     vendor: "Glamour Salon",
     contactNo: "9876543210",
@@ -47,8 +43,7 @@ const payoutData: PayoutData[] = [
       { type: 'receive', amount: 1000, date: '2025-08-05', description: 'Membership Fee' },
       { type: 'pay', amount: 1200, date: '2025-08-12', description: 'Vendor Payout' },
     ],
-  },
-  {
+  }, {
     id: "TXN7483981",
     vendor: "Modern Cuts",
     contactNo: "8765432109",
@@ -63,343 +58,220 @@ const payoutData: PayoutData[] = [
       { type: 'receive', amount: 1000, date: '2025-08-03', description: 'Product Sale' },
       { type: 'pay', amount: 2000, date: '2025-08-15', description: 'Vendor Payout' },
     ],
-  },
-  {
-    id: "TXN7483980",
-    vendor: "Style Lounge",
-    contactNo: "7654321098",
-    ownerName: "Amit Singh",
-    adminReceiveAmount: 3200.00,
-    adminPayAmount: 3000.00,
-    pendingAmount: 200.00,
-    totalSettlement: 3200.00,
-    status: "Pending",
-    transactions: [
-      { type: 'receive', amount: 2000, date: '2025-08-07', description: 'Service Payment' },
-      { type: 'receive', amount: 1200, date: '2025-08-01', description: 'Membership Fee' },
-      { type: 'pay', amount: 3000, date: '2025-08-10', description: 'Vendor Payout' },
-    ],
-  },
-  {
-    id: "TXN7483979",
-    vendor: "The Barber Shop",
-    contactNo: "6543210987",
-    ownerName: "Neha Gupta",
-    adminReceiveAmount: 1800.00,
-    adminPayAmount: 1500.00,
-    pendingAmount: 300.00,
-    totalSettlement: 1800.00,
-    status: "Paid",
-    transactions: [
-      { type: 'receive', amount: 1000, date: '2025-08-09', description: 'Service Payment' },
-      { type: 'receive', amount: 800, date: '2025-08-04', description: 'Product Sale' },
-      { type: 'pay', amount: 1500, date: '2025-08-13', description: 'Vendor Payout' },
-    ],
-  },
-  {
-    id: "TXN7483978",
-    vendor: "Beauty Parlor",
-    contactNo: "5432109876",
-    ownerName: "Vikram Mehta",
-    adminReceiveAmount: 4200.00,
-    adminPayAmount: 4000.00,
-    pendingAmount: 200.00,
-    totalSettlement: 4200.00,
-    status: "Pending",
-    transactions: [
-      { type: 'receive', amount: 2500, date: '2025-08-11', description: 'Service Payment' },
-      { type: 'receive', amount: 1700, date: '2025-08-06', description: 'Membership Fee' },
-      { type: 'pay', amount: 4000, date: '2025-08-14', description: 'Vendor Payout' },
-    ],
-  }
-];
+  }]; // Placeholder - will be replaced with actual API call
+  const isLoading = false; // Placeholder - will be replaced with actual loading state
 
-interface ReceiveAmountDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onReceive: (amount: number) => void;
-  pendingAmount: number;
-}
+  // RTK Query mutations
+  // Placeholder implementations - will be replaced with actual mutations
+  const collectPayment = (data: any) => Promise.resolve();
 
+  const settlements: PayoutData[] = Array.isArray(settlementsData) ? settlementsData : [];
 
-function ReceiveAmountDialog({ open, onOpenChange, onReceive, pendingAmount }: ReceiveAmountDialogProps) {
-  const [amount, setAmount] = useState('');
-  const [error, setError] = useState('');
-
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const numAmount = parseFloat(amount);
-    
-    if (isNaN(numAmount) || numAmount <= 0) {
-      setError('Please enter a valid amount');
-      return;
-    }
-    
-    if (numAmount > pendingAmount) {
-      setError(`Amount cannot exceed pending amount (₹${pendingAmount.toFixed(2)})`);
-      return;
-    }
-    
-    onReceive(numAmount);
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Receive Payment</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="amount" className="text-right">
-                Amount (₹)
-              </Label>
-              <Input
-                id="amount"
-                type="number"
-                value={amount}
-                onChange={(e) => {
-                  setAmount(e.target.value);
-                  setError('');
-                }}
-                className="col-span-3"
-                placeholder={`Max: ₹${pendingAmount.toFixed(2)}`}
-                step="0.01"
-                min="0.01"
-                max={pendingAmount}
-                autoFocus
-              />
-            </div>
-            {error && (
-              <p className="text-sm text-red-500 text-center">{error}</p>
-            )}
-          </div>
-          <div className="flex justify-end gap-3">
-            <DialogClose asChild>
-              <Button type="button" variant="outline">
-                Cancel
-              </Button>
-            </DialogClose>
-            <Button type="submit">
-              <Plus className="mr-2 h-4 w-4" /> Receive
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-export default function SettlementsPage() {
+  // State management
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
-  const [selectedPayout, setSelectedPayout] = useState<PayoutData | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedSettlement, setSelectedSettlement] = useState<PayoutData | null>(null);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<"view">("view");
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  // Filter and paginate settlements
+  const filteredSettlements = useMemo(() => {
+    return settlements.filter(
+      (settlement) =>
+        (settlement.vendor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          settlement.ownerName?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+        (statusFilter === "all" ||
+          settlement.status === statusFilter)
+    );
+  }, [settlements, searchTerm, statusFilter]);
 
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
-  const currentItems = payoutData.slice(firstItemIndex, lastItemIndex);
+  const currentItems = filteredSettlements.slice(
+    firstItemIndex,
+    lastItemIndex
+  );
+  const totalPages = Math.ceil(filteredSettlements.length / itemsPerPage);
 
-  const totalPages = Math.ceil(payoutData.length / itemsPerPage);
-
-  const handleReceiveAmount = (payoutId: string, amount: number) => {
-    // TODO: Implement the actual receive amount logic here
-    console.log(`Received ₹${amount} for payout ${payoutId}`);
-    // Update the UI accordingly
+  // Modal handlers
+  const handleOpenModal = (
+    type: "view",
+    settlement?: PayoutData
+  ) => {
+    setModalType(type);
+    setSelectedSettlement(settlement || null);
+    setIsModalOpen(true);
   };
-  
-  const totalPaid = payoutData.reduce((acc, p) => p.status === 'Paid' ? acc + p.adminPayAmount : acc, 0);
-  const totalPending = payoutData.reduce((acc, p) => p.pendingAmount, 0);
-  const pendingVendors = payoutData.filter(p => p.status === 'Pending').length;
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedSettlement(null);
+  };
+
+  const handleOpenPaymentModal = (settlement: PayoutData) => {
+    setSelectedSettlement(settlement);
+    setIsPaymentModalOpen(true);
+  };
+
+  const handleClosePaymentModal = () => {
+    setIsPaymentModalOpen(false);
+    setSelectedSettlement(null);
+  };
+
+  // Payment collection handler
+  const handleCollectPayment = async (payoutId: string, amount: number) => {
+    const toastId = toast.loading("Processing payment...");
+    setIsProcessingPayment(true);
+
+    try {
+      // Call backend to record payment
+      await collectPayment({
+        payoutId: payoutId,
+        amount: amount,
+      });
+
+      toast.success("Payment received successfully", {
+        description: `₹${amount.toFixed(2)} received`,
+      });
+
+      handleClosePaymentModal();
+      // refetch data to update UI
+    } catch (error: any) {
+      console.error("Error processing payment:", error);
+      toast.error("Failed to process payment", {
+        description: error?.message || "Please try again.",
+      });
+    } finally {
+      toast.dismiss(toastId);
+      setIsProcessingPayment(false);
+    }
+  };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-6">Settlements</h1>
-
-       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Paid Out</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₹{totalPaid.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">All-time paid to vendors</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Pending</CardTitle>
-            <Hourglass className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">₹{totalPending.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Across all vendors</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Vendors with Pending</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{pendingVendors}</div>
-            <p className="text-xs text-muted-foreground">Vendors to be paid</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
-            <RefreshCw className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-                {payoutData.reduce((acc, p) => acc + p.transactions.length, 0)}
-            </div>
-            <p className="text-xs text-muted-foreground">Total pay and receive entries</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
+    <div className="min-h-screen bg-background">
+      <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Enhanced Header Section */}
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-6">
             <div>
-              <CardTitle>Settlement Transactions</CardTitle>
-              <CardDescription>
-                Details of all settlements for online payments and platform fees.
-              </CardDescription>
+              <h1 className="text-3xl font-bold font-headline mb-1 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
+                Settlements
+              </h1>
+              <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl">
+                Manage your settlements and track vendor payments
+              </p>
             </div>
-            <Button>Export Report</Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto no-scrollbar">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Salon Name</TableHead>
-                  <TableHead>Contact No</TableHead>
-                  <TableHead>Owner Name</TableHead>
-                  <TableHead>Admin Receive Amount (₹)</TableHead>
-                  <TableHead>Admin Pay Amount (₹)</TableHead>
-                  <TableHead>Pending Amount (₹)</TableHead>
-                  <TableHead>Total Settlement (₹)</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {currentItems.map((payout) => (
-                  <TableRow key={payout.id}>
-                    <TableCell>{payout.vendor}</TableCell>
-                    <TableCell>{payout.contactNo}</TableCell>
-                    <TableCell>{payout.ownerName}</TableCell>
-                    <TableCell>₹{payout.adminReceiveAmount.toFixed(2)}</TableCell>
-                    <TableCell>₹{payout.adminPayAmount.toFixed(2)}</TableCell>
-                    <TableCell>₹{payout.pendingAmount.toFixed(2)}</TableCell>
-                    <TableCell className="font-bold">₹{payout.totalSettlement.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        payout.status === "Paid"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                          : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
-                      }`}>
-                        {payout.status}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right space-x-1">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Eye className="h-4 w-4" />
-                            <span className="sr-only">View Transactions</span>
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-2xl">
-                          <DialogHeader>
-                            <DialogTitle className="text-xl">{payout.vendor} - Transaction History</DialogTitle>
-                            <div className="grid grid-cols-3 gap-4 pt-4">
-                              <div className="bg-green-50 p-4 rounded-lg">
-                                <p className="text-sm text-gray-500">Total Received</p>
-                                <p className="text-lg font-semibold">₹{payout.adminReceiveAmount.toFixed(2)}</p>
-                              </div>
-                              <div className="bg-blue-50 p-4 rounded-lg">
-                                <p className="text-sm text-gray-500">Total Paid</p>
-                                <p className="text-lg font-semibold">₹{payout.adminPayAmount.toFixed(2)}</p>
-                              </div>
-                              <div className="bg-yellow-50 p-4 rounded-lg">
-                                <p className="text-sm text-gray-500">Pending Amount</p>
-                                <div className="flex items-center justify-between">
-                                  <p className="text-lg font-semibold">₹{payout.pendingAmount.toFixed(2)}</p>
-                                  {payout.pendingAmount > 0 && (
-                                    <Button 
-                                      type="button" 
-                                      variant="outline" 
-                                      size="sm"
-                                      className="h-8"
-                                      onClick={() => {
-                                        setSelectedPayout(payout);
-                                        setReceiveDialogOpen(true);
-                                      }}
-                                    >
-                                      <Plus className="h-3.5 w-3.5 mr-1" />
-                                      Receive
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </DialogHeader>
-                          <div className="mt-4">
-                            <h3 className="font-medium mb-2">Transaction Details</h3>
-                            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                              {payout.transactions.map((txn, index) => (
-                                <div key={index} className="flex justify-between items-center p-3 border rounded-lg">
-                                  <div>
-                                    <p className="font-medium">{txn.description}</p>
-                                    <p className="text-sm text-gray-500">{new Date(txn.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                                  </div>
-                                  <div className={`font-medium ${txn.type === 'receive' ? 'text-green-600' : 'text-blue-600'}`}>
-                                    {txn.type === 'receive' ? '+' : '-'}₹{txn.amount.toFixed(2)}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                      
-                      {selectedPayout?.id === payout.id && (
-                        <ReceiveAmountDialog
-                          open={receiveDialogOpen && selectedPayout?.id === payout.id}
-                          onOpenChange={(open) => {
-                            setReceiveDialogOpen(open);
-                            if (!open) setSelectedPayout(null);
-                          }}
-                          onReceive={(amount) => handleReceiveAmount(payout.id, amount)}
-                          pendingAmount={payout.pendingAmount}
-                        />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-          <Pagination
-            className="mt-4"
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            itemsPerPage={itemsPerPage}
-            onItemsPerPageChange={setItemsPerPage}
-            totalItems={payoutData.length}
-          />
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Settlements Stats Cards */}
+        <SettlementsStatsCards payouts={settlements} />
+
+        {/* Filters Toolbar */}
+        <SettlementsFiltersToolbar
+          searchTerm={searchTerm}
+          statusFilter={statusFilter}
+          onSearchChange={setSearchTerm}
+          onStatusChange={setStatusFilter}
+          exportData={filteredSettlements}
+          exportColumns={[
+            { header: 'Vendor', key: 'vendor' },
+            { header: 'Contact', key: 'contactNo' },
+            { header: 'Owner', key: 'ownerName' },
+            {
+              header: 'Receive Amount',
+              key: 'adminReceiveAmount',
+              transform: (val) => `₹${Number(val).toFixed(2)}`
+            },
+            {
+              header: 'Pay Amount',
+              key: 'adminPayAmount',
+              transform: (val) => `₹${Number(val).toFixed(2)}`
+            },
+            {
+              header: 'Pending Amount',
+              key: 'pendingAmount',
+              transform: (val) => `₹${Number(val).toFixed(2)}`
+            },
+            {
+              header: 'Total Settlement',
+              key: 'totalSettlement',
+              transform: (val) => `₹${Number(val).toFixed(2)}`
+            },
+            { header: 'Status', key: 'status' }
+          ]}
+          exportFilename="settlements_export"
+          exportTitle="Settlements Report"
+        />
+
+        {/* Settlements Table */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <Card className="flex-1 flex flex-col min-h-0">
+            <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+              <SettlementsTableNew
+                payouts={settlements}
+                isLoading={isLoading}
+                searchTerm={searchTerm}
+                statusFilter={statusFilter}
+                currentItems={currentItems}
+                onOpenModal={handleOpenModal}
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Pagination Controls */}
+        <SettlementsPaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          itemsPerPage={itemsPerPage}
+          totalItems={filteredSettlements.length}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={(value) => {
+            setItemsPerPage(value);
+            setCurrentPage(1); // Reset to first page when changing items per page
+          }}
+        />
+
+        {/* Settlement Detail Modal */}
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="max-w-2xl w-[95vw] sm:w-full h-[70vh] max-h-[70vh] p-0 overflow-hidden flex flex-col">
+            <DialogHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-background z-10">
+              <DialogTitle className="text-lg sm:text-xl">
+                Settlement Details
+              </DialogTitle>
+              <DialogDescription>
+                View detailed information about this settlement
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto px-6 pb-6 -mt-1 no-scrollbar">
+              {selectedSettlement && (
+                <div className="pr-1">
+                  <SettlementsDetailCard
+                    payout={selectedSettlement}
+                    onReceivePayment={handleOpenPaymentModal}
+                    onClose={handleCloseModal}
+                  />
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Payment Collection Modal */}
+        <SettlementsPaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={handleClosePaymentModal}
+          onCollectPayment={handleCollectPayment}
+          selectedPayout={selectedSettlement}
+          isProcessing={isProcessingPayment}
+        />
+      </div>
     </div>
   );
 }

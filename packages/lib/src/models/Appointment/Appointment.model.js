@@ -278,6 +278,9 @@ const appointmentSchema = new mongoose.Schema(
     notes: {
       type: String,
     },
+    cancellationReason: {
+      type: String,
+    },
     // Array of service items (for multi-service appointments)
     serviceItems: {
       type: [serviceItemSchema],

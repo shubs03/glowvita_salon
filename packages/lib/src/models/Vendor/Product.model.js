@@ -82,6 +82,11 @@ const productSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'rejected', 'disapproved'],
     default: 'pending',
   },
+  rejectionReason: {
+    type: String,
+    trim: true,
+    default: null,
+  },
   regionId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Region",
@@ -116,7 +121,7 @@ productSchema.pre('save', async function (next) {
       } else {
         ParentModel = mongoose.models.Supplier || (await import('./Supplier.model.js')).default;
       }
-      
+
       const parent = await ParentModel.findById(this.vendorId).select('regionId');
       if (parent && parent.regionId) {
         this.regionId = parent.regionId;

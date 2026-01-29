@@ -5051,8 +5051,8 @@ export default function SupplierReports() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold font-headline mb-2">Reports</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold font-headline mb-2">Reports</h1>
+          <p className="text-lg text-muted-foreground">
             Generate and download detailed reports for various components of the platform.
           </p>
         </div>
@@ -5097,11 +5097,14 @@ export default function SupplierReports() {
                         <p className="text-sm text-muted-foreground">{report.details}</p>
                       </CardContent>
                       <CardFooter className="flex justify-end gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleViewClick(report)}>
+                        <Button
+                        variant="outline" size="sm" onClick={() => handleViewClick(report)}>
                           <Eye className="mr-2 h-4 w-4" />
                           View
                         </Button>
-                        <Button size="sm">
+                        <Button size="sm" 
+                        className='h-12 px-6 rounded-lg'
+                        >
                           <Download className="mr-2 h-4 w-4" />
                           Download
                         </Button>

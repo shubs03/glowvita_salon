@@ -112,6 +112,7 @@ export default function NewAppointmentForm({
   const vendorId = user?.vendorId || user?._id;
 
   // Initialize form data with default values
+  const isClientSearchEnabled = !isEditing && !isRescheduling;
   const [formData, setFormData] = useState<Partial<Appointment>>({
     client: '',
     clientName: '',
@@ -128,6 +129,7 @@ export default function NewAppointmentForm({
     amount: 0,
     tax: 0,
     totalAmount: 0,
+    clientEmail: defaultValues?.clientEmail || '',
     ...defaultValues
   });
 
@@ -328,8 +330,7 @@ export default function NewAppointmentForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAddClientModalOpen, setIsAddClientModalOpen] = useState(false);
 
-  // Determine if client search should be enabled (only for new appointments)
-  const isClientSearchEnabled = !isEditing && !isRescheduling;
+
 
   // Fetch staff data using the getStaff query
   const { data: staffResponse, isLoading: isLoadingStaff } = glowvitaApi.useGetStaffQuery(undefined, {
@@ -1500,6 +1501,7 @@ export default function NewAppointmentForm({
 
       const appointmentPayload: any = {
         clientName: appointmentData.clientName.trim(),
+        clientEmail: appointmentData.clientEmail?.trim(),
         service: appointmentData.service,
         serviceName: appointmentData.serviceName || '',
         staff: appointmentData.staff,
@@ -1743,19 +1745,150 @@ export default function NewAppointmentForm({
   };
 
   // Update the form title based on the mode
-  const formTitle = isRescheduling
-    ? 'Reschedule Appointment'
-    : isEditing
-      ? 'Edit Appointment'
-      : 'New Appointment';
+  let formTitle = 'New Appointment';
+  let formDescription = 'Fill in the details to schedule a new appointment';
 
-  const formDescription = isRescheduling
-    ? 'Update the date and time for this appointment'
-    : isEditing
-      ? 'Update the appointment details'
-      : 'Fill in the details to schedule a new appointment';
+  if (isRescheduling) {
+    formTitle = 'Reschedule Appointment';
+    formDescription = 'Update the date and time for this appointment';
+  } else if (isEditing) {
+    formTitle = 'Edit Appointment';
+    formDescription = 'Update the appointment details';
+    formDescription = 'Update the appointment details';
+  }
 
-  return (
+  const isGuest = !appointmentData.client && appointmentData.clientName;
+
+  /* Client Section Logic */
+  let clientSection;
+
+  if (isClientSearchEnabled) {
+    clientSection = (
+      <div className="space-y-2 relative" ref={clientSearchRef}>
+        <Label htmlFor="clientSearch" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Client <span className="text-red-500">*</span>
+        </Label>
+        <div className="relative flex items-center gap-2">
+          {/* Search Input and logic */}
+          <div className="relative flex-1">
+            <Input
+              id="clientSearch"
+              type="text"
+              value={isClientDropdownOpen ? clientSearchTerm : appointmentData.clientName}
+              onChange={(e) => {
+                setClientSearchTerm(e.target.value);
+                if (!isClientDropdownOpen) setIsClientDropdownOpen(true);
+              }}
+              onFocus={() => {
+                setIsClientDropdownOpen(true);
+              }}
+              placeholder="Search for a client..."
+              className="pl-10 w-full bg-background text-foreground border border-border placeholder:text-muted-foreground"
+              autoComplete="off"
+              onBlur={() => {
+                // Delay slightly to allow click on dropdown items
+                setTimeout(() => {
+                  if (!appointmentData.client && clientSearchTerm) {
+                    setAppointmentData(prev => ({ ...prev, clientName: clientSearchTerm }));
+                  }
+                }, 200);
+              }}
+            />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+            {(isLoadingClients || isFetchingClients) && (
+              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
+            )}
+            {appointmentData.clientName && (
+              <button
+                type="button"
+                onClick={clearClient}
+                className="absolute right-9 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                title="Clear"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+            {/* Client Dropdown */}
+            {isClientDropdownOpen && (
+              <div className="absolute z-10 mt-1 w-full bg-background shadow-lg rounded-md py-1 max-h-60 overflow-auto border border-border">
+                {isLoadingClients || isFetchingClients ? (
+                  <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">Loading clients...</div>
+                ) : Array.isArray(clientsResponse) && clientsResponse.length > 0 ? (
+                  clientsResponse.map((client: any) => (
+                    <button
+                      key={client._id}
+                      type="button"
+                      onClick={() => handleClientSelect(client)}
+                      className="w-full text-left px-4 py-2 hover:bg-muted border-b border-border last:border-0"
+                    >
+                      <div className="font-medium text-foreground">{client.fullName || client.name}</div>
+                      {client.email && (
+                        <div className="text-sm text-muted-foreground truncate">{client.email}</div>
+                      )}
+                      {client.phone && (
+                        <div className="text-sm text-muted-foreground">{client.phone}</div>
+                      )}
+                    </button>
+                  ))
+                ) : (
+                  <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                    {debouncedClientSearchTerm ? 'No matching clients found.' : 'No clients found.'}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <Button
+            type="button"
+            onClick={() => setIsAddClientModalOpen(true)}
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            title="Add client"
+          >
+            <PlusCircle className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Guest Email Input */}
+        {isGuest && (
+          <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+            <Label htmlFor="clientEmail" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Guest Email <span className="text-gray-400 text-xs">(Optional - for receipts)</span>
+            </Label>
+            <Input
+              id="clientEmail"
+              type="email"
+              value={appointmentData.clientEmail || ''}
+              onChange={(e) => handleFieldChange('clientEmail', e.target.value)}
+              placeholder="client@example.com"
+              className="w-full bg-background text-foreground border border-border"
+            />
+          </div>
+        )}
+      </div>
+    );
+  } else {
+    // Edit/Reschedule Mode
+    clientSection = (
+      <div className="space-y-2">
+        <Label htmlFor="clientName" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Client <span className="text-red-500">*</span>
+        </Label>
+        <Input
+          id="clientName"
+          type="text"
+          value={appointmentData.clientName}
+          onChange={(e) => handleFieldChange('clientName', e.target.value)}
+          placeholder="Client name"
+          className="w-full bg-background text-foreground border border-border appearance-none dark:[color-scheme:dark]"
+          required
+        />
+      </div>
+    );
+  }
+
+  const content = (
     <div className="space-y-6 p-4">
       <div className="space-y-1">
         <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -1767,103 +1900,8 @@ export default function NewAppointmentForm({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Client Field - Different rendering based on mode */}
-        {isClientSearchEnabled ? (
-          /* Client Search - Only for new appointments */
-          <div className="space-y-2 relative" ref={clientSearchRef}>
-            <Label htmlFor="clientSearch" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Client <span className="text-red-500">*</span>
-            </Label>
-            <div className="relative flex items-center gap-2">
-              <div className="relative flex-1">
-                <Input
-                  id="clientSearch"
-                  type="text"
-                  value={isClientDropdownOpen ? clientSearchTerm : appointmentData.clientName}
-                  onChange={(e) => {
-                    setClientSearchTerm(e.target.value);
-                    if (!isClientDropdownOpen) setIsClientDropdownOpen(true);
-                  }}
-                  onFocus={() => {
-                    setIsClientDropdownOpen(true);
-                  }}
-                  placeholder="Search for a client..."
-                  className="pl-10 w-full bg-background text-foreground border border-border placeholder:text-muted-foreground"
-                  autoComplete="off"
-                />
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-                {(isLoadingClients || isFetchingClients) && (
-                  <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
-                )}
-                {appointmentData.clientName && (
-                  <button
-                    type="button"
-                    onClick={clearClient}
-                    className="absolute right-9 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                    title="Clear"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-                {/* Client Dropdown */}
-                {isClientDropdownOpen && (
-                  <div className="absolute z-10 mt-1 w-full bg-background shadow-lg rounded-md py-1 max-h-60 overflow-auto border border-border">
-                    {isLoadingClients || isFetchingClients ? (
-                      <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">Loading clients...</div>
-                    ) : Array.isArray(clientsResponse) && clientsResponse.length > 0 ? (
-                      clientsResponse.map((client: any) => (
-                        <button
-                          key={client._id}
-                          type="button"
-                          onClick={() => handleClientSelect(client)}
-                          className="w-full text-left px-4 py-2 hover:bg-muted border-b border-border last:border-0"
-                        >
-                          <div className="font-medium text-foreground">{client.fullName || client.name}</div>
-                          {client.email && (
-                            <div className="text-sm text-muted-foreground truncate">{client.email}</div>
-                          )}
-                          {client.phone && (
-                            <div className="text-sm text-muted-foreground">{client.phone}</div>
-                          )}
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                        {debouncedClientSearchTerm ? 'No matching clients found.' : 'No clients found.'}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <Button
-                type="button"
-                onClick={() => setIsAddClientModalOpen(true)}
-                variant="outline"
-                size="icon"
-                className="shrink-0"
-                title="Add client"
-              >
-                <PlusCircle className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        ) : (
-          /* Client Name Display - For edit and reschedule modes */
-          <div className="space-y-2">
-            <Label htmlFor="clientName" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Client <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="clientName"
-              type="text"
-              value={appointmentData.clientName}
-              onChange={(e) => handleFieldChange('clientName', e.target.value)}
-              placeholder="Client name"
-              className="w-full bg-background text-foreground border border-border appearance-none dark:[color-scheme:dark]"
-              required
-            />
-          </div>
-        )}
+        {/* Client Field */}
+        {clientSection}
 
         {/* Date and Time Row */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -1978,6 +2016,7 @@ export default function NewAppointmentForm({
           </div>
         </div>
 
+        {/* Service and Staff Row */}
         {/* Service and Staff Row */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
@@ -2318,114 +2357,118 @@ export default function NewAppointmentForm({
             )}
           </Button>
         </div>
-      </form>
+      </form >
 
       {/* Add New Client Modal - Only for new appointments */}
-      {isClientSearchEnabled && (
-        <Dialog open={isAddClientModalOpen} onOpenChange={setIsAddClientModalOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background text-foreground">
-            <DialogHeader>
-              <DialogTitle>Add New Client</DialogTitle>
-              <DialogDescription>
-                Enter the details for the new client.
-              </DialogDescription>
-            </DialogHeader>
+      {
+        isClientSearchEnabled && (
+          <Dialog open={isAddClientModalOpen} onOpenChange={setIsAddClientModalOpen}>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background text-foreground">
+              <DialogHeader>
+                <DialogTitle>Add New Client</DialogTitle>
+                <DialogDescription>
+                  Enter the details for the new client.
+                </DialogDescription>
+              </DialogHeader>
 
-            <div className="space-y-4 py-4">
-              {/* Profile Picture */}
-              <div className="space-y-2">
-                <div className="flex justify-center">
-                  <div className="relative">
-                    <p className="text-sm font-medium text-gray-700 text-center mb-2">Profile Photo</p>
-                    <input
-                      id="profilePicture"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleNewClientFileChange}
-                      className="hidden"
-                    />
-                    <label
-                      htmlFor="profilePicture"
-                      className="cursor-pointer block"
-                    >
-                      <div className="w-24 h-24 rounded-full border-4 border-dashed border-gray-300 dark:border-neutral-700 hover:border-blue-400 transition-colors duration-200 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-neutral-800 hover:bg-blue-50 dark:hover:bg-neutral-700">
-                        {newClientData.profilePicture ? (
-                          <img
-                            src={newClientData.profilePicture}
-                            alt="Profile preview"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="text-center">
-                            <PlusCircle className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                            <span className="text-xs text-gray-500">Add Photo</span>
-                          </div>
-                        )}
-                      </div>
-                    </label>
+              <div className="space-y-4 py-4">
+                {/* Profile Picture */}
+                <div className="space-y-2">
+                  <div className="flex justify-center">
+                    <div className="relative">
+                      <p className="text-sm font-medium text-gray-700 text-center mb-2">Profile Photo</p>
+                      <input
+                        id="profilePicture"
+                        type="file"
+                        accept="image/*"
+                        onChange={handleNewClientFileChange}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="profilePicture"
+                        className="cursor-pointer block"
+                      >
+                        <div className="w-24 h-24 rounded-full border-4 border-dashed border-gray-300 dark:border-neutral-700 hover:border-blue-400 transition-colors duration-200 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-neutral-800 hover:bg-blue-50 dark:hover:bg-neutral-700">
+                          {newClientData.profilePicture ? (
+                            <img
+                              src={newClientData.profilePicture}
+                              alt="Profile preview"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="text-center">
+                              <PlusCircle className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+                              <span className="text-xs text-gray-500">Add Photo</span>
+                            </div>
+                          )}
+                        </div>
+                      </label>
+                    </div>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 dark:text-gray-300">Full Name <span className="text-red-500">*</span></Label>
+                    <Input id="fullName" name="fullName" value={newClientData.fullName} onChange={handleNewClientInputChange} required className="bg-background text-foreground border border-border" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone <span className="text-red-500">*</span></Label>
+                    <Input id="phone" name="phone" value={newClientData.phone} onChange={handleNewClientInputChange} required className="bg-background text-foreground border border-border" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</Label>
+                    <Input id="email" name="email" type="email" value={newClientData.email} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="birthdayDate" className="text-sm font-medium text-gray-700 dark:text-gray-300">Birthday</Label>
+                    <Input id="birthdayDate" name="birthdayDate" type="date" value={newClientData.birthdayDate} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gender" className="text-sm font-medium text-gray-700 dark:text-gray-300">Gender</Label>
+                    <Select name="gender" value={newClientData.gender} onValueChange={(value) => handleNewClientSelectChange('gender', value)}>
+                      <SelectTrigger className="bg-background text-foreground border border-border">
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background text-foreground border border-border">
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="country" className="text-sm font-medium text-gray-700 dark:text-gray-300">Country</Label>
+                    <Input id="country" name="country" value={newClientData.country} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="occupation" className="text-sm font-medium text-gray-700 dark:text-gray-300">Occupation</Label>
+                    <Input id="occupation" name="occupation" value={newClientData.occupation} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address" className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</Label>
+                  <Textarea id="address" name="address" value={newClientData.address} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border placeholder:text-muted-foreground" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="preferences" className="text-sm font-medium text-gray-700 dark:text-gray-300">Preferences</Label>
+                  <Textarea id="preferences" name="preferences" value={newClientData.preferences} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border placeholder:text-muted-foreground" />
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 dark:text-gray-300">Full Name <span className="text-red-500">*</span></Label>
-                  <Input id="fullName" name="fullName" value={newClientData.fullName} onChange={handleNewClientInputChange} required className="bg-background text-foreground border border-border" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone <span className="text-red-500">*</span></Label>
-                  <Input id="phone" name="phone" value={newClientData.phone} onChange={handleNewClientInputChange} required className="bg-background text-foreground border border-border" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</Label>
-                  <Input id="email" name="email" type="email" value={newClientData.email} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="birthdayDate" className="text-sm font-medium text-gray-700 dark:text-gray-300">Birthday</Label>
-                  <Input id="birthdayDate" name="birthdayDate" type="date" value={newClientData.birthdayDate} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="gender" className="text-sm font-medium text-gray-700 dark:text-gray-300">Gender</Label>
-                  <Select name="gender" value={newClientData.gender} onValueChange={(value) => handleNewClientSelectChange('gender', value)}>
-                    <SelectTrigger className="bg-background text-foreground border border-border">
-                      <SelectValue placeholder="Select gender" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background text-foreground border border-border">
-                      <SelectItem value="Male">Male</SelectItem>
-                      <SelectItem value="Female">Female</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="country" className="text-sm font-medium text-gray-700 dark:text-gray-300">Country</Label>
-                  <Input id="country" name="country" value={newClientData.country} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="occupation" className="text-sm font-medium text-gray-700 dark:text-gray-300">Occupation</Label>
-                  <Input id="occupation" name="occupation" value={newClientData.occupation} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="address" className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</Label>
-                <Textarea id="address" name="address" value={newClientData.address} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border placeholder:text-muted-foreground" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="preferences" className="text-sm font-medium text-gray-700 dark:text-gray-300">Preferences</Label>
-                <Textarea id="preferences" name="preferences" value={newClientData.preferences} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border placeholder:text-muted-foreground" />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddClientModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreateClient} disabled={isCreatingClient}>
-                {isCreatingClient && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Client
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-    </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsAddClientModalOpen(false)}>Cancel</Button>
+                <Button onClick={handleCreateClient} disabled={isCreatingClient}>
+                  {isCreatingClient && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Client
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )
+      }
+    </div >
   );
+
+  return content;
 }
