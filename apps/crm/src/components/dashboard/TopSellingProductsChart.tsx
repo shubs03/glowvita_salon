@@ -1,10 +1,9 @@
 "use client"
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
-
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#a4de6c", "#d0ed57"];
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { useGetSalesByProductReportQuery } from "@repo/store/services/api";
 
 interface TopProductData {
   productName: string;
@@ -17,6 +16,10 @@ interface TopSellingProductsChartProps {
   presetPeriod?: 'day' | 'month' | 'year' | 'all';
   startDate?: string;
   endDate?: string;
+  // Hierarchical date filter props - Updated to accept both null and undefined
+  selectedYear?: number | null | undefined;
+  selectedMonth?: number | null | undefined; // 0-11 representing Jan-Dec
+  selectedDay?: number | null | undefined;
 }
 
 // Helper function to format date for display
@@ -34,64 +37,59 @@ export function TopSellingProductsChart({
   filterType = 'preset', 
   presetPeriod = 'all', 
   startDate = '', 
-  endDate = '' 
+  endDate = '',
+  selectedYear,
+  selectedMonth,
+  selectedDay
 }: TopSellingProductsChartProps) {
-  const [data, setData] = useState<TopProductData[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Prepare query parameters for RTK Query
+  // If hierarchical filtering is active, build date range from selected values
+  let queryParams: any = {
+    period: filterType === 'custom' ? 'custom' : presetPeriod,
+  };
 
-  useEffect(() => {
-    const fetchTopSellingProducts = async () => {
-      try {
-        // Build query params based on filter parameters
-        let url = '/api/crm/vendor/reports/sales-by-product';
-        const params = new URLSearchParams();
-        
-        // Handle custom date range
-        if (filterType === 'custom' && startDate && endDate) {
-          params.append('startDate', startDate);
-          params.append('endDate', endDate);
-        } 
-        // Handle preset periods
-        else if (presetPeriod && presetPeriod !== 'all') {
-          params.append('period', presetPeriod);
-        }
-        
-        // Append query parameters if any exist
-        if (params.toString()) {
-          url += `?${params.toString()}`;
-        }
-        
-        const response = await fetch(url);
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data && result.data.salesByProduct) {
-            // Get top 5 products by quantity sold
-            const topProducts = result.data.salesByProduct
-              .sort((a: any, b: any) => b.quantitySold - a.quantitySold)
-              .slice(0, 5);
-            setData(topProducts);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching top selling products:', error);
-        // Fallback to mock data on error
-        setData([
-          { productName: 'Lipstick', quantitySold: 25, totalSales: 5000 },
-          { productName: 'Foundation', quantitySold: 20, totalSales: 8000 },
-          { productName: 'Mascara', quantitySold: 18, totalSales: 3600 },
-          { productName: 'Eyeliner', quantitySold: 15, totalSales: 3000 },
-          { productName: 'Blush', quantitySold: 12, totalSales: 2400 },
-        ]);
-      } finally {
-        setLoading(false);
+  // Use hierarchical dates if provided, otherwise use standard date range
+  if (selectedYear != null) {
+    if (selectedMonth != null) {
+      if (selectedDay != null) {
+        // Specific day selected: YYYY-MM-DD to YYYY-MM-DD
+        const start = new Date(selectedYear, selectedMonth, selectedDay);
+        const end = new Date(selectedYear, selectedMonth, selectedDay);
+        queryParams.startDate = start.toISOString().split('T')[0];
+        queryParams.endDate = end.toISOString().split('T')[0];
+      } else {
+        // Month selected: YYYY-MM-01 to YYYY-MM-lastDay
+        const start = new Date(selectedYear, selectedMonth, 1);
+        const end = new Date(selectedYear, selectedMonth + 1, 0);
+        queryParams.startDate = start.toISOString().split('T')[0];
+        queryParams.endDate = end.toISOString().split('T')[0];
       }
-    };
+    } else {
+      // Year selected: YYYY-01-01 to YYYY-12-31
+      const start = new Date(selectedYear, 0, 1);
+      const end = new Date(selectedYear, 11, 31);
+      queryParams.startDate = start.toISOString().split('T')[0];
+      queryParams.endDate = end.toISOString().split('T')[0];
+    }
+  } else if (filterType === 'custom' && startDate && endDate) {
+    // Use standard date range if no hierarchical filtering
+    queryParams.startDate = startDate;
+    queryParams.endDate = endDate;
+  }
 
-    fetchTopSellingProducts();
-  }, [filterType, presetPeriod, startDate, endDate]);
+  // Use RTK Query to fetch data
+  const { data: apiResponse, isLoading, isError } = useGetSalesByProductReportQuery(queryParams);
 
-  if (loading) {
+  // Process the data to get top 5 products
+  let topProducts: TopProductData[] = [];
+  
+  if (apiResponse?.success && apiResponse.data?.salesByProduct) {
+    topProducts = apiResponse.data.salesByProduct
+      .sort((a: any, b: any) => b.quantitySold - a.quantitySold)
+      .slice(0, 5);
+  }
+
+  if (isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -107,11 +105,27 @@ export function TopSellingProductsChart({
     );
   }
 
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Top Selling Products</CardTitle>
+          <CardDescription>Error loading data</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-[300px] text-destructive">
+            Failed to load product data
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Calculate total for percentage calculation
-  const totalQuantity = data.reduce((sum, item) => sum + item.quantitySold, 0);
+  const totalQuantity = topProducts.reduce((sum, item) => sum + item.quantitySold, 0);
 
   // Format data with explicit percentages for display
-  const formattedData = data.map(item => ({
+  const formattedData = topProducts.map(item => ({
     ...item,
     percentage: totalQuantity > 0 ? (item.quantitySold / totalQuantity) * 100 : 0
   }));
@@ -121,11 +135,11 @@ export function TopSellingProductsChart({
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-background border border-border p-2 rounded shadow-sm">
-          <p className="font-semibold">{data.productName}</p>
-          <p>Quantity Sold: {data.quantitySold}</p>
-          <p>Total Sales: ₹{data.totalSales.toFixed(2)}</p>
-          <p>Percentage: {data.percentage.toFixed(1)}%</p>
+        <div className="bg-background border border-border p-3 rounded-lg shadow-lg">
+          <p className="font-semibold text-foreground">{data.productName}</p>
+          <p className="text-sm text-muted-foreground">Quantity Sold: {data.quantitySold}</p>
+          <p className="text-sm text-muted-foreground">Total Sales: ₹{data.totalSales.toFixed(2)}</p>
+          <p className="text-sm text-muted-foreground">Percentage: {data.percentage.toFixed(1)}%</p>
         </div>
       );
     }
@@ -150,25 +164,35 @@ export function TopSellingProductsChart({
       <CardContent>
         {formattedData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={formattedData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                outerRadius={100}
-                fill="#8884d8"
-                dataKey="quantitySold"
-                nameKey="productName"
-                label={({ productName, percentage }) => `${productName}: ${percentage.toFixed(0)}%`}
-              >
-                {formattedData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
+            <BarChart
+              data={formattedData}
+              margin={{
+                top: 5,
+                right: 30,
+                left: 20,
+                bottom: 60,
+              }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="productName" 
+                angle={-45} 
+                textAnchor="end" 
+                height={70}
+                tick={{ fontSize: 12 }}
+              />
+              <YAxis 
+                dataKey="quantitySold" 
+                label={{ value: 'Quantity Sold', angle: -90, position: 'insideLeft' }} 
+              />
               <Tooltip content={<CustomTooltip />} />
-              <Legend iconType="circle" />
-            </PieChart>
+              <Legend />
+              <Bar 
+                dataKey="quantitySold" 
+                name="Quantity Sold" 
+                fill="hsl(var(--primary))" 
+              />
+            </BarChart>
           </ResponsiveContainer>
         ) : (
           <div className="flex items-center justify-center h-[300px] text-muted-foreground">

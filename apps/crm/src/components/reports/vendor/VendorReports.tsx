@@ -5100,8 +5100,8 @@ export default function VendorReports() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold font-headline mb-2">Reports</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold font-headline mb-2">Reports</h1>
+          <p className="text-lg text-muted-foreground">
             Generate and download detailed reports for various components of the platform.
           </p>
         </div>

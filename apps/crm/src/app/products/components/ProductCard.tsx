@@ -15,7 +15,8 @@ interface Product {
   stock: number;
   isActive: boolean;
   description?: string;
-  status: 'pending' | 'approved' | 'disapproved';
+  status: 'pending' | 'approved' | 'disapproved' | 'rejected';
+  rejectionReason?: string;
   size?: string;
   sizeMetric?: string;
   keyIngredients?: string[];
@@ -56,9 +57,9 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
         />
         {/* Status Badge */}
         <div className="absolute top-2 left-2 text-xs">
-          <StatusBadge status={product.status} />
+          <StatusBadge status={product.status} rejectionReason={product.rejectionReason} />
         </div>
-        
+
         {/* Discount Badge */}
         {discountPercentage > 0 && (
           <div className="absolute -top-1 -right-1">
@@ -96,9 +97,9 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
               size="sm"
               variant="outline"
               className="w-full text-xs lg:mr-3"
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                onEdit(product); 
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(product);
               }}
             >
               <Edit className="h-3 w-3 mr-1" />
@@ -109,9 +110,9 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
               size="sm"
               variant="outline"
               className="w-fit text-xs"
-              onClick={(e) => { 
-                e.stopPropagation(); 
-                onDelete(product); 
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(product);
               }}
             >
               <Trash2 className="h-3 w-3" />

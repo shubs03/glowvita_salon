@@ -2,6 +2,13 @@ import { Input } from '@repo/ui/input';
 import { Search, Plus } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Button } from '@repo/ui/button';
+import { ExportButtons } from '@/components/ExportButtons';
+
+interface Column {
+  header: string;
+  key: string;
+  transform?: (value: any, item: any) => string;
+}
 
 interface AppointmentFiltersToolbarProps {
   searchTerm: string;
@@ -9,6 +16,10 @@ interface AppointmentFiltersToolbarProps {
   onSearchChange: (value: string) => void;
   onStatusChange: (value: string) => void;
   onAddAppointment: () => void;
+  exportData?: any[];
+  exportColumns?: Column[];
+  exportFilename?: string;
+  exportTitle?: string;
 }
 
 const AppointmentFiltersToolbar = ({
@@ -16,7 +27,11 @@ const AppointmentFiltersToolbar = ({
   statusFilter,
   onSearchChange,
   onStatusChange,
-  onAddAppointment
+  onAddAppointment,
+  exportData,
+  exportColumns,
+  exportFilename,
+  exportTitle
 }: AppointmentFiltersToolbarProps) => {
   return (
     <div className=" rounded-lg">
@@ -46,8 +61,18 @@ const AppointmentFiltersToolbar = ({
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
+          
           <div className="flex gap-3 w-full sm:w-auto">
-            <Button 
+            {exportData && exportColumns && (
+              <ExportButtons
+                data={exportData}
+                filename={exportFilename || "appointments_export"}
+                title={exportTitle || "Appointments Report"}
+                columns={exportColumns}
+                className="h-12 px-4 rounded-lg"
+              />
+            )}
+            <Button
               onClick={onAddAppointment}
               className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1"
             >

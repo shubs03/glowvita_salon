@@ -1,15 +1,28 @@
 "use client"
 
-import { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
+import { useGetSummaryByServiceReportQuery } from "@repo/store/api";
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#a4de6c", "#d0ed57"];
+const COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+  "hsl(var(--chart-6))",
+  "hsl(var(--chart-7))",
+  "hsl(var(--chart-8))",
+  "hsl(var(--chart-9))",
+  "hsl(var(--chart-10))",
+];
 
 interface TopServiceData {
   service: string;
   serviceSold: number;
   totalSales: number;
+  bookingCount?: number; // Some reports might use booking count instead of sales
 }
 
 interface TopServicesChartProps {
@@ -36,68 +49,41 @@ export function TopServicesChart({
   startDate = '', 
   endDate = '' 
 }: TopServicesChartProps) {
-  const [data, setData] = useState<TopServiceData[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Use RTK Query to fetch summary by service report
+  const { data: reportData, isLoading, isError, error } = useGetSummaryByServiceReportQuery({
+    period: filterType === 'preset' ? presetPeriod : 'custom',
+    startDate: filterType === 'custom' && startDate ? new Date(startDate) : undefined,
+    endDate: filterType === 'custom' && endDate ? new Date(endDate) : undefined,
+    status: 'completed', // Always filter for completed status for reports
+  });
 
-  useEffect(() => {
-    const fetchTopServices = async () => {
-      try {
-        // Build query params based on filter parameters
-        let url = '/api/crm/vendor/reports/sales-by-service';
-        const params = new URLSearchParams();
-        
-        // Handle custom date range
-        if (filterType === 'custom' && startDate && endDate) {
-          params.append('startDate', startDate);
-          params.append('endDate', endDate);
-        } 
-        // Handle preset periods
-        else if (presetPeriod && presetPeriod !== 'all') {
-          params.append('period', presetPeriod);
-        }
-        
-        // Always filter for completed status for sales reports
-        params.append('status', 'completed');
-        
-        // Append query parameters if any exist
-        if (params.toString()) {
-          url += `?${params.toString()}`;
-        }
-        
-        const response = await fetch(url);
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data && result.data.salesByService) {
-            // Get top 5 services by total sales
-            const topServices = result.data.salesByService
-              .sort((a: any, b: any) => b.totalSales - a.totalSales)
-              .slice(0, 5);
-            setData(topServices);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching top services:', error);
-        // Fallback to mock data on error
-        setData([
-          { service: 'Haircut', serviceSold: 4, totalSales: 800 },
-          { service: 'Manicure', serviceSold: 3, totalSales: 600 },
-          { service: 'Facial', serviceSold: 3, totalSales: 900 },
-          { service: 'Spa', serviceSold: 2, totalSales: 1200 },
-        ]);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Extract and format the summary by service data
+  // The summary report might have different property names, try common variations
+  const rawData = reportData?.summaryByService || 
+                  reportData?.serviceSummary || 
+                  reportData?.services || 
+                  reportData?.data || 
+                  [];
+  
+  // Ensure rawData is an array before sorting
+  const dataArray = Array.isArray(rawData) ? rawData : [];
+  
+  // Get top 5 services by booking count (if available) or fallback to sales
+  const data = dataArray
+    .sort((a: TopServiceData, b: TopServiceData) => {
+      // Try booking count first, fallback to serviceSold, then totalSales
+      const aCount = a.bookingCount || a.serviceSold || a.totalSales || 0;
+      const bCount = b.bookingCount || b.serviceSold || b.totalSales || 0;
+      return bCount - aCount;
+    })
+    .slice(0, 5);
 
-    fetchTopServices();
-  }, [filterType, presetPeriod, startDate, endDate]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>Top Services</CardTitle>
-          <CardDescription>Based on completed appointments and sales data.</CardDescription>
+          <CardDescription>Based on completed appointments and booking counts.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-[300px]">
@@ -108,25 +94,59 @@ export function TopServicesChart({
     );
   }
 
+  // Handle error state
+  if (isError) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Top Services</CardTitle>
+          <CardDescription>Based on completed appointments and booking counts.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center h-[300px] text-destructive">
+            <div className="text-center">
+              <p>Error loading data</p>
+              <p className="text-sm mt-2">Please try again later</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // Calculate total for percentage calculation
-  const totalSales = data.reduce((sum, item) => sum + item.totalSales, 0);
+  // Use booking count if available, otherwise fall back to totalSales
+  const totalValue = data.reduce((sum: number, item: TopServiceData) => {
+    return sum + (item.bookingCount || item.serviceSold || item.totalSales || 0);
+  }, 0);
 
   // Format data with explicit percentages for display
-  const formattedData = data.map(item => ({
+  const formattedData = data.map((item: TopServiceData) => ({
     ...item,
-    percentage: totalSales > 0 ? (item.totalSales / totalSales) * 100 : 0
+    percentage: totalValue > 0 ? ((item.bookingCount || item.serviceSold || item.totalSales || 0) / totalValue) * 100 : 0
   }));
 
   // Custom tooltip to show detailed information
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
+      // Determine the primary metric to display (booking count or fallback)
+      const primaryMetric = data.bookingCount || data.serviceSold || data.totalSales || 0;
+      const metricLabel = data.bookingCount ? 'Bookings' : 
+                         data.serviceSold ? 'Services Sold' : 'Total Sales';
+      const currencyPrefix = data.bookingCount ? '' : '₹';
+      
       return (
-        <div className="bg-background border border-border p-2 rounded shadow-sm">
-          <p className="font-semibold">{data.service}</p>
-          <p>Services Sold: {data.serviceSold}</p>
-          <p>Total Sales: ₹{data.totalSales.toFixed(2)}</p>
-          <p>Percentage: {data.percentage.toFixed(1)}%</p>
+        <div className="bg-background border border-border p-3 rounded-lg shadow-lg">
+          <p className="font-semibold text-foreground">{data.service}</p>
+          <p className="text-sm text-muted-foreground">{metricLabel}: {currencyPrefix}{primaryMetric.toFixed(data.bookingCount ? 0 : 2)}</p>
+          {data.bookingCount && data.serviceSold && (
+            <p className="text-sm text-muted-foreground">Services Sold: {data.serviceSold}</p>
+          )}
+          {data.bookingCount && data.totalSales && (
+            <p className="text-sm text-muted-foreground">Total Sales: ₹{data.totalSales.toFixed(2)}</p>
+          )}
+          <p className="text-sm text-muted-foreground">Percentage: {data.percentage.toFixed(1)}%</p>
         </div>
       );
     }
@@ -158,12 +178,12 @@ export function TopServicesChart({
                 cy="50%"
                 labelLine={false}
                 outerRadius={100}
-                fill="#8884d8"
-                dataKey="totalSales"
+                fill="hsl(var(--primary))"
+                dataKey="bookingCount"
                 nameKey="service"
                 label={({ service, percentage }) => `${service}: ${percentage.toFixed(0)}%`}
               >
-                {formattedData.map((entry, index) => (
+                {formattedData.map((entry: TopServiceData, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

@@ -44,7 +44,8 @@ interface Product {
   description?: string;
   createdAt?: string;
   updatedAt?: string;
-  status: "pending" | "approved" | "disapproved";
+  status: "pending" | "approved" | "disapproved" | "rejected";
+  rejectionReason?: string;
   size?: string;
   sizeMetric?: string;
   keyIngredients?: string[];
@@ -216,9 +217,13 @@ export default function ProductsPage() {
     }
 
     const mutation = selectedProduct ? updateProduct : createProduct;
-    const payload = selectedProduct
+    let payload = selectedProduct
       ? { id: selectedProduct._id, ...formData }
       : formData;
+
+    if (selectedProduct && (selectedProduct.status === 'disapproved' || selectedProduct.status === 'rejected')) {
+      payload = { ...payload, status: 'pending' };
+    }
 
     try {
       await mutation(payload).unwrap();
@@ -335,7 +340,7 @@ export default function ProductsPage() {
         </div>
 
         {/* Product Statistics Cards */}
-        <StatsCards 
+        <StatsCards
           productStats={productStats}
           filteredProductStats={filteredProductStats}
         />
@@ -392,7 +397,7 @@ export default function ProductsPage() {
                       />
                       {/* Status Badge */}
                       <div className="absolute top-2 left-2 text-xs">
-                        <StatusBadge status={product.status} />
+                        <StatusBadge status={product.status} rejectionReason={product.rejectionReason} />
                       </div>
                     </div>
                     <div className="p-3 flex flex-col flex-grow">
@@ -477,7 +482,7 @@ export default function ProductsPage() {
                                 {Math.round(
                                   ((product.price - product.salePrice) /
                                     product.price) *
-                                    100
+                                  100
                                 )}
                                 %
                               </Badge>
@@ -495,7 +500,7 @@ export default function ProductsPage() {
                                 <Badge variant="outline" className="text-xs">
                                   {product.category}
                                 </Badge>
-                                <StatusBadge status={product.status} />
+                                <StatusBadge status={product.status} rejectionReason={product.rejectionReason} />
                                 <Badge
                                   variant={
                                     product.stock > 10

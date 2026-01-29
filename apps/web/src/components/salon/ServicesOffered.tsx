@@ -10,10 +10,10 @@ interface ServicesOfferedProps {
   isSubscriptionExpired?: boolean;
 }
 
-const ServicesOffered: React.FC<ServicesOfferedProps> = ({ 
-  vendorId, 
-  onBookNow, 
-  isSubscriptionExpired = false 
+const ServicesOffered: React.FC<ServicesOfferedProps> = ({
+  vendorId,
+  onBookNow,
+  isSubscriptionExpired = false
 }) => {
   const [selectedCategory, setSelectedCategory] = useState('All');
 
@@ -194,6 +194,12 @@ const ServicesOffered: React.FC<ServicesOfferedProps> = ({
                     </span>
                   </div>
 
+                  {isSubscriptionExpired && (
+                    <p className="text-[10px] text-red-600 font-medium">
+                      This service is temporarily closed
+                    </p>
+                  )}
+
                   {/* Price */}
                   <div className="flex items-center gap-2">
                     <IndianRupee className="w-4 h-4 text-primary" />
@@ -205,9 +211,8 @@ const ServicesOffered: React.FC<ServicesOfferedProps> = ({
 
                 {/* Book Now Button */}
                 <button
-                  className={`bg-background border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary px-5 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
-                    isSubscriptionExpired ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
+                  className={`bg-background border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary px-5 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${isSubscriptionExpired ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                   disabled={isSubscriptionExpired}
                   onClick={() => {
                     // Store complete service data in sessionStorage

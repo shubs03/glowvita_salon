@@ -127,6 +127,7 @@ interface Service {
   image?: string;
   serviceImage?: string;
   status?: string;
+  rejectionReason?: string;
   addOns?: string[];
   createdAt?: string;
   updatedAt?: string;
@@ -646,6 +647,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
     status: 'pending',
     addOns: [],
   });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (service && type === "edit") {
@@ -711,7 +713,16 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
+
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
+
 
   const handleSelectChange = (name: string, value: any) => {
     setFormData((prev) => {
@@ -728,6 +739,14 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
 
       return newState;
     });
+
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleCategoryChange = (categoryId: string) => {
@@ -739,6 +758,14 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
     const currentValues = (formData as any)[name] || [];
     const newValues = checked ? [...currentValues, id] : currentValues.filter((val: string) => val !== id);
     setFormData((prev) => ({ ...prev, [name]: newValues }));
+
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleNestedChange = (parent: string, child: string, value: any) => {
@@ -784,6 +811,13 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   const handleSave = async () => {
     if (!VENDOR_ID) {
       console.error("Vendor ID is missing");
+      return;
+    }
+
+    if (!formData.staff || formData.staff.length === 0) {
+      setFormErrors(prev => ({ ...prev, staff: "Please select at least one staff member" }));
+      toast.error("Please select at least one staff member");
+      setActiveTab("advanced");
       return;
     }
 
@@ -834,8 +868,27 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
 
   const handleNextTab = () => {
     if (activeTab === "basic") {
+      const errors: Record<string, string> = {};
+      if (!(formData.category as any)?._id) errors.category = "Please select a category";
+      if (!formData.name) errors.name = "Please select or create a service name";
+      if (!formData.price || Number(formData.price) <= 0) errors.price = "Price is required and must be greater than 0";
+      if (!formData.duration) errors.duration = "Please select service duration";
+
+      if (Object.keys(errors).length > 0) {
+        setFormErrors(errors);
+        const firstError = Object.values(errors)[0];
+        toast.error(firstError);
+        return;
+      }
+      setFormErrors({});
       setActiveTab("advanced");
     } else if (activeTab === "advanced") {
+      if (!formData.staff || formData.staff.length === 0) {
+        setFormErrors(prev => ({ ...prev, staff: "Please select at least one staff member" }));
+        toast.error("Please select at least one staff member");
+        return;
+      }
+      setFormErrors({});
       setActiveTab("booking");
     }
   };
@@ -876,6 +929,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
               <Plus className="h-4 w-4" />
             </Button>
           </div>
+          {formErrors.category && <p className="text-xs text-red-500 mt-1">{formErrors.category}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="name">Service Name</Label>
@@ -922,6 +976,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
               <Plus className="h-4 w-4" />
             </Button>
           </div>
+          {formErrors.name && <p className="text-xs text-red-500 mt-1">{formErrors.name}</p>}
         </div>
       </div>
       <div className="space-y-2">
@@ -944,7 +999,9 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
             placeholder="e.g., 500"
             value={formData.price || ""}
             onChange={handleInputChange}
+            className={formErrors.price ? "border-red-500" : ""}
           />
+          {formErrors.price && <p className="text-xs text-red-500 mt-1">{formErrors.price}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="discountedPrice">Discounted Price (₹)</Label>
@@ -978,6 +1035,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
               )}
             </SelectContent>
           </Select>
+          {formErrors.duration && <p className="text-xs text-red-500 mt-1">{formErrors.duration}</p>}
         </div>
         <div className="space-y-2">
           <Label htmlFor="gender">Gender</Label>
@@ -1019,7 +1077,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
         <Button variant="outline" onClick={onClose} disabled={isSaving}>
           Cancel
         </Button>
-        <Button onClick={handleNextTab} disabled={!formData.name}>
+        <Button onClick={handleNextTab}>
           Next
         </Button>
       </DialogFooter>
@@ -1060,6 +1118,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
             </>
           ) : <p>No staff found. Please add staff members first.</p>}
         </div>
+        {formErrors.staff && <p className="text-xs text-red-500 mt-1">{formErrors.staff}</p>}
       </div>
       <div className="flex items-center space-x-2">
         <Switch
@@ -1306,6 +1365,12 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
                   {service?.status || 'N/A'}
                 </Badge>
               </div>
+              {service?.status === 'disapproved' && service?.rejectionReason && (
+                <div className="col-span-1 md:col-span-2 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <span className="font-semibold text-red-700 block mb-1">Rejection Reason:</span>
+                  <p className="text-red-600">{service.rejectionReason}</p>
+                </div>
+              )}
               <div>
                 <span className="font-semibold">Created At:</span>{" "}
                 {service?.createdAt ? new Date(service.createdAt).toLocaleDateString() : 'N/A'}
@@ -1698,6 +1763,11 @@ export default function ServicesPage() {
                         >
                           {service.status}
                         </Badge>
+                        {service.status === 'disapproved' && service.rejectionReason && (
+                          <p className="text-[10px] text-red-500 mt-1 max-w-[150px] leading-tight" title={service.rejectionReason}>
+                            Reason: {service.rejectionReason}
+                          </p>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Switch
@@ -1798,7 +1868,7 @@ export default function ServicesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 }
 

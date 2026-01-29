@@ -122,24 +122,24 @@ export function SalesChart({
         {data.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={data}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
               <XAxis
                 dataKey="name"
-                stroke="#888888"
+                stroke="hsl(var(--muted-foreground))"
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
-                stroke="#888888"
+                stroke="hsl(var(--muted-foreground))"
                 fontSize={12}
                 tickLine={false}
                 axisLine={false}
                 tickFormatter={(value) => `₹${value / 1000}k`}
               />
               <Tooltip
-                contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))' }}
-                cursor={{ fill: 'hsl(var(--secondary))' }}
+                contentStyle={{ backgroundColor: 'hsl(var(--background))', border: '1px solid hsl(var(--border))', borderRadius: '0.5rem', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}
+                cursor={{ fill: 'hsl(var(--secondary)/0.1)', stroke: 'hsl(var(--border))' }}
                 formatter={(value, name) => {
                   if (name === 'sales') {
                     return [`₹${Number(value).toLocaleString()}`, 'Sales'];
@@ -148,13 +148,14 @@ export function SalesChart({
                 }}
                 labelFormatter={(label) => `Period: ${label}`}
               />
-              <Legend iconType="circle" />
+              <Legend iconType="circle" wrapperStyle={{ paddingTop: '10px' }} />
               <Line 
                 type="monotone" 
                 dataKey="sales" 
                 stroke="hsl(var(--primary))" 
-                strokeWidth={2} 
-                activeDot={{ r: 8 }} 
+                strokeWidth={3} 
+                dot={{ stroke: 'hsl(var(--primary))', strokeWidth: 2, r: 4, fill: 'hsl(var(--background))' }}
+                activeDot={{ r: 6, stroke: 'hsl(var(--primary))', strokeWidth: 2, fill: 'hsl(var(--primary)/0.1)' }}
                 name="Sales (₹)"
               />
             </LineChart>

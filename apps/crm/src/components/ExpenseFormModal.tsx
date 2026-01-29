@@ -134,7 +134,7 @@ export const ExpenseFormModal = ({ isOpen, onClose, expense, onSuccess }: Expens
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
                 <DialogHeader>
                     <DialogTitle>{expense ? 'Edit Expense' : 'Add New Expense'}</DialogTitle>
                     <DialogDescription>

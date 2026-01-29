@@ -66,6 +66,7 @@
     "normalize-range": "^0.1.2",
     "pdfmake": "^0.2.20",
     "qrcode": "^1.5.4",
+    "react-gauge-component": "^2.0.23",
     "react-hook-form": "^7.62.0",
     "react-hot-toast": "^2.6.0",
     "react-toastify": "^11.0.5",

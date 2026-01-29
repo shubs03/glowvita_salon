@@ -6,9 +6,10 @@ import { Gift } from "lucide-react";
 
 interface SpecialOfferedProps {
   vendorId: string;
+  isSubscriptionExpired?: boolean;
 }
 
-const SpecialOffered = ({ vendorId }: SpecialOfferedProps) => {
+const SpecialOffered = ({ vendorId, isSubscriptionExpired = false }: SpecialOfferedProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [startX, setStartX] = useState(0);
   const [currentX, setCurrentX] = useState(0);
@@ -58,51 +59,51 @@ const SpecialOffered = ({ vendorId }: SpecialOfferedProps) => {
     offers.length > 0
       ? offers
       : [
-          {
-            title: "Layer Cut",
-            originalPrice: "500",
-            discountedPrice: "250",
-            discount: "50%",
-            description:
-              "Transform your style with our premium haircut service. Expert stylists, quality service, unbeatable price!",
-            validity: "*Valid until December 31, 2025",
-            image:
-              "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=600",
-          },
-          {
-            title: "Hair Spa Treatment",
-            originalPrice: "1200",
-            discountedPrice: "800",
-            discount: "33%",
-            description:
-              "Rejuvenate your hair with our luxurious spa treatment. Deep conditioning, nourishment, and shine restoration!",
-            validity: "*Valid until January 15, 2026",
-            image:
-              "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600",
-          },
-          {
-            title: "Facial & Cleanup",
-            originalPrice: "800",
-            discountedPrice: "600",
-            discount: "25%",
-            description:
-              "Experience glowing skin with our professional facial service. Deep cleansing, exfoliation, and hydration!",
-            validity: "*Valid until December 25, 2025",
-            image:
-              "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=600",
-          },
-          {
-            title: "Manicure & Pedicure",
-            originalPrice: "600",
-            discountedPrice: "450",
-            discount: "25%",
-            description:
-              "Pamper your hands and feet with our complete nail care service. Professional grooming and relaxation!",
-            validity: "*Valid until January 31, 2026",
-            image:
-              "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600",
-          },
-        ];
+        {
+          title: "Layer Cut",
+          originalPrice: "500",
+          discountedPrice: "250",
+          discount: "50%",
+          description:
+            "Transform your style with our premium haircut service. Expert stylists, quality service, unbeatable price!",
+          validity: "*Valid until December 31, 2025",
+          image:
+            "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=600",
+        },
+        {
+          title: "Hair Spa Treatment",
+          originalPrice: "1200",
+          discountedPrice: "800",
+          discount: "33%",
+          description:
+            "Rejuvenate your hair with our luxurious spa treatment. Deep conditioning, nourishment, and shine restoration!",
+          validity: "*Valid until January 15, 2026",
+          image:
+            "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600",
+        },
+        {
+          title: "Facial & Cleanup",
+          originalPrice: "800",
+          discountedPrice: "600",
+          discount: "25%",
+          description:
+            "Experience glowing skin with our professional facial service. Deep cleansing, exfoliation, and hydration!",
+          validity: "*Valid until December 25, 2025",
+          image:
+            "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=600",
+        },
+        {
+          title: "Manicure & Pedicure",
+          originalPrice: "600",
+          discountedPrice: "450",
+          discount: "25%",
+          description:
+            "Pamper your hands and feet with our complete nail care service. Professional grooming and relaxation!",
+          validity: "*Valid until January 31, 2026",
+          image:
+            "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600",
+        },
+      ];
 
   // Auto-scroll every 3 seconds
   useEffect(() => {
@@ -302,11 +303,21 @@ const SpecialOffered = ({ vendorId }: SpecialOfferedProps) => {
 
             {/* Validity and Button */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-2">
-              <p className="text-xs text-muted-foreground">
-                {currentOffer.validity}
-              </p>
-              <button className="bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-1.5 rounded-lg text-xs">
-                Book Now
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">
+                  {currentOffer.validity}
+                </p>
+                {isSubscriptionExpired && (
+                  <p className="text-[10px] text-red-600 font-medium">
+                    This service is temporarily closed
+                  </p>
+                )}
+              </div>
+              <button
+                className={`bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs transition-opacity ${isSubscriptionExpired ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary/90'}`}
+                disabled={isSubscriptionExpired}
+              >
+                {isSubscriptionExpired ? 'Unavailable' : 'Book Now'}
               </button>
             </div>
           </div>
@@ -318,11 +329,10 @@ const SpecialOffered = ({ vendorId }: SpecialOfferedProps) => {
             <button
               key={index}
               onClick={() => setCurrentIndex(index)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                index === currentIndex
-                  ? "w-6 bg-primary"
-                  : "w-2 bg-muted hover:bg-primary/50"
-              }`}
+              className={`h-2 rounded-full transition-all duration-300 ${index === currentIndex
+                ? "w-6 bg-primary"
+                : "w-2 bg-muted hover:bg-primary/50"
+                }`}
               aria-label={`Go to offer ${index + 1}`}
             />
           ))}

@@ -386,6 +386,9 @@ export function AppointmentDetailView({
       ? parseFloat((liveAppointment as any).amountRemaining)
       : Math.max(0, totalAmount - paidAmount);
 
+  const discountAmount = (liveAppointment as any).discountAmount ?? liveAppointment.discount ?? 0;
+  const couponCode = (liveAppointment as any).couponCode ?? '';
+
   // Resolve payment history to display
   const displayPaymentHistory = useMemo(() => {
     const hist = overridePaymentHistory ?? (liveAppointment as any)?.paymentHistory ?? [];
@@ -925,14 +928,15 @@ export function AppointmentDetailView({
       ],
       subtotal: totalBaseAmount + totalAddOnsAmount,
       originalSubtotal: totalBaseAmount + totalAddOnsAmount,
-      discount: appointment.discount,
+      discount: discountAmount,
       tax: (appointment as any).serviceTax || (appointment as any).tax || appointment.payment?.serviceTax || 0,
       platformFee: (appointment as any).platformFee || appointment.payment?.platformFee || 0,
       total: totalAmount,
       balance: remainingAmount,
-      paymentMethod: (appointment as any).paymentMethod || appointment.payment?.paymentMethod || null
+      paymentMethod: (appointment as any).paymentMethod || appointment.payment?.paymentMethod || null,
+      couponCode: (liveAppointment as any).couponCode || ''
     };
-  }, [appointment, totalAmount, remainingAmount, vendorProfile]);
+  }, [appointment, totalAmount, remainingAmount, vendorProfile, liveAppointment]);
 
   const handleDownloadPdf = async () => {
     const toastId = toast.loading('Generating PDF...');
@@ -1375,35 +1379,6 @@ export function AppointmentDetailView({
                           <span className="font-medium">{formatCurrency(totalAddOnsAmount)}</span>
                         </div>
 
-                        {/* Discount Amount (from appointment root) */}
-                        {(appointment as any).discountAmount > 0 && (
-                          <div className="flex justify-between items-center text-foreground">
-                            <span>Discount Applied</span>
-                            <span className="font-medium">-{formatCurrency((appointment as any).discountAmount)}</span>
-                          </div>
-                        )}
-
-                        {/* Offer/Discount Applied (from payment object) */}
-                        {appointment.payment?.offer && (
-                          <div className="flex justify-between items-center text-foreground">
-                            <div className="flex items-center gap-1">
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                              </svg>
-                              <span>Offer ({appointment.payment.offer.code})</span>
-                            </div>
-                            <span className="font-medium">-{formatCurrency(appointment.payment.offer.discountAmount)}</span>
-                          </div>
-                        )}
-
-                        {/* Regular Discount */}
-                        {appointment.discount > 0 && (
-                          <div className="flex justify-between items-center text-foreground">
-                            <span>Discount</span>
-                            <span className="font-medium">-{formatCurrency(appointment.discount)}</span>
-                          </div>
-                        )}
-
                         {/* Service Tax (GST) */}
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Service Tax (GST)</span>
@@ -1414,6 +1389,12 @@ export function AppointmentDetailView({
                         <div className="flex justify-between items-center">
                           <span className="text-muted-foreground">Platform Fee</span>
                           <span className="font-medium">{formatCurrency((liveAppointment as any).platformFee || appointment.payment?.platformFee || 0)}</span>
+                        </div>
+
+                        {/* Discount(couponcode) */}
+                        <div className="flex justify-between items-center text-red-600">
+                          <span>Discount{couponCode ? `(${couponCode})` : ''}</span>
+                          <span className="font-medium">-{formatCurrency(discountAmount)}</span>
                         </div>
 
                         <div className="border-t pt-2 mt-2">
@@ -1808,6 +1789,27 @@ export function AppointmentDetailView({
                         <div>
                           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Client</p>
                           <p className="text-lg font-semibold text-foreground">{appointment.clientName}</p>
+                          {(appointment as any).client && (
+                            <div className="flex flex-col gap-1 mt-1">
+                              <div className="flex items-center text-sm text-foreground/70">
+                                <Phone className="h-3 w-3 mr-1.5" />
+                                <span>
+                                  {(appointment as any).client?.mobileNo ||
+                                    (appointment as any).client?.phone ||
+                                    (appointment as any).clientPhone ||
+                                    'N/A'}
+                                </span>
+                              </div>
+                              {((appointment as any).client?.email || (appointment as any).client?.emailAddress) && (
+                                <div className="flex items-center text-sm text-foreground/70">
+                                  <Mail className="h-3 w-3 mr-1.5" />
+                                  <span className="truncate max-w-[200px]">
+                                    {(appointment as any).client?.email || (appointment as any).client?.emailAddress}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2026,12 +2028,10 @@ export function AppointmentDetailView({
                     <span className="font-mono">{formatCurrency((liveAppointment as any).platformFee || appointment.payment?.platformFee || 0)}</span>
                   </div>
 
-                  {appointment.discount > 0 && (
-                    <div className="flex justify-between text-green-600 dark:text-green-400">
-                      <span>Discount:</span>
-                      <span className="font-mono">-{formatCurrency(appointment.discount)}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between text-red-600">
+                    <span>Discount{couponCode ? `(${couponCode})` : ''}:</span>
+                    <span className="font-mono">-{formatCurrency(discountAmount)}</span>
+                  </div>
 
                   <div className="flex justify-between font-medium pt-2 border-t mt-2">
                     <span>Total Amount:</span>

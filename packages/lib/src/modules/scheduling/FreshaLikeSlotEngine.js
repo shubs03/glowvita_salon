@@ -57,6 +57,29 @@ function minutesToTime(minutes) {
 }
 
 /**
+ * Helper: Parse duration string or number to minutes
+ * @param {string|number} duration - Duration to parse
+ * @param {number} defaultValue - Default value if parsing fails
+ * @returns {number} - Duration in minutes
+ */
+function parseDuration(duration, defaultValue = 60) {
+  if (duration === undefined || duration === null || duration === '') return 0;
+  if (typeof duration === 'number') return duration;
+  if (typeof duration === 'string') {
+    const match = duration.match(/(\d+)\s*(min|hour|hours)/i);
+    if (!match) {
+      const num = parseInt(duration);
+      return isNaN(num) ? defaultValue : num;
+    }
+    const value = parseInt(match[1]);
+    const unit = match[2].toLowerCase();
+    if (unit === 'min') return value;
+    if (unit === 'hour' || unit === 'hours') return value * 60;
+  }
+  return defaultValue;
+}
+
+/**
  * Generate available time slots for a service with Fresha-like validation
  * @param {Object} params - Slot generation parameters
  * @returns {Promise<Array>} - Array of available time slots
@@ -121,8 +144,14 @@ export async function generateFreshaLikeSlots({
 
     // Calculate total service time including all services
     const totalServiceTime = services.reduce((total, service) => {
-      return total + (service.duration || 0) + (service.prepTime || 0) + (service.setupCleanupTime || 0);
+      const dur = parseDuration(service.duration);
+      const prep = parseDuration(service.prepTime, 0);
+      const clean = parseDuration(service.setupCleanupTime, 0);
+      return total + dur + prep + clean;
     }, 0);
+
+    console.log(`[SlotEngine] totalServiceTime calculated: ${totalServiceTime} mins for ${services.length} records`);
+    services.forEach((s, idx) => console.log(`  - Service ${idx + 1}: ${s.name} (${s.duration} mins)`));
 
     // Calculate travel time if needed
     let travelTimeInfo = null;
@@ -244,12 +273,15 @@ async function validateAndFilterSlots({
 
     const existingAppointments = await AppointmentModel.find({
       vendorId: vendorId,
-      'staff.id': staffId,
+      $or: [
+        { staff: staffId },
+        { 'serviceItems.staff': staffId }
+      ],
       date: {
         $gte: startOfDay,
         $lte: endOfDay
       },
-      status: { $in: ['scheduled', 'confirmed', 'checked-in'] }
+      status: { $in: ['scheduled', 'confirmed', 'checked-in', 'temp-locked'] }
     });
 
     // Filter candidate slots
@@ -262,47 +294,44 @@ async function validateAndFilterSlots({
       const daySlotsField = `${dayOfWeek}Slots`;
       const workingHours = staff[daySlotsField];
 
+      // Calculate the full blocked window for the CURRENT candidate slot
+      const currentTravelTime = travelTimeInfo ? travelTimeInfo.timeInMinutes : 0;
+      const slotBlockedStart = slotStartMinutes - currentTravelTime - bufferBefore;
+      const slotBlockedEnd = slotEndMinutes + (isHomeService ? currentTravelTime : 0) + bufferAfter;
+
+      // Check if the FULL activity fits within staff's working hours
       let isInWorkingHours = false;
       for (const period of workingHours) {
         const periodStart = timeToMinutes(period.startTime);
         const periodEnd = timeToMinutes(period.endTime);
-        if (slotStartMinutes >= periodStart && slotEndMinutes <= periodEnd) {
+        if (slotBlockedStart >= periodStart && slotBlockedEnd <= periodEnd) {
           isInWorkingHours = true;
           break;
         }
       }
 
       if (!isInWorkingHours) {
-        return false; // Slot is outside working hours
+        return false; // Slot activity window is outside working hours
       }
 
-      // Check for conflicts with existing appointments
+      // Check for conflicts with existing appointments using the pre-calculated slotBlockedStart/End
       for (const appointment of existingAppointments) {
         const aptStartMinutes = timeToMinutes(appointment.startTime);
         const aptEndMinutes = timeToMinutes(appointment.endTime);
+        
+        // Calculate the full blocked window for the existing appointment
+        // including its own travel time and buffers if recorded
+        // Robustness fallback: use 30 mins if it's a home service but travel is not recorded
+        const aptTravelTime = appointment.travelTime || (appointment.isHomeService ? 30 : 0);
+        const aptBufferBefore = appointment.bufferBefore || 0;
+        const aptBufferAfter = appointment.bufferAfter || 0;
+        
+        const aptBlockedStart = aptStartMinutes - aptTravelTime - aptBufferBefore;
+        const aptBlockedEnd = aptEndMinutes + aptTravelTime + aptBufferAfter;
 
-        // Check for overlap
-        if (slotStartMinutes < aptEndMinutes && slotEndMinutes > aptStartMinutes) {
-          return false; // Slot conflicts with existing appointment
-        }
-
-        // Check for travel time conflicts for home services
-        if (isHomeService && travelTimeInfo) {
-          // Check pre-travel conflict (travel to customer)
-          const preTravelStart = slotStartMinutes - travelTimeInfo.timeInMinutes - bufferBefore;
-          const preTravelEnd = slotStartMinutes;
-
-          if (preTravelStart < aptEndMinutes && preTravelEnd > aptStartMinutes) {
-            return false; // Pre-travel time conflicts
-          }
-
-          // Check post-travel conflict (travel back from customer)
-          const postTravelStart = slotEndMinutes;
-          const postTravelEnd = slotEndMinutes + travelTimeInfo.timeInMinutes + bufferAfter;
-
-          if (postTravelStart < aptEndMinutes && postTravelEnd > aptStartMinutes) {
-            return false; // Post-travel time conflicts
-          }
+        // Check for overlap between blocked windows
+        if (slotBlockedStart < aptBlockedEnd && slotBlockedEnd > aptBlockedStart) {
+          return false; // Slot or its travel/buffer time conflicts with existing appointment or its travel/buffer
         }
       }
 
@@ -311,35 +340,18 @@ async function validateAndFilterSlots({
         const dateString = date.toISOString().split('T')[0];
 
         for (const blocked of staff.blockedTimes) {
-          const blockedDateString = blocked.date.toISOString().split('T')[0];
+          const blockedDateString = blocked.date instanceof Date ? 
+            blocked.date.toISOString().split('T')[0] : 
+            new Date(blocked.date).toISOString().split('T')[0];
           
           // Check if blocked time is for the same date
           if (blockedDateString === dateString) {
             const blockStart = timeToMinutes(blocked.startTime);
             const blockEnd = timeToMinutes(blocked.endTime);
 
-            // Check for overlap with the appointment slot
-            if (slotStartMinutes < blockEnd && slotEndMinutes > blockStart) {
-              return false; // Slot conflicts with blocked time
-            }
-
-            // Check for travel time conflicts for home services with blocked times
-            if (isHomeService && travelTimeInfo) {
-              // Check pre-travel conflict with blocked time
-              const preTravelStart = slotStartMinutes - travelTimeInfo.timeInMinutes - bufferBefore;
-              const preTravelEnd = slotStartMinutes;
-
-              if (preTravelStart < blockEnd && preTravelEnd > blockStart) {
-                return false; // Pre-travel time conflicts with blocked time
-              }
-
-              // Check post-travel conflict with blocked time
-              const postTravelStart = slotEndMinutes;
-              const postTravelEnd = slotEndMinutes + travelTimeInfo.timeInMinutes + bufferAfter;
-
-              if (postTravelStart < blockEnd && postTravelEnd > blockStart) {
-                return false; // Post-travel time conflicts with blocked time
-              }
+            // Check for overlap with the pre-calculated slot blocked window
+            if (slotBlockedStart < blockEnd && slotBlockedEnd > blockStart) {
+              return false; // Slot or its travel/buffer conflicts with blocked time
             }
           }
         }
@@ -668,28 +680,30 @@ export async function generateWeddingPackageSlots({
     }
 
     // Account for travel time to and from the customer for home services
-    const totalSlotTime = customerLocation ? 
-      totalDuration + (2 * travelTime) + bufferBefore + bufferAfter : // Travel to + service + travel back + buffers
+    const totalSlotActivityTime = customerLocation ? 
+      totalDuration + (2 * travelTime) + bufferBefore + bufferAfter : 
       totalDuration + bufferBefore + bufferAfter;
 
-    while (currentTime + totalSlotTime <= closeMinutes) {
-      const slotStart = minutesToTime(currentTime);
-      const slotEnd = minutesToTime(currentTime + totalDuration);
+    while (currentTime + totalSlotActivityTime <= closeMinutes) {
+      // The SERVICE starts after travel and buffer
+      const serviceStartMinutes = currentTime + (customerLocation ? travelTime : 0) + bufferBefore;
+      const slotStart = minutesToTime(serviceStartMinutes);
+      const slotEnd = minutesToTime(serviceStartMinutes + totalDuration);
 
       // Create blocking windows for travel time
       const blockingWindows = [];
       if (travelTime > 0 && customerLocation) {
         // Add travel time before appointment (to customer location)
         blockingWindows.push({
-          startTime: minutesToTime(currentTime - travelTime - bufferBefore),
-          endTime: minutesToTime(currentTime - bufferBefore),
+          startTime: minutesToTime(serviceStartMinutes - travelTime - bufferBefore),
+          endTime: minutesToTime(serviceStartMinutes - bufferBefore),
           reason: 'Travel to customer location'
         });
 
         // Add buffer before
         if (bufferBefore > 0) {
           blockingWindows.push({
-            startTime: minutesToTime(currentTime - bufferBefore),
+            startTime: minutesToTime(serviceStartMinutes - bufferBefore),
             endTime: slotStart,
             reason: 'Buffer before service'
           });
@@ -699,13 +713,13 @@ export async function generateWeddingPackageSlots({
         if (bufferAfter > 0) {
           blockingWindows.push({
             startTime: slotEnd,
-            endTime: minutesToTime(currentTime + totalDuration + bufferAfter),
+            endTime: minutesToTime(serviceStartMinutes + totalDuration + bufferAfter),
             reason: 'Buffer after service'
           });
         }
 
         // Add travel time after appointment (back to salon/base location)
-        const returnTravelStartMinutes = currentTime + totalDuration + bufferAfter;
+        const returnTravelStartMinutes = serviceStartMinutes + totalDuration + bufferAfter;
         const returnTravelEndMinutes = returnTravelStartMinutes + travelTime;
         blockingWindows.push({
           startTime: minutesToTime(returnTravelStartMinutes),
@@ -716,7 +730,7 @@ export async function generateWeddingPackageSlots({
         // Add buffers for salon services
         if (bufferBefore > 0) {
           blockingWindows.push({
-            startTime: minutesToTime(currentTime - bufferBefore),
+            startTime: minutesToTime(serviceStartMinutes - bufferBefore),
             endTime: slotStart,
             reason: 'Buffer before service'
           });
@@ -725,7 +739,7 @@ export async function generateWeddingPackageSlots({
         if (bufferAfter > 0) {
           blockingWindows.push({
             startTime: slotEnd,
-            endTime: minutesToTime(currentTime + totalDuration + bufferAfter),
+            endTime: minutesToTime(serviceStartMinutes + totalDuration + bufferAfter),
             reason: 'Buffer after service'
           });
         }
@@ -867,27 +881,23 @@ async function validateWeddingPackageSlot({
         return false;
       }
 
-      // Check if the slot time falls within staff's working hours
+      const slotTotalStart = slotStartMinutes - (isHomeService ? travelTime : 0) - bufferBefore;
+      const slotTotalEnd = slotEndMinutes + (isHomeService ? travelTime : 0) + bufferAfter;
+
+      // Check if the FULL activity fits within staff's working hours
       let slotWithinWorkingHours = false;
       for (const period of staffWorkingHours) {
         const periodStart = timeToMinutes(period.startTime);
         const periodEnd = timeToMinutes(period.endTime);
 
-        console.log(`  Checking period: ${period.startTime}-${period.endTime} (${periodStart}-${periodEnd} minutes)`);
-        console.log(`  Slot range: ${slotStartMinutes}-${slotEndMinutes} minutes`);
-
-        // Check if slot falls within this working period
-        if (slotStartMinutes >= periodStart && slotEndMinutes <= periodEnd) {
+        if (slotTotalStart >= periodStart && slotTotalEnd <= periodEnd) {
           slotWithinWorkingHours = true;
-          console.log(`  ✅ Slot fits within this working period`);
           break;
-        } else {
-          console.log(`  ❌ Slot does NOT fit (start: ${slotStartMinutes >= periodStart}, end: ${slotEndMinutes <= periodEnd})`);
         }
       }
 
       if (!slotWithinWorkingHours) {
-        console.log(`❌ Slot ${slotStartTime}-${slotEndTime} is outside staff ${staff.fullName}'s working hours`);
+        console.log(`❌ Full window ${minutesToTime(slotTotalStart)}-${minutesToTime(slotTotalEnd)} is outside staff ${staff.fullName}'s working hours`);
         return false;
       }
 
@@ -917,114 +927,44 @@ async function validateWeddingPackageSlot({
           $gte: startOfDay,
           $lte: endOfDay
         },
-        status: { $in: ['scheduled', 'confirmed', 'checked-in'] }
+        status: { $in: ['scheduled', 'confirmed', 'checked-in', 'temp-locked'] }
       });
 
       console.log(`Found ${existingAppointments.length} existing appointments for validation`);
 
-      // Check for conflicts with existing appointments
+      // Check for conflicts with existing appointments using full window logic
       for (const appointment of existingAppointments) {
         const aptStartMinutes = timeToMinutes(appointment.startTime);
         const aptEndMinutes = timeToMinutes(appointment.endTime);
+        const aptTravel = Number(appointment.travelTime) || 0;
+        const aptBufBefore = Number(appointment.bufferBefore) || 0;
+        const aptBufAfter = Number(appointment.bufferAfter) || 0;
 
-        // Check for overlap with the main service time
-        if (slotStartMinutes < aptEndMinutes && slotEndMinutes > aptStartMinutes) {
-          console.log(`Slot conflicts with appointment at ${appointment.startTime}-${appointment.endTime}`);
-          return false; // Slot conflicts with existing appointment
-        }
+        const aptBlockedStart = aptStartMinutes - aptTravel - aptBufBefore;
+        const aptBlockedEnd = aptEndMinutes + aptTravel + aptBufAfter;
 
-        // Check for travel time conflicts for home services
-        if (isHomeService && travelTime > 0) {
-          // Check pre-travel conflict (travel to customer)
-          const preTravelStart = slotStartMinutes - travelTime - bufferBefore;
-          const preTravelEnd = slotStartMinutes - bufferBefore;
-
-          if (preTravelStart < aptEndMinutes && preTravelEnd > aptStartMinutes) {
-            return false; // Pre-travel time conflicts
-          }
-
-          // Check post-travel conflict (travel back from customer)
-          const postTravelStart = slotEndMinutes + bufferAfter;
-          const postTravelEnd = slotEndMinutes + bufferAfter + travelTime;
-
-          if (postTravelStart < aptEndMinutes && postTravelEnd > aptStartMinutes) {
-            return false; // Post-travel time conflicts
-          }
-        }
-
-        // Check buffer conflicts
-        if (bufferBefore > 0) {
-          const bufferStart = slotStartMinutes - bufferBefore;
-          const bufferEnd = slotStartMinutes;
-          
-          if (bufferStart < aptEndMinutes && bufferEnd > aptStartMinutes) {
-            return false; // Buffer before conflicts
-          }
-        }
-
-        if (bufferAfter > 0) {
-          const bufferStart = slotEndMinutes;
-          const bufferEnd = slotEndMinutes + bufferAfter;
-          
-          if (bufferStart < aptEndMinutes && bufferEnd > aptStartMinutes) {
-            return false; // Buffer after conflicts
-          }
+        if (slotTotalStart < aptBlockedEnd && slotTotalEnd > aptBlockedStart) {
+          console.log(`Slot window conflicts with appointment window ${minutesToTime(aptBlockedStart)}-${minutesToTime(aptBlockedEnd)}`);
+          return false;
         }
       }
 
-      // Check for conflicts with staff blocked times
+      // Check for conflicts with staff blocked times using full window logic
       if (staff.blockedTimes && staff.blockedTimes.length > 0) {
         const dateString = date.toISOString().split('T')[0];
 
         for (const blocked of staff.blockedTimes) {
-          const blockedDateString = blocked.date.toISOString().split('T')[0];
+          const blockedDateString = blocked.date instanceof Date ? 
+            blocked.date.toISOString().split('T')[0] : 
+            new Date(blocked.date).toISOString().split('T')[0];
           
-          // Check if blocked time is for the same date
           if (blockedDateString === dateString) {
             const blockStart = timeToMinutes(blocked.startTime);
             const blockEnd = timeToMinutes(blocked.endTime);
 
-            // Check for overlap with the main service time
-            if (slotStartMinutes < blockEnd && slotEndMinutes > blockStart) {
-              return false; // Slot conflicts with blocked time
-            }
-
-            // Check for travel time conflicts for home services with blocked times
-            if (isHomeService && travelTime > 0) {
-              // Check pre-travel conflict with blocked time
-              const preTravelStart = slotStartMinutes - travelTime - bufferBefore;
-              const preTravelEnd = slotStartMinutes - bufferBefore;
-
-              if (preTravelStart < blockEnd && preTravelEnd > blockStart) {
-                return false; // Pre-travel time conflicts with blocked time
-              }
-
-              // Check post-travel conflict with blocked time
-              const postTravelStart = slotEndMinutes + bufferAfter;
-              const postTravelEnd = slotEndMinutes + bufferAfter + travelTime;
-
-              if (postTravelStart < blockEnd && postTravelEnd > blockStart) {
-                return false; // Post-travel time conflicts with blocked time
-              }
-            }
-
-            // Check buffer conflicts with blocked times
-            if (bufferBefore > 0) {
-              const bufferStart = slotStartMinutes - bufferBefore;
-              const bufferEnd = slotStartMinutes;
-              
-              if (bufferStart < blockEnd && bufferEnd > blockStart) {
-                return false; // Buffer before conflicts with blocked time
-              }
-            }
-
-            if (bufferAfter > 0) {
-              const bufferStart = slotEndMinutes;
-              const bufferEnd = slotEndMinutes + bufferAfter;
-              
-              if (bufferStart < blockEnd && bufferEnd > blockStart) {
-                return false; // Buffer after conflicts with blocked time
-              }
+            if (slotTotalStart < blockEnd && slotTotalEnd > blockStart) {
+              console.log(`Slot window conflicts with blocked time ${blocked.startTime}-${blocked.endTime}`);
+              return false;
             }
           }
         }

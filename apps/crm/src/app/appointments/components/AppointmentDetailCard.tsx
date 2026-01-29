@@ -41,6 +41,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
   const paidAmount = (appointment as any).amountPaid ?? (appointment as any).payment?.paid ?? 0;
   const remainingAmount = Math.max(0, Number(totalAmount) - Number(paidAmount));
   const discountAmount = (appointment as any).discountAmount ?? 0;
+  const couponCode = (appointment as any).couponCode ?? '';
   const serviceTax = (appointment as any).serviceTax ?? 0;
   const platformFee = (appointment as any).platformFee ?? 0;
   const paymentMethod = (appointment as any).paymentMethod ?? (appointment as any).payment?.paymentMethod ?? null;
@@ -130,9 +131,10 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
       platformFee: Number(platformFee),
       total: Number(totalAmount),
       balance: Number(remainingAmount),
-      paymentMethod: paymentMethod
+      paymentMethod: paymentMethod,
+      couponCode: couponCode
     };
-  }, [appointment, totalAmount, remainingAmount, vendorProfile, discountAmount, serviceTax, platformFee, paymentMethod]);
+  }, [appointment, totalAmount, remainingAmount, vendorProfile, discountAmount, serviceTax, platformFee, paymentMethod, couponCode]);
 
   const handleDownloadPdf = async () => {
     const toastId = toast.loading('Generating PDF...');
@@ -226,7 +228,17 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
       <div className="flex justify-between items-start">
         <div>
           <h3 className="text-lg font-semibold">{appointment.clientName}</h3>
-          <p className="text-sm text-gray-500">Appointment Details</p>
+          <p className="text-sm text-muted-foreground">
+            {(appointment as any).client?.mobileNo ||
+              (appointment as any).client?.phone ||
+              (appointment as any).client?.mobileNumber ||
+              (appointment as any).client?.phoneNumber ||
+              appointment.clientPhone ||
+              (appointment as any).mobileNo ||
+              (appointment as any).phone ||
+              'No phone'}
+          </p>
+          <p className="text-xs text-gray-400 mt-1 uppercase tracking-wider font-medium">Appointment Details</p>
         </div>
         <div className="flex gap-2">
           {(appointment.status === 'completed' || appointment.status === 'completed without payment') && (
@@ -372,12 +384,6 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
               <span>Add-on Amount:</span>
               <span>₹{Number(totalAddOnsAmount).toFixed(2)}</span>
             </div>
-            {Number(discountAmount) > 0 && (
-              <div className="flex justify-between text-sm text-red-600">
-                <span>Discount:</span>
-                <span>-₹{Number(discountAmount).toFixed(2)}</span>
-              </div>
-            )}
             <div className="flex justify-between text-sm text-gray-700">
               <span>Service Tax:</span>
               <span>₹{Number(serviceTax).toFixed(2)}</span>
@@ -385,6 +391,10 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
             <div className="flex justify-between text-sm text-gray-700">
               <span>Platform Fee:</span>
               <span>₹{Number(platformFee).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm text-red-600">
+              <span>Discount{couponCode ? `(${couponCode})` : ''}:</span>
+              <span>-₹{Number(discountAmount).toFixed(2)}</span>
             </div>
             <div className="flex justify-between font-medium mt-1 pt-2 border-t">
               <span>Total:</span>

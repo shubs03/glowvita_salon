@@ -528,6 +528,16 @@ export const glowvitaApi = createApi({
       transformResponse: (response) => response,
     }),
 
+    // Multi-Service Slot Discovery for booking flow
+    getMultiServiceSlots: builder.mutation({
+      query: (body) => ({
+        url: "/booking/slots/multi",
+        method: "POST",
+        body
+      }),
+      transformResponse: (response) => response,
+    }),
+
     // Admin Panel Endpoints
     getUsers: builder.query({
       query: () => ({
@@ -542,10 +552,10 @@ export const glowvitaApi = createApi({
       providesTags: ["PendingServices"],
     }),
     updateServiceStatus: builder.mutation({
-      query: ({ serviceId, status }) => ({
+      query: ({ serviceId, status, rejectionReason }) => ({
         url: "/admin/services/service-approval",
         method: "PATCH",
-        body: { serviceId, status },
+        body: { serviceId, status, rejectionReason },
       }),
       invalidatesTags: ["PendingServices", "VendorServices"],
     }),
@@ -556,10 +566,10 @@ export const glowvitaApi = createApi({
       providesTags: ["PendingWeddingPackages"],
     }),
     updateWeddingPackageStatus: builder.mutation({
-      query: ({ packageId, status }) => ({
+      query: ({ packageId, status, rejectionReason }) => ({
         url: "/admin/wedding-packages/approval",
         method: "PATCH",
-        body: { packageId, status },
+        body: { packageId, status, rejectionReason },
       }),
       invalidatesTags: ["PendingWeddingPackages", "VendorWeddingPackages", "PublicVendorWeddingPackages"],
     }),
@@ -1401,20 +1411,20 @@ export const glowvitaApi = createApi({
 
     // Update Vendor Product Status
     updateVendorProductStatus: builder.mutation({
-      query: ({ productId, status }) => ({
+      query: ({ productId, status, rejectionReason }) => ({
         url: "/admin/product-approval/vendor",
         method: "PATCH",
-        body: { productId, status },
+        body: { productId, status, rejectionReason },
       }),
       invalidatesTags: ["Product", "CrmProducts"],
     }),
 
     // Update Supplier Product Status
     updateSupplierProductStatus: builder.mutation({
-      query: ({ productId, status }) => ({
+      query: ({ productId, status, rejectionReason }) => ({
         url: "/admin/product-approval/supplier",
         method: "PATCH",
-        body: { productId, status },
+        body: { productId, status, rejectionReason },
       }),
       invalidatesTags: ["Product", "CrmProducts"],
     }),
@@ -2279,6 +2289,16 @@ export const glowvitaApi = createApi({
       invalidatesTags: ['PublicAppointments'],
     }),
 
+    // Cancel Booking Mutation
+    cancelBooking: builder.mutation({
+      query: ({ appointmentId, reason }) => ({
+        url: "/booking/booking",
+        method: "DELETE",
+        body: { appointmentId, reason }
+      }),
+      invalidatesTags: ['PublicAppointments', 'Appointments'],
+    }),
+
     // Acquire slot lock for preventing concurrent bookings
     acquireSlotLock: builder.mutation({
       query: (lockData) => ({
@@ -2315,11 +2335,12 @@ export const glowvitaApi = createApi({
 
     // Get available slots with caching
     getAvailableSlots: builder.query({
-      query: ({ vendorId, staffId, serviceIds, date, isHomeService, location }) => {
+      query: ({ vendorId, staffId, serviceIds, addOnIds, date, isHomeService, location }) => {
         const params = new URLSearchParams({
           vendorId,
           staffId: staffId || 'any',
           ...(serviceIds && { serviceIds: Array.isArray(serviceIds) ? serviceIds.join(',') : serviceIds }),
+          ...(addOnIds && { addOnIds: Array.isArray(addOnIds) ? addOnIds.join(',') : addOnIds }),
           date: date,
           isHomeService: isHomeService?.toString() || 'false',
           ...(location?.lat && { lat: location.lat.toString() }),
@@ -2744,6 +2765,7 @@ export const {
   useGetPublicVendorStaffByServiceQuery,
   useGetPublicVendorOffersQuery,
   useGetPublicAllOffersQuery,
+  useGetMultiServiceSlotsMutation,
   useUserLoginMutation,
   useGetClientOrdersQuery,
   useCreateClientOrderMutation,
@@ -3015,6 +3037,8 @@ export const {
   useAcquireSlotLockMutation,
   // Confirm Booking Mutation
   useConfirmBookingMutation,
+  // Cancel Booking Mutation (added)
+  useCancelBookingMutation,
   // Lock Wedding Package Mutation
   useLockWeddingPackageMutation,
   // Public Wedding Packages Hook
