@@ -53,6 +53,13 @@ const billingItemSchema = new mongoose.Schema({
     type: Number, // in minutes
     min: 0
   },
+  // Add-ons for services
+  addOns: [{
+    _id: { type: mongoose.Schema.Types.ObjectId, ref: 'AddOn' },
+    name: { type: String, required: true },
+    price: { type: Number, required: true, min: 0 },
+    duration: { type: Number, min: 0 }
+  }],
   // Product-specific fields
   stock: {
     type: Number,
@@ -234,37 +241,9 @@ billingSchema.pre("save", function (next) {
 
 // Static method to generate unique invoice numbers
 billingSchema.statics.generateInvoiceNumber = async function (vendorId) {
-  const crypto = require('crypto');
-
-  // Get current date in YYYYMMDD format
-  const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const dateStr = `${year}${month}${day}`;
-
-  // Extract first 4 characters of vendorId and convert to uppercase
-  const vendorCode = vendorId.toString().slice(0, 4).toUpperCase();
-
-  // Generate random sections (2-3 sections with mixed case letters and numbers)
-  const generateRandomSection = (length) => {
-    return crypto.randomBytes(length)
-      .toString('base64')
-      .replace(/\+/g, 'A')
-      .replace(/\//g, 'B')
-      .substring(0, length);
-  };
-
-  // Create 2-3 random sections
-  const section1 = generateRandomSection(8);
-  const section2 = generateRandomSection(8);
-
-  // Randomly decide whether to include a third section (50% chance)
-  const includeThirdSection = Math.random() > 0.5;
-  const section3 = includeThirdSection ? `-${generateRandomSection(8)}` : '';
-
-  // Construct the invoice number
-  return `#INV-${dateStr}-${vendorCode}-${section1}-${section2}${section3}`;
+  // Use dynamic import to avoid circular dependencies
+  const { default: InvoiceModel } = await import('../Invoice/Invoice.model.js');
+  return await InvoiceModel.generateInvoiceNumber(vendorId);
 };
 
 // Instance method to update payment status

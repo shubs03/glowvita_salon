@@ -8,12 +8,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui/dialog";
 import { Textarea } from "@repo/ui/textarea";
+import { Checkbox } from "@repo/ui/checkbox";
 import { Search, Plus, Minus, Trash2, ShoppingCart, Package, Clock, UserCheck, CheckCircle, X, Mail, Printer, DownloadCloud, Calendar, Paperclip } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useGetCategoriesQuery, useGetVendorServicesQuery, useGetClientsQuery, useCreateClientMutation, useGetVendorProfileQuery, useCreateBillingMutation, useGetStaffQuery } from "@repo/store/api";
+import { useGetCategoriesQuery, useGetVendorServicesQuery, useGetClientsQuery, useCreateClientMutation, useGetVendorProfileQuery, useCreateBillingMutation, useGetStaffQuery, useGetAddOnsQuery } from "@repo/store/api";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { toast } from 'sonner';
 import InvoiceUI from "@/components/InvoiceUI";
+import { ScrollArea } from "@repo/ui/scroll-area";
 
 // Dynamically import html2pdf to avoid SSR issues
 let html2pdf: any = null;
@@ -31,6 +33,15 @@ const loadHtml2Pdf = async () => {
   }
   return html2pdf;
 };
+
+// AddOn interface
+interface AddOn {
+  _id: string;
+  name: string;
+  price: number;
+  duration: number;
+  services: string[];
+}
 
 // Service interface
 interface Service {
@@ -78,6 +89,7 @@ interface CartItem extends Service {
     id: string;
     name: string;
   };
+  addOns?: AddOn[];
 }
 
 interface ServicesTabProps {
@@ -288,72 +300,144 @@ export default function ServicesTab({
     }
   };
 
-  // Add item to cart
-  const addToCart = (service: Service) => {
-    setCart(prevCart => {
-      const existingItem = prevCart.find(item => item._id === service._id);
+  // Add-on selection states
+  const [isAddOnModalOpen, setIsAddOnModalOpen] = useState(false);
+  const [selectedServiceForAdd, setSelectedServiceForAdd] = useState<Service | null>(null);
+  const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
 
-      if (existingItem) {
-        return prevCart.map(item =>
-          item._id === service._id
-            ? {
-              ...item,
-              quantity: item.quantity + 1,
-              totalPrice: (item.quantity + 1) * item.price
-            }
-            : item
-        );
+  // Fetch add-ons
+  const { data: addOnsData } = useGetAddOnsQuery(undefined, {
+    skip: !user?._id
+  });
+
+  const allAddOns = (addOnsData?.addOns as AddOn[]) || [];
+
+  // Filter add-ons for the selected service
+  const applicableAddOns = useMemo(() => {
+    if (!selectedServiceForAdd) return [];
+    return allAddOns.filter(addOn =>
+      !addOn.services ||
+      addOn.services.length === 0 ||
+      addOn.services.includes(selectedServiceForAdd._id)
+    );
+  }, [selectedServiceForAdd, allAddOns]);
+
+  // Handle open add-on modal
+  const handleOpenAddOnModal = (service: Service) => {
+    setSelectedServiceForAdd(service);
+    setSelectedAddOnIds([]);
+    setIsAddOnModalOpen(true);
+  };
+
+  // Toggle add-on selection
+  const toggleAddOnSelection = (addOnId: string) => {
+    setSelectedAddOnIds(prev =>
+      prev.includes(addOnId)
+        ? prev.filter(id => id !== addOnId)
+        : [...prev, addOnId]
+    );
+  };
+
+  // Calculate item total price including add-ons
+  const calculateItemTotal = (servicePrice: number, addOns: AddOn[], quantity: number) => {
+    const addOnsTotal = addOns.reduce((sum, addOn) => sum + addOn.price, 0);
+    return (servicePrice + addOnsTotal) * quantity;
+  };
+
+  // Handle add service with add-ons to cart
+  const handleAddServiceWithAddOns = () => {
+    if (!selectedServiceForAdd) return;
+
+    const selectedAddOns = allAddOns.filter(addOn => selectedAddOnIds.includes(addOn._id));
+
+    setCart(prevCart => {
+      // Logic to find if same service with EXACT same add-ons exists is complex.
+      // For simplicity, we treat every addition as a new line item if it has add-ons, or merge if exact match.
+      // Or we can just generate a unique ID for cart item.
+      // Here, we'll try to find an existing item with same service ID and matching add-on IDs.
+
+      const existingItemIndex = prevCart.findIndex(item => {
+        if (item._id !== selectedServiceForAdd._id) return false;
+
+        const itemAddOnIds = item.addOns?.map(a => a._id).sort().join(',') || '';
+        const currentAddOnIds = selectedAddOnIds.sort().join(',');
+
+        return itemAddOnIds === currentAddOnIds;
+      });
+
+      if (existingItemIndex > -1) {
+        const updatedCart = [...prevCart];
+        const existingItem = updatedCart[existingItemIndex];
+        const newQuantity = existingItem.quantity + 1;
+
+        updatedCart[existingItemIndex] = {
+          ...existingItem,
+          quantity: newQuantity,
+          totalPrice: calculateItemTotal(existingItem.price, existingItem.addOns || [], newQuantity)
+        };
+        return updatedCart;
       } else {
+        const totalDuration = selectedServiceForAdd.duration + selectedAddOns.reduce((sum, addOn) => sum + (addOn.duration || 0), 0);
+
         return [
           ...prevCart,
           {
-            ...service,
+            ...selectedServiceForAdd,
             quantity: 1,
-            totalPrice: service.price
+            addOns: selectedAddOns,
+            totalPrice: calculateItemTotal(selectedServiceForAdd.price, selectedAddOns, 1),
+            duration: totalDuration
           }
         ];
       }
     });
 
-    toast.success(`${service.name} added to cart`);
+    toast.success(`${selectedServiceForAdd.name} added to cart`);
+    setIsAddOnModalOpen(false);
+    setSelectedServiceForAdd(null);
+    setSelectedAddOnIds([]);
   };
 
   // Update item quantity
-  const updateQuantity = (id: string, quantity: number) => {
+  const updateQuantity = (index: number, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(id);
+      removeFromCart(index);
       return;
     }
 
     setCart(prevCart =>
-      prevCart.map(item =>
-        item._id === id
+      prevCart.map((item, i) =>
+        i === index
           ? {
             ...item,
             quantity,
-            totalPrice: quantity * item.price
+            totalPrice: calculateItemTotal(item.price, item.addOns || [], quantity)
           }
           : item
       )
     );
   };
 
-  // Remove item from cart
-  const removeFromCart = (id: string) => {
-    setCart(prevCart => prevCart.filter(item => item._id !== id));
+  // Remove item from cart (using index because multiple items can share same service ID but different add-ons)
+  const removeFromCart = (index: number) => {
+    setCart(prevCart => prevCart.filter((_, i) => i !== index));
     toast.success("Item removed from cart");
   };
 
   // Calculate cart totals
   const originalSubtotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    return cart.reduce((sum, item) => {
+      const addOnsTotal = (item.addOns || []).reduce((aSum, a) => aSum + a.price, 0);
+      return sum + ((item.price + addOnsTotal) * item.quantity);
+    }, 0);
   }, [cart]);
 
   const totalDiscount = useMemo(() => {
     return cart.reduce((sum, item) => {
       // Only calculate discount for items that actually have a discount applied
       if (item.discount && item.discount > 0) {
-        const itemTotal = item.price * item.quantity;
+        const addOnsTotal = (item.addOns || []).reduce((aSum, a) => aSum + a.price, 0);
+        const itemTotal = (item.price + addOnsTotal) * item.quantity;
         if (item.discountType === 'flat') {
           return sum + item.discount;
         } else if (item.discountType === 'percentage') {
@@ -433,7 +517,8 @@ export default function ServicesTab({
           duration: item.duration,
           discount: item.discount,
           discountType: item.discountType,
-          staffMember: item.staffMember
+          staffMember: item.staffMember,
+          addOns: item.addOns // Include add-ons in billing item
         })),
         subtotal: subtotal,
         taxRate: taxRate,
@@ -555,6 +640,9 @@ export default function ServicesTab({
   // State for edit cart item dialog
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<CartItem | null>(null);
+  // Need to store index of editing item since we use index for cart operations now
+  const [editingItemIndex, setEditingItemIndex] = useState<number>(-1);
+
   const [editFormData, setEditFormData] = useState({
     quantity: 1,
     discount: 0,
@@ -885,8 +973,9 @@ export default function ServicesTab({
   };
 
   // Handle edit cart item click
-  const handleEditItemClick = (item: CartItem) => {
+  const handleEditItemClick = (item: CartItem, index: number) => {
     setEditingItem(item);
+    setEditingItemIndex(index);
     setEditFormData({
       quantity: item.quantity || 1,
       discount: item.discount || 0,
@@ -898,7 +987,7 @@ export default function ServicesTab({
 
   // Handle save edited item
   const handleSaveEditedItem = () => {
-    if (!editingItem) return;
+    if (!editingItem || editingItemIndex === -1) return;
 
     // Check if discount is greater than 0, then staff member is required
     if (editFormData.discount > 0 && editFormData.staffMemberId === 'none') {
@@ -911,8 +1000,8 @@ export default function ServicesTab({
       staffData.find((staff: any) => staff._id === editFormData.staffMemberId) : null;
 
     setCart(prevCart =>
-      prevCart.map(item =>
-        item._id === editingItem._id
+      prevCart.map((item, i) =>
+        i === editingItemIndex
           ? {
             ...item,
             quantity: editFormData.quantity,
@@ -927,12 +1016,14 @@ export default function ServicesTab({
 
     setIsEditDialogOpen(false);
     setEditingItem(null);
+    setEditingItemIndex(-1);
     toast.success('Item updated successfully');
   };
 
   // Calculate item total price with discount
   const calculateItemTotalPrice = (item: CartItem, quantity: number, discount: number, discountType: 'flat' | 'percentage') => {
-    const basePrice = item.price * quantity;
+    const addOnsTotal = (item.addOns || []).reduce((sum, addOn) => sum + addOn.price, 0);
+    const basePrice = (item.price + addOnsTotal) * quantity;
     if (discountType === 'flat') {
       return Math.max(0, basePrice - discount);
     } else {
@@ -1020,7 +1111,7 @@ export default function ServicesTab({
                       <TableCell className="text-right">
                         <Button
                           size="sm"
-                          onClick={() => addToCart(service)}
+                          onClick={() => handleOpenAddOnModal(service)}
                         >
                           <Plus className="h-4 w-4 mr-1" />
                           Add
@@ -1175,14 +1266,24 @@ export default function ServicesTab({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  cart.map((item) => (
-                    <TableRow key={item._id}>
+                  cart.map((item, index) => (
+                    <TableRow key={`${item._id}-${index}`}>
                       <TableCell>
-                        <div className="cursor-pointer text-green-600 p-2 rounded" onClick={() => handleEditItemClick(item)}>
-                          <div className="font-medium">{item.name}</div>
+                        <div className="cursor-pointer p-2 rounded hover:bg-muted/50" onClick={() => handleEditItemClick(item, index)}>
+                          <div className="font-medium text-green-600">{item.name}</div>
                           <div className="text-sm text-muted-foreground">
                             {item.duration} min
                           </div>
+                          {item.addOns && item.addOns.length > 0 && (
+                            <div className="mt-1 pl-2 border-l-2 border-primary/20">
+                              {item.addOns.map((addon, i) => (
+                                <div key={i} className="text-xs text-muted-foreground flex justify-between">
+                                  <span>+ {addon.name}</span>
+                                  <span>₹{addon.price}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>₹{item.price.toFixed(2)}</TableCell>
@@ -1192,7 +1293,7 @@ export default function ServicesTab({
                             variant="outline"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => updateQuantity(item._id, item.quantity - 1)}
+                            onClick={() => updateQuantity(index, item.quantity - 1)}
                           >
                             <Minus className="h-3 w-3" />
                           </Button>
@@ -1201,7 +1302,7 @@ export default function ServicesTab({
                             variant="outline"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() => updateQuantity(item._id, item.quantity + 1)}
+                            onClick={() => updateQuantity(index, item.quantity + 1)}
                           >
                             <Plus className="h-3 w-3" />
                           </Button>
@@ -1212,7 +1313,7 @@ export default function ServicesTab({
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeFromCart(item._id)}
+                          onClick={() => removeFromCart(index)}
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -1597,6 +1698,56 @@ export default function ServicesTab({
         </DialogContent>
       </Dialog>
 
+      {/* Add-On Selection Modal */}
+      <Dialog open={isAddOnModalOpen} onOpenChange={setIsAddOnModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Add-Ons</DialogTitle>
+            <DialogDescription>
+              Select add-ons for {selectedServiceForAdd?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="h-[300px] w-full rounded-md border p-4">
+            {applicableAddOns.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                <p>No add-ons available for this service.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {applicableAddOns.map((addOn) => (
+                  <div key={addOn._id} className="flex items-start space-x-3 space-y-0">
+                    <Checkbox
+                      id={`addon-${addOn._id}`}
+                      checked={selectedAddOnIds.includes(addOn._id)}
+                      onCheckedChange={() => toggleAddOnSelection(addOn._id)}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <label
+                        htmlFor={`addon-${addOn._id}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {addOn.name}
+                      </label>
+                      <p className="text-sm text-muted-foreground">
+                        Time: {addOn.duration} min • Price: ₹{addOn.price}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setIsAddOnModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddServiceWithAddOns}>
+              Add to Cart {selectedAddOnIds.length > 0 && `(${selectedAddOnIds.length})`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Invoice Summary Dialog */}
       <Dialog open={isInvoiceDialogOpen} onOpenChange={(open) => {
         setIsInvoiceDialogOpen(open);
@@ -1780,13 +1931,25 @@ export default function ServicesTab({
                       <h4 className="font-semibold text-gray-900 mb-3 pb-2 border-b border-gray-200 text-lg">Services</h4>
                       <div className="space-y-2 max-h-52 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 rounded">
                         {invoiceData.items.map((item: any, index: number) => (
-                          <div key={index} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 rounded px-2">
-                            <div className="flex-1">
-                              <p className="font-semibold text-gray-900 text-xs">{item.name}</p>
+                          <div key={index} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 rounded px-2 py-2">
+                            <div className="flex justify-between items-center">
+                              <div className="flex-1">
+                                <p className="font-semibold text-gray-900 text-xs">{item.name}</p>
+                              </div>
+                              <div className="text-right ml-2">
+                                <p className="font-semibold text-gray-900">₹{item.totalPrice.toFixed(2)}</p>
+                              </div>
                             </div>
-                            <div className="text-right ml-2">
-                              <p className="font-semibold text-gray-900">₹{item.totalPrice.toFixed(2)}</p>
-                            </div>
+                            {item.addOns && item.addOns.length > 0 && (
+                              <div className="mt-1 pl-2 border-l-2 border-primary/20">
+                                {item.addOns.map((addon: any, i: number) => (
+                                  <div key={i} className="flex justify-between items-center text-xs text-muted-foreground">
+                                    <span>+ {addon.name}</span>
+                                    <span>₹{addon.price}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

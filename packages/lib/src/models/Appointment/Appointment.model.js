@@ -48,7 +48,7 @@ const serviceItemSchema = new mongoose.Schema({
     name: { type: String, required: true },
     price: { type: Number, required: true },
     duration: { type: Number }, // duration in minutes
-    _id: { 
+    _id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AddOn",
     } // original addon ID
@@ -126,6 +126,14 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    clientEmail: {
+      type: String,
+      default: '',
+    },
+    clientPhone: {
+      type: String,
+      default: '',
+    },
     startTime: {
       type: String,
       required: true,
@@ -152,10 +160,10 @@ const appointmentSchema = new mongoose.Schema(
       price: { type: Number, required: true },
       duration: { type: Number, default: 0 },
       _id: {
-         type: mongoose.Schema.Types.ObjectId, 
-         ref: "AddOn",
-         required: true 
-        }
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "AddOn",
+        required: true
+      }
     }],
     totalAmount: {
       type: Number,
@@ -255,6 +263,10 @@ const appointmentSchema = new mongoose.Schema(
         "no-show",
       ],
       default: "scheduled",
+    },
+    invoiceNumber: {
+      type: String,
+      index: true,
     },
     // Fields for optimistic locking
     lockToken: {

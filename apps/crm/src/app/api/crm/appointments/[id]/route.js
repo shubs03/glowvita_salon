@@ -10,7 +10,7 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
     try {
         const vendorId = req.user.userId || req.user._id;
         const appointmentId = params?.id;
-        
+
         if (!appointmentId) {
             return NextResponse.json(
                 { success: false, message: 'Appointment ID is required' },
@@ -19,10 +19,10 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
         }
 
         const requestBody = await req.json();
-        
+
         // Handle both direct updates and updates in an 'updates' object
         const updateData = requestBody.updates || requestBody;
-        
+
         if (!updateData || Object.keys(updateData).length === 0) {
             return NextResponse.json(
                 { success: false, message: 'No update data provided' },
@@ -64,12 +64,12 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
 
         // Prepare the update object
         const updateObject = { ...updateData };
-        
+
         // Remove fields that MongoDB manages automatically to prevent conflicts
         delete updateObject.updatedAt;
         delete updateObject.createdAt;
         delete updateObject.__v; // version key managed by Mongoose
-        
+
         // If client is a string (name) and not a valid ObjectId, remove it to prevent cast error
         if (updateObject.client && !Types.ObjectId.isValid(updateObject.client)) {
             // If clientName is not provided, use the client string as clientName
@@ -86,20 +86,30 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
             updateObject.clientName = updateObject.clientName;
         }
 
+        if (updateObject.status === 'completed') {
+            try {
+                const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+                await InvoiceModel.createFromAppointment(appointmentId, vendorId);
+                console.log(`Ensured sequential invoice exists for appointment ${appointmentId}`);
+            } catch (invoiceError) {
+                console.error("Error in centralized invoice generation:", invoiceError);
+            }
+        }
+
         // Update the appointment
         // Use runValidators: false to prevent validation errors on partial updates
         // since we're only updating specific fields and not the entire document
         const updatedAppointment = await AppointmentModel.findByIdAndUpdate(
             appointmentId,
-            { 
+            {
                 $set: updateObject,
                 $currentDate: { updatedAt: true }
             },
             { new: true, runValidators: false }
         )
-        .populate('client', 'fullName email phone')
-        .populate('service', 'name duration price')
-        .populate('staff', 'name email phone');
+            .populate('client', 'fullName email phone')
+            .populate('service', 'name duration price')
+            .populate('staff', 'name email phone');
 
         if (!updatedAppointment) {
             throw new Error('Failed to update appointment');
@@ -114,8 +124,8 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
     } catch (error) {
         console.error('Error updating appointment:', error);
         return NextResponse.json(
-            { 
-                success: false, 
+            {
+                success: false,
                 message: 'Failed to update appointment',
                 error: process.env.NODE_ENV === 'development' ? error.message : undefined
             },
@@ -129,13 +139,13 @@ export const DELETE = authMiddlewareCrm(async (req, { params }) => {
         console.log('=== DELETE REQUEST START ===');
         const vendorId = req.user.userId || req.user._id;
         const { id: appointmentId } = params;
-        
+
         console.log('DELETE Request - ID:', appointmentId);
 
         if (!appointmentId) {
             console.error('No appointment ID found for deletion');
             return NextResponse.json(
-                { 
+                {
                     message: "Appointment ID is required for deletion",
                     receivedParams: params
                 },
@@ -143,23 +153,23 @@ export const DELETE = authMiddlewareCrm(async (req, { params }) => {
             );
         }
 
-        const deletedAppointment = await AppointmentModel.findOneAndDelete({ 
-            _id: appointmentId, 
-            vendorId: vendorId 
+        const deletedAppointment = await AppointmentModel.findOneAndDelete({
+            _id: appointmentId,
+            vendorId: vendorId
         });
 
         if (!deletedAppointment) {
             return NextResponse.json(
-                { message: "Appointment not found or access denied" }, 
+                { message: "Appointment not found or access denied" },
                 { status: 404 }
             );
         }
 
         return NextResponse.json(
-            { 
+            {
                 message: "Appointment deleted successfully",
                 appointment: deletedAppointment
-            }, 
+            },
             { status: 200 }
         );
     } catch (error) {

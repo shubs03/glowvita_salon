@@ -203,7 +203,6 @@ export default function DoctorDashboard({
             value={metrics ? formatNumber(metrics.totalPatients) : '0'}
             subtitle="Patient count"
             change={hasNoData ? "No data" : "+12.5%"}
-            subtitle={hasNoData ? "No data" : "+12.5%"}
             icon={FaUserMd}
             iconColor="text-primary"
           />
@@ -212,7 +211,6 @@ export default function DoctorDashboard({
             value={metrics ? formatNumber(metrics.totalAppointments) : '0'}
             subtitle="Appointment count"
             change={hasNoData ? "No data" : "+15.2%"}
-            subtitle={hasNoData ? "No data" : "+15.2%"}
             icon={FaCalendarCheck}
             iconColor="text-primary"
           />
@@ -221,7 +219,6 @@ export default function DoctorDashboard({
             value={metrics ? formatNumber(metrics.completedAppointments) : '0'}
             subtitle="Completed appointments"
             change={hasNoData ? "No data" : "+8.3%"}
-            subtitle={hasNoData ? "No data" : "+8.3%"}
             icon={FaCheckCircle}
             iconColor="text-primary"
           />
@@ -230,7 +227,6 @@ export default function DoctorDashboard({
             value={metrics ? formatNumber(metrics.pendingAppointments) : '0'}
             subtitle="Pending appointments"
             change={hasNoData ? "No data" : "+5.7%"}
-            subtitle={hasNoData ? "No data" : "+5.7%"}
             icon={FaClock}
             iconColor="text-primary"
           />
@@ -239,7 +235,6 @@ export default function DoctorDashboard({
             value={metrics ? formatNumber(metrics.cancelledAppointments) : '0'}
             subtitle="Cancelled appointments"
             change={hasNoData ? "No data" : "-3.7%"}
-            subtitle={hasNoData ? "No data" : "-3.7%"}
             icon={FaTimesCircle}
             iconColor="text-primary"
           />
@@ -248,7 +243,6 @@ export default function DoctorDashboard({
             value={metrics ? formatCurrency(metrics.totalRevenue) : '₹0'}
             subtitle="Overall earnings"
             change={hasNoData ? "No data" : "+10.7%"}
-            subtitle={hasNoData ? "No data" : "+10.7%"}
             icon={FaRupeeSign}
             iconColor="text-primary"
           />
@@ -257,7 +251,6 @@ export default function DoctorDashboard({
             value={metrics ? formatCurrency(metrics.todayRevenue) : '₹0'}
             subtitle="Daily earnings"
             change={hasNoData ? "No data" : "+5.2%"}
-            subtitle={hasNoData ? "No data" : "+5.2%"}
             icon={FaChartLine}
             iconColor="text-primary"
           />
@@ -266,7 +259,6 @@ export default function DoctorDashboard({
             value={metrics ? `${Math.round(metrics.averageConsultationTime)} min` : '0 min'}
             subtitle="Average duration"
             change={hasNoData ? "No data" : "-2.1%"}
-            subtitle={hasNoData ? "No data" : "-2.1%"}
             icon={FaClock}
             iconColor="text-primary"
           />

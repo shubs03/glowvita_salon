@@ -152,6 +152,16 @@ export function InvoiceUI({
                 <td className="border border-black p-2 print:p-1">
                   <div className="font-semibold text-sm text-black print:text-xs">
                     {isProduct(item) ? item.productName : item.name}
+                    {item.addOns && item.addOns.length > 0 && (
+                      <div className="mt-1 text-xs text-gray-600 print:text-[10px]">
+                        {item.addOns.map((addon: any, i: number) => (
+                          <div key={i} className="flex justify-between">
+                            <span>+ {addon.name}</span>
+                            <span>₹{addon.price}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </td>
                 <td className="border border-black p-2 text-right text-sm text-black print:text-xs print:p-1">₹{(item.price || 0).toFixed(2)}</td>
