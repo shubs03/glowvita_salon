@@ -39,9 +39,9 @@ export async function calculateEnhancedTravelTime(origin, destination, vendor, u
       }
     }
     
-    // Validate vendor supports travel
-    const supportsTravel = ['onsite-only', 'hybrid', 'vendor-home-travel'].includes(vendor.vendorType);
-    if (!supportsTravel) {
+    // Validate vendor supports travel - Be more permissive if a calculation is explicitly requested
+    const supportsTravel = ['onsite-only', 'hybrid', 'vendor-home-travel', 'home-only', 'shop-only'].includes(vendor.vendorType);
+    if (!supportsTravel && !origin) { // If type unknown and no origin provided
       return {
         timeInMinutes: 0,
         distanceInKm: 0,

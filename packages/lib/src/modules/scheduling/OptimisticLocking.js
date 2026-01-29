@@ -326,8 +326,38 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
       tempAppointmentData.staffName = primaryService.staffName;
       tempAppointmentData.startTime = primaryService.startTime;
       tempAppointmentData.endTime = primaryService.endTime;
-      tempAppointmentData.duration = primaryService.duration;
+      // Use totalDuration (base + addons) for the top-level duration field
+      tempAppointmentData.duration = primaryService.totalDuration || primaryService.duration;
       tempAppointmentData.amount = primaryService.amount;
+      
+      // Sync addOns and addOnsAmount from primary service
+      if (primaryService.addOns && primaryService.addOns.length > 0) {
+        tempAppointmentData.addOns = primaryService.addOns;
+        tempAppointmentData.addOnsAmount = primaryService.addOns.reduce((sum, a) => sum + (a.price || 0), 0);
+      }
+
+      // propagate buffers and travel info to primary service item for internal reference
+      primaryService.travelTime = tempAppointmentData.travelTime || 0;
+      primaryService.travelDistance = tempAppointmentData.travelDistance || 0;
+      primaryService.distanceMeters = tempAppointmentData.distanceMeters || 0;
+      primaryService.bufferBefore = tempAppointmentData.bufferBefore;
+      primaryService.bufferAfter = tempAppointmentData.bufferAfter;
+    }
+
+    // Process top-level addOns if they exist and are just IDs
+    if (Array.isArray(tempAppointmentData.addOns) && tempAppointmentData.addOns.length > 0) {
+      const AddOnModel = (await import('../../models/Vendor/AddOn.model.js')).default;
+      const addOnIds = tempAppointmentData.addOns.map(addOn => addOn.id || addOn._id || (typeof addOn === 'string' ? addOn : null)).filter(Boolean);
+      
+      if (addOnIds.length > 0) {
+        const addOnObjects = await AddOnModel.find({ _id: { $in: addOnIds } }).lean();
+        tempAppointmentData.addOns = addOnObjects.map(obj => ({
+          _id: obj._id,
+          name: obj.name,
+          price: obj.price,
+          duration: obj.duration || 0
+        }));
+      }
     }
 
     // Create a temporary appointment in the database

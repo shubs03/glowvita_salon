@@ -154,7 +154,17 @@ export const convertDurationToMinutes = (duration: string | number): number => {
 
 export const calculateTotalDuration = (services: Service[]): number => {
   return services.reduce((total, service) => {
-    return total + convertDurationToMinutes(service.duration);
+    let serviceDuration = convertDurationToMinutes(service.duration);
+
+    // Add durations of selected addons
+    if (service.selectedAddons && service.selectedAddons.length > 0) {
+      const addonsDuration = service.selectedAddons.reduce((sum, addon) => {
+        return sum + (Number(addon.duration) || 0);
+      }, 0);
+      serviceDuration += addonsDuration;
+    }
+
+    return total + serviceDuration;
   }, 0);
 };
 
