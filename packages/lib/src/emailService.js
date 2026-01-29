@@ -13,20 +13,20 @@ import nodemailer from 'nodemailer';
 export async function sendEmail({ to, subject, html, text, attachments = [] }) {
   try {
     console.log('Attempting to send email to:', to);
-    
+
     // Check if required environment variables are present
     if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
       console.error('Missing SMTP configuration in environment variables');
       return { success: false, error: 'Missing SMTP configuration' };
     }
-    
+
     console.log('SMTP Config:', {
       host: process.env.SMTP_HOST,
       port: process.env.SMTP_PORT || 587,
       secure: process.env.SMTP_PORT === '465',
       user: process.env.SMTP_USER
     });
-    
+
     // Create transporter using environment variables
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -42,14 +42,14 @@ export async function sendEmail({ to, subject, html, text, attachments = [] }) {
     });
 
     console.log('Created transporter, verifying connection...');
-    
+
     // Verify transporter configuration
     await transporter.verify();
     console.log('SMTP connection verified successfully');
 
     // Prepare email options
     const mailOptions = {
-      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      from: process.env.SMTP_FROM || process.env.EMAIL_FROM || process.env.SMTP_USER,
       to,
       subject,
     };

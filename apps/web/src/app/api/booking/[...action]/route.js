@@ -10,6 +10,9 @@ import WeddingPackageModel from "@repo/lib/models/Vendor/WeddingPackage.model";
 import { validateService, validateStaff, validateAppointment, validateWeddingPackage } from "@repo/lib/modules/validation/ValidationEngine";
 import { AppError, formatErrorResponse } from "@repo/lib/modules/error/ErrorHandler";
 import { getCache, setCache } from "@repo/lib/modules/caching/CacheManager";
+import { sendEmail } from "../../../../../../../packages/lib/src/emailService";
+import { getCancellationTemplate } from "../../../../../../../packages/lib/src/emailTemplates";
+import UserModel from "../../../../../../../packages/lib/src/models/user/User.model";
 
 // Utility functions for internally use
 /**
@@ -534,15 +537,15 @@ async function handleSlotDiscovery(searchParams) {
         // First try to find in VendorServices collection where services are stored as subdocuments
         const VendorServicesModel = (await import("@repo/lib/models/Vendor/VendorServices.model")).default;
         const vendorServicesDoc = await VendorServicesModel.findOne({ vendor: vendorId }).lean();
-        
+
         if (vendorServicesDoc && vendorServicesDoc.services) {
-          services = vendorServicesDoc.services.filter(s => 
+          services = vendorServicesDoc.services.filter(s =>
             serviceIds.includes(s._id.toString())
           );
         }
-        
+
         console.log(`Found ${services.length} regular services in VendorServices`);
-        
+
         // Fallback to ServiceModel if not found (legacy or different structure)
         if (services.length === 0) {
           services = await ServiceModel.find({ _id: { $in: serviceIds } }).lean();
@@ -1301,6 +1304,44 @@ async function handleBookingCancellation(body) {
   // Release any associated lock
   if (appointment.lockToken) {
     await releaseLock(appointment.lockToken);
+  }
+
+  // Send cancellation email
+  try {
+    const vendor = await VendorModel.findById(appointment.vendorId).select('businessName');
+    const businessName = vendor?.businessName || 'GlowVita Salon';
+
+    let clientEmail = appointment.clientEmail;
+    let clientName = appointment.clientName;
+
+    // If clientEmail is missing, check User model (for logged-in users)
+    if (!clientEmail && appointment.client) {
+      const user = await UserModel.findById(appointment.client).select('emailAddress email firstName lastName');
+      if (user) {
+        clientEmail = user.emailAddress || user.email;
+        clientName = clientName || `${user.firstName} ${user.lastName}`;
+      }
+    }
+
+    if (clientEmail) {
+      const emailHtml = getCancellationTemplate({
+        clientName,
+        businessName,
+        serviceName: appointment.serviceName,
+        date: appointment.date,
+        startTime: appointment.startTime,
+        cancellationReason: reason
+      });
+
+      await sendEmail({
+        to: clientEmail,
+        subject: `Appointment Cancelled - ${businessName}`,
+        html: emailHtml
+      });
+      console.log(`Cancellation email sent to ${clientEmail}`);
+    }
+  } catch (emailError) {
+    console.error('Error sending cancellation email:', emailError);
   }
 
   return Response.json({
