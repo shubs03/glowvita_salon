@@ -48,7 +48,7 @@ const serviceItemSchema = new mongoose.Schema({
     name: { type: String, required: true },
     price: { type: Number, required: true },
     duration: { type: Number }, // duration in minutes
-    _id: { 
+    _id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "AddOn",
     } // original addon ID
@@ -126,6 +126,10 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    clientEmail: {
+      type: String,
+      default: null,
+    },
     startTime: {
       type: String,
       required: true,
@@ -152,10 +156,10 @@ const appointmentSchema = new mongoose.Schema(
       price: { type: Number, required: true },
       duration: { type: Number, default: 0 },
       _id: {
-         type: mongoose.Schema.Types.ObjectId, 
-         ref: "AddOn",
-         required: true 
-        }
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "AddOn",
+        required: true
+      }
     }],
     totalAmount: {
       type: Number,

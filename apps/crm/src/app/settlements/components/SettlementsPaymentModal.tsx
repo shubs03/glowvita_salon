@@ -4,7 +4,7 @@ import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from '@repo/ui/label';
 import { Plus } from 'lucide-react';
-import { PayoutData } from "./SettlementsTable";
+import { PayoutData } from "../types";
 
 interface SettlementsPaymentModalProps {
   isOpen: boolean;
@@ -27,23 +27,23 @@ const SettlementsPaymentModal = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const numAmount = parseFloat(amount);
-    
+
     if (isNaN(numAmount) || numAmount <= 0) {
       setError('Please enter a valid amount');
       return;
     }
-    
+
     if (selectedPayout && numAmount > selectedPayout.pendingAmount) {
       setError(`Amount cannot exceed pending amount (₹${selectedPayout.pendingAmount.toFixed(2)})`);
       return;
     }
-    
+
     if (selectedPayout) {
       onCollectPayment(selectedPayout.id, numAmount);
       setAmount('');
     }
   };
-  
+
   const handleReset = () => {
     setAmount('');
     setError('');
@@ -87,8 +87,8 @@ const SettlementsPaymentModal = ({
             )}
           </div>
           <div className="flex justify-end gap-3">
-            <Button 
-              type="button" 
+            <Button
+              type="button"
               variant="outline"
               onClick={() => {
                 onClose();

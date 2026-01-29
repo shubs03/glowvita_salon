@@ -37,17 +37,18 @@ const nextConfig = {
       test: /\.node$/,
       use: 'ignore-loader',
     });
-    
+
     // For server-side builds, provide a fallback for canvas
     if (isServer) {
       config.externals = [
         ...config.externals,
         {
           canvas: 'commonjs canvas',
+          'html-pdf': 'commonjs html-pdf',
         },
       ];
     }
-    
+
     return config;
   },
   images: {

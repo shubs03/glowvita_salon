@@ -2,12 +2,12 @@ import React from 'react';
 import { TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { ShoppingCart, Package, Truck, CheckCircle, Clock } from 'lucide-react';
 import { Badge } from "@repo/ui/badge";
-import { Order, OrdersTabsProps } from './types';
+import { Order, OrdersTabsProps } from '../types';
 
-export function OrdersTabs({ 
-  role, 
-  activeTab, 
-  setActiveTab, 
+export function OrdersTabs({
+  role,
+  activeTab,
+  setActiveTab,
   setCurrentPage,
   filteredOrders
 }: OrdersTabsProps) {
@@ -15,8 +15,8 @@ export function OrdersTabs({
     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
       <TabsList className="grid w-full max-w-md grid-cols-1 sm:grid-cols-3 h-auto p-1 bg-muted/50 backdrop-blur-sm">
         {(role === 'vendor' || role === 'supplier') && (
-          <TabsTrigger 
-            value="customer-orders" 
+          <TabsTrigger
+            value="customer-orders"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg py-2.5 font-medium transition-all"
           >
             <ShoppingCart className="mr-2 h-4 w-4" />
@@ -24,8 +24,8 @@ export function OrdersTabs({
           </TabsTrigger>
         )}
         {role === 'vendor' && (
-          <TabsTrigger 
-            value="my-purchases" 
+          <TabsTrigger
+            value="my-purchases"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg py-2.5 font-medium transition-all"
           >
             <Package className="mr-2 h-4 w-4" />
@@ -33,8 +33,8 @@ export function OrdersTabs({
           </TabsTrigger>
         )}
         {role === 'supplier' && (
-          <TabsTrigger 
-            value="received-orders" 
+          <TabsTrigger
+            value="received-orders"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg py-2.5 font-medium transition-all"
           >
             <Truck className="mr-2 h-4 w-4" />

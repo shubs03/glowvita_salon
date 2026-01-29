@@ -6,7 +6,7 @@ import { Skeleton } from "@repo/ui/skeleton";
 import { Badge } from "@repo/ui/badge";
 import { User, CheckCircle, Clock, Eye, Edit, Package, Calendar, Truck, XCircle } from 'lucide-react';
 import Image from 'next/image';
-import { Order, OrdersTableContentProps, MobileOrdersViewProps } from './types';
+import { Order, OrdersTableContentProps, MobileOrdersViewProps } from '../types';
 
 export function OrdersTableContent({
   orders,
@@ -167,8 +167,8 @@ export function OrdersTableContent({
             </TableHeader>
             <TableBody>
               {orders.map((order, index) => (
-                <TableRow 
-                  key={order._id} 
+                <TableRow
+                  key={order._id}
                   className="hover:bg-muted/30 transition-colors border-border/30"
                   style={{ animationDelay: `${index * 0.05}s` }}
                 >
@@ -199,12 +199,12 @@ export function OrdersTableContent({
                       {order.items && order.items.map((item, idx: number) => (
                         <div key={idx} className="flex items-center gap-2">
                           <div className="relative">
-                            <Image 
-                              src={item.productImage || 'https://placehold.co/50x50.png'} 
-                              alt={item.productName} 
-                              width={50} 
-                              height={50} 
-                              className="rounded-lg object-cover border border-border/30" 
+                            <Image
+                              src={item.productImage || 'https://placehold.co/50x50.png'}
+                              alt={item.productName}
+                              width={50}
+                              height={50}
+                              className="rounded-lg object-cover border border-border/30"
                             />
                           </div>
                           <div className="space-y-0.5">
@@ -240,18 +240,18 @@ export function OrdersTableContent({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={() => handleViewDetails(order)}
                         className="rounded-lg hover:bg-primary/10 hover:border-primary/30 h-8 w-8 p-0"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
                       {(role === 'supplier' || role === 'vendor') && order.status && getNextStatus(order.status, order) && (
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status, order)!)} 
+                        <Button
+                          size="sm"
+                          onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status, order)!)}
                           disabled={isUpdatingStatus}
                           className="rounded-lg bg-gradient-to-r from-primary to-primary/80 h-8 px-2 text-xs"
                         >
@@ -277,7 +277,7 @@ export function OrdersTableContent({
       </div>
 
       {/* Mobile Card View */}
-      <MobileOrdersView 
+      <MobileOrdersView
         orders={orders}
         handleViewDetails={handleViewDetails}
         handleUpdateStatus={handleUpdateStatus}
@@ -306,8 +306,8 @@ function MobileOrdersView({
   return (
     <div className="lg:hidden space-y-4">
       {orders.map((order, index) => (
-        <Card 
-          key={order._id} 
+        <Card
+          key={order._id}
           className="overflow-hidden border-border/50 hover:shadow-lg transition-all duration-300 bg-gradient-to-r from-background to-muted/20"
           style={{ animationDelay: `${index * 0.1}s` }}
         >
@@ -349,12 +349,12 @@ function MobileOrdersView({
                 {order.items && order.items.map((item, idx: number) => (
                   <div key={idx} className="flex items-center gap-3">
                     <div className="relative">
-                      <Image 
-                        src={item.productImage || 'https://placehold.co/60x60.png'} 
-                        alt={item.productName} 
-                        width={60} 
-                        height={60} 
-                        className="rounded-lg object-cover border border-border/30" 
+                      <Image
+                        src={item.productImage || 'https://placehold.co/60x60.png'}
+                        alt={item.productName}
+                        width={60}
+                        height={60}
+                        className="rounded-lg object-cover border border-border/30"
                       />
                     </div>
                     <div className="flex-1">
@@ -378,18 +378,18 @@ function MobileOrdersView({
                   <p className="text-xs text-muted-foreground">Total Amount</p>
                 </div>
                 <div className="flex gap-1">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => handleViewDetails(order)}
                     className="rounded-lg h-8 w-8 p-0"
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
                   {(role === 'supplier' || role === 'vendor') && order.status && getNextStatus(order.status, order) && (
-                    <Button 
-                      size="sm" 
-                      onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status, order)!)} 
+                    <Button
+                      size="sm"
+                      onClick={() => handleUpdateStatus(order._id, getNextStatus(order.status, order)!)}
                       disabled={isUpdatingStatus}
                       className="rounded-lg bg-gradient-to-r from-primary to-primary/80 h-8 px-2 text-xs"
                     >

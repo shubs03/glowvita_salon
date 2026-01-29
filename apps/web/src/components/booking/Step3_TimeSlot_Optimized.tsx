@@ -44,7 +44,7 @@ const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage }: {
 // Skeleton loader for time slots
 const TimeSlotSkeleton = memo(() => (
   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-    {[...Array(12)].map((_, i) => (
+    {Array.from({ length: 12 }).map((_, i) => (
       <div key={i} className="h-16 bg-gray-200 animate-pulse rounded-lg" />
     ))}
   </div>
@@ -172,7 +172,7 @@ export const Step3_TimeSlot = memo(({
       } else if (selectedServices && selectedServices.length > 0) {
         const allAddOnIds = selectedServices.flatMap(s => s.selectedAddons?.map(a => a._id) || []);
         if (allAddOnIds.length > 0) {
-          addOnIdsParam = [...new Set(allAddOnIds)].join(',');
+          addOnIdsParam = Array.from(new Set(allAddOnIds)).join(',');
         }
       }
 
