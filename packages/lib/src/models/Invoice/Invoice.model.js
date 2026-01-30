@@ -133,9 +133,13 @@ invoiceSchema.statics.generateInvoiceNumber = async function (vendorId) {
 // Static method to create/get invoice from appointment
 invoiceSchema.statics.createFromAppointment = async function (appointmentId, vendorId) {
     const existingInvoice = await this.findOne({ appointmentId, vendorId });
-    if (existingInvoice) return existingInvoice;
-
     const AppointmentModel = (await import('../Appointment/Appointment.model.js')).default;
+
+    if (existingInvoice) {
+        // If invoice exists but appointment somehow doesn't have the number, sync it
+        await AppointmentModel.findByIdAndUpdate(appointmentId, { invoiceNumber: existingInvoice.invoiceNumber });
+        return existingInvoice;
+    }
 
     // Fetch appointment and ensure we have the raw client ID
     const appt = await AppointmentModel.findById(appointmentId)

@@ -98,7 +98,7 @@ const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus,
                     amountPaid: appointment.amountPaid || appointment.totalAmount, // Fallback to total if fully paid
                     amountRemaining: appointment.amountRemaining || 0,
                     paymentStatus: appointment.paymentStatus,
-                    invoiceNumber: appointment._id.toString(),
+                    invoiceNumber: appointment.invoiceNumber || appointment._id.toString(),
                     paymentMethod: appointment.paymentMethod
                 });
 
@@ -641,7 +641,7 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
             // Logic for completing an appointment and calculating staff commission
             const updateFields = { status: body.status };
 
-            if (body.status === 'completed') {
+            if (body.status === 'completed' || body.status === 'completed without payment') {
                 try {
                     // Fetch current appointment to get staff and service details
                     const currentAppt = await AppointmentModel.findOne({ _id: appointmentId, vendorId })
@@ -682,8 +682,11 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
 
                     // CENTRALIZED INVOICE GENERATION LOGIC
                     const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
-                    await InvoiceModel.createFromAppointment(appointmentId, vendorId);
-                    console.log(`Ensured sequential invoice exists for appointment ${appointmentId}`);
+                    const invoice = await InvoiceModel.createFromAppointment(appointmentId, vendorId);
+                    if (invoice) {
+                        updateFields.invoiceNumber = invoice.invoiceNumber;
+                        console.log(`Linked sequential invoice ${invoice.invoiceNumber} to appointment ${appointmentId}`);
+                    }
                 } catch (invoiceError) {
                     console.error("Error in centralized invoice generation:", invoiceError);
                 }

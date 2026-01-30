@@ -868,25 +868,25 @@ export function AppointmentDetailView({
 
   // Prepare Invoice Data
   const invoiceData = useMemo(() => {
-    if (!appointment) return null;
+    if (!liveAppointment) return null;
 
     return {
-      invoiceNumber: appointment.invoiceNumber || (() => {
-        const dateStr = appointment.date instanceof Date
-          ? appointment.date.toISOString().split('T')[0].replace(/-/g, '')
-          : String(appointment.date).split('T')[0].replace(/-/g, '');
+      invoiceNumber: liveAppointment.invoiceNumber || (() => {
+        const dateStr = liveAppointment.date instanceof Date
+          ? liveAppointment.date.toISOString().split('T')[0].replace(/-/g, '')
+          : String(liveAppointment.date).split('T')[0].replace(/-/g, '');
         const salonName = vendorProfile?.data?.businessName?.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 10) || 'SALON';
-        const uniqueId = appointment._id ? appointment._id.substring(appointment._id.length - 6).toUpperCase() : '000';
+        const uniqueId = liveAppointment._id ? liveAppointment._id.substring(liveAppointment._id.length - 6).toUpperCase() : '000';
         return `INV-${dateStr}-${salonName}-${uniqueId}`;
       })(),
-      date: appointment.date instanceof Date ? appointment.date.toLocaleDateString() : String(appointment.date).split('T')[0],
-      time: appointment.startTime,
+      date: liveAppointment.date instanceof Date ? liveAppointment.date.toLocaleDateString() : String(liveAppointment.date).split('T')[0],
+      time: liveAppointment.startTime,
       client: {
-        fullName: appointment.clientName,
-        phone: (appointment.client as any)?.phone || ''
+        fullName: liveAppointment.clientName,
+        phone: (liveAppointment.client as any)?.phone || liveAppointment.clientPhone || ''
       },
-      status: appointment.status,
-      items: appointment.serviceItems?.length ? appointment.serviceItems.flatMap(item => [
+      status: liveAppointment.status,
+      items: liveAppointment.serviceItems?.length ? liveAppointment.serviceItems.flatMap((item: any) => [
         {
           name: item.serviceName,
           price: item.amount,
@@ -897,7 +897,7 @@ export function AppointmentDetailView({
           duration: item.duration,
           type: 'service'
         },
-        ...(Array.isArray(item.addOns) ? item.addOns.map(addOn => ({
+        ...(Array.isArray(item.addOns) ? item.addOns.map((addOn: any) => ({
           name: `${addOn.name} (Add-on)`,
           price: addOn.price,
           quantity: 1,
@@ -908,16 +908,16 @@ export function AppointmentDetailView({
         })) : [])
       ]) : [
         {
-          name: appointment.serviceName,
-          price: appointment.amount,
+          name: liveAppointment.serviceName,
+          price: liveAppointment.amount,
           quantity: 1,
-          totalPrice: appointment.amount,
-          discount: appointment.discount,
-          staff: appointment.staffName,
-          duration: appointment.duration,
+          totalPrice: liveAppointment.amount,
+          discount: liveAppointment.discount,
+          staff: liveAppointment.staffName,
+          duration: liveAppointment.duration,
           type: 'service'
         },
-        ...((appointment as any).addOns || []).map((addOn: any) => ({
+        ...((liveAppointment as any).addOns || []).map((addOn: any) => ({
           name: `${addOn.name} (Add-on)`,
           price: addOn.price,
           quantity: 1,
@@ -930,14 +930,14 @@ export function AppointmentDetailView({
       subtotal: totalBaseAmount + totalAddOnsAmount,
       originalSubtotal: totalBaseAmount + totalAddOnsAmount,
       discount: discountAmount,
-      tax: (appointment as any).serviceTax || (appointment as any).tax || appointment.payment?.serviceTax || 0,
-      platformFee: (appointment as any).platformFee || appointment.payment?.platformFee || 0,
+      tax: (liveAppointment as any).serviceTax || (liveAppointment as any).tax || liveAppointment.payment?.serviceTax || 0,
+      platformFee: (liveAppointment as any).platformFee || liveAppointment.payment?.platformFee || 0,
       total: totalAmount,
       balance: remainingAmount,
-      paymentMethod: (appointment as any).paymentMethod || appointment.payment?.paymentMethod || null,
+      paymentMethod: (liveAppointment as any).paymentMethod || liveAppointment.payment?.paymentMethod || null,
       couponCode: (liveAppointment as any).couponCode || ''
     };
-  }, [appointment, totalAmount, remainingAmount, vendorProfile, liveAppointment]);
+  }, [liveAppointment, totalAmount, remainingAmount, vendorProfile, totalBaseAmount, totalAddOnsAmount, discountAmount]);
 
   const handleDownloadPdf = async () => {
     const toastId = toast.loading('Generating PDF...');
@@ -1186,58 +1186,22 @@ export function AppointmentDetailView({
 
 
             <TabsContent value="invoice" className="p-6 pt-4">
-              <AppointmentInvoice
-                invoiceData={{
-                  invoiceNumber: (liveAppointment as any)._id,
-                  date: format(new Date(liveAppointment.date), 'dd/MM/yyyy'),
-                  time: liveAppointment.startTime,
-                  client: {
-                    fullName: liveAppointment.clientName,
-                    phone: (liveAppointment as any).clientPhone || (liveAppointment as any).client?.phone
-                  },
-                  status: liveAppointment.paymentStatus || 'paid',
-                  items: [
-                    // Main service
-                    {
-                      name: liveAppointment.serviceName,
-                      price: (liveAppointment as any).amount || 0,
-                      quantity: 1,
-                      totalPrice: (liveAppointment as any).amount || 0,
-                      type: 'service',
-                      duration: liveAppointment.duration
-                    },
-                    // Add-ons if any (need to map if they exist in structure)
-                    ...((liveAppointment.serviceItems || []).flatMap((item: any) =>
-                      (item.addOns || []).map((addon: any) => ({
-                        name: `Add-on: ${addon.name}`,
-                        price: addon.price,
-                        quantity: 1,
-                        totalPrice: addon.price,
-                        type: 'addon',
-                        duration: addon.duration
-                      }))
-                    ))
-                  ],
-                  subtotal: (liveAppointment as any).amount + ((liveAppointment as any).addOnsAmount || 0),
-                  discount: (liveAppointment as any).discount || 0,
-                  tax: (liveAppointment as any).serviceTax || (liveAppointment as any).tax || 0,
-                  platformFee: (liveAppointment as any).platformFee || 0,
-                  total: totalAmount,
-                  balance: remainingAmount,
-                  paymentMethod: (liveAppointment as any).paymentMethod || (liveAppointment as any).payment?.paymentMethod || 'Cash'
-                }}
-                vendorName={vendorProfile?.data?.businessName || "GlowVita Salon"}
-                vendorProfile={vendorProfile}
-                taxRate={0} // Tax is already calculated in amount
-                isOrderSaved={true}
-                onEmailClick={() => {
-                  toast.success('Invoice email sent to client');
-                }}
-                onRebookClick={() => {
-                  setIsRescheduling(true);
-                  setActiveTab('details');
-                }}
-              />
+              {invoiceData && (
+                <AppointmentInvoice
+                  invoiceData={invoiceData}
+                  vendorName={vendorProfile?.data?.businessName || "GlowVita Salon"}
+                  vendorProfile={vendorProfile}
+                  taxRate={0} // Tax is already calculated in amount
+                  isOrderSaved={true}
+                  onEmailClick={() => {
+                    toast.success('Invoice email sent to client');
+                  }}
+                  onRebookClick={() => {
+                    setIsRescheduling(true);
+                    setActiveTab('details');
+                  }}
+                />
+              )}
             </TabsContent>
 
             <TabsContent value="details" className="p-6 pt-4 space-y-4">

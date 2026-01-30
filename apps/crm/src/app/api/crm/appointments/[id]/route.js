@@ -91,11 +91,14 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
             updateObject.clientName = updateObject.clientName;
         }
 
-        if (updateObject.status === 'completed') {
+        if (updateObject.status === 'completed' || updateObject.status === 'completed without payment') {
             try {
                 const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
-                await InvoiceModel.createFromAppointment(appointmentId, vendorId);
-                console.log(`Ensured sequential invoice exists for appointment ${appointmentId}`);
+                const invoice = await InvoiceModel.createFromAppointment(appointmentId, vendorId);
+                if (invoice) {
+                    updateObject.invoiceNumber = invoice.invoiceNumber;
+                    console.log(`Linked sequential invoice ${invoice.invoiceNumber} to appointment ${appointmentId}`);
+                }
             } catch (invoiceError) {
                 console.error("Error in centralized invoice generation:", invoiceError);
             }
@@ -200,7 +203,7 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                                 amountPaid: updatedAppointment.amountPaid || updatedAppointment.totalAmount,
                                 amountRemaining: updatedAppointment.amountRemaining || 0,
                                 paymentStatus: updatedAppointment.paymentStatus,
-                                invoiceNumber: updatedAppointment._id.toString(),
+                                invoiceNumber: updatedAppointment.invoiceNumber || updatedAppointment._id.toString(),
                                 paymentMethod: updatedAppointment.paymentMethod
                             });
                             console.log('Invoice template generated successfully.');
