@@ -1934,19 +1934,56 @@ export default function ProductsTab({
       {/* Print Styles */}
       <style>{`
         @media print {
-          body * {
-            visibility: hidden;
+          /* Reset everything for a clean print */
+          html, body {
+            height: auto !important;
+            overflow: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
           }
+          
+          /* Hide all default content - use visibility so parent-child rules work */
+          body * {
+            visibility: hidden !important;
+          }
+          
+          /* ONLY show the invoice section and its children */
           #printable-invoice-section,
           #printable-invoice-section * {
-            visibility: visible;
+            visibility: visible !important;
           }
+          
+          /* POP the invoice to the very top of the page using FIXED positioning */
+          /* This prevents whitespace from hidden background elements */
           #printable-invoice-section {
             display: block !important;
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 5mm !important; /* Standard print padding */
+            background: white !important;
+            z-index: 2147483647 !important;
+          }
+          
+          /* Ensure the table doesn't break from display blocks */
+          #printable-invoice-section table {
+            display: table !important;
+            width: 100% !important;
+            border-collapse: collapse !important;
+          }
+          #printable-invoice-section thead { display: table-header-group !important; }
+          #printable-invoice-section tbody { display: table-row-group !important; }
+          #printable-invoice-section tr { display: table-row !important; }
+          #printable-invoice-section td, #printable-invoice-section th { display: table-cell !important; }
+
+          /* Standard page settings */
+          @page {
+            margin: 0;
+            size: auto;
           }
         }
       `}</style>

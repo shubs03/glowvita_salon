@@ -344,6 +344,39 @@ export default function ServicesTab({
     return (servicePrice + addOnsTotal) * quantity;
   };
 
+  // Add item to cart (standard addition without add-ons)
+  const addToCart = (service: Service) => {
+    setCart(prevCart => {
+      const existingItemIndex = prevCart.findIndex(item =>
+        item._id === service._id && (!item.addOns || item.addOns.length === 0)
+      );
+
+      if (existingItemIndex > -1) {
+        const updatedCart = [...prevCart];
+        const existingItem = updatedCart[existingItemIndex];
+        const newQuantity = existingItem.quantity + 1;
+        updatedCart[existingItemIndex] = {
+          ...existingItem,
+          quantity: newQuantity,
+          totalPrice: calculateItemTotal(existingItem.price, [], newQuantity)
+        };
+        return updatedCart;
+      } else {
+        return [
+          ...prevCart,
+          {
+            ...service,
+            quantity: 1,
+            addOns: [],
+            totalPrice: service.price,
+            duration: service.duration
+          }
+        ];
+      }
+    });
+    toast.success(`${service.name} added to cart`);
+  };
+
   // Handle add service with add-ons to cart
   const handleAddServiceWithAddOns = () => {
     if (!selectedServiceForAdd) return;
@@ -1089,16 +1122,11 @@ export default function ServicesTab({
                           Loading services...
                         </div>
                       </TableCell>
-                      <TableCell>₹{service.price.toFixed(2)}</TableCell>
-                      <TableCell>{service.duration} min</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          onClick={() => handleOpenAddOnModal(service)}
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Add
-                        </Button>
+                    </TableRow>
+                  ) : services.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-4">
+                        No services found
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -1117,7 +1145,7 @@ export default function ServicesTab({
                         <TableCell className="text-right">
                           <Button
                             size="sm"
-                            onClick={() => addToCart(service)}
+                            onClick={() => handleOpenAddOnModal(service)}
                             className="h-8 px-2"
                           >
                             <Plus className="h-4 w-4 mr-1" />
@@ -1264,106 +1292,83 @@ export default function ServicesTab({
                     <TableHead>Total</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {cart.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <ShoppingCart className="mx-auto h-12 w-12 opacity-50 mb-2" />
+                        <div>Your cart is empty</div>
+                        <div className="text-sm">Add services from the catalog</div>
+                      </TableCell>
+                    </TableRow>
                   ) : (
-                  cart.map((item, index) => (
-                  <TableRow key={`${item._id}-${index}`}>
-                    <TableCell>
-                      <div className="cursor-pointer p-2 rounded hover:bg-muted/50" onClick={() => handleEditItemClick(item, index)}>
-                        <div className="font-medium text-green-600">{item.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {item.duration} min
-                        </div>
-                        {item.addOns && item.addOns.length > 0 && (
-                          <div className="mt-1 pl-2 border-l-2 border-primary/20">
-                            {item.addOns.map((addon, i) => (
-                              <div key={i} className="text-xs text-muted-foreground flex justify-between">
-                                <span>+ {addon.name}</span>
-                                <span>₹{addon.price}</span>
+                    cart.map((item, index) => (
+                      <TableRow key={`${item._id}-${index}`}>
+                        <TableCell>
+                          <div className="cursor-pointer p-2 rounded hover:bg-muted/50" onClick={() => handleEditItemClick(item, index)}>
+                            <div className="font-medium text-green-600">{item.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {item.duration} min
+                            </div>
+                            {item.addOns && item.addOns.length > 0 && (
+                              <div className="mt-1 pl-2 border-l-2 border-primary/20">
+                                {item.addOns.map((addon, i) => (
+                                  <div key={i} className="text-xs text-muted-foreground">
+                                    + {addon.name}
+                                  </div>
+                                ))}
                               </div>
-                            ))}
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>₹{item.price.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => updateQuantity(index, item.quantity - 1)}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <div className="mx-2 w-8 text-center">{item.quantity}</div>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => updateQuantity(index, item.quantity + 1)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell>₹{item.totalPrice.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeFromCart(index)}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                  ) : (
-                    cart.map((item) => (
-                  <TableRow key={item._id}>
-                    <TableCell>
-                      <div className="cursor-pointer text-green-600 p-2 rounded" onClick={() => handleEditItemClick(item)}>
-                        <div className="font-medium">{item.name}</div>
-                        <div className="text-sm text-muted-foreground">
-                          {item.duration} min
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>₹{item.price.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8 p-0"
-                          onClick={() => updateQuantity(item._id, item.quantity - 1)}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <div className="mx-2 w-8 text-center">{item.quantity}</div>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8 p-0"
-                          onClick={() => updateQuantity(item._id, item.quantity + 1)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell>₹{item.totalPrice.toFixed(2)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => removeFromCart(item._id)}
-                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell>
+                          <div className="p-2">
+                            <div>₹{item.price.toFixed(2)}</div>
+                            {item.addOns && item.addOns.length > 0 && (
+                              <div className="mt-1">
+                                {item.addOns.map((addon, i) => (
+                                  <div key={i} className="text-xs text-muted-foreground whitespace-nowrap">
+                                    + ₹{addon.price.toFixed(2)}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateQuantity(index, item.quantity - 1)}
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <div className="mx-2 w-8 text-center">{item.quantity}</div>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateQuantity(index, item.quantity + 1)}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell>₹{item.totalPrice.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeFromCart(index)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
                   )}
                 </TableBody>
               </Table>
@@ -1977,24 +1982,32 @@ export default function ServicesTab({
                       <div className="space-y-2 max-h-52 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 rounded">
                         {invoiceData.items.map((item: any, index: number) => (
                           <div key={index} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 rounded px-2 py-2">
-                            <div className="flex justify-between items-center">
-                              <div className="flex-1">
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1 pr-4">
                                 <p className="font-semibold text-gray-900 text-xs">{item.name}</p>
+                                {item.addOns && item.addOns.length > 0 && (
+                                  <div className="mt-1 pl-2 border-l-2 border-primary/20">
+                                    {item.addOns.map((addon: any, i: number) => (
+                                      <div key={i} className="text-xs text-muted-foreground">
+                                        + {addon.name}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                              <div className="text-right ml-2">
-                                <p className="font-semibold text-gray-900">₹{item.totalPrice.toFixed(2)}</p>
+                              <div className="text-right whitespace-nowrap">
+                                <p className="font-semibold text-gray-900 text-xs">₹{item.price.toFixed(2)}</p>
+                                {item.addOns && item.addOns.length > 0 && (
+                                  <div className="mt-1">
+                                    {item.addOns.map((addon: any, i: number) => (
+                                      <div key={i} className="text-xs text-muted-foreground">
+                                        + ₹{addon.price.toFixed(2)}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
                             </div>
-                            {item.addOns && item.addOns.length > 0 && (
-                              <div className="mt-1 pl-2 border-l-2 border-primary/20">
-                                {item.addOns.map((addon: any, i: number) => (
-                                  <div key={i} className="flex justify-between items-center text-xs text-muted-foreground">
-                                    <span>+ {addon.name}</span>
-                                    <span>₹{addon.price}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
                           </div>
                         ))}
                       </div>
@@ -2211,19 +2224,56 @@ export default function ServicesTab({
       {/* Print Styles */}
       <style>{`
         @media print {
-          body * {
-            visibility: hidden;
+          /* Reset everything for a clean print */
+          html, body {
+            height: auto !important;
+            overflow: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
           }
+          
+          /* Hide all default content - use visibility so parent-child rules work */
+          body * {
+            visibility: hidden !important;
+          }
+          
+          /* ONLY show the invoice section and its children */
           #printable-invoice-section,
           #printable-invoice-section * {
-            visibility: visible;
+            visibility: visible !important;
           }
+          
+          /* POP the invoice to the very top of the page using FIXED positioning */
+          /* This prevents whitespace from hidden background elements */
           #printable-invoice-section {
             display: block !important;
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 5mm !important; /* Standard print padding */
+            background: white !important;
+            z-index: 2147483647 !important;
+          }
+          
+          /* Ensure the table doesn't break from display blocks */
+          #printable-invoice-section table {
+            display: table !important;
+            width: 100% !important;
+            border-collapse: collapse !important;
+          }
+          #printable-invoice-section thead { display: table-header-group !important; }
+          #printable-invoice-section tbody { display: table-row-group !important; }
+          #printable-invoice-section tr { display: table-row !important; }
+          #printable-invoice-section td, #printable-invoice-section th { display: table-cell !important; }
+
+          /* Standard page settings */
+          @page {
+            margin: 0;
+            size: auto;
           }
         }
       `}</style>
