@@ -1628,6 +1628,7 @@ function BookingPageContent() {
       } else {
         // Handle regular booking with enhanced slot locking
         let appointmentIdToConfirm = pendingAppointmentId;
+        let currentLockId = slotLockToken;
 
         // If we don't have an appointmentId from Step 3, we must acquire a lock now
         if (!appointmentIdToConfirm) {
@@ -1678,6 +1679,7 @@ function BookingPageContent() {
           }
           
           appointmentIdToConfirm = lockResult.appointmentId;
+          currentLockId = lockResult.lockId;
         } else {
           console.log("Using existing appointment ID from Step 3 lock:", appointmentIdToConfirm);
         }
@@ -1686,6 +1688,7 @@ function BookingPageContent() {
           // Confirm the booking
           const confirmResult = await confirmBooking({
             appointmentId: appointmentIdToConfirm,
+            lockId: currentLockId,
             paymentMethod: paymentMethod,
             paymentStatus: paymentMethod === 'Pay at Salon' ? 'pending' : 'paid',
             couponCode: appliedOffer?.code || offerCode,

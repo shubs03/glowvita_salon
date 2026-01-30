@@ -443,8 +443,19 @@ export async function confirmAppointment(appointmentId, lockToken, paymentDetail
 
     // Update the appointment status to 'scheduled' (as per the model default)
     appointment.status = 'scheduled';
+    
     // Set payment details and confirmation time
-    appointment.paymentDetails = paymentDetails;
+    if (paymentDetails) {
+      if (paymentDetails.paymentMethod) appointment.paymentMethod = paymentDetails.paymentMethod;
+      else if (paymentDetails.method) appointment.paymentMethod = paymentDetails.method;
+      
+      if (paymentDetails.paymentStatus) appointment.paymentStatus = paymentDetails.paymentStatus;
+      else if (paymentDetails.status) appointment.paymentStatus = paymentDetails.status;
+      
+      // Keep paymentDetails for backward compatibility if any field uses it as a map
+      appointment.paymentDetails = paymentDetails;
+    }
+    
     appointment.confirmedAt = new Date();
 
     // Update coupon data if provided in confirmation request

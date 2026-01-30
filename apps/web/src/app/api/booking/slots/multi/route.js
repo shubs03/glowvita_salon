@@ -131,8 +131,42 @@ function hasAppointmentConflict(appointments, staffId, date, startMinutes, endMi
   });
 }
 
+/**
+ * Helper: Comprehensive availability check for a staff member
+ */
+function checkStaffAvailability(staff, date, fullBlockedStart, fullBlockedEnd, existingAppointments) {
+  if (!staff || staff.isAny) return false;
+  
+  // 1. Check staff exists and is available on this day
+  if (!isStaffAvailableOnDay(staff, date)) return false;
+  
+  // 2. Check working hours - The professional must be working from the start of travel until return from travel
+  const workingHours = getStaffWorkingHours(staff, date);
+  let windowCovered = false;
+  
+  for (const period of workingHours) {
+    const periodStart = timeToMinutes(period.startTime);
+    const periodEnd = timeToMinutes(period.endTime);
+    
+    if (fullBlockedStart >= periodStart && fullBlockedEnd <= periodEnd) {
+      windowCovered = true;
+      break;
+    }
+  }
+  
+  if (!windowCovered) return false;
+  
+  // 3. Check blocked times against the full professional window
+  if (isTimeSlotBlocked(staff, date, fullBlockedStart, fullBlockedEnd)) return false;
+  
+  // 4. Check appointment conflicts against the full professional window
+  if (hasAppointmentConflict(existingAppointments, staff._id || staff.id, date, fullBlockedStart, fullBlockedEnd)) return false;
+  
+  return true;
+}
+
 // Main validation: Check if a complete sequence is valid
-async function validateSequence(assignments, startMinutes, date, existingAppointments, staffCache, isHomeService, travelTimeInfo, bufferBefore = 0, bufferAfter = 0) {
+async function validateSequence(assignments, startMinutes, date, existingAppointments, allActiveStaff, isHomeService, travelTimeInfo, bufferBefore = 0, bufferAfter = 0) {
   const travelTimeMinutes = (isHomeService && travelTimeInfo) ? travelTimeInfo.timeInMinutes : 0;
   
   // Calculate total duration for the entire sequence including all addons
@@ -144,16 +178,44 @@ async function validateSequence(assignments, startMinutes, date, existingAppoint
   });
 
   // Calculate the FULL professional blocked period [Start - TravelTo - BufferBefore, Start + Duration + TravelBack + BufferAfter]
-  // Note: We use startMinutes as the 'at destination' time if home service.
-  // Actually, in our engine, startMinutes is the time the first service begins at the location.
   const fullBlockedStart = startMinutes - travelTimeMinutes - bufferBefore;
   const fullBlockedEnd = startMinutes + totalServiceDuration + travelTimeMinutes + bufferAfter;
+
+  // Find a suitable professional for 'any' assignments
+  let anyProfessionalCandidate = null;
+  const hasAnyAssignment = assignments.some(a => a.staff.isAny);
+  
+  if (hasAnyAssignment) {
+    // Try each active staff to see if they can handle the FULL sequence
+    for (const candidate of allActiveStaff) {
+      if (checkStaffAvailability(candidate, date, fullBlockedStart, fullBlockedEnd, existingAppointments)) {
+        anyProfessionalCandidate = candidate;
+        break;
+      }
+    }
+    
+    // If no one can handle 'any', this slot is invalid
+    if (!anyProfessionalCandidate) {
+      return { valid: false, reason: 'No professional available for "Any Professional" selection' };
+    }
+  }
+
+  // Double check availability for specific staff assignments
+  for (const a of assignments) {
+    if (!a.staff.isAny) {
+      if (!checkStaffAvailability(a.staff, date, fullBlockedStart, fullBlockedEnd, existingAppointments)) {
+        return { valid: false, reason: `${a.staff.fullName} is not available for the full duration` };
+      }
+    }
+  }
 
   const sequence = [];
   let currentMinutes = startMinutes;
   
   for (const assignment of assignments) {
-    const { service, staff, staffId, addOnDetails = [] } = assignment;
+    const { service, staff: originalStaff, staffId: originalStaffId, addOnDetails = [] } = assignment;
+    const staff = originalStaff.isAny ? anyProfessionalCandidate : originalStaff;
+    const staffId = staff._id || staff.id || originalStaffId;
     
     // Calculate total duration for this service including its addons
     const baseDuration = parseDuration(service.duration);
@@ -161,39 +223,6 @@ async function validateSequence(assignments, startMinutes, date, existingAppoint
     const serviceDuration = baseDuration + addonsDuration;
     
     const serviceEndMinutes = currentMinutes + serviceDuration;
-    
-    // 1. Check staff exists and is available on this day
-    if (!isStaffAvailableOnDay(staff, date)) {
-      return { valid: false, reason: `${staff.fullName} is not available on this day` };
-    }
-    
-    // 2. Check working hours - The professional must be working from the start of travel until return from travel
-    const workingHours = getStaffWorkingHours(staff, date);
-    let windowCovered = false;
-    
-    for (const period of workingHours) {
-      const periodStart = timeToMinutes(period.startTime);
-      const periodEnd = timeToMinutes(period.endTime);
-      
-      if (fullBlockedStart >= periodStart && fullBlockedEnd <= periodEnd) {
-        windowCovered = true;
-        break;
-      }
-    }
-    
-    if (!windowCovered) {
-      return { valid: false, reason: `${staff.fullName} window ${minutesToTime(fullBlockedStart)}-${minutesToTime(fullBlockedEnd)} is outside working hours` };
-    }
-    
-    // 3. Check blocked times against the full professional window
-    if (isTimeSlotBlocked(staff, date, fullBlockedStart, fullBlockedEnd)) {
-      return { valid: false, reason: `${staff.fullName} has blocked time within ${minutesToTime(fullBlockedStart)}-${minutesToTime(fullBlockedEnd)}` };
-    }
-    
-    // 4. Check appointment conflicts against the full professional window
-    if (hasAppointmentConflict(existingAppointments, staffId, date, fullBlockedStart, fullBlockedEnd)) {
-      return { valid: false, reason: `${staff.fullName} has a conflict between ${minutesToTime(fullBlockedStart)} and ${minutesToTime(fullBlockedEnd)} (including travel/buffers)` };
-    }
     
     // Add to sequence
     sequence.push({
@@ -313,6 +342,10 @@ export async function POST(request) {
     const enrichedAssignments = [];
     const staffCache = new Map();
     const allAddOnIds = new Set();
+
+    // Fetch all active staff for the vendor to handle "any" professional selection and caching
+    const allActiveStaff = await StaffModel.find({ vendorId, status: 'Active' }).lean();
+    allActiveStaff.forEach(s => staffCache.set(s._id.toString(), s));
     
     // Extract top-level addon IDs if they exist
     const topLevelAddOnIds = [
@@ -368,10 +401,16 @@ export async function POST(request) {
       
       // Find or fetch staff
       let staff;
-      if (staffCache.has(staffId)) {
+      if (staffId === 'any') {
+        staff = { _id: 'any', fullName: 'Any Professional', isAny: true };
+      } else if (staffCache.has(staffId)) {
         staff = staffCache.get(staffId);
       } else {
-        staff = await StaffModel.findOne({ _id: staffId, vendorId, status: 'Active' });
+        // Robustness: try for valid ObjectId
+        if (staffId && /^[0-9a-fA-F]{24}$/.test(staffId)) {
+          staff = await StaffModel.findOne({ _id: staffId, vendorId, status: 'Active' }).lean();
+        }
+        
         if (!staff) {
           return NextResponse.json(
             { success: false, message: `Staff ${staffId} not found or inactive`, slots: [] },
@@ -467,12 +506,17 @@ export async function POST(request) {
     
     console.log(`Found ${existingAppointments.length} existing appointments for the day`);
     
-    // Determine the earliest and latest working hours across all staff
+    // Determine the earliest and latest working hours across all staff involved
     let earliestStart = 24 * 60; // 11:59 PM in minutes
     let latestEnd = 0;
     
-    for (const assignment of enrichedAssignments) {
-      const workingHours = getStaffWorkingHours(assignment.staff, date);
+    // If any assignment is 'any', consider all active staff for the range
+    const staffForRange = enrichedAssignments.some(a => a.staff.isAny) 
+      ? allActiveStaff 
+      : enrichedAssignments.map(a => a.staff);
+
+    for (const staff of staffForRange) {
+      const workingHours = getStaffWorkingHours(staff, date);
       
       for (const period of workingHours) {
         const periodStart = timeToMinutes(period.startTime);
@@ -527,7 +571,7 @@ export async function POST(request) {
         serviceStartMinutes,
         date,
         existingAppointments,
-        staffCache,
+        allActiveStaff,
         isHomeService,
         travelTimeInfo,
         bufferBefore,
