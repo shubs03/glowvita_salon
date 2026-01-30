@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
 import NewAppointmentForm, { type Appointment as FormAppointment } from "../app/calendar/components/NewAppointmentForm";
 import { toast } from 'sonner';
-import { useCollectPaymentMutation, useGetAppointmentsQuery, useGetVendorProfileQuery } from '@repo/store/services/api';
+import { useCollectPaymentMutation, useGetAppointmentsQuery, useGetVendorProfileQuery, useGetTaxFeeSettingsQuery } from '@repo/store/services/api';
 import { AppointmentInvoice } from './AppointmentInvoice';
 
 interface PaymentDetails {
@@ -161,6 +161,7 @@ export function AppointmentDetailView({
   const [isStatusChanging, setIsStatusChanging] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
   const { data: vendorProfile, isLoading: isVendorLoading } = useGetVendorProfileQuery({});
+  const { data: taxSettings } = useGetTaxFeeSettingsQuery(undefined);
 
   // Local override for payment values after a successful collection, so UI updates immediately
   const [overridePayment, setOverridePayment] = useState<{ amountPaid: number; amountRemaining: number; paymentStatus: string } | null>(null);
@@ -931,13 +932,14 @@ export function AppointmentDetailView({
       originalSubtotal: totalBaseAmount + totalAddOnsAmount,
       discount: discountAmount,
       tax: (liveAppointment as any).serviceTax || (liveAppointment as any).tax || liveAppointment.payment?.serviceTax || 0,
+      taxRate: (liveAppointment as any).taxRate || taxSettings?.serviceTax || 0,
       platformFee: (liveAppointment as any).platformFee || liveAppointment.payment?.platformFee || 0,
       total: totalAmount,
       balance: remainingAmount,
       paymentMethod: (liveAppointment as any).paymentMethod || liveAppointment.payment?.paymentMethod || null,
       couponCode: (liveAppointment as any).couponCode || ''
     };
-  }, [liveAppointment, totalAmount, remainingAmount, vendorProfile, totalBaseAmount, totalAddOnsAmount, discountAmount]);
+  }, [liveAppointment, totalAmount, remainingAmount, vendorProfile, totalBaseAmount, totalAddOnsAmount, discountAmount, taxSettings]);
 
   const handleDownloadPdf = async () => {
     const toastId = toast.loading('Generating PDF...');
@@ -1191,7 +1193,7 @@ export function AppointmentDetailView({
                   invoiceData={invoiceData}
                   vendorName={vendorProfile?.data?.businessName || "GlowVita Salon"}
                   vendorProfile={vendorProfile}
-                  taxRate={0} // Tax is already calculated in amount
+                  taxRate={invoiceData.taxRate}
                   isOrderSaved={true}
                   onEmailClick={() => {
                     toast.success('Invoice email sent to client');
