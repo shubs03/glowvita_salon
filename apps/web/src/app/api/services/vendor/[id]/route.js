@@ -51,9 +51,9 @@ export const GET = async (request, { params }) => {
       });
     }
 
-    // Filter only approved services
+    // Filter only approved AND services with onlineBooking enabled
     const approvedServices = vendorServices.services.filter(service =>
-      service.status === 'approved'
+      service.status === 'approved' && service.onlineBooking !== false
     );
 
     // Transform services and resolve category names

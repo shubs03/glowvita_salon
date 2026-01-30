@@ -320,7 +320,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
       ...formData,
       category: (formData.category as any)?._id || undefined,
       price: Number(formData.price) || 0,
-      discountedPrice: Number(formData.discountedPrice) || 0,
+      discountedPrice: formData.discountedPrice === "" ? null : Number(formData.discountedPrice),
       duration: Number(formData.duration) || 0,
       homeService: formData.homeService ? {
         ...formData.homeService,
@@ -785,71 +785,71 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
                   <span className="font-semibold">Category:</span>{" "}
                   {service?.categoryName || "N/A"}
                 </div>
-              <div>
-                <span className="font-semibold">Price:</span> ₹
-                {service?.price?.toFixed(2) || 0}
-              </div>
-              <div>
-                <span className="font-semibold">Discounted Price:</span> ₹
-                {service?.discountedPrice ? service.discountedPrice.toFixed(2) : "N/A"}
-              </div>
-              <div>
-                <span className="font-semibold">Duration:</span>{" "}
-                {service?.duration || 0} mins
-              </div>
-              <div>
-                <span className="font-semibold">Booking Interval:</span>{" "}
-                {service?.bookingInterval || 0} mins
-              </div>
-              <div>
-                <span className="font-semibold">Gender:</span> {service?.gender || 'N/A'}
-              </div>
-              <div>
-                <span className="font-semibold">Commission:</span>{" "}
-                {service?.commission ? 'Enabled' : 'Disabled'}
-              </div>
-              <div>
-                <span className="font-semibold">Online Booking:</span>{" "}
-                {service?.onlineBooking ? 'Enabled' : 'Disabled'}
-              </div>
-              <div>
-                <span className="font-semibold">Home Service:</span>{" "}
-                {service?.homeService?.available ? `Available (₹${service.homeService.charges || 0})` : 'Not Available'}
-              </div>
-              <div>
-                <span className="font-semibold">Wedding Service:</span>{" "}
-                {service?.weddingService?.available ? `Available (₹${service.weddingService.charges || 0})` : 'Not Available'}
-              </div>
-              <div>
-                <span className="font-semibold">Tax:</span>{" "}
-                {service?.tax?.enabled ? `${service.tax.type === 'percentage' ? `${service.tax.value}%` : `₹${service.tax.value}`}` : 'Not Enabled'}
-              </div>
-              <div>
-                <span className="font-semibold">Status:</span>
-                <Badge
-                  variant={
-                    service?.status === 'approved' ? 'default' :
-                      service?.status === 'disapproved' ? 'destructive' : 'secondary'
-                  }
-                  className={
-                    service?.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      service?.status === 'disapproved' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                  }
-                >
-                  {service?.status || 'N/A'}
-                </Badge>
-              </div>
-              <div>
-                <span className="font-semibold">Created At:</span>{" "}
-                {service?.createdAt ? new Date(service.createdAt).toLocaleDateString() : 'N/A'}
-              </div>
-              <div>
-                <span className="font-semibold">Updated At:</span>{" "}
-                {service?.updatedAt ? new Date(service.updatedAt).toLocaleDateString() : 'N/A'}
+                <div>
+                  <span className="font-semibold">Price:</span> ₹
+                  {service?.price?.toFixed(2) || 0}
+                </div>
+                <div>
+                  <span className="font-semibold">Discounted Price:</span> ₹
+                  {service?.discountedPrice ? service.discountedPrice.toFixed(2) : "N/A"}
+                </div>
+                <div>
+                  <span className="font-semibold">Duration:</span>{" "}
+                  {service?.duration || 0} mins
+                </div>
+                <div>
+                  <span className="font-semibold">Booking Interval:</span>{" "}
+                  {service?.bookingInterval || 0} mins
+                </div>
+                <div>
+                  <span className="font-semibold">Gender:</span> {service?.gender || 'N/A'}
+                </div>
+                <div>
+                  <span className="font-semibold">Commission:</span>{" "}
+                  {service?.commission ? 'Enabled' : 'Disabled'}
+                </div>
+                <div>
+                  <span className="font-semibold">Online Booking:</span>{" "}
+                  {service?.onlineBooking ? 'Enabled' : 'Disabled'}
+                </div>
+                <div>
+                  <span className="font-semibold">Home Service:</span>{" "}
+                  {service?.homeService?.available ? `Available (₹${service.homeService.charges || 0})` : 'Not Available'}
+                </div>
+                <div>
+                  <span className="font-semibold">Wedding Service:</span>{" "}
+                  {service?.weddingService?.available ? `Available (₹${service.weddingService.charges || 0})` : 'Not Available'}
+                </div>
+                <div>
+                  <span className="font-semibold">Tax:</span>{" "}
+                  {service?.tax?.enabled ? `${service.tax.type === 'percentage' ? `${service.tax.value}%` : `₹${service.tax.value}`}` : 'Not Enabled'}
+                </div>
+                <div>
+                  <span className="font-semibold">Status:</span>
+                  <Badge
+                    variant={
+                      service?.status === 'approved' ? 'default' :
+                        service?.status === 'disapproved' ? 'destructive' : 'secondary'
+                    }
+                    className={
+                      service?.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        service?.status === 'disapproved' ? 'bg-red-100 text-red-800' :
+                          'bg-yellow-100 text-yellow-800'
+                    }
+                  >
+                    {service?.status || 'N/A'}
+                  </Badge>
+                </div>
+                <div>
+                  <span className="font-semibold">Created At:</span>{" "}
+                  {service?.createdAt ? new Date(service.createdAt).toLocaleDateString() : 'N/A'}
+                </div>
+                <div>
+                  <span className="font-semibold">Updated At:</span>{" "}
+                  {service?.updatedAt ? new Date(service.updatedAt).toLocaleDateString() : 'N/A'}
+                </div>
               </div>
             </div>
-          </div>
             {service?.addOns && service.addOns.length > 0 && (
               <div className="mt-4">
                 <span className="font-semibold block mb-2">Selected Add-ons:</span>

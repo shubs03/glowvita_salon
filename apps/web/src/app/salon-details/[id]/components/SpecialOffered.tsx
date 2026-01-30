@@ -54,56 +54,8 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false }: SpecialOffe
           "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=600", // Use offer image if available
       })) || [];
 
-  // If no offers are available, use the original hardcoded offers as fallback
-  const offersToUse =
-    offers.length > 0
-      ? offers
-      : [
-        {
-          title: "Layer Cut",
-          originalPrice: "500",
-          discountedPrice: "250",
-          discount: "50%",
-          description:
-            "Transform your style with our premium haircut service. Expert stylists, quality service, unbeatable price!",
-          validity: "*Valid until December 31, 2025",
-          image:
-            "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=600",
-        },
-        {
-          title: "Hair Spa Treatment",
-          originalPrice: "1200",
-          discountedPrice: "800",
-          discount: "33%",
-          description:
-            "Rejuvenate your hair with our luxurious spa treatment. Deep conditioning, nourishment, and shine restoration!",
-          validity: "*Valid until January 15, 2026",
-          image:
-            "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600",
-        },
-        {
-          title: "Facial & Cleanup",
-          originalPrice: "800",
-          discountedPrice: "600",
-          discount: "25%",
-          description:
-            "Experience glowing skin with our professional facial service. Deep cleansing, exfoliation, and hydration!",
-          validity: "*Valid until December 25, 2025",
-          image:
-            "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=600",
-        },
-        {
-          title: "Manicure & Pedicure",
-          originalPrice: "600",
-          discountedPrice: "450",
-          discount: "25%",
-          description:
-            "Pamper your hands and feet with our complete nail care service. Professional grooming and relaxation!",
-          validity: "*Valid until January 31, 2026",
-          image:
-            "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600",
-        },
-      ];
+  // Use fetched offers
+  const offersToUse = offers;
 
   // Auto-scroll every 3 seconds
   useEffect(() => {
@@ -197,8 +149,6 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false }: SpecialOffe
     };
   }, [isDragging, startX, currentX, dragOffset]);
 
-  const currentOffer = offersToUse[currentIndex];
-
   // Show loading state if offers are loading
   if (isLoadingOffers) {
     return (
@@ -226,22 +176,13 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false }: SpecialOffe
     );
   }
 
-  // Show error state if there's an error
-  if (offersError) {
-    return (
-      <section className="max-w-4xl mx-auto">
-        <div className="mb-8 text-center">
-          <Gift className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary">
-            Offers Available
-          </h2>
-          <p className="text-muted-foreground mt-3 text-sm">
-            Error loading offers
-          </p>
-        </div>
-      </section>
-    );
+  // Hide if error or no offers
+  if (offersError || (!isLoadingOffers && offersToUse.length === 0)) {
+    return null;
   }
+
+  const currentOffer = offersToUse[currentIndex];
+  if (!currentOffer) return null;
 
   return (
     <section className="max-w-4xl mx-auto">

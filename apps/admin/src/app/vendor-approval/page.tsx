@@ -44,7 +44,7 @@ import {
   useDeleteDoctorMutation,
   useGetVendorsQuery,
   useUpdateVendorStatusMutation,
-  useGetPendingServicesQuery,
+  useGetVendorServicesForApprovalQuery,
   useUpdateServiceStatusMutation,
   useGetVendorProductApprovalsQuery,
   useUpdateVendorProductStatusMutation,
@@ -109,7 +109,7 @@ type Vendor = {
 
 type Service = {
   _id: string;
-  serviceName: string;
+  name: string;
   vendorName: string;
   category: string;
   price: number;
@@ -185,7 +185,7 @@ export default function VendorApprovalPage() {
   const [updateVendorStatus] = useUpdateVendorStatusMutation();
   const { data: suppliersData = [], isLoading: suppliersLoading } = useGetSuppliersQuery(undefined);
   const { data: doctorsData = [], isLoading: doctorsLoading } = useGetDoctorsQuery(undefined);
-  const { data: pendingServices = [], isLoading: servicesLoading, refetch: refetchPendingServices } = useGetPendingServicesQuery(undefined);
+  const { data: pendingServices = [], isLoading: servicesLoading, refetch: refetchPendingServices } = useGetVendorServicesForApprovalQuery({ status: 'pending' });
   const [updateServiceStatus] = useUpdateServiceStatusMutation();
 
   // Vendor product approvals
@@ -350,7 +350,7 @@ export default function VendorApprovalPage() {
           status: newStatus,
           rejectionReason: actionType === 'reject' ? rejectionReason : undefined
         }).unwrap();
-        toast.success(`Service "${service.serviceName}" has been ${newStatus}.`);
+        toast.success(`Service "${service.name}" has been ${newStatus}.`);
         refetchPendingServices();
       } else if (itemType === 'vendor-product') {
         const product = selectedItem as Product;
@@ -730,7 +730,7 @@ export default function VendorApprovalPage() {
                     ) : (
                       currentServices.map((service: Service) => (
                         <TableRow key={service._id}>
-                          <TableCell className="font-medium text-xs max-w-[120px] truncate">{service.serviceName || 'N/A'}</TableCell>
+                          <TableCell className="font-medium text-xs max-w-[120px] truncate">{service.name || 'N/A'}</TableCell>
                           <TableCell className="text-xs max-w-[100px] truncate">{service.vendorName || 'N/A'}</TableCell>
                           <TableCell className="text-xs">{service.price ? `₹${service.price.toFixed(2)}` : 'N/A'}</TableCell>
                           <TableCell>
@@ -1637,7 +1637,7 @@ export default function VendorApprovalPage() {
                   <div className="space-y-6">
                     <div className="pb-6 border-b flex justify-between items-start">
                       <div>
-                        <h3 className="text-2xl font-bold font-headline">{service.serviceName || 'N/A'}</h3>
+                        <h3 className="text-2xl font-bold font-headline">{service.name || 'N/A'}</h3>
                         <p className="text-muted-foreground flex items-center gap-1.5 mt-1 font-medium italic">
                           By {service.vendorName || 'Independent Vendor'}
                         </p>

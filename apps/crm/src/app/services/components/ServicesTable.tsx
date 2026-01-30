@@ -20,24 +20,24 @@ interface ServicesTableProps {
   refetch: () => void;
 }
 
-const ServicesTable = ({ 
-  services, 
-  onEdit, 
-  onView, 
-  onDelete, 
-  onAddOn, 
-  onVisibilityToggle, 
-  searchTerm, 
+const ServicesTable = ({
+  services,
+  onEdit,
+  onView,
+  onDelete,
+  onAddOn,
+  onVisibilityToggle,
+  searchTerm,
   statusFilter,
-  isNoServicesError, 
-  isError, 
-  refetch 
+  isNoServicesError,
+  isError,
+  refetch
 }: ServicesTableProps) => {
   const filteredServices = services.filter(
     (service: Service) =>
       (service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (service.categoryName &&
-        service.categoryName.toLowerCase().includes(searchTerm.toLowerCase()))) &&
+        (service.categoryName &&
+          service.categoryName.toLowerCase().includes(searchTerm.toLowerCase()))) &&
       (statusFilter === "all" || service.status === statusFilter)
   );
 
@@ -101,19 +101,26 @@ const ServicesTable = ({
                   </TableCell>
                   <TableCell>₹{service.price?.toFixed(2)}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant={
-                        service.status === 'approved' ? 'default' :
-                          service.status === 'disapproved' ? 'destructive' : 'secondary'
-                      }
-                      className={
-                        service.status === 'approved' ? 'bg-primary text-primary-foreground' :
-                          service.status === 'disapproved' ? 'bg-secondary text-primary-foreground' :
-                            'bg-secondary text-primary'
-                      }
-                    >
-                      {service.status}
-                    </Badge>
+                    <div className="flex flex-col items-start gap-1">
+                      <Badge
+                        variant={
+                          service.status === 'approved' ? 'default' :
+                            service.status === 'disapproved' ? 'destructive' : 'secondary'
+                        }
+                        className={
+                          service.status === 'approved' ? 'bg-primary text-primary-foreground' :
+                            service.status === 'disapproved' ? 'bg-red-100 text-red-800 hover:bg-red-100 border-red-200' :
+                              'bg-secondary text-primary'
+                        }
+                      >
+                        {service.status}
+                      </Badge>
+                      {service.status === 'disapproved' && service.rejectionReason && (
+                        <p className="text-[10px] text-red-600 max-w-[150px] leading-tight">
+                          Reason: {service.rejectionReason}
+                        </p>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Switch

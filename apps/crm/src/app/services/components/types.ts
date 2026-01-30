@@ -27,6 +27,7 @@ export interface Service {
   image?: string;
   serviceImage?: string;
   status?: string;
+  rejectionReason?: string;
   addOns?: string[];
   createdAt?: string;
   updatedAt?: string;

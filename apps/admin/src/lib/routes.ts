@@ -47,6 +47,12 @@ export const sidebarNavItems: NavItem[] = [
     permission: "vendor-approval",
   },
   {
+    title: "Services",
+    href: "/services",
+    Icon: FaBox,
+    permission: "services",
+  },
+  {
     title: "Supplier Management",
     href: "/supplier-management",
     Icon: FaTruck,
