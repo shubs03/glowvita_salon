@@ -57,6 +57,8 @@ interface Step3MultiServiceTimeSlotProps {
     lng: number;
     address?: string;
   };
+  onLockAcquired?: (lockToken: string, appointmentId?: string) => void;
+  user?: any;
 }
 
 interface MultiServiceSlot {
@@ -97,12 +99,26 @@ export function Step3_MultiServiceTimeSlot({
   selectedServices,
   vendorId,
   isHomeService = false,
-  homeServiceLocation
+  homeServiceLocation,
+  onLockAcquired,
+  platformFee = 0,
+  serviceTax = 0,
+  taxRate = 0,
+  couponCode = null,
+  discountAmount = 0,
+  user
 }: Step3MultiServiceTimeSlotProps) {
   // RTK Query mutation hook
   const [getMultiServiceSlots, { data: slotsData, isLoading: isLoadingSlots, error: slotsError }] = useGetMultiServiceSlotsMutation();
   
   const [selectedSlot, setSelectedSlot] = useState<MultiServiceSlot | null>(null);
+  const [isLocking, setIsLocking] = useState(false);
+  const [lockedSlot, setLockedSlot] = useState<{
+    slot: MultiServiceSlot;
+    lockToken: string;
+    expiresAt: Date;
+  } | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   // Extract slots from RTK Query response
   const slots = slotsData?.slots || [];
@@ -174,11 +190,135 @@ export function Step3_MultiServiceTimeSlot({
     fetchMultiServiceSlots();
   }, [fetchMultiServiceSlots]);
 
-  // Handle slot selection
-  const handleSlotSelect = (slot: MultiServiceSlot) => {
-    setSelectedSlot(slot);
-    onSelectTime(slot.startTime);
+  // Release lock manually
+  const handleReleaseLock = async () => {
+    if (!lockedSlot) return;
+
+    try {
+      // Find the appointment ID from the lock token if possible, 
+      // but the backend handleReleaseLock now supports appointmentId + lockToken
+      // We should ideally have stored the appointmentId
+      
+      await fetch('/api/booking/release-lock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          lockToken: lockedSlot.lockToken,
+          appointmentId: (lockedSlot as any).appointmentId // Store this in the state
+        })
+      });
+
+      setLockedSlot(null);
+      setTimeLeft(null);
+      setSelectedSlot(null);
+      onSelectTime(null);
+    } catch (error) {
+      console.error('Error releasing lock:', error);
+    }
   };
+
+  // Handle slot selection (with locking)
+  const handleSlotSelect = async (slot: MultiServiceSlot) => {
+    if (isLocking) return;
+
+    // INDUSTRY BEST PRACTICE: Release existing lock before acquiring a new one
+    if (lockedSlot) {
+      console.log('Releasing existing lock before acquiring new one');
+      await handleReleaseLock();
+    }
+
+    try {
+      setIsLocking(true);
+      console.log('Acquiring lock for multi-service slot:', slot);
+
+      // Prepare lock request
+      const lockRequest = {
+        vendorId,
+        serviceId: 'combo', // Multi-service identifier
+        serviceName: 'Multi-service Booking',
+        date: selectedDate.toISOString(),
+        startTime: slot.startTime,
+        endTime: slot.endTime,
+        isMultiService: true,
+        serviceItems: slot.sequence.map(item => ({
+          service: item.serviceId,
+          serviceName: item.serviceName,
+          staff: item.staffId,
+          staffName: item.staffName,
+          startTime: item.startTime,
+          endTime: item.endTime,
+          duration: item.duration,
+          amount: 0 // Will be calculated by backend or next step
+        })),
+        isHomeService,
+        location: homeServiceLocation,
+        duration: slot.totalDuration,
+        // Client Info
+        clientId: user?._id || user?.id || 'temp-client-id',
+        clientName: user ? `${user.firstName} ${user.lastName}` : 'Customer'
+      };
+
+      const response = await fetch('/api/booking/lock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lockRequest)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Slot no longer available');
+      }
+
+      const lockData = await response.json();
+      console.log('Lock acquired:', lockData);
+
+      setLockedSlot({
+        slot,
+        lockToken: lockData.lockId,
+        appointmentId: lockData.appointmentId,
+        expiresAt: new Date(Date.now() + (lockData.expiresIn || 15) * 60 * 1000)
+      } as any);
+
+      if (onLockAcquired) {
+        onLockAcquired(lockData.lockId, lockData.appointmentId);
+      }
+
+      setSelectedSlot(slot);
+      onSelectTime(slot.startTime);
+      toast.success('Time slot reserved for 15 minutes');
+    } catch (error: any) {
+      console.error('Lock acquisition failed:', error);
+      toast.error(error.message || 'Failed to reserve time slot. Please try another.');
+    } finally {
+      setIsLocking(false);
+    }
+  };
+
+  // Timer for locked slot
+  useEffect(() => {
+    if (!lockedSlot) {
+      setTimeLeft(null);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      const now = new Date().getTime();
+      const expires = lockedSlot.expiresAt.getTime();
+      const diff = Math.max(0, Math.floor((expires - now) / 1000));
+
+      setTimeLeft(diff);
+
+      if (diff === 0) {
+        setLockedSlot(null);
+        setSelectedSlot(null);
+        onSelectTime(null);
+        toast.info('Reservation expired. Please select a time slot again.');
+        fetchMultiServiceSlots();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [lockedSlot, onSelectTime, fetchMultiServiceSlots]);
 
   // Handle date scroll
   const handleDateScroll = (direction: 'left' | 'right') => {
@@ -282,6 +422,18 @@ export function Step3_MultiServiceTimeSlot({
         <p className="text-muted-foreground">
           Choose a convenient time for your {serviceStaffAssignments.length} service{serviceStaffAssignments.length > 1 ? 's' : ''}.
         </p>
+
+        {timeLeft !== null && (
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between text-amber-800 animate-pulse">
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              <span className="font-medium">Slot reserved! Complete booking in:</span>
+            </div>
+            <span className="text-xl font-bold tabular-nums">
+              {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Service Summary */}
@@ -382,14 +534,21 @@ export function Step3_MultiServiceTimeSlot({
                 return (
                   <button
                     key={index}
-                    onClick={() => handleSlotSelect(slot)}
+                    onClick={() => !isLocking && handleSlotSelect(slot)}
+                    disabled={isLocking}
                     className={cn(
-                      "p-4 border-2 rounded-lg transition-all text-left hover:shadow-md",
+                      "p-4 border-2 rounded-lg transition-all text-left hover:shadow-md relative overflow-hidden",
                       isSelected
                         ? "border-primary bg-primary/5"
-                        : "border-gray-200 hover:border-primary hover:bg-primary/5"
+                        : "border-gray-200 hover:border-primary hover:bg-primary/5",
+                      isLocking && "opacity-50 cursor-wait"
                     )}
                   >
+                    {isLocking && isSelected && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white/60">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      </div>
+                    )}
                     {/* Slot Time */}
                     <div className="font-semibold text-lg mb-2">
                       {slot.startTime} - {slot.endTime}

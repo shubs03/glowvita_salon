@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 
 // In-memory store for locks (in production, use Redis or similar)
 const locks = new Map();
-const LOCK_TTL = 30 * 60 * 1000; // 30 minutes
+const LOCK_TTL = 15 * 60 * 1000; // 15 minutes (Standard for booking flows)
 
 /**
  * Clean up expired locks periodically
@@ -92,12 +92,22 @@ export async function acquireLock(params) {
     // Check if lock already exists and is still valid
     if (locks.has(lockKey)) {
       const existingLock = locks.get(lockKey);
-      console.log('Existing lock found:', existingLock);
+      console.log('Existing lock found in memory:', existingLock);
+      
       if (existingLock.expiration > Date.now()) {
-        // Lock is still held by someone else
-        const timeRemaining = Math.round((existingLock.expiration - Date.now()) / 1000);
-        console.log(`Lock already held for ${lockKey}, expires in ${timeRemaining} seconds`);
-        return null;
+        // [ENHANCEMENT] Allow same client to re-acquire their own lock
+        // This handles retries, page refreshes, and "delete-from-db-then-retry" scenarios
+        const incomingClientId = params.clientId || (typeof params === 'object' ? params.clientId : null);
+        
+        if (incomingClientId && incomingClientId !== 'temp-client-id' && existingLock.clientId === incomingClientId) {
+          console.log(`Lock already held by SAME client ${incomingClientId}, allowing re-acquisition.`);
+          locks.delete(lockKey);
+        } else {
+          // Lock is still held by someone else
+          const timeRemaining = Math.round((existingLock.expiration - Date.now()) / 1000);
+          console.log(`Lock already held for ${lockKey} by client ${existingLock.clientId}, expires in ${timeRemaining} seconds`);
+          return null;
+        }
       } else {
         // Lock has expired, remove it
         console.log('Removing expired lock:', lockKey);
@@ -111,8 +121,9 @@ export async function acquireLock(params) {
       expiration: expiration,
       vendorId,
       staffId,
-      date: date.toISOString().split('T')[0],
-      timeSlot
+      date: date instanceof Date ? date.toISOString().split('T')[0] : new Date(date).toISOString().split('T')[0],
+      timeSlot,
+      clientId: params.clientId || 'temp-client-id'
     });
 
     console.log(`Lock acquired: ${lockKey}`);
@@ -521,6 +532,18 @@ export async function cancelAppointment(appointmentId, lockToken) {
     if (appointment.lockToken !== lockToken) {
       console.warn(`Invalid lock token for appointment ${appointmentId}`);
       return false;
+    }
+
+    // Release the in-memory lock as well
+    if (appointment.vendorId && appointment.date && appointment.startTime) {
+      const staffId = appointment.staff ? appointment.staff.toString() : 'any';
+      await releaseLock(
+        appointment.vendorId.toString(),
+        staffId,
+        appointment.date,
+        appointment.startTime,
+        lockToken
+      );
     }
 
     // Delete the temporary appointment record

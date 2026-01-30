@@ -494,11 +494,16 @@ export async function POST(request) {
     
     // If it's today, start from current time
     const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
+    // IST is UTC + 5:30
+    const istOffset = 5.5 * 60; // 330 minutes
+    const nowUTC = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const nowIST = new Date(nowUTC + (istOffset * 60000));
+    const isToday = date.toDateString() === nowIST.toDateString();
+    
     if (isToday) {
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
-      if (currentMinutes > earliestStart) {
-        currentTime = Math.ceil(currentMinutes / stepMinutes) * stepMinutes;
+      const currentMinutesIST = nowIST.getHours() * 60 + nowIST.getMinutes();
+      if (currentMinutesIST > earliestStart) {
+        currentTime = Math.ceil(currentMinutesIST / stepMinutes) * stepMinutes;
       }
     }
     
