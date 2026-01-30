@@ -547,9 +547,13 @@ export const glowvitaApi = createApi({
       providesTags: ["admin"],
     }),
     // Service Approval Endpoints
-    getPendingServices: builder.query({
-      query: () => ({ url: "/admin/services/service-approval", method: "GET" }),
-      providesTags: ["PendingServices"],
+    getVendorServicesForApproval: builder.query({
+      query: (params) => ({
+        url: "/admin/services/service-approval",
+        method: "GET",
+        params: params // Support status filter
+      }),
+      providesTags: ["VendorServicesApproval"],
     }),
     updateServiceStatus: builder.mutation({
       query: ({ serviceId, status, rejectionReason }) => ({
@@ -557,7 +561,15 @@ export const glowvitaApi = createApi({
         method: "PATCH",
         body: { serviceId, status, rejectionReason },
       }),
-      invalidatesTags: ["PendingServices", "VendorServices"],
+      invalidatesTags: ["VendorServicesApproval", "VendorServices"],
+    }),
+    updateVendorServiceOnlineBooking: builder.mutation({
+      query: ({ serviceId, onlineBooking }) => ({
+        url: "/admin/services/service-approval",
+        method: "PUT",
+        body: { serviceId, onlineBooking },
+      }),
+      invalidatesTags: ["VendorServicesApproval", "VendorServices"],
     }),
 
     // Wedding Package Approval Endpoints
@@ -3103,4 +3115,5 @@ export const {
   useCreateRegionMutation,
   useUpdateRegionMutation,
   useDeleteRegionMutation,
+  useGetVendorServicesForApprovalQuery,
 } = glowvitaApi;
