@@ -20,7 +20,7 @@ import SettlementsDetailCard from "./components/SettlementsDetailCard";
 import SettlementsPaymentModal from "./components/SettlementsPaymentModal";
 
 // Import the original PayoutData interface
-import { PayoutData } from "./components/SettlementsTable";
+import { PayoutData } from "./types";
 
 export default function SettlementsPage() {
   const dispatch = useAppDispatch();
@@ -43,7 +43,7 @@ export default function SettlementsPage() {
       { type: 'receive', amount: 1000, date: '2025-08-05', description: 'Membership Fee' },
       { type: 'pay', amount: 1200, date: '2025-08-12', description: 'Vendor Payout' },
     ],
-  },{
+  }, {
     id: "TXN7483981",
     vendor: "Modern Cuts",
     contactNo: "8765432109",
@@ -126,7 +126,7 @@ export default function SettlementsPage() {
   const handleCollectPayment = async (payoutId: string, amount: number) => {
     const toastId = toast.loading("Processing payment...");
     setIsProcessingPayment(true);
-    
+
     try {
       // Call backend to record payment
       await collectPayment({
@@ -182,23 +182,23 @@ export default function SettlementsPage() {
             { header: 'Vendor', key: 'vendor' },
             { header: 'Contact', key: 'contactNo' },
             { header: 'Owner', key: 'ownerName' },
-            { 
-              header: 'Receive Amount', 
+            {
+              header: 'Receive Amount',
               key: 'adminReceiveAmount',
               transform: (val) => `₹${Number(val).toFixed(2)}`
             },
-            { 
-              header: 'Pay Amount', 
+            {
+              header: 'Pay Amount',
               key: 'adminPayAmount',
               transform: (val) => `₹${Number(val).toFixed(2)}`
             },
-            { 
-              header: 'Pending Amount', 
+            {
+              header: 'Pending Amount',
               key: 'pendingAmount',
               transform: (val) => `₹${Number(val).toFixed(2)}`
             },
-            { 
-              header: 'Total Settlement', 
+            {
+              header: 'Total Settlement',
               key: 'totalSettlement',
               transform: (val) => `₹${Number(val).toFixed(2)}`
             },

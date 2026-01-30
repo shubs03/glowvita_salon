@@ -1,7 +1,7 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Button } from "@repo/ui/button";
 import { Eye } from 'lucide-react';
-import { PayoutData } from "./SettlementsTable";
+import { PayoutData } from "../types";
 
 interface SettlementsTableProps {
   payouts: PayoutData[];
@@ -66,10 +66,9 @@ const SettlementsTableNew = ({
                   <TableCell>₹{payout.pendingAmount.toFixed(2)}</TableCell>
                   <TableCell className="font-bold">₹{payout.totalSettlement.toFixed(2)}</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      payout.status === "Paid"
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${payout.status === "Paid"
                         ? "bg-primary text-white" : "bg-secondary text-primary"
-                    }`}>
+                      }`}>
                       {payout.status}
                     </span>
                   </TableCell>

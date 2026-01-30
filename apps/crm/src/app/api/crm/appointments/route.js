@@ -2,7 +2,186 @@ import { NextResponse } from 'next/server';
 import AppointmentModel from "../../../../../../../packages/lib/src/models/Appointment/Appointment.model";
 import _db from '@repo/lib/db';
 import ClientModel from '@repo/lib/models/Vendor/Client.model';
+import UserModel from "../../../../../../../packages/lib/src/models/user/User.model";
 import { withSubscriptionCheck } from '@/middlewareCrm';
+import { sendEmail } from "../../../../../../../packages/lib/src/emailService";
+import { getConfirmationTemplate, getCompletionTemplate, getInvoiceTemplate, getCancellationTemplate } from "../../../../../../../packages/lib/src/emailTemplates";
+import VendorModelLib from "../../../../../../../packages/lib/src/models/Vendor/Vendor.model";
+
+// Helper function to send appointment emails
+const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus, fallbackClientId = null) => {
+    console.log(`[Email Debug] Attempting to send email for appointment ${appointment._id}`);
+    console.log(`[Email Debug] Status change: ${oldStatus} -> ${newStatus}`);
+
+    if (newStatus === oldStatus) {
+        console.log('[Email Debug] Status unchanged, skipping email');
+        return;
+    }
+
+    try {
+        const vendor = await VendorModelLib.findById(vendorId).select('businessName address phone city state pincode');
+        const businessName = vendor?.businessName || 'GlowVita Salon';
+        const businessAddress = `${vendor?.address || ''}, ${vendor?.city || ''}, ${vendor?.state || ''}, ${vendor?.pincode || ''}`.trim().replace(/^,|,$/g, '');
+        const businessPhone = vendor?.phone || '';
+
+        let clientEmail = appointment.client?.email || appointment.clientEmail;
+        let clientName = appointment.client?.fullName || appointment.clientName;
+        let clientPhone = appointment.client?.phone || '';
+
+        // If client email is missing, it might be an online booking with a User ID stored in the client field
+        // We check appointment.client (which might be populated/null) or try to get the raw ID
+        const clientId = appointment.client?._id || appointment.client || fallbackClientId;
+
+        if (!clientEmail && clientId) {
+            console.log(`[Email Debug] Client email missing, checking User model for ID: ${clientId}`);
+            try {
+                const user = await UserModel.findById(clientId).select('firstName lastName emailAddress email mobileNo');
+                if (user) {
+                    clientEmail = user.emailAddress || user.email;
+                    clientName = clientName || `${user.firstName} ${user.lastName}`;
+                    clientPhone = user.mobileNo || user.phone;
+                    console.log(`[Email Debug] Found user info from User model: Name=${clientName}, Email=${clientEmail}, Phone=${clientPhone}`);
+                }
+            } catch (userError) {
+                console.error('[Email Debug] Error fetching user data:', userError);
+            }
+        }
+
+        console.log(`[Email Debug] Final Client Info for email: Name=${clientName}, Email=${clientEmail}`);
+
+        if (clientEmail) {
+            if (newStatus === 'confirmed') {
+                const emailHtml = getConfirmationTemplate({
+                    clientName,
+                    businessName,
+                    serviceName: appointment.serviceName,
+                    date: appointment.date,
+                    startTime: appointment.startTime,
+                    location: appointment.homeServiceLocation?.address || businessName
+                });
+
+                await sendEmail({
+                    to: clientEmail,
+                    subject: `Appointment Confirmed - ${businessName}`,
+                    html: emailHtml
+                });
+                console.log(`Confirmation email sent to ${clientEmail}`);
+            } else if (newStatus === 'completed' || newStatus === 'completed without payment') {
+                // Send completion template
+                const completionHtml = getCompletionTemplate({
+                    clientName,
+                    businessName,
+                    serviceName: appointment.serviceName
+                });
+
+                // Fetch formal invoice
+                let invoiceHtml;
+                let formalInvoice;
+                try {
+                    const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+                    formalInvoice = await InvoiceModel.findOne({ appointmentId: appointment._id });
+
+                    if (formalInvoice) {
+                        invoiceHtml = getInvoiceTemplate({
+                            clientName,
+                            clientPhone,
+                            businessName,
+                            businessAddress,
+                            businessPhone,
+                            date: new Date(formalInvoice.createdAt).toLocaleDateString(),
+                            items: formalInvoice.items,
+                            subtotal: formalInvoice.subtotal,
+                            tax: formalInvoice.taxAmount,
+                            taxRate: formalInvoice.taxRate,
+                            platformFee: formalInvoice.platformFee,
+                            discount: formalInvoice.discountAmount,
+                            couponCode: appointment.payment?.offer?.code || "",
+                            totalAmount: formalInvoice.totalAmount,
+                            paymentStatus: formalInvoice.paymentStatus,
+                            invoiceNumber: formalInvoice.invoiceNumber,
+                            paymentMethod: formalInvoice.paymentMethod
+                        });
+                    } else {
+                        // Fallback
+                        invoiceHtml = getInvoiceTemplate({
+                            clientName,
+                            clientPhone,
+                            businessName,
+                            businessAddress,
+                            businessPhone,
+                            date: new Date(appointment.date).toLocaleDateString(),
+                            items: [{
+                                name: appointment.serviceName,
+                                price: appointment.amount,
+                                quantity: 1,
+                                totalPrice: appointment.amount
+                            }],
+                            subtotal: appointment.amount,
+                            tax: appointment.serviceTax || appointment.tax || 0,
+                            taxRate: 0,
+                            platformFee: appointment.platformFee || 0,
+                            discount: appointment.discountAmount || appointment.discount || 0,
+                            totalAmount: appointment.totalAmount,
+                            paymentStatus: appointment.paymentStatus,
+                            invoiceNumber: appointment.invoiceNumber || appointment._id.toString(),
+                            paymentMethod: appointment.paymentMethod
+                        });
+                    }
+                } catch (tplError) {
+                    console.error('Error fetching invoice for email:', tplError);
+                }
+
+                // Generate PDF Buffer (add this for consistency if missing)
+                let pdfBuffer;
+                if (invoiceHtml) {
+                    try {
+                        const pdf = (await import('html-pdf')).default;
+                        pdfBuffer = await new Promise((resolve, reject) => {
+                            pdf.create(invoiceHtml, { format: 'A4' }).toBuffer((err, buffer) => {
+                                if (err) reject(err);
+                                else resolve(buffer);
+                            });
+                        });
+                    } catch (pdfError) {
+                        console.error('PDF generation failed in appointments route:', pdfError);
+                    }
+                }
+
+                await sendEmail({
+                    to: clientEmail,
+                    subject: `Appointment Completed - ${businessName}`,
+                    html: completionHtml,
+                    attachments: pdfBuffer ? [
+                        {
+                            filename: `Invoice_${formalInvoice?.invoiceNumber || appointment.invoiceNumber || appointment._id}.pdf`,
+                            content: pdfBuffer,
+                            contentType: 'application/pdf'
+                        }
+                    ] : []
+                });
+                console.log(`Completion email and invoice sent to ${clientEmail}`);
+            } else if (newStatus === 'cancelled') {
+                const emailHtml = getCancellationTemplate({
+                    clientName,
+                    businessName,
+                    serviceName: appointment.serviceName,
+                    date: appointment.date,
+                    startTime: appointment.startTime,
+                    cancellationReason: appointment.cancellationReason
+                });
+
+                await sendEmail({
+                    to: clientEmail,
+                    subject: `Appointment Cancelled - ${businessName}`,
+                    html: emailHtml
+                });
+                console.log(`Cancellation email sent to ${clientEmail}`);
+            }
+        }
+    } catch (emailError) {
+        console.error('Error sending appointment status email:', emailError);
+    }
+};
 
 await _db();
 
@@ -351,13 +530,16 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
             },
             { new: true, runValidators: false } // Disable validation to avoid issues with existing appointments
         )
-            .populate('client', 'name email phone')
+            .populate('client', 'fullName email phone')
             .populate('service', 'name duration price')
             .populate('staff', 'name email phone');
 
         if (!updatedAppointment) {
             throw new Error('Failed to update appointment');
         }
+
+        // Send email notifications
+        await sendAppointmentEmail(updatedAppointment, vendorId, updatedAppointment.status, existingAppointment.status);
 
         return NextResponse.json({
             success: true,
@@ -455,14 +637,23 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
             );
         }
 
+        // Fetch the existing appointment once to get old values
+        const existingAppointment = await AppointmentModel.findOne({ _id: appointmentId, vendorId });
+        if (!existingAppointment) {
+            return NextResponse.json(
+                { message: "Appointment not found or access denied" },
+                { status: 404 }
+            );
+        }
+
+        const oldStatus = existingAppointment.status;
+        const rawClientId = existingAppointment.client;
+
         // Add cancellation reason to notes if status is cancelled
         if (body.status === 'cancelled') {
             const cancellationReasonText = body.cancellationReason || 'No reason provided';
             const cancellationNote = `[${new Date().toISOString()}] Appointment cancelled: ${cancellationReasonText}`;
-
-            // Get the existing appointment to append to the notes
-            const existingAppointment = await AppointmentModel.findOne({ _id: appointmentId, vendorId });
-            const existingNotes = existingAppointment?.notes || '';
+            const existingNotes = existingAppointment.notes || '';
 
             const updateObj = {
                 $set: {
@@ -478,6 +669,7 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                 updateObj,
                 { new: true, runValidators: false } // Disable validation to avoid issues with existing appointments
             )
+                .populate('client', 'fullName email phone')
                 .populate('staff', 'fullName position')
                 .populate('service', 'name duration price');
 
@@ -488,6 +680,11 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                 );
             }
 
+            if (updatedAppointment) {
+                // Send email notifications
+                await sendAppointmentEmail(updatedAppointment, vendorId, 'cancelled', oldStatus, rawClientId);
+            }
+
             return NextResponse.json({
                 message: "Appointment status updated successfully",
                 appointment: updatedAppointment
@@ -496,10 +693,12 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
             // Logic for completing an appointment and calculating staff commission
             const updateFields = { status: body.status };
 
-            if (body.status === 'completed') {
+            if (body.status === 'completed' || body.status === 'completed without payment') {
                 try {
                     // Fetch current appointment to get staff and service details
-                    const currentAppt = await AppointmentModel.findOne({ _id: appointmentId, vendorId });
+                    const currentAppt = await AppointmentModel.findOne({ _id: appointmentId, vendorId })
+                        .populate('staff', 'fullName position')
+                        .populate('client', 'fullName email phone');
 
                     if (currentAppt && currentAppt.staff) {
                         const { default: StaffModel } = await import('@repo/lib/models/Vendor/Staff.model');
@@ -518,8 +717,6 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                             // Also update service items if they exist
                             if (currentAppt.serviceItems && currentAppt.serviceItems.length > 0) {
                                 updateFields.serviceItems = currentAppt.serviceItems.map(item => {
-                                    // Logic could be more complex here to handle different staff per item, 
-                                    // but for now assumming primary staff or simplistic model
                                     if (item.staff && item.staff.toString() === staffMember._id.toString()) {
                                         return {
                                             ...item,
@@ -534,9 +731,16 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                             }
                         }
                     }
-                } catch (commissionError) {
-                    console.error("Error calculating commission during completion:", commissionError);
-                    // Don't block completion if commission calc fails, but log it
+
+                    // CENTRALIZED INVOICE GENERATION LOGIC
+                    const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+                    const invoice = await InvoiceModel.createFromAppointment(appointmentId, vendorId);
+                    if (invoice) {
+                        updateFields.invoiceNumber = invoice.invoiceNumber;
+                        console.log(`Linked sequential invoice ${invoice.invoiceNumber} to appointment ${appointmentId}`);
+                    }
+                } catch (invoiceError) {
+                    console.error("Error in centralized invoice generation:", invoiceError);
                 }
             }
 
@@ -545,6 +749,7 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                 { $set: updateFields },
                 { new: true, runValidators: false } // Disable validation to avoid issues with existing appointments
             )
+                .populate('client', 'fullName email phone')
                 .populate('staff', 'fullName position')
                 .populate('service', 'name duration price');
 
@@ -554,6 +759,9 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                     { status: 404 }
                 );
             }
+
+            // Send email notifications
+            await sendAppointmentEmail(updatedAppointment, vendorId, updatedAppointment.status, oldStatus, rawClientId);
 
             return NextResponse.json({
                 message: "Appointment status updated successfully",

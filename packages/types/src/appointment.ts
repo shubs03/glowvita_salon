@@ -32,6 +32,7 @@ export interface Appointment {
   _id?: string;
   client: string;
   clientName: string;
+  clientEmail?: string;
   clientPhone?: string;
   service: string;
   serviceName: string;

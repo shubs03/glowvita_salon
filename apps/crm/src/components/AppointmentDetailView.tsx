@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@repo/ui/button";
@@ -98,6 +98,7 @@ interface Appointment {
   finalAmount?: number;
   amountPaid?: number;
   amountRemaining?: number;
+  invoiceNumber?: string;
 }
 
 interface AppointmentDetailViewProps {
@@ -163,18 +164,25 @@ export function AppointmentDetailView({
 
   // Local override for payment values after a successful collection, so UI updates immediately
   const [overridePayment, setOverridePayment] = useState<{ amountPaid: number; amountRemaining: number; paymentStatus: string } | null>(null);
+  // Local override for status so it shows immediately after payment
+  const [overrideStatus, setOverrideStatus] = useState<string | null>(null);
   // Local override for payment history so it shows immediately after payment
   const [overridePaymentHistory, setOverridePaymentHistory] = useState<any[] | null>(null);
 
   // Pull latest appointments list from store and merge the one for this id
-  const { data: allAppointments } = useGetAppointmentsQuery(undefined, { refetchOnMountOrArgChange: true });
+  const { data: allAppointments, refetch: refetchAppointments } = useGetAppointmentsQuery(undefined, { refetchOnMountOrArgChange: true });
   const liveAppointment = useMemo(() => {
     const currentId = (appointment as any)._id || (appointment as any).id;
     const fromList = Array.isArray(allAppointments)
       ? allAppointments.find((a: any) => (a?._id || a?.id) === currentId)
       : undefined;
-    return { ...appointment, ...(fromList || {}) } as any;
-  }, [allAppointments, appointment]);
+    const merged = { ...appointment, ...(fromList || {}) } as any;
+    // Apply status override if present
+    if (overrideStatus) {
+      merged.status = overrideStatus;
+    }
+    return merged;
+  }, [allAppointments, appointment, overrideStatus]);
 
   // Normalize all appointments into an array regardless of API shape
   const appointmentsList: any[] = useMemo(() => {
@@ -809,6 +817,27 @@ export function AppointmentDetailView({
         paymentStatus: newPaymentStatus,
       });
 
+      // Override status based on payment completion
+      // If payment is fully collected, status should be 'completed'
+      let newStatus = updatedAppointmentData?.status || appointment.status;
+      if (newRemainingAmount === 0 && newAmountPaid > 0) {
+        newStatus = 'completed';
+      }
+
+      console.log('Status update check:', {
+        currentStatus: appointment.status,
+        backendStatus: updatedAppointmentData?.status,
+        calculatedStatus: newStatus,
+        remainingAmount: newRemainingAmount,
+        amountPaid: newAmountPaid
+      });
+
+      // Set override if status changed
+      if (newStatus !== appointment.status) {
+        console.log(`Setting status override from ${appointment.status} to ${newStatus}`);
+        setOverrideStatus(newStatus);
+      }
+
       // Update local payment history for immediate UI
       const newHistoryEntry = {
         amount: paymentData.amount,
@@ -821,6 +850,9 @@ export function AppointmentDetailView({
       setOverridePaymentHistory(Array.isArray(backendHistory) && backendHistory.length > 0
         ? backendHistory
         : [newHistoryEntry, ...((overridePaymentHistory as any[]) || ((liveAppointment as any)?.paymentHistory || []))]);
+
+      // Refetch appointments to ensure we have latest data
+      refetchAppointments();
 
       // Close payment form
       setIsCollectingPayment(false);
@@ -836,25 +868,25 @@ export function AppointmentDetailView({
 
   // Prepare Invoice Data
   const invoiceData = useMemo(() => {
-    if (!appointment) return null;
+    if (!liveAppointment) return null;
 
     return {
-      invoiceNumber: (() => {
-        const dateStr = appointment.date instanceof Date
-          ? appointment.date.toISOString().split('T')[0].replace(/-/g, '')
-          : String(appointment.date).split('T')[0].replace(/-/g, '');
+      invoiceNumber: liveAppointment.invoiceNumber || (() => {
+        const dateStr = liveAppointment.date instanceof Date
+          ? liveAppointment.date.toISOString().split('T')[0].replace(/-/g, '')
+          : String(liveAppointment.date).split('T')[0].replace(/-/g, '');
         const salonName = vendorProfile?.data?.businessName?.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 10) || 'SALON';
-        const uniqueId = appointment._id ? appointment._id.substring(appointment._id.length - 6).toUpperCase() : '000';
+        const uniqueId = liveAppointment._id ? liveAppointment._id.substring(liveAppointment._id.length - 6).toUpperCase() : '000';
         return `INV-${dateStr}-${salonName}-${uniqueId}`;
       })(),
-      date: appointment.date instanceof Date ? appointment.date.toLocaleDateString() : String(appointment.date).split('T')[0],
-      time: appointment.startTime,
+      date: liveAppointment.date instanceof Date ? liveAppointment.date.toLocaleDateString() : String(liveAppointment.date).split('T')[0],
+      time: liveAppointment.startTime,
       client: {
-        fullName: appointment.clientName,
-        phone: (appointment.client as any)?.phone || ''
+        fullName: liveAppointment.clientName,
+        phone: (liveAppointment.client as any)?.phone || liveAppointment.clientPhone || ''
       },
-      status: appointment.status,
-      items: appointment.serviceItems?.length ? appointment.serviceItems.flatMap(item => [
+      status: liveAppointment.status,
+      items: liveAppointment.serviceItems?.length ? liveAppointment.serviceItems.flatMap((item: any) => [
         {
           name: item.serviceName,
           price: item.amount,
@@ -865,7 +897,7 @@ export function AppointmentDetailView({
           duration: item.duration,
           type: 'service'
         },
-        ...(Array.isArray(item.addOns) ? item.addOns.map(addOn => ({
+        ...(Array.isArray(item.addOns) ? item.addOns.map((addOn: any) => ({
           name: `${addOn.name} (Add-on)`,
           price: addOn.price,
           quantity: 1,
@@ -876,16 +908,16 @@ export function AppointmentDetailView({
         })) : [])
       ]) : [
         {
-          name: appointment.serviceName,
-          price: appointment.amount,
+          name: liveAppointment.serviceName,
+          price: liveAppointment.amount,
           quantity: 1,
-          totalPrice: appointment.amount,
-          discount: appointment.discount,
-          staff: appointment.staffName,
-          duration: appointment.duration,
+          totalPrice: liveAppointment.amount,
+          discount: liveAppointment.discount,
+          staff: liveAppointment.staffName,
+          duration: liveAppointment.duration,
           type: 'service'
         },
-        ...((appointment as any).addOns || []).map((addOn: any) => ({
+        ...((liveAppointment as any).addOns || []).map((addOn: any) => ({
           name: `${addOn.name} (Add-on)`,
           price: addOn.price,
           quantity: 1,
@@ -898,14 +930,14 @@ export function AppointmentDetailView({
       subtotal: totalBaseAmount + totalAddOnsAmount,
       originalSubtotal: totalBaseAmount + totalAddOnsAmount,
       discount: discountAmount,
-      tax: (appointment as any).serviceTax || (appointment as any).tax || appointment.payment?.serviceTax || 0,
-      platformFee: (appointment as any).platformFee || appointment.payment?.platformFee || 0,
+      tax: (liveAppointment as any).serviceTax || (liveAppointment as any).tax || liveAppointment.payment?.serviceTax || 0,
+      platformFee: (liveAppointment as any).platformFee || liveAppointment.payment?.platformFee || 0,
       total: totalAmount,
       balance: remainingAmount,
-      paymentMethod: (appointment as any).paymentMethod || appointment.payment?.paymentMethod || null,
+      paymentMethod: (liveAppointment as any).paymentMethod || liveAppointment.payment?.paymentMethod || null,
       couponCode: (liveAppointment as any).couponCode || ''
     };
-  }, [appointment, totalAmount, remainingAmount, vendorProfile, liveAppointment]);
+  }, [liveAppointment, totalAmount, remainingAmount, vendorProfile, totalBaseAmount, totalAddOnsAmount, discountAmount]);
 
   const handleDownloadPdf = async () => {
     const toastId = toast.loading('Generating PDF...');
@@ -1139,12 +1171,43 @@ export function AppointmentDetailView({
                   </span>
                 )}
               </TabsTrigger>
+              {/* Only show Invoice tab if appointment is completed */}
+              {(liveAppointment.status === 'completed' || liveAppointment.status === 'completed without payment') && (
+                <TabsTrigger
+                  value="invoice"
+                  className="relative h-12 rounded-none border-b-2 border-transparent bg-transparent px-4 pb-4 pt-2 font-semibold text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                >
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  Invoice
+                </TabsTrigger>
+              )}
             </TabsList>
+
+
+
+            <TabsContent value="invoice" className="p-6 pt-4">
+              {invoiceData && (
+                <AppointmentInvoice
+                  invoiceData={invoiceData}
+                  vendorName={vendorProfile?.data?.businessName || "GlowVita Salon"}
+                  vendorProfile={vendorProfile}
+                  taxRate={0} // Tax is already calculated in amount
+                  isOrderSaved={true}
+                  onEmailClick={() => {
+                    toast.success('Invoice email sent to client');
+                  }}
+                  onRebookClick={() => {
+                    setIsRescheduling(true);
+                    setActiveTab('details');
+                  }}
+                />
+              )}
+            </TabsContent>
 
             <TabsContent value="details" className="p-6 pt-4 space-y-4">
               <div className="flex flex-col sm:flex-row justify-between gap-3">
                 <div className="w-full flex flex-col sm:flex-row gap-3">
-                  {(remainingAmount > 0 && (overridePayment?.paymentStatus ?? (liveAppointment as any).paymentStatus) !== 'completed' && appointment.status !== 'completed' && appointment.status !== 'cancelled') && (
+                  {(remainingAmount > 0 && (overridePayment?.paymentStatus ?? (liveAppointment as any).paymentStatus) !== 'completed' && liveAppointment.status !== 'completed' && liveAppointment.status !== 'cancelled') && (
                     <Button
                       variant="outline"
                       className="w-full sm:w-auto"
@@ -1163,7 +1226,7 @@ export function AppointmentDetailView({
                       {isCollectingPayment ? 'Hide Payment' : 'Collect Payment'}
                     </Button>
                   )}
-                  {appointment.status !== 'completed' && (
+                  {liveAppointment.status !== 'completed' && (
                     <Button
                       variant="outline"
                       className="w-full sm:w-auto"
@@ -1197,13 +1260,13 @@ export function AppointmentDetailView({
                   </Select>
                 </div> */}
                   <div className="w-full sm:w-[200px]">
-                    {(appointment.status === 'completed' || appointment.status === 'completed without payment' || appointment.status === 'cancelled') ? (
+                    {(liveAppointment.status === 'completed' || liveAppointment.status === 'completed without payment' || liveAppointment.status === 'cancelled') ? (
                       <div className="w-full h-10 px-3 py-2 border rounded-md bg-muted/20 flex items-center text-sm font-medium text-foreground cursor-default">
-                        {getStatusLabel(appointment.status)}
+                        {getStatusLabel(liveAppointment.status)}
                       </div>
                     ) : (
                       <Select
-                        value={appointment.status || "scheduled"}
+                        value={liveAppointment.status || "scheduled"}
                         onValueChange={handleStatusChange}
                         disabled={isStatusChanging}
                       >
@@ -1211,7 +1274,7 @@ export function AppointmentDetailView({
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                         <SelectContent>
-                          {getStatusOptions(appointment.status || 'scheduled').map(option => (
+                          {getStatusOptions(liveAppointment.status || 'scheduled').map(option => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>
@@ -1830,28 +1893,28 @@ export function AppointmentDetailView({
 
                     <div className="bg-background p-3 rounded-lg border shadow-sm">
                       <div className="flex items-center space-x-3">
-                        <div className={`p-2 rounded-lg ${(appointment.status === 'confirmed' || appointment.status === 'in_progress') ? 'bg-blue-100 dark:bg-blue-900/30' :
-                          appointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
-                            appointment.status === 'partially-completed' ? 'bg-indigo-100 dark:bg-indigo-900/30' :
-                              appointment.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30' :
-                                appointment.status === 'completed without payment' ? 'bg-green-100 dark:bg-green-900/30' :
-                                  appointment.status === 'no_show' ? 'bg-purple-100 dark:bg-purple-900/30' :
+                        <div className={`p-2 rounded-lg ${(liveAppointment.status === 'confirmed' || liveAppointment.status === 'in_progress') ? 'bg-blue-100 dark:bg-blue-900/30' :
+                          liveAppointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30' :
+                            liveAppointment.status === 'partially-completed' ? 'bg-indigo-100 dark:bg-indigo-900/30' :
+                              liveAppointment.status === 'completed' ? 'bg-green-100 dark:bg-green-900/30' :
+                                liveAppointment.status === 'completed without payment' ? 'bg-green-100 dark:bg-green-900/30' :
+                                  liveAppointment.status === 'no_show' ? 'bg-purple-100 dark:bg-purple-900/30' :
                                     'bg-red-100 dark:bg-red-900/30'
                           }`}>
-                          <div className={`h-5 w-5 rounded-full flex items-center justify-center ${(appointment.status === 'confirmed' || appointment.status === 'in_progress') ? 'text-blue-600 dark:text-blue-400' :
-                            appointment.status === 'pending' ? 'text-yellow-600 dark:text-yellow-400' :
-                              appointment.status === 'partially-completed' ? 'text-indigo-600 dark:text-indigo-400' :
-                                appointment.status === 'completed' ? 'text-green-600 dark:text-green-400' :
-                                  appointment.status === 'completed without payment' ? 'text-green-600 dark:text-green-400' :
-                                    appointment.status === 'no_show' ? 'text-purple-600 dark:text-purple-400' :
+                          <div className={`h-5 w-5 rounded-full flex items-center justify-center ${(liveAppointment.status === 'confirmed' || liveAppointment.status === 'in_progress') ? 'text-blue-600 dark:text-blue-400' :
+                            liveAppointment.status === 'pending' ? 'text-yellow-600 dark:text-yellow-400' :
+                              liveAppointment.status === 'partially-completed' ? 'text-indigo-600 dark:text-indigo-400' :
+                                liveAppointment.status === 'completed' ? 'text-green-600 dark:text-green-400' :
+                                  liveAppointment.status === 'completed without payment' ? 'text-green-600 dark:text-green-400' :
+                                    liveAppointment.status === 'no_show' ? 'text-purple-600 dark:text-purple-400' :
                                       'text-red-600 dark:text-red-400'
                             }`}>
-                            <div className={`h-2.5 w-2.5 rounded-full ${(appointment.status === 'confirmed' || appointment.status === 'in_progress') ? 'bg-blue-500' :
-                              appointment.status === 'pending' ? 'bg-yellow-500' :
-                                appointment.status === 'partially-completed' ? 'bg-indigo-500' :
-                                  appointment.status === 'completed' ? 'bg-green-500' :
-                                    appointment.status === 'completed without payment' ? 'bg-green-500' :
-                                      appointment.status === 'no_show' ? 'bg-purple-500' : 'bg-red-500'
+                            <div className={`h-2.5 w-2.5 rounded-full ${(liveAppointment.status === 'confirmed' || liveAppointment.status === 'in_progress') ? 'bg-blue-500' :
+                              liveAppointment.status === 'pending' ? 'bg-yellow-500' :
+                                liveAppointment.status === 'partially-completed' ? 'bg-indigo-500' :
+                                  liveAppointment.status === 'completed' ? 'bg-green-500' :
+                                    liveAppointment.status === 'completed without payment' ? 'bg-green-500' :
+                                      liveAppointment.status === 'no_show' ? 'bg-purple-500' : 'bg-red-500'
                               }`} />
                           </div>
                         </div>
@@ -1859,22 +1922,22 @@ export function AppointmentDetailView({
                           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Appointment Status</p>
                           <div className="flex items-center space-x-2">
                             <span className="text-lg font-semibold text-foreground capitalize">
-                              {appointment.status.replace(/-/g, ' ')}
+                              {liveAppointment.status.replace(/-/g, ' ')}
                             </span>
                             <Badge
                               variant="outline"
-                              className={`px-2 py-0.5 text-xs font-medium ${appointment.status === 'completed' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
-                                appointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200' :
-                                  appointment.status === 'partially-completed' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
-                                    appointment.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200' :
-                                      appointment.status === 'confirmed' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
-                                        appointment.status === 'in_progress' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
-                                          appointment.status === 'completed without payment' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
-                                            appointment.status === 'no_show' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200' :
+                              className={`px-2 py-0.5 text-xs font-medium ${liveAppointment.status === 'completed' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
+                                liveAppointment.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200' :
+                                  liveAppointment.status === 'partially-completed' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
+                                    liveAppointment.status === 'cancelled' ? 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200' :
+                                      liveAppointment.status === 'confirmed' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
+                                        liveAppointment.status === 'in_progress' ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200' :
+                                          liveAppointment.status === 'completed without payment' ? 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200' :
+                                            liveAppointment.status === 'no_show' ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200' :
                                               'bg-gray-100 dark:bg-gray-900/50 text-gray-800 dark:text-gray-200'
                                 } border-0`}
                             >
-                              {appointment.status.toUpperCase()}
+                              {liveAppointment.status.toUpperCase().replace(/-/g, ' ')}
                             </Badge>
                           </div>
                         </div>
@@ -2096,8 +2159,8 @@ export function AppointmentDetailView({
               </div>
             </TabsContent>
           </Tabs>
-        </DialogContent>
-      </Dialog>
+        </DialogContent >
+      </Dialog >
 
       {/* Payment Collection Dialog */}
       {/* <Dialog open={isCollectingPayment} onOpenChange={setIsCollectingPayment}>

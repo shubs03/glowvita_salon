@@ -110,57 +110,73 @@ export default function SalesPage() {
   console.log('Sales Page - Show Products Tab:', showProductsTab);
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-6">Sales Overview</h1>
+    <div className="min-h-screen bg-background">
+      <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
+        {/* Enhanced Header Section matching marketplace design */}
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl font-bold font-headline mb-1 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
+                Sales Overview
+              </h1>
+              <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl">
+                Manage your sales and process customer transactions
+              </p>
+            </div>
+          </div>
+        </div>
 
-      {/* Tab Navigation - Show for vendors (multiple tabs) and suppliers (single Products tab) */}
-      <div className="mb-6">
-        <div className="border-b">
-          <nav className="-mb-px flex space-x-8">
-            {showServicesTab && (
-              <button
-                onClick={() => setActiveTab('services')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'services'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
-                  }`}
-              >
-                Services
-              </button>
-            )}
-            {showProductsTab && (
-              <button
-                onClick={() => setActiveTab('products')}
-                className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'products'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
-                  }`}
-              >
-                Products
-              </button>
-            )}
-          </nav>
+        {/* Tab Navigation - Show for vendors (multiple tabs) and suppliers (single Products tab) */}
+        <div className="mb-6">
+          <div className="border-b">
+            <nav className="-mb-px flex space-x-8">
+              {showServicesTab && (
+                <button
+                  onClick={() => setActiveTab('services')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'services'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                    }`}
+                >
+                  Services
+                </button>
+              )}
+              {showProductsTab && (
+                <button
+                  onClick={() => setActiveTab('products')}
+                  className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'products'
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                    }`}
+                >
+                  Products
+                </button>
+              )}
+            </nav>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {activeTab === 'services' && showServicesTab ? (
+            <ServicesTab
+              cart={serviceCart}
+              setCart={setServiceCart}
+              selectedClient={selectedClient}
+              setSelectedClient={setSelectedClient}
+            />
+          ) : activeTab === 'products' && showProductsTab ? (
+            <ProductsTab
+              cart={productCart}
+              setCart={setProductCart}
+              selectedClient={selectedClient}
+              setSelectedClient={setSelectedClient}
+            />
+          ) : (
+            <div>No content available</div>
+          )}
         </div>
       </div>
-
-      {/* Tab Content */}
-      {activeTab === 'services' && showServicesTab ? (
-        <ServicesTab
-          cart={serviceCart}
-          setCart={setServiceCart}
-          selectedClient={selectedClient}
-          setSelectedClient={setSelectedClient}
-        />
-      ) : activeTab === 'products' && showProductsTab ? (
-        <ProductsTab
-          cart={productCart}
-          setCart={setProductCart}
-          selectedClient={selectedClient}
-          setSelectedClient={setSelectedClient}
-        />
-      ) : (
-        <div>No content available</div>
-      )}
     </div>
   );
 }

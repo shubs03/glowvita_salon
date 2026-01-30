@@ -44,8 +44,13 @@ export function InvoiceUI({
   onRebookClick
 }: InvoiceUIProps) {
   // Get vendor contact info
-  const vendorPhone = vendorProfile?.data?.mobile || vendorProfile?.data?.phone || 'N/A';
-  const vendorAddress = vendorProfile?.data?.address || 'N/A';
+  const vendorPhone = vendorProfile?.data?.phone || vendorProfile?.data?.mobile || 'N/A';
+  const vendorAddress = [
+    vendorProfile?.data?.address,
+    vendorProfile?.data?.city,
+    vendorProfile?.data?.state,
+    vendorProfile?.data?.pincode
+  ].filter(Boolean).join(', ') || 'N/A';
 
   // Split address into multiple lines if it's too long
   const formatAddress = (address: string) => {
@@ -78,7 +83,7 @@ export function InvoiceUI({
 
   // Determine if item is a product or service
   const isProduct = (item: any) => {
-    return item.hasOwnProperty('productName') && item.hasOwnProperty('stock');
+    return item.hasOwnProperty('productName');
   };
 
   // State for popup dialog
@@ -99,7 +104,7 @@ export function InvoiceUI({
   const items = invoiceData.items || [];
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white font-sans print:p-4 rounded-lg print:rounded-none" style={{ minWidth: 'auto' }}>
+    <div className="max-w-4xl mx-auto p-6 bg-white font-sans print:p-0 print:max-w-none print:w-full rounded-lg print:rounded-none" style={{ minWidth: 'auto' }}>
       {/* Header with Salon Info */}
       <div className="flex justify-between items-start mb-4 print:mb-3 border-b-2 border-black pb-4">
         <div>
@@ -151,7 +156,17 @@ export function InvoiceUI({
               >
                 <td className="border border-black p-2 print:p-1">
                   <div className="font-semibold text-sm text-black print:text-xs">
-                    {isProduct(item) ? item.productName : item.name}
+                    {item.productName || item.name || 'Unnamed Item'}
+                    {item.addOns && item.addOns.length > 0 && (
+                      <div className="mt-1 text-xs text-gray-600 print:text-[10px]">
+                        {item.addOns.map((addon: any, i: number) => (
+                          <div key={i} className="flex justify-between">
+                            <span>+ {addon.name}</span>
+                            <span>₹{addon.price}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </td>
                 <td className="border border-black p-2 text-right text-sm text-black print:text-xs print:p-1">₹{(item.price || 0).toFixed(2)}</td>
@@ -186,14 +201,14 @@ export function InvoiceUI({
       </div>
 
       {/* Payment Info and Footer */}
-      <div className="border-t-2 border-black pt-4 print:pt-3 mt-auto">
+      <div className="border-t-2 border-black pt-4 print:pt-4 mt-8 print:mt-4">
         <p className="text-center text-black font-medium text-sm print:text-xs mb-2">
           {invoiceData.paymentMethod
-            ? `Payment Of ₹{(invoiceData.total || 0).toFixed(2)} Received By ${invoiceData.paymentMethod}`
-            : `Payment Of ₹{(invoiceData.total || 0).toFixed(2)} Is Pending`
+            ? `Payment Of ₹${(invoiceData.total || 0).toFixed(2)} Received By ${invoiceData.paymentMethod}`
+            : `Payment Of ₹${(invoiceData.total || 0).toFixed(2)} Is Pending`
           }
         </p>
-        <p className="text-center text-xs text-black print:text-xs">
+        <p className="text-center text-sm font-semibold text-gray-600 print:text-[10px] uppercase tracking-wider">
           NOTE: This is computer generated receipt and does not require physical signature.
         </p>
       </div>

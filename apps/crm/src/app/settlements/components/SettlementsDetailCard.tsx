@@ -1,6 +1,6 @@
 import { Button } from "@repo/ui/button";
 import { Plus } from "lucide-react";
-import { PayoutData } from "./SettlementsTable";
+import { PayoutData } from "../types";
 
 interface SettlementsDetailCardProps {
   payout: PayoutData;
@@ -19,7 +19,7 @@ const SettlementsDetailCard = ({
         <h2 className="text-xl font-bold">{payout.vendor}</h2>
         <p className="text-muted-foreground text-sm">Transaction History</p>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="border p-4 rounded-lg">
           <p className="text-sm text-muted-foreground">Total Received</p>
@@ -34,9 +34,9 @@ const SettlementsDetailCard = ({
           <div className="flex items-center justify-between">
             <p className="text-lg font-semibold">₹{payout.pendingAmount.toFixed(2)}</p>
             {payout.pendingAmount > 0 && (
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 size="sm"
                 className="h-8"
                 onClick={() => onReceivePayment(payout)}
@@ -48,7 +48,7 @@ const SettlementsDetailCard = ({
           </div>
         </div>
       </div>
-      
+
       <div>
         <h3 className="font-medium mb-3">Transaction Details</h3>
         <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -65,7 +65,7 @@ const SettlementsDetailCard = ({
           ))}
         </div>
       </div>
-      
+
       <div className="flex justify-end pt-2">
         <Button variant="outline" size="sm" onClick={onClose}>Close</Button>
       </div>

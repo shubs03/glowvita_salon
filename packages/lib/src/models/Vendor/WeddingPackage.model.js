@@ -90,6 +90,11 @@ const weddingPackageSchema = new mongoose.Schema({
     enum: ["pending", "approved", "disapproved"],
     default: "pending",
   },
+  rejectionReason: {
+    type: String,
+    trim: true,
+    default: null,
+  },
   isActive: {
     type: Boolean,
     default: true,
@@ -111,7 +116,7 @@ weddingPackageSchema.pre("save", function (next) {
 });
 
 // Add method to calculate package price with discount
-weddingPackageSchema.methods.calculateDiscountedPrice = function() {
+weddingPackageSchema.methods.calculateDiscountedPrice = function () {
   if (this.discountedPrice !== null && this.discountedPrice !== undefined) {
     return this.discountedPrice;
   }
@@ -119,22 +124,22 @@ weddingPackageSchema.methods.calculateDiscountedPrice = function() {
 };
 
 // Add method to get total service count
-weddingPackageSchema.methods.getServiceCount = function() {
+weddingPackageSchema.methods.getServiceCount = function () {
   return this.services.reduce((total, service) => total + (service.quantity || 1), 0);
 };
 
 // Add method to populate service details
-weddingPackageSchema.methods.populateServiceDetails = async function() {
+weddingPackageSchema.methods.populateServiceDetails = async function () {
   const populatedServices = await Promise.all(this.services.map(async (pkgService) => {
     try {
       // Dynamically import VendorServicesModel to avoid circular dependency
       const { default: VendorServicesModel } = await import('./VendorServices.model.js');
-        
+
       // Fetch service details from VendorServicesModel
       // Find the vendor services document and then find the specific service within it
       const vendorServicesDoc = await VendorServicesModel.findOne({ vendor: this.vendorId });
       let serviceDetails = null;
-        
+
       if (vendorServicesDoc && vendorServicesDoc.services) {
         // Handle both string and ObjectId comparisons
         const serviceIdToFind = pkgService.serviceId || pkgService._id;
@@ -146,10 +151,10 @@ weddingPackageSchema.methods.populateServiceDetails = async function() {
           });
         }
       }
-        
+
       // Ensure we have the correct service data structure
       const baseServiceData = pkgService.toObject ? pkgService.toObject() : pkgService;
-        
+
       return {
         ...baseServiceData,
         serviceId: baseServiceData.serviceId || baseServiceData._id,
@@ -179,7 +184,7 @@ weddingPackageSchema.methods.populateServiceDetails = async function() {
       };
     }
   }));
-    
+
   // Ensure we return a properly structured object
   const basePackage = this.toObject ? this.toObject() : this;
   const result = {
@@ -187,11 +192,11 @@ weddingPackageSchema.methods.populateServiceDetails = async function() {
     id: basePackage._id || basePackage.id,
     services: populatedServices
   };
-    
+
   console.log('Model - Populated package result:', result);
   console.log('Model - Populated package services:', populatedServices);
   console.log('Model - Populated package services length:', populatedServices.length);
-    
+
   return result;
 };
 

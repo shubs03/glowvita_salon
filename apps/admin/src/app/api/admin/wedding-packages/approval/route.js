@@ -58,7 +58,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
 // PATCH (update status) a wedding package by ID
 export const PATCH = authMiddlewareAdmin(async (req) => {
-    const { packageId, status } = await req.json();
+    const { packageId, status, rejectionReason } = await req.json();
 
     if (!packageId || !status) {
         return Response.json(
@@ -75,15 +75,23 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
     }
 
     try {
+        const updateFields = {
+            status: status,
+            updatedAt: new Date()
+        };
+
+        if (status === 'disapproved' && rejectionReason) {
+            updateFields.rejectionReason = rejectionReason;
+        } else if (status === 'approved') {
+            updateFields.rejectionReason = null;
+        }
+
         const updatedPackage = await WeddingPackageModel.findByIdAndUpdate(
-            packageId,
+            new mongoose.Types.ObjectId(packageId),
             {
-                $set: {
-                    status: status,
-                    updatedAt: new Date()
-                }
+                $set: updateFields
             },
-            { new: true }
+            { new: true, runValidators: false }
         );
 
         if (!updatedPackage) {

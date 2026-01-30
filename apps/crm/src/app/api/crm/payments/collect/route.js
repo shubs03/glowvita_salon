@@ -4,8 +4,27 @@ import AppointmentModel from "../../../../../../../../packages/lib/src/models/Ap
 import PaymentCollectionModel from "../../../../../../../../packages/lib/src/models/Payment/PaymentCollection.model";
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm';
+import { sendEmail } from "../../../../../../../../packages/lib/src/emailService";
+import { getCompletionTemplate, getInvoiceTemplate } from "../../../../../../../../packages/lib/src/emailTemplates";
+import UserModel from "../../../../../../../../packages/lib/src/models/user/User.model";
+import VendorModelLib from "../../../../../../../../packages/lib/src/models/Vendor/Vendor.model";
+import ClientModel from "../../../../../../../../packages/lib/src/models/Vendor/Client.model";
+import pdf from 'html-pdf';
+import fs from 'fs';
+import path from 'path';
 
 await _db();
+
+// Helper for file logging
+const logToFile = (message) => {
+  try {
+    const logPath = path.join(process.cwd(), 'debug_email_log.txt');
+    const timestamp = new Date().toISOString();
+    fs.appendFileSync(logPath, `[${timestamp}] ${message}\n`);
+  } catch (e) {
+    // ignore logging errors
+  }
+};
 
 // POST route to collect payment for an appointment
 export const POST = authMiddlewareCrm(async (req) => {
@@ -80,8 +99,7 @@ export const POST = authMiddlewareCrm(async (req) => {
     const appointment = await AppointmentModel.findOne({
       _id: appointmentId,
       vendorId: vendorId
-    }).populate('client', 'fullName email phone')
-      .populate('service', 'name duration price');
+    }).populate('service', 'name duration price');
 
     console.log('Found appointment:', appointment ? appointment._id : 'None');
     if (appointment) {
@@ -91,7 +109,7 @@ export const POST = authMiddlewareCrm(async (req) => {
       console.log('  - Service Name:', appointment.serviceName);
       console.log('  - Has service field:', !!appointment.service);
       console.log('  - Service type:', typeof appointment.service);
-      console.log('  - Client:', appointment.client);
+      console.log('  - Client ID (Raw):', appointment.client);
       console.log('  - Client Name:', appointment.clientName);
       console.log('  - Amount:', appointment.amount);
       console.log('  - Total Amount:', appointment.totalAmount);
@@ -338,6 +356,20 @@ export const POST = authMiddlewareCrm(async (req) => {
 
       console.log('Update query:', JSON.stringify(updateQuery, null, 2));
 
+      // TRIGGER CENTRALIZED INVOICE GENERATION if appointment is reaching completed status
+      if (appointmentStatus === 'completed' || appointmentStatus === 'completed without payment') {
+        try {
+          const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+          const invoice = await InvoiceModel.createFromAppointment(appointmentId, vendorId);
+          if (invoice) {
+            updateQuery.$set.invoiceNumber = invoice.invoiceNumber;
+            console.log(`Prepared sequential invoice ${invoice.invoiceNumber} for appointment ${appointmentId}`);
+          }
+        } catch (invoiceError) {
+          console.error("Error in centralized invoice generation during payment:", invoiceError);
+        }
+      }
+
       // First, let's check if the appointment exists and log its current state
       const currentAppointment = await AppointmentModel.findById(appointmentId);
       console.log('Current appointment state before update:', currentAppointment ? {
@@ -353,7 +385,8 @@ export const POST = authMiddlewareCrm(async (req) => {
         updateQuery,
         { new: true, runValidators: false }
       ).populate([
-        { path: 'client', select: 'fullName email phone' },
+        // REMOVED 'client' from population to handle manual lookup below
+        // { path: 'client', select: 'fullName email phone' },
         { path: 'service', select: 'name duration price' },
         { path: 'staff', select: 'name email phone' }
       ]);
@@ -363,7 +396,8 @@ export const POST = authMiddlewareCrm(async (req) => {
         paymentStatus: updatedAppointment.paymentStatus,
         status: updatedAppointment.status,
         amountPaid: updatedAppointment.amountPaid,
-        amountRemaining: updatedAppointment.amountRemaining
+        amountRemaining: updatedAppointment.amountRemaining,
+        invoiceNumber: updatedAppointment.invoiceNumber
       } : 'null');
 
       // If the update failed for some reason, use the original appointment
@@ -385,10 +419,233 @@ export const POST = authMiddlewareCrm(async (req) => {
         console.error('FAILED TO UPDATE APPOINTMENT: Appointment not found or update failed');
       }
 
+      // Send email if appointment is completed
+      console.log('=== EMAIL SENDING CHECK ===');
+      console.log('appointmentStatus:', appointmentStatus);
+      console.log('appointment.status (before update):', appointment.status);
+      console.log('Condition check:', appointmentStatus === 'completed' && appointment.status !== 'completed');
+
+      if (appointmentStatus === 'completed' && appointment.status !== 'completed') {
+        try {
+          console.log('=== SENDING COMPLETION EMAIL AND INVOICE ===');
+          const vendor = await VendorModelLib.findById(vendorId).select('businessName address phone city state pincode');
+          const businessName = vendor?.businessName || 'GlowVita Salon';
+          const businessAddress = `${vendor?.address || ''}, ${vendor?.city || ''}, ${vendor?.state || ''}, ${vendor?.pincode || ''}`.trim().replace(/^,|,$/g, '');
+          const businessPhone = vendor?.phone || '';
+
+          let clientEmail = appointment.clientEmail;
+          let clientName = appointment.clientName;
+          let clientPhone = '';
+
+          // RESOLVE CLIENT INFO MANUALLY
+          // Since we removed auto-populate, appointment.client is the raw ID string or ObjectId
+          const clientId = appointment.client;
+
+          console.log('Initial client email (from appointment):', clientEmail);
+          console.log('Initial client name (from appointment):', clientName);
+          console.log('Client ID (Raw):', clientId);
+
+          if (!clientEmail && clientId) {
+            console.log(`Searching for email for Client ID: ${clientId}`);
+
+            // 1. Try Client Collection (Vendor-specific clients)
+            try {
+              const clientDoc = await ClientModel.findById(clientId);
+              if (clientDoc) {
+                console.log('Found in Client collection:', clientDoc._id);
+                clientEmail = clientDoc.email;
+                if (!clientName) clientName = clientDoc.fullName;
+                clientPhone = clientDoc.phone;
+              }
+            } catch (err) {
+              console.error('Error lookup in ClientModel:', err.message);
+            }
+
+            // 2. If not found, Try User Collection (Online bookings)
+            if (!clientEmail) {
+              console.log('Not found in Client collection or no email. Checking User collection...');
+              try {
+                const userDoc = await UserModel.findById(clientId);
+                if (userDoc) {
+                  console.log('Found in User collection:', userDoc._id);
+                  clientEmail = userDoc.emailAddress || userDoc.email;
+                  if (!clientName) clientName = `${userDoc.firstName} ${userDoc.lastName}`;
+                  clientPhone = userDoc.mobileNo || userDoc.phone;
+                }
+              } catch (err) {
+                console.error('Error lookup in UserModel:', err.message);
+              }
+            }
+          }
+
+
+          if (clientEmail) {
+            console.log('Sending emails to:', clientEmail);
+            logToFile(`Attempting to send email to: ${clientEmail}`);
+
+            let invoiceHtml;
+            try {
+              console.log('Generating invoice template...');
+              logToFile('Generating invoice template...');
+
+              // Fetch the saved invoice to get formal items and other details
+              const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+              const invoice = await InvoiceModel.findOne({ appointmentId: appointment._id });
+
+              if (invoice) {
+                invoiceHtml = getInvoiceTemplate({
+                  clientName,
+                  clientPhone,
+                  businessName,
+                  businessAddress,
+                  businessPhone,
+                  date: new Date(invoice.createdAt).toLocaleDateString(),
+                  items: invoice.items,
+                  subtotal: invoice.subtotal,
+                  tax: invoice.taxAmount,
+                  taxRate: invoice.taxRate,
+                  platformFee: invoice.platformFee,
+                  discount: invoice.discountAmount,
+                  couponCode: finalAppointment.payment?.offer?.code || "",
+                  totalAmount: invoice.totalAmount,
+                  paymentStatus: invoice.paymentStatus,
+                  invoiceNumber: invoice.invoiceNumber,
+                  paymentMethod: invoice.paymentMethod
+                });
+                logToFile('Invoice template generated successfully from formal invoice.');
+              } else {
+                // Fallback (though invoice should exist here)
+                invoiceHtml = getInvoiceTemplate({
+                  clientName,
+                  clientPhone,
+                  businessName,
+                  businessAddress,
+                  businessPhone,
+                  date: new Date(appointment.date).toLocaleDateString(),
+                  items: [{
+                    name: appointment.serviceName,
+                    price: appointment.amount,
+                    quantity: 1,
+                    totalPrice: appointment.amount
+                  }],
+                  subtotal: appointment.amount,
+                  tax: appointment.serviceTax || appointment.tax || 0,
+                  taxRate: 0,
+                  platformFee: appointment.platformFee || 0,
+                  discount: appointment.discountAmount || appointment.discount || 0,
+                  totalAmount: totalAmount,
+                  paymentStatus: 'paid',
+                  invoiceNumber: updatedAppointment.invoiceNumber || appointment._id.toString(),
+                  paymentMethod: paymentMethod
+                });
+                logToFile('Invoice template generated from appointment fallback.');
+              }
+            } catch (tplError) {
+              console.error('Error generating invoice template:', tplError);
+              logToFile(`Error generating invoice template: ${tplError.message}`);
+              invoiceHtml = null;
+            }
+
+            // Generate PDF Buffer with Timeout
+            let pdfBuffer;
+            if (invoiceHtml) {
+              console.log('Generating Invoice PDF...');
+              logToFile('Starting PDF generation...');
+              try {
+                const pdfPromise = new Promise((resolve, reject) => {
+                  try {
+                    console.log('Calling pdf.create...');
+                    logToFile('Calling pdf.create...');
+
+                    const options = {
+                      format: 'A4',
+                      timeout: 50000
+                    };
+
+                    pdf.create(invoiceHtml, options).toBuffer((err, buffer) => {
+                      if (err) {
+                        console.error('pdf.create error callback:', err);
+                        logToFile(`pdf.create error callback: ${err.message}`);
+                        reject(err);
+                      } else {
+                        console.log('pdf.create success callback');
+                        logToFile('pdf.create success callback');
+                        resolve(buffer);
+                      }
+                    });
+                  } catch (err) {
+                    console.error('pdf.create catch block:', err);
+                    logToFile(`pdf.create catch block: ${err.message}`);
+                    reject(err);
+                  }
+                });
+
+                const timeoutPromise = new Promise((_, reject) =>
+                  setTimeout(() => {
+                    logToFile('Hard timeout (30s) reached for PDF generation');
+                    reject(new Error('PDF generation timed out (30s threshold)'));
+                  }, 30000)
+                );
+
+                pdfBuffer = await Promise.race([pdfPromise, timeoutPromise]);
+                console.log('Invoice PDF generated, size:', pdfBuffer.length);
+                logToFile(`PDF Generation successful. Size: ${pdfBuffer.length}`);
+              } catch (pdfError) {
+                console.error('⚠️ PDF Generation failed or timed out:', pdfError.message);
+                logToFile(`PDF Generation overall failed: ${pdfError.message}`);
+                console.log('Proceeding to send email without invoice attachment.');
+              }
+            } else {
+              logToFile('Skipping PDF generation due to template error.');
+            }
+
+            // Send completion email with attachment
+            const completionHtml = getCompletionTemplate({
+              clientName,
+              businessName,
+              serviceName: appointment.serviceName
+            });
+
+            logToFile('Sending email via transporter...');
+            const emailOptions = {
+              to: clientEmail,
+              subject: `Appointment Completed - ${businessName}`,
+              html: completionHtml,
+              attachments: pdfBuffer ? [
+                {
+                  filename: `Invoice_${updatedAppointment.invoiceNumber || appointment._id}.pdf`,
+                  content: pdfBuffer,
+                  contentType: 'application/pdf'
+                }
+              ] : []
+            };
+
+            const emailResult = await sendEmail(emailOptions);
+            if (emailResult.success) {
+              logToFile(`Email sent successfully. MessageID: ${emailResult.messageId}`);
+              console.log(`✅ Completion email sent successfully to ${clientEmail}`);
+            } else {
+              logToFile(`Email sending FAILED. Error: ${emailResult.error}`);
+              console.error(`❌ Email sending failed: ${emailResult.error}`);
+            }
+          } else {
+            console.warn('⚠️ No client email found - emails not sent');
+            console.log('Client data:', JSON.stringify(appointment.client, null, 2));
+          }
+        } catch (emailError) {
+          console.error('❌ Error sending completion emails:', emailError);
+          console.error('Email error stack:', emailError.stack);
+        }
+      } else {
+        console.log('⚠️ Email condition not met - emails not sent');
+        console.log('Reason: appointmentStatus !== "completed" OR appointment was already completed');
+      }
+
+
       // Include detailed payment information in the response
-      const totalAmount = finalAppointment.finalAmount || finalAppointment.totalAmount || 0;
-      const amountPaid = finalAppointment.amountPaid || 0;
-      const amountRemaining = Math.max(0, totalAmount - amountPaid);
+      const respTotalAmount = finalAppointment.finalAmount || finalAppointment.totalAmount || 0;
+      const respAmountPaid = finalAppointment.amountPaid || 0;
+      const respAmountRemaining = Math.max(0, respTotalAmount - respAmountPaid);
 
       return NextResponse.json({
         success: true,
@@ -396,9 +653,9 @@ export const POST = authMiddlewareCrm(async (req) => {
         paymentCollection: savedPaymentCollection,
         appointment: finalAppointment,
         paymentDetails: {
-          totalAmount: totalAmount,
-          amountPaid: amountPaid,
-          amountRemaining: amountRemaining,
+          totalAmount: respTotalAmount,
+          amountPaid: respAmountPaid,
+          amountRemaining: respAmountRemaining,
           paymentStatus: finalAppointment.paymentStatus || 'pending'
         }
       }, { status: 200 });

@@ -16,7 +16,8 @@ interface Product {
   stock: number;
   isActive: boolean;
   description?: string;
-  status: 'pending' | 'approved' | 'disapproved';
+  status: 'pending' | 'approved' | 'disapproved' | 'rejected';
+  rejectionReason?: string;
   size?: string;
   sizeMetric?: string;
   keyIngredients?: string[];
@@ -44,19 +45,19 @@ const ProductListItem = ({ product, onEdit, onDelete }: ProductListItemProps) =>
   const discountPercentage = calculateDiscountPercentage();
 
   return (
-    <Card 
-      key={product._id} 
+    <Card
+      key={product._id}
       className="border border-border bg-card rounded-lg transition-all duration-200"
     >
       <CardContent className="p-4">
         <div className="flex items-center gap-4">
           {/* Product Image */}
           <div className="relative w-16 h-16 rounded-md overflow-hidden border border-border/30 flex-shrink-0">
-            <Image 
-              src={product.productImages?.[0] || 'https://placehold.co/80x80.png'} 
-              alt={product.productName} 
+            <Image
+              src={product.productImages?.[0] || 'https://placehold.co/80x80.png'}
+              alt={product.productName}
               fill
-              className="object-cover" 
+              className="object-cover"
             />
             {discountPercentage > 0 && (
               <div className="absolute -top-1 -right-1">
@@ -66,7 +67,7 @@ const ProductListItem = ({ product, onEdit, onDelete }: ProductListItemProps) =>
               </div>
             )}
           </div>
-          
+
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
               <div className="flex-1 space-y-1">
@@ -77,8 +78,8 @@ const ProductListItem = ({ product, onEdit, onDelete }: ProductListItemProps) =>
                   <Badge variant="outline" className="text-xs">
                     {product.category}
                   </Badge>
-                  <StatusBadge status={product.status} />
-                  <Badge 
+                  <StatusBadge status={product.status} rejectionReason={product.rejectionReason} />
+                  <Badge
                     variant={product.stock > 10 ? "secondary" : product.stock > 0 ? "outline" : "destructive"}
                     className="text-xs"
                   >
@@ -86,14 +87,14 @@ const ProductListItem = ({ product, onEdit, onDelete }: ProductListItemProps) =>
                   </Badge>
                 </div>
               </div>
-              
+
               <div className="text-right">
                 <div className="mb-2">
                   <span className="font-semibold text-primary">
                     ₹{product.salePrice.toFixed(0)}
                   </span>
                 </div>
-                
+
                 <div className="flex gap-1">
                   <Button
                     variant="outline"

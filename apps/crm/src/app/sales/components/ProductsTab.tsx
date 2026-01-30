@@ -977,21 +977,21 @@ export default function ProductsTab({
           {/* Search and Filter */}
           <div className="flex flex-col sm:flex-row gap-4 mb-6">
             <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="Search products..."
-                className="pl-8"
+                className="pl-10 h-12 rounded-lg border border-border focus:border-primary text-base"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
 
             <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full sm:w-48">
+              <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-lg border-border hover:border-primary">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
-              <SelectContent className="max-h-60 overflow-y-auto">
+              <SelectContent className="rounded-lg border border-border/40">
                 <SelectItem value="all">All Categories</SelectItem>
                 {[...categories.slice(0, 5), ...categories.slice(5)].map((category: any) => (
                   <SelectItem key={category._id} value={category._id}>
@@ -1003,53 +1003,56 @@ export default function ProductsTab({
           </div>
 
           {/* Products Table */}
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {productsLoading ? (
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 overflow-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4">
-                      Loading products...
-                    </TableCell>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Stock</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
-                ) : products.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-4">
-                      No products found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  products.map((product) => (
-                    <TableRow key={product._id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{product.productName}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>₹{product.price.toFixed(2)}</TableCell>
-                      <TableCell>{product.stock}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          onClick={() => addToCart(product)}
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          Add
-                        </Button>
+                </TableHeader>
+                <TableBody>
+                  {productsLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-4">
+                        Loading products...
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : products.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-4">
+                        No products found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    products.map((product) => (
+                      <TableRow key={product._id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{product.productName}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>₹{product.price.toFixed(2)}</TableCell>
+                        <TableCell>{product.stock}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            onClick={() => addToCart(product)}
+                            className="h-8 px-2"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Add
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -1071,11 +1074,11 @@ export default function ProductsTab({
             {/* Search Box */}
             <div className="mb-3">
               <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
                   placeholder="Search clients by name, email, or phone..."
-                  className="pl-10 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                  className="pl-10 h-12 rounded-lg border border-border focus:border-primary text-base"
                   value={clientSearchTerm}
                   onChange={(e) => setClientSearchTerm(e.target.value)}
                   onFocus={() => setIsSearchFocused(true)}
@@ -1121,7 +1124,7 @@ export default function ProductsTab({
                 <Button
                   variant="outline"
                   onClick={() => setIsAddClientModalOpen(true)}
-                  className="w-full border-gray-300 hover:bg-gray-50 text-sm h-10"
+                  className="w-full h-12 rounded-lg border-border hover:border-primary text-base"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Add New Client
@@ -1167,70 +1170,75 @@ export default function ProductsTab({
           </div>
 
           {/* Cart Items */}
-          <div className="rounded-md border mb-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Qty</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cart.length === 0 ? (
+          <div className="flex-1 flex flex-col min-h-0 mb-6">
+            <div className="flex-1 overflow-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      <ShoppingCart className="mx-auto h-12 w-12 opacity-50 mb-2" />
-                      <div>Your cart is empty</div>
-                      <div className="text-sm">Add products from the catalog</div>
-                    </TableCell>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Qty</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ) : (
-                  cart.map((item) => (
-                    <TableRow key={item._id}>
-                      <TableCell>
-                        <div className="cursor-pointer text-green-600 p-2 rounded" onClick={() => handleEditItemClick(item)}>
-                          <div className="font-medium">{item.productName}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>₹{item.price.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateQuantity(item._id, item.quantity - 1)}
-                            disabled={item.quantity <= 1}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="w-8 text-center">{item.quantity}</span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => updateQuantity(item._id, item.quantity + 1)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell>₹{item.totalPrice.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => removeFromCart(item._id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
+                </TableHeader>
+                <TableBody>
+                  {cart.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        <ShoppingCart className="mx-auto h-12 w-12 opacity-50 mb-2" />
+                        <div>Your cart is empty</div>
+                        <div className="text-sm">Add products from the catalog</div>
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    cart.map((item) => (
+                      <TableRow key={item._id}>
+                        <TableCell>
+                          <div className="cursor-pointer text-green-600 p-2 rounded" onClick={() => handleEditItemClick(item)}>
+                            <div className="font-medium">{item.productName}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>₹{item.price.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateQuantity(item._id, item.quantity - 1)}
+                              disabled={item.quantity <= 1}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-8 text-center">{item.quantity}</span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => updateQuantity(item._id, item.quantity + 1)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                        <TableCell>₹{item.totalPrice.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => removeFromCart(item._id)}
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
 
           {/* Order Summary */}
@@ -1266,7 +1274,7 @@ export default function ProductsTab({
               variant="outline"
               onClick={clearCart}
               disabled={cart.length === 0}
-              className="flex-1"
+              className="flex-1 h-12 rounded-lg border-border hover:border-primary"
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Clear Cart
@@ -1274,7 +1282,7 @@ export default function ProductsTab({
             <Button
               onClick={processPayment}
               disabled={cart.length === 0}
-              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+              className="flex-1 h-12 rounded-lg bg-primary hover:bg-primary/90"
             >
               <ShoppingCart className="h-4 w-4 mr-2" />
               Process Payment
@@ -1926,19 +1934,56 @@ export default function ProductsTab({
       {/* Print Styles */}
       <style>{`
         @media print {
-          body * {
-            visibility: hidden;
+          /* Reset everything for a clean print */
+          html, body {
+            height: auto !important;
+            overflow: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
           }
+          
+          /* Hide all default content - use visibility so parent-child rules work */
+          body * {
+            visibility: hidden !important;
+          }
+          
+          /* ONLY show the invoice section and its children */
           #printable-invoice-section,
           #printable-invoice-section * {
-            visibility: visible;
+            visibility: visible !important;
           }
+          
+          /* POP the invoice to the very top of the page using FIXED positioning */
+          /* This prevents whitespace from hidden background elements */
           #printable-invoice-section {
             display: block !important;
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 5mm !important; /* Standard print padding */
+            background: white !important;
+            z-index: 2147483647 !important;
+          }
+          
+          /* Ensure the table doesn't break from display blocks */
+          #printable-invoice-section table {
+            display: table !important;
+            width: 100% !important;
+            border-collapse: collapse !important;
+          }
+          #printable-invoice-section thead { display: table-header-group !important; }
+          #printable-invoice-section tbody { display: table-row-group !important; }
+          #printable-invoice-section tr { display: table-row !important; }
+          #printable-invoice-section td, #printable-invoice-section th { display: table-cell !important; }
+
+          /* Standard page settings */
+          @page {
+            margin: 0;
+            size: auto;
           }
         }
       `}</style>

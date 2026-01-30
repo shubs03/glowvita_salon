@@ -101,7 +101,7 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
   };
 
   return (
-    <header className="flex-shrink-0 sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border/20 bg-background/95 backdrop-blur-xl px-4 md:px-6 justify-between shadow-sm">
+    <header className="flex-shrink-0 sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/95 backdrop-blur-xl px-4 md:px-6 justify-between">
       {/* Left Section */}
       <div className="flex items-center gap-4">
         <Button
@@ -183,8 +183,8 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
             >
               <div className="relative">
                 <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full flex items-center justify-center">
-                  <span className="text-[8px] font-bold text-white">3</span>
+                <span className="absolute -top-2 -right-2 h-4 w-4 bg-destructive rounded-full flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-white">3</span>
                 </span>
               </div>
               <span className="sr-only">Notifications</span>
@@ -200,9 +200,6 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
             <div className="max-h-80 overflow-y-auto">
               <DropdownMenuItem className="p-4 border-b border-border/10 hover:bg-muted/50 transition-colors">
                 <div className="flex items-start gap-3 w-full">
-                  <div className="bg-green-100 text-green-600 p-2 rounded-lg">
-                    <CheckCircle className="h-4 w-4" />
-                  </div>
                   <div className="flex-1">
                     <p className="text-sm font-semibold text-foreground">New Appointment Confirmed</p>
                     <p className="text-xs text-muted-foreground mt-1">Booking with Sarah Johnson at 2:00 PM today.</p>
@@ -230,7 +227,6 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
                   {(user?.businessName || user?.name || "U").charAt(0)}
                 </AvatarFallback>
               </Avatar>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full border-2 border-background animate-pulse shadow-lg shadow-green-500/50"></div>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64 bg-background/95 backdrop-blur-xl border border-border/30 shadow-lg rounded-lg">
@@ -245,10 +241,6 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
                 <div className="min-w-0 flex-1">
                   <p className="font-bold text-foreground truncate">{user?.businessName || user?.name}</p>
                   <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-xs text-green-600 font-semibold">ONLINE</span>
-                  </div>
                 </div>
               </div>
             </DropdownMenuLabel>
