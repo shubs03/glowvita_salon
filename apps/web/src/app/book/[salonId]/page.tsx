@@ -1327,11 +1327,7 @@ function BookingPageContent() {
     const endTime = calculateEndTime(selectedTime, totalDuration);
 
     // Check if any selected service is a home service or if wedding package is for wedding venue
-    const isHomeService = selectedWeddingPackage
-      ? false // Wedding packages handle location separately
-      : selectedServices.some(service =>
-        service.homeService?.available || service.serviceHomeService?.available
-      );
+    const isHomeService = (bookingMode === 'home' || !!selectedWeddingPackage) && !!homeServiceLocation;
 
     // Check if this is a wedding service (either wedding package or wedding service)
     const isWeddingService = !!selectedWeddingPackage || selectedServices.some(service =>
@@ -1491,7 +1487,7 @@ function BookingPageContent() {
       isHomeService: isHomeService,
       isWeddingService: isWeddingService,
       // Add home service location if it's a home service - ensure proper structure
-      ...(bookingMode === 'home' && homeServiceLocation ? {
+      ...(isHomeService && homeServiceLocation ? {
         homeServiceLocation: {
           address: homeServiceLocation.address || locationForm.address || '',
           city: homeServiceLocation.city || locationForm.city || '',
@@ -1521,7 +1517,7 @@ function BookingPageContent() {
     try {
       // Determine if this is a home service based on booking mode and location availability
       // Payment method should NOT affect whether it's a home service or not
-      const finalIsHomeService = bookingMode === 'home' && !!homeServiceLocation;
+      const finalIsHomeService = isHomeService;
 
       console.log("=== FINAL BOOKING DECISION ===");
       console.log("Booking Mode:", bookingMode);
@@ -2894,6 +2890,11 @@ function BookingPageContent() {
               couponCode={appliedOffer?.code || offerCode}
               discountAmount={priceBreakdown?.discountAmount || 0}
               user={user}
+              isHomeService={bookingMode === 'home'}
+              homeServiceLocation={homeServiceLocation as any}
+              isWeddingService={selectedServices.some(service => 
+                service.weddingService?.available || service.serviceWeddingService?.available
+              )}
             />
           ) : (
             <TimeSlotSelector
@@ -2925,6 +2926,11 @@ function BookingPageContent() {
               couponCode={appliedOffer?.code || offerCode}
               discountAmount={priceBreakdown?.discountAmount || 0}
               user={user}
+              isHomeService={bookingMode === 'home'}
+              homeServiceLocation={homeServiceLocation}
+              isWeddingService={selectedServices.some(service => 
+                service.weddingService?.available || service.serviceWeddingService?.available
+              )}
             />
           );
           break;

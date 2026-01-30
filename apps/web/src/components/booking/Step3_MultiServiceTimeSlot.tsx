@@ -59,6 +59,7 @@ interface Step3MultiServiceTimeSlotProps {
   };
   onLockAcquired?: (lockToken: string, appointmentId?: string) => void;
   user?: any;
+  isWeddingService?: boolean;
 }
 
 interface MultiServiceSlot {
@@ -106,7 +107,8 @@ export function Step3_MultiServiceTimeSlot({
   taxRate = 0,
   couponCode = null,
   discountAmount = 0,
-  user
+  user,
+  isWeddingService = false
 }: Step3MultiServiceTimeSlotProps) {
   // RTK Query mutation hook
   const [getMultiServiceSlots, { data: slotsData, isLoading: isLoadingSlots, error: slotsError }] = useGetMultiServiceSlotsMutation();
@@ -253,6 +255,7 @@ export function Step3_MultiServiceTimeSlot({
         isHomeService,
         location: homeServiceLocation,
         duration: slot.totalDuration,
+        isWeddingService,
         // Client Info
         clientId: user?._id || user?.id || 'temp-client-id',
         clientName: user ? `${user.firstName} ${user.lastName}` : 'Customer'
