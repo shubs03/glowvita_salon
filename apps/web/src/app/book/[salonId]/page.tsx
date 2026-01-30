@@ -1697,7 +1697,7 @@ function BookingPageContent() {
           setIsPaymentModalOpen(false);
           setIsSuccessModalOpen(true);
         } else {
-          throw new Error(lockResult.message || "Failed to acquire slot lock");
+          throw new Error("Failed to acquire slot lock or session expired.");
         }
       }
 

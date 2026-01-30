@@ -68,6 +68,7 @@
     "pdfmake": "^0.2.20",
     "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
+    "react-circular-progressbar": "^2.2.0",
     "react-gauge-component": "^2.0.23",
     "react-hook-form": "^7.62.0",
     "react-hot-toast": "^2.6.0",

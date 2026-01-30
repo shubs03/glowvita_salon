@@ -1,7 +1,7 @@
 export * from "./types";
 export * from "./hooks";
 export * from "./provider";
-export { default as store, selectRootState } from "./store";
+export { store, selectRootState } from "./store";
 
 // Export only reducers and selectors, not all actions to avoid conflicts
 export { default as modalReducer } from "./slices/modalSlice";
@@ -37,6 +37,7 @@ export { default as patientReducer } from "./slices/patientSlice";
 
 // Export specific actions that are commonly used (namespaced)
 export * from "./slices/modalSlice";
-export * from "./slices/crmAuthSlice";
-export * from "./slices/Web/userAuthSlice";
-export * from "./slices/Admin/adminAuthSlice";
+// Avoid star exports for slices with conflicting action names (rehydrateAuth, updateUser)
+export { setCrmAuth, clearCrmAuth, rehydrateAuth as rehydrateCrmAuth, updateUser as updateCrmUser, setSubscriptionExpired } from "./slices/crmAuthSlice";
+export { setUserAuth, clearUserAuth, rehydrateAuth as rehydrateUserAuth, updateUser as updateWebUser } from "./slices/Web/userAuthSlice";
+export { setAdminAuth, clearAdminAuth, rehydrateAuth as rehydrateAdminAuth } from "./slices/Admin/adminAuthSlice";
