@@ -1,6 +1,6 @@
 import _db from "@repo/lib/db";
 import { generateFreshaLikeSlots, generateAnyStaffSlots, generateWeddingPackageSlots } from "@repo/lib/modules/scheduling/FreshaLikeSlotEngine";
-import { acquireLock, createTemporaryAppointment, confirmAppointment, releaseLock } from "@repo/lib/modules/scheduling/OptimisticLocking";
+import { acquireLock, createTemporaryAppointment, confirmAppointment, releaseLock, cancelAppointment } from "@repo/lib/modules/scheduling/OptimisticLocking";
 import { calculateVendorTravelTime } from "@repo/lib/modules/scheduling/EnhancedTravelUtils";
 import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import ServiceModel from "@repo/lib/models/admin/Service";
@@ -38,6 +38,17 @@ const parseDuration = (duration, defaultValue = 60) => {
     if (unit === 'hour' || unit === 'hours') return value * 60;
   }
   return defaultValue;
+};
+
+/**
+ * Helper: Ensure numeric values for amounts and durations to avoid NaN
+ * @param {any} a - Value to check
+ * @returns {number} - Numeric value or 0
+ */
+const safeAmount = (a) => {
+  if (a === undefined || a === null) return 0;
+  const num = Number(a);
+  return isNaN(num) ? 0 : num;
 };
 
 // Handle CORS preflight
@@ -103,6 +114,8 @@ export const POST = async (request, { params }) => {
         return await handleWeddingPackageCustomization(body);
       case 'travel-time':
         return await handleTravelTimeRequest(body);
+      case 'release-lock':
+        return await handleReleaseLock(body);
       default:
         return Response.json(formatErrorResponse(new AppError(`Invalid endpoint: ${path}`, 'INVALID_ENDPOINT', 'CLIENT_ERROR', 404)), { status: 404 });
     }
@@ -159,7 +172,60 @@ export const DELETE = async (request, { params }) => {
   }
 };
 
-// --- Handler Functions ---
+// --- Route Handlers ---
+
+/**
+ * Handle manual lock release
+ * @returns {Promise<Response>}
+ */
+async function handleReleaseLock(body) {
+  const { lockToken } = body;
+  console.log('handleReleaseLock called with token:', lockToken);
+
+  if (!lockToken) {
+    const errorRes = formatErrorResponse(new AppError('Lock token is required', 'MISSING_LOCK_TOKEN', 'CLIENT_ERROR', 400));
+    return Response.json(errorRes, { status: 400 });
+  }
+
+  try {
+    const { releaseLock } = await import("@repo/lib/modules/scheduling/OptimisticLocking");
+    await releaseLock(lockToken);
+    return Response.json({
+      success: true,
+      message: "Lock released successfully"
+    });
+  } catch (error) {
+    console.error('Error releasing lock:', error);
+    const errorResponse = formatErrorResponse(error);
+    return Response.json(errorResponse, { status: errorResponse.statusCode || 500 });
+  }
+}
+
+/**
+ * Handle travel time calculation request
+ * @returns {Promise<Response>}
+ */
+async function handleTravelTimeRequest(body) {
+  const { vendorId, customerLocation } = body;
+
+  if (!vendorId || !customerLocation) {
+    const errorRes = formatErrorResponse(new AppError('Vendor ID and customer location are required', 'MISSING_REQUIRED_FIELDS', 'CLIENT_ERROR', 400));
+    return Response.json(errorRes, { status: 400 });
+  }
+
+  try {
+    const travelTimeInfo = await calculateVendorTravelTime(vendorId, customerLocation);
+
+    return Response.json({
+      success: true,
+      message: "Travel time calculated successfully",
+      travelTimeInfo
+    });
+  } catch (error) {
+    console.error('Error calculating travel time:', error);
+    return formatErrorResponse(new AppError(error.message || 'Failed to calculate travel time', 'TRAVEL_TIME_CALCULATION_ERROR', 'SERVER_ERROR', 500));
+  }
+}
 
 /**
  * Handle vendor discovery with location-based filtering
@@ -939,13 +1005,37 @@ async function handleSlotLock(body) {
 
     const {
       vendorId,
+      clientId
+    } = body;
+
+    // INDUSTRY BEST PRACTICE: Only allow ONE active lock per client per vendor
+    // This prevents a single user from blocking multiple slots.
+    if (clientId && clientId !== 'temp-client-id') {
+      try {
+        const Appointment = (await import("@repo/lib/models/Appointment/Appointment.model")).default;
+        const existingTempApt = await Appointment.findOne({
+          client: clientId,
+          vendorId: vendorId,
+          status: 'temp-locked'
+        });
+
+        if (existingTempApt) {
+            console.log(`Auto-releasing previously locked slot for client ${clientId}: Appointment ${existingTempApt._id}`);
+            await cancelAppointment(existingTempApt._id.toString(), existingTempApt.lockToken);
+        }
+      } catch (err) {
+        console.error("Error during auto-lock-release:", err);
+        // Continue anyway to not block the new lock
+      }
+    }
+
+    const {
       staffId,
       serviceId: rawServiceId,
       serviceName,
       date,
       startTime,
       endTime,
-      clientId,
       clientName,
       staffName,
       isHomeService,
@@ -1174,12 +1264,34 @@ async function handleSlotLock(body) {
        }
     }
 
+    // Calculate totals if not provided
+    const effectiveServiceAmount = amount !== undefined ? safeAmount(amount) : (serviceItems && serviceItems.length > 0 ? serviceItems.reduce((sum, item) => sum + safeAmount(item.amount), 0) : 0);
+    const effectiveTotalAmount = totalAmount !== undefined ? safeAmount(totalAmount) : (effectiveServiceAmount + totalAddOnsPrice);
+    
+    console.log('Amount Calculations:', {
+      inputAmount: amount,
+      inputTotalAmount: totalAmount,
+      effectiveServiceAmount,
+      totalAddOnsPrice,
+      effectiveTotalAmount,
+      finalAmountInBody: finalAmount
+    });
+
+    // Determine the primary staffId for locking purposes
+    const lockStaffId = staffId || (serviceItems && serviceItems.length > 0 ? (serviceItems[0].staff || serviceItems[0].staffId || 'any') : 'any');
+
+    console.log('Staff Resolution:', {
+      topLevelStaffId: staffId,
+      firstItemStaff: serviceItems?.[0]?.staff,
+      resolvedStaffId: lockStaffId
+    });
+
     const lockData = {
       vendorId,
-      staffId,
+      staffId: lockStaffId,
       serviceId, // Keep for top-level reference if needed by other logic
-      serviceName: serviceName || serviceItems[0].serviceName,
-      staffName: staffName || serviceItems[0].staffName,
+      serviceName: serviceName || (serviceItems && serviceItems.length > 0 ? serviceItems[0].serviceName : 'Service'),
+      staffName: staffName || (serviceItems && serviceItems.length > 0 ? serviceItems[0].staffName : 'Any Professional'),
       date: appointmentDate,
       startTime,
       endTime: calculatedEndTime, 
@@ -1190,15 +1302,15 @@ async function handleSlotLock(body) {
       isWeddingService,
       isMultiService, 
       // Amounts
-      amount: Number(amount) || serviceItems[0].amount,
+      amount: effectiveServiceAmount,
       addOnsAmount: totalAddOnsPrice, 
-      totalAmount: Number(totalAmount) || (Number(amount) + totalAddOnsPrice),
-      finalAmount: Number(finalAmount) || (Number(totalAmount) || (Number(amount) + totalAddOnsPrice)),
-      platformFee: Number(platformFee) || 0,
-      serviceTax: Number(serviceTax) || 0,
-      taxRate: Number(taxRate) || 0,
+      totalAmount: effectiveTotalAmount,
+      finalAmount: finalAmount !== undefined ? safeAmount(finalAmount) : (effectiveTotalAmount + safeAmount(platformFee) + safeAmount(serviceTax) - safeAmount(discountAmount)),
+      platformFee: safeAmount(platformFee),
+      serviceTax: safeAmount(serviceTax),
+      taxRate: safeAmount(taxRate),
       couponCode: couponCode,
-      discountAmount: Number(discountAmount) || 0,
+      discountAmount: safeAmount(discountAmount),
       // For single service, keep addOns for backward compatibility
       addOns: effectiveAddOns,
       // Service Structure
@@ -1208,8 +1320,8 @@ async function handleSlotLock(body) {
       // Package
       ...(packageId ? { packageId } : {}),
       // Buffers
-      bufferBefore: Number(bufferBefore) || 0,
-      bufferAfter: Number(bufferAfter) || 0,
+      bufferBefore: safeAmount(bufferBefore),
+      bufferAfter: safeAmount(bufferAfter),
       travelTimeInfo: calculatedTravelTime // Include the calculated one
     };
 
@@ -1422,31 +1534,4 @@ async function handleBookingCancellation(body) {
     message: "Booking cancelled successfully",
     appointment
   });
-}
-
-/**
- * Handle travel time calculation request
- * @returns {Promise<Response>}
- */
-async function handleTravelTimeRequest(body) {
-  const { vendorId, customerLocation } = body;
-
-  // Validate required parameters
-  if (!vendorId || !customerLocation) {
-    const errorRes = formatErrorResponse(new AppError('Vendor ID and customer location are required', 'MISSING_REQUIRED_FIELDS', 'CLIENT_ERROR', 400));
-    return Response.json(errorRes, { status: 400 });
-  }
-
-  try {
-    const travelTimeInfo = await calculateVendorTravelTime(vendorId, customerLocation);
-
-    return Response.json({
-      success: true,
-      message: "Travel time calculated successfully",
-      travelTimeInfo
-    });
-  } catch (error) {
-    console.error('Error calculating travel time:', error);
-    return formatErrorResponse(new AppError(error.message || 'Failed to calculate travel time', 'TRAVEL_TIME_CALCULATION_ERROR', 'SERVER_ERROR', 500));
-  }
 }

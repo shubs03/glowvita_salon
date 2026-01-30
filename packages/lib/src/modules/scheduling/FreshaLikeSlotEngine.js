@@ -177,8 +177,25 @@ export async function generateFreshaLikeSlots({
       const periodStart = timeToMinutes(period.startTime);
       const periodEnd = timeToMinutes(period.endTime);
 
+      // Check if the selected date is today to filter out past slots
+      const now = new Date();
+      // IST is UTC + 5:30
+      const istOffset = 5.5 * 60; // 330 minutes
+      const nowUTC = now.getTime() + (now.getTimezoneOffset() * 60000);
+      const nowIST = new Date(nowUTC + (istOffset * 60000));
+      
+      const isToday = bookingDate.toDateString() === nowIST.toDateString();
+      const currentMinutesIST = isToday ? (nowIST.getHours() * 60 + nowIST.getMinutes()) : 0;
+
       // Adjust start time to account for travel time and buffer
       let slotStart = periodStart;
+      
+      // If today, ensure we don't show past slots
+      if (isToday && slotStart < currentMinutesIST) {
+        // Round up to next 15-minute interval
+        slotStart = Math.ceil(currentMinutesIST / stepMinutes) * stepMinutes;
+      }
+      
       if (isHomeService && travelTimeInfo) {
         // For home services, we need to account for travel time to the customer
         // We block time before the appointment for travel to the customer
@@ -584,12 +601,15 @@ export async function generateWeddingPackageSlots({
         console.log(`After manual filtering: Found ${staffMembers.length} staff members`);
       }
     } else {
-      // Fallback to all active staff if no specific staff assigned
-      staffMembers = await StaffModel.find({
+      // Fallback to active staff if no specific staff assigned
+      // We use the staffCount requirement to determine how many professionals to check
+      const requiredStaffCount = weddingPackage.staffCount || 1;
+      const allActiveStaff = await StaffModel.find({
         vendorId: vendorId,
         status: 'Active'
-      });
-      console.log(`No assigned staff, using all ${staffMembers.length} active staff members`);
+      }).limit(requiredStaffCount);
+      staffMembers = allActiveStaff;
+      console.log(`No assigned staff, using ${staffMembers.length} active staff members as placeholder for availability (Required: ${requiredStaffCount})`);
     }
 
     if (!staffMembers.length) {
@@ -669,14 +689,19 @@ export async function generateWeddingPackageSlots({
 
     // Check if the selected date is today
     const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-    const currentMinutes = isToday ? (now.getHours() * 60 + now.getMinutes()) : 0;
+    // IST is UTC + 5:30
+    const istOffset = 5.5 * 60; // 330 minutes
+    const nowUTC = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const nowIST = new Date(nowUTC + (istOffset * 60000));
+    
+    const isToday = date.toDateString() === nowIST.toDateString();
+    const currentMinutesIST = isToday ? (nowIST.getHours() * 60 + nowIST.getMinutes()) : 0;
     
     // If it's today, start from current time or opening time, whichever is later
-    if (isToday && currentMinutes > currentTime) {
+    if (isToday && currentMinutesIST > currentTime) {
       // Round up to next 15-minute interval
-      currentTime = Math.ceil(currentMinutes / 15) * 15;
-      console.log(`Today's date detected. Starting slots from ${minutesToTime(currentTime)} (current time: ${minutesToTime(currentMinutes)})`);
+      currentTime = Math.ceil(currentMinutesIST / 15) * 15;
+      console.log(`Today's date detected (IST). Starting slots from ${minutesToTime(currentTime)} (current time: ${minutesToTime(currentMinutesIST)})`);
     }
 
     // Account for travel time to and from the customer for home services
@@ -917,11 +942,11 @@ async function validateWeddingPackageSlot({
       const existingAppointments = await AppointmentModel.find({
         vendorId: vendorId,
         $or: [
+          { staff: staff._id },
           { 'staff.id': staff._id },
+          { 'serviceItems.staff': staff._id },
           { 'weddingPackageDetails.teamMembers.staffId': staff._id.toString() },
-          { 'weddingPackageDetails.teamMembers.staffId': staff._id },
-          // Also include ALL wedding service appointments for the same date/vendor
-          { isWeddingService: true }
+          { 'weddingPackageDetails.teamMembers.staffId': staff._id }
         ],
         date: {
           $gte: startOfDay,
