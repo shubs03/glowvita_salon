@@ -49,7 +49,7 @@ export default function ServicesPage() {
         data: servicesData = [],
         isLoading,
         refetch,
-    } = glowvitaApi.useGetVendorServicesForApprovalQuery();
+    } = glowvitaApi.useGetVendorServicesForApprovalQuery({});
 
     const [updateServiceStatus] = glowvitaApi.useUpdateServiceStatusMutation();
     const [updateVendorServiceOnlineBooking] = glowvitaApi.useUpdateVendorServiceOnlineBookingMutation();
