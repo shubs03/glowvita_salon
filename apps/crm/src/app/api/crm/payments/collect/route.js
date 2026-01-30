@@ -487,31 +487,62 @@ export const POST = authMiddlewareCrm(async (req) => {
             try {
               console.log('Generating invoice template...');
               logToFile('Generating invoice template...');
-              invoiceHtml = getInvoiceTemplate({
-                clientName,
-                clientPhone,
-                businessName,
-                businessAddress,
-                businessPhone,
-                serviceName: appointment.serviceName,
-                date: appointment.date,
-                startTime: appointment.startTime,
-                amount: appointment.amount,
-                addOnsAmount: appointment.addOnsAmount || 0,
-                tax: appointment.serviceTax || appointment.tax || 0,
-                platformFee: appointment.platformFee || 0,
-                totalAmount: totalAmount,
-                amountPaid: newPaidAmount,
-                amountRemaining: 0,
-                paymentStatus: 'paid',
-                invoiceNumber: appointment.invoiceNumber || appointment._id.toString(),
-                paymentMethod: paymentMethod
-              });
-              logToFile('Invoice template generated successfully.');
+
+              // Fetch the saved invoice to get formal items and other details
+              const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+              const invoice = await InvoiceModel.findOne({ appointmentId: appointment._id });
+
+              if (invoice) {
+                invoiceHtml = getInvoiceTemplate({
+                  clientName,
+                  clientPhone,
+                  businessName,
+                  businessAddress,
+                  businessPhone,
+                  date: new Date(invoice.createdAt).toLocaleDateString(),
+                  items: invoice.items,
+                  subtotal: invoice.subtotal,
+                  tax: invoice.taxAmount,
+                  taxRate: invoice.taxRate,
+                  platformFee: invoice.platformFee,
+                  discount: invoice.discountAmount,
+                  couponCode: finalAppointment.payment?.offer?.code || "",
+                  totalAmount: invoice.totalAmount,
+                  paymentStatus: invoice.paymentStatus,
+                  invoiceNumber: invoice.invoiceNumber,
+                  paymentMethod: invoice.paymentMethod
+                });
+                logToFile('Invoice template generated successfully from formal invoice.');
+              } else {
+                // Fallback (though invoice should exist here)
+                invoiceHtml = getInvoiceTemplate({
+                  clientName,
+                  clientPhone,
+                  businessName,
+                  businessAddress,
+                  businessPhone,
+                  date: new Date(appointment.date).toLocaleDateString(),
+                  items: [{
+                    name: appointment.serviceName,
+                    price: appointment.amount,
+                    quantity: 1,
+                    totalPrice: appointment.amount
+                  }],
+                  subtotal: appointment.amount,
+                  tax: appointment.serviceTax || appointment.tax || 0,
+                  taxRate: 0,
+                  platformFee: appointment.platformFee || 0,
+                  discount: appointment.discountAmount || appointment.discount || 0,
+                  totalAmount: totalAmount,
+                  paymentStatus: 'paid',
+                  invoiceNumber: updatedAppointment.invoiceNumber || appointment._id.toString(),
+                  paymentMethod: paymentMethod
+                });
+                logToFile('Invoice template generated from appointment fallback.');
+              }
             } catch (tplError) {
               console.error('Error generating invoice template:', tplError);
               logToFile(`Error generating invoice template: ${tplError.message}`);
-              // Fallback or abort invoice generation
               invoiceHtml = null;
             }
 
@@ -521,7 +552,6 @@ export const POST = authMiddlewareCrm(async (req) => {
               console.log('Generating Invoice PDF...');
               logToFile('Starting PDF generation...');
               try {
-                // Create a promise for PDF generation
                 const pdfPromise = new Promise((resolve, reject) => {
                   try {
                     console.log('Calling pdf.create...');
@@ -529,7 +559,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 
                     const options = {
                       format: 'A4',
-                      timeout: 50000 // Internal PhantomJS timeout (increased)
+                      timeout: 50000
                     };
 
                     pdf.create(invoiceHtml, options).toBuffer((err, buffer) => {
@@ -550,7 +580,6 @@ export const POST = authMiddlewareCrm(async (req) => {
                   }
                 });
 
-                // Create a timeout promise
                 const timeoutPromise = new Promise((_, reject) =>
                   setTimeout(() => {
                     logToFile('Hard timeout (30s) reached for PDF generation');
@@ -558,7 +587,6 @@ export const POST = authMiddlewareCrm(async (req) => {
                   }, 30000)
                 );
 
-                // Race them
                 pdfBuffer = await Promise.race([pdfPromise, timeoutPromise]);
                 console.log('Invoice PDF generated, size:', pdfBuffer.length);
                 logToFile(`PDF Generation successful. Size: ${pdfBuffer.length}`);
@@ -570,7 +598,6 @@ export const POST = authMiddlewareCrm(async (req) => {
             } else {
               logToFile('Skipping PDF generation due to template error.');
             }
-
 
             // Send completion email with attachment
             const completionHtml = getCompletionTemplate({
@@ -586,7 +613,7 @@ export const POST = authMiddlewareCrm(async (req) => {
               html: completionHtml,
               attachments: pdfBuffer ? [
                 {
-                  filename: `Invoice_${appointment._id}.pdf`,
+                  filename: `Invoice_${updatedAppointment.invoiceNumber || appointment._id}.pdf`,
                   content: pdfBuffer,
                   contentType: 'application/pdf'
                 }

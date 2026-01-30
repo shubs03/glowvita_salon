@@ -186,26 +186,57 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                         let invoiceHtml;
                         try {
                             console.log('Generating invoice template...');
-                            invoiceHtml = getInvoiceTemplate({
-                                clientName,
-                                clientPhone,
-                                businessName,
-                                businessAddress,
-                                businessPhone,
-                                serviceName: updatedAppointment.serviceName,
-                                date: updatedAppointment.date,
-                                startTime: updatedAppointment.startTime,
-                                amount: updatedAppointment.amount,
-                                addOnsAmount: updatedAppointment.addOnsAmount || 0,
-                                tax: updatedAppointment.serviceTax || updatedAppointment.tax || 0,
-                                platformFee: updatedAppointment.platformFee || 0,
-                                totalAmount: updatedAppointment.totalAmount,
-                                amountPaid: updatedAppointment.amountPaid || updatedAppointment.totalAmount,
-                                amountRemaining: updatedAppointment.amountRemaining || 0,
-                                paymentStatus: updatedAppointment.paymentStatus,
-                                invoiceNumber: updatedAppointment.invoiceNumber || updatedAppointment._id.toString(),
-                                paymentMethod: updatedAppointment.paymentMethod
-                            });
+
+                            // Fetch formal invoice
+                            const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+                            const invoice = await InvoiceModel.findOne({ appointmentId: updatedAppointment._id });
+
+                            if (invoice) {
+                                invoiceHtml = getInvoiceTemplate({
+                                    clientName,
+                                    clientPhone,
+                                    businessName,
+                                    businessAddress,
+                                    businessPhone,
+                                    date: new Date(invoice.createdAt).toLocaleDateString(),
+                                    items: invoice.items,
+                                    subtotal: invoice.subtotal,
+                                    tax: invoice.taxAmount,
+                                    taxRate: invoice.taxRate,
+                                    platformFee: invoice.platformFee,
+                                    discount: invoice.discountAmount,
+                                    couponCode: updatedAppointment.payment?.offer?.code || "",
+                                    totalAmount: invoice.totalAmount,
+                                    paymentStatus: invoice.paymentStatus,
+                                    invoiceNumber: invoice.invoiceNumber,
+                                    paymentMethod: invoice.paymentMethod
+                                });
+                            } else {
+                                // Fallback
+                                invoiceHtml = getInvoiceTemplate({
+                                    clientName,
+                                    clientPhone,
+                                    businessName,
+                                    businessAddress,
+                                    businessPhone,
+                                    date: new Date(updatedAppointment.date).toLocaleDateString(),
+                                    items: [{
+                                        name: updatedAppointment.serviceName,
+                                        price: updatedAppointment.amount,
+                                        quantity: 1,
+                                        totalPrice: updatedAppointment.amount
+                                    }],
+                                    subtotal: updatedAppointment.amount,
+                                    tax: updatedAppointment.serviceTax || updatedAppointment.tax || 0,
+                                    taxRate: 0,
+                                    platformFee: updatedAppointment.platformFee || 0,
+                                    discount: updatedAppointment.discountAmount || updatedAppointment.discount || 0,
+                                    totalAmount: updatedAppointment.totalAmount,
+                                    paymentStatus: updatedAppointment.paymentStatus,
+                                    invoiceNumber: updatedAppointment.invoiceNumber || updatedAppointment._id.toString(),
+                                    paymentMethod: updatedAppointment.paymentMethod
+                                });
+                            }
                             console.log('Invoice template generated successfully.');
                         } catch (tplError) {
                             console.error('Error generating invoice template:', tplError);
@@ -266,7 +297,7 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                             html: completionHtml,
                             attachments: pdfBuffer ? [
                                 {
-                                    filename: `Invoice_${updatedAppointment._id}.pdf`,
+                                    filename: `Invoice_${updatedAppointment.invoiceNumber || updatedAppointment._id}.pdf`,
                                     content: pdfBuffer,
                                     contentType: 'application/pdf'
                                 }
