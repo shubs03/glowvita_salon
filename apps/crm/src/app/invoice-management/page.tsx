@@ -17,7 +17,8 @@ import { Pagination } from "@repo/ui/pagination";
 // Dynamically import html2pdf to avoid SSR issues
 let html2pdf: any;
 if (typeof window !== 'undefined') {
-  html2pdf = require('html2pdf.js').default;
+  const lib = require('html2pdf.js');
+  html2pdf = lib.default || lib;
 }
 
 // Billing interface
@@ -92,7 +93,7 @@ interface InvoiceData {
 export default function InvoiceManagementPage() {
   const { user } = useCrmAuth();
   const VENDOR_ID = user?._id || "";
-  
+
   // States
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("all");
@@ -104,21 +105,21 @@ export default function InvoiceManagementPage() {
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  
+
   // Fetch billings
   const { data: billingsData, isLoading, isError, refetch } = useGetBillingRecordsQuery(
     { vendorId: VENDOR_ID },
     { skip: !VENDOR_ID }
   );
-  
+
   // Fetch vendor profile
   const { data: vendorProfile } = useGetVendorProfileQuery(undefined, {
     skip: !VENDOR_ID
   });
-  
+
   // Delete billing mutation
   const [deleteBilling] = useDeleteBillingMutation();
-  
+
   // Get vendor name from profile
   const vendorName = vendorProfile?.data?.businessName || vendorProfile?.data?.shopName || "Your Salon";
 
@@ -126,50 +127,50 @@ export default function InvoiceManagementPage() {
   useEffect(() => {
     if (billingsData?.data) {
       let filtered: Billing[] = [...billingsData.data];
-      
+
       // Apply search term filter (search in client name, invoice number)
       if (searchTerm) {
-        filtered = filtered.filter((billing: Billing) => 
+        filtered = filtered.filter((billing: Billing) =>
           billing.clientInfo.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
           billing.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase())
         );
       }
-      
+
       // Apply payment method filter
       if (selectedPaymentMethod && selectedPaymentMethod !== "all") {
         filtered = filtered.filter((billing: Billing) => billing.paymentMethod === selectedPaymentMethod);
       }
-      
+
       // Apply item type filter
       if (selectedItemType !== "all") {
-        filtered = filtered.filter((billing: Billing) => 
+        filtered = filtered.filter((billing: Billing) =>
           billing.items.some((item: BillingItem) => item.itemType === selectedItemType)
         );
       }
-      
+
       // Apply date range filter
       if (startDate) {
         const startDateObj = new Date(startDate);
         startDateObj.setHours(0, 0, 0, 0); // Set to start of day
-        filtered = filtered.filter((billing: Billing) => 
+        filtered = filtered.filter((billing: Billing) =>
           new Date(billing.createdAt) >= startDateObj
         );
       }
-      
+
       if (endDate) {
         const endDateObj = new Date(endDate);
         endDateObj.setHours(23, 59, 59, 999); // Set to end of day
-        filtered = filtered.filter((billing: Billing) => 
+        filtered = filtered.filter((billing: Billing) =>
           new Date(billing.createdAt) <= endDateObj
         );
       }
-      
+
       setBillings(filtered);
     }
   }, [billingsData, searchTerm, selectedPaymentMethod, selectedItemType, startDate, endDate]);
 
   // Get unique clients for the client filter dropdown
-  const uniqueClients: ClientInfo[] = billingsData?.data ? 
+  const uniqueClients: ClientInfo[] = billingsData?.data ?
     Array.from(
       new Map(
         billingsData.data
@@ -177,17 +178,17 @@ export default function InvoiceManagementPage() {
           .map((b: Billing) => [b.clientId, b.clientInfo])
       ).values()
     ) as ClientInfo[] : [];
-  
+
   // Get unique payment methods for the payment method filter dropdown
-  const uniquePaymentMethods: string[] = billingsData?.data ? 
+  const uniquePaymentMethods: string[] = billingsData?.data ?
     billingsData.data
       .filter((b: Billing) => b.paymentMethod)
       .map((b: Billing) => b.paymentMethod)
       .filter((method: string, index: number, self: string[]) => self.indexOf(method) === index) : [];
-  
+
   // Ensure "Net Banking" is always available as an option
-  const paymentMethodsIncludingDefaults = uniquePaymentMethods.includes("Net Banking") 
-    ? uniquePaymentMethods 
+  const paymentMethodsIncludingDefaults = uniquePaymentMethods.includes("Net Banking")
+    ? uniquePaymentMethods
     : [...uniquePaymentMethods, "Net Banking"];
 
   // Get item type for display
@@ -230,13 +231,13 @@ export default function InvoiceManagementPage() {
     try {
       // Prepare invoice data
       const invoiceData = prepareInvoiceData(billing);
-      
+
       // Generate PDF from InvoiceUI component
       const invoiceElement = document.getElementById('invoice-to-pdf');
       if (invoiceElement) {
         // Convert invoice number to string for filename
         const invoiceNumberStr = invoiceData.invoiceNumber.toString();
-        
+
         const pdfOptions = {
           margin: 5,
           filename: `Invoice_${invoiceNumberStr}.pdf`,
@@ -244,11 +245,11 @@ export default function InvoiceManagementPage() {
           html2canvas: { scale: 1.5, useCORS: true },
           jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
         };
-        
+
         // Generate and download PDF automatically with timeout handling
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
-        
+
         try {
           await html2pdf().set(pdfOptions).from(invoiceElement).save();
           toast.success(`Invoice ${invoiceNumberStr} downloaded successfully`);
@@ -305,19 +306,19 @@ export default function InvoiceManagementPage() {
   const prepareInvoiceData = (billing: Billing): InvoiceData => {
     // Use the original invoice number as is
     const invoiceNumber = billing.invoiceNumber;
-    
+
     // Create a new object with the correct types
     const invoiceData: InvoiceData = {
       invoiceNumber: invoiceNumber, // Keep as string to preserve original value
-      date: new Date(billing.createdAt).toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
+      date: new Date(billing.createdAt).toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
       }),
-      time: new Date(billing.createdAt).toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
+      time: new Date(billing.createdAt).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
       }),
       client: billing.clientInfo,
       status: billing.paymentStatus,
@@ -340,7 +341,7 @@ export default function InvoiceManagementPage() {
       balance: billing.balance,
       paymentMethod: billing.paymentMethod
     };
-    
+
     return invoiceData;
   };
 
@@ -423,7 +424,7 @@ export default function InvoiceManagementPage() {
             </CardContent>
           </Card>
         </div>
-        
+
         <Card className="backdrop-blur-xl bg-background/95 border-border/50 shadow-xl">
           <CardHeader className="pb-6">
             <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-6">
@@ -588,15 +589,15 @@ export default function InvoiceManagementPage() {
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
-                                <Button 
-                                  variant="outline" 
+                                <Button
+                                  variant="outline"
                                   size="sm"
                                   onClick={() => viewInvoice(billing)}
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                <Button 
-                                  variant="outline" 
+                                <Button
+                                  variant="outline"
                                   size="sm"
                                   onClick={() => deleteBillingRecord(billing)}
                                 >
@@ -615,8 +616,8 @@ export default function InvoiceManagementPage() {
               {/* Mobile Card View */}
               <div className="lg:hidden space-y-4">
                 {currentItems.map((billing: Billing, index) => (
-                  <Card 
-                    key={billing._id} 
+                  <Card
+                    key={billing._id}
                     className="overflow-hidden border-border/50 hover:shadow-lg transition-all duration-300 bg-gradient-to-r from-background to-muted/20"
                     style={{ animationDelay: `${index * 0.1}s` }}
                   >
@@ -684,18 +685,18 @@ export default function InvoiceManagementPage() {
                             <p className="text-xs text-muted-foreground">Total Amount</p>
                           </div>
                           <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => viewInvoice(billing)}
                               className="rounded-lg"
                             >
                               <Eye className="mr-1 h-4 w-4" />
                               View
                             </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => deleteBillingRecord(billing)}
                               className="rounded-lg"
                             >
@@ -726,14 +727,14 @@ export default function InvoiceManagementPage() {
           </CardContent>
         </Card>
       </div>
-      
+
       {/* Invoice Modal */}
       {isInvoiceModalOpen && selectedBilling && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-lg p-6 max-w-4xl w-full my-8">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold">Invoice Details</h3>
-              <button 
+              <button
                 onClick={closeInvoiceModal}
                 className="text-gray-500 hover:text-gray-700"
                 title="Close"
@@ -743,7 +744,7 @@ export default function InvoiceManagementPage() {
                 </svg>
               </button>
             </div>
-            
+
             <div className="max-h-[70vh] overflow-y-auto">
               <InvoiceUI
                 invoiceData={prepareInvoiceData(selectedBilling)}
@@ -751,13 +752,13 @@ export default function InvoiceManagementPage() {
                 vendorProfile={vendorProfile}
                 taxRate={selectedBilling.taxRate}
                 isOrderSaved={selectedBilling.paymentStatus === "Paid"}
-                onEmailClick={() => {}}
-                onPrintClick={() => {}}
-                onDownloadClick={() => {}}
-                onRebookClick={() => {}}
+                onEmailClick={() => { }}
+                onPrintClick={() => { }}
+                onDownloadClick={() => { }}
+                onRebookClick={() => { }}
               />
             </div>
-            
+
             <div className="mt-4 flex justify-end gap-2">
               <Button variant="outline" onClick={() => downloadInvoice(selectedBilling)}>
                 <Download className="h-4 w-4 mr-2" />
@@ -768,9 +769,9 @@ export default function InvoiceManagementPage() {
           </div>
         </div>
       )}
-      
+
       {/* Hidden PDF generation area */}
-      <div className="hidden">
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
         {selectedBilling && (
           <div id="invoice-to-pdf">
             <InvoiceUI
@@ -779,10 +780,10 @@ export default function InvoiceManagementPage() {
               vendorProfile={vendorProfile}
               taxRate={selectedBilling.taxRate}
               isOrderSaved={selectedBilling.paymentStatus === "Paid"}
-              onEmailClick={() => {}}
-              onPrintClick={() => {}}
-              onDownloadClick={() => {}}
-              onRebookClick={() => {}}
+              onEmailClick={() => { }}
+              onPrintClick={() => { }}
+              onDownloadClick={() => { }}
+              onRebookClick={() => { }}
             />
           </div>
         )}
