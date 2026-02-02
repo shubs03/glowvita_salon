@@ -112,7 +112,7 @@ export function Step3_MultiServiceTimeSlot({
 }: Step3MultiServiceTimeSlotProps) {
   // RTK Query mutation hook
   const [getMultiServiceSlots, { data: slotsData, isLoading: isLoadingSlots, error: slotsError }] = useGetMultiServiceSlotsMutation();
-  
+
   const [selectedSlot, setSelectedSlot] = useState<MultiServiceSlot | null>(null);
   const [isLocking, setIsLocking] = useState(false);
   const [lockedSlot, setLockedSlot] = useState<{
@@ -200,11 +200,11 @@ export function Step3_MultiServiceTimeSlot({
       // Find the appointment ID from the lock token if possible, 
       // but the backend handleReleaseLock now supports appointmentId + lockToken
       // We should ideally have stored the appointmentId
-      
+
       await fetch('/api/booking/release-lock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           lockToken: lockedSlot.lockToken,
           appointmentId: (lockedSlot as any).appointmentId // Store this in the state
         })
@@ -258,7 +258,13 @@ export function Step3_MultiServiceTimeSlot({
         isWeddingService,
         // Client Info
         clientId: user?._id || user?.id || 'temp-client-id',
-        clientName: user ? `${user.firstName} ${user.lastName}` : 'Customer'
+        clientName: user ? `${user.firstName} ${user.lastName}` : 'Customer',
+        // Fee and Tax Information
+        platformFee: Math.round(platformFee || 0),
+        serviceTax: Math.round(serviceTax || 0),
+        taxRate: taxRate || 0,
+        couponCode: couponCode || null,
+        discountAmount: Math.round(discountAmount || 0)
       };
 
       const response = await fetch('/api/booking/lock', {
@@ -414,7 +420,7 @@ export function Step3_MultiServiceTimeSlot({
   return (
     <div className="w-full">
       <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
-      
+
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -473,14 +479,14 @@ export function Step3_MultiServiceTimeSlot({
             </Button>
           </div>
         </div>
-        
+
         <div id="date-scroller" className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar">
           {dates.map((date: Date) => {
             const isToday = date.toDateString() === new Date().toDateString();
             const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
             const isAvailable = isDateAvailable(date);
             const isSelected = selectedDate.toDateString() === date.toDateString();
-            
+
             return (
               <Button
                 key={date.toISOString()}
@@ -533,7 +539,7 @@ export function Step3_MultiServiceTimeSlot({
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {slots.map((slot: MultiServiceSlot, index: number) => {
                 const isSelected = selectedSlot?.startTime === slot.startTime;
-                
+
                 return (
                   <button
                     key={index}
@@ -556,7 +562,7 @@ export function Step3_MultiServiceTimeSlot({
                     <div className="font-semibold text-lg mb-2">
                       {slot.startTime} - {slot.endTime}
                     </div>
-                    
+
                     {/* Duration Info */}
                     <div className="text-sm text-gray-600 mb-3">
                       {slot.totalDuration} min total
