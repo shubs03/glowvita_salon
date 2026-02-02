@@ -11,27 +11,14 @@ import { toast } from 'sonner';
 import Image from 'next/image';
 import customerImage from '../../../public/images/web_registration.jpg';
 
-// Dynamically import mapbox-gl only on client side
-let mapboxgl: any = null;
-if (typeof window !== 'undefined') {
-  import('mapbox-gl').then((module) => {
-    mapboxgl = module.default;
-    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_API_KEY;
-  }).catch((err) => {
-    console.warn('Mapbox failed to load:', err);
-  });
-}
+import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '../../../../packages/config/config';
 
-interface MapboxFeature {
-  id: string;
-  place_name: string;
-  geometry: {
-    coordinates: [number, number];
-  };
-  context?: Array<{
-    id: string;
-    text: string;
-  }>;
+const rawApiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+const GOOGLE_MAPS_API_KEY = rawApiKey.toString().trim().replace(/['"“”]/g, '');
+
+interface GooglePlacesResult {
+  description: string;
+  place_id: string;
 }
 
 function ClientRegisterForm() {
@@ -65,10 +52,15 @@ function ClientRegisterForm() {
   // Map functionality states
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
+  const [searchResults, setSearchResults] = useState<GooglePlacesResult[]>([]);
+  const [authError, setAuthError] = useState(false);
+  const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
   const mapContainer = useRef<HTMLDivElement | null>(null);
-  const map = useRef<any | null>(null);
-  const marker = useRef<any | null>(null);
+  const map = useRef<google.maps.Map | null>(null);
+  const marker = useRef<google.maps.Marker | null>(null);
+  const geocoder = useRef<google.maps.Geocoder | null>(null);
+  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const placesService = useRef<google.maps.places.PlacesService | null>(null);
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
   
   // New state to track confirmed location
@@ -214,177 +206,253 @@ function ClientRegisterForm() {
     }
   };
 
-  // Initialize Map when modal opens
+  // Load Google Maps script
   useEffect(() => {
-    if (!isMapOpen || !mapboxgl || !process.env.NEXT_PUBLIC_MAPBOX_API_KEY) return;
+    if (!GOOGLE_MAPS_API_KEY) return;
 
-    const initMap = () => {
-      if (!mapContainer.current) return;
-
-      try {
-        mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_API_KEY;
-        if (map.current) {
-          map.current.remove();
-        }
-
-        map.current = new mapboxgl.Map({
-          container: mapContainer.current,
-          style: 'mapbox://styles/mapbox/streets-v11',
-          center: location ? [location.lng, location.lat] : [77.4126, 23.2599],
-          zoom: location ? 15 : 5,
-          attributionControl: false
-        });
-
-        if (marker.current) {
-          marker.current.remove();
-        }
-
-        marker.current = new mapboxgl.Marker({
-          draggable: true,
-          color: '#3B82F6'
-        })
-          .setLngLat(location ? [location.lng, location.lat] : [77.4126, 23.2599])
-          .addTo(map.current);
-
-        marker.current.on('dragend', () => {
-          const lngLat = marker.current!.getLngLat();
-          setLocation({ lat: lngLat.lat, lng: lngLat.lng });
-          fetchAddress([lngLat.lng, lngLat.lat]);
-        });
-
-        map.current.on('click', (e: any) => {
-          const { lng, lat } = e.lngLat;
-          setLocation({ lat, lng });
-          marker.current!.setLngLat([lng, lat]);
-          fetchAddress([lng, lat]);
-        });
-
-        map.current.on('load', () => {
-          setTimeout(() => {
-            if (map.current) {
-              map.current.resize();
-            }
-          }, 100);
-        });
-      } catch (error) {
-        console.error('Error initializing Mapbox:', error);
-      }
+    // Suppress Google Maps IntersectionObserver internal error
+    const originalError = console.error;
+    console.error = (...args) => {
+      if (typeof args[0] === 'string' && args[0].includes('IntersectionObserver')) return;
+      originalError.apply(console, args);
     };
 
-    const timeoutId = setTimeout(initMap, 100);
+    const checkGoogleMaps = () => {
+      if ((window as any).google?.maps) {
+        setIsGoogleMapsLoaded(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (checkGoogleMaps()) return;
+
+    const scriptId = 'google-maps-native-script';
+    const existingScript = document.getElementById(scriptId);
+    
+    if (existingScript) {
+      if (checkGoogleMaps()) return;
+      
+      const checkInterval = setInterval(() => {
+        if (checkGoogleMaps()) {
+          clearInterval(checkInterval);
+        }
+      }, 500);
+      return () => clearInterval(checkInterval);
+    }
+
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,drawing&v=weekly`;
+    script.async = true;
+    script.defer = true;
+    
+    (window as any).gm_authFailure = () => {
+      console.error("Google Maps API Key Authentication Failure - This usually means the API Key is invalid, has no billing, or is restricted incorrectly.");
+      toast.error("Google Maps Authentication Failed. Please check your API key.");
+      setAuthError(true);
+    };
+
+    script.onload = () => setIsGoogleMapsLoaded(true);
+    document.head.appendChild(script);
+
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
+
+  // Initialize Map when modal opens
+  useEffect(() => {
+    if (!isMapOpen || !isGoogleMapsLoaded || !GOOGLE_MAPS_API_KEY) return;
+
+    const initMap = () => {
+      if (!mapContainer.current || !window.google) return;
+
+      if (map.current) {
+        google.maps.event.clearInstanceListeners(map.current);
+      }
+
+      const center = location 
+        ? { lat: location.lat, lng: location.lng }
+        : { lat: 23.2599, lng: 77.4126 };
+
+      // Ensure container still exists and has height
+      if (mapContainer.current) {
+        const rect = mapContainer.current.getBoundingClientRect();
+        if (rect.height === 0) {
+          setTimeout(initMap, 200);
+          return;
+        }
+      } else {
+        return;
+      }
+
+      map.current = new google.maps.Map(mapContainer.current, {
+        center,
+        zoom: location ? 15 : 5,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: false,
+      });
+
+      geocoder.current = new google.maps.Geocoder();
+      autocompleteService.current = new google.maps.places.AutocompleteService();
+      placesService.current = new google.maps.places.PlacesService(map.current);
+
+      if (marker.current) {
+        marker.current.setMap(null);
+      }
+
+      marker.current = new google.maps.Marker({
+        position: center,
+        map: map.current,
+        draggable: true,
+        animation: google.maps.Animation.DROP,
+      });
+
+      marker.current.addListener('dragend', () => {
+        const position = marker.current!.getPosition();
+        if (position) {
+          setLocation({ lat: position.lat(), lng: position.lng() });
+          fetchAddress({ lat: position.lat(), lng: position.lng() });
+        }
+      });
+
+      map.current.addListener('click', (e: google.maps.MapMouseEvent) => {
+        if (!e.latLng) return;
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+        setLocation({ lat, lng });
+        if (marker.current) {
+          marker.current.setPosition({ lat, lng });
+        }
+        fetchAddress({ lat, lng });
+      });
+    };
+
+    const timeoutId = setTimeout(initMap, 500);
 
     return () => {
       clearTimeout(timeoutId);
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
       if (marker.current) {
-        marker.current.remove();
-        marker.current = null;
+        marker.current.setMap(null);
       }
     };
-  }, [isMapOpen, location]);
+  }, [isMapOpen, isGoogleMapsLoaded]);
 
-  // Resize map when modal is fully opened
-  useEffect(() => {
-    if (isMapOpen && map.current) {
-      setTimeout(() => {
-        if (map.current) {
-          map.current.resize();
-        }
-      }, 300);
-    }
-  }, [isMapOpen]);
-
-  // Search for locations using Mapbox Geocoding API
   const handleSearch = async (query: string) => {
-    if (!query || !mapboxgl || !process.env.NEXT_PUBLIC_MAPBOX_API_KEY) {
+    if (!query || !autocompleteService.current) {
       setSearchResults([]);
       return;
     }
-
+    
     try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-          query
-        )}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_API_KEY}&country=IN&types=place,locality,neighborhood,address`
+      autocompleteService.current.getPlacePredictions(
+        {
+          input: query,
+          componentRestrictions: { country: 'IN' },
+        },
+        (predictions, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setSearchResults(predictions.map(p => ({
+              description: p.description,
+              place_id: p.place_id,
+            })));
+          } else {
+            setSearchResults([]);
+          }
+        }
       );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setSearchResults(data.features || []);
     } catch (error) {
       console.error('Error searching locations:', error);
       setSearchResults([]);
     }
   };
 
-  // Fetch address from coordinates using reverse geocoding
-  const fetchAddress = async (coordinates: [number, number]) => {
-    if (!mapboxgl || !process.env.NEXT_PUBLIC_MAPBOX_API_KEY) return;
-
+  const fetchAddress = async (location: { lat: number; lng: number }) => {
+    if (!geocoder.current) return;
+    
     try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${coordinates[0]},${coordinates[1]}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_API_KEY}&types=place,locality,neighborhood,address`
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data.features && data.features.length > 0) {
-        const context = data.features[0].context || [];
-        const state = context.find((c: any) => c.id.includes('region'))?.text || '';
-        const city = context.find((c: any) => c.id.includes('place'))?.text || '';
-        const pincode = context.find((c: any) => c.id.includes('postcode'))?.text || '';
-
-        setState(state || '');
-        setCity(city || '');
-        setPincode(pincode || '');
-      }
+      geocoder.current.geocode({ location }, (results, status) => {
+        if (status === 'OK' && results && results.length > 0) {
+          const result = results[0];
+          
+          let state = '';
+          let city = '';
+          let pincode = '';
+          
+          result.address_components.forEach((component) => {
+            if (component.types.includes('administrative_area_level_1')) {
+              state = component.long_name;
+            }
+            if (component.types.includes('locality')) {
+              city = component.long_name;
+            }
+            if (component.types.includes('postal_code')) {
+              pincode = component.long_name;
+            }
+          });
+          
+          setState(state || '');
+          setCity(city || '');
+          setPincode(pincode || '');
+        }
+      });
     } catch (error) {
       console.error('Error fetching address:', error);
     }
   };
 
-  // Handle search result selection
-  const handleSearchResultSelect = (result: MapboxFeature) => {
-    const coordinates = result.geometry.coordinates;
-    const newLocation = { lat: coordinates[1], lng: coordinates[0] };
+  const handleSearchResultSelect = (result: GooglePlacesResult) => {
+    if (!placesService.current) return;
 
-    setLocation(newLocation);
+    placesService.current.getDetails(
+      {
+        placeId: result.place_id,
+        fields: ['geometry', 'address_components'],
+      },
+      (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          const newLocation = { lat, lng };
 
-    // Update state, city, and pincode based on the selected location
-    const context = result.context || [];
-    const state = context.find((c: any) => c.id.includes('region'))?.text || '';
-    const city = context.find((c: any) => c.id.includes('place'))?.text || '';
-    const pincode = context.find((c: any) => c.id.includes('postcode'))?.text || '';
+          setLocation(newLocation);
 
-    setState(state || '');
-    setCity(city || '');
-    setPincode(pincode || '');
+          let state = '';
+          let city = '';
+          let pincode = '';
 
-    if (map.current) {
-      map.current.setCenter(coordinates);
-      map.current.setZoom(15);
-      setTimeout(() => {
-        if (map.current) {
-          map.current.resize();
+          place.address_components?.forEach((component) => {
+            if (component.types.includes('administrative_area_level_1')) {
+              state = component.long_name;
+            }
+            if (component.types.includes('locality')) {
+              city = component.long_name;
+            }
+            if (component.types.includes('postal_code')) {
+              pincode = component.long_name;
+            }
+          });
+          
+          setState(state || '');
+          setCity(city || '');
+          setPincode(pincode || '');
+          
+          if (map.current) {
+            map.current.setCenter({ lat, lng });
+            map.current.setZoom(15);
+          }
+          
+          if (marker.current) {
+            marker.current.setPosition({ lat, lng });
+          }
+          
+          setSearchResults([]);
+          setSearchQuery('');
         }
-      }, 100);
-    }
-
-    if (marker.current) {
-      marker.current.setLngLat(coordinates);
-    }
-
-    setSearchResults([]);
-    setSearchQuery('');
+      }
+    );
   };
 
   return (
@@ -694,76 +762,90 @@ function ClientRegisterForm() {
 
       {/* Map Modal */}
       {isMapOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-lg w-full max-w-3xl max-h-[80vh] overflow-hidden flex flex-col">
-            <div className="p-4 border-b">
-              <h3 className="text-lg font-semibold">Select Location</h3>
-              <p className="text-sm text-gray-500">Search for a location or click on the map</p>
-            </div>
+        <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+          <DialogContent className="sm:max-w-5xl h-[85vh] p-0 overflow-hidden flex flex-col border-none shadow-2xl rounded-3xl">
+            <DialogHeader className="p-6 bg-gradient-to-r from-primary/10 to-transparent border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <DialogTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">Find Your Salon</DialogTitle>
+                  <DialogDescription className="text-slate-500 font-medium">
+                    Search for your area and pin your exact location for accurate home service mapping.
+                  </DialogDescription>
+                </div>
+              </div>
+            </DialogHeader>
             
-            <div className="p-4 space-y-3 flex-1 overflow-auto">
-              <div className="relative">
-                <input
-                  placeholder="Search for a location"
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    handleSearch(e.target.value);
-                  }}
-                  className="w-full h-11 p-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+            <div className="flex-1 flex flex-col relative overflow-hidden">
+              {/* Floating Search Bar with Glassmorphism */}
+              <div className="absolute top-6 left-6 right-6 z-[100] max-w-md">
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
+                    <MapIcon className="h-5 w-5" />
+                  </div>
+                  <Input
+                    placeholder="Where are you located?"
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      handleSearch(e.target.value);
+                    }}
+                    className="w-full h-14 pl-12 pr-6 rounded-2xl border-none shadow-2xl bg-white/90 backdrop-blur-xl text-lg font-medium ring-1 ring-slate-200 focus:ring-2 focus:ring-primary transition-all"
+                  />
+                  {searchResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-3 bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] max-h-[350px] overflow-y-auto overflow-x-hidden p-2 z-[110] animate-in slide-in-from-top-2 duration-200">
+                      {searchResults.map((result) => (
+                        <div
+                          key={result.place_id}
+                          className="group flex items-start gap-3 p-4 hover:bg-primary/5 cursor-pointer rounded-xl transition-all border-b border-slate-50 last:border-0"
+                          onClick={() => {
+                            handleSearchResultSelect(result);
+                            setSearchQuery('');
+                            setSearchResults([]);
+                          }}
+                        >
+                          <div className="mt-0.5 p-2 rounded-full bg-slate-100 group-hover:bg-primary/10 text-slate-500 group-hover:text-primary transition-colors">
+                            <MapPin className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-slate-800 group-hover:text-primary truncate transition-colors font-headline">
+                              {result.description}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Map Container */}
+              <div className="flex-1 relative bg-slate-100">
+                <div 
+                  ref={mapContainer} 
+                  className="w-full h-full"
                 />
-                {searchResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 z-50 border rounded-md bg-white shadow-lg max-h-48 overflow-y-auto mt-1">
-                    {searchResults.map((result) => (
-                      <div
-                        key={result.id}
-                        className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0 text-sm"
-                        onClick={() => {
-                          handleSearchResultSelect(result);
-                          setSearchQuery('');
-                          setSearchResults([]);
-                        }}
-                      >
-                        <div className="font-medium">{result.place_name}</div>
+                
+                {authError && (
+                  <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6 z-[200]">
+                    <div className="bg-white rounded-3xl p-8 shadow-2xl max-w-md text-center border border-red-100">
+                      <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+                        <MapPin className="h-8 w-8" />
                       </div>
-                    ))}
+                      <h3 className="text-xl font-bold text-slate-900 mb-2">Map Connection Lost</h3>
+                      <p className="text-slate-500 text-sm mb-6">
+                        We're having trouble connecting to Google Maps. Please check your connection or reload the page.
+                      </p>
+                      <Button 
+                        onClick={() => window.location.reload()}
+                        className="w-full rounded-xl bg-red-600 hover:bg-red-700 h-12 text-lg font-headline"
+                      >
+                        Reload Page
+                      </Button>
+                    </div>
                   </div>
                 )}
-              </div>
-              
-              {/* Show warning if location is selected but city/pincode are missing */}
-              {location && (!city || !pincode) && (
-                <div className="text-sm text-red-500 bg-red-50 p-2 rounded">
-                  Please wait for the city and pincode to be automatically populated, or select a more specific location.
-                </div>
-              )}
-              
-              {location && (
-                <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                  Selected: {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
-                </div>
-              )}
-              
-              <div 
-                ref={mapContainer} 
-                className="w-full h-64 rounded-lg overflow-hidden border"
-              />
-            </div>
-            
-            <div className="p-4 border-t flex justify-end space-x-2">
-              <Button variant="outline" onClick={() => setIsMapOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={() => {
-                  // Check if location, city, and pincode are all populated
-                  if (location && city && pincode) {
-                    // Set the confirmed location only when all fields are populated
-                    setConfirmedLocation(location);
-                    setIsMapOpen(false);
-                  } else {
-                    toast.error('Please select a location and wait for city and pincode to be populated.');
-                  }
+
+                {!isGoogleMapsLoaded && !authError && (
                 }}
                 disabled={!location || !city || !pincode}
               >

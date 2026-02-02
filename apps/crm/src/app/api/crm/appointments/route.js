@@ -445,6 +445,28 @@ export const POST = withSubscriptionCheck(async (req) => {
             serviceItems // Include the processed service items
         };
 
+        // Check for conflicts before creating
+        const { checkMultiServiceConflict } = await import('../../../../../../../packages/lib/src/modules/scheduling/ConflictChecker');
+        const conflict = await checkMultiServiceConflict(
+            vendorId,
+            appointmentData.date,
+            serviceItems
+        );
+
+        if (conflict) {
+            return NextResponse.json(
+                { 
+                    message: "The selected professional is already booked at this time.",
+                    conflict: {
+                        startTime: conflict.startTime,
+                        endTime: conflict.endTime,
+                        staffName: conflict.staffName
+                    }
+                },
+                { status: 409 }
+            );
+        }
+
         const newAppointment = await AppointmentModel.create(appointmentData);
         const populatedAppointment = await AppointmentModel.findById(newAppointment._id)
             .populate('staff', 'fullName position')
@@ -519,6 +541,48 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
             const discount = updateData.discount !== undefined ? Number(updateData.discount) : existingAppointment.discount || 0;
             const tax = updateData.tax !== undefined ? Number(updateData.tax) : existingAppointment.tax || 0;
             updateData.totalAmount = Math.max(0, amount - discount + tax);
+        }
+
+        // Check for conflicts if staff, date, or time is being updated
+        if (updateData.staff || updateData.date || updateData.startTime || updateData.endTime || updateData.serviceItems) {
+            const { checkMultiServiceConflict } = await import('../../../../../../../packages/lib/src/modules/scheduling/ConflictChecker');
+            
+            const checkDate = updateData.date ? new Date(updateData.date) : existingAppointment.date;
+            
+            // Re-construct service items for verification
+            let verificationItems = updateData.serviceItems || existingAppointment.serviceItems;
+            
+            // If it's a legacy single-service update that doesn't use serviceItems array
+            if (!updateData.serviceItems && (updateData.staff || updateData.startTime || updateData.endTime)) {
+                verificationItems = [{
+                    staff: updateData.staff || existingAppointment.staff,
+                    startTime: updateData.startTime || existingAppointment.startTime,
+                    endTime: updateData.endTime || existingAppointment.endTime,
+                    service: updateData.service || existingAppointment.service
+                }];
+            }
+
+            const conflict = await checkMultiServiceConflict(
+                vendorId,
+                checkDate,
+                verificationItems,
+                appointmentId // Exclude current appointment from check
+            );
+
+            if (conflict) {
+                return NextResponse.json(
+                    { 
+                        success: false,
+                        message: "The update would cause a conflict with another appointment.",
+                        conflict: {
+                            startTime: conflict.startTime,
+                            endTime: conflict.endTime,
+                            staffName: conflict.staffName
+                        }
+                    },
+                    { status: 409 }
+                );
+            }
         }
 
         // Update the appointment

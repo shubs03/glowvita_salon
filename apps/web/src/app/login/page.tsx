@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
+import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
@@ -11,16 +11,10 @@ import Image from 'next/image';
 import customerImage from '../../../public/images/web_login.jpg';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 
-// Dynamically import mapbox-gl only on client side
-let mapboxgl: any = null;
-if (typeof window !== 'undefined') {
-  import('mapbox-gl').then((module) => {
-    mapboxgl = module.default;
-    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_API_KEY;
-  }).catch((err) => {
-    console.warn('Mapbox failed to load:', err);
-  });
-}
+import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '../../../../packages/config/config';
+
+const rawApiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+const GOOGLE_MAPS_API_KEY = rawApiKey.toString().trim().replace(/['"“”]/g, '');
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -34,9 +28,14 @@ export default function LoginPage() {
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [authError, setAuthError] = useState(false);
+  const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
   const mapContainer = useRef<HTMLDivElement | null>(null);
-  const map = useRef<any | null>(null);
-  const marker = useRef<any | null>(null);
+  const map = useRef<google.maps.Map | null>(null);
+  const marker = useRef<google.maps.Marker | null>(null);
+  const geocoder = useRef<google.maps.Geocoder | null>(null);
+  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const placesService = useRef<google.maps.places.PlacesService | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,136 +55,194 @@ export default function LoginPage() {
     }
   };
 
-  // Initialize Map when modal opens
+  // Load Google Maps script
   useEffect(() => {
-    if (!isMapOpen || !mapboxgl) return;
+    if (!GOOGLE_MAPS_API_KEY) return;
 
-    const initMap = () => {
-      if (!mapContainer.current) return;
-
-      try {
-        mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_API_KEY;
-        if (map.current) {
-          map.current.remove();
-        }
-
-        map.current = new mapboxgl.Map({
-          container: mapContainer.current,
-          style: 'mapbox://styles/mapbox/streets-v11',
-          center: location ? [location.lng, location.lat] : [77.4126, 23.2599],
-          zoom: location ? 15 : 5,
-          attributionControl: false
-        });
-
-        if (marker.current) {
-          marker.current.remove();
-        }
-
-        marker.current = new mapboxgl.Marker({
-          draggable: true,
-          color: '#3B82F6'
-        })
-          .setLngLat(location ? [location.lng, location.lat] : [77.4126, 23.2599])
-          .addTo(map.current);
-
-        marker.current.on('dragend', () => {
-          const lngLat = marker.current!.getLngLat();
-          setLocation({ lat: lngLat.lat, lng: lngLat.lng });
-        });
-
-        map.current.on('click', (e: any) => {
-          const { lng, lat } = e.lngLat;
-          setLocation({ lat, lng });
-          marker.current!.setLngLat([lng, lat]);
-        });
-
-        map.current.on('load', () => {
-          setTimeout(() => {
-            if (map.current) {
-              map.current.resize();
-            }
-          }, 100);
-        });
-      } catch (error) {
-        console.error('Error initializing Mapbox:', error);
-      }
+    // Suppress Google Maps IntersectionObserver internal error
+    const originalError = console.error;
+    console.error = (...args) => {
+      if (typeof args[0] === 'string' && args[0].includes('IntersectionObserver')) return;
+      originalError.apply(console, args);
     };
 
-    const timeoutId = setTimeout(initMap, 100);
+    const checkGoogleMaps = () => {
+      if ((window as any).google?.maps) {
+        setIsGoogleMapsLoaded(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (checkGoogleMaps()) return;
+
+    const scriptId = 'google-maps-native-script';
+    const existingScript = document.getElementById(scriptId);
+    
+    if (existingScript) {
+      if (checkGoogleMaps()) return;
+      
+      const checkInterval = setInterval(() => {
+        if (checkGoogleMaps()) {
+          clearInterval(checkInterval);
+        }
+      }, 500);
+      return () => clearInterval(checkInterval);
+    }
+
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,drawing&v=weekly`;
+    script.async = true;
+    script.defer = true;
+    
+    (window as any).gm_authFailure = () => {
+      console.error("Google Maps API Key Authentication Failure - This usually means the API Key is invalid, has no billing, or is restricted incorrectly.");
+      toast.error("Google Maps Authentication Failed. Please check your API key.");
+      setAuthError(true);
+    };
+
+    script.onload = () => setIsGoogleMapsLoaded(true);
+    document.head.appendChild(script);
+
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
+
+  // Initialize Map when modal opens
+  useEffect(() => {
+    if (!isMapOpen || !isGoogleMapsLoaded || !GOOGLE_MAPS_API_KEY) return;
+
+    const initMap = () => {
+      if (!mapContainer.current || !window.google) return;
+
+      if (map.current) {
+        google.maps.event.clearInstanceListeners(map.current);
+      }
+
+      const center = location 
+        ? { lat: location.lat, lng: location.lng }
+        : { lat: 23.2599, lng: 77.4126 };
+
+      // Ensure container still exists and has height
+      if (mapContainer.current) {
+        const rect = mapContainer.current.getBoundingClientRect();
+        if (rect.height === 0) {
+          setTimeout(initMap, 200);
+          return;
+        }
+      } else {
+        return;
+      }
+
+      map.current = new google.maps.Map(mapContainer.current, {
+        center,
+        zoom: location ? 15 : 5,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: false,
+      });
+
+      geocoder.current = new google.maps.Geocoder();
+      autocompleteService.current = new google.maps.places.AutocompleteService();
+      placesService.current = new google.maps.places.PlacesService(map.current);
+
+      if (marker.current) {
+        marker.current.setMap(null);
+      }
+
+      marker.current = new google.maps.Marker({
+        position: center,
+        map: map.current,
+        draggable: true,
+        animation: google.maps.Animation.DROP,
+      });
+
+      marker.current.addListener('dragend', () => {
+        const position = marker.current!.getPosition();
+        if (position) {
+          setLocation({ lat: position.lat(), lng: position.lng() });
+        }
+      });
+
+      map.current.addListener('click', (e: google.maps.MapMouseEvent) => {
+        if (!e.latLng) return;
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+        setLocation({ lat, lng });
+        if (marker.current) {
+          marker.current.setPosition({ lat, lng });
+        }
+      });
+    };
+
+    const timeoutId = setTimeout(initMap, 500);
 
     return () => {
       clearTimeout(timeoutId);
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-      }
       if (marker.current) {
-        marker.current.remove();
-        marker.current = null;
+        marker.current.setMap(null);
       }
     };
-  }, [isMapOpen, location]);
+  }, [isMapOpen, isGoogleMapsLoaded]);
 
-  // Resize map when modal is fully opened
-  useEffect(() => {
-    if (isMapOpen && map.current) {
-      setTimeout(() => {
-        if (map.current) {
-          map.current.resize();
-        }
-      }, 300);
-    }
-  }, [isMapOpen]);
-
-  // Search for locations using Mapbox Geocoding API
   const handleSearch = async (query: string) => {
-    if (!query || !mapboxgl || !process.env.NEXT_PUBLIC_MAPBOX_API_KEY) {
+    if (!query || !autocompleteService.current) {
       setSearchResults([]);
       return;
     }
-
+    
     try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-          query
-        )}.json?access_token=${process.env.NEXT_PUBLIC_MAPBOX_API_KEY}&country=IN&types=place,locality,neighborhood,address`
+      autocompleteService.current.getPlacePredictions(
+        {
+          input: query,
+          componentRestrictions: { country: 'IN' },
+        },
+        (predictions, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setSearchResults(predictions);
+          } else {
+            setSearchResults([]);
+          }
+        }
       );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setSearchResults(data.features || []);
     } catch (error) {
       console.error('Error searching locations:', error);
       setSearchResults([]);
     }
   };
 
-  // Handle search result selection
   const handleSearchResultSelect = (result: any) => {
-    const coordinates = result.geometry.coordinates;
-    const newLocation = { lat: coordinates[1], lng: coordinates[0] };
+    if (!placesService.current) return;
 
-    setLocation(newLocation);
+    placesService.current.getDetails(
+      {
+        placeId: result.place_id,
+        fields: ['geometry', 'formatted_address'],
+      },
+      (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          const newLocation = { lat, lng };
 
-    if (map.current) {
-      map.current.setCenter(coordinates);
-      map.current.setZoom(15);
-      setTimeout(() => {
-        if (map.current) {
-          map.current.resize();
+          setLocation(newLocation);
+          
+          if (map.current) {
+            map.current.setCenter({ lat, lng });
+            map.current.setZoom(15);
+          }
+          
+          if (marker.current) {
+            marker.current.setPosition({ lat, lng });
+          }
+          
+          setSearchResults([]);
+          setSearchQuery('');
         }
-      }, 100);
-    }
-
-    if (marker.current) {
-      marker.current.setLngLat(coordinates);
-    }
-
-    setSearchResults([]);
-    setSearchQuery('');
+      }
+    );
   };
 
   return (
@@ -393,13 +450,13 @@ export default function LoginPage() {
               {searchResults.length > 0 && (
                 <div className="absolute top-full left-0 right-0 z-50 border rounded-md bg-white shadow-lg max-h-48 overflow-y-auto mt-1">
                   {searchResults.map((result) => (
-                    <div
-                      key={result.id}
-                      className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0 text-sm"
-                      onClick={() => handleSearchResultSelect(result)}
-                    >
-                      <div className="font-medium">{result.place_name}</div>
-                    </div>
+                      <div
+                        key={result.place_id}
+                        className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0 text-sm"
+                        onClick={() => handleSearchResultSelect(result)}
+                      >
+                        <div className="font-medium">{result.description}</div>
+                      </div>
                   ))}
                 </div>
               )}
@@ -417,11 +474,28 @@ export default function LoginPage() {
                 className="w-full h-full"
               />
               
-              {!mapboxgl && (
+              {authError && (
+                <div className="absolute inset-0 bg-red-50 flex flex-col items-center justify-center p-4 text-center z-10">
+                  <p className="text-red-600 font-bold mb-2">Google Maps Error</p>
+                  <p className="text-xs text-red-500 mb-4 px-4 overflow-hidden text-ellipsis whitespace-nowrap max-w-full">
+                    InvalidKeyMapError: The API key is invalid or rejected.
+                  </p>
+                  <button 
+                    onClick={() => window.location.reload()}
+                    className="text-xs bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700 font-semibold"
+                  >
+                    Reload Page
+                  </button>
+                  <p className="text-[10px] text-gray-400 mt-4 max-w-xs">
+                    Check billing, Maps JavaScript API enablement, and API restrictions in Google Cloud Console.
+                  </p>
+                </div>
+              )}
+
+              {!isGoogleMapsLoaded && !authError && (
                 <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
                   <div className="text-center">
-                    <p className="text-gray-600">Map unavailable</p>
-                    <p className="text-sm text-gray-500">Mapbox library not loaded</p>
+                    <p className="text-gray-600">Loading map...</p>
                   </div>
                 </div>
               )}

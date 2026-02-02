@@ -41,10 +41,10 @@ import {
   Rows,
   Search,
 } from "lucide-react";
-import mapboxgl from "mapbox-gl";
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import "mapbox-gl/dist/mapbox-gl.css";
-import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
+import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from "../../../../../packages/config/config";
+
+const rawApiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+const GOOGLE_MAPS_API_KEY = rawApiKey.toString().trim().replace(/['"“”]/g, '');
 import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
 import { selectRootState } from "@repo/store/store";
 import {
@@ -61,14 +61,7 @@ import {
   useUpdateGeoFenceMutation,
   useDeleteGeoFenceMutation,
 } from "@repo/store/api";
-import { NEXT_PUBLIC_MAPBOX_API_KEY } from "../../../../../packages/config/config";
-
-// Set the Mapbox access token
-if (NEXT_PUBLIC_MAPBOX_API_KEY) {
-  mapboxgl.accessToken = NEXT_PUBLIC_MAPBOX_API_KEY;
-} else {
-  console.error("Mapbox API key is not defined");
-}
+// Mapbox access token setter removed as we are using Google Maps
 
 interface Fence {
   _id?: string;
@@ -80,9 +73,8 @@ interface Fence {
 }
 
 interface SearchResult {
-  id: string;
-  place_name: string;
-  center: [number, number];
+  description: string;
+  place_id: string;
 }
 
 interface GeoFencingState {
@@ -126,223 +118,284 @@ export default function GeoFencingPage() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [showSearchResults, setShowSearchResults] = useState<boolean>(false);
 
+  const [authError, setAuthError] = useState(false);
+  const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
   const mapContainer = useRef<HTMLDivElement | null>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const draw = useRef<MapboxDraw | null>(null);
+  const map = useRef<google.maps.Map | null>(null);
+  const drawingManager = useRef<google.maps.drawing.DrawingManager | null>(null);
+  const currentPolygon = useRef<google.maps.Polygon | null>(null);
   const viewMapContainer = useRef<HTMLDivElement | null>(null);
-  const viewMap = useRef<mapboxgl.Map | null>(null);
+  const viewMap = useRef<google.maps.Map | null>(null);
+  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const placesService = useRef<google.maps.places.PlacesService | null>(null);
 
-  // Search for locations using Mapbox Geocoding API
+  // Load Google Maps script
+  useEffect(() => {
+    if (!GOOGLE_MAPS_API_KEY) return;
+
+    // Suppress Google Maps IntersectionObserver internal error
+    const originalError = console.error;
+    console.error = (...args) => {
+      if (typeof args[0] === 'string' && args[0].includes('IntersectionObserver')) return;
+      originalError.apply(console, args);
+    };
+
+    const checkGoogleMaps = () => {
+      if ((window as any).google?.maps) {
+        setIsGoogleMapsLoaded(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (checkGoogleMaps()) return;
+
+    const scriptId = 'google-maps-native-script';
+    const existingScript = document.getElementById(scriptId);
+    
+    if (existingScript) {
+      if (checkGoogleMaps()) return;
+      
+      const checkInterval = setInterval(() => {
+        if (checkGoogleMaps()) {
+          clearInterval(checkInterval);
+        }
+      }, 500);
+      return () => clearInterval(checkInterval);
+    }
+
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,drawing,geometry&v=weekly`;
+    script.async = true;
+    script.defer = true;
+    
+    (window as any).gm_authFailure = () => {
+      console.error("Google Maps API Key Authentication Failure - This usually means the API Key is invalid, has no billing, or is restricted incorrectly.");
+      toast.error("Google Maps Authentication Failed. Please check your API key.");
+      setAuthError(true);
+    };
+
+    script.onload = () => setIsGoogleMapsLoaded(true);
+    document.head.appendChild(script);
+
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
+
   const searchLocation = async (query: string) => {
-    if (!query.trim() || !NEXT_PUBLIC_MAPBOX_API_KEY) return;
+    if (!query.trim() || !autocompleteService.current) return;
 
     try {
-      const response = await fetch(
-        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(
-          query
-        )}.json?access_token=${NEXT_PUBLIC_MAPBOX_API_KEY}&limit=5`
+      autocompleteService.current.getPlacePredictions(
+        {
+          input: query,
+          componentRestrictions: { country: 'IN' },
+        },
+        (predictions, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setSearchResults(predictions.map(p => ({
+              description: p.description,
+              place_id: p.place_id,
+            })));
+            setShowSearchResults(true);
+          } else {
+            setSearchResults([]);
+          }
+        }
       );
-      const data = await response.json();
-
-      if (data.features) {
-        const results: SearchResult[] = data.features.map((feature: any) => ({
-          id: feature.id,
-          place_name: feature.place_name,
-          center: feature.center,
-        }));
-        setSearchResults(results);
-        setShowSearchResults(true);
-      }
     } catch (error) {
       console.error("Error searching location:", error);
-      toast.error("Failed to search location", {
-        description: "Please try again.",
-      });
     }
   };
 
-  // Handle search result selection
   const handleSearchResultSelect = (result: SearchResult) => {
-    if (map.current) {
-      map.current.flyTo({
-        center: result.center,
-        zoom: 14,
-        duration: 1000,
-      });
-    }
+    if (!placesService.current || !map.current) return;
+
+    placesService.current.getDetails(
+      {
+        placeId: result.place_id,
+        fields: ['geometry'],
+      },
+      (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+          map.current?.setCenter(place.geometry.location);
+          map.current?.setZoom(14);
+        }
+      }
+    );
     setShowSearchResults(false);
-    setSearchQuery(result.place_name);
+    setSearchQuery(result.description);
   };
 
   // Cleanup map function
   const cleanupMap = useCallback(() => {
-    if (map.current) {
-      map.current.remove();
-      map.current = null;
+    if (currentPolygon.current) {
+      currentPolygon.current.setMap(null);
+      currentPolygon.current = null;
     }
-    if (draw.current) {
-      draw.current = null;
+    if (drawingManager.current) {
+      drawingManager.current.setMap(null);
+      drawingManager.current = null;
     }
+    map.current = null;
   }, []);
 
   // Initialize the main map
   const initializeMap = useCallback(() => {
-    if (!mapContainer.current || !NEXT_PUBLIC_MAPBOX_API_KEY) {
-      console.error("Map container or API key not found");
+    if (!mapContainer.current || !window.google) {
       return;
     }
 
     cleanupMap();
 
     try {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: "mapbox://styles/mapbox/streets-v12",
-        center: [-74.5, 40],
+      // Ensure container exists and has height
+      if (mapContainer.current) {
+        const rect = mapContainer.current.getBoundingClientRect();
+        if (rect.height === 0) {
+          setTimeout(initializeMap, 200);
+          return;
+        }
+      } else {
+        return;
+      }
+
+      const center = { lat: 23.2599, lng: 77.4126 };
+      map.current = new google.maps.Map(mapContainer.current, {
+        center,
         zoom: 9,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: false,
       });
 
-      draw.current = new MapboxDraw({
-        displayControlsDefault: false,
-        controls: {
-          polygon: true,
-          trash: true,
+      autocompleteService.current = new google.maps.places.AutocompleteService();
+      placesService.current = new google.maps.places.PlacesService(map.current);
+
+      drawingManager.current = new google.maps.drawing.DrawingManager({
+        drawingMode: google.maps.drawing.OverlayType.POLYGON,
+        drawingControl: true,
+        drawingControlOptions: {
+          position: google.maps.ControlPosition.TOP_CENTER,
+          drawingModes: [google.maps.drawing.OverlayType.POLYGON],
         },
-        defaultMode: "draw_polygon",
+        polygonOptions: {
+          fillColor: "#088",
+          fillOpacity: 0.3,
+          strokeWeight: 2,
+          strokeColor: "#088",
+          editable: true,
+          draggable: true,
+        },
       });
 
-      map.current.addControl(draw.current);
-      map.current.addControl(new mapboxgl.NavigationControl(), "top-right");
+      drawingManager.current.setMap(map.current);
 
-      const updateArea = (e: any) => {
-        const data = draw.current?.getAll();
-        if (data && data.features.length > 0) {
-          console.log("Drawn feature:", data.features[0]);
-        }
-      };
-
-      map.current.on("draw.create", updateArea);
-      map.current.on("draw.delete", updateArea);
-      map.current.on("draw.update", updateArea);
-
-      map.current.on("load", () => {
-        if (isEditMode && selectedFence && draw.current) {
-          try {
-            const featureCollection: GeoJSON.FeatureCollection = {
-              type: "FeatureCollection",
-              features: [selectedFence.coordinates],
-            };
-            draw.current.set(featureCollection);
-            const coordinates = selectedFence.coordinates.geometry.coordinates[0];
-            const bounds = coordinates.reduce(
-              (bounds, coord) => bounds.extend(coord as [number, number]),
-              new mapboxgl.LngLatBounds(coordinates[0] as [number, number], coordinates[0] as [number, number])
-            );
-            map.current?.fitBounds(bounds, { padding: 50 });
-          } catch (error) {
-            console.error("Error loading existing fence:", error);
-            toast.error("Failed to load existing fence", {
-              description: "Please try again.",
-            });
+      google.maps.event.addListener(drawingManager.current, 'overlaycomplete', (event: any) => {
+        if (event.type === google.maps.drawing.OverlayType.POLYGON) {
+          if (currentPolygon.current) {
+            currentPolygon.current.setMap(null);
           }
+          currentPolygon.current = event.overlay;
+          drawingManager.current?.setDrawingMode(null);
         }
       });
+
+      if (isEditMode && selectedFence) {
+        try {
+          const coords = selectedFence.coordinates.geometry.coordinates[0].map(c => ({
+            lat: c[1],
+            lng: c[0]
+          }));
+          
+          // Close the polygon if it's not closed in GeoJSON
+          if (coords.length > 0 && (coords[0].lat !== coords[coords.length-1].lat || coords[0].lng !== coords[coords.length-1].lng)) {
+             // Google Maps auto-closes
+          }
+
+          currentPolygon.current = new google.maps.Polygon({
+            paths: coords,
+            fillColor: "#088",
+            fillOpacity: 0.3,
+            strokeWeight: 2,
+            strokeColor: "#088",
+            editable: true,
+            draggable: true,
+            map: map.current
+          });
+
+          const bounds = new google.maps.LatLngBounds();
+          coords.forEach(c => bounds.extend(c));
+          map.current.fitBounds(bounds);
+          drawingManager.current.setDrawingMode(null);
+        } catch (error) {
+          console.error("Error loading existing fence:", error);
+        }
+      }
     } catch (error) {
       console.error("Error initializing map:", error);
-      toast.error("Failed to initialize map", {
-        description: "Please try again.",
-      });
     }
   }, [isEditMode, selectedFence, cleanupMap]);
 
   // Initialize view map for the view modal
   const initializeViewMap = useCallback(() => {
-    if (!viewMapContainer.current || !NEXT_PUBLIC_MAPBOX_API_KEY || !selectedFence) {
+    if (!viewMapContainer.current || !window.google || !selectedFence) {
       return;
     }
 
-    if (viewMap.current) {
-      viewMap.current.remove();
-    }
-
     try {
-      viewMap.current = new mapboxgl.Map({
-        container: viewMapContainer.current,
-        style: "mapbox://styles/mapbox/streets-v12",
-        center: [-74.5, 40],
-        zoom: 9,
+      const coords = selectedFence.coordinates.geometry.coordinates[0].map(c => ({
+        lat: c[1],
+        lng: c[0]
+      }));
+
+      viewMap.current = new google.maps.Map(viewMapContainer.current, {
+        center: coords[0],
+        zoom: 12,
+        mapTypeControl: true,
+        streetViewControl: true,
       });
 
-      viewMap.current.addControl(new mapboxgl.NavigationControl(), "top-right");
-
-      viewMap.current.on("load", () => {
-        if (!viewMap.current || !selectedFence) return;
-
-        viewMap.current.addSource("fence-polygon", {
-          type: "geojson",
-          data: selectedFence.coordinates,
-        });
-
-        viewMap.current.addLayer({
-          id: "fence-fill",
-          type: "fill",
-          source: "fence-polygon",
-          paint: {
-            "fill-color": "#088",
-            "fill-opacity": 0.3,
-          },
-        });
-
-        viewMap.current.addLayer({
-          id: "fence-stroke",
-          type: "line",
-          source: "fence-polygon",
-          paint: {
-            "line-color": "#088",
-            "line-width": 2,
-          },
-        });
-
-        const coordinates = selectedFence.coordinates.geometry.coordinates[0];
-        const bounds = coordinates.reduce(
-          (bounds, coord) => bounds.extend(coord as [number, number]),
-          new mapboxgl.LngLatBounds(coordinates[0] as [number, number], coordinates[0] as [number, number])
-        );
-
-        viewMap.current.fitBounds(bounds, { padding: 50 });
+      new google.maps.Polygon({
+        paths: coords,
+        fillColor: "#088",
+        fillOpacity: 0.3,
+        strokeWeight: 2,
+        strokeColor: "#088",
+        map: viewMap.current
       });
+
+      const bounds = new google.maps.LatLngBounds();
+      coords.forEach(c => bounds.extend(c));
+      viewMap.current.fitBounds(bounds);
     } catch (error) {
       console.error("Error initializing view map:", error);
-      toast.error("Failed to initialize view map", {
-        description: "Please try again.",
-      });
     }
   }, [selectedFence]);
 
   // Effect for main map initialization
   useEffect(() => {
-    if (isModalOpen) {
+    if (isModalOpen && isGoogleMapsLoaded) {
       const timer = setTimeout(() => {
         initializeMap();
-      }, 100);
+      }, 500);
       return () => clearTimeout(timer);
     } else {
       cleanupMap();
     }
-  }, [isModalOpen, initializeMap, cleanupMap]);
+  }, [isModalOpen, isGoogleMapsLoaded, initializeMap, cleanupMap]);
 
   // Effect for view map initialization
   useEffect(() => {
-    if (isViewModalOpen) {
+    if (isViewModalOpen && isGoogleMapsLoaded) {
       const timer = setTimeout(() => {
         initializeViewMap();
-      }, 100);
+      }, 500);
       return () => clearTimeout(timer);
-    } else if (viewMap.current) {
-      viewMap.current.remove();
-      viewMap.current = null;
     }
-  }, [isViewModalOpen, initializeViewMap]);
+  }, [isViewModalOpen, isGoogleMapsLoaded, initializeViewMap]);
 
   // Cleanup on component unmount
   useEffect(() => {
@@ -399,12 +452,30 @@ export default function GeoFencingPage() {
     const fenceName = formData.get("fenceName") as string;
     const cityName = formData.get("cityName") as string;
 
-    const drawnData = draw.current?.getAll();
-    if (!drawnData || drawnData.features.length === 0) {
+    if (!currentPolygon.current) {
       toast.error("Please draw a fence on the map");
       return;
     }
-    const coordinates = drawnData.features[0] as GeoJSON.Feature<GeoJSON.Polygon>;
+
+    const path = currentPolygon.current.getPath();
+    const coords: number[][] = [];
+    for (let i = 0; i < path.getLength(); i++) {
+      const p = path.getAt(i);
+      coords.push([p.lng(), p.lat()]);
+    }
+    // GeoJSON polygon must be closed
+    if (coords.length > 0) {
+      coords.push([coords[0][0], coords[0][1]]);
+    }
+
+    const coordinates: GeoJSON.Feature<GeoJSON.Polygon> = {
+      type: "Feature",
+      geometry: {
+        type: "Polygon",
+        coordinates: [coords],
+      },
+      properties: {},
+    };
 
     const fenceData = {
       name: fenceName,
@@ -696,7 +767,7 @@ export default function GeoFencingPage() {
                           className="px-3 py-2 hover:bg-muted cursor-pointer text-sm"
                           onClick={() => handleSearchResultSelect(result)}
                         >
-                          {result.place_name}
+                          {result.description}
                         </div>
                       ))}
                     </div>
@@ -706,10 +777,40 @@ export default function GeoFencingPage() {
 
               <div className="space-y-2">
                 <Label>Draw Fence</Label>
-                <div ref={mapContainer} className="h-96 w-full rounded-md border" style={{ minHeight: "400px" }} />
-                {!NEXT_PUBLIC_MAPBOX_API_KEY && (
+                <div className="relative border rounded-md overflow-hidden">
+                  <div ref={mapContainer} className="h-96 w-full rounded-md border" style={{ minHeight: "400px" }} />
+                  
+                  {authError && (
+                    <div className="absolute inset-0 bg-red-50 flex flex-col items-center justify-center p-4 text-center z-10 transition-all">
+                      <p className="text-red-600 font-bold mb-2 text-lg">Google Maps Error</p>
+                      <p className="text-sm text-red-500 mb-4 px-6 overflow-hidden text-ellipsis whitespace-nowrap max-w-full">
+                        InvalidKeyMapError: The API key is invalid or rejected.
+                      </p>
+                      <button 
+                        onClick={() => window.location.reload()}
+                        className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 font-semibold shadow-md"
+                        type="button"
+                      >
+                        Reload Page
+                      </button>
+                      <div className="mt-6 text-xs text-gray-500 max-w-md text-left bg-white p-4 rounded-md border border-red-100 italic">
+                        <p className="font-bold text-red-800 mb-1 not-italic">Common fixes:</p>
+                        <p>1. Ensure Billing is enabled in Google Cloud Console.</p>
+                        <p>2. Enable "Maps JavaScript API" and "Places API (New)".</p>
+                        <p>3. Check API restrictions (Referrers should allow this domain).</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {!isGoogleMapsLoaded && !authError && (
+                    <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
+                      <p className="text-gray-600 animate-pulse">Initializing Google Maps...</p>
+                    </div>
+                  )}
+                </div>
+                {!GOOGLE_MAPS_API_KEY && (
                   <p className="text-sm text-destructive">
-                    Mapbox API key is not configured. Please set NEXT_PUBLIC_MAPBOX_API_KEY in your environment variables.
+                    Google Maps API key is not configured. Please set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in your environment variables.
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
@@ -758,9 +859,9 @@ export default function GeoFencingPage() {
                 className="h-64 w-full bg-secondary rounded-md border"
                 style={{ minHeight: "300px" }}
               />
-              {!NEXT_PUBLIC_MAPBOX_API_KEY && (
+              {!GOOGLE_MAPS_API_KEY && (
                 <p className="text-sm text-destructive mt-2">
-                  Mapbox API key is not configured. Please set NEXT_PUBLIC_MAPBOX_API_KEY in your environment variables.
+                  Google Maps API key is not configured. Please set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in your environment variables.
                 </p>
               )}
             </div>

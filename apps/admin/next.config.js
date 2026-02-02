@@ -83,6 +83,7 @@ const nextConfig = {
 
   env: {
     NEXT_PUBLIC_MAPBOX_API_KEY: process.env.MAPBOX_API_KEY,
+    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
   }
 };
 

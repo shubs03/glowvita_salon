@@ -690,7 +690,7 @@ function BookingPageContent() {
     if (isAuthenticated && user) {
       setCustomerInfo({
         name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || 'Guest User',
-        phone: user.phone || 'Not provided'
+        phone: user.mobileNo || user.phone || 'Not provided'
       });
     }
   }, [isAuthenticated, user]);
@@ -1561,7 +1561,7 @@ function BookingPageContent() {
             clientName: `${user?.firstName} ${user?.lastName}`,
             customerDetails: {
               name: `${user?.firstName} ${user?.lastName}`,
-              phone: user?.phone
+              phone: user?.mobileNo || user?.phone
             }
           }).unwrap();
 
@@ -1601,8 +1601,8 @@ function BookingPageContent() {
             customerDetails: {
               userId: user?._id || user?.id,
               name: `${user?.firstName} ${user?.lastName}`,
-              phone: user?.phone,
-              email: user?.email
+              phone: user?.mobileNo || user?.phone,
+              email: user?.emailAddress || user?.email
             },
             paymentDetails: {
               method: paymentMethod,
@@ -1639,6 +1639,8 @@ function BookingPageContent() {
             endTime: endTime,
             clientId: user?._id || user?.id,
             clientName: `${user?.firstName} ${user?.lastName}`,
+            clientEmail: user?.emailAddress || user?.email,
+            clientPhone: user?.mobileNo || user?.phone,
             staffName: staffName,
             isHomeService: finalIsHomeService,
             isWeddingService: isWeddingService,
@@ -1760,6 +1762,8 @@ function BookingPageContent() {
           endTime: calculateEndTime(selectedTime, convertDurationToMinutes(primaryService.duration)),
           clientId: user?._id || user?.id,
           clientName: `${user?.firstName} ${user?.lastName}`,
+          clientEmail: user?.emailAddress || user?.email,
+          clientPhone: user?.mobileNo || user?.phone,
           staffName: selectedStaff?.name || "Any Professional",
           isHomeService: true,
           isWeddingService: isWeddingService,
@@ -2210,7 +2214,9 @@ function BookingPageContent() {
           const appointmentData = {
             vendorId: vendorId, // Use the fixed vendorId
             client: clientId, // Use the fixed client ID
-            clientName: clientName, // In a real implementation, this would come from user authentication
+            clientName: clientName,
+            clientEmail: user?.emailAddress || user?.email || '',
+            clientPhone: user?.mobileNo || user?.phone || '',
             service: primarySchedule.service.id,
             serviceName: primarySchedule.service.name,
             staff: staffId, // This can now be null for "Any Professional"
@@ -2886,7 +2892,7 @@ function BookingPageContent() {
               }}
               platformFee={priceBreakdown?.platformFee}
               serviceTax={priceBreakdown?.serviceTax}
-              taxRate={priceBreakdown?.taxRate}
+              taxRate={priceBreakdown?.taxFeeSettings?.serviceTax}
               couponCode={appliedOffer?.code || offerCode}
               discountAmount={priceBreakdown?.discountAmount || 0}
               user={user}
@@ -2922,7 +2928,7 @@ function BookingPageContent() {
               }}
               platformFee={priceBreakdown?.platformFee}
               serviceTax={priceBreakdown?.serviceTax}
-              taxRate={priceBreakdown?.taxRate}
+              taxRate={priceBreakdown?.taxFeeSettings?.serviceTax}
               couponCode={appliedOffer?.code || offerCode}
               discountAmount={priceBreakdown?.discountAmount || 0}
               user={user}

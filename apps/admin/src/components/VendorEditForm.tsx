@@ -15,13 +15,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@repo/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
 import { Badge } from '@repo/ui/badge';
-import { Trash2, UploadCloud, CheckCircle2, Users, Eye, EyeOff, Map, X, FileText, Clock, RefreshCw } from 'lucide-react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../packages/config/config';
+import { Trash2, UploadCloud, CheckCircle2, Users, Eye, EyeOff, Map, X, FileText, Clock, RefreshCw, MapPinIcon } from 'lucide-react';
+import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '../../../../packages/config/config';
 
-// Mapbox access token
-const MAPBOX_TOKEN = NEXT_PUBLIC_MAPBOX_API_KEY;
+// Google Maps API key
+const rawApiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+const GOOGLE_MAPS_API_KEY = rawApiKey.toString().trim().replace(/['"“”]/g, '');
 
 interface SubscriptionPlan {
   _id: string;
@@ -118,16 +117,9 @@ interface Client {
   avatar?: string;
 }
 
-interface MapboxFeature {
-  id: string;
-  place_name: string;
-  geometry: {
-    coordinates: [number, number];
-  };
-  context?: Array<{
-    id: string;
-    text: string;
-  }>;
+interface GooglePlacesResult {
+  description: string;
+  place_id: string;
 }
 
 // Define props for the tab components
@@ -145,167 +137,321 @@ interface TabProps {
 const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxChange, errors, setFormData, isEditMode, onSave, isSaving }: TabProps) => {
   const [isMapOpen, setIsMapOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
+  const [searchResults, setSearchResults] = useState<GooglePlacesResult[]>([]);
+  const [authError, setAuthError] = useState(false);
+  const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
   const mapContainer = useRef<HTMLDivElement | null>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const marker = useRef<mapboxgl.Marker | null>(null);
+  const map = useRef<google.maps.Map | null>(null);
+  const marker = useRef<google.maps.Marker | null>(null);
+  const geocoder = useRef<google.maps.Geocoder | null>(null);
+  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const placesService = useRef<google.maps.places.PlacesService | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
 
-  // Initialize Mapbox when modal opens
+  // Load Google Maps script
   useEffect(() => {
-    if (!isMapOpen || !MAPBOX_TOKEN) return;
+    if (!GOOGLE_MAPS_API_KEY) return;
+
+    // Suppress Google Maps IntersectionObserver internal error
+    const originalError = console.error;
+    console.error = (...args) => {
+      if (typeof args[0] === 'string' && args[0].includes('IntersectionObserver')) return;
+      originalError.apply(console, args);
+    };
+
+    const checkGoogleMaps = () => {
+      if ((window as any).google?.maps) {
+        setIsGoogleMapsLoaded(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (checkGoogleMaps()) return;
+
+    const scriptId = 'google-maps-native-script';
+    const existingScript = document.getElementById(scriptId);
+    
+    if (existingScript) {
+      if (checkGoogleMaps()) return;
+      
+      const checkInterval = setInterval(() => {
+        if (checkGoogleMaps()) {
+          clearInterval(checkInterval);
+        }
+      }, 500);
+      return () => clearInterval(checkInterval);
+    }
+    
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,drawing,geometry&v=weekly`;
+    script.async = true;
+    script.defer = true;
+    
+    (window as any).gm_authFailure = () => {
+      console.error("Google Maps API Key Authentication Failure - This usually means the API Key is invalid, has no billing, or is restricted incorrectly.");
+      toast.error("Google Maps Authentication Failed. Please check your API key.");
+      setAuthError(true);
+    };
+
+    script.onload = () => setIsGoogleMapsLoaded(true);
+    document.head.appendChild(script);
+
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
+
+  // Initialize map when modal opens
+  useEffect(() => {
+    if (!isMapOpen || !isGoogleMapsLoaded || !GOOGLE_MAPS_API_KEY) return;
 
     const initMap = () => {
-      if (!mapContainer.current) return;
-
-      mapboxgl.accessToken = MAPBOX_TOKEN;
+      if (!mapContainer.current || !window.google) return;
 
       // Clean up existing map
-      if (map.current) map.current.remove();
+      if (map.current) {
+        google.maps.event.clearInstanceListeners(map.current);
+      }
+
+      const center = formData.location 
+        ? { lat: formData.location.lat, lng: formData.location.lng }
+        : { lat: 23.2599, lng: 77.4126 }; // Center of India
+
+      // Ensure container still exists and has height
+      if (mapContainer.current) {
+        const rect = mapContainer.current.getBoundingClientRect();
+        if (rect.height === 0) {
+          setTimeout(initMap, 200);
+          return;
+        }
+      } else {
+        return;
+      }
 
       // Create new map
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v11',
-        center: formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599],
-        zoom: formData.location ? 15 : 5
+      map.current = new google.maps.Map(mapContainer.current, {
+        center,
+        zoom: formData.location ? 15 : 5,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: false,
       });
 
+      // Initialize services
+      geocoder.current = new google.maps.Geocoder();
+      autocompleteService.current = new google.maps.places.AutocompleteService();
+      placesService.current = new google.maps.places.PlacesService(map.current);
+
       // Remove existing marker
-      if (marker.current) marker.current.remove();
+      if (marker.current) {
+        marker.current.setMap(null);
+      }
 
       // Add marker if location exists
       if (formData.location) {
-        marker.current = new mapboxgl.Marker({ draggable: true, color: '#3B82F6' })
-          .setLngLat([formData.location.lng, formData.location.lat])
-          .addTo(map.current);
+        marker.current = new google.maps.Marker({
+          position: center,
+          map: map.current,
+          draggable: true,
+          animation: google.maps.Animation.DROP,
+        });
 
-        marker.current.on('dragend', () => {
-          const lngLat = marker.current!.getLngLat();
-          setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
-          fetchAddress([lngLat.lng, lngLat.lat]);
+        marker.current.addListener('dragend', () => {
+          const position = marker.current!.getPosition();
+          if (position) {
+            setFormData(prev => ({ 
+              ...prev, 
+              location: { lat: position.lat(), lng: position.lng() } 
+            }));
+            fetchAddress({ lat: position.lat(), lng: position.lng() });
+          }
         });
       }
 
       // Handle map clicks
-      map.current.on('click', (e: mapboxgl.MapLayerMouseEvent) => {
-        const { lng, lat } = e.lngLat;
+      map.current.addListener('click', (e: google.maps.MapMouseEvent) => {
+        if (!e.latLng) return;
+
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
         setFormData(prev => ({ ...prev, location: { lat, lng } }));
 
         // Remove existing marker and add new one
-        if (marker.current) marker.current.remove();
-        if (map.current) {
-          marker.current = new mapboxgl.Marker({ draggable: true, color: '#3B82F6' })
-            .setLngLat([lng, lat])
-            .addTo(map.current);
+        if (marker.current) {
+          marker.current.setMap(null);
+        }
 
-          marker.current.on('dragend', () => {
-            const lngLat = marker.current!.getLngLat();
-            setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
-            fetchAddress([lngLat.lng, lngLat.lat]);
+        if (map.current) {
+          marker.current = new google.maps.Marker({
+            position: { lat, lng },
+            map: map.current,
+            draggable: true,
+            animation: google.maps.Animation.DROP,
+          });
+
+          marker.current.addListener('dragend', () => {
+            const position = marker.current!.getPosition();
+            if (position) {
+              setFormData(prev => ({ 
+                ...prev, 
+                location: { lat: position.lat(), lng: position.lng() } 
+              }));
+              fetchAddress({ lat: position.lat(), lng: position.lng() });
+            }
           });
         }
 
-        fetchAddress([lng, lat]);
+        fetchAddress({ lat, lng });
       });
-
-      // Resize map after load
-      map.current.on('load', () => setTimeout(() => map.current?.resize(), 100));
     };
 
-    // Initialize with a small delay to ensure DOM is ready
-    const timeoutId = setTimeout(initMap, 100);
+    // Initialize with a larger delay to ensure DOM is ready and modal animation finished
+    const timeoutId = setTimeout(initMap, 500);
 
     // Cleanup function
     return () => {
       clearTimeout(timeoutId);
-      if (map.current) map.current.remove();
-      if (marker.current) marker.current.remove();
+      if (marker.current) {
+        marker.current.setMap(null);
+      }
     };
-  }, [isMapOpen]);
+  }, [isMapOpen, isGoogleMapsLoaded]);
 
-  // Resize map when modal is fully opened
-  useEffect(() => {
-    if (isMapOpen && map.current) {
-      setTimeout(() => {
-        if (map.current) {
-          map.current.resize();
-        }
-      }, 300);
-    }
-  }, [isMapOpen]);
-
-  // Search for locations using Mapbox Geocoding API
+  // Search for locations using Google Places Autocomplete
   const handleSearch = async (query: string) => {
-    if (!query || !MAPBOX_TOKEN) {
+    if (!query || !autocompleteService.current) {
       setSearchResults([]);
       return;
     }
 
     try {
-      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${MAPBOX_TOKEN}&country=IN&types=place,locality,neighborhood,address`);
-      const data = await response.json();
-      setSearchResults(data.features || []);
+      autocompleteService.current.getPlacePredictions(
+        {
+          input: query,
+          componentRestrictions: { country: 'IN' },
+        },
+        (predictions, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setSearchResults(predictions.map(p => ({
+              description: p.description,
+              place_id: p.place_id,
+            })));
+          } else {
+            setSearchResults([]);
+          }
+        }
+      );
     } catch (error) {
       console.error('Error searching locations:', error);
       setSearchResults([]);
     }
   };
 
-  // Fetch address details based on coordinates
-  const fetchAddress = async (coordinates: [number, number]) => {
-    if (!MAPBOX_TOKEN) return;
+  // Fetch address details based on coordinates using reverse geocoding
+  const fetchAddress = async (location: { lat: number; lng: number }) => {
+    if (!geocoder.current) return;
 
     try {
-      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${coordinates[0]},${coordinates[1]}.json?access_token=${MAPBOX_TOKEN}&types=place,locality,neighborhood,address`);
-      const data = await response.json();
+      geocoder.current.geocode({ location }, (results, status) => {
+        if (status === 'OK' && results && results.length > 0) {
+          const result = results[0];
+          const address = result.formatted_address;
 
-      if (data.features && data.features.length > 0) {
-        const address = data.features[0].place_name;
-        const context = data.features[0].context || [];
-        const state = context.find((c: any) => c.id.includes('region'))?.text || '';
-        const city = context.find((c: any) => c.id.includes('place'))?.text || '';
+          let state = '';
+          let city = '';
 
-        setFormData(prev => ({
-          ...prev,
-          address,
-          state: state || prev.state,
-          city: city || prev.city
-        }));
-      }
+          result.address_components.forEach((component) => {
+            if (component.types.includes('administrative_area_level_1')) {
+              state = component.long_name;
+            }
+            if (component.types.includes('locality')) {
+              city = component.long_name;
+            }
+          });
+
+          setFormData(prev => ({
+            ...prev,
+            address,
+            state: state || prev.state,
+            city: city || prev.city
+          }));
+        }
+      });
     } catch (error) {
       console.error('Error fetching address:', error);
     }
   };
 
   // Handle selection of a search result
-  const handleSearchResultSelect = (result: any) => {
-    const coordinates = result.geometry.coordinates;
-    const newLocation = { lat: coordinates[1], lng: coordinates[0] };
-    const state = result.context?.find((c: any) => c.id.includes('region'))?.text;
+  const handleSearchResultSelect = (result: GooglePlacesResult) => {
+    if (!placesService.current) return;
 
-    setFormData(prev => ({
-      ...prev,
-      location: newLocation,
-      address: result.place_name,
-      state: state || prev.state,
-      city: result.context?.find((c: any) => c.id.includes('place'))?.text || prev.city,
-    }));
+    placesService.current.getDetails(
+      {
+        placeId: result.place_id,
+        fields: ['geometry', 'formatted_address', 'address_components'],
+      },
+      (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          const newLocation = { lat, lng };
 
-    // Update map
-    if (map.current) {
-      map.current.setCenter(coordinates);
-      map.current.setZoom(15);
-      setTimeout(() => map.current?.resize(), 100);
-    }
+          let state = '';
+          let city = '';
 
-    // Update marker
-    if (marker.current) marker.current.setLngLat(coordinates);
+          place.address_components?.forEach((component) => {
+            if (component.types.includes('administrative_area_level_1')) {
+              state = component.long_name;
+            }
+            if (component.types.includes('locality')) {
+              city = component.long_name;
+            }
+          });
 
-    // Clear search
-    setSearchResults([]);
-    setSearchQuery('');
+          setFormData(prev => ({
+            ...prev,
+            location: newLocation,
+            address: place.formatted_address || result.description,
+            state: state || prev.state,
+            city: city || prev.city,
+          }));
+
+          if (map.current) {
+            map.current.setCenter({ lat, lng });
+            map.current.setZoom(15);
+          }
+
+          if (marker.current) {
+            marker.current.setPosition({ lat, lng });
+          } else if (map.current) {
+            marker.current = new google.maps.Marker({
+              position: { lat, lng },
+              map: map.current,
+              draggable: true,
+              animation: google.maps.Animation.DROP,
+            });
+
+            marker.current.addListener('dragend', () => {
+              const position = marker.current!.getPosition();
+              if (position) {
+                setFormData(prev => ({ 
+                  ...prev, 
+                  location: { lat: position.lat(), lng: position.lng() } 
+                }));
+                fetchAddress({ lat: position.lat(), lng: position.lng() });
+              }
+            });
+          }
+
+          setSearchResults([]);
+          setSearchQuery('');
+        }
+      }
+    );
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -593,78 +739,130 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
 
       {/* Map Modal */}
       <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Select Location</DialogTitle>
-            <DialogDescription>
-              Search for a location, click on the map, or drag the marker to select the exact position.
-            </DialogDescription>
+        <DialogContent className="sm:max-w-5xl h-[85vh] p-0 overflow-hidden flex flex-col border-none shadow-2xl">
+          <DialogHeader className="p-6 bg-gradient-to-r from-primary/10 to-transparent border-b">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">Select Precise Location</DialogTitle>
+                <DialogDescription className="text-slate-500 font-medium font-headline">
+                  Search for your business area and refine by dragging the marker.
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="space-y-4 flex flex-col max-h-[50vh] overflow-y-auto">
-            <div className="relative">
-              <Input
-                placeholder="Search for a location (e.g., Mumbai, Delhi, Bangalore)"
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  handleSearch(e.target.value);
-                }}
-                className="w-full"
-              />
-              {searchResults.length > 0 && (
-                <div className="absolute top-full left-0 right-0 z-50 border rounded-md bg-white shadow-lg max-h-48 overflow-y-auto mt-1">
-                  {searchResults.map((result) => (
-                    <div
-                      key={result.id}
-                      className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0 text-sm"
-                      onClick={() => handleSearchResultSelect(result)}
-                    >
-                      <div className="font-medium">{result.place_name}</div>
-                    </div>
-                  ))}
+          
+          <div className="flex-1 flex flex-col relative overflow-hidden">
+            {/* Floating Search Bar with Glassmorphism */}
+            <div className="absolute top-6 left-6 right-6 z-[100] max-w-md">
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
+                  <Map className="h-5 w-5" />
                 </div>
-              )}
+                <Input
+                  placeholder="Enter city, area, or landmark..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    handleSearch(e.target.value);
+                  }}
+                  className="w-full h-14 pl-12 pr-6 rounded-2xl border-none shadow-2xl bg-white/90 backdrop-blur-xl text-lg font-medium ring-1 ring-slate-200 focus:ring-2 focus:ring-primary transition-all"
+                />
+                {searchResults.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-3 bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] max-h-[350px] overflow-y-auto overflow-x-hidden p-2 z-[110] animate-in slide-in-from-top-2 duration-200">
+                    {searchResults.map((result) => (
+                      <div
+                        key={result.place_id}
+                        className="group flex items-start gap-3 p-4 hover:bg-primary/5 cursor-pointer rounded-xl transition-all border-b border-slate-50 last:border-0"
+                        onClick={() => handleSearchResultSelect(result)}
+                      >
+                        <div className="mt-0.5 p-2 rounded-full bg-slate-100 group-hover:bg-primary/10 text-slate-500 group-hover:text-primary transition-colors">
+                          <MapPinIcon className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-slate-800 group-hover:text-primary truncate transition-colors font-headline">
+                            {result.description}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {formData.location && (
-              <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                <strong>Selected Location:</strong> {formData.location?.lat.toFixed(6)}, {formData.location?.lng.toFixed(6)}
-              </div>
-            )}
-
-            <div className="relative border rounded-lg overflow-hidden" style={{ height: '300px' }}>
-              <div
-                ref={mapContainer}
+            {/* Map Container */}
+            <div className="flex-1 relative bg-slate-100">
+              <div 
+                ref={mapContainer} 
                 className="w-full h-full"
               />
-
-              {!MAPBOX_TOKEN && (
-                <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
-                  <div className="text-center">
-                    <p className="text-gray-600">Map unavailable</p>
-                    <p className="text-sm text-gray-500">Mapbox API key not configured</p>
+              <div className="absolute bottom-6 left-6 z-50">
+                 <div className="bg-white/90 backdrop-blur-md px-4 py-3 rounded-2xl shadow-xl border border-white/20 flex items-center gap-3">
+                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                    <span className="text-sm font-bold text-slate-700 font-headline uppercase tracking-wider">Live Mapper</span>
+                 </div>
+              </div>
+              
+              {authError && (
+                <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6 z-[200]">
+                  <div className="bg-white rounded-3xl p-8 shadow-2xl max-w-md text-center border border-red-100">
+                    <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+                      <MapPin className="h-8 w-8" />
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-900 mb-2 font-headline">Google Maps Key Rejected</h3>
+                    <p className="text-slate-500 text-sm mb-6">
+                      The API key is invalid or rejected. Please check billing and project restrictions.
+                    </p>
+                    <Button 
+                      onClick={() => window.location.reload()}
+                      className="w-full rounded-xl bg-red-600 hover:bg-red-700 h-12 text-lg font-headline"
+                    >
+                      Reload Interface
+                    </Button>
                   </div>
                 </div>
               )}
-            </div>
 
-            <div className="text-xs text-gray-500 space-y-1">
-              <p>• Click anywhere on the map to place the marker</p>
-              <p>• Drag the marker to adjust the location</p>
-              <p>• Use the search box to find specific places</p>
+              {!isGoogleMapsLoaded && !authError && (
+                <div className="absolute inset-0 bg-slate-50 flex flex-col items-center justify-center z-[150]">
+                  <div className="relative">
+                     <div className="h-24 w-24 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
+                     <div className="absolute inset-0 flex items-center justify-center">
+                        <Map className="h-8 w-8 text-primary/40" />
+                     </div>
+                  </div>
+                  <p className="mt-6 text-lg font-bold text-slate-800 tracking-tight font-headline">Synchronizing Maps...</p>
+                </div>
+              )}
             </div>
           </div>
-
-          <DialogFooter className="mt-4">
-            <Button type="button" variant="outline" onClick={() => setIsMapOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={() => setIsMapOpen(false)}
-            >
-              Confirm Location
-            </Button>
+          
+          <DialogFooter className="p-6 bg-slate-50 border-t flex flex-row items-center justify-between gap-4">
+             <div className="flex items-center gap-4">
+                {formData.location && (
+                  <div className="hidden sm:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm transition-all hover:shadow-md">
+                     <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+                        <CheckCircle2 className="h-4 w-4" />
+                     </div>
+                     <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter font-headline">Coords Selected</div>
+                     <div className="text-xs font-mono font-bold text-slate-800">
+                       {formData.location.lat.toFixed(4)}, {formData.location.lng.toFixed(4)}
+                     </div>
+                  </div>
+                )}
+             </div>
+             <div className="flex items-center gap-3">
+              <Button variant="ghost" onClick={() => setIsMapOpen(false)} className="rounded-xl h-12 px-6 font-bold text-slate-600 hover:bg-slate-200 transition-all font-headline">
+                Dismiss
+              </Button>
+              <Button 
+                onClick={() => setIsMapOpen(false)} 
+                disabled={!formData.location}
+                className="rounded-xl h-12 px-8 font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-headline"
+              >
+                Verify & Select Position
+              </Button>
+             </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

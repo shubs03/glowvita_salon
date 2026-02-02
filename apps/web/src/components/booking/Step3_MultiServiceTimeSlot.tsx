@@ -192,6 +192,17 @@ export function Step3_MultiServiceTimeSlot({
     fetchMultiServiceSlots();
   }, [fetchMultiServiceSlots]);
 
+  // [NEW] Auto-refresh slots every 10 seconds to improve real-time feel
+  useEffect(() => {
+    if (!vendorId || !selectedDate || !isAssignmentsValid) return;
+
+    const refreshInterval = setInterval(() => {
+      fetchMultiServiceSlots();
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [vendorId, selectedDate, isAssignmentsValid, fetchMultiServiceSlots]);
+
   // Release lock manually
   const handleReleaseLock = async () => {
     if (!lockedSlot) return;
@@ -242,23 +253,43 @@ export function Step3_MultiServiceTimeSlot({
         startTime: slot.startTime,
         endTime: slot.endTime,
         isMultiService: true,
-        serviceItems: slot.sequence.map(item => ({
-          service: item.serviceId,
-          serviceName: item.serviceName,
-          staff: item.staffId,
-          staffName: item.staffName,
-          startTime: item.startTime,
-          endTime: item.endTime,
-          duration: item.duration,
-          amount: 0 // Will be calculated by backend or next step
-        })),
+        serviceItems: slot.sequence.map(item => {
+          const service = selectedServices?.find(s => s.id === item.serviceId);
+          const serviceAmount = service ? (service.discountedPrice || service.price || 0) : 0;
+          return {
+            service: item.serviceId,
+            serviceName: item.serviceName,
+            staff: item.staffId,
+            staffName: item.staffName,
+            startTime: item.startTime,
+            endTime: item.endTime,
+            duration: item.duration,
+            amount: Number(serviceAmount)
+          };
+        }),
         isHomeService,
         location: homeServiceLocation,
         duration: slot.totalDuration,
+        amount: slot.sequence.reduce((sum, item) => {
+          const service = selectedServices?.find(s => s.id === item.serviceId);
+          return sum + (service ? Number(service.discountedPrice || service.price || 0) : 0);
+        }, 0),
+        totalAmount: slot.sequence.reduce((sum, item) => {
+          const service = selectedServices?.find(s => s.id === item.serviceId);
+          return sum + (service ? Number(service.discountedPrice || service.price || 0) : 0);
+        }, 0),
         isWeddingService,
         // Client Info
         clientId: user?._id || user?.id || 'temp-client-id',
-        clientName: user ? `${user.firstName} ${user.lastName}` : 'Customer'
+        clientName: user ? `${user.firstName} ${user.lastName}` : 'Customer',
+        clientEmail: user?.emailAddress || user?.email || '',
+        clientPhone: user?.mobileNo || user?.phone || '',
+        // Financials (if provided)
+        platformFee: Math.round(platformFee || 0),
+        serviceTax: Math.round(serviceTax || 0),
+        taxRate: taxRate,
+        couponCode,
+        discountAmount: Math.round(discountAmount || 0)
       };
 
       const response = await fetch('/api/booking/lock', {
@@ -292,6 +323,9 @@ export function Step3_MultiServiceTimeSlot({
     } catch (error: any) {
       console.error('Lock acquisition failed:', error);
       toast.error(error.message || 'Failed to reserve time slot. Please try another.');
+      
+      // [NEW] Refresh slots immediately to get updated availability
+      await fetchMultiServiceSlots();
     } finally {
       setIsLocking(false);
     }
