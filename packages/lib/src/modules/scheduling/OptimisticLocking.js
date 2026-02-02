@@ -62,55 +62,74 @@ function generateLockKey(vendorId, staffId, date, timeSlot) {
 export async function acquireLock(params) {
   try {
     // Handle both old signature (individual params) and new signature (object param)
-    let vendorId, staffId, date, timeSlot, ttl = LOCK_TTL;
+    let vendorId, staffId, date, startTime, duration, ttl = LOCK_TTL;
 
     if (typeof params === 'object' && params !== null) {
       // New signature with object parameter
-      vendorId = params.vendorId || params.packageId; // For wedding packages, use packageId as vendorId
+      vendorId = params.vendorId || params.packageId;
       staffId = params.staffId;
       date = params.date;
-      timeSlot = params.startTime; // Using startTime as the timeSlot
+      startTime = params.startTime;
+      duration = params.duration;
       ttl = params.ttl || LOCK_TTL;
     } else {
-      // Old signature with individual parameters
+      // Old signature
       vendorId = params;
       staffId = arguments[1];
       date = arguments[2];
-      timeSlot = arguments[3];
+      startTime = arguments[3];
       ttl = arguments[4] || LOCK_TTL;
+      // Duration not available in old signature, we'll estimate or just check start time
     }
 
-    const lockKey = generateLockKey(vendorId, staffId, date, timeSlot);
+    // [CRITICAL] DATABASE-BACKED CONFLICT DETECTION
+    // Instead of just checking in-memory, we MUST check for overlapping appointments in the DB
+    // This handles distributed environments (multiple server instances)
+    const { checkMultiServiceConflict, checkStaffConflict } = await import('./ConflictChecker.js');
+    
+    let conflict = null;
+    if (params.serviceItems && params.serviceItems.length > 0) {
+      conflict = await checkMultiServiceConflict(vendorId, date, params.serviceItems);
+    } else if (staffId && staffId !== 'any') {
+      // Calculate endTime if not provided
+      let endTime = params.endTime;
+      if (!endTime && duration) {
+        const [h, m] = startTime.split(':').map(Number);
+        const totalMin = h * 60 + m + Number(duration);
+        endTime = `${Math.floor(totalMin / 60).toString().padStart(2, '0')}:${(totalMin % 60).toString().padStart(2, '0')}`;
+      }
+      
+      if (endTime) {
+        conflict = await checkStaffConflict({
+          vendorId,
+          staffId,
+          date,
+          startTime,
+          endTime
+        });
+      }
+    }
+
+    if (conflict) {
+      console.warn(`Lock acquisition failed: Conflict with existing appointment ${conflict._id}`);
+      return null;
+    }
+
+    const lockKey = generateLockKey(vendorId, staffId, date, startTime);
     const lockToken = crypto.randomBytes(16).toString('hex');
     const expiration = Date.now() + ttl;
 
-    console.log('Acquiring lock with parameters:', { vendorId, staffId, date, timeSlot, ttl });
-    console.log('Acquiring lock with key:', lockKey);
-    console.log('Generated lock token:', lockToken);
-    console.log('Lock expiration:', new Date(expiration));
-
-    // Check if lock already exists and is still valid
+    // Check in-memory Map as a fast second-level check
     if (locks.has(lockKey)) {
       const existingLock = locks.get(lockKey);
-      console.log('Existing lock found in memory:', existingLock);
-      
       if (existingLock.expiration > Date.now()) {
-        // [ENHANCEMENT] Allow same client to re-acquire their own lock
-        // This handles retries, page refreshes, and "delete-from-db-then-retry" scenarios
         const incomingClientId = params.clientId || (typeof params === 'object' ? params.clientId : null);
-        
         if (incomingClientId && incomingClientId !== 'temp-client-id' && existingLock.clientId === incomingClientId) {
-          console.log(`Lock already held by SAME client ${incomingClientId}, allowing re-acquisition.`);
           locks.delete(lockKey);
         } else {
-          // Lock is still held by someone else
-          const timeRemaining = Math.round((existingLock.expiration - Date.now()) / 1000);
-          console.log(`Lock already held for ${lockKey} by client ${existingLock.clientId}, expires in ${timeRemaining} seconds`);
           return null;
         }
       } else {
-        // Lock has expired, remove it
-        console.log('Removing expired lock:', lockKey);
         locks.delete(lockKey);
       }
     }
@@ -122,7 +141,7 @@ export async function acquireLock(params) {
       vendorId,
       staffId,
       date: date instanceof Date ? date.toISOString().split('T')[0] : new Date(date).toISOString().split('T')[0],
-      timeSlot,
+      timeSlot: startTime,
       clientId: params.clientId || 'temp-client-id'
     });
 
@@ -248,6 +267,8 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
       vendorId: cleanAppointmentData.vendorId,
       regionId: vendorRegionId, // <--- Added Region ID
       clientName: cleanAppointmentData.clientName || 'Temporary Client',
+      clientEmail: cleanAppointmentData.clientEmail || '',
+      clientPhone: cleanAppointmentData.clientPhone || '',
       service: cleanAppointmentData.serviceId,
       serviceName: cleanAppointmentData.serviceName || 'Temporary Service',
       staffName: cleanAppointmentData.staffName || 'Any Professional',

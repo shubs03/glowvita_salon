@@ -209,43 +209,54 @@ export default function RegionsPage() {
               </DialogDescription>
             </DialogHeader>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-              <div className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 py-4">
+              <div className="lg:col-span-4 space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Region Name *</Label>
+                  <Label htmlFor="name" className="text-sm font-semibold">Region Name *</Label>
                   <Input
                     id="name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="e.g. Pune Region"
+                    className="h-11"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="code">Region Code *</Label>
+                  <Label htmlFor="code" className="text-sm font-semibold">Region Code *</Label>
                   <Input
                     id="code"
                     value={formData.code}
                     onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                     placeholder="e.g. PUNE"
+                    className="h-11"
                     required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description" className="text-sm font-semibold">Description</Label>
                   <Input
                     id="description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Brief description"
+                    className="h-11"
                   />
                 </div>
-                {/* City and State Fallback fields removed as per request for pure geospatial logic */}
+                <div className="p-4 bg-primary/5 border border-primary/10 rounded-lg">
+                  <h4 className="text-xs font-bold text-primary uppercase tracking-wider mb-2">Instructions</h4>
+                  <ul className="text-xs text-slate-600 space-y-1.5 list-disc pl-4">
+                    <li>Use the <strong>Search Bar</strong> on the map to find your city.</li>
+                    <li>Click <strong>Draw Boundary</strong> to start.</li>
+                    <li>Click points on the map to define the area.</li>
+                    <li>Double-click to close the polygon.</li>
+                  </ul>
+                </div>
               </div>
               
-              <div className="space-y-2">
-                <Label>Geospatial Boundary</Label>
-                <div className="border rounded-md h-[400px] bg-slate-50">
+              <div className="lg:col-span-8 space-y-2">
+                <Label className="text-sm font-semibold">Geospatial Boundary</Label>
+                <div className="border-2 border-slate-200 rounded-xl overflow-hidden shadow-inner bg-slate-50 relative group" style={{ height: '550px' }}>
                    <RegionMapEditor 
                       initialGeometry={formData.geometry} 
                       onChange={(geom) => setFormData(prev => ({ ...prev, geometry: geom }))} 
@@ -254,11 +265,11 @@ export default function RegionsPage() {
               </div>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseModal}>
+            <DialogFooter className="sticky bottom-0 bg-white pt-4 pb-2 border-t z-50">
+              <Button type="button" variant="outline" onClick={handleCloseModal} className="h-11 px-6">
                 Cancel
               </Button>
-              <Button type="submit" disabled={isCreating || isUpdating}>
+              <Button type="submit" disabled={isCreating || isUpdating} className="h-11 px-8 shadow-lg shadow-primary/20">
                 {(isCreating || isUpdating) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {editingRegion ? "Update Region" : "Create Region"}
               </Button>

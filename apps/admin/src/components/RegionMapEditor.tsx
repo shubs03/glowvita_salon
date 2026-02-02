@@ -22,6 +22,13 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
   const [authError, setAuthError] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [errorDetails, setErrorDetails] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<google.maps.places.AutocompletePrediction[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+  const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
+  const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
   const apiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
   // Debug: Log API key info (first/last 4 chars only for security)
@@ -100,7 +107,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
     const loader = document.createElement("script");
     loader.id = scriptId;
     // Standard URL without redundant loading=async (handled by .async property)
-    loader.src = `https://maps.googleapis.com/maps/api/js?key=${cleanApiKey}&libraries=geometry&v=weekly`;
+    loader.src = `https://maps.googleapis.com/maps/api/js?key=${cleanApiKey}&libraries=places,drawing,geometry&v=weekly`;
     loader.async = true;
     loader.defer = true;
     
@@ -181,6 +188,10 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
         // Wait for idle event before proceeding
         google.maps.event.addListenerOnce(map, 'idle', () => {
           console.log("Map is ready and idle");
+          
+          geocoderRef.current = new google.maps.Geocoder();
+          placesServiceRef.current = new google.maps.places.PlacesService(map);
+          autocompleteServiceRef.current = new google.maps.places.AutocompleteService();
           
           // Load initial geometry if present
           if (initialGeometry?.coordinates?.[0]) {
@@ -586,8 +597,75 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
     );
   }
 
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (!query || !autocompleteServiceRef.current) {
+      setSearchResults([]);
+      return;
+    }
+    
+    autocompleteServiceRef.current.getPlacePredictions(
+      { input: query, componentRestrictions: { country: 'IN' } },
+      (predictions, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+          setSearchResults(predictions);
+          setShowResults(true);
+        } else {
+          setSearchResults([]);
+        }
+      }
+    );
+  };
+
+  const selectPlace = (place: google.maps.places.AutocompletePrediction) => {
+    if (!placesServiceRef.current || !mapRef.current) return;
+    
+    setSearchQuery(place.description);
+    setShowResults(false);
+    
+    placesServiceRef.current.getDetails(
+      { placeId: place.place_id, fields: ['geometry'] },
+      (details, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && details?.geometry?.location) {
+          mapRef.current?.setCenter(details.geometry.location);
+          mapRef.current?.setZoom(15);
+        }
+      }
+    );
+  };
+
   return (
-    <div className="h-full w-full relative group" style={{ minHeight: '500px', width: '100%' }}>
+    <div className="h-full w-full relative group flex flex-col" style={{ height: '500px', width: '100%' }}>
+      {/* Search Overlay */}
+      {isLoaded && !authError && (
+        <div className="absolute top-3 left-3 z-[110] w-[300px]">
+          <div className="relative">
+            <input
+              type="text"
+              className="w-full px-4 py-2 text-sm border-2 border-primary/20 rounded-lg shadow-xl focus:outline-none focus:border-primary bg-white/95 backdrop-blur-sm transition-all"
+              placeholder="🔍 Search for a city or area..."
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              onFocus={() => searchQuery && setShowResults(true)}
+            />
+            {showResults && searchResults.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-2xl max-h-60 overflow-y-auto z-[200]">
+                {searchResults.map((result) => (
+                  <div
+                    key={result.place_id}
+                    className="p-3 hover:bg-slate-50 cursor-pointer border-b last:border-0 transition-colors"
+                    onClick={() => selectPlace(result)}
+                  >
+                    <p className="text-sm font-medium text-slate-700 truncate">{result.structured_formatting.main_text}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{result.structured_formatting.secondary_text}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {!isLoaded && (
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 z-[1000] rounded-lg">
           <div className="flex flex-col items-center gap-3">
@@ -600,10 +678,9 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
       
       <div 
         ref={mapContainerRef} 
-        className="h-full w-full rounded-lg bg-slate-200" 
+        className="flex-1 w-full rounded-lg bg-slate-200" 
         id="native-map-container" 
         style={{ 
-          minHeight: '500px', 
           width: '100%', 
           position: 'relative',
           overflow: 'hidden'
@@ -617,14 +694,14 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
             <button
               type="button"
               onClick={startDrawing}
-              className="bg-blue-600 text-white px-4 py-2.5 rounded-lg shadow-lg text-sm font-semibold hover:bg-blue-700 transition-all hover:shadow-xl"
+              className="bg-primary text-primary-foreground px-4 py-2.5 rounded-lg shadow-lg text-sm font-semibold hover:opacity-90 transition-all hover:shadow-xl"
             >
               ✏️ Draw Boundary
             </button>
           )}
           
           {isDrawing && (
-            <div className="bg-blue-600 text-white px-4 py-2.5 rounded-lg shadow-lg text-sm font-semibold animate-pulse">
+            <div className="bg-primary text-primary-foreground px-4 py-2.5 rounded-lg shadow-lg text-sm font-semibold animate-pulse">
               👆 Click to add points • Double-click to finish
             </div>
           )}
@@ -634,14 +711,14 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
               <button
                 type="button"
                 onClick={startDrawing}
-                className="bg-blue-600 text-white px-3 py-2 rounded-lg shadow-lg text-sm font-semibold hover:bg-blue-700 transition-all"
+                className="bg-primary text-primary-foreground px-3 py-2 rounded-lg shadow-lg text-sm font-semibold hover:opacity-90 transition-all"
               >
                 ↻ Redraw
               </button>
               <button
                 type="button"
                 onClick={clearMap}
-                className="bg-white text-red-600 px-3 py-2 rounded-lg shadow-lg text-sm font-semibold border-2 border-red-200 hover:bg-red-50 transition-all"
+                className="bg-white text-destructive px-3 py-2 rounded-lg shadow-lg text-sm font-semibold border-2 border-destructive/20 hover:bg-destructive/5 transition-all"
               >
                 🗑️ Clear
               </button>
@@ -652,7 +729,7 @@ export default function RegionMapEditor({ initialGeometry, onChange }: RegionMap
       
       {/* Help Text */}
       {isLoaded && !authError && (
-        <div className="absolute bottom-3 left-3 bg-black/80 text-white px-3 py-2 rounded-lg text-xs pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity max-w-xs backdrop-blur-sm">
+        <div className="absolute bottom-3 left-3 bg-slate-900/90 text-white px-3 py-2 rounded-lg text-xs pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity max-w-xs backdrop-blur-sm border border-white/10 shadow-2xl">
           {!polygonRef.current && !isDrawing && "💡 Click 'Draw Boundary' to start defining your region"}
           {isDrawing && "🖱️ Click on the map to add points. Double-click or press ESC when done."}
           {polygonRef.current && !isDrawing && "✨ Drag vertices to adjust boundaries or click 'Redraw' to start over"}

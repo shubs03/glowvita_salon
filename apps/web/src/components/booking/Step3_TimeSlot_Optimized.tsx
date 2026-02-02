@@ -237,7 +237,7 @@ export const Step3_TimeSlot = memo(({
 
     const refreshInterval = setInterval(() => {
       fetchSlots();
-    }, 30000); // 30 seconds
+    }, 10000); // 10 seconds
 
     return () => clearInterval(refreshInterval);
   }, [effectiveVendorId, selectedDate, fetchSlots]);
@@ -431,6 +431,8 @@ export const Step3_TimeSlot = memo(({
         endTime: slot.endTime,
         clientId: user?._id || user?.id || (effectiveService as any)?.clientId || 'temp-client-id', 
         clientName: user ? `${user.firstName} ${user.lastName}` : 'Customer', 
+        clientEmail: user?.emailAddress || user?.email || '',
+        clientPhone: user?.mobileNo || user?.phone || '',
         staffName: selectedStaff?.name || 'Any Professional',
         isHomeService,
         isWeddingService: isWeddingService,

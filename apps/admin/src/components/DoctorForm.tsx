@@ -6,7 +6,7 @@ import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Upload, User, Briefcase, MapPin, Eye, EyeOff, Check, ChevronsUpDown, Map as MapIcon } from 'lucide-react';
+import { X, Upload, User, Briefcase, MapPin, Eye, EyeOff, Check, ChevronsUpDown, Map as MapIcon, CheckCircle2 } from 'lucide-react';
 import { Checkbox } from "@repo/ui/checkbox";
 import {
   Select,
@@ -19,14 +19,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { useGetSuperDataQuery } from "@repo/store/api";
 import { toast } from "sonner";
 import { cn } from "@repo/ui/cn";
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { NEXT_PUBLIC_MAPBOX_API_KEY } from '../../../../packages/config/config';
+import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '../../../../packages/config/config';
 
-// Mapbox Access Token
-if (NEXT_PUBLIC_MAPBOX_API_KEY) {
-  mapboxgl.accessToken = NEXT_PUBLIC_MAPBOX_API_KEY;
-}
+// Google Maps API Key
+const rawApiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+const GOOGLE_MAPS_API_KEY = rawApiKey.toString().trim().replace(/['"“”]/g, '');
 
 export interface Doctor {
   _id?: string;
@@ -73,16 +70,9 @@ interface DoctorFormProps {
   onSubmit: (data: Omit<Doctor, 'confirmPassword'>) => void;
 }
 
-interface MapboxFeature {
-  id: string;
-  place_name: string;
-  geometry: {
-    coordinates: [number, number];
-  };
-  context?: Array<{
-    id: string;
-    text: string;
-  }>;
+interface GooglePlacesResult {
+  description: string;
+  place_id: string;
 }
 
 interface SuperDataItem {
@@ -134,10 +124,15 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
 
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<MapboxFeature[]>([]);
+  const [searchResults, setSearchResults] = useState<GooglePlacesResult[]>([]);
+  const [authError, setAuthError] = useState(false);
+  const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
   const mapContainer = useRef<HTMLDivElement | null>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const marker = useRef<mapboxgl.Marker | null>(null);
+  const map = useRef<google.maps.Map | null>(null);
+  const marker = useRef<google.maps.Marker | null>(null);
+  const geocoder = useRef<google.maps.Geocoder | null>(null);
+  const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
+  const placesService = useRef<google.maps.places.PlacesService | null>(null);
 
 
   const { data: superData = [], isLoading: isSuperDataLoading } = useGetSuperDataQuery(undefined);
@@ -316,99 +311,249 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
     onSubmit({ ...submitData, specialties: specialtyNames, diseases: diseaseNames });
   };
 
+  // Load Google Maps script
+  useEffect(() => {
+    if (!GOOGLE_MAPS_API_KEY) return;
+
+    // Suppress Google Maps IntersectionObserver internal error
+    const originalError = console.error;
+    console.error = (...args) => {
+      if (typeof args[0] === 'string' && args[0].includes('IntersectionObserver')) return;
+      originalError.apply(console, args);
+    };
+
+    const checkGoogleMaps = () => {
+      if ((window as any).google?.maps) {
+        setIsGoogleMapsLoaded(true);
+        return true;
+      }
+      return false;
+    };
+
+    if (checkGoogleMaps()) return;
+
+    const scriptId = 'google-maps-native-script';
+    const existingScript = document.getElementById(scriptId);
+    
+    if (existingScript) {
+      if (checkGoogleMaps()) return;
+      
+      const checkInterval = setInterval(() => {
+        if (checkGoogleMaps()) {
+          clearInterval(checkInterval);
+        }
+      }, 500);
+      return () => clearInterval(checkInterval);
+    }
+
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,drawing,geometry&v=weekly`;
+    script.async = true;
+    script.defer = true;
+    
+    (window as any).gm_authFailure = () => {
+      console.error("Google Maps API Key Authentication Failure - This usually means the API Key is invalid, has no billing, or is restricted incorrectly.");
+      toast.error("Google Maps Authentication Failed. Please check your API key.");
+      setAuthError(true);
+    };
+
+    script.onload = () => setIsGoogleMapsLoaded(true);
+    document.head.appendChild(script);
+
+    return () => {
+      console.error = originalError;
+    };
+  }, []);
+
   // Map functionality
   useEffect(() => {
-    if (!isMapOpen || !NEXT_PUBLIC_MAPBOX_API_KEY) return;
+    if (!isMapOpen || !isGoogleMapsLoaded || !GOOGLE_MAPS_API_KEY) return;
+
     const initMap = () => {
-      if (!mapContainer.current) return;
-      if (map.current) map.current.remove();
+      if (!mapContainer.current || !window.google) return;
 
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/streets-v12',
-        center: formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599],
+      if (map.current) {
+        google.maps.event.clearInstanceListeners(map.current);
+      }
+
+      const center = formData.location 
+        ? { lat: formData.location.lat, lng: formData.location.lng }
+        : { lat: 23.2599, lng: 77.4126 };
+
+      // Ensure container still exists and has height
+      if (mapContainer.current) {
+        const rect = mapContainer.current.getBoundingClientRect();
+        if (rect.height === 0) {
+          setTimeout(initMap, 200);
+          return;
+        }
+      } else {
+        return;
+      }
+
+      map.current = new google.maps.Map(mapContainer.current, {
+        center,
         zoom: formData.location ? 14 : 4,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: false,
       });
 
-      if (marker.current) marker.current.remove();
+      geocoder.current = new google.maps.Geocoder();
+      autocompleteService.current = new google.maps.places.AutocompleteService();
+      placesService.current = new google.maps.places.PlacesService(map.current);
+
+      if (marker.current) {
+        marker.current.setMap(null);
+      }
       
-      marker.current = new mapboxgl.Marker({ draggable: true })
-        .setLngLat(formData.location ? [formData.location.lng, formData.location.lat] : [77.4126, 23.2599])
-        .addTo(map.current);
-
-      marker.current.on('dragend', () => {
-        const lngLat = marker.current!.getLngLat();
-        setFormData(prev => ({ ...prev, location: { lat: lngLat.lat, lng: lngLat.lng } }));
-        fetchAddress([lngLat.lng, lngLat.lat]);
+      marker.current = new google.maps.Marker({
+        position: center,
+        map: map.current,
+        draggable: true,
+        animation: google.maps.Animation.DROP,
       });
 
-      map.current.on('click', (e) => {
-        const { lng, lat } = e.lngLat;
+      marker.current.addListener('dragend', () => {
+        const position = marker.current!.getPosition();
+        if (position) {
+          setFormData(prev => ({ ...prev, location: { lat: position.lat(), lng: position.lng() } }));
+          fetchAddress({ lat: position.lat(), lng: position.lng() });
+        }
+      });
+
+      map.current.addListener('click', (e: google.maps.MapMouseEvent) => {
+        if (!e.latLng) return;
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
         setFormData(prev => ({ ...prev, location: { lat, lng } }));
-        marker.current!.setLngLat([lng, lat]);
-        fetchAddress([lng, lat]);
+        if (marker.current) {
+          marker.current.setPosition({ lat, lng });
+        }
+        fetchAddress({ lat, lng });
       });
     };
     
-    const timer = setTimeout(initMap, 100);
-    return () => clearTimeout(timer);
-  }, [isMapOpen]);
-
-  // Resize map when modal is fully opened
-  useEffect(() => {
-    if (isMapOpen && map.current) {
-      setTimeout(() => {
-        if(map.current) {
-            map.current.resize();
-        }
-      }, 300);
-    }
-  }, [isMapOpen]);
+    const timer = setTimeout(initMap, 500);
+    return () => {
+      clearTimeout(timer);
+      if (marker.current) {
+        marker.current.setMap(null);
+      }
+    };
+  }, [isMapOpen, isGoogleMapsLoaded]);
 
   const handleSearch = async (query: string) => {
-    if (!query.trim() || !NEXT_PUBLIC_MAPBOX_API_KEY) return;
+    if (!query.trim() || !autocompleteService.current) return;
     try {
-      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${NEXT_PUBLIC_MAPBOX_API_KEY}&country=IN`);
-      const data = await response.json();
-      setSearchResults(data.features || []);
+      autocompleteService.current.getPlacePredictions(
+        {
+          input: query,
+          componentRestrictions: { country: 'IN' },
+        },
+        (predictions, status) => {
+          if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+            setSearchResults(predictions.map(p => ({
+              description: p.description,
+              place_id: p.place_id,
+            })));
+          } else {
+            setSearchResults([]);
+          }
+        }
+      );
     } catch (error) {
       toast.error("Failed to search location.");
     }
   };
 
-  const fetchAddress = async (coordinates: [number, number]) => {
+  const fetchAddress = async (location: { lat: number; lng: number }) => {
+    if (!geocoder.current) return;
     try {
-      const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${coordinates[0]},${coordinates[1]}.json?access_token=${NEXT_PUBLIC_MAPBOX_API_KEY}`);
-      const data = await response.json();
-      if (data.features.length > 0) {
-        const feature = data.features[0];
-        setFormData(prev => ({
-          ...prev,
-          clinicAddress: feature.place_name,
-          city: feature.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('place'))?.text || '',
-          state: feature.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('region'))?.text || '',
-          pincode: feature.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('postcode'))?.text || '',
-        }));
-      }
+      geocoder.current.geocode({ location }, (results, status) => {
+        if (status === 'OK' && results && results.length > 0) {
+          const result = results[0];
+          let state = '';
+          let city = '';
+          let pincode = '';
+
+          result.address_components.forEach((component) => {
+            if (component.types.includes('administrative_area_level_1')) {
+              state = component.long_name;
+            }
+            if (component.types.includes('locality')) {
+              city = component.long_name;
+            }
+            if (component.types.includes('postal_code')) {
+              pincode = component.long_name;
+            }
+          });
+
+          setFormData(prev => ({
+            ...prev,
+            clinicAddress: result.formatted_address,
+            city: city || prev.city,
+            state: state || prev.state,
+            pincode: pincode || prev.pincode,
+          }));
+        }
+      });
     } catch (error) {
       toast.error("Failed to fetch address.");
     }
   };
 
-  const handleSearchResultSelect = (result: MapboxFeature) => {
-    const coordinates: [number, number] = result.geometry.coordinates;
-    setFormData(prev => ({
-      ...prev,
-      location: { lat: coordinates[1], lng: coordinates[0] },
-      clinicAddress: result.place_name,
-      city: result.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('place'))?.text || '',
-      state: result.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('region'))?.text || '',
-      pincode: result.context?.find((c: MapboxFeature["context"] extends (infer U)[] | undefined ? U : never) => c.id.startsWith('postcode'))?.text || '',
-    }));
-    map.current?.flyTo({ center: coordinates, zoom: 14 });
-    marker.current?.setLngLat(coordinates);
-    setSearchResults([]);
-    setSearchQuery('');
+  const handleSearchResultSelect = (result: GooglePlacesResult) => {
+    if (!placesService.current) return;
+
+    placesService.current.getDetails(
+      {
+        placeId: result.place_id,
+        fields: ['geometry', 'formatted_address', 'address_components'],
+      },
+      (place, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+
+          let state = '';
+          let city = '';
+          let pincode = '';
+
+          place.address_components?.forEach((component) => {
+            if (component.types.includes('administrative_area_level_1')) {
+              state = component.long_name;
+            }
+            if (component.types.includes('locality')) {
+              city = component.long_name;
+            }
+            if (component.types.includes('postal_code')) {
+              pincode = component.long_name;
+            }
+          });
+
+          setFormData(prev => ({
+            ...prev,
+            location: { lat, lng },
+            clinicAddress: place.formatted_address || result.description,
+            city: city || prev.city,
+            state: state || prev.state,
+            pincode: pincode || prev.pincode,
+          }));
+
+          if (map.current) {
+            map.current.setCenter({ lat, lng });
+            map.current.setZoom(14);
+          }
+          if (marker.current) {
+            marker.current.setPosition({ lat, lng });
+          }
+          setSearchResults([]);
+          setSearchQuery('');
+        }
+      }
+    );
   };
 
   const renderFormContent = () => (
@@ -1032,40 +1177,127 @@ export function DoctorForm({ isOpen, onClose, doctor, isEditMode, onSubmit }: Do
       </Tabs>
       <Dialog.Root open={isMapOpen} onOpenChange={setIsMapOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-black/80" />
-          <Dialog.Content className="fixed left-[50%] top-[50%] z-50 w-full max-w-4xl max-h-[80vh] translate-x-[-50%] translate-y-[-50%] bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-lg border">
-            <div className="flex flex-col space-y-4">
-              <div className="flex flex-col space-y-1.5 text-center sm:text-left">
-                <Dialog.Title className="text-lg font-semibold leading-none tracking-tight">Select Clinic Location</Dialog.Title>
-                <Dialog.Description className="text-sm text-muted-foreground">Search, pan, or click on the map to set the exact location.</Dialog.Description>
-              </div>
-              <div className="space-y-4 h-[60vh] flex flex-col">
-                  <div className="relative">
-                      <Input
-                          placeholder="Search for a location..."
-                          value={searchQuery}
-                          onChange={(e) => { setSearchQuery(e.target.value); handleSearch(e.target.value); }}
-                      />
-                      {searchResults.length > 0 && (
-                          <div className="absolute z-10 w-full bg-background border rounded-md mt-1 max-h-48 overflow-y-auto">
-                              {searchResults.map((result: MapboxFeature) => (
-                                  <div key={result.id} onClick={() => handleSearchResultSelect(result)} className="p-2 hover:bg-secondary cursor-pointer text-sm">
-                                      {result.place_name}
-                                  </div>
-                              ))}
-                          </div>
-                      )}
-                  </div>
-                  <div ref={mapContainer} className="flex-grow w-full rounded-md border" />
-              </div>
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2">
-                  <Button variant="outline" onClick={() => setIsMapOpen(false)}>Cancel</Button>
-                  <Button onClick={() => setIsMapOpen(false)}>Confirm Location</Button>
+          <Dialog.Overlay className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" />
+          <Dialog.Content className="fixed left-[50%] top-[50%] z-[70] w-full max-w-5xl h-[85vh] translate-x-[-50%] translate-y-[-50%] bg-background p-0 shadow-2xl duration-200 border-none rounded-3xl overflow-hidden flex flex-col">
+            <div className="p-6 bg-gradient-to-r from-primary/10 to-transparent border-b">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Dialog.Title className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">Clinic Location Scout</Dialog.Title>
+                  <Dialog.Description className="text-slate-500 font-medium">
+                    Search for your clinic area and refine by dragging the marker to the exact entrance.
+                  </Dialog.Description>
+                </div>
               </div>
             </div>
+            
+            <div className="flex-1 flex flex-col relative overflow-hidden">
+              {/* Floating Search Bar with Glassmorphism */}
+              <div className="absolute top-6 left-6 right-6 z-[100] max-w-md">
+                <div className="relative group">
+                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-primary transition-colors">
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                  <Input
+                    placeholder="Search clinic location..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      handleSearch(e.target.value);
+                    }}
+                    className="w-full h-14 pl-12 pr-6 rounded-2xl border-none shadow-2xl bg-white/90 backdrop-blur-xl text-lg font-medium ring-1 ring-slate-200 focus:ring-2 focus:ring-primary transition-all"
+                  />
+                  {searchResults.length > 0 && (
+                    <div className="absolute top-full left-0 right-0 mt-3 bg-white/95 backdrop-blur-2xl border border-slate-200 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] max-h-[350px] overflow-y-auto overflow-x-hidden p-2 z-[110] animate-in slide-in-from-top-2 duration-200">
+                      {searchResults.map((result) => (
+                        <div
+                          key={result.place_id}
+                          className="group flex items-start gap-3 p-4 hover:bg-primary/5 cursor-pointer rounded-xl transition-all border-b border-slate-50 last:border-0"
+                          onClick={() => handleSearchResultSelect(result)}
+                        >
+                          <div className="mt-0.5 p-2 rounded-full bg-slate-100 group-hover:bg-primary/10 text-slate-500 group-hover:text-primary transition-colors">
+                            <MapPin className="h-4 w-4" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-slate-800 group-hover:text-primary truncate transition-colors">
+                              {result.description}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Map Container */}
+              <div className="flex-1 relative bg-slate-100">
+                <div 
+                  ref={mapContainer} 
+                  className="w-full h-full"
+                />
+                
+                {authError && (
+                  <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6 z-[200]">
+                    <div className="bg-white rounded-3xl p-8 shadow-2xl max-w-md text-center border border-red-100">
+                      <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
+                        <MapPin className="h-8 w-8" />
+                      </div>
+                      <h3 className="text-xl font-bold text-slate-900 mb-2">Maps Initialization Failed</h3>
+                      <p className="text-slate-500 text-sm mb-6">
+                        The Google Maps API key is invalid or rejected. Please check billing and restrictions.
+                      </p>
+                      <Button 
+                        onClick={() => window.location.reload()}
+                        className="w-full rounded-xl bg-red-600 hover:bg-red-700 h-12 text-lg"
+                        type="button"
+                      >
+                        Try Again
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {!isGoogleMapsLoaded && !authError && (
+                  <div className="absolute inset-0 bg-slate-50 flex flex-col items-center justify-center z-[150]">
+                    <div className="relative">
+                       <div className="h-20 w-20 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
+                    </div>
+                    <p className="mt-6 text-sm font-bold text-slate-400 tracking-widest uppercase">Initializing Radar</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="p-6 bg-slate-50 border-t flex flex-row items-center justify-between gap-4">
+               <div className="flex items-center gap-4">
+                  {formData.location && (
+                    <div className="hidden sm:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                       <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+                          <CheckCircle2 className="h-4 w-4" />
+                       </div>
+                       <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter italic">Position Locked</div>
+                       <div className="text-xs font-mono font-bold text-slate-800">
+                         {formData.location.lat.toFixed(4)}, {formData.location.lng.toFixed(4)}
+                       </div>
+                    </div>
+                  )}
+               </div>
+               <div className="flex items-center gap-3">
+                <Button variant="ghost" onClick={() => setIsMapOpen(false)} className="rounded-xl h-12 px-6 font-bold text-slate-600 hover:bg-slate-200">
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={() => setIsMapOpen(false)} 
+                  disabled={!formData.location}
+                  className="rounded-xl h-12 px-8 font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+                >
+                  Set Clinic Location
+                </Button>
+               </div>
+            </div>
             <Dialog.Close asChild>
-              <Button variant="outline" size="icon" className="absolute right-4 top-4">
-                <X className="h-4 w-4" />
+              <Button variant="outline" size="icon" className="absolute right-4 top-4 bg-white/50 backdrop-blur-md rounded-full h-10 w-10 border-none shadow-lg group hover:bg-white transition-all">
+                <X className="h-5 w-5 text-slate-600 group-hover:text-primary" />
                 <span className="sr-only">Close</span>
               </Button>
             </Dialog.Close>

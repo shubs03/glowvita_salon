@@ -690,7 +690,7 @@ function BookingPageContent() {
     if (isAuthenticated && user) {
       setCustomerInfo({
         name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.name || 'Guest User',
-        phone: user.phone || 'Not provided'
+        phone: user.mobileNo || user.phone || 'Not provided'
       });
     }
   }, [isAuthenticated, user]);
@@ -1561,7 +1561,7 @@ function BookingPageContent() {
             clientName: `${user?.firstName} ${user?.lastName}`,
             customerDetails: {
               name: `${user?.firstName} ${user?.lastName}`,
-              phone: user?.phone
+              phone: user?.mobileNo || user?.phone
             }
           }).unwrap();
 
@@ -1601,8 +1601,8 @@ function BookingPageContent() {
             customerDetails: {
               userId: user?._id || user?.id,
               name: `${user?.firstName} ${user?.lastName}`,
-              phone: user?.phone,
-              email: user?.email
+              phone: user?.mobileNo || user?.phone,
+              email: user?.emailAddress || user?.email
             },
             paymentDetails: {
               method: paymentMethod,
@@ -1639,6 +1639,8 @@ function BookingPageContent() {
             endTime: endTime,
             clientId: user?._id || user?.id,
             clientName: `${user?.firstName} ${user?.lastName}`,
+            clientEmail: user?.emailAddress || user?.email,
+            clientPhone: user?.mobileNo || user?.phone,
             staffName: staffName,
             isHomeService: finalIsHomeService,
             isWeddingService: isWeddingService,
@@ -1760,6 +1762,8 @@ function BookingPageContent() {
           endTime: calculateEndTime(selectedTime, convertDurationToMinutes(primaryService.duration)),
           clientId: user?._id || user?.id,
           clientName: `${user?.firstName} ${user?.lastName}`,
+          clientEmail: user?.emailAddress || user?.email,
+          clientPhone: user?.mobileNo || user?.phone,
           staffName: selectedStaff?.name || "Any Professional",
           isHomeService: true,
           isWeddingService: isWeddingService,
@@ -2210,7 +2214,9 @@ function BookingPageContent() {
           const appointmentData = {
             vendorId: vendorId, // Use the fixed vendorId
             client: clientId, // Use the fixed client ID
-            clientName: clientName, // In a real implementation, this would come from user authentication
+            clientName: clientName,
+            clientEmail: user?.emailAddress || user?.email || '',
+            clientPhone: user?.mobileNo || user?.phone || '',
             service: primarySchedule.service.id,
             serviceName: primarySchedule.service.name,
             staff: staffId, // This can now be null for "Any Professional"
@@ -2886,7 +2892,7 @@ function BookingPageContent() {
               }}
               platformFee={priceBreakdown?.platformFee}
               serviceTax={priceBreakdown?.serviceTax}
-              taxRate={priceBreakdown?.taxRate}
+              taxRate={priceBreakdown?.taxFeeSettings?.serviceTax}
               couponCode={appliedOffer?.code || offerCode}
               discountAmount={priceBreakdown?.discountAmount || 0}
               user={user}
@@ -2922,7 +2928,7 @@ function BookingPageContent() {
               }}
               platformFee={priceBreakdown?.platformFee}
               serviceTax={priceBreakdown?.serviceTax}
-              taxRate={priceBreakdown?.taxRate}
+              taxRate={priceBreakdown?.taxFeeSettings?.serviceTax}
               couponCode={appliedOffer?.code || offerCode}
               discountAmount={priceBreakdown?.discountAmount || 0}
               user={user}
@@ -3937,170 +3943,6 @@ function BookingPageContent() {
             <Button onClick={handleFinalBookingConfirmation} className="bg-primary hover:bg-primary/90 px-6">
               Confirm & Proceed
               <ChevronRight className="h-4 w-4 ml-2" />
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Success Modal */}
-      <Dialog open={isSuccessModalOpen} onOpenChange={setIsSuccessModalOpen}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-center text-green-600">
-              <div className="flex flex-col items-center gap-2">
-                <div className="bg-green-100 p-3 rounded-full">
-                  <CheckCircle className="h-8 w-8 text-green-600" />
-                </div>
-                Appointment Confirmed!
-              </div>
-            </DialogTitle>
-            <DialogDescription className="text-center">
-              Your appointment has been successfully booked. A confirmation has been sent to your email.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
-            <Card className="bg-green-50 border-green-200">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-md flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-green-600" />
-                  Appointment Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <div className="font-medium">{format(selectedDate, 'EEEE, MMMM d, yyyy')}</div>
-                    <div className="text-muted-foreground text-xs">Date</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <div className="font-medium">{selectedTime}</div>
-                    <div className="text-muted-foreground text-xs">Time</div>
-                  </div>
-                </div>
-                {selectedStaff && (
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <div className="font-medium">{selectedStaff ? selectedStaff.name : 'Any Professional'}</div>
-                      <div className="text-muted-foreground text-xs">Professional</div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-md flex items-center gap-2">
-                  <User className="h-4 w-4 text-primary" />
-                  Customer Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <UserCircle className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <div className="font-medium">{customerInfo?.name || 'Guest User'}</div>
-                    <div className="text-muted-foreground text-xs">Name</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <div>
-                    <div className="font-medium">{customerInfo?.phone || 'Not provided'}</div>
-                    <div className="text-muted-foreground text-xs">Phone</div>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                  <div>
-                    <div className="font-medium">{homeServiceLocation?.address || 'Salon Address'}</div>
-                    <div className="text-muted-foreground text-xs">
-                      {homeServiceLocation ? 'Home Service Location' : 'Appointment Location'}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-md flex items-center gap-2">
-                  <Scissors className="h-4 w-4 text-primary" />
-                  Service Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                {selectedServices.map((service) => (
-                  <div key={service.id} className="flex items-center justify-between py-1">
-                    <div className="flex-1">
-                      <div className="font-medium">{service.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {service.duration}
-                      </div>
-                    </div>
-                    <div className="font-semibold">₹{Math.round(Number(service.price))}</div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-md flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-primary" />
-                  Payment Summary
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <div>Subtotal</div>
-                  <div>₹{Math.round(totalAmount)}</div>
-                </div>
-                {appliedOffer && (
-                  <div className="flex items-center justify-between text-green-600">
-                    <div>Discount ({appliedOffer.code})</div>
-                    <div className="font-medium">
-                      -₹{Math.round(appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value)}
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center justify-between pt-2 border-t font-semibold">
-                  <div>Total Paid</div>
-                  <div className="text-primary">
-                    ₹{Math.round(
-                      totalAmount -
-                      (appliedOffer ?
-                        (appliedOffer.type === 'percentage' ? (totalAmount * appliedOffer.value) / 100 : appliedOffer.value)
-                        : 0)
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="bg-blue-50 p-3 rounded-md text-sm">
-              <div className="flex items-start gap-2">
-                <Info className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-blue-800">Next Steps</div>
-                  <div className="text-blue-700 text-xs mt-1">
-                    You will receive a reminder 1 hour before your appointment. Please arrive 10 minutes early.
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <DialogFooter className="sm:justify-end gap-2 pt-2">
-            <Button variant="outline" size="sm" onClick={() => setIsSuccessModalOpen(false)}>
-              Close
-            </Button>
-            <Button size="sm" onClick={() => router.push('/profile/appointments')} className="bg-primary hover:bg-primary/90">
-              View Appointments
             </Button>
           </DialogFooter>
         </DialogContent>

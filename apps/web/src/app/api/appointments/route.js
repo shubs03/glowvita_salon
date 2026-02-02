@@ -423,6 +423,46 @@ export const POST = async (req) => {
             console.log('Set regionId for appointment:', vendor.regionId);
         }
 
+        // Check for conflicts before creating
+        const { checkMultiServiceConflict } = await import('@repo/lib/modules/scheduling/ConflictChecker');
+        
+        // Prepare verification items
+        let verificationItems = appointmentData.serviceItems;
+        if (!verificationItems || verificationItems.length === 0) {
+            verificationItems = [{
+                staff: appointmentData.staff,
+                startTime: appointmentData.startTime,
+                endTime: appointmentData.endTime
+            }];
+        }
+
+        const conflict = await checkMultiServiceConflict(
+            appointmentData.vendorId,
+            appointmentData.date,
+            verificationItems
+        );
+
+        if (conflict) {
+            console.warn('Conflict detected during appointment creation:', conflict);
+            const response = NextResponse.json(
+                { 
+                    message: "The selected time slot is no longer available. Please choose another time.",
+                    conflict: {
+                        startTime: conflict.startTime,
+                        endTime: conflict.endTime,
+                        staffName: conflict.staffName
+                    }
+                },
+                { status: 409 }
+            );
+
+            response.headers.set('Access-Control-Allow-Origin', '*');
+            response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+            response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
+
+            return response;
+        }
+
         const newAppointment = await AppointmentModel.create(appointmentData);
         console.log('Appointment created successfully with ID:', newAppointment._id);
         console.log('Saved appointment data:', {

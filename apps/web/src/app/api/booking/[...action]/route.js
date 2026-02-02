@@ -1040,6 +1040,8 @@ async function handleSlotLock(body) {
       startTime,
       endTime,
       clientName,
+      clientEmail,
+      clientPhone,
       staffName,
       isHomeService,
       isWeddingService,
@@ -1258,13 +1260,23 @@ async function handleSlotLock(body) {
         // Check if the requested start time is still available
         const isStillAvailable = validationSlots.some(s => s.startTime === startTime);
         if (!isStillAvailable) {
-          console.warn(`Time slot ${startTime} no longer available with travel time of ${calculatedTravelTime.timeInMinutes} mins`);
-          // Optional: return error or continue? Fresha usually blocks.
-          // return Response.json(formatErrorResponse(new AppError('The selected time is no longer available including travel time.', 'TRAVEL_TIME_CONFLICT', 'CONFLICT', 409)), { status: 409 });
+          console.warn(`Time slot ${startTime} no longer available with travel time of ${calculatedTravelTime.timeInMinutes} mins or existing bookings`);
+          const errorRes = formatErrorResponse(new AppError('The selected time is no longer available. Please choose another time or professional.', 'SLOT_CONFLICT', 'CONFLICT', 409));
+          return Response.json(errorRes, { status: 409 });
         }
       } catch (err) {
         console.error("Availability re-check error:", err.message);
       }
+    }
+
+    // [GENERAL CONFLICT CHECK] Check for any overlapping appointments in DB for the specific staff
+    // This is a safety net for non-home-service appointments as well
+    const { checkMultiServiceConflict } = await import('@repo/lib/modules/scheduling/ConflictChecker');
+    const dbConflict = await checkMultiServiceConflict(vendorId, appointmentDate, serviceItems);
+    if (dbConflict) {
+        console.warn('Conflict detected during handleSlotLock:', dbConflict);
+        const errorRes = formatErrorResponse(new AppError('The selected time slot is already booked. Please choose another time.', 'SLOT_CONFLICT', 'CONFLICT', 409));
+        return Response.json(errorRes, { status: 409 });
     }
 
     // Calculate totals if not provided
@@ -1301,6 +1313,8 @@ async function handleSlotLock(body) {
       duration: finalCalculatedDuration,
       clientId: effectiveClientId,
       clientName: effectiveClientName,
+      clientEmail: clientEmail,
+      clientPhone: clientPhone,
       isHomeService: effectiveIsHomeService,
       isWeddingService,
       isMultiService,

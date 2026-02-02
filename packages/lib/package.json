@@ -67,6 +67,7 @@
     "./modules/scheduling/EnhancedTravelUtils": "./src/modules/scheduling/EnhancedTravelUtils.js",
     "./modules/scheduling/OptimisticLocking": "./src/modules/scheduling/OptimisticLocking.js",
     "./modules/scheduling/FreshaLikeSlotEngine": "./src/modules/scheduling/FreshaLikeSlotEngine.js",
+    "./modules/scheduling/ConflictChecker": "./src/modules/scheduling/ConflictChecker.js",
     "./utils/regionQuery": "./src/utils/regionQuery.js",
     "./utils/assignRegion.js": "./src/utils/assignRegion.js",
     "./VPSUpload": "./VPSUpload.js"
