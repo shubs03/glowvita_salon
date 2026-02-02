@@ -3,7 +3,7 @@ import UserModel from '@repo/lib/models/user';
 import _db from "@repo/lib/db";
 import crypto from 'crypto';
 import { sendEmail } from "@repo/lib/emailService";
-import { NEXT_PUBLIC_WEB_URL } from '../../../../../../../packages/config/config';
+import { NEXT_PUBLIC_WEB_URL } from '@repo/config/config';
 
 export async function POST(request) {
   try {

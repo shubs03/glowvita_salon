@@ -402,7 +402,7 @@ export default function GeoFencingPage() {
     return () => {
       cleanupMap();
       if (viewMap.current) {
-        viewMap.current.remove();
+        viewMap.current = null;
       }
     };
   }, [cleanupMap]);
@@ -763,7 +763,7 @@ export default function GeoFencingPage() {
                     <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-y-auto">
                       {searchResults.map((result) => (
                         <div
-                          key={result.id}
+                          key={result.place_id}
                           className="px-3 py-2 hover:bg-muted cursor-pointer text-sm"
                           onClick={() => handleSearchResultSelect(result)}
                         >
