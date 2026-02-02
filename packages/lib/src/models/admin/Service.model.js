@@ -20,6 +20,15 @@ const serviceSchema = new mongoose.Schema({
     type: String, // URL to the uploaded image
     trim: true,
   },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+  status: {
+    type: String,
+    enum: ["approved", "disapproved"],
+    default: "approved",
+  },
   createdAt: {
     type: Date,
     default: Date.now,

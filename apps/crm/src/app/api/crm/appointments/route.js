@@ -74,38 +74,90 @@ const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus,
                     serviceName: appointment.serviceName
                 });
 
+                // Fetch formal invoice
+                let invoiceHtml;
+                let formalInvoice;
+                try {
+                    const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+                    formalInvoice = await InvoiceModel.findOne({ appointmentId: appointment._id });
+
+                    if (formalInvoice) {
+                        invoiceHtml = getInvoiceTemplate({
+                            clientName,
+                            clientPhone,
+                            businessName,
+                            businessAddress,
+                            businessPhone,
+                            date: new Date(formalInvoice.createdAt).toLocaleDateString(),
+                            items: formalInvoice.items,
+                            subtotal: formalInvoice.subtotal,
+                            tax: formalInvoice.taxAmount,
+                            taxRate: formalInvoice.taxRate,
+                            platformFee: formalInvoice.platformFee,
+                            discount: formalInvoice.discountAmount,
+                            couponCode: appointment.payment?.offer?.code || "",
+                            totalAmount: formalInvoice.totalAmount,
+                            paymentStatus: formalInvoice.paymentStatus,
+                            invoiceNumber: formalInvoice.invoiceNumber,
+                            paymentMethod: formalInvoice.paymentMethod
+                        });
+                    } else {
+                        // Fallback
+                        invoiceHtml = getInvoiceTemplate({
+                            clientName,
+                            clientPhone,
+                            businessName,
+                            businessAddress,
+                            businessPhone,
+                            date: new Date(appointment.date).toLocaleDateString(),
+                            items: [{
+                                name: appointment.serviceName,
+                                price: appointment.amount,
+                                quantity: 1,
+                                totalPrice: appointment.amount
+                            }],
+                            subtotal: appointment.amount,
+                            tax: appointment.serviceTax || appointment.tax || 0,
+                            taxRate: 0,
+                            platformFee: appointment.platformFee || 0,
+                            discount: appointment.discountAmount || appointment.discount || 0,
+                            totalAmount: appointment.totalAmount,
+                            paymentStatus: appointment.paymentStatus,
+                            invoiceNumber: appointment.invoiceNumber || appointment._id.toString(),
+                            paymentMethod: appointment.paymentMethod
+                        });
+                    }
+                } catch (tplError) {
+                    console.error('Error fetching invoice for email:', tplError);
+                }
+
+                // Generate PDF Buffer (add this for consistency if missing)
+                let pdfBuffer;
+                if (invoiceHtml) {
+                    try {
+                        const pdf = (await import('html-pdf')).default;
+                        pdfBuffer = await new Promise((resolve, reject) => {
+                            pdf.create(invoiceHtml, { format: 'A4' }).toBuffer((err, buffer) => {
+                                if (err) reject(err);
+                                else resolve(buffer);
+                            });
+                        });
+                    } catch (pdfError) {
+                        console.error('PDF generation failed in appointments route:', pdfError);
+                    }
+                }
+
                 await sendEmail({
                     to: clientEmail,
                     subject: `Appointment Completed - ${businessName}`,
-                    html: completionHtml
-                });
-
-                // Send invoice template
-                const invoiceHtml = getInvoiceTemplate({
-                    clientName,
-                    clientPhone,
-                    businessName,
-                    businessAddress,
-                    businessPhone,
-                    serviceName: appointment.serviceName,
-                    date: appointment.date,
-                    startTime: appointment.startTime,
-                    amount: appointment.amount,
-                    addOnsAmount: appointment.addOnsAmount || 0,
-                    tax: appointment.serviceTax || appointment.tax || 0,
-                    platformFee: appointment.platformFee || 0,
-                    totalAmount: appointment.totalAmount,
-                    amountPaid: appointment.amountPaid || appointment.totalAmount, // Fallback to total if fully paid
-                    amountRemaining: appointment.amountRemaining || 0,
-                    paymentStatus: appointment.paymentStatus,
-                    invoiceNumber: appointment._id.toString(),
-                    paymentMethod: appointment.paymentMethod
-                });
-
-                await sendEmail({
-                    to: clientEmail,
-                    subject: `Invoice for your visit at ${businessName}`,
-                    html: invoiceHtml
+                    html: completionHtml,
+                    attachments: pdfBuffer ? [
+                        {
+                            filename: `Invoice_${formalInvoice?.invoiceNumber || appointment.invoiceNumber || appointment._id}.pdf`,
+                            content: pdfBuffer,
+                            contentType: 'application/pdf'
+                        }
+                    ] : []
                 });
                 console.log(`Completion email and invoice sent to ${clientEmail}`);
             } else if (newStatus === 'cancelled') {
@@ -641,7 +693,7 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
             // Logic for completing an appointment and calculating staff commission
             const updateFields = { status: body.status };
 
-            if (body.status === 'completed') {
+            if (body.status === 'completed' || body.status === 'completed without payment') {
                 try {
                     // Fetch current appointment to get staff and service details
                     const currentAppt = await AppointmentModel.findOne({ _id: appointmentId, vendorId })
@@ -682,8 +734,11 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
 
                     // CENTRALIZED INVOICE GENERATION LOGIC
                     const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
-                    await InvoiceModel.createFromAppointment(appointmentId, vendorId);
-                    console.log(`Ensured sequential invoice exists for appointment ${appointmentId}`);
+                    const invoice = await InvoiceModel.createFromAppointment(appointmentId, vendorId);
+                    if (invoice) {
+                        updateFields.invoiceNumber = invoice.invoiceNumber;
+                        console.log(`Linked sequential invoice ${invoice.invoiceNumber} to appointment ${appointmentId}`);
+                    }
                 } catch (invoiceError) {
                     console.error("Error in centralized invoice generation:", invoiceError);
                 }

@@ -20,25 +20,41 @@ import {
 import { Checkbox } from "@repo/ui/checkbox";
 import { Label } from "@repo/ui/label";
 
-const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
-  const steps = ['Services', 'Select Professional', 'Time Slot'];
+const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage }: { 
+  currentStep: number; 
+  setCurrentStep: (step: number) => void; 
+  isWeddingPackage?: boolean;
+}) => {
+  const steps = isWeddingPackage
+    ? ['Select Package', 'Select Date & Time', 'Confirm Booking']
+    : ['Services', 'Select Professional', 'Time Slot'];
+
   return (
     <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
-      {steps.map((step, index) => (
-        <React.Fragment key={step}>
-          <button
-            onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
-            className={cn(
-              "transition-colors",
-              currentStep > index + 1 ? "hover:text-primary" : "cursor-default",
-              currentStep === index + 1 && "text-primary font-semibold"
-            )}
-          >
-            {step}
-          </button>
-          {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
-        </React.Fragment>
-      ))}
+      {steps.map((step, index) => {
+        // Map index to step number
+        // Regular: 0->1, 1->2, 2->3
+        // Wedding: 0->1, 1->3, 2->4
+        const targetStep = isWeddingPackage
+          ? (index === 0 ? 1 : index === 1 ? 3 : 4)
+          : index + 1;
+
+        return (
+          <React.Fragment key={step}>
+            <button
+              onClick={() => currentStep > targetStep && setCurrentStep(targetStep)}
+              className={cn(
+                "transition-colors",
+                currentStep > targetStep ? "hover:text-primary" : "cursor-default",
+                currentStep === targetStep && "text-primary font-semibold"
+              )}
+            >
+              {step}
+            </button>
+            {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
+          </React.Fragment>
+        );
+      })}
     </nav>
   );
 };
@@ -238,7 +254,7 @@ export function Step1_Services({
   if (isLoading) {
     return (
       <div className="w-full">
-        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={!!selectedWeddingPackage} />
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -263,7 +279,7 @@ export function Step1_Services({
   if (error) {
     return (
       <div className="w-full">
-        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={!!selectedWeddingPackage} />
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -288,7 +304,7 @@ export function Step1_Services({
   if (!hasServices && !hasWeddingPackages) {
     return (
       <div className="w-full">
-        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={!!selectedWeddingPackage} />
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -311,7 +327,7 @@ export function Step1_Services({
 
   return (
     <div className="w-full">
-      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={!!selectedWeddingPackage} />
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-3 bg-primary/10 rounded-full text-primary">

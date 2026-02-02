@@ -82,35 +82,80 @@ export const getCompletionTemplate = ({ clientName, businessName, serviceName })
 </html>
 `;
 
-export const getInvoiceTemplate = ({ clientName, clientPhone, businessName, businessAddress, businessPhone, serviceName, date, startTime, amount, addOnsAmount, tax, platformFee, totalAmount, amountPaid, amountRemaining, paymentStatus, invoiceNumber, paymentMethod }) => `
+export const getInvoiceTemplate = ({
+    clientName,
+    clientPhone,
+    businessName,
+    businessAddress,
+    businessPhone,
+    date,
+    items = [],
+    subtotal,
+    tax,
+    taxRate = 0,
+    platformFee,
+    discount = 0,
+    couponCode = "",
+    totalAmount,
+    paymentStatus,
+    invoiceNumber,
+    paymentMethod
+}) => {
+    // Helper to format address with line breaks like the UI component
+    const formatAddress = (address) => {
+        if (!address || address === 'N/A') return address;
+        if (address.length > 50) {
+            const words = address.split(' ');
+            const lines = [];
+            let currentLine = '';
+            for (const word of words) {
+                if ((currentLine + word).length > 40 && currentLine.length > 0) {
+                    lines.push(currentLine.trim());
+                    currentLine = word + ' ';
+                } else {
+                    currentLine += word + ' ';
+                }
+            }
+            if (currentLine.trim().length > 0) lines.push(currentLine.trim());
+            return lines.join('<br />');
+        }
+        return address;
+    };
+
+    return `
 <!DOCTYPE html>
 <html>
 <head>
     <style>
-        body { font-family: 'Arial', sans-serif; line-height: 1.4; color: #000; margin: 0; padding: 20px; background-color: #fff; }
-        .invoice-container { max-width: 800px; margin: 0 auto; padding: 20px; background: white; }
-        .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.4; color: #000; margin: 0; padding: 20px; background-color: #fff; }
+        .invoice-container { max-width: 800px; margin: 0 auto; padding: 20px; background: white; border-radius: 8px; }
+        .header { border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
         .salon-info { float: left; width: 60%; }
-        .invoice-title { float: right; width: 30%; text-align: right; }
-        .salon-name { font-size: 20px; font-bold: true; margin: 0; }
-        .salon-detail { font-size: 14px; margin: 5px 0; }
-        .title { font-size: 24px; font-weight: bold; margin: 0; }
+        .invoice-title-box { float: right; width: 30%; text-align: right; }
+        .salon-name { font-size: 20px; font-weight: bold; margin: 0; color: #000; }
+        .salon-detail { font-size: 14px; margin: 2px 0; color: #000; }
+        .invoice-header-title { font-size: 24px; font-weight: bold; margin: 0; color: #000; }
         .clear { clear: both; }
-        .info-section { margin: 20px 0; display: flex; justify-content: space-between; font-size: 14px; }
-        .info-col { float: left; width: 45%; }
-        .info-col-right { float: right; width: 45%; text-align: right; }
+        
+        .info-section { margin-bottom: 20px; font-size: 14px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .info-label { font-weight: 600; }
+        
         .divider { border-top: 1px solid #000; margin: 15px 0; }
-        .invoice-to { margin-bottom: 20px; font-size: 14px; }
+        
         .table { width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 20px; }
-        .table th { background-color: #e2e8f0; border: 1px solid #000; padding: 10px; text-align: left; font-size: 13px; font-weight: bold; }
-        .table td { border: 1px solid #000; padding: 10px; font-size: 13px; }
+        .table th { background-color: #e2e8f0; border: 1px solid #000; padding: 8px; text-align: left; font-size: 12px; font-weight: bold; color: #000; }
+        .table td { border: 1px solid #000; padding: 8px; font-size: 12px; color: #000; }
         .text-right { text-align: right; }
         .font-bold { font-weight: bold; }
-        .summary-row td { padding: 8px 10px; border: 1px solid #000; }
+        .addon-item { padding-left: 15px; }
+        
+        .summary-row td { padding: 6px 8px; border: 1px solid #000; }
         .total-row { background-color: #e2e8f0; }
-        .footer { margin-top: 30px; border-top: 2px solid #000; pt-20px; text-align: center; }
-        .footer-note { font-weight: 500; font-size: 14px; margin-bottom: 10px; }
-        .computer-generated { font-size: 12px; }
+        
+        .footer { margin-top: 30px; border-top: 2px solid #000; padding-top: 15px; text-align: center; }
+        .payment-status-note { font-weight: 500; font-size: 14px; margin-bottom: 8px; color: #000; }
+        .computer-generated { font-size: 10px; color: #4b5563; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -119,22 +164,22 @@ export const getInvoiceTemplate = ({ clientName, clientPhone, businessName, busi
         <div class="header">
             <div class="salon-info">
                 <h1 class="salon-name">${businessName}</h1>
-                <p class="salon-detail">${businessAddress || ''}</p>
-                <p class="salon-detail">Phone: ${businessPhone || ''}</p>
+                <div class="salon-detail">${formatAddress(businessAddress)}</div>
+                <div class="salon-detail">Phone: ${businessPhone}</div>
             </div>
-            <div class="invoice-title">
-                <h2 class="title">INVOICE</h2>
+            <div class="invoice-title-box">
+                <h2 class="invoice-header-title">INVOICE</h2>
             </div>
             <div class="clear"></div>
         </div>
 
-        <!-- Info Section -->
+        <!-- Date and Invoice No -->
         <div class="info-section">
-            <div class="info-col">
-                <p><strong>Date:</strong> ${new Date(date).toLocaleDateString()}</p>
+            <div style="float: left;">
+                <span class="info-label">Date:</span> ${date}
             </div>
-            <div class="info-col-right">
-                <p><strong>Invoice No:</strong> ${invoiceNumber}</p>
+            <div style="float: right;">
+                <span class="info-label">Invoice No:</span> ${invoiceNumber}
             </div>
             <div class="clear"></div>
         </div>
@@ -142,9 +187,9 @@ export const getInvoiceTemplate = ({ clientName, clientPhone, businessName, busi
         <div class="divider"></div>
 
         <!-- Client Section -->
-        <div class="invoice-to">
-            <p><strong>Invoice To:</strong> ${clientName}</p>
-            ${clientPhone ? `<p><strong>Phone:</strong> ${clientPhone}</p>` : ''}
+        <div class="info-section" style="margin-bottom: 15px;">
+            <div><span class="info-label">Invoice To:</span> ${clientName || 'N/A'}</div>
+            ${clientPhone ? `<div><span class="info-label">Phone:</span> ${clientPhone}</div>` : ''}
         </div>
 
         <!-- Table -->
@@ -159,55 +204,53 @@ export const getInvoiceTemplate = ({ clientName, clientPhone, businessName, busi
                 </tr>
             </thead>
             <tbody>
+                ${items.map(item => `
                 <tr>
                     <td>
-                        <div class="font-bold">${serviceName}</div>
+                        <div class="font-bold ${item.type === 'addon' ? 'addon-item' : ''}">
+                            ${item.type === 'addon' ? '+ ' : ''}${item.name}
+                        </div>
                     </td>
-                    <td class="text-right">₹${(Number(amount) || 0).toFixed(2)}</td>
-                    <td class="text-right">1</td>
-                    <td class="text-right">₹0.00</td>
-                    <td class="text-right">₹${(Number(amount) || 0).toFixed(2)}</td>
+                    <td class="text-right">₹${(Number(item.price) || 0).toFixed(2)}</td>
+                    <td class="text-right">${item.quantity || 1}</td>
+                    <td class="text-right">₹${((Number(item.price || 0) * Number(item.quantity || 1) * Number(taxRate)) / 100).toFixed(2)}</td>
+                    <td class="text-right font-bold">₹${(Number(item.totalPrice) || 0).toFixed(2)}</td>
                 </tr>
-                ${Number(addOnsAmount) > 0 ? `
-                <tr>
-                    <td style="padding-left: 20px;">+ Add-ons</td>
-                    <td class="text-right">₹${Number(addOnsAmount).toFixed(2)}</td>
-                    <td class="text-right">1</td>
-                    <td class="text-right">₹0.00</td>
-                    <td class="text-right">₹${Number(addOnsAmount).toFixed(2)}</td>
-                </tr>` : ''}
+                `).join('')}
                 
                 <!-- Summary Rows -->
                 <tr class="summary-row">
                     <td colspan="4" class="text-right font-bold">Subtotal:</td>
-                    <td class="text-right font-bold">₹${(Number(amount) + Number(addOnsAmount || 0)).toFixed(2)}</td>
+                    <td class="text-right font-bold">₹${(Number(subtotal) || 0).toFixed(2)}</td>
                 </tr>
                 <tr class="summary-row">
-                    <td colspan="4" class="text-right font-bold" style="color: #16a34a;">Discount:</td>
-                    <td class="text-right font-bold" style="color: #16a34a;">-₹0.00</td>
-                </tr>
-                <tr class="summary-row">
-                    <td colspan="4" class="text-right font-bold">Tax (0%):</td>
+                    <td colspan="4" class="text-right font-bold">Tax (${taxRate}%):</td>
                     <td class="text-right font-bold">₹${(Number(tax) || 0).toFixed(2)}</td>
                 </tr>
                 <tr class="summary-row">
                     <td colspan="4" class="text-right font-bold">Platform Fee:</td>
                     <td class="text-right font-bold">₹${(Number(platformFee) || 0).toFixed(2)}</td>
                 </tr>
+                <tr class="summary-row">
+                    <td colspan="4" class="text-right font-bold" style="color: #16a34a;">
+                        Discount${couponCode ? ` (${couponCode})` : ''}:
+                    </td>
+                    <td class="text-right font-bold" style="color: #16a34a;">-₹${(Number(discount) || 0).toFixed(2)}</td>
+                </tr>
                 <tr class="summary-row total-row">
-                    <td colspan="4" class="text-right font-bold" style="font-size: 16px;">Total:</td>
-                    <td class="text-right font-bold" style="font-size: 16px;">₹${(Number(totalAmount) || 0).toFixed(2)}</td>
+                    <td colspan="4" class="text-right font-bold" style="font-size: 15px;">Total:</td>
+                    <td class="text-right font-bold" style="font-size: 15px;">₹${(Number(totalAmount) || 0).toFixed(2)}</td>
                 </tr>
             </tbody>
         </table>
 
         <!-- Footer -->
         <div class="footer">
-            <p class="footer-note">
-                ${paymentStatus === 'paid' || paymentStatus === 'completed'
-        ? `Payment Of ₹${(Number(totalAmount) || 0).toFixed(2)} Received By ${paymentMethod || 'Paid at Salon'}`
-        : `Payment Of ₹${(Number(totalAmount) || 0).toFixed(2)} Is Pending`
-    }
+            <p class="payment-status-note">
+                ${paymentMethod || paymentStatus === 'paid' || paymentStatus === 'completed'
+            ? `Payment Of ₹${(Number(totalAmount) || 0).toFixed(2)} Received By ${paymentMethod || 'Paid at Salon'}`
+            : `Payment Of ₹${(Number(totalAmount) || 0).toFixed(2)} Is Pending`
+        }
             </p>
             <p class="computer-generated">
                 NOTE: This is computer generated receipt and does not require physical signature.
@@ -217,6 +260,7 @@ export const getInvoiceTemplate = ({ clientName, clientPhone, businessName, busi
 </body>
 </html>
 `;
+};
 
 export const getCancellationTemplate = ({ clientName, businessName, serviceName, date, startTime, cancellationReason }) => `
 <!DOCTYPE html>

@@ -313,8 +313,9 @@ function BookingPageContent() {
   const [isServiceSelectionOpen, setIsServiceSelectionOpen] = useState(false);
   const [isVendorSelectionOpen, setIsVendorSelectionOpen] = useState(false);
 
-  // Add state to store lock token from Step3 for wedding packages
+  // Add state to store lock token from Step3 for wedding packages and regular bookings
   const [slotLockToken, setSlotLockToken] = useState<string | null>(null);
+  const [pendingAppointmentId, setPendingAppointmentId] = useState<string | null>(null);
 
   // Add missing form state variables
   const [customerInfoForm, setCustomerInfoForm] = useState({
@@ -862,7 +863,12 @@ function BookingPageContent() {
 
   const handlePrevStep = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      // For wedding packages, skip step 2 (staff selection) when going back from step 3
+      if (selectedWeddingPackage && currentStep === 3) {
+        setCurrentStep(1);
+      } else {
+        setCurrentStep(currentStep - 1);
+      }
     } else {
       window.history.back();
     }
@@ -1321,11 +1327,7 @@ function BookingPageContent() {
     const endTime = calculateEndTime(selectedTime, totalDuration);
 
     // Check if any selected service is a home service or if wedding package is for wedding venue
-    const isHomeService = selectedWeddingPackage
-      ? false // Wedding packages handle location separately
-      : selectedServices.some(service =>
-        service.homeService?.available || service.serviceHomeService?.available
-      );
+    const isHomeService = (bookingMode === 'home' || !!selectedWeddingPackage) && !!homeServiceLocation;
 
     // Check if this is a wedding service (either wedding package or wedding service)
     const isWeddingService = !!selectedWeddingPackage || selectedServices.some(service =>
@@ -1485,7 +1487,7 @@ function BookingPageContent() {
       isHomeService: isHomeService,
       isWeddingService: isWeddingService,
       // Add home service location if it's a home service - ensure proper structure
-      ...(bookingMode === 'home' && homeServiceLocation ? {
+      ...(isHomeService && homeServiceLocation ? {
         homeServiceLocation: {
           address: homeServiceLocation.address || locationForm.address || '',
           city: homeServiceLocation.city || locationForm.city || '',
@@ -1515,7 +1517,7 @@ function BookingPageContent() {
     try {
       // Determine if this is a home service based on booking mode and location availability
       // Payment method should NOT affect whether it's a home service or not
-      const finalIsHomeService = bookingMode === 'home' && !!homeServiceLocation;
+      const finalIsHomeService = isHomeService;
 
       console.log("=== FINAL BOOKING DECISION ===");
       console.log("Booking Mode:", bookingMode);
@@ -1577,6 +1579,7 @@ function BookingPageContent() {
         // Now confirm the booking with the lock ID
         console.log("=== CONFIRMING WEDDING PACKAGE BOOKING ===");
         console.log("Lock ID:", lockId);
+        console.log("Appointment ID (if any):", pendingAppointmentId);
 
         // Call the wedding package specific endpoint
         const response = await fetch('/api/scheduling/wedding-package', {
@@ -1620,59 +1623,70 @@ function BookingPageContent() {
         }
       } else {
         // Handle regular booking with enhanced slot locking
-        const lockResult = await acquireSlotLock({
-          vendorId: salonId,
-          staffId: staffId,
-          serviceId: primaryService.id,
-          serviceName: primaryService.name,
-          date: selectedDate,
-          startTime: selectedTime,
-          endTime: endTime,
-          clientId: user?._id || user?.id,
-          clientName: `${user?.firstName} ${user?.lastName}`,
-          staffName: staffName,
-          // Use the correctly determined home service flag
-          isHomeService: finalIsHomeService,
-          isWeddingService: isWeddingService,
-          location: finalIsHomeService && homeServiceLocation ? {
-            address: homeServiceLocation.address || locationForm.address || '',
-            city: homeServiceLocation.city || locationForm.city || '',
-            state: homeServiceLocation.state || locationForm.state || '',
-            pincode: homeServiceLocation.pincode || locationForm.pincode || '',
-            landmark: homeServiceLocation.landmark || locationForm.landmark || '',
-            lat: Number(homeServiceLocation.coordinates?.lat || homeServiceLocation.lat || locationForm.lat || 0),
-            lng: Number(homeServiceLocation.coordinates?.lng || homeServiceLocation.lng || locationForm.lng || 0)
-          } : null,
-          duration: totalDuration,
-          amount: appointmentData.amount,
-          totalAmount: appointmentData.totalAmount,
-          finalAmount: appointmentData.finalAmount,
-          platformFee: appointmentData.platformFee,
-          serviceTax: appointmentData.serviceTax,
-          taxRate: appointmentData.taxRate,
-          couponCode: appliedOffer?.code || offerCode,
-          discountAmount: priceBreakdown?.discountAmount || 0,
-          // Include all service items with their add-ons for multi-service bookings
-          serviceItems: appointmentData.serviceItems,
-          // Extract addOnIds for backend parsing
-          addOnIds: appointmentData.serviceItems.flatMap((item: any) =>
-            item.addOns?.map((a: any) => a._id || a.id) || []
-          ),
-          selectedAddOns: appointmentData.serviceItems.flatMap((item: any) =>
-            item.addOns?.map((a: any) => a._id || a.id) || []
-          ),
-          isMultiService: isMultiService,
-        }).unwrap();
+        let appointmentIdToConfirm = pendingAppointmentId;
+        let currentLockId = slotLockToken;
 
-        if (lockResult.success) {
+        // If we don't have an appointmentId from Step 3, we must acquire a lock now
+        if (!appointmentIdToConfirm) {
+          console.log("No existing appointment found from Step 3, acquiring lock now...");
+          const lockResult = await acquireSlotLock({
+            vendorId: salonId,
+            staffId: staffId,
+            serviceId: primaryService.id,
+            serviceName: primaryService.name,
+            date: selectedDate,
+            startTime: selectedTime,
+            endTime: endTime,
+            clientId: user?._id || user?.id,
+            clientName: `${user?.firstName} ${user?.lastName}`,
+            staffName: staffName,
+            isHomeService: finalIsHomeService,
+            isWeddingService: isWeddingService,
+            location: finalIsHomeService && homeServiceLocation ? {
+              address: homeServiceLocation.address || locationForm.address || '',
+              city: homeServiceLocation.city || locationForm.city || '',
+              state: homeServiceLocation.state || locationForm.state || '',
+              pincode: homeServiceLocation.pincode || locationForm.pincode || '',
+              landmark: homeServiceLocation.landmark || locationForm.landmark || '',
+              lat: Number(homeServiceLocation.coordinates?.lat || homeServiceLocation.lat || locationForm.lat || 0),
+              lng: Number(homeServiceLocation.coordinates?.lng || homeServiceLocation.lng || locationForm.lng || 0)
+            } : null,
+            duration: totalDuration,
+            amount: appointmentData.amount,
+            totalAmount: appointmentData.totalAmount,
+            finalAmount: appointmentData.finalAmount,
+            platformFee: appointmentData.platformFee,
+            serviceTax: appointmentData.serviceTax,
+            taxRate: appointmentData.taxRate,
+            couponCode: appliedOffer?.code || offerCode,
+            discountAmount: priceBreakdown?.discountAmount || 0,
+            serviceItems: appointmentData.serviceItems,
+            addOnIds: appointmentData.serviceItems.flatMap((item: any) =>
+              item.addOns?.map((a: any) => a._id || a.id) || []
+            ),
+            selectedAddOns: appointmentData.serviceItems.flatMap((item: any) =>
+              item.addOns?.map((a: any) => a._id || a.id) || []
+            ),
+            isMultiService: isMultiService,
+          }).unwrap();
+
+          if (!lockResult.success) {
+            throw new Error(lockResult.message || "Failed to acquire lock");
+          }
+          
+          appointmentIdToConfirm = lockResult.appointmentId;
+          currentLockId = lockResult.lockId;
+        } else {
+          console.log("Using existing appointment ID from Step 3 lock:", appointmentIdToConfirm);
+        }
+
+        if (appointmentIdToConfirm) {
           // Confirm the booking
           const confirmResult = await confirmBooking({
-            appointmentId: lockResult.appointmentId,
-            lockId: lockResult.lockId,
-            paymentDetails: {
-              method: paymentMethod,
-              status: 'pending'
-            },
+            appointmentId: appointmentIdToConfirm,
+            lockId: currentLockId,
+            paymentMethod: paymentMethod,
+            paymentStatus: paymentMethod === 'Pay at Salon' ? 'pending' : 'paid',
             couponCode: appliedOffer?.code || offerCode,
             discountAmount: priceBreakdown?.discountAmount || 0,
             finalAmount: priceBreakdown?.finalTotal || 0
@@ -1682,7 +1696,7 @@ function BookingPageContent() {
           setIsPaymentModalOpen(false);
           setIsSuccessModalOpen(true);
         } else {
-          throw new Error(lockResult.message || "Failed to acquire slot lock");
+          throw new Error("Failed to acquire slot lock or session expired.");
         }
       }
 
@@ -2866,11 +2880,21 @@ function BookingPageContent() {
               error={null}
               selectedServices={selectedServices}
               vendorId={salonId as string}
+              onLockAcquired={(token, appId) => {
+                setSlotLockToken(token);
+                if (appId) setPendingAppointmentId(appId);
+              }}
               platformFee={priceBreakdown?.platformFee}
               serviceTax={priceBreakdown?.serviceTax}
               taxRate={priceBreakdown?.taxRate}
               couponCode={appliedOffer?.code || offerCode}
               discountAmount={priceBreakdown?.discountAmount || 0}
+              user={user}
+              isHomeService={bookingMode === 'home'}
+              homeServiceLocation={homeServiceLocation as any}
+              isWeddingService={selectedServices.some(service => 
+                service.weddingService?.available || service.serviceWeddingService?.available
+              )}
             />
           ) : (
             <TimeSlotSelector
@@ -2892,12 +2916,21 @@ function BookingPageContent() {
               isWeddingPackage={!!selectedWeddingPackage}
               weddingPackage={selectedWeddingPackage}
               weddingPackageServices={selectedWeddingPackage ? (weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services) : undefined}
-              onLockAcquired={setSlotLockToken}
+              onLockAcquired={(token, appId) => {
+                setSlotLockToken(token);
+                if (appId) setPendingAppointmentId(appId);
+              }}
               platformFee={priceBreakdown?.platformFee}
               serviceTax={priceBreakdown?.serviceTax}
               taxRate={priceBreakdown?.taxRate}
               couponCode={appliedOffer?.code || offerCode}
               discountAmount={priceBreakdown?.discountAmount || 0}
+              user={user}
+              isHomeService={bookingMode === 'home'}
+              homeServiceLocation={homeServiceLocation}
+              isWeddingService={selectedServices.some(service => 
+                service.weddingService?.available || service.serviceWeddingService?.available
+              )}
             />
           );
           break;

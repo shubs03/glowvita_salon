@@ -13,7 +13,7 @@ import { selectBlockedTimesByStaffAndDate } from '@repo/store/slices/blockTimeSl
 
 import { getDay } from 'date-fns';
 import { Calendar as CalendarIcon, Trash2, Loader2, Search, X, PlusCircle } from 'lucide-react';
-import { glowvitaApi, useCreateClientMutation, useGetWorkingHoursQuery } from '@repo/store/api';
+import { glowvitaApi, useCreateClientMutation, useGetWorkingHoursQuery, useGetTaxFeeSettingsQuery } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { toast } from 'sonner';
@@ -128,6 +128,7 @@ export default function NewAppointmentForm({
     status: 'scheduled',
     amount: 0,
     tax: 0,
+    taxRate: 0,
     totalAmount: 0,
     clientEmail: defaultValues?.clientEmail || '',
     ...defaultValues
@@ -138,6 +139,19 @@ export default function NewAppointmentForm({
     // Force refetch when component mounts
     refetchOnMountOrArgChange: true
   });
+
+  // Fetch tax settings
+  const { data: taxSettings } = useGetTaxFeeSettingsQuery(undefined);
+
+  // Update taxRate if settings change
+  useEffect(() => {
+    if (taxSettings && taxSettings.serviceTax !== undefined && !isEditing && !isRescheduling) {
+      setFormData(prev => ({
+        ...prev,
+        taxRate: taxSettings.serviceTax
+      }));
+    }
+  }, [taxSettings, isEditing, isRescheduling]);
 
   // Debug working hours state
   const [workingHours, setWorkingHours] = useState<Record<string, any> | null>(null);
@@ -1515,6 +1529,7 @@ export default function NewAppointmentForm({
         amount: Number(appointmentData.amount) || 0,
         discount: Number(appointmentData.discount) || 0,
         tax: Number(appointmentData.tax) || 0,
+        taxRate: Number(appointmentData.taxRate) || Number(taxSettings?.serviceTax) || 0,
         totalAmount: Number(appointmentData.totalAmount) || 0,
         finalAmount: Number(appointmentData.totalAmount) || 0,
         paymentStatus: appointmentData.paymentStatus || 'pending',

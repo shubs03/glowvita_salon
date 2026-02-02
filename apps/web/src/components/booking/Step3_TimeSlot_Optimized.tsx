@@ -16,23 +16,36 @@ const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage }: {
   isWeddingPackage?: boolean;
 }) => {
   // Wedding packages skip step 2 (staff selection)
+  // Step mapping: 
+  // Regular: [1, 2, 3, 4] -> ['Select Service', 'Select Professional', 'Select Date & Time', 'Confirm Booking']
+  // Wedding: [1, 3, 4, 5] -> ['Select Package', 'Select Date & Time', 'Location Selection', 'Confirm Booking']
+  
   const steps = isWeddingPackage
-    ? ['Select Package', 'Select Date & Time', 'Confirm Booking']
-    : ['Select Service', 'Select Professional', 'Select Date & Time', 'Confirm Booking'];
+    ? [
+        { name: 'Select Package', step: 1 },
+        { name: 'Select Date & Time', step: 3 },
+        { name: 'Confirm Booking', step: 4 }
+      ]
+    : [
+        { name: 'Select Service', step: 1 },
+        { name: 'Select Professional', step: 2 },
+        { name: 'Select Date & Time', step: 3 },
+        { name: 'Confirm Booking', step: 4 }
+      ];
 
   return (
     <nav className="flex items-center text-sm font-medium text-muted-foreground mb-6">
-      {steps.map((step, index) => (
-        <React.Fragment key={step}>
+      {steps.map((stepObj, index) => (
+        <React.Fragment key={stepObj.name}>
           <button
-            onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
+            onClick={() => currentStep > stepObj.step && setCurrentStep(stepObj.step)}
             className={cn(
               "transition-colors",
-              currentStep > index + 1 ? "hover:text-primary cursor-pointer" : "cursor-default",
-              currentStep === index + 1 && "text-primary font-semibold"
+              currentStep > stepObj.step ? "hover:text-primary cursor-pointer" : "cursor-default",
+              currentStep === stepObj.step && "text-primary font-semibold"
             )}
           >
-            {step}
+            {stepObj.name}
           </button>
           {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
         </React.Fragment>
@@ -93,12 +106,13 @@ interface Step3TimeSlotProps {
   weddingPackage?: WeddingPackage | null;
   weddingPackageServices?: any[];
   homeServiceLocation?: any;
-  onLockAcquired?: (lockToken: string) => void; // Callback when lock is acquired
+  onLockAcquired?: (lockToken: string, appointmentId?: string) => void; // Callback when lock is acquired
   platformFee?: number;
   serviceTax?: number;
   taxRate?: number;
   couponCode?: string | null;
   discountAmount?: number;
+  user?: any;
 }
 
 export const Step3_TimeSlot = memo(({
@@ -130,7 +144,8 @@ export const Step3_TimeSlot = memo(({
   serviceTax = 0,
   taxRate = 0,
   couponCode = null,
-  discountAmount = 0
+  discountAmount = 0,
+  user
 }: Step3TimeSlotProps) => {
   const [slots, setSlots] = useState<TimeSlot[]>([]);
   const [isLoadingSlots, setIsLoadingSlots] = useState(false);
@@ -267,6 +282,17 @@ export const Step3_TimeSlot = memo(({
   const handleTimeSelect = useCallback(async (slot: TimeSlot) => {
     if (isLocking) return;
 
+    // INDUSTRY BEST PRACTICE: Release existing lock before acquiring a new one
+    // This prevents one user from blocking multiple slots.
+    if (lockedSlot) {
+      console.log('Releasing existing lock before acquiring new one');
+      try {
+        await handleReleaseLock();
+      } catch (err) {
+        console.error('Error auto-releasing lock:', err);
+      }
+    }
+
     setIsLocking(true);
 
     try {
@@ -310,8 +336,8 @@ export const Step3_TimeSlot = memo(({
             totalAmount: weddingPackage.discountedPrice || weddingPackage.totalPrice || 0,
             depositAmount: (weddingPackage as any).depositAmount || 0
           },
-          clientId: 'temp-client-id', // TODO: Replace with actual client ID from auth
-          clientName: 'Customer', // TODO: Replace with actual client name
+          clientId: (weddingPackage as any).clientId || 'temp-client-id', 
+          clientName: 'Customer', 
           customerDetails: {
             name: 'Customer',
             phone: null
@@ -345,7 +371,7 @@ export const Step3_TimeSlot = memo(({
 
         // Notify parent component about the lock token
         if (onLockAcquired && lockData.lockId) {
-          onLockAcquired(lockData.lockId);
+          onLockAcquired(lockData.lockId, lockData.appointmentId);
         }
 
         // Trigger the next step by calling onSelectTime
@@ -403,8 +429,8 @@ export const Step3_TimeSlot = memo(({
         date: selectedDate.toISOString(),
         startTime: slot.startTime,
         endTime: slot.endTime,
-        clientId: 'temp-client-id', // TODO: Replace with actual client ID from auth
-        clientName: 'Customer', // TODO: Replace with actual client name
+        clientId: user?._id || user?.id || (effectiveService as any)?.clientId || 'temp-client-id', 
+        clientName: user ? `${user.firstName} ${user.lastName}` : 'Customer', 
         staffName: selectedStaff?.name || 'Any Professional',
         isHomeService,
         isWeddingService: isWeddingService,
@@ -452,12 +478,17 @@ export const Step3_TimeSlot = memo(({
 
       console.log('Lock response received:', lockData);
 
-      // Store lock - backend returns lockId and expiresAt
+      if (onLockAcquired && lockData.lockId) {
+        onLockAcquired(lockData.lockId, lockData.appointmentId);
+      }
+
+      // Store lock state locally
       setLockedSlot({
         slot,
-        lockToken: lockData.lockId || lockData.lockToken,
-        expiresAt: new Date(lockData.expiresAt || lockData.lockExpiration)
-      });
+        lockToken: lockData.lockId,
+        appointmentId: lockData.appointmentId,
+        expiresAt: new Date(lockData.expiresAt || (Date.now() + 15 * 60 * 1000))
+      } as any);
 
       onSelectTime(slot.startTime);
       toast.success('Slot locked! You have 15 minutes to complete booking.');

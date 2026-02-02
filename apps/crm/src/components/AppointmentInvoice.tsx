@@ -41,8 +41,13 @@ export function AppointmentInvoice({
     onRebookClick
 }: AppointmentInvoiceProps) {
     // Get vendor contact info
-    const vendorPhone = vendorProfile?.data?.mobile || vendorProfile?.data?.phone || 'N/A';
-    const vendorAddress = vendorProfile?.data?.address || 'N/A';
+    const vendorPhone = vendorProfile?.data?.phone || vendorProfile?.data?.mobile || 'N/A';
+    const vendorAddress = [
+        vendorProfile?.data?.address,
+        vendorProfile?.data?.city,
+        vendorProfile?.data?.state,
+        vendorProfile?.data?.pincode
+    ].filter(Boolean).join(', ') || 'N/A';
 
     // Split address into multiple lines if it's too long
     const formatAddress = (address: string) => {
@@ -215,7 +220,7 @@ export function AppointmentInvoice({
                         : `Payment Of ₹${invoiceData.total.toFixed(2)} Is Pending`
                     }
                 </p>
-                <p className="text-center text-xs text-black print:text-xs">
+                <p className="text-center text-sm font-semibold text-gray-600 print:text-[10px] uppercase tracking-wider">
                     NOTE: This is computer generated receipt and does not require physical signature.
                 </p>
             </div>

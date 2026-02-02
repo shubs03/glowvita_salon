@@ -181,8 +181,22 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // 5. Top Performance
     const [servicesData, productsData] = await Promise.all([
-      getPerformanceData(req, '../reports/booking-summary/selling-services/route'),
-      getPerformanceData(req, '../reports/booking-summary/sales-by-products/route')
+      (async () => {
+        try {
+          const mod = await import('../reports/booking-summary/selling-services/route');
+          const res = await mod.GET(new Request(new URL('../reports/booking-summary/selling-services/route', req.url).href, { headers: req.headers }));
+          const json = await res.json();
+          return json?.data || {};
+        } catch (e) { return {}; }
+      })(),
+      (async () => {
+        try {
+          const mod = await import('../reports/booking-summary/sales-by-products/route');
+          const res = await mod.GET(new Request(new URL('../reports/booking-summary/sales-by-products/route', req.url).href, { headers: req.headers }));
+          const json = await res.json();
+          return json?.data || {};
+        } catch (e) { return {}; }
+      })()
     ]);
 
     return NextResponse.json({
@@ -363,14 +377,9 @@ async function getSmsAmount(req, filterType, filterValue, selectedRegionId) {
   } catch (e) { return 0; }
 }
 
-async function getPerformanceData(req, path) {
-  try {
-    const mod = await import(path);
-    const res = await mod.GET(new Request(new URL(path, req.url).href, { headers: req.headers }));
-    const json = await res.json();
-    return json?.data || {};
-  } catch (e) { return {}; }
-}
+/** 
+ * Refactored to use explicit strings above instead of generic dynamic imports to avoid Webpack warnings
+ */
 
 async function calculateSubscriptionAmount(req, filterType, filterValue) {
   try {

@@ -58,6 +58,7 @@ export interface Appointment {
   serviceTax?: number;
   discountAmount?: number;
   discount?: number;
+  taxRate?: number;
   finalAmount?: number;
   payment?: {
     paid?: number;
