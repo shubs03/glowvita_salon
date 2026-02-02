@@ -6,12 +6,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
-import { Eye, EyeOff, Map, Gift } from 'lucide-react';
+import { Eye, EyeOff, Map as MapIcon, Gift, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import Image from 'next/image';
 import customerImage from '../../../public/images/web_registration.jpg';
 
-import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '../../../../packages/config/config';
+import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '@repo/config/config';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 
 const rawApiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 const GOOGLE_MAPS_API_KEY = rawApiKey.toString().trim().replace(/['"“”]/g, '');
@@ -639,7 +640,7 @@ function ClientRegisterForm() {
                         onClick={() => setIsMapOpen(true)}
                         className="h-11 w-11"
                       >
-                        <Map className="h-5 w-5" />
+                        <MapIcon className="h-5 w-5" />
                       </Button>
                     </div>
                     {/* Hidden fields for state, city, pincode - not displayed to user but sent to backend */}
@@ -846,14 +847,48 @@ function ClientRegisterForm() {
                 )}
 
                 {!isGoogleMapsLoaded && !authError && (
-                }}
-                disabled={!location || !city || !pincode}
-              >
-                Confirm
-              </Button>
+                  <div className="absolute inset-0 bg-slate-100 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-3"></div>
+                      <p className="text-slate-600 font-medium">Loading map...</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Bottom Action Area */}
+              <div className="p-6 bg-slate-50 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  {location && (
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+                        <MapPin className="h-4 w-4" />
+                      </div>
+                      <p className="text-sm font-medium truncate">
+                        {location.lat.toFixed(6)}, {location.lng.toFixed(6)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3 w-full sm:w-auto">
+                  <Button variant="outline" className="flex-1 sm:flex-none rounded-xl" onClick={() => setIsMapOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    className="flex-1 sm:flex-none rounded-xl px-8" 
+                    onClick={() => {
+                      setConfirmedLocation(location);
+                      setIsMapOpen(false);
+                    }}
+                    disabled={!location || !city || !pincode}
+                  >
+                    Confirm Location
+                  </Button>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

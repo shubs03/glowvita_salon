@@ -6,7 +6,7 @@ import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Upload, User, Briefcase, MapPin, Eye, EyeOff, Check, ChevronsUpDown, Map as MapIcon } from 'lucide-react';
+import { X, Upload, User, Briefcase, MapPin, Eye, EyeOff, Check, ChevronsUpDown, Map as MapIcon, CheckCircle2 } from 'lucide-react';
 import { Checkbox } from "@repo/ui/checkbox";
 import {
   Select,

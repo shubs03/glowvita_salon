@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Building, MapPin, User, ChevronRight, ArrowLeft, ArrowRight, Map as MapIcon } from 'lucide-react';
+import { Eye, EyeOff, Building, MapPin, User, ChevronRight, ArrowLeft, ArrowRight, Map as MapIcon, CheckCircle2 } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
@@ -808,10 +808,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="font-semibold text-slate-800 group-hover:text-primary truncate transition-colors font-headline">
-                              {result.structured_formatting.main_text}
-                            </div>
-                            <div className="text-xs text-slate-500 truncate mt-0.5">
-                              {result.structured_formatting.secondary_text}
+                              {result.description}
                             </div>
                           </div>
                         </div>

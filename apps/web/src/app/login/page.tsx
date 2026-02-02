@@ -11,7 +11,8 @@ import Image from 'next/image';
 import customerImage from '../../../public/images/web_login.jpg';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 
-import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '../../../../packages/config/config';
+import Link from 'next/link';
+import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '@repo/config/config';
 
 const rawApiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 const GOOGLE_MAPS_API_KEY = rawApiKey.toString().trim().replace(/['"“”]/g, '');
