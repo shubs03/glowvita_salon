@@ -107,7 +107,7 @@ export const ProfileHeader = ({
               </span>
             </CardDescription>
             <div className="text-xs sm:text-sm text-muted-foreground mt-2">
-              {role === 'vendor' ? 'Vendor' : role === 'supplier' ? 'Supplier' : 'Doctor'} ID:{" "}
+              {role === 'vendor' ? 'Vendor' : role === 'supplier' ? 'Supplier' : 'Doctor'} ID :{" "}
               <span className="font-mono bg-secondary px-1.5 py-0.5 rounded text-xs">
                 {profileData?._id?.substring(0, 8) || 'N/A'}
               </span>

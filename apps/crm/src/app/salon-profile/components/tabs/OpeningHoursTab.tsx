@@ -311,7 +311,7 @@ export const OpeningHoursTab = ({
                     <div
                       onClick={() => updateHours(index, { isOpen: !hour.isOpen })}
                       className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors ${
-                        hour.isOpen ? 'bg-blue-400' : 'bg-gray-300'
+                        hour.isOpen ? 'bg-primary' : 'bg-secondary'
                       }`}
                     >
                       <span
