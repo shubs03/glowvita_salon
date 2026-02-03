@@ -115,9 +115,9 @@ export function PackageModal({
         </DialogHeader>
 
         <form onSubmit={onSubmit} className="space-y-4 sm:space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
             {/* Left Column */}
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Package Name</Label>
                 <Input
@@ -145,13 +145,13 @@ export function PackageModal({
               <div className="space-y-2">
                 <Label>Package Image</Label>
                 {formData.image ? (
-                  <div className="relative">
+                  <div className="relative w-full max-w-[200px]">
                     <Image
                       src={formData.image}
                       alt="Package preview"
                       width={200}
                       height={200}
-                      className="rounded-md object-cover"
+                      className="rounded-md object-cover w-full h-auto"
                     />
                     {modalType !== "view" && (
                       <Button
@@ -166,8 +166,8 @@ export function PackageModal({
                     )}
                   </div>
                 ) : modalType !== "view" ? (
-                  <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                    <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                  <div className="border-2 border-dashed rounded-lg p-4 sm:p-6 text-center">
+                    <Upload className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400" />
                     <p className="mt-2 text-sm text-gray-600">
                       <label htmlFor="image-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary/80">
                         <span>Upload an image</span>
@@ -189,10 +189,10 @@ export function PackageModal({
             </div>
 
             {/* Right Column */}
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <div className="space-y-2">
                 <Label>Package Details</Label>
-                <div className="space-y-2 p-4 bg-muted rounded-lg">
+                <div className="space-y-2 p-3 sm:p-4 bg-muted rounded-lg text-sm">
                   <div className="flex justify-between">
                     <span>Total Services:</span>
                     <span className="font-medium">{formData.services.length}</span>
@@ -362,8 +362,8 @@ export function PackageModal({
 
           {/* Add Services Section */}
           {modalType !== "view" && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <Label>Add Services to Package</Label>
                 <Button
                   type="button"
@@ -371,13 +371,14 @@ export function PackageModal({
                   size="sm"
                   onClick={onAddService}
                   disabled={!newService.serviceId}
+                  className="w-full sm:w-auto"
                 >
                   Add Service
                 </Button>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <div className="space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-2">
+                <div className="space-y-2 sm:col-span-2 lg:col-span-1">
                   <Label>Service</Label>
                   <Select
                     value={newService.serviceId}
@@ -406,8 +407,8 @@ export function PackageModal({
                   />
                 </div>
 
-                <div className="space-y-2 flex items-end">
-                  <div className="flex items-center space-x-2">
+                <div className="space-y-2 flex items-end sm:col-span-2 lg:col-span-1">
+                  <div className="flex items-center space-x-2 h-10">
                     <Checkbox
                       id="staffRequired"
                       checked={newService.staffRequired}
@@ -415,7 +416,7 @@ export function PackageModal({
                         onNewServiceChange(prev => ({ ...prev, staffRequired: !!checked }))
                       }
                     />
-                    <Label htmlFor="staffRequired">Staff Required</Label>
+                    <Label htmlFor="staffRequired" className="text-sm">Staff Required</Label>
                   </div>
                 </div>
               </div>
@@ -423,22 +424,22 @@ export function PackageModal({
           )}
 
           {/* Package Services List */}
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <Label>Package Services</Label>
             {formData.services.length > 0 ? (
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <div className="space-y-2 max-h-48 sm:max-h-60 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {formData.services.map((pkgService: PackageService) => {
                   const service = services.find((s: Service) => s._id === pkgService.serviceId);
                   return (
                     <div
                       key={pkgService.serviceId}
-                      className="flex items-center justify-between p-3 border rounded-lg"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-3 border rounded-lg gap-3"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="font-medium">{service?.name || pkgService.serviceName}</div>
-                        <Badge variant="secondary">{service?.categoryName}</Badge>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                        <div className="font-medium text-sm sm:text-base">{service?.name || pkgService.serviceName}</div>
+                        <Badge variant="secondary" className="w-fit">{service?.categoryName}</Badge>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end w-full sm:w-auto">
                         {modalType !== "view" && (
                           <div className="flex items-center border rounded-lg">
                             <Button
@@ -450,7 +451,7 @@ export function PackageModal({
                             >
                               <Minus className="h-4 w-4" />
                             </Button>
-                            <span className="px-2 text-sm font-medium">{pkgService.quantity}</span>
+                            <span className="px-2 text-sm font-medium min-w-[30px] text-center">{pkgService.quantity}</span>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -485,20 +486,21 @@ export function PackageModal({
                 })}
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground border rounded-lg">
+              <div className="text-center py-6 sm:py-8 text-sm text-muted-foreground border rounded-lg">
                 No services added to this package yet
               </div>
             )}
           </div>
 
           {modalType !== "view" && (
-            <DialogFooter>
-              <Button type="button" variant="secondary" onClick={onClose}>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button type="button" variant="secondary" onClick={onClose} className="w-full sm:w-auto">
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isCreating || isUpdating || formData.services.length === 0}
+                className="w-full sm:w-auto"
               >
                 {(isCreating || isUpdating) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {modalType === "create" ? "Create Package" : "Update Package"}
