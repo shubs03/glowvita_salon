@@ -2,60 +2,6 @@
 
 import { useState, useEffect } from "react";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@repo/ui/card";
-import { Button } from "@repo/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@repo/ui/dialog";
-import { Input } from "@repo/ui/input";
-import { Label } from "@repo/ui/label";
-import { Textarea } from "@repo/ui/textarea";
-import {
-  Plus,
-  Minus,
-  Edit,
-  Trash2,
-  Search,
-  DollarSign,
-  Tag,
-  Star,
-  BarChart2,
-  Eye,
-  Upload,
-  X,
-  Loader2,
-} from "lucide-react";
-import { Checkbox } from "@repo/ui/checkbox";
-import { Switch } from "@repo/ui/switch";
-import { useDispatch, useSelector } from 'react-redux';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@repo/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
-import { Badge } from "@repo/ui/badge";
-import {
   useGetVendorServicesQuery,
   useGetVendorWeddingPackagesQuery,
   useCreateWeddingPackageMutation,
@@ -63,11 +9,17 @@ import {
   useDeleteWeddingPackageMutation,
   useGetPublicVendorStaffQuery,
 } from "@repo/store/services/api";
-import Image from "next/image";
-import { Skeleton } from "@repo/ui/skeleton";
-import { Pagination } from "@repo/ui/pagination";
 import { toast } from 'sonner';
 import { useCrmAuth } from "@/hooks/useCrmAuth";
+import { PageHeader } from "./components/PageHeader";
+import { StatsCards } from "./components/StatsCards";
+import { PackageFiltersToolbar } from "./components/PackageFiltersToolbar";
+import { PackageTable } from "./components/PackageTable";
+import { PackagePaginationControls } from "./components/PackagePaginationControls";
+import { PackageModal } from "./components/PackageModal";
+import { DeleteConfirmationModal } from "./components/DeleteConfirmationModal";
+import { LoadingSkeleton } from "./components/LoadingSkeleton";
+import { Card, CardContent } from "@repo/ui/card";
 
 interface Service {
   _id: string;
@@ -175,18 +127,6 @@ export default function WeddingPackagesPage() {
   // Log staff for debugging
   console.log('Parsed staff array:', staff);
   console.log('Staff count:', staff.length);
-
-  // Filter packages based on search term
-  const filteredPackages = packages.filter((pkg: WeddingPackage) =>
-    pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    pkg.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Pagination
-  const totalPages = Math.ceil(filteredPackages.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentItems = filteredPackages.slice(startIndex, endIndex);
 
   // Calculate totals when services change
   useEffect(() => {
@@ -363,697 +303,85 @@ export default function WeddingPackagesPage() {
   };
 
   if (servicesLoading || packagesLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 sm:p-6 lg:p-8">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="flex justify-between items-center">
-            <h1 className="text-3xl font-bold font-headline bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Wedding Packages</h1>
-            <Skeleton className="h-10 w-32" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-24" />
-            ))}
-          </div>
-          <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
-            <CardContent className="p-0">
-              <div className="space-y-4 p-4">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-16" />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
+    return <LoadingSkeleton />;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold font-headline mb-2 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">Wedding Packages</h1>
-            <p className="text-gray-600">
-              Create and manage wedding packages for your client
-            </p>
-          </div>
-          <Button onClick={() => handleOpenModal("create")} className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Package
-          </Button>
-        </div>
+    <div className="min-h-screen bg-background">
+      <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
+        <PageHeader onCreateClick={() => handleOpenModal("create")} />
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold text-gray-700">Total Packages</CardTitle>
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Tag className="h-4 w-4 text-blue-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900">{packages.length}</div>
-              <p className="text-xs text-gray-500">Active packages</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold text-gray-700">Avg. Price</CardTitle>
-              <div className="p-2 bg-green-100 rounded-lg">
-                <DollarSign className="h-4 w-4 text-green-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900">
-                ₹{packages.length > 0
-                  ? (packages.reduce((sum: number, pkg: WeddingPackage) => sum + pkg.totalPrice, 0) / packages.length).toFixed(0)
-                  : 0}
-              </div>
-              <p className="text-xs text-gray-500">Average package price</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold text-gray-700">Most Popular</CardTitle>
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Star className="h-4 w-4 text-purple-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900">
-                {packages.length > 0
-                  ? packages.reduce((prev: WeddingPackage, current: WeddingPackage) =>
-                    (prev.services.length > current.services.length) ? prev : current
-                  ).name
-                  : "0"}
-              </div>
-              <p className="text-xs text-gray-500">Package with most services</p>
-            </CardContent>
-          </Card>
-          <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-semibold text-gray-700">Avg. Duration</CardTitle>
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <BarChart2 className="h-4 w-4 text-orange-600" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-gray-900">
-                {packages.length > 0
-                  ? Math.round(packages.reduce((sum: number, pkg: WeddingPackage) => sum + pkg.duration, 0) / packages.length / 60)
-                  : 0} Hour
-              </div>
-              <p className="text-xs text-gray-500">Average package duration</p>
-            </CardContent>
-          </Card>
-        </div>
+        <StatsCards packages={packages} />
 
-        {/* Search and Table Card */}
-        <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100">
-            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-              <div>
-                <CardTitle className="text-xl font-bold text-gray-900">All Packages</CardTitle>
-                <CardDescription className="text-gray-600">View and manage your wedding packages.</CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search packages..."
-                    className="pl-8 w-full md:w-80"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Package</TableHead>
-                    <TableHead>Services</TableHead>
-                    <TableHead>Duration</TableHead>
-                    <TableHead>Staff</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Active</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {currentItems.length > 0 ? (
-                    currentItems.map((pkg: WeddingPackage) => (
-                      <TableRow key={pkg._id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            {pkg.image ? (
-                              <Image
-                                src={pkg.image}
-                                alt={pkg.name}
-                                width={40}
-                                height={40}
-                                className="h-10 w-10 rounded-md object-cover"
-                              />
-                            ) : (
-                              <div className="bg-gray-200 border-2 border-dashed rounded-xl w-10 h-10" />
-                            )}
-                            <span className="font-medium">{pkg.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {pkg.services.length} services
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{Math.floor(pkg.duration / 60)}h {pkg.duration % 60}m</TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <Badge variant="secondary">
-                              {pkg.staffCount || 1} {pkg.staffCount === 1 ? 'staff' : 'staff'}
-                            </Badge>
-                            {pkg.assignedStaff && pkg.assignedStaff.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {pkg.assignedStaff.slice(0, 2).map((staffId: string) => {
-                                  const staffMember = staff.find((s: any) => (s.id || s._id) === staffId);
-                                  return staffMember ? (
-                                    <span key={staffId} className="text-xs bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded">
-                                      {staffMember.name}
-                                    </span>
-                                  ) : null;
-                                })}
-                                {pkg.assignedStaff.length > 2 && (
-                                  <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
-                                    +{pkg.assignedStaff.length - 2}
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {pkg.discountedPrice ? (
-                            <div className="flex flex-col">
-                              <span className="line-through text-muted-foreground">₹{pkg.totalPrice}</span>
-                              <span className="font-bold">₹{pkg.discountedPrice}</span>
-                            </div>
-                          ) : (
-                            <span>₹{pkg.totalPrice}</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              pkg.status === 'approved' ? 'default' :
-                                pkg.status === 'disapproved' ? 'destructive' : 'secondary'
-                            }
-                            className={
-                              pkg.status === 'approved' ? 'bg-green-100 text-green-800' :
-                                pkg.status === 'disapproved' ? 'bg-red-100 text-red-800' :
-                                  'bg-yellow-100 text-yellow-800'
-                            }
-                          >
-                            {pkg.status}
-                          </Badge>
-                          {pkg.status === 'disapproved' && pkg.rejectionReason && (
-                            <p className="text-[10px] text-red-500 mt-1 max-w-[150px] leading-tight" title={pkg.rejectionReason}>
-                              Reason: {pkg.rejectionReason}
-                            </p>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Switch
-                            checked={pkg.isActive}
-                          // onCheckedChange={() => handleVisibilityToggle(pkg)}
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenModal("view", pkg)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenModal("edit", pkg)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-destructive"
-                            onClick={() => handleDeleteClick(pkg)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                        {searchTerm ? "No matching packages found." : "No wedding packages found. Create your first package to get started!"}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-            {filteredPackages.length > 0 && (
-              <Pagination
-                className="mt-4 p-4 border-t"
+        <PackageFiltersToolbar
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          onAddPackage={() => handleOpenModal("create")}
+        />
+
+        <div className="flex-1 flex flex-col min-h-0">
+          <Card className="flex-1 flex flex-col min-h-0">
+            <CardContent className="p-0 flex-1 flex flex-col min-h-0">
+              <PackageTable
+                packages={packages}
+                staff={staff}
+                searchTerm={searchTerm}
                 currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
                 itemsPerPage={itemsPerPage}
-                onItemsPerPageChange={setItemsPerPage}
-                totalItems={filteredPackages.length}
+                onViewClick={(pkg) => handleOpenModal("view", pkg)}
+                onEditClick={(pkg) => handleOpenModal("edit", pkg)}
+                onDeleteClick={handleDeleteClick}
               />
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
 
-        {/* Create/Edit Package Modal */}
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {modalType === "create" ? "Create Wedding Package" :
-                  modalType === "edit" ? "Edit Wedding Package" : "View Wedding Package"}
-              </DialogTitle>
-              <DialogDescription>
-                {modalType === "create" ? "Create a new wedding package for your clients" :
-                  modalType === "edit" ? "Edit the details of your wedding package" : "View package details"}
-              </DialogDescription>
-            </DialogHeader>
+        <PackagePaginationControls
+          currentPage={currentPage}
+          totalPages={Math.ceil(packages.filter((pkg: WeddingPackage) =>
+            pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            pkg.description.toLowerCase().includes(searchTerm.toLowerCase())
+          ).length / itemsPerPage)}
+          itemsPerPage={itemsPerPage}
+          totalItems={packages.filter((pkg: WeddingPackage) =>
+            pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            pkg.description.toLowerCase().includes(searchTerm.toLowerCase())
+          ).length}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={setItemsPerPage}
+        />
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Package Name</Label>
-                    <Input
-                      id="name"
-                      placeholder="e.g., Bridal Glam Package"
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      disabled={modalType === "view"}
-                      required
-                    />
-                  </div>
+        <PackageModal
+          isOpen={isModalOpen}
+          onClose={handleCloseModal}
+          modalType={modalType}
+          formData={formData}
+          onFormDataChange={setFormData}
+          services={services}
+          staff={staff}
+          staffLoading={staffLoading}
+          staffError={staffError}
+          newService={newService}
+          onNewServiceChange={setNewService}
+          selectedStaffForAdd={selectedStaffForAdd}
+          onSelectedStaffChange={setSelectedStaffForAdd}
+          onSubmit={handleSubmit}
+          onImageUpload={handleImageUpload}
+          onAddService={handleAddService}
+          onRemoveService={handleRemoveService}
+          onQuantityChange={handleQuantityChange}
+          isCreating={isCreating}
+          isUpdating={isUpdating}
+        />
 
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Description</Label>
-                    <Textarea
-                      id="description"
-                      placeholder="Describe your wedding package..."
-                      value={formData.description}
-                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                      disabled={modalType === "view"}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Package Image</Label>
-                    {formData.image ? (
-                      <div className="relative">
-                        <Image
-                          src={formData.image}
-                          alt="Package preview"
-                          width={200}
-                          height={200}
-                          className="rounded-md object-cover"
-                        />
-                        {modalType !== "view" && (
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-2 right-2"
-                            onClick={() => setFormData(prev => ({ ...prev, image: null }))}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ) : modalType !== "view" ? (
-                      <div className="border-2 border-dashed rounded-lg p-6 text-center">
-                        <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                        <p className="mt-2 text-sm text-gray-600">
-                          <label htmlFor="image-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-primary hover:text-primary/80">
-                            <span>Upload an image</span>
-                            <input
-                              id="image-upload"
-                              type="file"
-                              className="sr-only"
-                              accept="image/*"
-                              onChange={handleImageUpload}
-                            />
-                          </label>
-                        </p>
-                        <p className="text-xs text-gray-500">PNG, JPG up to 5MB</p>
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground">No image uploaded</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Package Details</Label>
-                    <div className="space-y-2 p-4 bg-muted rounded-lg">
-                      <div className="flex justify-between">
-                        <span>Total Services:</span>
-                        <span className="font-medium">{formData.services.length}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Total Duration:</span>
-                        <span className="font-medium">
-                          {Math.floor(formData.duration / 60)}h {formData.duration % 60}m
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Staff Required:</span>
-                        <span className="font-medium">{formData.staffCount} {formData.staffCount === 1 ? 'Professional' : 'Professionals'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Total Price:</span>
-                        <span className="font-medium">₹{formData.totalPrice.toFixed(2)}</span>
-                      </div>
-                      {formData.discountedPrice && (
-                        <div className="flex justify-between text-green-600">
-                          <span>Discounted Price:</span>
-                          <span className="font-medium">₹{formData.discountedPrice.toFixed(2)}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="staffCount">Staff Required</Label>
-                    <Input
-                      id="staffCount"
-                      type="number"
-                      min="1"
-                      placeholder="e.g., 2"
-                      value={formData.staffCount}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        staffCount: parseInt(e.target.value) || 1
-                      }))}
-                      disabled={modalType === "view"}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Number of professionals needed to perform this package
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Assign Staff (Optional)</Label>
-                    {staffLoading ? (
-                      <div className="flex items-center justify-center p-4 border rounded-lg">
-                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                        <span className="text-sm text-muted-foreground">Loading staff...</span>
-                      </div>
-                    ) : staffError ? (
-                      <div className="p-4 border border-red-200 rounded-lg bg-red-50">
-                        <p className="text-sm text-red-600">Error loading staff. Please try again.</p>
-                      </div>
-                    ) : modalType === "view" ? (
-                      <div className="flex flex-wrap gap-2">
-                        {formData.assignedStaff.length > 0 ? (
-                          formData.assignedStaff.map((staffId) => {
-                            const staffMember = staff.find((s: any) => (s.id || s._id) === staffId);
-                            return staffMember ? (
-                              <Badge key={staffId} variant="secondary">
-                                {staffMember.name}
-                              </Badge>
-                            ) : null;
-                          })
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No staff assigned</p>
-                        )}
-                      </div>
-                    ) : staff.length === 0 ? (
-                      <div className="p-4 border border-yellow-200 rounded-lg bg-yellow-50">
-                        <p className="text-sm text-yellow-800">No staff members available. Please add staff members first.</p>
-                      </div>
-                    ) : (
-                      <>
-                        <Select
-                          value={selectedStaffForAdd}
-                          onValueChange={(value) => {
-                            console.log('Selected staff value:', value);
-                            console.log('Current assignedStaff:', formData.assignedStaff);
-                            console.log('All staff:', staff);
-
-                            if (value && value !== "no-staff" && !formData.assignedStaff.includes(value)) {
-                              setFormData(prev => ({
-                                ...prev,
-                                assignedStaff: [...prev.assignedStaff, value]
-                              }));
-                              // Reset after a brief delay to allow the selection to register
-                              setTimeout(() => {
-                                setSelectedStaffForAdd("");
-                              }, 100);
-                            }
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select staff members" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {staff.length > 0 ? (
-                              staff.map((staffMember: any) => (
-                                <SelectItem
-                                  key={staffMember.id || staffMember._id}
-                                  value={staffMember.id || staffMember._id}
-                                  disabled={formData.assignedStaff.includes(staffMember.id || staffMember._id)}
-                                >
-                                  {staffMember.name} {formData.assignedStaff.includes(staffMember.id || staffMember._id) ? '(Selected)' : ''}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem value="no-staff" disabled>
-                                No staff available
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {formData.assignedStaff.map((staffId) => {
-                            const staffMember = staff.find((s: any) => (s.id || s._id) === staffId);
-                            return staffMember ? (
-                              <Badge key={staffId} variant="secondary" className="flex items-center gap-1">
-                                {staffMember.name}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setFormData(prev => ({
-                                      ...prev,
-                                      assignedStaff: prev.assignedStaff.filter(id => id !== staffId)
-                                    }));
-                                  }}
-                                  className="ml-1 hover:text-destructive"
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            ) : null;
-                          })}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {staff.length} staff member{staff.length !== 1 ? 's' : ''} available. Select those who can perform this package.
-                        </p>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="discountedPrice">Discounted Price (Optional)</Label>
-                    <Input
-                      id="discountedPrice"
-                      type="number"
-                      placeholder="e.g., 4500"
-                      value={formData.discountedPrice || ""}
-                      onChange={(e) => setFormData(prev => ({
-                        ...prev,
-                        discountedPrice: e.target.value ? parseFloat(e.target.value) : null
-                      }))}
-                      disabled={modalType === "view"}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {modalType !== "view" && (
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <Label>Add Services to Package</Label>
-                    <Button type="button" variant="outline" size="sm" onClick={handleAddService} disabled={!newService.serviceId}>
-                      Add Service
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <div className="space-y-2">
-                      <Label>Service</Label>
-                      <Select
-                        value={newService.serviceId}
-                        onValueChange={(value) => setNewService(prev => ({ ...prev, serviceId: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select service" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {services.map((service: Service) => (
-                            <SelectItem key={service._id} value={service._id}>
-                              {service.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Quantity</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={newService.quantity}
-                        onChange={(e) => setNewService(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
-                      />
-                    </div>
-
-                    <div className="space-y-2 flex items-end">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="staffRequired"
-                          checked={newService.staffRequired}
-                          onCheckedChange={(checked) =>
-                            setNewService(prev => ({ ...prev, staffRequired: !!checked }))
-                          }
-                        />
-                        <Label htmlFor="staffRequired">Staff Required</Label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-4">
-                <Label>Package Services</Label>
-                {formData.services.length > 0 ? (
-                  <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {formData.services.map((pkgService: PackageService) => {
-                      const service = services.find((s: Service) => s._id === pkgService.serviceId);
-                      return (
-                        <div key={pkgService.serviceId} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div className="font-medium">{service?.name || pkgService.serviceName}</div>
-                            <Badge variant="secondary">{service?.categoryName}</Badge>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {modalType !== "view" && (
-                              <div className="flex items-center border rounded-lg">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => handleQuantityChange(pkgService.serviceId, -1)}
-                                  disabled={pkgService.quantity <= 1}
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </Button>
-                                <span className="px-2 text-sm font-medium">{pkgService.quantity}</span>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => handleQuantityChange(pkgService.serviceId, 1)}
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
-                            {modalType !== "view" && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => handleRemoveService(pkgService.serviceId)}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                            <div className="text-right min-w-[80px]">
-                              <div className="text-sm font-semibold">
-                                ₹{service ? (service.price * pkgService.quantity).toFixed(2) : "0.00"}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {service ? `${service.duration * pkgService.quantity} min` : "0 min"}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground border rounded-lg">
-                    No services added to this package yet
-                  </div>
-                )}
-              </div>
-
-              {modalType !== "view" && (
-                <DialogFooter>
-                  <Button type="button" variant="secondary" onClick={handleCloseModal}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isCreating || isUpdating || formData.services.length === 0}>
-                    {(isCreating || isUpdating) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {modalType === "create" ? "Create Package" : "Update Package"}
-                  </Button>
-                </DialogFooter>
-              )}
-            </form>
-          </DialogContent>
-        </Dialog>
-
-        {/* Delete Confirmation Modal */}
-        <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete Wedding Package?</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete "{selectedPackage?.name}"? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="secondary"
-                onClick={() => setIsDeleteModalOpen(false)}
-                disabled={isDeleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-              >
-                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Delete
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <DeleteConfirmationModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          packageName={selectedPackage?.name}
+          onConfirmDelete={handleConfirmDelete}
+          isDeleting={isDeleting}
+        />
       </div>
-    </div >
+    </div>
   );
 }
