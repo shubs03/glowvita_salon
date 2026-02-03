@@ -235,41 +235,28 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ vendor, o
         </div>
       </CardContent>
 
-      {/* Document Preview Overlay */}
-      {previewDocument && (
-        <div
-          className="fixed inset-0 bg-black/90 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={() => setPreviewDocument(null)}
-        >
-          <div className="relative max-w-5xl max-h-full w-full flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex justify-end w-full">
-              <Button
-                variant="outline"
-                size="icon"
-                className="rounded-full bg-white/10 hover:bg-white/20 text-white border-white/20 h-10 w-10"
-                onClick={() => setPreviewDocument(null)}
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-            <div className="w-full h-full flex items-center justify-center overflow-hidden rounded-xl bg-white/5 p-1 border border-white/10 shadow-2xl">
-              {previewDocument.src?.toLowerCase().endsWith('.pdf') || previewDocument.src?.startsWith('data:application/pdf') ? (
+      {/* Document Preview Modal */}
+      <Dialog open={!!previewDocument} onOpenChange={(open) => !open && setPreviewDocument(null)}>
+        <DialogContent className="max-w-4xl w-[90vw] h-[90vh] p-0 overflow-hidden border-none bg-transparent shadow-none">
+          <div className="relative w-full h-full flex flex-col items-center justify-center bg-black/5 backdrop-blur-sm rounded-xl overflow-hidden border border-white/10">
+            <div className="w-full h-full flex items-center justify-center p-2">
+              {previewDocument?.src?.toLowerCase().endsWith('.pdf') || previewDocument?.src?.startsWith('data:application/pdf') ? (
                 <iframe
-                  src={previewDocument.src}
-                  className="w-full h-[85vh] rounded-lg bg-white"
+                  src={previewDocument?.src}
+                  className="w-full h-full rounded-lg bg-white"
                   title="Document Preview"
                 />
               ) : (
                 <img
-                  src={previewDocument.src}
+                  src={previewDocument?.src}
                   alt="Document Preview"
-                  className="object-contain max-h-[85vh] mx-auto rounded-lg shadow-2xl"
+                  className="object-contain max-h-full max-w-full mx-auto rounded-lg shadow-2xl"
                 />
               )}
             </div>
           </div>
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Rejection Reason Modal */}
       <Dialog open={isRejectionModalOpen} onOpenChange={setIsRejectionModalOpen}>
