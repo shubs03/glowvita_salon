@@ -8,6 +8,8 @@ interface ClientStatsSectionProps {
   appointments: any[];
   inactiveClients: Client[];
   totalsById: Map<string, number>;
+  bookingsById: Map<string, number>;
+  currentSegment: "offline" | "online";
 }
 
 export default function ClientStatsSection({
@@ -15,12 +17,24 @@ export default function ClientStatsSection({
   onlineClients,
   appointments,
   inactiveClients,
-  totalsById
+  totalsById,
+  bookingsById,
+  currentSegment
 }: ClientStatsSectionProps) {
-  const totalClients = offlineClients.length + onlineClients.length;
-  const newClients = [...offlineClients, ...onlineClients].filter((c: Client) => c.status === 'New').length;
-  const totalBookings = appointments.length;
-  const inactiveCount = inactiveClients.length;
+  const activeClientsArray = currentSegment === 'online' ? onlineClients : offlineClients;
+  const activeClientIds = new Set(activeClientsArray.map(c => String(c._id)));
+
+  const totalClients = activeClientsArray.length;
+
+  const activeInactiveCount = activeClientsArray.filter((c: Client) => c.status === 'Inactive').length;
+
+  const totalBookings = Array.from(bookingsById.entries())
+    .filter(([id]) => activeClientIds.has(id))
+    .reduce((sum, [_, val]) => sum + val, 0);
+
+  const segmentRevenue = Array.from(totalsById.entries())
+    .filter(([id]) => activeClientIds.has(id))
+    .reduce((sum, [_, val]) => sum + val, 0);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -38,13 +52,13 @@ export default function ClientStatsSection({
           </div>
         </CardContent>
       </Card>
-      
+
       <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-secondary-foreground mb-1">Active Clients</p>
-              <p className="text-2xl font-bold text-secondary-foreground">{totalClients - inactiveCount}</p>
+              <p className="text-2xl font-bold text-secondary-foreground">{totalClients - activeInactiveCount}</p>
               <p className="text-xs text-secondary-foreground/70 mt-1">Currently active</p>
             </div>
             <div className="p-3 bg-primary/10 rounded-full transition-colors">
@@ -53,7 +67,7 @@ export default function ClientStatsSection({
           </div>
         </CardContent>
       </Card>
-      
+
       <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
@@ -68,14 +82,14 @@ export default function ClientStatsSection({
           </div>
         </CardContent>
       </Card>
-      
+
       <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-secondary-foreground mb-1">Total Revenue</p>
               <p className="text-2xl font-bold text-secondary-foreground">
-                ₹{Array.from(totalsById.values()).reduce((sum, val) => sum + val, 0).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
+                ₹{segmentRevenue.toLocaleString('en-IN', { minimumFractionDigits: 0 })}
               </p>
               <p className="text-xs text-secondary-foreground/70 mt-1">Lifetime revenue</p>
             </div>
