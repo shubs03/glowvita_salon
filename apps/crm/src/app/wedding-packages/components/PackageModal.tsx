@@ -102,7 +102,11 @@ export function PackageModal({
 }: PackageModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-full max-h-[85vh] overflow-y-auto my-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <DialogContent
+        className="max-w-4xl w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-full max-h-[85vh] overflow-y-auto my-8 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>
             {modalType === "create" ? "Create Wedding Package" :

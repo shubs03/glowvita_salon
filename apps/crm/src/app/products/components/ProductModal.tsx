@@ -92,7 +92,11 @@ const ProductModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-hidden rounded-3xl border-0 bg-background/95 backdrop-blur-xl shadow-2xl scrollbar-hide">
+      <DialogContent
+        className="sm:max-w-3xl max-h-[90vh] overflow-hidden rounded-3xl border-0 bg-background/95 backdrop-blur-xl shadow-2xl scrollbar-hide"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <div className="space-y-6 py-4 max-h-[60vh] overflow-y-auto scrollbar-hide">
           <ProductFormFields
             formData={formData}
