@@ -38,16 +38,16 @@ type CreateCampaignModalProps = {
 
 export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: CreateCampaignModalProps) {
   const dispatch = useAppDispatch();
-  
+
   // Get CRM authentication state for accessing CRM SMS templates
   const { isAuthenticated, token } = useAppSelector((state: any) => ({
     isAuthenticated: state.crmAuth.isCrmAuthenticated,
     token: state.crmAuth.token
   }));
-  
+
   // Debug authentication state
   console.log('CRM Auth State:', { isAuthenticated, token, open });
-  
+
   // Fetch CRM SMS templates
   const {
     data: templatesResponse,
@@ -59,7 +59,7 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
     skip: !open, // Temporarily remove auth check to see if that's the issue
     refetchOnMountOrArgChange: true
   });
-  
+
   // Test endpoint to bypass authentication
   const {
     data: testTemplatesResponse,
@@ -71,19 +71,19 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
     skip: !open,
     refetchOnMountOrArgChange: true
   });
-  
+
   // Extract templates from the response - the slice transforms it to { templates: [], total: number }
   const templates = templatesResponse?.templates || [];
   const testTemplates = testTemplatesResponse?.templates || [];
-  
+
   // ENHANCED DEBUG: Check if we're getting the raw data instead of transformed
   const rawTemplates = Array.isArray((templatesResponse as any)?.data) ? (templatesResponse as any).data : [];
   const rawTestTemplates = Array.isArray((testTemplatesResponse as any)?.data) ? (testTemplatesResponse as any).data : [];
-  
+
   // Use the templates that actually have data
   const finalTemplates = templates.length > 0 ? templates : rawTemplates;
   const finalTestTemplates = testTemplates.length > 0 ? testTemplates : rawTestTemplates;
-  
+
   // Debug API response
   console.log('Main API Response:', { templatesResponse, templates: finalTemplates, isLoading, isError, fetchError });
   console.log('Test API Response:', { testTemplatesResponse, testTemplates: finalTestTemplates, isLoadingTest, isErrorTest, fetchErrorTest });
@@ -94,7 +94,7 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
   console.log('Auth state:', { isAuthenticated, token: token ? 'present' : 'missing' });
   console.log('Raw fetch error:', fetchError);
   console.log('Raw test fetch error:', fetchErrorTest);
-  
+
   // Check if we have data in different formats
   console.log('Raw templates check:', {
     'templatesResponse?.templates': templatesResponse?.templates,
@@ -102,30 +102,30 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
     'testTemplatesResponse?.templates': testTemplatesResponse?.templates,
     'testTemplatesResponse?.data': (testTemplatesResponse as any)?.data
   });
-  
+
   // Debug API URLs being called
   console.log('Expected CRM API URL should be: http://localhost:3001/api/crm/sms-template');
   console.log('Expected Test API URL should be: http://localhost:3001/api/crm/test-sms-templates');
-  
+
   const error = isError ? 'Failed to load templates. Please try again.' : null;
-  
+
   // Refetch templates when modal opens or auth state changes
   useEffect(() => {
     if (open && isAuthenticated) {
       refetchTemplates();
     }
   }, [open, isAuthenticated, refetchTemplates]);
-  
+
   // Campaign creation mutation
   const [createCrmCampaign, { isLoading: isCreatingCampaign }] = useCreateCrmCampaignMutation();
-  
+
   // Form state
   const [campaignName, setCampaignName] = useState('');
   const [campaignTypes, setCampaignTypes] = useState<string[]>(['SMS']);
   const [targetAudience, setTargetAudience] = useState('All Customers');
   const [budget, setBudget] = useState(0);
   const [scheduledDate, setScheduledDate] = useState('');
-  
+
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [showNewTemplateForm, setShowNewTemplateForm] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
@@ -156,7 +156,7 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
       setShowNewTemplateForm(false);
     }
   };
-  
+
   const handleCampaignTypeToggle = (type: string, checked: boolean) => {
     if (checked) {
       setCampaignTypes(prev => [...prev, type]);
@@ -164,7 +164,7 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
       setCampaignTypes(prev => prev.filter(t => t !== type));
     }
   };
-  
+
   const resetForm = () => {
     setCampaignName('');
     setCampaignTypes(['SMS']);
@@ -176,24 +176,24 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
     setNewTemplateName('');
     setShowNewTemplateForm(false);
   };
-  
+
   const handleCreateCampaign = async () => {
     try {
       if (!campaignName.trim()) {
         toast.error('Please enter a campaign name');
         return;
       }
-      
+
       if (!message.trim()) {
         toast.error('Please enter message content');
         return;
       }
-      
+
       if (campaignTypes.length === 0) {
         toast.error('Please select at least one campaign type');
         return;
       }
-      
+
       const campaignData = {
         name: campaignName.trim(),
         type: campaignTypes,
@@ -204,24 +204,24 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
         scheduledDate: scheduledDate ? new Date(scheduledDate).toISOString() : new Date().toISOString(),
         status: 'Draft'
       };
-      
+
       console.log('Creating campaign with data:', campaignData);
-      
+
       const result = await createCrmCampaign(campaignData).unwrap();
-      
+
       console.log('Campaign created successfully:', result);
-      
+
       toast.success('Campaign created successfully!');
-      
+
       // Trigger refetch of campaigns list
       if (onCampaignCreated) {
         onCampaignCreated();
       }
-      
+
       // Reset form and close modal
       resetForm();
       onOpenChange(false);
-      
+
     } catch (error: any) {
       console.error('Error creating campaign:', error);
       toast.error(error?.data?.message || 'Failed to create campaign. Please try again.');
@@ -230,7 +230,11 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent
+        className="w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader className="pb-4 border-b">
           <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             Create New Campaign
@@ -239,7 +243,7 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
             Fill in the details below to create a new campaign.
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="flex-1 overflow-y-auto">
           <div className="space-y-6 p-1">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -251,17 +255,17 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                     SMS Templates
                   </h3>
                   <div className="flex flex-wrap gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => refetchTestTemplates()}
                       className="text-xs h-8 hover:bg-primary/10 transition-colors"
                     >
                       Test DB
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => setShowNewTemplateForm(true)}
                       className="text-xs h-8 hover:bg-primary/10 transition-colors"
                     >
@@ -295,9 +299,9 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                               <Button onClick={handleCreateNewTemplate} size="sm" className="flex-shrink-0">
                                 Create
                               </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
+                              <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={() => setShowNewTemplateForm(false)}
                                 className="flex-shrink-0"
                               >
@@ -344,9 +348,9 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                           {JSON.stringify(fetchError, null, 2)}
                         </pre>
                       </details>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
                         onClick={() => refetchTemplates()}
                       >
@@ -366,7 +370,7 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                           <p className="text-sm">Testing with direct DB access...</p>
                         </div>
                       </div>
-                      
+
                       <div className="mt-6 space-y-4">
                         <details className="text-left">
                           <summary className="cursor-pointer text-sm font-medium hover:text-foreground mb-2">
@@ -376,7 +380,7 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                             {JSON.stringify(templatesResponse, null, 2)}
                           </pre>
                         </details>
-                        
+
                         <details className="text-left">
                           <summary className="cursor-pointer text-sm font-medium hover:text-foreground mb-2">
                             Test API Response
@@ -385,7 +389,7 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                             {JSON.stringify(testTemplatesResponse, null, 2)}
                           </pre>
                         </details>
-                        
+
                         <div className="flex flex-wrap gap-4 justify-center text-sm">
                           <div className="flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full bg-blue-500"></div>
@@ -396,7 +400,7 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                             <span>Test Templates: {finalTestTemplates.length}</span>
                           </div>
                         </div>
-                        
+
                         {finalTestTemplates.length > 0 && (
                           <div className="p-3 bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-200 rounded-lg border border-green-200 dark:border-green-800">
                             <div className="flex items-center gap-2 mb-2">
@@ -410,7 +414,7 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                             </div>
                           </div>
                         )}
-                        
+
                         {finalTemplates.length > 0 && (
                           <div className="p-3 bg-blue-50 dark:bg-blue-950/30 text-blue-800 dark:text-blue-200 rounded-lg border border-blue-200 dark:border-blue-800">
                             <div className="flex items-center gap-2 mb-2">
@@ -432,19 +436,17 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                     {finalTemplates.map((template: Template) => (
                       <Card
                         key={template._id}
-                        className={`p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${
-                          selectedTemplate === template._id 
-                            ? 'border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20' 
+                        className={`p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${selectedTemplate === template._id
+                            ? 'border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20'
                             : 'hover:bg-muted/50 hover:border-primary/30'
-                        }`}
+                          }`}
                         onClick={() => handleTemplateSelect(template)}
                       >
                         <div className="flex items-start gap-4">
-                          <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-colors ${
-                            selectedTemplate === template._id
+                          <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-colors ${selectedTemplate === template._id
                               ? 'bg-primary text-primary-foreground'
                               : 'bg-primary/10 text-primary'
-                          }`}>
+                            }`}>
                             <MessageSquare className="h-6 w-6" />
                           </div>
                           <div className="flex-1 min-w-0 space-y-2">
@@ -456,9 +458,8 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                                     ✨ Popular
                                   </span>
                                 )}
-                                <div className={`h-2 w-2 rounded-full ${
-                                  template.status === 'Active' ? 'bg-green-500' : 'bg-gray-400'
-                                }`}></div>
+                                <div className={`h-2 w-2 rounded-full ${template.status === 'Active' ? 'bg-green-500' : 'bg-gray-400'
+                                  }`}></div>
                               </div>
                             </div>
                             <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
@@ -468,11 +469,10 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                               <span className="px-2 py-1 rounded-md bg-muted text-muted-foreground font-medium">
                                 {template.type}
                               </span>
-                              <span className={`px-2 py-1 rounded-md font-medium ${
-                                template.status === 'Active' 
+                              <span className={`px-2 py-1 rounded-md font-medium ${template.status === 'Active'
                                   ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
                                   : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-                              }`}>
+                                }`}>
                                 {template.status}
                               </span>
                               {template.price > 0 && (
@@ -487,193 +487,192 @@ export function CreateCampaignModal({ open, onOpenChange, onCampaignCreated }: C
                     ))}
                   </div>
                 )}
-            </div>
-            
-            {/* Right Column - Campaign Details */}
-            <div className="space-y-6 pl-0 lg:pl-4">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Plus className="h-4 w-4 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold text-foreground">Campaign Details</h3>
-            </div>
-            
-            <div className="space-y-6">
-              <div className="space-y-3">
-                <Label htmlFor="campaign-name" className="text-sm font-medium flex items-center gap-2">
-                  Campaign Name
-                  <span className="text-destructive">*</span>
-                </Label>
-                <Input 
-                  id="campaign-name" 
-                  placeholder="Enter a descriptive campaign name" 
-                  className="h-11"
-                  value={campaignName}
-                  onChange={(e) => setCampaignName(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-4">
-                <Label className="text-sm font-medium flex items-center gap-2">
-                  Campaign Type
-                  <span className="text-destructive">*</span>
-                </Label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                    <Checkbox 
-                      id="type-sms" 
-                      checked={campaignTypes.includes('SMS')}
-                      onCheckedChange={(checked) => handleCampaignTypeToggle('SMS', checked as boolean)}
-                      className="data-[state=checked]:bg-primary" 
-                    />
-                    <Label htmlFor="type-sms" className="font-medium cursor-pointer flex-1">
-                      SMS
+
+              {/* Right Column - Campaign Details */}
+              <div className="space-y-6 pl-0 lg:pl-4">
+                <div className="flex items-center gap-2 mb-6">
+                  <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Plus className="h-4 w-4 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground">Campaign Details</h3>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="campaign-name" className="text-sm font-medium flex items-center gap-2">
+                      Campaign Name
+                      <span className="text-destructive">*</span>
                     </Label>
-                  </div>
-                  <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                    <Checkbox 
-                      id="type-email" 
-                      checked={campaignTypes.includes('Email')}
-                      onCheckedChange={(checked) => handleCampaignTypeToggle('Email', checked as boolean)}
-                      className="data-[state=checked]:bg-primary" 
+                    <Input
+                      id="campaign-name"
+                      placeholder="Enter a descriptive campaign name"
+                      className="h-11"
+                      value={campaignName}
+                      onChange={(e) => setCampaignName(e.target.value)}
                     />
-                    <Label htmlFor="type-email" className="font-medium cursor-pointer flex-1">
-                      Email
-                    </Label>
                   </div>
-                  <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
-                    <Checkbox 
-                      id="type-whatsapp" 
-                      checked={campaignTypes.includes('WhatsApp')}
-                      onCheckedChange={(checked) => handleCampaignTypeToggle('WhatsApp', checked as boolean)}
-                      className="data-[state=checked]:bg-primary" 
+
+                  <div className="space-y-4">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      Campaign Type
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <Checkbox
+                          id="type-sms"
+                          checked={campaignTypes.includes('SMS')}
+                          onCheckedChange={(checked) => handleCampaignTypeToggle('SMS', checked as boolean)}
+                          className="data-[state=checked]:bg-primary"
+                        />
+                        <Label htmlFor="type-sms" className="font-medium cursor-pointer flex-1">
+                          SMS
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <Checkbox
+                          id="type-email"
+                          checked={campaignTypes.includes('Email')}
+                          onCheckedChange={(checked) => handleCampaignTypeToggle('Email', checked as boolean)}
+                          className="data-[state=checked]:bg-primary"
+                        />
+                        <Label htmlFor="type-email" className="font-medium cursor-pointer flex-1">
+                          Email
+                        </Label>
+                      </div>
+                      <div className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+                        <Checkbox
+                          id="type-whatsapp"
+                          checked={campaignTypes.includes('WhatsApp')}
+                          onCheckedChange={(checked) => handleCampaignTypeToggle('WhatsApp', checked as boolean)}
+                          className="data-[state=checked]:bg-primary"
+                        />
+                        <Label htmlFor="type-whatsapp" className="font-medium cursor-pointer flex-1">
+                          WhatsApp
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label htmlFor="message" className="text-sm font-medium flex items-center gap-2">
+                      Message Content
+                      <span className="text-destructive">*</span>
+                    </Label>
+                    <div className="relative">
+                      <Textarea
+                        id="message"
+                        placeholder="Type your message here..."
+                        className="min-h-[140px] resize-none pr-16"
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                      />
+                      <div className="absolute bottom-3 right-3 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+                        {message.length}/160
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">
+                        SMS limit: 160 characters per message
+                      </span>
+                      <span className={`font-medium ${message.length <= 160 ? 'text-green-600' : 'text-destructive'
+                        }`}>
+                        {Math.ceil(message.length / 160)} SMS{Math.ceil(message.length / 160) !== 1 ? 'es' : ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <Label htmlFor="target-audience" className="text-sm font-medium">
+                        Target Audience
+                      </Label>
+                      <Select value={targetAudience} onValueChange={setTargetAudience}>
+                        <SelectTrigger className="h-11">
+                          <SelectValue placeholder="Select target audience" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="All Customers">All Customers</SelectItem>
+                          <SelectItem value="New Customers">New Customers</SelectItem>
+                          <SelectItem value="Returning Customers">Returning Customers</SelectItem>
+                          <SelectItem value="Premium Customers">Premium Customers</SelectItem>
+                          <SelectItem value="Inactive Customers">Inactive Customers</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-3">
+                      <Label htmlFor="budget" className="text-sm font-medium">
+                        Budget (₹)
+                      </Label>
+                      <Input
+                        id="budget"
+                        type="number"
+                        placeholder="Enter campaign budget"
+                        className="h-11"
+                        min="0"
+                        value={budget || ''}
+                        onChange={(e) => setBudget(parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label htmlFor="scheduled-date" className="text-sm font-medium">
+                      Scheduled Date (Optional)
+                    </Label>
+                    <Input
+                      id="scheduled-date"
+                      type="datetime-local"
+                      className="h-11"
+                      value={scheduledDate}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                      min={new Date().toISOString().slice(0, 16)}
                     />
-                    <Label htmlFor="type-whatsapp" className="font-medium cursor-pointer flex-1">
-                      WhatsApp
-                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Leave empty to send immediately or schedule for a future date
+                    </p>
                   </div>
+
+                  {selectedTemplate && (
+                    <div className="p-4 bg-muted/30 rounded-lg border border-dashed">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="h-2 w-2 rounded-full bg-primary"></div>
+                        <span className="text-sm font-medium">Selected Template</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Using template: <span className="font-medium text-foreground">{finalTemplates.find((t: any) => t._id === selectedTemplate)?.name}</span>
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
-              
-              <div className="space-y-3">
-                <Label htmlFor="message" className="text-sm font-medium flex items-center gap-2">
-                  Message Content
-                  <span className="text-destructive">*</span>
-                </Label>
-                <div className="relative">
-                  <Textarea 
-                    id="message" 
-                    placeholder="Type your message here..." 
-                    className="min-h-[140px] resize-none pr-16"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                  />
-                  <div className="absolute bottom-3 right-3 text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
-                    {message.length}/160
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">
-                    SMS limit: 160 characters per message
-                  </span>
-                  <span className={`font-medium ${
-                    message.length <= 160 ? 'text-green-600' : 'text-destructive'
-                  }`}>
-                    {Math.ceil(message.length / 160)} SMS{Math.ceil(message.length / 160) !== 1 ? 'es' : ''}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-3">
-                  <Label htmlFor="target-audience" className="text-sm font-medium">
-                    Target Audience
-                  </Label>
-                  <Select value={targetAudience} onValueChange={setTargetAudience}>
-                    <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Select target audience" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="All Customers">All Customers</SelectItem>
-                      <SelectItem value="New Customers">New Customers</SelectItem>
-                      <SelectItem value="Returning Customers">Returning Customers</SelectItem>
-                      <SelectItem value="Premium Customers">Premium Customers</SelectItem>
-                      <SelectItem value="Inactive Customers">Inactive Customers</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-3">
-                  <Label htmlFor="budget" className="text-sm font-medium">
-                    Budget (₹)
-                  </Label>
-                  <Input 
-                    id="budget" 
-                    type="number"
-                    placeholder="Enter campaign budget" 
-                    className="h-11"
-                    min="0"
-                    value={budget || ''}
-                    onChange={(e) => setBudget(parseInt(e.target.value) || 0)}
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <Label htmlFor="scheduled-date" className="text-sm font-medium">
-                  Scheduled Date (Optional)
-                </Label>
-                <Input 
-                  id="scheduled-date" 
-                  type="datetime-local"
-                  className="h-11"
-                  value={scheduledDate}
-                  onChange={(e) => setScheduledDate(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Leave empty to send immediately or schedule for a future date
-                </p>
-              </div>
-              
-              {selectedTemplate && (
-                <div className="p-4 bg-muted/30 rounded-lg border border-dashed">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="h-2 w-2 rounded-full bg-primary"></div>
-                    <span className="text-sm font-medium">Selected Template</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Using template: <span className="font-medium text-foreground">{finalTemplates.find((t: any) => t._id === selectedTemplate)?.name}</span>
-                  </p>
-                </div>
-              )}
             </div>
           </div>
         </div>
-      </div>
-    </div>
-    
-    <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t bg-background">
-      <Button 
-        variant="outline" 
-        onClick={() => {
-          resetForm();
-          onOpenChange(false);
-        }}
-        className="order-2 sm:order-1"
-        disabled={isCreatingCampaign}
-      >
-        Cancel
-      </Button>
-      <Button 
-        className="order-1 sm:order-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
-        disabled={!message.trim() || !campaignName.trim() || isCreatingCampaign}
-        onClick={handleCreateCampaign}
-      >
-        {isCreatingCampaign ? 'Creating...' : 'Create Campaign'}
-      </Button>
-    </div>
-  </DialogContent>
-</Dialog>
-);
+
+        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t bg-background">
+          <Button
+            variant="outline"
+            onClick={() => {
+              resetForm();
+              onOpenChange(false);
+            }}
+            className="order-2 sm:order-1"
+            disabled={isCreatingCampaign}
+          >
+            Cancel
+          </Button>
+          <Button
+            className="order-1 sm:order-2 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+            disabled={!message.trim() || !campaignName.trim() || isCreatingCampaign}
+            onClick={handleCreateCampaign}
+          >
+            {isCreatingCampaign ? 'Creating...' : 'Create Campaign'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }

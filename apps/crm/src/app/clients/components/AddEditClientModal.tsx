@@ -242,7 +242,11 @@ export default function AddEditClientModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto hide-scrollbar">
+      <DialogContent
+        className="max-w-2xl max-h-[90vh] overflow-y-auto hide-scrollbar"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>
             {client ? "Edit Client" : "Add New Client"}
@@ -434,7 +438,7 @@ export default function AddEditClientModal({
               rows={3}
             />
           </div>
-          
+
           {/* Preferences */}
           <div className="space-y-2">
             <Label htmlFor="preferences">Notes</Label>
