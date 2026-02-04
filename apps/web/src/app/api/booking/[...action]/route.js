@@ -1023,8 +1023,8 @@ async function handleSlotLock(body) {
         });
 
         if (existingTempApt) {
-            console.log(`Auto-releasing previously locked slot for client ${clientId}: Appointment ${existingTempApt._id}`);
-            await cancelAppointment(existingTempApt._id.toString(), existingTempApt.lockToken);
+          console.log(`Auto-releasing previously locked slot for client ${clientId}: Appointment ${existingTempApt._id}`);
+          await cancelAppointment(existingTempApt._id.toString(), existingTempApt.lockToken);
         }
       } catch (err) {
         console.error("Error during auto-lock-release:", err);
@@ -1134,7 +1134,8 @@ async function handleSlotLock(body) {
       serviceItems = body.serviceItems.map(item => ({
         ...item,
         // If this is the primary service, add the addons (ensure string comparison)
-        addOns: (item.service && serviceId && item.service.toString() === serviceId.toString())
+        // Only overwrite if effectiveAddOns has items, otherwise keep what's in the item
+        addOns: (item.service && serviceId && item.service.toString() === serviceId.toString() && effectiveAddOns.length > 0)
           ? effectiveAddOns
           : (item.addOns || [])
       }));
@@ -1274,15 +1275,15 @@ async function handleSlotLock(body) {
     const { checkMultiServiceConflict } = await import('@repo/lib/modules/scheduling/ConflictChecker');
     const dbConflict = await checkMultiServiceConflict(vendorId, appointmentDate, serviceItems);
     if (dbConflict) {
-        console.warn('Conflict detected during handleSlotLock:', dbConflict);
-        const errorRes = formatErrorResponse(new AppError('The selected time slot is already booked. Please choose another time.', 'SLOT_CONFLICT', 'CONFLICT', 409));
-        return Response.json(errorRes, { status: 409 });
+      console.warn('Conflict detected during handleSlotLock:', dbConflict);
+      const errorRes = formatErrorResponse(new AppError('The selected time slot is already booked. Please choose another time.', 'SLOT_CONFLICT', 'CONFLICT', 409));
+      return Response.json(errorRes, { status: 409 });
     }
 
     // Calculate totals if not provided
     const effectiveServiceAmount = amount !== undefined ? safeAmount(amount) : (serviceItems && serviceItems.length > 0 ? serviceItems.reduce((sum, item) => sum + safeAmount(item.amount), 0) : 0);
     const effectiveTotalAmount = totalAmount !== undefined ? safeAmount(totalAmount) : (effectiveServiceAmount + totalAddOnsPrice);
-    
+
     console.log('Amount Calculations:', {
       inputAmount: amount,
       inputTotalAmount: totalAmount,
@@ -1320,7 +1321,7 @@ async function handleSlotLock(body) {
       isMultiService,
       // Amounts
       amount: effectiveServiceAmount,
-      addOnsAmount: totalAddOnsPrice, 
+      addOnsAmount: totalAddOnsPrice,
       totalAmount: effectiveTotalAmount,
       finalAmount: finalAmount !== undefined ? safeAmount(finalAmount) : (effectiveTotalAmount + safeAmount(platformFee) + safeAmount(serviceTax) - safeAmount(discountAmount)),
       platformFee: safeAmount(platformFee),

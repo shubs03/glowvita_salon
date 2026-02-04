@@ -141,9 +141,11 @@ supplierSchema.pre("validate", async function (next) {
           description: 'Default trial plan for new suppliers',
           price: 0,
           duration: 30, // 30 days
+          durationType: 'days',
           features: ['Basic features'],
-          userType: 'supplier',
-          status: 'active'
+          userTypes: ['supplier'],
+          planType: 'trial',
+          status: 'Active'
         });
       }
 

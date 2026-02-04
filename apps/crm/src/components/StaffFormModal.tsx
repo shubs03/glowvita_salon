@@ -649,35 +649,20 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
     const handleSubmit = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
 
-        if (!staff) {
-            if (!formData.password) {
-                toast.error("Password is required for new staff members.");
-                return;
-            }
+        // If updating and password is provided, validate it
+        if (staff && formData.password) {
             if (formData.password !== formData.confirmPassword) {
                 toast.error("Passwords do not match.");
                 return;
             }
-
-            // Password strength validation: word, number, and special symbol
             const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
             if (!passwordRegex.test(formData.password)) {
                 toast.error("Password must contain at least one letter, one number, and one special symbol.");
                 return;
             }
-        } else {
-            if (formData.password) {
-                if (formData.password !== formData.confirmPassword) {
-                    toast.error("Passwords do not match.");
-                    return;
-                }
-                const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{8,}$/;
-                if (!passwordRegex.test(formData.password)) {
-                    toast.error("Password must contain at least one letter, one number, and one special symbol.");
-                    return;
-                }
-            }
         }
+
+        // Mobile Number validation: exactly 10 digits
 
         // Mobile Number validation: exactly 10 digits
         if (formData.mobileNo.length !== 10) {
@@ -766,27 +751,26 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
                     <Input id="emailAddress" name="emailAddress" type="email" value={formData.emailAddress} onChange={handleInputChange} required />
                 </div>
             </div>
-            {!staff && (
+            {staff && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <Label htmlFor="password">Password</Label>
+                        <Label htmlFor="password">Change Password (optional)</Label>
                         <div className="relative">
-                            <Input id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handleInputChange} required={!staff} />
+                            <Input id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handleInputChange} />
                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowPassword(!showPassword)}>
                                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="confirmPassword">Confirm Password</Label>
+                        <Label htmlFor="confirmPassword">Confirm New Password</Label>
                         <div className="relative">
-                            <Input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={formData.confirmPassword} onChange={handleInputChange} required={!staff && !!formData.password} />
+                            <Input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={formData.confirmPassword} onChange={handleInputChange} />
                             <Button type="button" variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
                                 {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                             </Button>
                         </div>
                     </div>
-
                 </div>
             )}
             <div className="space-y-2">
@@ -1090,7 +1074,11 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent
+                className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+                onInteractOutside={(e) => e.preventDefault()}
+                onEscapeKeyDown={(e) => e.preventDefault()} // Also prevent Escape key for consistency based on "only Cancel button closes"
+            >
                 <DialogHeader>
                     <DialogTitle>{staff ? (hideTabs ? 'Staff Earnings' : 'Edit Staff Member') : 'Add Staff Member'}</DialogTitle>
                     <DialogDescription>

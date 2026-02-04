@@ -373,7 +373,7 @@ export function Step3_MultiServiceTimeSlot({
             endTime: item.endTime,
             duration: item.duration,
             amount: Number(serviceAmount),
-            addOns: addOns
+            addOns: service?.selectedAddons || []
           };
         }),
         isHomeService,
@@ -381,18 +381,18 @@ export function Step3_MultiServiceTimeSlot({
         duration: slot.totalDuration,
         amount: slot.sequence.reduce((sum, item) => {
           const service = selectedServices?.find(s => s.id === item.serviceId);
-          const servicePrice = service ? Number(service.discountedPrice || service.price || 0) : 0;
-          const addonsPrice = service?.selectedAddons?.reduce((addonSum, addon) => 
-            addonSum + Number(addon.price || 0), 0) || 0;
-          return sum + servicePrice + addonsPrice;
+          const servicePrice = Number(service?.discountedPrice || service?.price || 0);
+          const addOnsPrice = service?.selectedAddons?.reduce((aSum, a) => aSum + (a.price || 0), 0) || 0;
+          return sum + servicePrice + addOnsPrice;
         }, 0),
         totalAmount: slot.sequence.reduce((sum, item) => {
           const service = selectedServices?.find(s => s.id === item.serviceId);
-          const servicePrice = service ? Number(service.discountedPrice || service.price || 0) : 0;
-          const addonsPrice = service?.selectedAddons?.reduce((addonSum, addon) => 
-            addonSum + Number(addon.price || 0), 0) || 0;
-          return sum + servicePrice + addonsPrice;
+          const servicePrice = Number(service?.discountedPrice || service?.price || 0);
+          const addOnsPrice = service?.selectedAddons?.reduce((aSum, a) => aSum + (a.price || 0), 0) || 0;
+          return sum + servicePrice + addOnsPrice;
         }, 0),
+        addOnIds: selectedServices?.flatMap(s => s.selectedAddons?.map(a => a._id) || []),
+        selectedAddOns: selectedServices?.flatMap(s => s.selectedAddons?.map(a => a._id) || []),
         isWeddingService,
         // Client Info
         clientId: user?._id || user?.id || 'temp-client-id',

@@ -22,7 +22,7 @@ export const ExpenseFormModal = ({ isOpen, onClose, expense, onSuccess }: Expens
     const [updateExpense, { isLoading: isUpdating }] = useUpdateExpenseMutation();
     const { data: expenseTypes = [], isLoading: isLoadingTypes } = useGetCrmExpenseTypesQuery(undefined);
     const { data: paymentModes = [], isLoading: isLoadingPaymentModes } = useGetCrmPaymentModesQuery(undefined);
-    
+
     const [formData, setFormData] = useState({
         expenseType: '',
         date: new Date().toISOString().split('T')[0],
@@ -134,7 +134,11 @@ export const ExpenseFormModal = ({ isOpen, onClose, expense, onSuccess }: Expens
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar">
+            <DialogContent
+                className="max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar"
+                onInteractOutside={(e) => e.preventDefault()}
+                onEscapeKeyDown={(e) => e.preventDefault()}
+            >
                 <DialogHeader>
                     <DialogTitle>{expense ? 'Edit Expense' : 'Add New Expense'}</DialogTitle>
                     <DialogDescription>

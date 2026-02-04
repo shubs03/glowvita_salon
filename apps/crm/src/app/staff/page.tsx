@@ -7,9 +7,9 @@ import { Button } from "@repo/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Skeleton } from "@repo/ui/skeleton";
-import { Eye, Edit, Trash2 } from 'lucide-react';
+import { Eye, Edit, Trash2, Mail } from 'lucide-react';
 import { StaffFormModal } from '@/components/StaffFormModal';
-import { useGetStaffQuery, useDeleteStaffMutation } from '@repo/store/api';
+import { useGetStaffQuery, useDeleteStaffMutation, useSendStaffCredentialsMutation } from '@repo/store/api';
 import { toast } from 'sonner';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 
@@ -53,17 +53,37 @@ export type Staff = {
         recurringType?: string;
         isActive: boolean;
     }>;
+    createdAt?: string;
+    updatedAt?: string;
 };
 
 export default function StaffPage() {
     const { user } = useCrmAuth();
-    const { data: staffList = [], isLoading, isError, refetch } = useGetStaffQuery(user?._id, {
+    const { data: staffListRaw = [], isLoading, isError, refetch } = useGetStaffQuery(user?._id, {
         skip: !user?._id,
     });
+
+    const staffList = useMemo(() => {
+        return [...staffListRaw].sort((a: Staff, b: Staff) => {
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA;
+        });
+    }, [staffListRaw]);
 
     console.log("Staff List:", staffList)
 
     const [deleteStaff, { isLoading: isDeleting }] = useDeleteStaffMutation();
+    const [sendCredentials, { isLoading: isSendingMail }] = useSendStaffCredentialsMutation();
+
+    const handleSendMail = async (staffId: string) => {
+        try {
+            await sendCredentials(staffId).unwrap();
+            toast.success("Credentials email sent successfully.");
+        } catch (err: any) {
+            toast.error(err?.data?.message || "Failed to send credentials email.");
+        }
+    };
 
     // Refetch staff data when the page becomes visible to ensure latest data
     useEffect(() => {
@@ -154,92 +174,92 @@ export default function StaffPage() {
         return (
             <div className="min-h-screen bg-background">
                 <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
-                <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
-                    <div>
-                        <Skeleton className="h-8 w-64" />
+                    <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
+                        <div>
+                            <Skeleton className="h-8 w-64" />
+                        </div>
                     </div>
-                </div>
 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-                    {[...Array(2)].map((_, i) => (
-                        <Card key={i}>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <Skeleton className="h-4 w-24" />
-                                <Skeleton className="h-4 w-4" />
-                            </CardHeader>
-                            <CardContent>
-                                <Skeleton className="h-8 w-16 mb-2" />
-                                <Skeleton className="h-3 w-32" />
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                        {[...Array(2)].map((_, i) => (
+                            <Card key={i}>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <Skeleton className="h-4 w-24" />
+                                    <Skeleton className="h-4 w-4" />
+                                </CardHeader>
+                                <CardContent>
+                                    <Skeleton className="h-8 w-16 mb-2" />
+                                    <Skeleton className="h-3 w-32" />
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
 
-                <Card>
-                    <CardHeader>
-                        <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                            <div>
-                                <Skeleton className="h-6 w-24 mb-2" />
-                                <Skeleton className="h-4 w-48" />
-                            </div>
-                            <div className="flex gap-2 flex-wrap">
-                                <div className="relative">
-                                    <Skeleton className="h-10 w-80" />
+                    <Card>
+                        <CardHeader>
+                            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
+                                <div>
+                                    <Skeleton className="h-6 w-24 mb-2" />
+                                    <Skeleton className="h-4 w-48" />
                                 </div>
-                                <Skeleton className="h-10 w-20" />
-                                <Skeleton className="h-10 w-28" />
+                                <div className="flex gap-2 flex-wrap">
+                                    <div className="relative">
+                                        <Skeleton className="h-10 w-80" />
+                                    </div>
+                                    <Skeleton className="h-10 w-20" />
+                                    <Skeleton className="h-10 w-28" />
+                                </div>
                             </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="overflow-x-auto no-scrollbar rounded-md border">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow className="bg-secondary hover:bg-secondary">
-                                        {["Name", "Email", "Phone", "Position", "Status", "Actions"].map((_, i) => (
-                                            <TableHead key={i} className={i < 3 ? (i === 0 ? "min-w-[120px]" : (i === 1 ? "min-w-[150px]" : "min-w-[120px]")) : ""}>
-                                                <Skeleton className="h-5 w-full" />
-                                            </TableHead>
-                                        ))}
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {[...Array(5)].map((_, i) => (
-                                        <TableRow key={i} className="hover:bg-muted/50">
-                                            <TableCell className="font-medium py-3 min-w-[120px] max-w-[150px]">
-                                                <div className="flex items-center gap-3">
-                                                    <Skeleton className="w-10 h-10 rounded-full" />
-                                                    <Skeleton className="h-5 w-32" />
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="min-w-[150px] max-w-[180px]">
-                                                <Skeleton className="h-5 w-full mb-1" />
-                                            </TableCell>
-                                            <TableCell className="min-w-[120px] max-w-[150px]">
-                                                <Skeleton className="h-5 w-full mb-1" />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Skeleton className="h-5 w-full" />
-                                            </TableCell>
-                                            <TableCell>
-                                                <Skeleton className="h-6 w-16 rounded-full" />
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-1">
-                                                    <Skeleton className="h-8 w-8 rounded" />
-                                                    <Skeleton className="h-8 w-8 rounded" />
-                                                </div>
-                                            </TableCell>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto no-scrollbar rounded-md border">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow className="bg-secondary hover:bg-secondary">
+                                            {["Name", "Email", "Phone", "Position", "Status", "Actions"].map((_, i) => (
+                                                <TableHead key={i} className={i < 3 ? (i === 0 ? "min-w-[120px]" : (i === 1 ? "min-w-[150px]" : "min-w-[120px]")) : ""}>
+                                                    <Skeleton className="h-5 w-full" />
+                                                </TableHead>
+                                            ))}
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </div>
-                        <div className="mt-4">
-                            <Skeleton className="h-10 w-full" />
-                        </div>
-                    </CardContent>
-                </Card>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {[...Array(5)].map((_, i) => (
+                                            <TableRow key={i} className="hover:bg-muted/50">
+                                                <TableCell className="font-medium py-3 min-w-[120px] max-w-[150px]">
+                                                    <div className="flex items-center gap-3">
+                                                        <Skeleton className="w-10 h-10 rounded-full" />
+                                                        <Skeleton className="h-5 w-32" />
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="min-w-[150px] max-w-[180px]">
+                                                    <Skeleton className="h-5 w-full mb-1" />
+                                                </TableCell>
+                                                <TableCell className="min-w-[120px] max-w-[150px]">
+                                                    <Skeleton className="h-5 w-full mb-1" />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Skeleton className="h-5 w-full" />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Skeleton className="h-6 w-16 rounded-full" />
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-1">
+                                                        <Skeleton className="h-8 w-8 rounded" />
+                                                        <Skeleton className="h-8 w-8 rounded" />
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <div className="mt-4">
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         );
@@ -271,13 +291,13 @@ export default function StaffPage() {
 
                 {/* Filters Toolbar */}
                 <StaffFiltersToolbar
-                  searchTerm={searchTerm}
-                  positionFilter={positionFilter}
-                  onSearchChange={setSearchTerm}
-                  onPositionChange={setPositionFilter}
-                  onAddStaff={() => handleOpenModal()}
-                  exportData={filteredStaff}
-                  positions={positions}
+                    searchTerm={searchTerm}
+                    positionFilter={positionFilter}
+                    onSearchChange={setSearchTerm}
+                    onPositionChange={setPositionFilter}
+                    onAddStaff={() => handleOpenModal()}
+                    exportData={filteredStaff}
+                    positions={positions}
                 />
 
                 {/* Staff Table */}
@@ -289,6 +309,8 @@ export default function StaffPage() {
                                 searchTerm={searchTerm}
                                 onOpenModal={handleOpenModal}
                                 onDeleteClick={handleDeleteClick}
+                                onSendMail={handleSendMail}
+                                isSendingMail={isSendingMail}
                             />
                         </CardContent>
                     </Card>
@@ -296,42 +318,42 @@ export default function StaffPage() {
 
                 {/* Pagination Controls */}
                 <StaffPaginationControls
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  itemsPerPage={itemsPerPage}
-                  totalItems={filteredStaff.length}
-                  onPageChange={setCurrentPage}
-                  onItemsPerPageChange={setItemsPerPage}
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    itemsPerPage={itemsPerPage}
+                    totalItems={filteredStaff.length}
+                    onPageChange={setCurrentPage}
+                    onItemsPerPageChange={setItemsPerPage}
                 />
 
                 <StaffFormModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                staff={selectedStaff}
-                initialTab={modalTab}
-                hideTabs={modalTab === 'earnings'}
-                onSuccess={() => {
-                    setIsModalOpen(false);
-                    refetch();
-                }}
-            />
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    staff={selectedStaff}
+                    initialTab={modalTab}
+                    hideTabs={modalTab === 'earnings'}
+                    onSuccess={() => {
+                        setIsModalOpen(false);
+                        refetch();
+                    }}
+                />
 
-            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Delete Staff Member?</DialogTitle>
-                        <DialogDescription>
-                            Are you sure you want to delete "{selectedStaff?.fullName}"? This action cannot be undone.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
-                        <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
-                            {isDeleting ? 'Deleting...' : 'Delete'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Delete Staff Member?</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to delete "{selectedStaff?.fullName}"? This action cannot be undone.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+                            <Button variant="destructive" onClick={handleConfirmDelete} disabled={isDeleting}>
+                                {isDeleting ? 'Deleting...' : 'Delete'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </div>
     );

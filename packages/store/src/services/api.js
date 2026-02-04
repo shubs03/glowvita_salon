@@ -1778,6 +1778,13 @@ export const glowvitaApi = createApi({
       query: (id) => ({ url: "/crm/staff", method: "DELETE", body: { id } }),
       invalidatesTags: ["Staff"],
     }),
+    sendStaffCredentials: builder.mutation({
+      query: (staffId) => ({
+        url: "/crm/staff/send-credentials",
+        method: "POST",
+        body: { staffId },
+      }),
+    }),
 
     // Add-Ons Endpoints
     getAddOns: builder.query({
@@ -2934,6 +2941,7 @@ export const {
   useCreateStaffMutation,
   useUpdateStaffMutation,
   useDeleteStaffMutation,
+  useSendStaffCredentialsMutation,
   useGetAddOnsQuery,
   useCreateAddOnMutation,
   useUpdateAddOnMutation,

@@ -20,18 +20,20 @@ export async function POST(request) {
     let Model = null;
 
     const userRoles = [
-      { model: VendorModel, type: 'vendor' },
-      { model: DoctorModel, type: 'doctor' },
-      { model: SupplierModel, type: 'supplier' },
-      { model: StaffModel, type: 'staff' },
+      { model: VendorModel, type: 'vendor', emailField: 'email' },
+      { model: DoctorModel, type: 'doctor', emailField: 'email' },
+      { model: SupplierModel, type: 'supplier', emailField: 'email' },
+      { model: StaffModel, type: 'staff', emailField: 'emailAddress' },
     ];
 
     for (const roleInfo of userRoles) {
-      const foundUser = await roleInfo.model.findOne({ 
-        email,
+      const query = {
         resetPasswordToken: token,
         resetPasswordExpires: { $gt: Date.now() }
-      });
+      };
+      query[roleInfo.emailField] = email;
+
+      const foundUser = await roleInfo.model.findOne(query);
       if (foundUser) {
         user = foundUser;
         Model = roleInfo.model;
@@ -41,17 +43,6 @@ export async function POST(request) {
 
     if (!user) {
       return NextResponse.json({ isValid: false, error: "Password reset token is invalid or has expired." });
-    }
-
-    // Immediately invalidate the token upon first access
-    try {
-      await Model.findByIdAndUpdate(user._id, {
-        resetPasswordToken: undefined,
-        resetPasswordExpires: undefined
-      });
-      console.log('Reset token invalidated for user:', user.email);
-    } catch (invalidateError) {
-      console.error('Error invalidating reset token:', invalidateError);
     }
 
     return NextResponse.json({ isValid: true });

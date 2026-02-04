@@ -180,7 +180,7 @@ export default function OffersCouponsPage() {
 
   // RTK Query hooks with proper query parameters
   const {
-    data: couponsData = [],
+    data: couponsDataRaw = [],
     isLoading,
     isError,
     refetch,
@@ -188,6 +188,15 @@ export default function OffersCouponsPage() {
     skip: !auth || !businessId, // Skip query if not authenticated or no businessId
     refetchOnMountOrArgChange: false, // Disable to prevent infinite loops
   });
+
+  const couponsData = useMemo(() => {
+    return [...couponsDataRaw].sort((a: Coupon, b: Coupon) => {
+      // Assuming Coupon type has createdAt, if not we fall back to index or id
+      const dateA = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
+      const dateB = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [couponsDataRaw]);
 
   // Removed problematic useEffect that was causing infinite API calls
   // useEffect(() => {
@@ -551,11 +560,11 @@ export default function OffersCouponsPage() {
 
   const totalDiscountValue = Array.isArray(couponsData)
     ? couponsData.reduce((acc, coupon) => {
-        if (coupon.type === "fixed") {
-          return acc + coupon.value * coupon.redeemed;
-        }
-        return acc + 1000 * (coupon.value / 100) * coupon.redeemed;
-      }, 0)
+      if (coupon.type === "fixed") {
+        return acc + coupon.value * coupon.redeemed;
+      }
+      return acc + 1000 * (coupon.value / 100) * coupon.redeemed;
+    }, 0)
     : 0;
 
   // Get role-specific page title
@@ -787,7 +796,11 @@ export default function OffersCouponsPage() {
         }
         onOpenChange={handleCloseModal}
       >
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide">
+        <DialogContent
+          className="sm:max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-hide"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>
               {modalType === "addCoupon" && getCreateButtonText()}
@@ -882,7 +895,7 @@ export default function OffersCouponsPage() {
                     </span>
                     <span className="col-span-2">
                       {(data as Coupon)?.applicableServices &&
-                      (data as Coupon).applicableServices.length > 0
+                        (data as Coupon).applicableServices.length > 0
                         ? getServiceNames((data as Coupon).applicableServices)
                         : "All services"}
                     </span>
@@ -893,39 +906,39 @@ export default function OffersCouponsPage() {
                     </span>
                     <span className="col-span-2">
                       {(data as Coupon)?.applicableServiceCategories &&
-                      (data as Coupon).applicableServiceCategories.length > 0
+                        (data as Coupon).applicableServiceCategories.length > 0
                         ? (() => {
-                            const allCategories = (data as Coupon)
-                              .applicableServiceCategories;
-                            const autoCategories =
-                              getAutoCategoriesFromServices(
-                                (data as Coupon).applicableServices || []
-                              );
-                            const manualCategories = allCategories.filter(
-                              (id) => !autoCategories.includes(id)
+                          const allCategories = (data as Coupon)
+                            .applicableServiceCategories;
+                          const autoCategories =
+                            getAutoCategoriesFromServices(
+                              (data as Coupon).applicableServices || []
                             );
+                          const manualCategories = allCategories.filter(
+                            (id) => !autoCategories.includes(id)
+                          );
 
-                            const autoCategoryNames =
-                              getCategoryNames(autoCategories);
-                            const manualCategoryNames =
-                              getCategoryNames(manualCategories);
+                          const autoCategoryNames =
+                            getCategoryNames(autoCategories);
+                          const manualCategoryNames =
+                            getCategoryNames(manualCategories);
 
-                            return (
-                              <div>
-                                {autoCategories.length > 0 && (
-                                  <div className="text-blue-600">
-                                    Auto: {autoCategoryNames}
-                                  </div>
-                                )}
-                                {manualCategories.length > 0 && (
-                                  <div>Manual: {manualCategoryNames}</div>
-                                )}
-                                {autoCategories.length === 0 &&
-                                  manualCategories.length === 0 &&
-                                  "All categories"}
-                              </div>
-                            );
-                          })()
+                          return (
+                            <div>
+                              {autoCategories.length > 0 && (
+                                <div className="text-blue-600">
+                                  Auto: {autoCategoryNames}
+                                </div>
+                              )}
+                              {manualCategories.length > 0 && (
+                                <div>Manual: {manualCategoryNames}</div>
+                              )}
+                              {autoCategories.length === 0 &&
+                                manualCategories.length === 0 &&
+                                "All categories"}
+                            </div>
+                          );
+                        })()
                         : "All categories"}
                     </span>
                   </div>
@@ -935,7 +948,7 @@ export default function OffersCouponsPage() {
                     </span>
                     <span className="col-span-2">
                       {(data as Coupon)?.applicableCategories &&
-                      (data as Coupon).applicableCategories.length > 0
+                        (data as Coupon).applicableCategories.length > 0
                         ? formatList((data as Coupon)?.applicableCategories)
                         : "All genders"}
                     </span>
@@ -950,7 +963,7 @@ export default function OffersCouponsPage() {
                   </span>
                   <span className="col-span-2">
                     {(data as Coupon)?.applicableDiseases &&
-                    (data as Coupon).applicableDiseases.length > 0
+                      (data as Coupon).applicableDiseases.length > 0
                       ? `${(data as Coupon).applicableDiseases.length} condition(s) selected`
                       : "All conditions"}
                   </span>
@@ -1140,10 +1153,10 @@ export default function OffersCouponsPage() {
                               </Label>
                             </div>
                           )) || (
-                          <div className="text-sm text-muted-foreground">
-                            No approved services found
-                          </div>
-                        )}
+                            <div className="text-sm text-muted-foreground">
+                              No approved services found
+                            </div>
+                          )}
                       </div>
                     )}
                     <p className="text-sm text-muted-foreground">
@@ -1227,14 +1240,14 @@ export default function OffersCouponsPage() {
                         : `Selected: ${selectedServiceCategories.length} category(ies)`}
                       {getAutoCategoriesFromServices(selectedServices).length >
                         0 && (
-                        <span className="block text-blue-600">
-                          {
-                            getAutoCategoriesFromServices(selectedServices)
-                              .length
-                          }{" "}
-                          category(ies) auto-selected from services
-                        </span>
-                      )}
+                          <span className="block text-blue-600">
+                            {
+                              getAutoCategoriesFromServices(selectedServices)
+                                .length
+                            }{" "}
+                            category(ies) auto-selected from services
+                          </span>
+                        )}
                     </p>
                   </div>
 
