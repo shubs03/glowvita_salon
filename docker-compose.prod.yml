@@ -1,0 +1,41 @@
+version: '3.8'
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: glowvita_web
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+    - /home/glowvita/uploads:/home/glowvita/uploads
+    ports:
+      - "3000:3000"
+
+  crm:
+    build:
+      context: .
+      dockerfile: apps/crm/Dockerfile
+      args:
+        NEXT_PUBLIC_MAPBOX_API_KEY: ${NEXT_PUBLIC_MAPBOX_API_KEY}
+    container_name: glowvita_crm
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+    - /home/glowvita/uploads:/home/glowvita/uploads
+    ports:
+      - "3001:3001"
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        NEXT_PUBLIC_MAPBOX_API_KEY: ${NEXT_PUBLIC_MAPBOX_API_KEY}
+    container_name: glowvita_admin
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+    - /home/glowvita/uploads:/home/glowvita/uploads
+    ports:
+      - "3002:3002"
