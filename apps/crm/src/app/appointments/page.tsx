@@ -66,7 +66,14 @@ export default function AppointmentsPage() {
   const [collectPayment, { isLoading: isProcessingPayment }] =
     glowvitaApi.useCollectPaymentMutation();
 
-  const appointments = Array.isArray(appointmentsData) ? appointmentsData : [];
+  const appointments = useMemo(() => {
+    const list = Array.isArray(appointmentsData) ? appointmentsData : [];
+    return [...list].sort((a: Appointment, b: Appointment) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [appointmentsData]);
 
   // State management
   const [currentPage, setCurrentPage] = useState(1);
@@ -320,7 +327,11 @@ export default function AppointmentsPage() {
 
         {/* Appointment Form Modal */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="max-w-4xl w-[95vw] sm:w-full h-[90vh] max-h-[90vh] p-0 overflow-hidden flex flex-col">
+          <DialogContent
+            className="max-w-4xl w-[95vw] sm:w-full h-[90vh] max-h-[90vh] p-0 overflow-hidden flex flex-col"
+            onInteractOutside={(e) => e.preventDefault()}
+            onEscapeKeyDown={(e) => e.preventDefault()}
+          >
             <DialogHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-background z-10">
               <DialogTitle className="text-lg sm:text-xl">
                 {modalType === "add"
