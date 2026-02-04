@@ -73,7 +73,7 @@ export default function AppointmentListSection({
                       {appointment.serviceName || 'No service specified'}
                     </p>
                   </div>
-                                
+
                   {/* Second Column - Staff Name, Date and Time */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -90,15 +90,14 @@ export default function AppointmentListSection({
                       </span>
                     </div>
                   </div>
-                                
+
                   {/* Third Column - Amount and Status */}
                   <div className="flex flex-col items-end min-w-0">
                     <p className="font-semibold text-foreground">
                       ₹{appointment.finalAmount?.toFixed(2) || appointment.totalAmount?.toFixed(2) || '0.00'}
                     </p>
                     <span
-                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${
-                        appointment.status === 'completed'
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${appointment.status === 'completed'
                           ? 'bg-green-100 text-green-800'
                           : appointment.status === 'cancelled'
                             ? 'bg-red-100 text-red-800'
@@ -107,7 +106,7 @@ export default function AppointmentListSection({
                               : appointment.status === 'confirmed'
                                 ? 'bg-blue-100 text-blue-800'
                                 : 'bg-amber-100 text-amber-800'
-                      }`}
+                        }`}
                     >
                       {appointment.status?.charAt(0).toUpperCase() + appointment.status?.slice(1) || 'Scheduled'}
                     </span>

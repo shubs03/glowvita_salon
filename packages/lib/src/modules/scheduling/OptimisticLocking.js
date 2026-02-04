@@ -86,7 +86,7 @@ export async function acquireLock(params) {
     // Instead of just checking in-memory, we MUST check for overlapping appointments in the DB
     // This handles distributed environments (multiple server instances)
     const { checkMultiServiceConflict, checkStaffConflict } = await import('./ConflictChecker.js');
-    
+
     let conflict = null;
     if (params.serviceItems && params.serviceItems.length > 0) {
       conflict = await checkMultiServiceConflict(vendorId, date, params.serviceItems);
@@ -98,7 +98,7 @@ export async function acquireLock(params) {
         const totalMin = h * 60 + m + Number(duration);
         endTime = `${Math.floor(totalMin / 60).toString().padStart(2, '0')}:${(totalMin % 60).toString().padStart(2, '0')}`;
       }
-      
+
       if (endTime) {
         conflict = await checkStaffConflict({
           vendorId,
@@ -361,7 +361,7 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
       // Use totalDuration (base + addons) for the top-level duration field
       tempAppointmentData.duration = primaryService.totalDuration || primaryService.duration;
       tempAppointmentData.amount = primaryService.amount;
-      
+
       // Sync addOns and addOnsAmount from primary service
       if (primaryService.addOns && primaryService.addOns.length > 0) {
         tempAppointmentData.addOns = primaryService.addOns;
@@ -380,7 +380,7 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
     if (Array.isArray(tempAppointmentData.addOns) && tempAppointmentData.addOns.length > 0) {
       const AddOnModel = (await import('../../models/Vendor/AddOn.model.js')).default;
       const addOnIds = tempAppointmentData.addOns.map(addOn => addOn.id || addOn._id || (typeof addOn === 'string' ? addOn : null)).filter(Boolean);
-      
+
       if (addOnIds.length > 0) {
         const addOnObjects = await AddOnModel.find({ _id: { $in: addOnIds } }).lean();
         tempAppointmentData.addOns = addOnObjects.map(obj => ({
@@ -390,6 +390,51 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
           duration: obj.duration || 0
         }));
       }
+    }
+
+    // Calculate staff commission if enabled
+    try {
+      const { default: StaffModel } = await import('../../models/Vendor/Staff.model.js');
+
+      // Populate commission for top-level staff
+      if (tempAppointmentData.staff && mongoose.Types.ObjectId.isValid(tempAppointmentData.staff)) {
+        const staffMember = await StaffModel.findById(tempAppointmentData.staff);
+        if (staffMember && staffMember.commission) {
+          const rate = staffMember.commissionRate || 0;
+          tempAppointmentData.staffCommission = {
+            rate: rate,
+            amount: (tempAppointmentData.finalAmount * rate) / 100
+          };
+        }
+      }
+
+      // Populate commission for service items
+      if (tempAppointmentData.serviceItems && tempAppointmentData.serviceItems.length > 0) {
+        const staffIds = [...new Set(tempAppointmentData.serviceItems.map(item => item.staff).filter(Boolean))];
+        if (staffIds.length > 0) {
+          const staffMembers = await StaffModel.find({ _id: { $in: staffIds } });
+          const staffMap = new Map(staffMembers.map(s => [s._id.toString(), s]));
+
+          tempAppointmentData.serviceItems = tempAppointmentData.serviceItems.map(item => {
+            if (item.staff) {
+              const staff = staffMap.get(item.staff.toString());
+              if (staff && staff.commission) {
+                const rate = staff.commissionRate || 0;
+                return {
+                  ...item,
+                  staffCommission: {
+                    rate: rate,
+                    amount: (item.amount * rate) / 100
+                  }
+                };
+              }
+            }
+            return item;
+          });
+        }
+      }
+    } catch (commissionErr) {
+      console.error("Error calculating staff commission for temporary appointment:", commissionErr);
     }
 
     // Create a temporary appointment in the database
@@ -464,19 +509,19 @@ export async function confirmAppointment(appointmentId, lockToken, paymentDetail
 
     // Update the appointment status to 'scheduled' (as per the model default)
     appointment.status = 'scheduled';
-    
+
     // Set payment details and confirmation time
     if (paymentDetails) {
       if (paymentDetails.paymentMethod) appointment.paymentMethod = paymentDetails.paymentMethod;
       else if (paymentDetails.method) appointment.paymentMethod = paymentDetails.method;
-      
+
       if (paymentDetails.paymentStatus) appointment.paymentStatus = paymentDetails.paymentStatus;
       else if (paymentDetails.status) appointment.paymentStatus = paymentDetails.status;
-      
+
       // Keep paymentDetails for backward compatibility if any field uses it as a map
       appointment.paymentDetails = paymentDetails;
     }
-    
+
     appointment.confirmedAt = new Date();
 
     // Update coupon data if provided in confirmation request

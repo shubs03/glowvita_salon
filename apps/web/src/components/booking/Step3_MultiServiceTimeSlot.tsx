@@ -264,7 +264,8 @@ export function Step3_MultiServiceTimeSlot({
             startTime: item.startTime,
             endTime: item.endTime,
             duration: item.duration,
-            amount: Number(serviceAmount)
+            amount: Number(serviceAmount),
+            addOns: service?.selectedAddons || []
           };
         }),
         isHomeService,
@@ -272,12 +273,18 @@ export function Step3_MultiServiceTimeSlot({
         duration: slot.totalDuration,
         amount: slot.sequence.reduce((sum, item) => {
           const service = selectedServices?.find(s => s.id === item.serviceId);
-          return sum + (service ? Number(service.discountedPrice || service.price || 0) : 0);
+          const servicePrice = Number(service?.discountedPrice || service?.price || 0);
+          const addOnsPrice = service?.selectedAddons?.reduce((aSum, a) => aSum + (a.price || 0), 0) || 0;
+          return sum + servicePrice + addOnsPrice;
         }, 0),
         totalAmount: slot.sequence.reduce((sum, item) => {
           const service = selectedServices?.find(s => s.id === item.serviceId);
-          return sum + (service ? Number(service.discountedPrice || service.price || 0) : 0);
+          const servicePrice = Number(service?.discountedPrice || service?.price || 0);
+          const addOnsPrice = service?.selectedAddons?.reduce((aSum, a) => aSum + (a.price || 0), 0) || 0;
+          return sum + servicePrice + addOnsPrice;
         }, 0),
+        addOnIds: selectedServices?.flatMap(s => s.selectedAddons?.map(a => a._id || a.id) || []),
+        selectedAddOns: selectedServices?.flatMap(s => s.selectedAddons?.map(a => a._id || a.id) || []),
         isWeddingService,
         // Client Info
         clientId: user?._id || user?.id || 'temp-client-id',
@@ -323,7 +330,7 @@ export function Step3_MultiServiceTimeSlot({
     } catch (error: any) {
       console.error('Lock acquisition failed:', error);
       toast.error(error.message || 'Failed to reserve time slot. Please try another.');
-      
+
       // [NEW] Refresh slots immediately to get updated availability
       await fetchMultiServiceSlots();
     } finally {

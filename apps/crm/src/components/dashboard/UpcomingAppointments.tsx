@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { 
+import {
   Table,
   TableBody,
   TableCell,
@@ -32,18 +32,18 @@ interface UpcomingAppointmentsProps {
 const formatDateDisplay = (dateString: string): string => {
   if (!dateString) return '';
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
   });
 };
 
-export function UpcomingAppointments({ 
-  filterType = 'preset', 
-  presetPeriod = 'all', 
-  startDate = '', 
-  endDate = '' 
+export function UpcomingAppointments({
+  filterType = 'preset',
+  presetPeriod = 'all',
+  startDate = '',
+  endDate = ''
 }: UpcomingAppointmentsProps) {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [count, setCount] = useState(0);
@@ -55,22 +55,22 @@ export function UpcomingAppointments({
         // Build query params based on filter parameters
         let url = '/api/crm/vendor/metrics/upcoming';
         const params = new URLSearchParams();
-        
+
         // Handle custom date range
         if (filterType === 'custom' && startDate && endDate) {
           params.append('startDate', startDate);
           params.append('endDate', endDate);
-        } 
+        }
         // Handle preset periods
         else if (presetPeriod && presetPeriod !== 'all') {
           params.append('period', presetPeriod);
         }
-        
+
         // Append query parameters if any exist
         if (params.toString()) {
           url += `?${params.toString()}`;
         }
-        
+
         const response = await fetch(url);
         if (response.ok) {
           const result = await response.json();
@@ -127,13 +127,13 @@ export function UpcomingAppointments({
           <div>
             <CardTitle>Upcoming Appointments</CardTitle>
             <CardDescription>
-              {filterType === 'custom' 
+              {filterType === 'custom'
                 ? `You have ${count} upcoming appointments from ${formatDateDisplay(startDate)} to ${formatDateDisplay(endDate)}.`
-                : presetPeriod === 'day' 
+                : presetPeriod === 'day'
                   ? `You have ${count} upcoming appointments for today.`
-                  : presetPeriod === 'month' 
+                  : presetPeriod === 'month'
                     ? `You have ${count} upcoming appointments for this month.`
-                    : presetPeriod === 'year' 
+                    : presetPeriod === 'year'
                       ? `You have ${count} upcoming appointments for this year.`
                       : `You have ${count} upcoming appointments.`}
             </CardDescription>

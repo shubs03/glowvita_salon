@@ -219,8 +219,8 @@ export const POST = authMiddlewareCrm(async (req) => {
             type: typeof trimmedBody.commissionRate
         });
 
-        if (!trimmedBody.fullName || !trimmedBody.emailAddress || !trimmedBody.mobileNo || !trimmedBody.position || !trimmedBody.password) {
-            return NextResponse.json({ message: "Missing required fields, including password" }, { status: 400 });
+        if (!trimmedBody.fullName || !trimmedBody.emailAddress || !trimmedBody.mobileNo || !trimmedBody.position) {
+            return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
         }
 
         const existingEmailStaff = await StaffModel.findOne({
@@ -261,8 +261,6 @@ export const POST = authMiddlewareCrm(async (req) => {
 
             trimmedBody.photo = imageUrl;
         }
-
-        const hashedPassword = await bcrypt.hash(trimmedBody.password, 10);
 
         // Handle commission enabled date
         if (trimmedBody.commission) {
@@ -307,11 +305,23 @@ export const POST = authMiddlewareCrm(async (req) => {
             }
         }
 
+        // Check if schema has tempPassword, if not add it dynamically (fixes caching issues)
+        if (!StaffModel.schema.paths.tempPassword) {
+            StaffModel.schema.add({
+                tempPassword: { type: String, select: false }
+            });
+        }
+
+        // Generate a random temporary password instead of using one from the request
+        const generatedPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-2).toUpperCase() + "!1";
+        const hashedPassword = await bcrypt.hash(generatedPassword, 10);
+
         const newStaff = await StaffModel.create({
             ...trimmedBody,
             vendorId: ownerId,
             userType: userType, // Set the userType based on owner's role
             password: hashedPassword,
+            tempPassword: generatedPassword, // Store plain text for email
         });
 
         const staffData = newStaff.toObject();
@@ -415,9 +425,18 @@ export const PUT = authMiddlewareCrm(async (req) => {
             updateData.commissionEnabledDate = null;
         }
 
+        // Check if schema has tempPassword, if not add it dynamically (fixes caching issues)
+        if (!StaffModel.schema.paths.tempPassword) {
+            StaffModel.schema.add({
+                tempPassword: { type: String, select: false }
+            });
+        }
+
         // Handle password update
         if (updateData.password && updateData.password.trim() !== '') {
+            const rawPassword = updateData.password;
             updateData.password = await bcrypt.hash(updateData.password, 10);
+            updateData.tempPassword = rawPassword;
         } else {
             delete updateData.password;
         }
