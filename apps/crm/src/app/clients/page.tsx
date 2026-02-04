@@ -57,9 +57,6 @@ import {
 } from "@repo/store/api";
 import { toast } from "sonner";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
 import { Skeleton } from "@repo/ui/skeleton";
 import ClientListSection from "./components/ClientListSection";
 import ClientStatsSection from "./components/ClientStatsSection";
@@ -69,6 +66,7 @@ import NewAppointmentModal from "./components/NewAppointmentModal";
 import DeleteConfirmationModal from "./components/DeleteConfirmationModal";
 import { Client, Review, AppointmentFormData, ClientFormData } from "./types";
 import { formatDateForDisplay, getStatusColor } from "./utils";
+import { ExportButtons } from "@/components/ExportButtons";
 
 export default function ClientsPage() {
   const { user } = useCrmAuth();
@@ -244,10 +242,10 @@ export default function ClientsPage() {
         const amount =
           Number(
             appt?.finalAmount ??
-              appt?.totalAmount ??
-              appt?.amount ??
-              appt?.price ??
-              0
+            appt?.totalAmount ??
+            appt?.amount ??
+            appt?.price ??
+            0
           ) || 0;
         const status = String(appt?.status || "").toLowerCase();
 
@@ -362,158 +360,7 @@ export default function ClientsPage() {
     );
   }, [offlineClients, onlineClients]);
 
-  // Export functions
-  const getDataForExport = () => {
-    const filteredClients = combinedClients.filter(
-      (client: Client) =>
-        client.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.phone.includes(searchTerm)
-    );
 
-    return filteredClients.map((client: Client) => ({
-      Name: client.fullName,
-      Email: client.email,
-      Phone: client.phone,
-      Birthday: formatDateForDisplay(client.birthdayDate),
-      "Last Visit": formatDateForDisplay(client.lastVisit),
-      "Total Bookings": bookingsById.get(String(client._id)) || 0,
-      "Total Spent": (totalsById.get(String(client._id)) || 0).toFixed(2),
-      Status: client.status,
-    }));
-  };
-
-  const exportToExcel = () => {
-    const data = getDataForExport();
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Clients");
-    XLSX.writeFile(wb, "clients_list.xlsx");
-  };
-
-  const exportToCSV = () => {
-    const data = getDataForExport();
-    const ws = XLSX.utils.json_to_sheet(data);
-    const csv = XLSX.utils.sheet_to_csv(ws);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", "clients_list.csv");
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const exportToPDF = async () => {
-    printTable();
-  };
-
-  const copyToClipboard = () => {
-    const data = getDataForExport();
-    if (data.length === 0) {
-      toast.info("No data to copy");
-      return;
-    }
-
-    // Create TSV (Tab Separated Values)
-    const headers = Object.keys(data[0]);
-    const tsv = [
-      headers.join("\t"),
-      ...data.map((row: any) =>
-        headers.map((header) => row[header as keyof typeof row]).join("\t")
-      ),
-    ].join("\n");
-
-    navigator.clipboard
-      .writeText(tsv)
-      .then(() => {
-        toast.success("Client data copied to clipboard!");
-      })
-      .catch((err) => {
-        console.error("Failed to copy: ", err);
-        toast.error("Failed to copy data.");
-      });
-  };
-
-  const printTable = () => {
-    const data = getDataForExport();
-    if (data.length === 0) {
-      toast.info("No data to print");
-      return;
-    }
-
-    const printWindow = window.open("", "", "height=600,width=800");
-    if (printWindow) {
-      const headers = Object.keys(data[0]);
-
-      const htmlContent = `
-                <html>
-                <head>
-                    <title>Clients List</title>
-                    <style>
-                        body { font-family: sans-serif; padding: 20px; }
-                        h1 { color: #333; margin-bottom: 20px; }
-                        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-                        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                        th { bg-color: #f2f2f2; font-weight: bold; }
-                        tr:nth-child(even) { background-color: #f9f9f9; }
-                    </style>
-                </head>
-                <body>
-                    <h1>Clients List</h1>
-                    <table>
-                        <thead>
-                            <tr>
-                                ${headers.map((h) => `<th>${h}</th>`).join("")}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${data
-                              .map(
-                                (row: any) => `
-                                <tr>
-                                    ${headers.map((h) => `<td>${row[h as keyof typeof row] || ""}</td>`).join("")}
-                                </tr>
-                            `
-                              )
-                              .join("")}
-                        </tbody>
-                    </table>
-                </body>
-                </html>
-            `;
-
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
-      setTimeout(() => {
-        printWindow.print();
-      }, 500);
-    }
-  };
-
-  const handleExport = (format: string) => {
-    switch (format) {
-      case "excel":
-        exportToExcel();
-        break;
-      case "csv":
-        exportToCSV();
-        break;
-      case "pdf":
-        exportToPDF();
-        break;
-      case "copy":
-        copyToClipboard();
-        break;
-      case "print":
-        printTable();
-        break;
-      default:
-        break;
-    }
-  };
 
   const exportData = useMemo(() => {
     const filteredClients = combinedClients.filter(
@@ -776,6 +623,8 @@ export default function ClientsPage() {
           appointments={appointments}
           inactiveClients={inactiveClients}
           totalsById={totalsById}
+          bookingsById={bookingsById}
+          currentSegment={clientSegment}
         />
 
         {/* Search and Action Buttons Section */}
@@ -793,42 +642,62 @@ export default function ClientsPage() {
             </div>
 
 
-              <div className="">
-                <div className="flex items-center rounded-md border border-border/20 overflow-hidden w-fit">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setClientSegment("offline");
-                    }}
-                    className={`h-12 px-6 flex-1 sm:flex-none ${clientSegment === "offline" ? "bg-primary hover:bg-primary/90 text-primary-foreground rounded-tl-lg rounded-bl-lg" : "bg-background text-foreground hover:bg-muted"}`}
-                  >
-                    Offline Clients
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setClientSegment("online");
-                    }}
-                    className={`h-12 px-6 flex-1 sm:flex-none ${clientSegment === "online" ? "bg-primary hover:bg-primary/90 text-primary-foreground  rounded-tr-lg rounded-br-lg" : "bg-background text-foreground hover:bg-muted"}`}
-                  >
-                    Online Customers
-                  </button>
-                </div>
+            <div className="">
+              <div className="flex items-center rounded-md border border-border/20 overflow-hidden w-fit">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClientSegment("offline");
+                  }}
+                  className={`h-12 px-6 flex-1 sm:flex-none ${clientSegment === "offline" ? "bg-primary hover:bg-primary/90 text-primary-foreground rounded-tl-lg rounded-bl-lg" : "bg-background text-foreground hover:bg-muted"}`}
+                >
+                  Offline Clients
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setClientSegment("online");
+                  }}
+                  className={`h-12 px-6 flex-1 sm:flex-none ${clientSegment === "online" ? "bg-primary hover:bg-primary/90 text-primary-foreground  rounded-tr-lg rounded-br-lg" : "bg-background text-foreground hover:bg-muted"}`}
+                >
+                  Online Customers
+                </button>
               </div>
+            </div>
 
 
-            <Button
-              variant="outline"
+            <ExportButtons
+              data={exportData}
+              title="Clients Report"
+              filename="clients_list"
               className="h-12 px-6 rounded-lg border-border hover:border-primary flex-1 sm:flex-none"
-              onClick={() => {
-                const exportButton = document.createElement("button");
-                exportButton.onclick = () => handleExport("excel");
-                exportButton.click();
-              }}
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
+              columns={[
+                { header: 'Name', key: 'fullName' },
+                { header: 'Email', key: 'email' },
+                { header: 'Phone', key: 'phone' },
+                {
+                  header: 'Birthday',
+                  key: 'birthdayDate',
+                  transform: (val) => formatDateForDisplay(val)
+                },
+                {
+                  header: 'Last Visit',
+                  key: 'lastVisit',
+                  transform: (val) => formatDateForDisplay(val)
+                },
+                {
+                  header: 'Total Bookings',
+                  key: '_id',
+                  transform: (val) => String(bookingsById.get(String(val)) || 0)
+                },
+                {
+                  header: 'Total Spent',
+                  key: '_id',
+                  transform: (val) => `₹${(totalsById.get(String(val)) || 0).toFixed(2)}`
+                },
+                { header: 'Status', key: 'status' }
+              ]}
+            />
             <Button
               onClick={() => handleOpenModal()}
               className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1 sm:flex-none"
