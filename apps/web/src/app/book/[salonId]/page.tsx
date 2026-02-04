@@ -1664,10 +1664,10 @@ function BookingPageContent() {
             discountAmount: priceBreakdown?.discountAmount || 0,
             serviceItems: appointmentData.serviceItems,
             addOnIds: appointmentData.serviceItems.flatMap((item: any) =>
-              item.addOns?.map((a: any) => a._id || a.id) || []
+              item.addOns?.map((a: any) => a._id) || []
             ),
             selectedAddOns: appointmentData.serviceItems.flatMap((item: any) =>
-              item.addOns?.map((a: any) => a._id || a.id) || []
+              item.addOns?.map((a: any) => a._id) || []
             ),
             isMultiService: isMultiService,
           }).unwrap();
@@ -1675,7 +1675,7 @@ function BookingPageContent() {
           if (!lockResult.success) {
             throw new Error(lockResult.message || "Failed to acquire lock");
           }
-          
+
           appointmentIdToConfirm = lockResult.appointmentId;
           currentLockId = lockResult.lockId;
         } else {
@@ -2898,7 +2898,7 @@ function BookingPageContent() {
               user={user}
               isHomeService={bookingMode === 'home'}
               homeServiceLocation={homeServiceLocation as any}
-              isWeddingService={selectedServices.some(service => 
+              isWeddingService={selectedServices.some(service =>
                 service.weddingService?.available || service.serviceWeddingService?.available
               )}
             />
@@ -2934,7 +2934,7 @@ function BookingPageContent() {
               user={user}
               isHomeService={bookingMode === 'home'}
               homeServiceLocation={homeServiceLocation}
-              isWeddingService={selectedServices.some(service => 
+              isWeddingService={selectedServices.some(service =>
                 service.weddingService?.available || service.serviceWeddingService?.available
               )}
             />

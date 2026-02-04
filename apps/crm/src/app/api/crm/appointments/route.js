@@ -440,6 +440,7 @@ export const POST = withSubscriptionCheck(async (req) => {
             discount: Number(body.discount) || 0,
             tax: Number(body.tax) || 0,
             totalAmount,
+            finalAmount: totalAmount, // <--- Ensure finalAmount is set for online/offline consistency
             notes: body.notes || '',
             mode: 'offline', // CRM bookings are always offline mode
             serviceItems // Include the processed service items
@@ -455,7 +456,7 @@ export const POST = withSubscriptionCheck(async (req) => {
 
         if (conflict) {
             return NextResponse.json(
-                { 
+                {
                     message: "The selected professional is already booked at this time.",
                     conflict: {
                         startTime: conflict.startTime,
@@ -546,12 +547,12 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
         // Check for conflicts if staff, date, or time is being updated
         if (updateData.staff || updateData.date || updateData.startTime || updateData.endTime || updateData.serviceItems) {
             const { checkMultiServiceConflict } = await import('../../../../../../../packages/lib/src/modules/scheduling/ConflictChecker');
-            
+
             const checkDate = updateData.date ? new Date(updateData.date) : existingAppointment.date;
-            
+
             // Re-construct service items for verification
             let verificationItems = updateData.serviceItems || existingAppointment.serviceItems;
-            
+
             // If it's a legacy single-service update that doesn't use serviceItems array
             if (!updateData.serviceItems && (updateData.staff || updateData.startTime || updateData.endTime)) {
                 verificationItems = [{
@@ -571,7 +572,7 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
 
             if (conflict) {
                 return NextResponse.json(
-                    { 
+                    {
                         success: false,
                         message: "The update would cause a conflict with another appointment.",
                         conflict: {
@@ -585,22 +586,37 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
             }
         }
 
-        // Update the appointment
-        const updatedAppointment = await AppointmentModel.findByIdAndUpdate(
-            appointmentId,
-            {
-                $set: updateData,
-                $currentDate: { updatedAt: true }
-            },
-            { new: true, runValidators: false } // Disable validation to avoid issues with existing appointments
-        )
-            .populate('client', 'fullName email phone')
-            .populate('service', 'name duration price')
-            .populate('staff', 'name email phone');
+        // Update the appointment using findOne and save to trigger pre-save hooks
+        const updatedAppointment = await AppointmentModel.findOne({
+            _id: appointmentId,
+            vendorId: vendorId
+        });
 
         if (!updatedAppointment) {
-            throw new Error('Failed to update appointment');
+            return NextResponse.json(
+                { success: false, message: 'Appointment not found or access denied' },
+                { status: 404 }
+            );
         }
+
+        // Apply updates
+        Object.keys(updateData).forEach(key => {
+            updatedAppointment[key] = updateData[key];
+        });
+
+        // Ensure totalAmount and finalAmount are in sync if updated
+        if (updateData.totalAmount !== undefined) {
+            updatedAppointment.finalAmount = updateData.totalAmount;
+        }
+
+        await updatedAppointment.save({ validateBeforeSave: false });
+
+        // Populate for response
+        await updatedAppointment.populate([
+            { path: 'client', select: 'fullName email phone' },
+            { path: 'service', select: 'name duration price' },
+            { path: 'staff', select: 'fullName position email phone' }
+        ]);
 
         // Send email notifications
         await sendAppointmentEmail(updatedAppointment, vendorId, updatedAppointment.status, existingAppointment.status);
@@ -757,65 +773,8 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
             // Logic for completing an appointment and calculating staff commission
             const updateFields = { status: body.status };
 
-            if (body.status === 'completed' || body.status === 'completed without payment') {
-                try {
-                    // Fetch current appointment to get staff and service details
-                    const currentAppt = await AppointmentModel.findOne({ _id: appointmentId, vendorId })
-                        .populate('staff', 'fullName position')
-                        .populate('client', 'fullName email phone');
-
-                    if (currentAppt && currentAppt.staff) {
-                        const { default: StaffModel } = await import('@repo/lib/models/Vendor/Staff.model');
-                        const staffMember = await StaffModel.findById(currentAppt.staff);
-
-                        if (staffMember && staffMember.commission) {
-                            const rate = staffMember.commissionRate || 0;
-                            // Calculate based on final amount or total amount (excluding tax/platform fee if needed, but using total here)
-                            const commissionAmount = (currentAppt.finalAmount * rate) / 100;
-
-                            updateFields.staffCommission = {
-                                rate: rate,
-                                amount: commissionAmount
-                            };
-
-                            // Also update service items if they exist
-                            if (currentAppt.serviceItems && currentAppt.serviceItems.length > 0) {
-                                updateFields.serviceItems = currentAppt.serviceItems.map(item => {
-                                    if (item.staff && item.staff.toString() === staffMember._id.toString()) {
-                                        return {
-                                            ...item,
-                                            staffCommission: {
-                                                rate: rate,
-                                                amount: (item.amount * rate) / 100
-                                            }
-                                        };
-                                    }
-                                    return item;
-                                });
-                            }
-                        }
-                    }
-
-                    // CENTRALIZED INVOICE GENERATION LOGIC
-                    const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
-                    const invoice = await InvoiceModel.createFromAppointment(appointmentId, vendorId);
-                    if (invoice) {
-                        updateFields.invoiceNumber = invoice.invoiceNumber;
-                        console.log(`Linked sequential invoice ${invoice.invoiceNumber} to appointment ${appointmentId}`);
-                    }
-                } catch (invoiceError) {
-                    console.error("Error in centralized invoice generation:", invoiceError);
-                }
-            }
-
-            const updatedAppointment = await AppointmentModel.findOneAndUpdate(
-                { _id: appointmentId, vendorId },
-                { $set: updateFields },
-                { new: true, runValidators: false } // Disable validation to avoid issues with existing appointments
-            )
-                .populate('client', 'fullName email phone')
-                .populate('staff', 'fullName position')
-                .populate('service', 'name duration price');
+            // Use findOne and save instead of findOneAndUpdate to trigger pre-save hooks (like commission calculation)
+            const updatedAppointment = await AppointmentModel.findOne({ _id: appointmentId, vendorId });
 
             if (!updatedAppointment) {
                 return NextResponse.json(
@@ -823,6 +782,34 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                     { status: 404 }
                 );
             }
+
+            // Apply updates
+            Object.keys(updateFields).forEach(key => {
+                updatedAppointment[key] = updateFields[key];
+            });
+
+            await updatedAppointment.save({ validateBeforeSave: false });
+
+            // CENTRALIZED INVOICE GENERATION LOGIC
+            if (body.status === 'completed' || body.status === 'completed without payment') {
+                try {
+                    const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+                    const invoice = await InvoiceModel.createFromAppointment(appointmentId, vendorId);
+                    if (invoice) {
+                        updatedAppointment.invoiceNumber = invoice.invoiceNumber;
+                        console.log(`Linked sequential invoice ${invoice.invoiceNumber} to appointment ${appointmentId}`);
+                    }
+                } catch (invoiceError) {
+                    console.error("Error in centralized invoice generation:", invoiceError);
+                }
+            }
+
+            // Populate for response
+            await updatedAppointment.populate([
+                { path: 'client', select: 'fullName email phone' },
+                { path: 'staff', select: 'fullName position' },
+                { path: 'service', select: 'name duration price' }
+            ]);
 
             // Send email notifications
             await sendAppointmentEmail(updatedAppointment, vendorId, updatedAppointment.status, oldStatus, rawClientId);

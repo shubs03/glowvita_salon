@@ -139,6 +139,10 @@ const staffSchema = new mongoose.Schema(
       required: true,
       select: false, // Never select by default for security
     },
+    tempPassword: {
+      type: String, // Store temporary password for initial email
+      select: false,
+    },
     resetPasswordToken: {
       type: String,
     },

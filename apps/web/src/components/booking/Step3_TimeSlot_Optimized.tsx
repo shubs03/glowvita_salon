@@ -19,19 +19,19 @@ const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage }: {
   // Step mapping: 
   // Regular: [1, 2, 3, 4] -> ['Select Service', 'Select Professional', 'Select Date & Time', 'Confirm Booking']
   // Wedding: [1, 3, 4, 5] -> ['Select Package', 'Select Date & Time', 'Location Selection', 'Confirm Booking']
-  
+
   const steps = isWeddingPackage
     ? [
-        { name: 'Select Package', step: 1 },
-        { name: 'Select Date & Time', step: 3 },
-        { name: 'Confirm Booking', step: 4 }
-      ]
+      { name: 'Select Package', step: 1 },
+      { name: 'Select Date & Time', step: 3 },
+      { name: 'Confirm Booking', step: 4 }
+    ]
     : [
-        { name: 'Select Service', step: 1 },
-        { name: 'Select Professional', step: 2 },
-        { name: 'Select Date & Time', step: 3 },
-        { name: 'Confirm Booking', step: 4 }
-      ];
+      { name: 'Select Service', step: 1 },
+      { name: 'Select Professional', step: 2 },
+      { name: 'Select Date & Time', step: 3 },
+      { name: 'Confirm Booking', step: 4 }
+    ];
 
   return (
     <nav className="flex items-center text-sm font-medium text-muted-foreground mb-6">
@@ -336,8 +336,8 @@ export const Step3_TimeSlot = memo(({
             totalAmount: weddingPackage.discountedPrice || weddingPackage.totalPrice || 0,
             depositAmount: (weddingPackage as any).depositAmount || 0
           },
-          clientId: (weddingPackage as any).clientId || 'temp-client-id', 
-          clientName: 'Customer', 
+          clientId: (weddingPackage as any).clientId || 'temp-client-id',
+          clientName: 'Customer',
           customerDetails: {
             name: 'Customer',
             phone: null
@@ -429,8 +429,8 @@ export const Step3_TimeSlot = memo(({
         date: selectedDate.toISOString(),
         startTime: slot.startTime,
         endTime: slot.endTime,
-        clientId: user?._id || user?.id || (effectiveService as any)?.clientId || 'temp-client-id', 
-        clientName: user ? `${user.firstName} ${user.lastName}` : 'Customer', 
+        clientId: user?._id || user?.id || (effectiveService as any)?.clientId || 'temp-client-id',
+        clientName: user ? `${user.firstName} ${user.lastName}` : 'Customer',
         clientEmail: user?.emailAddress || user?.email || '',
         clientPhone: user?.mobileNo || user?.phone || '',
         staffName: selectedStaff?.name || 'Any Professional',
@@ -447,8 +447,8 @@ export const Step3_TimeSlot = memo(({
         couponCode,
         discountAmount: Math.round(discountAmount || 0),
         addOns: selectedService?.selectedAddons || addOns, // Ensure this is passed as well
-        addOnIds: (selectedService?.selectedAddons || addOns).map((a: any) => a._id || a.id),
-        selectedAddOns: (selectedService?.selectedAddons || addOns).map((a: any) => a._id || a.id),
+        addOnIds: (selectedService?.selectedAddons || addOns).map((a: any) => a._id),
+        selectedAddOns: (selectedService?.selectedAddons || addOns).map((a: any) => a._id),
       };
 
       // Only include location if it's actually provided and valid

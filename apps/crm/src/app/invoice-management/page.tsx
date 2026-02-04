@@ -47,7 +47,6 @@ interface BillingItem {
     name: string;
   };
   id: string;
-  name: string;
 }
 
 interface ClientInfo {
@@ -231,7 +230,7 @@ export default function InvoiceManagementPage() {
       }
 
       // Sort by invoice number descending (newest/highest invoice number first)
-      filtered.sort((a, b) => {
+      filtered.sort((a: any, b : any) => {
         const invoiceA = a.invoiceNumber || '';
         const invoiceB = b.invoiceNumber || '';
         return invoiceB.localeCompare(invoiceA, undefined, { numeric: true, sensitivity: 'base' });

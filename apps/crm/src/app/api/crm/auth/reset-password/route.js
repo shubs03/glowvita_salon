@@ -34,18 +34,20 @@ export async function POST(request) {
     let Model = null;
 
     const userRoles = [
-      { model: VendorModel, type: 'vendor' },
-      { model: DoctorModel, type: 'doctor' },
-      { model: SupplierModel, type: 'supplier' },
-      { model: StaffModel, type: 'staff' },
+      { model: VendorModel, type: 'vendor', emailField: 'email' },
+      { model: DoctorModel, type: 'doctor', emailField: 'email' },
+      { model: SupplierModel, type: 'supplier', emailField: 'email' },
+      { model: StaffModel, type: 'staff', emailField: 'emailAddress' },
     ];
 
     for (const roleInfo of userRoles) {
-      const foundUser = await roleInfo.model.findOne({ 
-        email,
+      const query = {
         resetPasswordToken: token,
         resetPasswordExpires: { $gt: Date.now() }
-      });
+      };
+      query[roleInfo.emailField] = email;
+
+      const foundUser = await roleInfo.model.findOne(query);
       if (foundUser) {
         user = foundUser;
         userType = roleInfo.type;
@@ -58,32 +60,28 @@ export async function POST(request) {
       return NextResponse.json({ success: false, error: "Password reset token is invalid or has expired." }, { status: 400 });
     }
 
-    // Immediately clear the reset token to prevent reuse
-    try {
-      await Model.findByIdAndUpdate(user._id, {
-        resetPasswordToken: undefined,
-        resetPasswordExpires: undefined
-      });
-      console.log('Reset token cleared for user:', user.email);
-    } catch (clearError) {
-      console.error('Error clearing reset token:', clearError);
-      return NextResponse.json({ 
-        success: false, 
-        error: "Failed to process reset request. Please try again later." 
-      }, { status: 500 });
-    }
-
     // Hash new password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Update user password
-    await Model.findByIdAndUpdate(user._id, {
-      password: hashedPassword
-    });
+    // Update user password and clear reset token in one operation
+    const updateData = {
+      password: hashedPassword,
+      resetPasswordToken: undefined,
+      resetPasswordExpires: undefined
+    };
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Password reset successfully. You can now log in with your new password." 
+    // If it's a staff member, clear the temp password as well
+    if (userType === 'staff') {
+      updateData.tempPassword = undefined;
+    }
+
+    await Model.findByIdAndUpdate(user._id, updateData);
+
+    console.log('Password updated and token cleared for user:', user.email);
+
+    return NextResponse.json({
+      success: true,
+      message: "Password reset successfully. You can now log in with your new password."
     });
   } catch (error) {
     console.error("Reset password error:", error);

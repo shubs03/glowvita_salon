@@ -508,14 +508,58 @@ appointmentSchema.pre('save', async function (next) {
     }
 
     // 2. Auto-complete past appointments
-    if (this.bookingDate && this.endTime && this.status !== 'completed' && this.status !== 'cancelled') {
+    if (this.date && this.endTime && this.status !== 'completed' && this.status !== 'cancelled') {
       const now = new Date();
-      const endDateTime = new Date(this.bookingDate);
+      const endDateTime = new Date(this.date);
       const [hours, minutes] = this.endTime.split(':');
       endDateTime.setHours(parseInt(hours), parseInt(minutes), 0);
 
       if (endDateTime < now) {
         this.status = 'completed';
+      }
+    }
+
+    // 3. Calculate staff commission
+    if (this.isModified('staff') || this.isModified('serviceItems') || this.isModified('amount') || this.isModified('totalAmount') || this.isModified('finalAmount')) {
+      try {
+        // Calculate for top-level staff
+        if (this.staff) {
+          const staffMember = await Staff.findById(this.staff);
+          if (staffMember && staffMember.commission) {
+            const rate = staffMember.commissionRate || 0;
+            const baseAmount = this.finalAmount || this.totalAmount || this.amount || 0;
+            this.staffCommission = {
+              rate: rate,
+              amount: (baseAmount * rate) / 100
+            };
+          }
+        }
+
+        // Calculate for individual service items
+        if (this.serviceItems && this.serviceItems.length > 0) {
+          const staffIds = [...new Set(this.serviceItems.map(item => item.staff).filter(Boolean))];
+          if (staffIds.length > 0) {
+            const staffMembers = await Staff.find({ _id: { $in: staffIds } });
+            const staffMap = new Map(staffMembers.map(s => [s._id.toString(), s]));
+
+            this.serviceItems.forEach(item => {
+              if (item.staff) {
+                const staff = staffMap.get(item.staff.toString());
+                if (staff && staff.commission) {
+                  const rate = staff.commissionRate || 0;
+                  item.staffCommission = {
+                    rate: rate,
+                    amount: (item.amount * rate) / 100
+                  };
+                } else {
+                  item.staffCommission = { rate: 0, amount: 0 };
+                }
+              }
+            });
+          }
+        }
+      } catch (commissionError) {
+        console.error("Error calculating commission in pre-save:", commissionError);
       }
     }
 
