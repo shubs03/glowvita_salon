@@ -180,7 +180,7 @@ export default function OffersCouponsPage() {
 
   // RTK Query hooks with proper query parameters
   const {
-    data: couponsData = [],
+    data: couponsDataRaw = [],
     isLoading,
     isError,
     refetch,
@@ -188,6 +188,15 @@ export default function OffersCouponsPage() {
     skip: !auth || !businessId, // Skip query if not authenticated or no businessId
     refetchOnMountOrArgChange: false, // Disable to prevent infinite loops
   });
+
+  const couponsData = useMemo(() => {
+    return [...couponsDataRaw].sort((a: Coupon, b: Coupon) => {
+      // Assuming Coupon type has createdAt, if not we fall back to index or id
+      const dateA = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
+      const dateB = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [couponsDataRaw]);
 
   // Removed problematic useEffect that was causing infinite API calls
   // useEffect(() => {

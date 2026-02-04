@@ -53,13 +53,23 @@ export type Staff = {
         recurringType?: string;
         isActive: boolean;
     }>;
+    createdAt?: string;
+    updatedAt?: string;
 };
 
 export default function StaffPage() {
     const { user } = useCrmAuth();
-    const { data: staffList = [], isLoading, isError, refetch } = useGetStaffQuery(user?._id, {
+    const { data: staffListRaw = [], isLoading, isError, refetch } = useGetStaffQuery(user?._id, {
         skip: !user?._id,
     });
+
+    const staffList = useMemo(() => {
+        return [...staffListRaw].sort((a: Staff, b: Staff) => {
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA;
+        });
+    }, [staffListRaw]);
 
     console.log("Staff List:", staffList)
 
