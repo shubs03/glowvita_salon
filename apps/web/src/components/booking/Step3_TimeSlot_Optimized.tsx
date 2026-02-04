@@ -155,7 +155,9 @@ export const Step3_TimeSlot = memo(({
   const [isLocking, setIsLocking] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [isStale, setIsStale] = useState(false);
+  const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const dateScrollerRef = useRef<HTMLDivElement>(null);
+  const previousSlotsRef = useRef<TimeSlot[]>([]);
 
   // Use salonId or vendorId (they're the same)
   const effectiveVendorId = vendorId || salonId;
@@ -163,10 +165,15 @@ export const Step3_TimeSlot = memo(({
   const effectiveService = service || selectedService;
 
   // Fetch slots from API
-  const fetchSlots = useCallback(async () => {
+  const fetchSlots = useCallback(async (isBackgroundFetch = false) => {
     if (!effectiveVendorId || !selectedDate || !effectiveService) return;
 
-    setIsLoadingSlots(true);
+    // For background fetches, don't show loading state
+    if (!isBackgroundFetch) {
+      setIsLoadingSlots(true);
+    } else {
+      setIsBackgroundRefreshing(true);
+    }
     setSlotsError(null);
 
     try {
@@ -214,14 +221,27 @@ export const Step3_TimeSlot = memo(({
       }
 
       const data = await response.json();
-      setSlots(data.slots || []);
+      const newSlots = data.slots || [];
+      
+      // Only update if slots actually changed (prevents unnecessary re-renders)
+      const slotsChanged = JSON.stringify(previousSlotsRef.current) !== JSON.stringify(newSlots);
+      
+      if (slotsChanged || !isBackgroundFetch) {
+        setSlots(newSlots);
+        previousSlotsRef.current = newSlots;
+      }
+      
       setLastRefresh(new Date());
     } catch (error: any) {
       console.error('Error fetching slots:', error);
       setSlotsError(error.message || 'Failed to load available slots');
       toast.error('Could not load available time slots. Please try again.');
     } finally {
-      setIsLoadingSlots(false);
+      if (!isBackgroundFetch) {
+        setIsLoadingSlots(false);
+      } else {
+        setIsBackgroundRefreshing(false);
+      }
     }
   }, [effectiveVendorId, selectedDate, effectiveService, selectedStaff, isHomeService, isWeddingService,
     isWeddingPackage, weddingPackage, weddingPackageServices, homeServiceLocation]);
@@ -231,12 +251,13 @@ export const Step3_TimeSlot = memo(({
     fetchSlots();
   }, [fetchSlots]);
 
-  // Auto-refresh slots every 30 seconds
+  // Background refresh every 10 seconds (smooth, no UI blink)
   useEffect(() => {
     if (!effectiveVendorId || !selectedDate) return;
 
     const refreshInterval = setInterval(() => {
-      fetchSlots();
+      // Pass true to indicate this is a background fetch
+      fetchSlots(true);
     }, 10000); // 10 seconds
 
     return () => clearInterval(refreshInterval);
@@ -269,7 +290,7 @@ export const Step3_TimeSlot = memo(({
         setLockCountdown(null);
         onSelectTime(null);
         toast.warning("Slot lock expired. Please select another time.");
-        fetchSlots(); // Refresh slots
+        fetchSlots(false); // Refresh slots immediately
       } else {
         setLockCountdown(remaining);
       }
@@ -502,8 +523,8 @@ export const Step3_TimeSlot = memo(({
       console.error('Slot lock error:', error);
       toast.error(error.message || 'This slot was just booked. Please select another time.');
 
-      // Refresh slots to get updated availability
-      await fetchSlots();
+      // Refresh slots immediately (not background) to get updated availability
+      await fetchSlots(false);
     } finally {
       setIsLocking(false);
     }
@@ -525,7 +546,7 @@ export const Step3_TimeSlot = memo(({
       setLockCountdown(null);
       onSelectTime(null);
       toast.info('Slot lock released');
-      fetchSlots();
+      fetchSlots(false);
     } catch (error) {
       console.error('Error releasing lock:', error);
     }
@@ -533,7 +554,7 @@ export const Step3_TimeSlot = memo(({
 
   // Manual refresh handler
   const handleRefresh = useCallback(() => {
-    fetchSlots();
+    fetchSlots(false);
     toast.success('Slots refreshed!');
   }, [fetchSlots]);
 
@@ -739,7 +760,7 @@ export const Step3_TimeSlot = memo(({
             </div>
             <h3 className="font-semibold text-lg">Available Slots for {format(selectedDate, 'MMMM d')}</h3>
             <Button size="sm" variant="ghost" onClick={handleRefresh} disabled={isLoadingSlots} className="ml-auto">
-              <RefreshCw className={cn("h-4 w-4", isLoadingSlots && "animate-spin")} />
+              <RefreshCw className={cn("h-4 w-4", (isLoadingSlots || isBackgroundRefreshing) && "animate-spin", isBackgroundRefreshing && "opacity-50")} />
             </Button>
           </div>
 
@@ -751,7 +772,7 @@ export const Step3_TimeSlot = memo(({
             </div>
           ) : (
             <div className="max-h-64 overflow-y-auto pr-2 no-scrollbar">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 transition-opacity duration-300" style={{ opacity: isBackgroundRefreshing ? 0.95 : 1 }}>
                 {displaySlots.map((slot) => {
                   const isSelected = selectedTime === slot.startTime;
                   const isLocked = lockedSlot?.slot.startTime === slot.startTime;

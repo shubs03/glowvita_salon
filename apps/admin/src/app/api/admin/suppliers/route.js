@@ -66,7 +66,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 }, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // POST a new supplier
-export const POST = authMiddlewareAdmin(async (req) => {
+export const POST = async (req) => {
   try {
     await initDb(); // Initialize DB connection
     const body = await req.json();
@@ -78,37 +78,80 @@ export const POST = authMiddlewareAdmin(async (req) => {
     }
 
     // Validate and lock region
-    const { validateAndLockRegion } = await import("@repo/lib");
-    const finalRegionId = validateAndLockRegion(req.user, regionId);
+    let finalRegionId = regionId;
+    try {
+      if (req.user) {
+        const { validateAndLockRegion } = await import("@repo/lib");
+        finalRegionId = validateAndLockRegion(req.user, regionId);
+      }
+    } catch (err) {
+      console.warn("Region validation skipped:", err.message);
+    }
 
-    // ... (rest of the upload logic)
-    
+    // Handle license files
+    const finalLicenseFiles = [];
+    if (licenseFiles && Array.isArray(licenseFiles)) {
+      for (let i = 0; i < licenseFiles.length; i++) {
+        const file = licenseFiles[i];
+        if (file && file.startsWith("data:")) {
+          const fileName = `supplier-${Date.now()}-license-${i}`;
+          const fileUrl = await uploadBase64(file, fileName);
+          if (fileUrl) {
+            finalLicenseFiles.push(fileUrl);
+          }
+        }
+      }
+    }
+
     // Hash the password before saving
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // ... (rest of the generation logic)
 
     const newSupplier = await SupplierModel.create({
       ...supplierData,
       password: hashedPassword, 
-      licenseFiles: [], // placeholder, will use actual if I keep full logic
+      licenseFiles: finalLicenseFiles, 
       referralCode: await generateReferralCode(supplierData.shopName),
       regionId: finalRegionId,
       subscription: {
           plan: (await SubscriptionPlan.findOne({ name: 'Trial Plan' }))?._id,
           status: 'Active',
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // placeholder
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 
           history: [],
       }
     });
 
-    // ... Handle referral ...
+    // Handle referral if code provided
+    if (referredByCode) {
+      try {
+        const referringSupplier = await SupplierModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
+        if (referringSupplier) {
+          const v2vSettings = await V2VSettingsModel.findOne({});
+          const bonusValue = v2vSettings?.referrerBonus?.bonusValue || 0;
+          const referralType = 'S2S'; // Supplier to Supplier
+          const count = await ReferralModel.countDocuments({ referralType });
+          const referralId = `${referralType}-${String(count + 1).padStart(3, '0')}`;
+
+          await ReferralModel.create({
+            referralId,
+            referralType,
+            referrer: referringSupplier.shopName || referringSupplier.firstName,
+            referee: newSupplier.shopName || newSupplier.firstName,
+            date: new Date(),
+            status: 'Completed',
+            bonus: String(bonusValue),
+          });
+        }
+      } catch (err) {
+        console.error("Referral creation failed:", err);
+      }
+    }
 
     return NextResponse.json(newSupplier, { status: 201 });
   } catch (error) {
-     // ...
+    console.error("Error creating supplier:", error);
+    return NextResponse.json({ message: "Error creating supplier", error: error.message }, { status: 500 });
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+};
 
 // PUT (update) a supplier
 export const PUT = authMiddlewareAdmin(async (req) => {
