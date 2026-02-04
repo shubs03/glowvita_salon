@@ -283,8 +283,8 @@ export function Step3_MultiServiceTimeSlot({
           const addOnsPrice = service?.selectedAddons?.reduce((aSum, a) => aSum + (a.price || 0), 0) || 0;
           return sum + servicePrice + addOnsPrice;
         }, 0),
-        addOnIds: selectedServices?.flatMap(s => s.selectedAddons?.map(a => a._id || a.id) || []),
-        selectedAddOns: selectedServices?.flatMap(s => s.selectedAddons?.map(a => a._id || a.id) || []),
+        addOnIds: selectedServices?.flatMap(s => s.selectedAddons?.map(a => a._id) || []),
+        selectedAddOns: selectedServices?.flatMap(s => s.selectedAddons?.map(a => a._id) || []),
         isWeddingService,
         // Client Info
         clientId: user?._id || user?.id || 'temp-client-id',
