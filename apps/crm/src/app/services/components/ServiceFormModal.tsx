@@ -884,7 +884,11 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-[95vw] sm:w-full h-[90vh] max-h-[90vh] p-0 overflow-hidden flex flex-col">
+      <DialogContent
+        className="max-w-4xl w-[95vw] sm:w-full h-[90vh] max-h-[90vh] p-0 overflow-hidden flex flex-col"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-background z-10">
           <DialogTitle className="text-lg sm:text-xl">
             {type === "add" ? "New Service" : type === "edit" ? "Edit Service" : "Service Details"}

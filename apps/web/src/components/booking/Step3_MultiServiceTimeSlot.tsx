@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@repo/ui/button';
 import { addDays, format, getDay } from 'date-fns';
 import { ChevronLeft, ChevronRight, Clock, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
@@ -85,6 +85,77 @@ interface MultiServiceSlot {
   };
 }
 
+// Memoized slot card to prevent unnecessary re-renders
+const SlotCard = React.memo<{
+  slot: MultiServiceSlot;
+  isSelected: boolean;
+  isLocking: boolean;
+  onClick: () => void;
+}>(({ slot, isSelected, isLocking, onClick }) => {
+  return (
+    <button
+      onClick={onClick}
+      disabled={isLocking}
+      className={cn(
+        "p-4 border-2 rounded-lg transition-all text-left hover:shadow-md relative overflow-hidden",
+        isSelected
+          ? "border-primary bg-primary/5"
+          : "border-gray-200 hover:border-primary hover:bg-primary/5",
+        isLocking && "opacity-50 cursor-wait"
+      )}
+    >
+      {isLocking && isSelected && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/60">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      )}
+      {/* Slot Time */}
+      <div className="font-semibold text-lg mb-2">
+        {slot.startTime} - {slot.endTime}
+      </div>
+
+      {/* Duration Info */}
+      <div className="text-sm text-gray-600 mb-3">
+        {slot.totalDuration} min total
+        {slot.travelTime && slot.travelTime > 0 && (
+          <span className="text-blue-600 ml-2">
+            (+{slot.travelTime} min travel)
+          </span>
+        )}
+      </div>
+
+      {/* Service Sequence */}
+      <div className="space-y-2">
+        {slot.sequence.map((item: any, idx: number) => (
+          <div key={idx} className="text-xs bg-white p-2 rounded border border-gray-100">
+            <div className="font-medium">{item.serviceName}</div>
+            <div className="text-gray-500">
+              {item.staffName} • {item.startTime}-{item.endTime}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Travel Info */}
+      {slot.travelInfo && (
+        <div className="mt-3 text-xs text-blue-600 border-t border-gray-100 pt-2">
+          📍 {slot.travelInfo.distanceInKm.toFixed(1)} km away
+        </div>
+      )}
+    </button>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison to prevent re-renders
+  return (
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isLocking === nextProps.isLocking &&
+    prevProps.slot.startTime === nextProps.slot.startTime &&
+    prevProps.slot.endTime === nextProps.slot.endTime
+  );
+});
+
+SlotCard.displayName = 'SlotCard';
+
 export function Step3_MultiServiceTimeSlot({
   selectedDate,
   onSelectDate,
@@ -121,9 +192,12 @@ export function Step3_MultiServiceTimeSlot({
     expiresAt: Date;
   } | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
-
-  // Extract slots from RTK Query response
-  const slots = slotsData?.slots || [];
+  const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
+  const previousSlotsRef = useRef<MultiServiceSlot[]>([]);
+  
+  // Use stable local state instead of RTK Query reactive state
+  const [stableSlots, setStableSlots] = useState<MultiServiceSlot[]>([]);
+  const slots = stableSlots;
 
   // Generate available dates (next 60 days)
   const dates = useMemo(() => Array.from({ length: 60 }, (_, i) => addDays(new Date(), i)), []);
@@ -141,10 +215,14 @@ export function Step3_MultiServiceTimeSlot({
   }, [serviceStaffAssignments]);
 
   // Fetch slots using the RTK Query mutation
-  const fetchMultiServiceSlots = useCallback(async () => {
+  const fetchMultiServiceSlots = useCallback(async (isBackgroundFetch = false) => {
     if (!vendorId || !selectedDate || !isAssignmentsValid) {
       console.log('Missing required data:', { vendorId, selectedDate, isAssignmentsValid });
       return;
+    }
+
+    if (isBackgroundFetch) {
+      setIsBackgroundRefreshing(true);
     }
 
     try {
@@ -181,9 +259,29 @@ export function Step3_MultiServiceTimeSlot({
         slotsCount: result.slots?.length || 0,
         metadata: result.metadata
       });
+      
+      const newSlots = result.slots || [];
+      
+      // Only update state if slots actually changed (prevents unnecessary re-renders)
+      const slotsChanged = JSON.stringify(previousSlotsRef.current) !== JSON.stringify(newSlots);
+      
+      if (slotsChanged || !isBackgroundFetch) {
+        setStableSlots(newSlots);
+        previousSlotsRef.current = newSlots;
+        console.log('Slots updated:', { isBackground: isBackgroundFetch, count: newSlots.length });
+      } else {
+        console.log('Slots unchanged, skipping update');
+      }
+      
+      if (isBackgroundFetch) {
+        setIsBackgroundRefreshing(false);
+      }
     } catch (error: any) {
       console.error('Error fetching multi-service slots:', error);
-      toast.error(error?.data?.message || 'Could not load available time slots. Please try again.');
+      if (!isBackgroundFetch) {
+        toast.error(error?.data?.message || 'Could not load available time slots. Please try again.');
+      }
+      setIsBackgroundRefreshing(false);
     }
   }, [vendorId, selectedDate, serviceStaffAssignments, isAssignmentsValid, isHomeService, homeServiceLocation, getMultiServiceSlots]);
 
@@ -192,12 +290,12 @@ export function Step3_MultiServiceTimeSlot({
     fetchMultiServiceSlots();
   }, [fetchMultiServiceSlots]);
 
-  // [NEW] Auto-refresh slots every 10 seconds to improve real-time feel
+  // [NEW] Background refresh every 10 seconds (smooth, no UI blink)
   useEffect(() => {
     if (!vendorId || !selectedDate || !isAssignmentsValid) return;
 
     const refreshInterval = setInterval(() => {
-      fetchMultiServiceSlots();
+      fetchMultiServiceSlots(true);
     }, 10000); // 10 seconds
 
     return () => clearInterval(refreshInterval);
@@ -256,6 +354,16 @@ export function Step3_MultiServiceTimeSlot({
         serviceItems: slot.sequence.map(item => {
           const service = selectedServices?.find(s => s.id === item.serviceId);
           const serviceAmount = service ? (service.discountedPrice || service.price || 0) : 0;
+          
+          // Include addons from the selected service
+          const addOns = service?.selectedAddons?.map(addon => ({
+            _id: addon._id,
+            id: addon._id,
+            name: addon.name,
+            price: addon.price || 0,
+            duration: addon.duration || 0
+          })) || [];
+          
           return {
             service: item.serviceId,
             serviceName: item.serviceName,
@@ -330,9 +438,9 @@ export function Step3_MultiServiceTimeSlot({
     } catch (error: any) {
       console.error('Lock acquisition failed:', error);
       toast.error(error.message || 'Failed to reserve time slot. Please try another.');
-
-      // [NEW] Refresh slots immediately to get updated availability
-      await fetchMultiServiceSlots();
+      
+      // [NEW] Refresh slots immediately (not background) to get updated availability
+      await fetchMultiServiceSlots(false);
     } finally {
       setIsLocking(false);
     }
@@ -357,7 +465,7 @@ export function Step3_MultiServiceTimeSlot({
         setSelectedSlot(null);
         onSelectTime(null);
         toast.info('Reservation expired. Please select a time slot again.');
-        fetchMultiServiceSlots();
+        fetchMultiServiceSlots(false);
       }
     }, 1000);
 
@@ -554,7 +662,7 @@ export function Step3_MultiServiceTimeSlot({
           </div>
           <h3 className="font-semibold text-lg">Available Slots for {format(selectedDate, 'MMMM d')}</h3>
           <Button size="sm" variant="ghost" onClick={fetchMultiServiceSlots} disabled={isLoadingSlots} className="ml-auto">
-            <RefreshCw className={cn("h-4 w-4", isLoadingSlots && "animate-spin")} />
+            <RefreshCw className={cn("h-4 w-4", (isLoadingSlots || isBackgroundRefreshing) && "animate-spin", isBackgroundRefreshing && "opacity-50")} />
           </Button>
         </div>
 
@@ -576,57 +684,13 @@ export function Step3_MultiServiceTimeSlot({
                 const isSelected = selectedSlot?.startTime === slot.startTime;
 
                 return (
-                  <button
-                    key={index}
+                  <SlotCard
+                    key={`${slot.startTime}-${index}`}
+                    slot={slot}
+                    isSelected={isSelected}
+                    isLocking={isLocking}
                     onClick={() => !isLocking && handleSlotSelect(slot)}
-                    disabled={isLocking}
-                    className={cn(
-                      "p-4 border-2 rounded-lg transition-all text-left hover:shadow-md relative overflow-hidden",
-                      isSelected
-                        ? "border-primary bg-primary/5"
-                        : "border-gray-200 hover:border-primary hover:bg-primary/5",
-                      isLocking && "opacity-50 cursor-wait"
-                    )}
-                  >
-                    {isLocking && isSelected && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-white/60">
-                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                      </div>
-                    )}
-                    {/* Slot Time */}
-                    <div className="font-semibold text-lg mb-2">
-                      {slot.startTime} - {slot.endTime}
-                    </div>
-
-                    {/* Duration Info */}
-                    <div className="text-sm text-gray-600 mb-3">
-                      {slot.totalDuration} min total
-                      {slot.travelTime && slot.travelTime > 0 && (
-                        <span className="text-blue-600 ml-2">
-                          (+{slot.travelTime} min travel)
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Service Sequence */}
-                    <div className="space-y-2">
-                      {slot.sequence.map((item: any, idx: number) => (
-                        <div key={idx} className="text-xs bg-white p-2 rounded border border-gray-100">
-                          <div className="font-medium">{item.serviceName}</div>
-                          <div className="text-gray-500">
-                            {item.staffName} • {item.startTime}-{item.endTime}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Travel Info */}
-                    {slot.travelInfo && (
-                      <div className="mt-3 text-xs text-blue-600 border-t border-gray-100 pt-2">
-                        📍 {slot.travelInfo.distanceInKm.toFixed(1)} km away
-                      </div>
-                    )}
-                  </button>
+                  />
                 );
               })}
             </div>

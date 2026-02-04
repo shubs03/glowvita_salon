@@ -1,5 +1,5 @@
 # Dockerfile for web app
-FROM node:20-alpine AS base
+FROM node:20-bullseye AS base
 WORKDIR /app
 
 # Install turbo
@@ -31,7 +31,7 @@ COPY turbo.json .
 RUN turbo run build --filter=web
 
 # Runner
-FROM node:20-alpine AS runner
+FROM node:20-bullseye AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

@@ -66,7 +66,10 @@ const AddOnsFormModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{modalType === "add" ? "Add New Add-On" : modalType === "edit" ? "Edit Add-On" : "Add-On Details"}</DialogTitle>
           <DialogDescription>
@@ -76,33 +79,33 @@ const AddOnsFormModal = ({
         <div className="space-y-4 py-4">
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="name" className="text-right">Name</Label>
-            <Input 
-              id="name" 
-              className="col-span-3" 
-              value={formData.name} 
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
+            <Input
+              id="name"
+              className="col-span-3"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               disabled={modalType === 'view'}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="price" className="text-right">Price (₹)</Label>
-            <Input 
-              id="price" 
-              type="number" 
-              className="col-span-3" 
-              value={formData.price} 
-              onChange={(e) => setFormData({ ...formData, price: e.target.value })} 
+            <Input
+              id="price"
+              type="number"
+              className="col-span-3"
+              value={formData.price}
+              onChange={(e) => setFormData({ ...formData, price: e.target.value })}
               disabled={modalType === 'view'}
             />
           </div>
           <div className="grid grid-cols-4 items-center gap-4">
             <Label htmlFor="duration" className="text-right">Duration (min)</Label>
-            <Input 
-              id="duration" 
-              type="number" 
-              className="col-span-3" 
-              value={formData.duration} 
-              onChange={(e) => setFormData({ ...formData, duration: e.target.value })} 
+            <Input
+              id="duration"
+              type="number"
+              className="col-span-3"
+              value={formData.duration}
+              onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
               disabled={modalType === 'view'}
             />
           </div>

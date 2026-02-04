@@ -1074,7 +1074,11 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent
+                className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+                onInteractOutside={(e) => e.preventDefault()}
+                onEscapeKeyDown={(e) => e.preventDefault()} // Also prevent Escape key for consistency based on "only Cancel button closes"
+            >
                 <DialogHeader>
                     <DialogTitle>{staff ? (hideTabs ? 'Staff Earnings' : 'Edit Staff Member') : 'Add Staff Member'}</DialogTitle>
                     <DialogDescription>

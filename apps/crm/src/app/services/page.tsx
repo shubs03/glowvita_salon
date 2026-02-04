@@ -117,7 +117,14 @@ export default function ServicesPage() {
   } = useGetVendorServicesQuery({ vendorId: user?._id }, { skip: !user?._id });
 
 
-  const services = data.services || [];
+  const services = useMemo(() => {
+    const servicesList = data.services || [];
+    return [...servicesList].sort((a: Service, b: Service) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
+  }, [data.services]);
 
   console.log("Services Data on Services page : ", services)
 
@@ -134,8 +141,8 @@ export default function ServicesPage() {
     return services.filter(
       (service: Service) =>
         (service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (service.categoryName &&
-          service.categoryName.toLowerCase().includes(searchTerm.toLowerCase()))) &&
+          (service.categoryName &&
+            service.categoryName.toLowerCase().includes(searchTerm.toLowerCase()))) &&
         (statusFilter === "all" || service.status === statusFilter)
     );
   }, [services, searchTerm, statusFilter]);

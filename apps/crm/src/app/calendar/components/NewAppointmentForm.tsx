@@ -13,7 +13,7 @@ import { selectBlockedTimesByStaffAndDate } from '@repo/store/slices/blockTimeSl
 
 import { getDay } from 'date-fns';
 import { Calendar as CalendarIcon, Trash2, Loader2, Search, X, PlusCircle } from 'lucide-react';
-import { glowvitaApi, useCreateClientMutation, useGetWorkingHoursQuery, useGetTaxFeeSettingsQuery } from '@repo/store/api';
+import { glowvitaApi, useCreateClientMutation, useGetWorkingHoursQuery, useGetPublicTaxFeeSettingsQuery } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { toast } from 'sonner';
@@ -141,15 +141,44 @@ export default function NewAppointmentForm({
   });
 
   // Fetch tax settings
-  const { data: taxSettings } = useGetTaxFeeSettingsQuery(undefined);
+  const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
 
   // Update taxRate if settings change
+  // Update taxRate and calculate fees if settings change and we are creating a new appointment
   useEffect(() => {
-    if (taxSettings && taxSettings.serviceTax !== undefined && !isEditing && !isRescheduling) {
-      setFormData(prev => ({
-        ...prev,
-        taxRate: taxSettings.serviceTax
-      }));
+    if (taxSettings && !isEditing && !isRescheduling) {
+      setAppointmentData(prev => {
+        const amount = prev.amount || 0;
+        const discount = prev.discount || 0;
+
+        let tax = 0;
+        if (taxSettings.serviceTaxEnabled !== false) {
+          if (taxSettings.serviceTaxType === 'fixed') {
+            tax = Number(taxSettings.serviceTax) || 0;
+          } else {
+            tax = (amount * (Number(taxSettings.serviceTax) || 0)) / 100;
+          }
+        }
+
+        let platformFee = 0;
+        if (taxSettings.platformFeeEnabled !== false) {
+          if (taxSettings.platformFeeType === 'fixed') {
+            platformFee = Number(taxSettings.platformFee) || 0;
+          } else {
+            platformFee = (amount * (Number(taxSettings.platformFee) || 0)) / 100;
+          }
+        }
+
+        const totalAmount = Math.max(0, amount - discount + tax + platformFee);
+
+        return {
+          ...prev,
+          taxRate: taxSettings.serviceTax,
+          tax,
+          platformFee, // Store platform fee in state if needed
+          totalAmount
+        };
+      });
     }
   }, [taxSettings, isEditing, isRescheduling]);
 
@@ -1305,6 +1334,30 @@ export default function NewAppointmentForm({
     return Math.max(0, amount - discount + tax);
   };
 
+  // Calculate total amount with proper tax/fee logic
+  const calculateFinancials = (baseAmount: number, discount: number) => {
+    let tax = 0;
+    if (taxSettings?.serviceTaxEnabled !== false) {
+      if (taxSettings?.serviceTaxType === 'fixed') {
+        tax = Number(taxSettings.serviceTax) || 0;
+      } else {
+        tax = (baseAmount * (Number(taxSettings?.serviceTax) || 0)) / 100;
+      }
+    }
+
+    let platformFee = 0;
+    if (taxSettings?.platformFeeEnabled !== false) {
+      if (taxSettings?.platformFeeType === 'fixed') {
+        platformFee = Number(taxSettings.platformFee) || 0;
+      } else {
+        platformFee = (baseAmount * (Number(taxSettings?.platformFee) || 0)) / 100;
+      }
+    }
+
+    const totalAmount = Math.max(0, baseAmount - discount + tax + platformFee);
+    return { tax, platformFee, totalAmount };
+  };
+
   // Handle form field changes
   const handleFieldChange = (field: keyof Appointment, value: any) => {
     setAppointmentData(prev => {
@@ -1323,12 +1376,17 @@ export default function NewAppointmentForm({
         );
       }
 
-      // Recalculate total amount when amount, discount, or tax changes
-      if (['amount', 'discount', 'tax'].includes(field)) {
+      // Recalculate total amount when amount or discount changes
+      if (['amount', 'discount'].includes(field)) {
         const amount = field === 'amount' ? numericValue : updated.amount || 0;
         const discount = field === 'discount' ? numericValue : updated.discount || 0;
-        const tax = field === 'tax' ? numericValue : updated.tax || 0;
-        updated.totalAmount = Math.max(0, amount - discount + tax);
+
+        const { tax, platformFee, totalAmount } = calculateFinancials(amount, discount);
+        updated.tax = tax;
+        updated.totalAmount = totalAmount;
+        // checking if platformFee exists on the type before assigning would be ideal, 
+        // but for now we'll inject it into the state object
+        (updated as any).platformFee = platformFee;
       }
 
       return updated;
@@ -1533,6 +1591,7 @@ export default function NewAppointmentForm({
         totalAmount: Number(appointmentData.totalAmount) || 0,
         finalAmount: Number(appointmentData.totalAmount) || 0,
         paymentStatus: appointmentData.paymentStatus || 'pending',
+        platformFee: (appointmentData as any).platformFee || 0,
         mode: 'offline', // CRM bookings are offline mode
       };
 

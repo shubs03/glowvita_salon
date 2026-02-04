@@ -29,10 +29,10 @@ export const GET = authMiddlewareCrm(async (req) => {
     const userRole = user.role;
 
     const Model = getUserModel(userRole);
-    
+
     // Fetch the latest user data from database
     const userData = await Model.findById(userId).select('-password');
-    
+
     if (!userData) {
       return NextResponse.json(
         { success: false, message: 'User not found' },
@@ -53,7 +53,7 @@ export const GET = authMiddlewareCrm(async (req) => {
       { status: 500 }
     );
   }
-},['vendor']);
+}, ['vendor', 'supplier', 'doctor', 'staff']);
 
 // Update user profile
 export const PUT = authMiddlewareCrm(async (req) => {
@@ -64,10 +64,10 @@ export const PUT = authMiddlewareCrm(async (req) => {
     const body = await req.json();
 
     const Model = getUserModel(userRole);
-    
+
     // Remove sensitive fields that shouldn't be updated via profile
     const { password, referralCode, ...updateData } = body;
-    
+
     const updatedUser = await Model.findByIdAndUpdate(
       userId,
       updateData,
@@ -94,4 +94,4 @@ export const PUT = authMiddlewareCrm(async (req) => {
       { status: 500 }
     );
   }
-},['vendor']);
+}, ['vendor', 'supplier', 'doctor', 'staff']);
