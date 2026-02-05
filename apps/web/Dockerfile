@@ -28,6 +28,10 @@ COPY --from=pruner /app/out/full/ .
 COPY turbo.json .
 
 # Build the app
+
+ARG NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+ENV NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+
 RUN turbo run build --filter=web
 
 # Runner
