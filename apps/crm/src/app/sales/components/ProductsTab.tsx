@@ -1171,15 +1171,15 @@ export default function ProductsTab({
 
           {/* Cart Items */}
           <div className="flex-1 flex flex-col min-h-0 mb-6">
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Qty</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="w-[40%]">Item</TableHead>
+                    <TableHead className="w-[20%]">Price</TableHead>
+                    <TableHead className="w-[18%]">Qty</TableHead>
+                    <TableHead className="w-[14%]">Total</TableHead>
+                    <TableHead className="text-right w-[8%]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1196,7 +1196,7 @@ export default function ProductsTab({
                       <TableRow key={item._id}>
                         <TableCell>
                           <div className="cursor-pointer text-green-600 p-2 rounded" onClick={() => handleEditItemClick(item)}>
-                            <div className="font-medium">{item.productName}</div>
+                            <div className="font-medium line-clamp-2">{item.productName}</div>
                           </div>
                         </TableCell>
                         <TableCell>₹{item.price.toFixed(2)}</TableCell>
