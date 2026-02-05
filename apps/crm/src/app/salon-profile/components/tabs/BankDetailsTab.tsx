@@ -11,6 +11,7 @@ interface BankDetails {
   accountNumber?: string;
   bankName?: string;
   ifscCode?: string;
+  upiId?: string;
 }
 
 interface BankDetailsTabProps {
@@ -93,6 +94,16 @@ export const BankDetailsTab = ({ bankDetails, setVendor }: BankDetailsTabProps) 
               placeholder="Enter IFSC code"
               value={bankDetails?.ifscCode || ''}
               onChange={(e) => handleInputChange('ifscCode', e.target.value)}
+              className="h-12 rounded-lg border border-border focus:border-primary text-base"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="upiId">UPI ID <span className="text-muted-foreground text-sm">(Optional)</span></Label>
+            <Input
+              id="upiId"
+              placeholder="Enter UPI ID (e.g., yourname@upi)"
+              value={bankDetails?.upiId || ''}
+              onChange={(e) => handleInputChange('upiId', e.target.value)}
               className="h-12 rounded-lg border border-border focus:border-primary text-base"
             />
           </div>
