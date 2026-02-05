@@ -7,21 +7,25 @@ import { Billing, BillingItem } from './types';
 interface SummaryStatsProps {
   billings: Billing[];
   appointments: any[];
+  activeTab: string;
 }
 
-export default function SummaryStats({ billings, appointments }: SummaryStatsProps) {
-  const totalInvoices = billings.length + appointments.length;
-  
+export default function SummaryStats({ billings, appointments, activeTab }: SummaryStatsProps) {
+  // Total revenue stays combined for both tabs
   const totalRevenue = 
     billings.reduce((sum, billing) => sum + billing.totalAmount, 0) +
     appointments.reduce((sum, app) => sum + (app.finalAmount || app.totalAmount || 0), 0);
   
-  const servicesSold = 
-    billings.filter((b: Billing) => b.items.some((i: BillingItem) => i.itemType === 'Service')).length +
-    appointments.length;
+  // Stats change based on active tab
+  const totalInvoices = activeTab === 'billing' ? billings.length : appointments.length;
   
-  const productsSold = 
-    billings.filter((b: Billing) => b.items.some((i: BillingItem) => i.itemType === 'Product')).length;
+  const servicesSold = activeTab === 'billing'
+    ? billings.filter((b: Billing) => b.items.some((i: BillingItem) => i.itemType === 'Service')).length
+    : appointments.length;
+  
+  const productsSold = activeTab === 'billing'
+    ? billings.filter((b: Billing) => b.items.some((i: BillingItem) => i.itemType === 'Product')).length
+    : 0;
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -32,7 +36,7 @@ export default function SummaryStats({ billings, appointments }: SummaryStatsPro
               <p className="text-sm font-medium text-primary mb-1">Total Invoices</p>
               <p className="text-2xl font-bold text-primary">{totalInvoices}</p>
               <p className="text-xs text-primary/70 mt-1">
-                {billings.length} billing + {appointments.length} appointments
+                {activeTab === 'billing' ? 'Billing records' : 'Appointment records'}
               </p>
             </div>
             <div className="p-3 bg-primary/10 rounded-full transition-colors">
@@ -63,7 +67,9 @@ export default function SummaryStats({ billings, appointments }: SummaryStatsPro
             <div>
               <p className="text-sm font-medium text-secondary-foreground mb-1">Services Sold</p>
               <p className="text-2xl font-bold text-secondary-foreground">{servicesSold}</p>
-              <p className="text-xs text-secondary-foreground/70 mt-1">Service transactions</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1">
+                {activeTab === 'billing' ? 'In billing records' : 'In appointments'}
+              </p>
             </div>
             <div className="p-3 bg-primary/10 rounded-full transition-colors">
               <Scissors className="h-6 w-6 text-secondary-foreground" />
@@ -78,7 +84,9 @@ export default function SummaryStats({ billings, appointments }: SummaryStatsPro
             <div>
               <p className="text-sm font-medium text-secondary-foreground mb-1">Products Sold</p>
               <p className="text-2xl font-bold text-secondary-foreground">{productsSold}</p>
-              <p className="text-xs text-secondary-foreground/70 mt-1">Product transactions</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1">
+                {activeTab === 'billing' ? 'In billing records' : 'Not applicable'}
+              </p>
             </div>
             <div className="p-3 bg-primary/10 rounded-full transition-colors">
               <Package className="h-6 w-6 text-secondary-foreground" />

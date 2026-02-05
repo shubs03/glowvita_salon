@@ -250,7 +250,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
                 // Handle nested objects like bankDetails and documents
                 else if (field === 'bankDetails' && typeof body[field] === 'object') {
                     Object.keys(body[field]).forEach(key => {
-                        if (['bankName', 'accountNumber', 'ifscCode', 'accountHolder'].includes(key)) {
+                        if (['bankName', 'accountNumber', 'ifscCode', 'accountHolder', 'upiId'].includes(key)) {
                             vendor.bankDetails[key] = body[field][key];
                         }
                     });

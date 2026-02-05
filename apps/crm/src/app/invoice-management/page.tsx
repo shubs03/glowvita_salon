@@ -341,7 +341,7 @@ export default function InvoiceManagementPage() {
         <InvoiceHeader />
 
         {/* Summary Stats - Combined Billing & Appointments */}
-        <SummaryStats billings={billings} appointments={appointments} />
+        <SummaryStats billings={billings} appointments={appointments} activeTab={activeTab} />
 
         <div className="">
           <div className="">

@@ -551,7 +551,7 @@ export function Step3_MultiServiceTimeSlot({
         <div className="flex flex-col items-center justify-center py-12">
           <AlertCircle className="h-12 w-12 text-destructive mb-4" />
           <p className="text-destructive mb-4">{getErrorMessage(slotsError)}</p>
-          <Button onClick={fetchMultiServiceSlots} variant="outline">
+          <Button onClick={() => fetchMultiServiceSlots()} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Try Again
           </Button>
@@ -661,7 +661,7 @@ export function Step3_MultiServiceTimeSlot({
             <Clock className="h-5 w-5" />
           </div>
           <h3 className="font-semibold text-lg">Available Slots for {format(selectedDate, 'MMMM d')}</h3>
-          <Button size="sm" variant="ghost" onClick={fetchMultiServiceSlots} disabled={isLoadingSlots} className="ml-auto">
+          <Button size="sm" variant="ghost" onClick={() => fetchMultiServiceSlots()} disabled={isLoadingSlots} className="ml-auto">
             <RefreshCw className={cn("h-4 w-4", (isLoadingSlots || isBackgroundRefreshing) && "animate-spin", isBackgroundRefreshing && "opacity-50")} />
           </Button>
         </div>

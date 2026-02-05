@@ -34,7 +34,7 @@ export default function InvoiceModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden p-0">
+      <DialogContent className="max-w-3xl h-[90vh] flex flex-col p-0">
         <style jsx>{`
           .modal-content::-webkit-scrollbar {
             display: none;
@@ -44,7 +44,7 @@ export default function InvoiceModal({
             scrollbar-width: none;
           }
         `}</style>
-        <DialogHeader className="p-6 pb-4 bg-muted">
+        <DialogHeader className="p-6 pb-4 bg-muted flex-shrink-0">
           <DialogTitle className="text-xl font-bold">
             {isBilling ? "Invoice Details" : "Appointment Invoice Details"}
           </DialogTitle>
@@ -53,7 +53,7 @@ export default function InvoiceModal({
             {isAppointment && selectedAppointment && `Invoice #${selectedAppointment.invoiceNumber || "N/A"}`}
           </DialogDescription>
         </DialogHeader>
-        <div className="modal-content overflow-y-auto max-h-[calc(80vh-10rem)] p-6 pt-4">
+        <div className="modal-content overflow-y-auto flex-1 p-6 pt-4">
           {isBilling && selectedBilling && (
             <InvoiceUI
               invoiceData={prepareInvoiceData(selectedBilling)}
@@ -81,7 +81,7 @@ export default function InvoiceModal({
           )}
         </div>
 
-        <div className="p-6 pt-4 border-t bg-muted/30">
+        <div className="p-6 pt-4 border-t bg-muted/30 flex-shrink-0">
           <div className="flex justify-end gap-2">
             {isBilling && selectedBilling && (
               <Button variant="outline" onClick={() => onDownloadBilling(selectedBilling)}>

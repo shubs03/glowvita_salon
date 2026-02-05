@@ -143,44 +143,51 @@ const getStatusConfig = (status: Appointment['status']) => {
       return {
         label: 'Scheduled',
         icon: '📅',
-        className: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+        className: 'bg-purple-500 text-white',
+        cardBgColor: 'bg-purple-50 dark:bg-purple-900/20'
       };
     case 'confirmed':
       return {
         label: 'Confirmed',
         icon: '✓',
-        className: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+        className: 'bg-blue-500 text-white',
+        cardBgColor: 'bg-blue-50 dark:bg-blue-900/20'
       };
     case 'in_progress':
       return {
         label: 'In Progress',
         icon: '🔄',
-        className: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800'
+        className: 'bg-orange-500 text-white',
+        cardBgColor: 'bg-orange-50 dark:bg-orange-900/20'
       };
     case 'completed':
     case 'completed without payment':
       return {
         label: status === 'completed' ? 'Completed' : 'Completed Without Payment',
         icon: '✓',
-        className: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
+        className: 'bg-green-500 text-white',
+        cardBgColor: 'bg-green-50 dark:bg-green-900/20'
       };
     case 'cancelled':
       return {
         label: 'Cancelled',
         icon: '✕',
-        className: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+        className: 'bg-red-500 text-white',
+        cardBgColor: 'bg-red-50 dark:bg-red-900/20'
       };
     case 'no_show':
       return {
         label: 'No Show',
         icon: '👻',
-        className: 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+        className: 'bg-gray-500 text-white',
+        cardBgColor: 'bg-gray-50 dark:bg-gray-900/20'
       };
     default:
       return {
         label: 'Unknown',
         icon: '?',
-        className: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+        className: 'bg-gray-500 text-white',
+        cardBgColor: 'bg-gray-50 dark:bg-gray-900/20'
       };
   }
 };
@@ -238,16 +245,16 @@ const getEmployeeColor = (name: string) => {
 
 // Employee background color mapping
 const employeeBgColors = [
-  'bg-blue-50 dark:bg-blue-900/20',
-  'bg-green-50 dark:bg-green-900/20',
-  'bg-purple-50 dark:bg-purple-900/20',
-  'bg-pink-50 dark:bg-pink-900/20',
-  'bg-indigo-50 dark:bg-indigo-900/20',
-  'bg-yellow-50 dark:bg-yellow-900/20',
-  'bg-red-50 dark:bg-red-900/20',
-  'bg-teal-50 dark:bg-teal-900/20',
-  'bg-orange-50 dark:bg-orange-900/20',
-  'bg-cyan-50 dark:bg-cyan-900/20'
+  'bg-secondary',
+  'bg-secondary',
+  'bg-secondary',
+  'bg-secondary',
+  'bg-secondary',
+  'bg-secondary',
+  'bg-secondary',
+  'bg-secondary',
+  'bg-secondary',
+  'bg-secondary'
 ];
 
 const getEmployeeBgColor = (name: string) => {
@@ -1164,11 +1171,11 @@ export default function DayScheduleView({
     // Get status configuration
     const statusConfig = getStatusConfig(appointment.status);
     const serviceTheme = {
-      hair: 'from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/20 border-l-blue-400',
-      facial: 'from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/20 border-l-purple-400',
-      nail: 'from-pink-50 to-pink-100 dark:from-pink-900/30 dark:to-pink-800/20 border-l-pink-400',
-      massage: 'from-green-50 to-green-100 dark:from-green-900/30 dark:to-green-800/20 border-l-green-400',
-      default: 'from-gray-50 to-gray-100 dark:from-gray-900/30 dark:to-gray-800/20 border-l-gray-400',
+      hair: 'bg-primary/10 border-l-primary',
+      facial: 'bg-primary/20 border-l-primary',
+      nail: 'bg-secondary/10 border-l-secondary',
+      massage: 'bg-secondary/20 border-l-secondary',
+      default: 'bg-muted border-l-border',
     };
 
     const serviceType = (appointment.service?.toLowerCase() || 'default').trim();
@@ -1192,21 +1199,21 @@ export default function DayScheduleView({
       return (
         <div
           key={`blocked-${index}`}
-          className="absolute left-0 right-0 mx-4 p-2.5 rounded-lg border-l-4 border-amber-500 bg-gradient-to-r from-amber-50 to-amber-100 dark:from-amber-900/40 dark:to-amber-800/30 text-amber-800 dark:text-amber-200 shadow-md hover:shadow-lg transition-all duration-200"
+          className="absolute left-0 right-0 mx-2 p-2 border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200"
           style={{
-            top: `${top + 12}px`,
-            height: `${Math.max(height - 24, MIN_APPOINTMENT_HEIGHT)}px`,
+            top: `${top}px`,
+            height: `${height}px`,
           }}
         >
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
             <div className="font-semibold truncate text-amber-700 dark:text-amber-300 text-sm">Blocked Time</div>
           </div>
-          <div className="text-sm text-amber-600 dark:text-amber-300/90 font-medium mb-1.5">
+          <div className="text-sm text-amber-600 dark:text-amber-300/90 font-medium mb-1">
             {appointment.description || 'Not Available'}
           </div>
           <div className="text-sm text-amber-600 dark:text-amber-300/90 font-medium flex items-center">
-            <Clock className="w-3.5 h-3.5 mr-1.5" />
+            <Clock className="w-3 h-3 mr-1" />
             {startTime} - {endTime}
           </div>
         </div>
@@ -1223,22 +1230,26 @@ export default function DayScheduleView({
     return (
       <div
         key={appointment.id}
-        className={`absolute left-0 right-0 mx-4 p-2.5 rounded-lg border-l-4 shadow-md group cursor-pointer transition-all duration-200 hover:shadow-lg transform hover:-translate-y-0.5 ${themeClass
+        className={`absolute left-0 right-0 mx-2 p-2 border-l-4 cursor-pointer ${statusConfig.cardBgColor} ${themeClass.includes('border-l-primary') ? 'border-l-primary' : themeClass.includes('border-l-secondary') ? 'border-l-secondary' : 'border-l-border'}
           }`}
         style={{
-          top: `${top + 12}px`,
-          height: `${Math.max(height - 24, MIN_APPOINTMENT_HEIGHT)}px`,
+          top: `${top}px`,
+          height: `${height}px`,
         }}
         onClick={() => handleAppointmentClick(appointment)}
       >
-        <div className="h-full flex flex-col">
-          {/* Client Name & Status */}
-          <div className="flex items-start justify-between mb-1.5 gap-2">
-            <div className="font-semibold text-sm truncate pr-1 text-gray-900 dark:text-gray-100">
-              {appointment.clientName || 'Unnamed Client'}
-            </div>
-            <div className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${statusConfig.className} flex-shrink-0`}>
+        <div className="h-full flex flex-col relative">
+          {/* Status Badge - positioned at top right */}
+          <div className="absolute top-0 right-0">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${statusConfig.className}`}>
               {statusConfig.label}
+            </span>
+          </div>
+
+          {/* Client Name */}
+          <div className="flex items-start justify-between mb-1 gap-2">
+            <div className="font-semibold text-sm truncate pr-20 text-muted-foreground">
+              {appointment.clientName || 'Unnamed Client'}
             </div>
           </div>
 
@@ -1255,20 +1266,20 @@ export default function DayScheduleView({
               if (isStaffSpecificView) {
                 // Show only this staff's service in their column
                 return (
-                  <div className="text-sm text-gray-800 dark:text-gray-200 font-medium mb-1.5 truncate leading-snug">
+                  <div className="text-sm text-muted-foreground font-medium mb-1 truncate">
                     {appointment.serviceName}
                   </div>
                 );
               } else {
                 // Show multi-service badge (fallback for non-staff-specific views)
                 return (
-                  <div className="mb-1.5">
-                    <div className="text-xs text-gray-600 dark:text-gray-400 font-medium mb-1">
+                  <div className="mb-1">
+                    <div className="text-xs text-muted-foreground font-medium mb-0.5">
                       Multi-Service ({appointment.serviceItems?.length || 0} services)
                     </div>
                     <div className="space-y-0.5">
                       {appointment.serviceItems?.map((item: any, idx: number) => (
-                        <div key={item._id || idx} className="text-xs text-gray-800 dark:text-gray-200 truncate">
+                        <div key={item._id || idx} className="text-xs text-muted-foreground truncate">
                           • {item.serviceName}
                         </div>
                       ))}
@@ -1278,39 +1289,22 @@ export default function DayScheduleView({
               }
             })()
           ) : (
-            <div className="text-sm text-gray-800 dark:text-gray-200 font-medium mb-1.5 truncate leading-snug">
+            <div className="text-sm text-muted-foreground font-medium mb-1 truncate">
               {appointment.serviceName || appointment.service}
             </div>
           )}
 
-          {/* Time - Medium size with better visibility */}
-          <div className="text-sm text-gray-700 dark:text-gray-300 font-medium flex items-center mb-1.5">
-            <Clock className="w-3.5 h-3.5 mr-1.5 flex-shrink-0" />
-            <span>{startTime} - {endTime}</span>
-          </div>
-
-          {/* Booking Mode Badge - Only show if mode field exists */}
+          {/* Web Badge - positioned at bottom right */}
           {appointment.mode && (
-            <div className="mb-1.5">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium border ${appointment.mode === 'online'
-                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800'
-                : 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-                }`}>
-                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                  {appointment.mode === 'online' ? (
-                    <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm1 11H9v-2h2v2zm0-4H9V5h2v4z" />
-                  ) : (
-                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-                  )}
-                </svg>
-                {appointment.mode === 'online' ? 'Web Booking' : 'Offline Booking'}
+            <div className="absolute bottom-1 right-1">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
+                appointment.mode === 'online' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
+              }`}>
+                {appointment.mode === 'online' ? 'Web' : 'Offline'}
               </span>
             </div>
           )}
         </div>
-
-        {/* Hover effect */}
-        <div className="absolute inset-0 bg-gradient-to-r from-white/40 to-transparent dark:from-blue-800/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none rounded-lg"></div>
       </div>
     );
   };
@@ -1340,19 +1334,19 @@ export default function DayScheduleView({
   // Handle no staff or appointments
   if (staffAppointmentsWithAvailability.length === 0) {
     return (
-      <div className="flex flex-col h-full w-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="flex flex-col h-full w-full bg-background">
         <div className="flex flex-col h-full w-full">
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+          <div className="p-4 border-b border-border bg-card">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-lg font-semibold text-foreground">
                 {format(safeSelectedDate, 'EEEE, MMMM d, yyyy')}
               </h2>
-              <div className="flex space-x-2">
+              <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleDateChange('prev')}
-                  className="rounded-full"
+                  className="h-8 w-8 p-0"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
@@ -1360,7 +1354,7 @@ export default function DayScheduleView({
                   variant="outline"
                   size="sm"
                   onClick={() => handleDateChange('next')}
-                  className="rounded-full"
+                  className="h-8 w-8 p-0"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </Button>
@@ -1378,19 +1372,19 @@ export default function DayScheduleView({
       `}</style>
             </div>
           </div>
-          <div className="flex items-center justify-center flex-grow bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+          <div className="flex items-center justify-center flex-grow bg-card">
             <div className="text-center">
-              <div className="relative w-24 h-24 mx-auto mb-6">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full opacity-20 animate-pulse"></div>
-                <Calendar className="w-24 h-24 text-blue-500 dark:text-blue-400 relative z-10" />
+              <div className="relative w-16 h-16 mx-auto mb-4">
+                <div className="absolute inset-0 bg-primary/10 rounded-full animate-pulse"></div>
+                <Calendar className="w-16 h-16 text-primary relative z-10" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
+              <h3 className="text-lg font-semibold text-foreground mb-2">
                 {staffList && staffList.length === 0
                   ? (role === 'doctor' ? 'Doctor profile not configured' : 'No staff members available')
                   : 'No appointments scheduled for this day'}
               </h3>
               {staffList && staffList.length === 0 && (
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                <p className="text-sm text-muted-foreground mb-4">
                   {role === 'doctor'
                     ? 'Please configure your doctor profile and working hours.'
                     : 'Please add staff members to start scheduling appointments.'}
@@ -1404,42 +1398,59 @@ export default function DayScheduleView({
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 rounded-2xl overflow-hidden shadow-xl">
+    <div className="flex flex-col h-full w-full bg-background overflow-hidden">
       <div className="flex flex-col h-full w-full">
         {/* Top header */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm flex-shrink-0 rounded-t-2xl">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              {format(safeSelectedDate, 'EEEE, MMMM d, yyyy')}
-            </h2>
-            <div className="flex items-center space-x-3">
+        <div className="p-4 border-b border-border bg-card flex-shrink-0">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <h2 className="text-lg font-semibold text-foreground whitespace-nowrap">
+                {format(safeSelectedDate, 'EEEE, MMMM d, yyyy')}
+              </h2>
+              {/* Status Legend */}
+              <div className="flex items-center gap-4 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                  <span className="text-muted-foreground">Available</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                  <span className="text-muted-foreground">Blocked</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                  <span className="text-muted-foreground">Not Working</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleDateChange('prev')}
-                className="rounded-full border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm"
+                className="h-8 w-8 p-0"
               >
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleDateChange('next')}
-                className="rounded-full border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm"
+                className="h-8 w-8 p-0"
               >
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </div>
 
         {/* Calendar grid container */}
-        <div className="flex-grow bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm flex flex-col relative overflow-hidden">
+        <div className="flex-grow bg-card flex flex-col relative overflow-hidden">
           {/* Fixed header row - sticky at top */}
-          <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm z-20 sticky top-0">
+          <div className="flex border-b border-border bg-card z-20 sticky top-0">
             {/* Fixed time header */}
-            <div className="w-20 border-r border-gray-200 dark:border-gray-700 p-4 font-semibold bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 flex-shrink-0 rounded-tl-2xl flex items-center justify-center" style={{ minHeight: '80px' }}>
-              <div className="text-center font-bold">Time</div>
+            <div className="w-20 border-r border-border p-3 font-medium bg-muted text-muted-foreground flex-shrink-0 flex items-center justify-center" style={{ minHeight: '70px' }}>
+              <div className="text-center text-sm font-semibold">Time</div>
             </div>
             {/* Scrollable staff headers */}
             <div
@@ -1462,32 +1473,28 @@ export default function DayScheduleView({
                 return (
                   <div
                     key={staff.id}
-                    className={`min-w-[250px] p-4 font-semibold border-r border-gray-200 dark:border-gray-700 ${isAvailable ? bgColor : 'bg-gray-100 dark:bg-gray-800'
+                    className={`min-w-[180px] p-3 font-medium border-r border-border ${isAvailable ? bgColor : 'bg-muted'
                       } flex-shrink-0 ${!isAvailable ? 'opacity-60' : ''} flex items-center`}
-                    style={{ minHeight: '80px' }}
+                    style={{ minHeight: '70px' }}
                   >
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between w-full">
                       <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center mr-3 flex-shrink-0 shadow-sm">
-                          <User className={`w-5 h-5 ${isAvailable ? textColor : 'text-gray-400'}`} />
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mr-2 flex-shrink-0">
+                          <User className={`w-4 h-4 ${isAvailable ? 'text-primary' : 'text-muted-foreground'}`} />
                         </div>
                         <div>
-                          <span className={`font-bold ${isAvailable ? textColor : 'text-gray-500'}`}>
+                          <span className={`text-sm font-semibold ${isAvailable ? 'text-foreground' : 'text-muted-foreground'}`}>
                             {staff.name || staff.fullName}
                           </span>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {staff.position || 'Staff Member'}
+                          <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <span className="w-1 h-1 rounded-full bg-muted-foreground"></span>
+                            <span>{staff.position || 'Staff Member'}</span>
                           </div>
                         </div>
                       </div>
                       {!isAvailable && (
-                        <span className="text-xs px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full font-bold shadow-sm">
+                        <span className="text-xs px-2 py-0.5 bg-destructive/10 text-destructive rounded-full font-medium">
                           Unavailable
-                        </span>
-                      )}
-                      {isAvailable && availability?.workingHours && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full shadow-sm">
-                          {availability.workingHours.startTime} - {availability.workingHours.endTime}
                         </span>
                       )}
                     </div>
@@ -1502,7 +1509,7 @@ export default function DayScheduleView({
           <div className="flex-grow overflow-y-auto relative">
             <div className="flex h-full">
               {/* Fixed time column */}
-              <div className="w-20 border-r border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 flex-shrink-0 sticky left-0 z-10">
+              <div className="w-20 border-r border-border bg-muted flex-shrink-0 sticky left-0 z-10">
                 {workingHoursArray.map((timeSlot, timeIndex) => {
                   // Use consistent time slot height
                   const slotHeight = TIME_SLOT_HEIGHT;
@@ -1510,23 +1517,19 @@ export default function DayScheduleView({
                   return (
                     <div
                       key={`time-${timeSlot.hour}-${timeSlot.minute}-${timeIndex}`}
-                      className={`${timeSlot.isGap ? 'bg-gray-50 dark:bg-gray-800/50' : ''} border-b border-gray-100 dark:border-gray-800 flex items-center justify-center`}
+                      className={`${timeSlot.isGap ? 'bg-muted/50' : ''} border-b border-border/50 flex items-center justify-center`}
                       style={{
                         height: `${slotHeight}px`,
                         boxSizing: 'border-box',
                         position: 'relative'
                       }}
                     >
-                      {timeSlot.isHourMark && (
-                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                          {timeSlot.timeString}
-                        </span>
-                      )}
-                      {timeSlot.isGap && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-1.5 h-1.5 rounded-full bg-gray-300 dark:bg-gray-600"></div>
-                        </div>
-                      )}
+                      {/* Show time for all 15-minute intervals */}
+                      <span className={`text-xs font-semibold text-muted-foreground ${
+                        timeSlot.isHourMark ? '' : 'text-[10px] opacity-70'
+                      }`}>
+                        {timeSlot.timeString}
+                      </span>
                     </div>
                   );
                 })}
@@ -1579,7 +1582,7 @@ export default function DayScheduleView({
                   const isAvailable = availability?.isAvailable ?? true;
 
                   return (
-                    <div key={staff.id} className={`min-w-[250px] border-r border-gray-200 dark:border-gray-700 relative flex-shrink-0 ${!isAvailable ? 'bg-gray-50 dark:bg-gray-900/50' : ''}`}>
+                    <div key={staff.id} className={`min-w-[180px] border-r border-gray-200 dark:border-gray-700 relative flex-shrink-0 ${!isAvailable ? 'bg-gray-50 dark:bg-gray-900/50' : ''}`}>
                       {/* Unavailable overlay */}
                       {!isAvailable && (
                         <div className="absolute inset-0 bg-gray-200/50 dark:bg-gray-800/50 z-30 flex items-center justify-center">
@@ -1611,21 +1614,31 @@ export default function DayScheduleView({
 
                           const isClickable = isAvailable && isWithinWorkingHours && !isBlocked;
 
+                          // Check if there's an appointment that overlaps with this time slot
+                          // Each slot is 15 minutes, so slot covers [slotTimeInMinutes, slotTimeInMinutes + 15)
+                          const hasAppointment = staffAppointmentsWithAvailability[staffIndex]?.appointments?.some((appt: Appointment) => {
+                            const apptStartMinutes = timeToMinutes(appt.startTime);
+                            const apptEndMinutes = timeToMinutes(appt.endTime);
+                            const slotEndMinutes = slotTimeInMinutes + 15; // 15-minute slot duration
+                            // Check if appointment overlaps with this slot
+                            return slotTimeInMinutes < apptEndMinutes && slotEndMinutes > apptStartMinutes;
+                          });
+
                           // Use consistent time slot height
                           const height = TIME_SLOT_HEIGHT;
 
                           return (
                             <div
                               key={`${staff.name}-${timeSlot.hour}-${timeSlot.minute}`}
-                              className={`border-b border-gray-100 dark:border-gray-800 relative transition-all duration-150 ${!isAvailable
-                                ? 'bg-gray-200/70 dark:bg-gray-800/70'
+                              className={`border-b border-border/50 relative transition-all duration-150 ${!isAvailable
+                                ? 'bg-muted/70'
                                 : isBlocked
-                                  ? 'bg-red-50/50 dark:bg-red-900/20 cursor-not-allowed'
+                                  ? 'bg-destructive/10 cursor-not-allowed'
                                   : !isWithinWorkingHours
-                                    ? 'bg-gray-100/50 dark:bg-gray-700/30 cursor-not-allowed'
+                                    ? 'bg-muted/50 cursor-not-allowed'
                                     : role === 'doctor'
-                                      ? 'hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-default'
-                                      : 'hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer'
+                                      ? 'hover:bg-secondary/50 cursor-default'
+                                      : 'hover:bg-secondary/50 cursor-pointer'
                                 }`}
                               style={{
                                 height: `${height}px`,
@@ -1657,13 +1670,22 @@ export default function DayScheduleView({
                               }
                             >
                               {/* Dashed line for time separation */}
-                              <div className="absolute top-1/2 w-full border-t border-dashed border-gray-200 dark:border-gray-600"></div>
+                              <div className="absolute top-1/2 w-full border-t border-dashed border-border/30"></div>
 
-                              {isClickable && role !== 'doctor' && (
-                                <div className="absolute top-2 right-2">
-                                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                </div>
-                              )}
+                              {/* Status indicator dot */}
+                              <div className="absolute top-2 left-2 z-10">
+                                {!isAvailable ? (
+                                  <div className="w-2 h-2 rounded-full bg-gray-400 shadow-sm"></div>
+                                ) : isBlocked ? (
+                                  <div className="w-2 h-2 rounded-full bg-red-500 shadow-sm animate-pulse"></div>
+                                ) : !isWithinWorkingHours ? (
+                                  <div className="w-2 h-2 rounded-full bg-gray-400 shadow-sm"></div>
+                                ) : hasAppointment ? (
+                                  null
+                                ) : (
+                                  <div className="w-2 h-2 rounded-full bg-green-500 shadow-sm"></div>
+                                )}
+                              </div>
 
                               {/* Not working hours indicator */}
                               {isAvailable && !isWithinWorkingHours && (
@@ -1739,9 +1761,9 @@ export default function DayScheduleView({
       {/* New Appointment Dialog - only show for non-doctors */}
       {role !== 'doctor' && (
         <Dialog open={isNewAppointmentOpen} onOpenChange={setIsNewAppointmentOpen}>
-          <DialogContent className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl max-w-2xl">
+          <DialogContent className="sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
+              <DialogTitle className="text-xl font-semibold">
                 New Appointment for {newAppointmentDate && format(newAppointmentDate, 'EEEE, MMMM d, yyyy')}
               </DialogTitle>
             </DialogHeader>
@@ -1757,7 +1779,7 @@ export default function DayScheduleView({
       {selectedAppointment && (
         <Dialog open={isDetailViewOpen} onOpenChange={(open) => !open && handleCloseDetailView()}>
           <DialogContent
-            className="max-w-3xl rounded-2xl border-gray-200 dark:border-gray-700"
+            className="max-w-3xl"
             onInteractOutside={(e) => {
               e.preventDefault();
               handleCloseDetailView();

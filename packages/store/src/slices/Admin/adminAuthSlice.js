@@ -89,6 +89,16 @@ const adminAuthSlice = createSlice({
     setSelectedRegion: (state, action) => {
       state.selectedRegion = action.payload;
     },
+    rehydrateAuth: (state, action) => {
+      if (action.payload) {
+        state.isAdminAuthenticated = action.payload.isAdminAuthenticated;
+        state.admin = action.payload.admin;
+        state.token = action.payload.token;
+        state.selectedRegion = action.payload.selectedRegion;
+      } else {
+        state.isAdminAuthenticated = false;
+      }
+    },
   },
 });
 
@@ -97,5 +107,5 @@ export const selectToken = (state) => state.adminAuth.token;
 export const selectCurrentAdmin = (state) => state.adminAuth.admin;
 export const selectSelectedRegion = (state) => state.adminAuth.selectedRegion;
 
-export const { setAdminAuth, clearAdminAuth, setSelectedRegion } = adminAuthSlice.actions;
+export const { setAdminAuth, clearAdminAuth, setSelectedRegion, rehydrateAuth } = adminAuthSlice.actions;
 export default adminAuthSlice.reducer;
