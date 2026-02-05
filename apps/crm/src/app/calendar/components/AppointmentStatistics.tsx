@@ -8,14 +8,6 @@ interface AppointmentStatisticsProps {
 export default function AppointmentStatistics({ appointments }: AppointmentStatisticsProps) {
   return (
     <Card className="w-full">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center text-lg font-semibold text-foreground">
-          <div className="p-1.5 bg-primary/10 rounded-md mr-2">
-            <CalendarIcon className="h-4 w-4 text-primary" />
-          </div>
-          Stats
-        </CardTitle>
-      </CardHeader>
       <CardContent className="p-3">
         <div className="space-y-2">
           <div className="flex justify-between items-center py-1 border-b border-border/50">
