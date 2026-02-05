@@ -30,7 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from "@repo/ui/badge";
 import { Checkbox } from "@repo/ui/checkbox";
 import { Switch } from "@repo/ui/switch";
-import { Plus, Edit, Trash2, Search, DollarSign, Tag, Star, BarChart2, Eye } from "lucide-react";
+import { Plus, Edit, Trash2, Search, DollarSign, Tag, Star, BarChart2, Eye, Clock, Users, Home, Globe, Percent, Calendar, Info, Scissors, CheckCircle2, AlertCircle } from "lucide-react";
 import { useDispatch } from 'react-redux';
 import {
   useGetCategoriesQuery,
@@ -769,111 +769,193 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   if (type === "view") {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl w-[95vw] sm:w-full h-[90vh] max-h-[90vh] p-0 overflow-hidden flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-background z-10">
-            <DialogTitle className="text-lg sm:text-xl">
-              {service?.name || 'Service Details'}
-            </DialogTitle>
-            <DialogDescription>
-              {service?.description || 'No description available'}
-            </DialogDescription>
+        <DialogContent className="max-w-6xl w-[90vw] h-auto max-h-[82vh] p-0 overflow-hidden flex flex-col rounded-3xl shadow-2xl border-none">
+          <DialogHeader className="px-8 py-5 border-b bg-muted/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Scissors className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <DialogTitle className="text-xl font-bold tracking-tight">
+                    Service Details
+                  </DialogTitle>
+                </div>
+              </div>
+              <Badge
+                variant={
+                  service?.status === 'approved' ? 'default' :
+                    service?.status === 'disapproved' ? 'destructive' : 'secondary'
+                }
+                className={`capitalize px-4 py-1.5 rounded-full text-xs font-semibold tracking-wide border-0 shadow-sm ${service?.status === 'approved' ? 'bg-emerald-500 text-white hover:bg-emerald-600' :
+                  service?.status === 'disapproved' ? 'bg-rose-500 text-white hover:bg-rose-600' :
+                    'bg-amber-500 text-white hover:bg-amber-600'
+                  }`}
+              >
+                {service?.status || 'Pending Review'}
+              </Badge>
+            </div>
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-6 pb-6 -mt-1">
-            <div className="grid gap-4 py-4 text-sm pr-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <div className="flex-1 overflow-y-auto px-8 py-8 custom-scrollbar">
+            {/* Main Landscape Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
+
+              {/* Col 1: Image - span 3 */}
+              <div className="lg:col-span-3">
+                {service?.image ? (
+                  <div className="relative aspect-square w-full rounded-2xl overflow-hidden shadow-lg bg-muted border-4 border-background ring-1 ring-border shadow-primary/5">
+                    <Image
+                      src={service.image}
+                      alt={service?.name || 'Service image'}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="aspect-square w-full rounded-2xl bg-muted flex flex-col items-center justify-center border border-dashed border-muted-foreground/30 text-muted-foreground">
+                    <Scissors className="h-10 w-10 opacity-20 mb-2" />
+                    <span className="text-xs font-medium opacity-40">No Image</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Col 2: Primary Info - span 4 */}
+              <div className="lg:col-span-4 space-y-6">
                 <div>
-                  <span className="font-semibold">Category:</span>{" "}
-                  {service?.categoryName || "N/A"}
+                  <h2 className="text-2xl font-black tracking-tight text-foreground mb-1">{service?.name}</h2>
+                  <div className="flex items-center gap-2 text-primary font-semibold">
+                    <Tag className="h-4 w-4" />
+                    <span className="text-sm">{service?.categoryName || "Uncategorized"}</span>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-semibold">Price:</span> ₹
-                  {service?.price?.toFixed(2) || 0}
-                </div>
-                <div>
-                  <span className="font-semibold">Discounted Price:</span> ₹
-                  {service?.discountedPrice ? service.discountedPrice.toFixed(2) : "N/A"}
-                </div>
-                <div>
-                  <span className="font-semibold">Duration:</span>{" "}
-                  {service?.duration || 0} mins
-                </div>
-                <div>
-                  <span className="font-semibold">Booking Interval:</span>{" "}
-                  {service?.bookingInterval || 0} mins
-                </div>
-                <div>
-                  <span className="font-semibold">Gender:</span> {service?.gender || 'N/A'}
-                </div>
-                <div>
-                  <span className="font-semibold">Commission:</span>{" "}
-                  {service?.commission ? 'Enabled' : 'Disabled'}
-                </div>
-                <div>
-                  <span className="font-semibold">Online Booking:</span>{" "}
-                  {service?.onlineBooking ? 'Enabled' : 'Disabled'}
-                </div>
-                <div>
-                  <span className="font-semibold">Home Service:</span>{" "}
-                  {service?.homeService?.available ? `Available (₹${service.homeService.charges || 0})` : 'Not Available'}
-                </div>
-                <div>
-                  <span className="font-semibold">Wedding Service:</span>{" "}
-                  {service?.weddingService?.available ? `Available (₹${service.weddingService.charges || 0})` : 'Not Available'}
-                </div>
-                <div>
-                  <span className="font-semibold">Tax:</span>{" "}
-                  {service?.tax?.enabled ? `${service.tax.type === 'percentage' ? `${service.tax.value}%` : `₹${service.tax.value}`}` : 'Not Enabled'}
-                </div>
-                <div>
-                  <span className="font-semibold">Status:</span>
-                  <Badge
-                    variant={
-                      service?.status === 'approved' ? 'default' :
-                        service?.status === 'disapproved' ? 'destructive' : 'secondary'
-                    }
-                    className={
-                      service?.status === 'approved' ? 'bg-green-100 text-green-800' :
-                        service?.status === 'disapproved' ? 'bg-red-100 text-red-800' :
-                          'bg-yellow-100 text-yellow-800'
-                    }
-                  >
-                    {service?.status || 'N/A'}
+
+                <div className="flex flex-wrap gap-2">
+                  <Badge variant="outline" className="px-3 py-1 bg-blue-50/50 text-blue-600 border-blue-100 rounded-lg">
+                    <Clock className="h-3 w-3 mr-1.5" /> {service?.duration || 0} mins
                   </Badge>
+                  <Badge variant="outline" className="px-3 py-1 bg-indigo-50/50 text-indigo-600 border-indigo-100 rounded-lg">
+                    <Users className="h-3 w-3 mr-1.5" /> {service?.gender || 'Unisex'}
+                  </Badge>
+                  {service?.onlineBooking && (
+                    <Badge variant="outline" className="px-3 py-1 bg-teal-50/50 text-teal-600 border-teal-100 rounded-lg">
+                      <Globe className="h-3 w-3 mr-1.5" /> Online
+                    </Badge>
+                  )}
                 </div>
-                <div>
-                  <span className="font-semibold">Created At:</span>{" "}
-                  {service?.createdAt ? new Date(service.createdAt).toLocaleDateString() : 'N/A'}
+
+                <div className="p-4 bg-muted/30 rounded-2xl border border-muted-foreground/5 space-y-2">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-foreground">₹{service?.price?.toFixed(2)}</span>
+                    {service?.discountedPrice && (
+                      <span className="text-lg text-muted-foreground line-through opacity-40 italic">₹{service.discountedPrice.toFixed(2)}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest font-bold text-muted-foreground">
+                    <Percent className="h-3 w-3" />
+                    Tax: {service?.tax?.enabled ? (
+                      <span className="text-primary">{service.tax.value}{service.tax.type === 'percentage' ? '%' : ' (Fixed)'}</span>
+                    ) : 'Inclusive'}
+                  </div>
                 </div>
-                <div>
-                  <span className="font-semibold">Updated At:</span>{" "}
-                  {service?.updatedAt ? new Date(service.updatedAt).toLocaleDateString() : 'N/A'}
+              </div>
+
+              {/* Col 3: Description - span 5 */}
+              <div className="lg:col-span-5 space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground/80 flex items-center gap-2">
+                  <Info className="h-3.5 w-3.5 text-primary" /> Service Overview
+                </h3>
+                <div className="bg-muted/10 p-5 rounded-2xl text-sm leading-relaxed border-2 border-dashed border-muted text-foreground/70 h-full min-h-[140px]">
+                  {service?.description || 'This service doesn\'t have a detailed description yet. Please consult with the salon representative for more information regarding this treatment.'}
                 </div>
               </div>
             </div>
-            {service?.addOns && service.addOns.length > 0 && (
-              <div className="mt-4">
-                <span className="font-semibold block mb-2">Selected Add-ons:</span>
-                <div className="flex flex-wrap gap-2">
-                  {service.addOns.map((addonId: string) => {
-                    const addon = availableAddOns.find((a: any) => a._id === addonId);
-                    return addon ? (
-                      <Badge key={addonId} variant="secondary">
-                        {addon.name} (₹{addon.price})
-                      </Badge>
-                    ) : null;
-                  })}
+
+            {/* Bottom Grid: Features & Add-ons */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Features List */}
+              <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-center justify-between p-4 rounded-xl border bg-background shadow-sm group hover:border-primary/50 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-50 text-blue-600 rounded-lg group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                      <Home className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-muted-foreground block uppercase">Home Visit</span>
+                      <span className="text-sm font-semibold">{service?.homeService?.available ? `₹${service.homeService.charges || 0}` : 'Disabled'}</span>
+                    </div>
+                  </div>
+                  {service?.homeService?.available && <CheckCircle2 className="h-4 w-4 text-emerald-500" />}
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-xl border bg-background shadow-sm group hover:border-pink-200 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-pink-50 text-pink-500 rounded-lg group-hover:bg-pink-100 transition-colors">
+                      <Star className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-muted-foreground block uppercase">Wedding Special</span>
+                      <span className="text-sm font-semibold">{service?.weddingService?.available ? `₹${service.weddingService.charges || 0}` : 'Disabled'}</span>
+                    </div>
+                  </div>
+                  {service?.weddingService?.available && <CheckCircle2 className="h-4 w-4 text-pink-500" />}
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-xl border bg-background shadow-sm group hover:border-primary/50 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-50 text-amber-600 rounded-lg group-hover:bg-primary/10 transition-colors">
+                      <DollarSign className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-muted-foreground block uppercase">Staff Comm.</span>
+                      <span className="text-sm font-semibold">{service?.commission ? 'Enabled' : 'Disabled'}</span>
+                    </div>
+                  </div>
+                  {service?.commission ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <AlertCircle className="h-4 w-4 text-muted-foreground/30" />}
+                </div>
+
+                <div className="flex items-center justify-between p-4 rounded-xl border bg-background shadow-sm group hover:border-primary/50 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-primary/10 transition-colors">
+                      <Calendar className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold text-muted-foreground block uppercase">Booking Interval</span>
+                      <span className="text-sm font-semibold">{service?.bookingInterval || 0} minutes</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
-            {service?.image && (
-              <div className="mt-4">
-                <span className="font-semibold">Image:</span>
-                <Image src={service.image} alt={service.name} width={200} height={200} className="mt-2" />
+
+              {/* Add-ons List */}
+              <div className="p-5 bg-muted/20 border-2 border-dashed border-muted-foreground/10 rounded-2xl">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">Available Add-ons</h3>
+                {service?.addOns && service.addOns.length > 0 ? (
+                  <div className="space-y-2">
+                    {service.addOns.slice(0, 4).map((addonId: string) => {
+                      const addon = availableAddOns.find((a: any) => a._id === addonId);
+                      return addon ? (
+                        <div key={addonId} className="flex items-center justify-between bg-background p-2.5 rounded-lg border border-muted-foreground/5 shadow-sm">
+                          <span className="text-xs font-medium truncate max-w-[120px]">{addon.name}</span>
+                          <span className="text-xs font-bold text-primary">₹{addon.price}</span>
+                        </div>
+                      ) : null;
+                    })}
+                    {service.addOns.length > 4 && (
+                      <p className="text-[10px] text-center text-muted-foreground pt-2 font-medium">
+                        + {service.addOns.length - 4} more add-ons
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground/60 text-center italic py-4">No add-ons selected</p>
+                )}
               </div>
-            )}
+            </div>
           </div>
-          <DialogFooter className="px-6 pb-6">
-            <Button variant="secondary" onClick={onClose}>
+
+          <DialogFooter className="px-8 py-4 border-t bg-muted/20">
+            <Button variant="outline" onClick={onClose} className="border-primary/20 hover:bg-primary/5 px-8 rounded-xl font-bold text-xs uppercase tracking-widest">
               Close
             </Button>
           </DialogFooter>
@@ -885,7 +967,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="max-w-4xl w-[95vw] sm:w-full h-[90vh] max-h-[90vh] p-0 overflow-hidden flex flex-col"
+        className="max-w-5xl w-[92vw] h-auto max-h-[85vh] p-0 overflow-hidden flex flex-col rounded-2xl shadow-2xl border-none"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
