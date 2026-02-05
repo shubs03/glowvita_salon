@@ -152,7 +152,7 @@ const HeroSection2 = () => {
   }, [categoriesData]);
 
   return (
-    <div className="relative w-full h-[615px] overflow-hidden">
+    <div className="relative w-full min-h-[500px] h-[615px] md:h-[615px] overflow-hidden">
       {/* Background Image with Overlay */}
       <div
         className="absolute inset-0 bg-cover bg-center"
@@ -162,31 +162,31 @@ const HeroSection2 = () => {
       />
 
       {/* Content */}
-      <div className="relative z-10 container mx-auto px-6 lg:px-8 h-full flex flex-col justify-center max-w-7xl">
+      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 h-full flex flex-col justify-center max-w-7xl py-8 md:py-0">
         {/* Logo */}
-        <div className="mb-8">
-          <h3 className="text-amber-100 text-sm font-light tracking-[0.3em] uppercase">
+        <div className="mb-4 md:mb-8">
+          <h3 className="text-amber-100 text-xs sm:text-sm font-light tracking-[0.2em] sm:tracking-[0.3em] uppercase">
             GLOWVITA
           </h3>
         </div>
 
         {/* Heading */}
-        <h1 className="text-5xl md:text-6xl lg:text-7xl font-serif font-bold text-amber-50 mb-6 max-w-2xl leading-tight">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-serif font-bold text-amber-50 mb-4 md:mb-6 max-w-2xl leading-tight">
           Find a service
           <br />
           close to you
         </h1>
 
         {/* Subheading */}
-        <p className="text-gray-200 text-base md:text-lg mb-10 max-w-xl leading-relaxed">
+        <p className="text-gray-200 text-sm sm:text-base md:text-lg mb-6 md:mb-10 max-w-xl leading-relaxed">
           Experience convenience by discovering salons and specialists in your
           area, ready to provide excellent self-care services.
         </p>
 
         {/* Search Bar */}
-        <div className="bg-white rounded-full shadow-2xl p-2 flex items-center gap-3 max-w-4xl mb-8">
+        <div className="bg-white rounded-2xl md:rounded-full shadow-2xl p-3 md:p-2 flex flex-col md:flex-row items-stretch md:items-center gap-3 max-w-4xl mb-6 md:mb-8">
           {/* Service Name Input */}
-          <div className="relative flex-1 flex items-center gap-3 px-4 border-r border-gray-200">
+          <div className="relative flex-1 flex items-center gap-3 px-4 md:border-r border-gray-200 py-2 md:py-0">
             <div className="flex flex-col flex-1">
               {!serviceInput && (
                 <label className="text-primary text-xs font-medium mb-1">
@@ -200,14 +200,14 @@ const HeroSection2 = () => {
                 onChange={(e) => setServiceInput(e.target.value)}
                 onFocus={() => setIsServiceFocused(true)}
                 onBlur={() => setTimeout(() => setIsServiceFocused(false), 200)}
-                className="outline-none text-gray-800 placeholder-gray-400 text-sm"
+                className="outline-none text-gray-800 placeholder-gray-400 text-sm w-full"
               />
             </div>
-            <Scissors className="w-4 h-4 text-gray-400" />
+            <Scissors className="w-4 h-4 text-gray-400 flex-shrink-0" />
 
             {/* Fixed & Reliable Dropdown */}
             {isServiceFocused && suggestions.length > 0 && (
-              <div className="absolute top-full left-0 right-auto w-[300px] sm:w-[400px] mt-3 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-60 overflow-y-auto no-scrollbar">
+              <div className="absolute top-full left-0 right-0 md:right-auto md:w-[400px] mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-60 overflow-y-auto no-scrollbar">
                   {/* <div className="px-5 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50/50 sticky top-0 backdrop-blur-sm">
                     Suggestions
                   </div> */}
@@ -218,27 +218,27 @@ const HeroSection2 = () => {
                         e.preventDefault();
                         handleSuggestionSelection(item);
                       }}
-                      className="w-full text-left px-5 py-3 hover:bg-amber-50 flex items-center justify-between group transition-colors"
+                      className="w-full text-left px-4 sm:px-5 py-3 hover:bg-amber-50 flex items-center justify-between group transition-colors"
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                         <div className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center transition-transform group-hover:scale-110",
+                          "w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 flex-shrink-0",
                           item.type === 'category' ? "bg-purple-100/50" : "bg-amber-100/50"
                         )}>
                           {item.type === 'category' ? (
-                            <Sparkles className="w-4 h-4 text-purple-600" />
+                            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" />
                           ) : (
-                            <Scissors className="w-4 h-4 text-amber-600" />
+                            <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
                           )}
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-gray-900 font-bold text-sm tracking-tight">{item.name}</span>
-                          <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-gray-900 font-bold text-xs sm:text-sm tracking-tight truncate">{item.name}</span>
+                          <span className="text-[8px] sm:text-[9px] font-black text-gray-400 uppercase tracking-widest">
                             {item.type}
                           </span>
                         </div>
                       </div>
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                          <Sparkles className="w-3 h-3 text-amber-400" />
                       </div>
                     </button>
@@ -248,7 +248,7 @@ const HeroSection2 = () => {
           </div>
 
           {/* Address Input */}
-          <div className="relative flex-1 flex items-center gap-3 px-4">
+          <div className="relative flex-1 flex items-center gap-3 px-4 py-2 md:py-0">
             <div className="flex flex-col flex-1">
               {!locationInput && (
                 <label className="text-primary text-xs font-medium mb-1">
@@ -262,13 +262,13 @@ const HeroSection2 = () => {
                 onChange={(e) => setLocationInput(e.target.value)}
                 onFocus={() => setIsLocationFocused(true)}
                 onBlur={() => setTimeout(() => setIsLocationFocused(false), 200)}
-                className="outline-none text-gray-800 placeholder-gray-400 text-sm"
+                className="outline-none text-gray-800 placeholder-gray-400 text-sm w-full"
               />
             </div>
-            <MapPin className="w-4 h-4 text-gray-400" />
+            <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
 
             {isLocationFocused && (locationPredictions.length > 0 || !locationInput) && (
-              <div className="absolute top-full left-0 right-auto w-[200px] sm:w-[350px] mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-60 overflow-y-auto no-scrollbar">
+              <div className="absolute top-full left-0 right-0 md:right-auto md:w-[350px] mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 max-h-60 overflow-y-auto no-scrollbar">
                   {/* <div className="px-5 py-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50/50 sticky top-0 backdrop-blur-sm">
                     Locations
                   </div> */}
@@ -280,16 +280,16 @@ const HeroSection2 = () => {
                         e.preventDefault();
                         handleCurrentLocation();
                       }}
-                      className="w-full text-left px-5 py-3 hover:bg-amber-50 flex items-center gap-3 transition-colors group"
+                      className="w-full text-left px-4 sm:px-5 py-3 hover:bg-amber-50 flex items-center gap-2 sm:gap-3 transition-colors group"
                     >
-                      <div className="w-8 h-8 rounded-full bg-amber-100 group-hover:bg-amber-200 transition-colors flex items-center justify-center">
-                        <Navigation className="w-4 h-4 text-amber-600" />
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-amber-100 group-hover:bg-amber-200 transition-colors flex items-center justify-center flex-shrink-0">
+                        <Navigation className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-gray-900 font-bold text-sm tracking-tight">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-gray-900 font-bold text-xs sm:text-sm tracking-tight truncate">
                           {isLocating ? "Locating..." : "Use Current Location"}
                         </span>
-                        <span className="text-[9px] text-gray-400 font-black uppercase">Instant Search</span>
+                        <span className="text-[8px] sm:text-[9px] text-gray-400 font-black uppercase">Instant Search</span>
                       </div>
                     </button>
                   )}
@@ -301,12 +301,12 @@ const HeroSection2 = () => {
                         e.preventDefault();
                         setLocationInput(prediction.description);
                       }}
-                      className="w-full text-left px-5 py-3 hover:bg-amber-50 flex items-center gap-3 transition-colors group"
+                      className="w-full text-left px-4 sm:px-5 py-3 hover:bg-amber-50 flex items-center gap-2 sm:gap-3 transition-colors group"
                     >
-                      <div className="w-8 h-8 rounded-full bg-gray-100 group-hover:bg-amber-100 transition-colors flex items-center justify-center">
-                        <MapPin className="w-4 h-4 text-gray-400 group-hover:text-amber-600" />
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-100 group-hover:bg-amber-100 transition-colors flex items-center justify-center flex-shrink-0">
+                        <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-400 group-hover:text-amber-600" />
                       </div>
-                      <span className="text-gray-800 font-bold text-sm tracking-tight">{prediction.description}</span>
+                      <span className="text-gray-800 font-bold text-xs sm:text-sm tracking-tight truncate">{prediction.description}</span>
                     </button>
                   ))}
               </div>
@@ -316,7 +316,7 @@ const HeroSection2 = () => {
           {/* Search Button */}
           <button
             onClick={handleSearch}
-            className="bg-primary text-white px-8 py-3 rounded-full font-medium transition-all duration-300 flex items-center gap-2 shadow-lg hover:bg-primary/90"
+            className="bg-primary text-white px-6 sm:px-8 py-3 rounded-full font-medium transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:bg-primary/90 w-full md:w-auto"
           >
             Search
             <Sparkles className="w-4 h-4" />
@@ -326,7 +326,7 @@ const HeroSection2 = () => {
         {/* Service Categories Marquee */}
         <div className="max-w-4xl overflow-hidden relative">
           {/* Left Fade */}
-          <div className="rounded-full absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-[rgba(45,28,48,0.95)] via-[rgba(45,28,48,0.7)] to-transparent z-10 pointer-events-none"></div>
+          <div className="rounded-full absolute left-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-r from-[rgba(45,28,48,0.95)] via-[rgba(45,28,48,0.7)] to-transparent z-10 pointer-events-none"></div>
 
           {/* Marquee */}
           <div className="flex gap-3 animate-marquee hover:[animation-play-state:paused]">
@@ -334,10 +334,10 @@ const HeroSection2 = () => {
               Array.from({ length: 6 }).map((_, i) => (
                 <div
                   key={i}
-                  className="bg-white bg-opacity-10 backdrop-blur-sm border border-purple-950 border-opacity-30 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2 whitespace-nowrap flex-shrink-0 animate-pulse"
+                  className="bg-white bg-opacity-10 backdrop-blur-sm border border-purple-950 border-opacity-30 px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0 animate-pulse"
                 >
-                  <div className="w-4 h-4 bg-gray-300 rounded-full" />
-                  <div className="h-4 bg-gray-300 rounded w-16" />
+                  <div className="w-3.5 h-3.5 sm:w-4 sm:h-4 bg-gray-300 rounded-full" />
+                  <div className="h-3.5 sm:h-4 bg-gray-300 rounded w-12 sm:w-16" />
                 </div>
               ))
             ) : (
@@ -348,9 +348,9 @@ const HeroSection2 = () => {
                     setSelectedCategoryId(cat.id);
                     setServiceInput(cat.label);
                   }}
-                  className="bg-white bg-opacity-10 backdrop-blur-sm hover:border-white hover:bg-opacity-20 border border-purple-950 border-opacity-30 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 flex items-center gap-2 whitespace-nowrap flex-shrink-0"
+                  className="bg-white bg-opacity-10 backdrop-blur-sm hover:border-white hover:bg-opacity-20 border border-purple-950 border-opacity-30 text-white px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 flex items-center gap-1.5 sm:gap-2 whitespace-nowrap flex-shrink-0"
                 >
-                  <cat.icon className="w-4 h-4" />
+                  <cat.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {cat.label}
                 </button>
               ))
@@ -358,7 +358,7 @@ const HeroSection2 = () => {
           </div>
 
           {/* Right Fade */}
-          <div className="rounded-full absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-[rgba(45,28,48,0.95)] via-[rgba(45,28,48,0.7)] to-transparent z-10 pointer-events-none"></div>
+          <div className="rounded-full absolute right-0 top-0 bottom-0 w-16 sm:w-32 bg-gradient-to-l from-[rgba(45,28,48,0.95)] via-[rgba(45,28,48,0.7)] to-transparent z-10 pointer-events-none"></div>
         </div>
       </div>
     </div>
