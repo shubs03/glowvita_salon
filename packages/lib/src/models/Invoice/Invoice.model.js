@@ -110,23 +110,31 @@ invoiceSchema.index({ appointmentId: 1 }, { sparse: true });
 invoiceSchema.statics.generateInvoiceNumber = async function (vendorId) {
     const { default: CounterModel } = await import('../Counter.model.js');
 
+    // 1. Ensure vendorId is a clean string
+    const salonId = vendorId.toString();
+    const counterId = `invoice_v2_${salonId}`; // Using v2 key to force a fresh start from 01 for all salons
+
     const date = new Date();
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const dateStr = `${year}${month}${day}`;
 
-    const vendorCode = vendorId.toString().slice(-5);
+    // 2. Get vendor code (last 5 characters) in uppercase
+    const vendorCode = salonId.slice(-5).toUpperCase();
 
-    // Per-vendor and per-day sequence
-    const counterId = `invoice_${vendorId}_${dateStr}`;
+    // 3. Increment the sequence for this SPECIFIC salon
+    // This counter is NOT shared with anyone else
     const counter = await CounterModel.findByIdAndUpdate(
         counterId,
         { $inc: { seq: 1 } },
         { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
+    // 4. Pad sequence (01, 02, ... 99, 100...)
     const sequence = String(counter.seq).padStart(2, '0');
+
+    // Format: INV-[VENDOR_CODE]-[YYYYMMDD]-[SEQUENCE]
     return `INV-${vendorCode}-${dateStr}-${sequence}`;
 };
 
