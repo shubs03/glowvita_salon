@@ -75,6 +75,7 @@ interface BankDetails {
   accountNumber?: string;
   bankName?: string;
   ifscCode?: string;
+  upiId?: string;
 }
 
 interface OpeningHour {
