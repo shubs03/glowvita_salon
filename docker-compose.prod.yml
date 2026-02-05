@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
     container_name: glowvita_web
     restart: unless-stopped
     env_file: .env
@@ -17,7 +19,7 @@ services:
       context: .
       dockerfile: apps/crm/Dockerfile
       args:
-        NEXT_PUBLIC_MAPBOX_API_KEY: ${NEXT_PUBLIC_MAPBOX_API_KEY}
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
     container_name: glowvita_crm
     restart: unless-stopped
     env_file: .env
@@ -31,7 +33,7 @@ services:
       context: .
       dockerfile: apps/admin/Dockerfile
       args:
-        NEXT_PUBLIC_MAPBOX_API_KEY: ${NEXT_PUBLIC_MAPBOX_API_KEY}
+        NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
     container_name: glowvita_admin
     restart: unless-stopped
     env_file: .env
