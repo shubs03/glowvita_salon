@@ -869,28 +869,28 @@ export default function DailySchedulePage() {
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-5">
-        <Button
-          variant="ghost"
-          onClick={handleBackClick}
-          className="hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full px-5 py-3 text-gray-800 dark:text-gray-200 font-bold text-lg shadow-sm"
-        >
-          <ChevronLeft className="mr-3 h-5 w-5" />
-          Back to Calendar
-        </Button>
+    <div className="min-h-screen bg-background">
+      <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+          <Button
+            variant="ghost"
+            onClick={handleBackClick}
+            className="hover:bg-secondary/80 transition-all duration-200 rounded-lg px-4 py-2 text-foreground font-medium text-sm flex items-center gap-2"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back to Calendar
+          </Button>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
             {role !== 'doctor' && (
               <Select value={selectedStaff} onValueChange={setSelectedStaff}>
-                <SelectTrigger className="w-[200px] rounded-full border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 shadow-sm text-base font-bold">
+                <SelectTrigger className="w-full sm:w-[180px] h-12">
                   <SelectValue placeholder="Select staff" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-gray-200 dark:border-gray-700 shadow-lg">
-                  <SelectItem value="All Staff" className="rounded-lg py-2 font-medium">All Staff</SelectItem>
+                <SelectContent>
+                  <SelectItem value="All Staff">All Staff</SelectItem>
                   {staffList.map(staff => (
-                    <SelectItem key={staff.id} value={staff.name} className="rounded-lg py-2 font-medium">
+                    <SelectItem key={staff.id} value={staff.name}>
                       {staff.name}
                     </SelectItem>
                   ))}
@@ -900,27 +900,26 @@ export default function DailySchedulePage() {
 
             <Button
               onClick={handleNewAppointment}
-              className="rounded-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-extrabold shadow-xl hover:shadow-2xl transition-all duration-300 px-6 py-3 text-base"
+              className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 transition-colors duration-200 flex-1 sm:flex-none"
             >
-              <Plus className="mr-3 h-5 w-5" />
-              New Appointment
+              <Plus className="mr-2 h-4 w-4" />
+              New Booking
             </Button>
           </div>
         </div>
-      </div>
 
-      <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-2 border border-gray-200 dark:border-gray-800 overflow-hidden">
-        <DayScheduleView
-          selectedDate={selectedDate}
-          appointments={filteredAppointments}
-          staffList={staffList}
-          workingHours={dayWorkingHours}
-          blockedTimes={blockedTimes}
-          isLoading={isLoading || isLoadingAppointments || isLoadingWorkingHours || (role !== 'doctor' && isLoadingStaff)}
-          error={staffError || workingHoursError}
-          role={role}
-          onAppointmentClick={handleAppointmentClick}
-          onTimeSlotClick={handleTimeSlotClick}
+        <div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
+          <DayScheduleView
+            selectedDate={selectedDate}
+            appointments={filteredAppointments}
+            staffList={staffList}
+            workingHours={dayWorkingHours}
+            blockedTimes={blockedTimes}
+            isLoading={isLoading || isLoadingAppointments || isLoadingWorkingHours || (role !== 'doctor' && isLoadingStaff)}
+            error={staffError || workingHoursError}
+            role={role}
+            onAppointmentClick={handleAppointmentClick}
+            onTimeSlotClick={handleTimeSlotClick}
           timeSlots={useMemo(() => {
             try {
               // Get working hours with fallbacks
@@ -1009,6 +1008,7 @@ export default function DailySchedulePage() {
           onDateChange={handleDateChange}
           onUpdateAppointmentStatus={handleUpdateStatus}
         />
+        </div>
       </div>
 
       <Dialog
@@ -1023,9 +1023,9 @@ export default function DailySchedulePage() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto rounded-3xl border-gray-200 dark:border-gray-700 shadow-2xl">
+        <DialogContent className="sm:max-w-[650px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-extrabold text-gray-900 dark:text-white">
+            <DialogTitle className="text-xl font-semibold">
               {selectedAppointment ? 'Edit Appointment' : 'New Appointment'}
             </DialogTitle>
           </DialogHeader>
@@ -1076,44 +1076,42 @@ export default function DailySchedulePage() {
 
       {/* Cancel Appointment Dialog */}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <DialogContent className="rounded-3xl border-gray-200 dark:border-gray-700 shadow-2xl">
+        <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-extrabold text-gray-900 dark:text-white">Cancel Appointment</DialogTitle>
+            <DialogTitle className="text-lg font-semibold">Cancel Appointment</DialogTitle>
           </DialogHeader>
-          <div className="space-y-5">
-            <p className="text-gray-700 dark:text-gray-300 text-lg">Are you sure you want to cancel this appointment?</p>
-            <div className="space-y-3">
-              <Label htmlFor="cancelReason" className="text-gray-800 dark:text-gray-200 font-bold text-base">Reason for cancellation</Label>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Are you sure you want to cancel this appointment?</p>
+            <div className="space-y-2">
+              <Label htmlFor="cancelReason" className="text-sm font-medium">Reason for cancellation</Label>
               <Textarea
                 id="cancelReason"
                 value={cancelReason}
                 onChange={(e) => setCancelReason(e.target.value)}
                 placeholder="Please provide a reason for cancellation"
-                className="border-gray-300 dark:border-gray-700 dark:bg-gray-800 dark:text-white rounded-xl text-base p-4"
+                className="min-h-[80px]"
               />
             </div>
-            <div className="flex justify-end space-x-4 pt-3">
+            <div className="flex justify-end gap-3 pt-2">
               <Button
                 variant="outline"
                 onClick={() => setShowCancelDialog(false)}
                 disabled={isLoading}
-                className="rounded-full border-gray-300 dark:border-gray-600 px-6 py-3 text-base font-bold"
               >
-                No, Keep It
+                Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={() => handleUpdateStatus('cancelled', cancelReason)}
                 disabled={isLoading || !cancelReason.trim()}
-                className="rounded-full px-6 py-3 text-base font-bold"
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Cancelling...
                   </>
                 ) : (
-                  'Yes, Cancel'
+                  'Confirm Cancellation'
                 )}
               </Button>
             </div>
