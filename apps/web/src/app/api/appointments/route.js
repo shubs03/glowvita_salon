@@ -103,7 +103,7 @@ export const GET = async (req) => {
 
         // Fetch appointments with populated vendor data
         const appointments = await AppointmentModel.find(query)
-            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId amount totalAmount finalAmount platformFee serviceTax discountAmount vendorId cancellationReason notes')
+            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId amount totalAmount finalAmount platformFee serviceTax discountAmount vendorId cancellationReason notes isHomeService homeServiceLocation travelTime travelDistance distanceMeters blockedTravelWindows isWeddingService weddingPackageDetails')
             .populate('vendorId', 'businessName address')
             .lean(); // Use lean() to get plain JavaScript objects with raw ObjectIds
 
@@ -220,7 +220,16 @@ export const GET = async (req) => {
                 vendorId: apt.vendorId?._id || apt.vendorId, // Handle both populated and non-populated cases
                 client: apt.client,
                 userId: apt.userId,
-                cancellationReason: cancellationReason // Pass through cancellation reason (from field or extracted from notes)
+                cancellationReason: cancellationReason, // Pass through cancellation reason (from field or extracted from notes)
+                // Add home service fields
+                isHomeService: apt.isHomeService || false,
+                homeServiceLocation: apt.homeServiceLocation || null,
+                travelTime: apt.travelTime || 0,
+                travelDistance: apt.travelDistance || 0,
+                distanceMeters: apt.distanceMeters || 0,
+                blockedTravelWindows: apt.blockedTravelWindows || [],
+                isWeddingService: apt.isWeddingService || false,
+                weddingPackageDetails: apt.weddingPackageDetails || null
             };
         });
 

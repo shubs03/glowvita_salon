@@ -30,7 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Badge } from "@repo/ui/badge";
 import { Checkbox } from "@repo/ui/checkbox";
 import { Switch } from "@repo/ui/switch";
-import { Plus, Edit, Trash2, Search, DollarSign, Tag, Star, BarChart2, Eye } from "lucide-react";
+import { Plus, Edit, Trash2, Search, DollarSign, Tag, Star, BarChart2, Eye, Clock, Users, Home, Globe, Percent, Calendar, Info, Scissors, CheckCircle2, AlertCircle } from "lucide-react";
 import { useDispatch } from 'react-redux';
 import {
   useGetCategoriesQuery,
@@ -769,111 +769,169 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   if (type === "view") {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl w-[95vw] sm:w-full h-[90vh] max-h-[90vh] p-0 overflow-hidden flex flex-col">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-background z-10">
-            <DialogTitle className="text-lg sm:text-xl">
-              {service?.name || 'Service Details'}
-            </DialogTitle>
-            <DialogDescription>
-              {service?.description || 'No description available'}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto px-6 pb-6 -mt-1">
-            <div className="grid gap-4 py-4 text-sm pr-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <span className="font-semibold">Category:</span>{" "}
-                  {service?.categoryName || "N/A"}
-                </div>
-                <div>
-                  <span className="font-semibold">Price:</span> ₹
-                  {service?.price?.toFixed(2) || 0}
-                </div>
-                <div>
-                  <span className="font-semibold">Discounted Price:</span> ₹
-                  {service?.discountedPrice ? service.discountedPrice.toFixed(2) : "N/A"}
-                </div>
-                <div>
-                  <span className="font-semibold">Duration:</span>{" "}
-                  {service?.duration || 0} mins
-                </div>
-                <div>
-                  <span className="font-semibold">Booking Interval:</span>{" "}
-                  {service?.bookingInterval || 0} mins
-                </div>
-                <div>
-                  <span className="font-semibold">Gender:</span> {service?.gender || 'N/A'}
-                </div>
-                <div>
-                  <span className="font-semibold">Commission:</span>{" "}
-                  {service?.commission ? 'Enabled' : 'Disabled'}
-                </div>
-                <div>
-                  <span className="font-semibold">Online Booking:</span>{" "}
-                  {service?.onlineBooking ? 'Enabled' : 'Disabled'}
-                </div>
-                <div>
-                  <span className="font-semibold">Home Service:</span>{" "}
-                  {service?.homeService?.available ? `Available (₹${service.homeService.charges || 0})` : 'Not Available'}
-                </div>
-                <div>
-                  <span className="font-semibold">Wedding Service:</span>{" "}
-                  {service?.weddingService?.available ? `Available (₹${service.weddingService.charges || 0})` : 'Not Available'}
-                </div>
-                <div>
-                  <span className="font-semibold">Tax:</span>{" "}
-                  {service?.tax?.enabled ? `${service.tax.type === 'percentage' ? `${service.tax.value}%` : `₹${service.tax.value}`}` : 'Not Enabled'}
-                </div>
-                <div>
-                  <span className="font-semibold">Status:</span>
-                  <Badge
-                    variant={
-                      service?.status === 'approved' ? 'default' :
-                        service?.status === 'disapproved' ? 'destructive' : 'secondary'
-                    }
-                    className={
-                      service?.status === 'approved' ? 'bg-green-100 text-green-800' :
-                        service?.status === 'disapproved' ? 'bg-red-100 text-red-800' :
-                          'bg-yellow-100 text-yellow-800'
-                    }
-                  >
-                    {service?.status || 'N/A'}
-                  </Badge>
-                </div>
-                <div>
-                  <span className="font-semibold">Created At:</span>{" "}
-                  {service?.createdAt ? new Date(service.createdAt).toLocaleDateString() : 'N/A'}
-                </div>
-                <div>
-                  <span className="font-semibold">Updated At:</span>{" "}
-                  {service?.updatedAt ? new Date(service.updatedAt).toLocaleDateString() : 'N/A'}
-                </div>
-              </div>
+        <DialogContent className="max-w-3xl w-[90vw] h-auto max-h-[90vh] p-0 overflow-hidden flex flex-col rounded-2xl shadow-2xl">
+          <DialogHeader className="px-5 py-4 border-b bg-gradient-to-r from-muted/50 to-muted/30">
+            <div className="flex items-center gap-3">
+              <DialogTitle className="text-lg font-bold tracking-tight">Service Details</DialogTitle>
+              <Badge
+                variant={
+                  service?.status === 'approved' ? 'default' :
+                    service?.status === 'disapproved' ? 'destructive' : 'secondary'
+                }
+                className="capitalize px-2.5 py-0.5 rounded-full text-xs font-semibold"
+              >
+                {service?.status || 'Pending'}
+              </Badge>
             </div>
-            {service?.addOns && service.addOns.length > 0 && (
-              <div className="mt-4">
-                <span className="font-semibold block mb-2">Selected Add-ons:</span>
-                <div className="flex flex-wrap gap-2">
-                  {service.addOns.map((addonId: string) => {
-                    const addon = availableAddOns.find((a: any) => a._id === addonId);
-                    return addon ? (
-                      <Badge key={addonId} variant="secondary">
-                        {addon.name} (₹{addon.price})
-                      </Badge>
-                    ) : null;
-                  })}
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-5 py-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {/* Service Image Section */}
+            <div className="mb-4">
+              {service?.image ? (
+                <div className="relative w-48 h-48 mx-auto rounded-lg overflow-hidden shadow-md border">
+                  <Image
+                    src={service.image}
+                    alt={service?.name || 'Service image'}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="w-48 h-48 mx-auto rounded-lg bg-muted flex flex-col items-center justify-center border border-dashed">
+                  <Scissors className="h-10 w-10 text-muted-foreground/30 mb-2" />
+                  <span className="text-sm text-muted-foreground">No Image Available</span>
+                </div>
+              )}
+            </div>
+
+            {/* Service Information Grid */}
+            <div className="space-y-4">
+              {/* Basic Information */}
+              <div>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 pb-1.5 border-b">
+                  Basic Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                  <div className="flex items-start justify-between py-1.5">
+                    <span className="text-sm font-medium text-muted-foreground">Service Name:</span>
+                    <span className="text-sm font-semibold text-right max-w-[60%]">{service?.name || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-start justify-between py-1.5">
+                    <span className="text-sm font-medium text-muted-foreground">Category:</span>
+                    <span className="text-sm font-semibold text-right max-w-[60%]">{service?.categoryName || 'Uncategorized'}</span>
+                  </div>
+                  <div className="flex items-start justify-between py-1.5">
+                    <span className="text-sm font-medium text-muted-foreground">Duration:</span>
+                    <span className="text-sm font-semibold">{service?.duration || 0} minutes</span>
+                  </div>
+                  <div className="flex items-start justify-between py-1.5">
+                    <span className="text-sm font-medium text-muted-foreground">Gender:</span>
+                    <span className="text-sm font-semibold capitalize">{service?.gender || 'Unisex'}</span>
+                  </div>
                 </div>
               </div>
-            )}
-            {service?.image && (
-              <div className="mt-4">
-                <span className="font-semibold">Image:</span>
-                <Image src={service.image} alt={service.name} width={200} height={200} className="mt-2" />
+
+              {/* Pricing Information */}
+              <div>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 pb-1.5 border-b">
+                  Pricing
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                  <div className="flex items-start justify-between py-1.5">
+                    <span className="text-sm font-medium text-muted-foreground">Price:</span>
+                    <span className="text-sm font-bold text-primary">₹{service?.price?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  <div className="flex items-start justify-between py-1.5">
+                    <span className="text-sm font-medium text-muted-foreground">Discounted Price:</span>
+                    <span className="text-sm font-bold text-primary">
+                      {service?.discountedPrice ? `₹${service.discountedPrice.toFixed(2)}` : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-between py-1.5">
+                    <span className="text-sm font-medium text-muted-foreground">Tax Enabled:</span>
+                    <span className="text-sm font-semibold">{service?.tax?.enabled ? 'Yes' : 'No'}</span>
+                  </div>
+                  {service?.tax?.enabled && (
+                    <div className="flex items-start justify-between py-1.5">
+                      <span className="text-sm font-medium text-muted-foreground">Tax Value:</span>
+                      <span className="text-sm font-semibold">
+                        {service.tax.value}{service.tax.type === 'percentage' ? '%' : ' (Fixed)'}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
+
+              {/* Service Features */}
+              <div>
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 pb-1.5 border-b">
+                  Features
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                  <div className="flex items-start justify-between py-1.5">
+                    <span className="text-sm font-medium text-muted-foreground">Online Booking:</span>
+                    <span className="text-sm font-semibold">{service?.onlineBooking ? 'Enabled' : 'Disabled'}</span>
+                  </div>
+                  <div className="flex items-start justify-between py-1.5">
+                    <span className="text-sm font-medium text-muted-foreground">Booking Interval:</span>
+                    <span className="text-sm font-semibold">{service?.bookingInterval || 0} minutes</span>
+                  </div>
+                  <div className="flex items-start justify-between py-1.5">
+                    <span className="text-sm font-medium text-muted-foreground">Staff Commission:</span>
+                    <span className="text-sm font-semibold">{service?.commission ? 'Enabled' : 'Disabled'}</span>
+                  </div>
+                  <div className="flex items-start justify-between py-1.5">
+                    <span className="text-sm font-medium text-muted-foreground">Home Service:</span>
+                    <span className="text-sm font-semibold">
+                      {service?.homeService?.available ? `₹${service.homeService.charges || 0}` : 'Not Available'}
+                    </span>
+                  </div>
+                  <div className="flex items-start justify-between py-1.5">
+                    <span className="text-sm font-medium text-muted-foreground">Wedding Service:</span>
+                    <span className="text-sm font-semibold">
+                      {service?.weddingService?.available ? `₹${service.weddingService.charges || 0}` : 'Not Available'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description */}
+              {service?.description && (
+                <div>
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 pb-1.5 border-b">
+                    Description
+                  </h3>
+                  <p className="text-sm text-foreground/80 leading-relaxed bg-muted/30 p-3 rounded-lg">
+                    {service.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Add-ons */}
+              {service?.addOns && service.addOns.length > 0 && (
+                <div>
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 pb-1.5 border-b">
+                    Available Add-ons
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {service.addOns.map((addonId: string) => {
+                      const addon = availableAddOns.find((a: any) => a._id === addonId);
+                      return addon ? (
+                        <div key={addonId} className="flex items-center justify-between p-2.5 bg-muted/50 rounded-lg border">
+                          <span className="text-sm font-medium">{addon.name}</span>
+                          <span className="text-sm font-bold text-primary">₹{addon.price}</span>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          <DialogFooter className="px-6 pb-6">
-            <Button variant="secondary" onClick={onClose}>
+
+          <DialogFooter className="px-5 py-3 border-t bg-muted/30">
+            <Button variant="outline" onClick={onClose} className="px-6">
               Close
             </Button>
           </DialogFooter>
@@ -885,12 +943,12 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
-        className="max-w-4xl w-[95vw] sm:w-full h-[90vh] max-h-[90vh] p-0 overflow-hidden flex flex-col"
+        className="max-w-3xl w-[90vw] h-auto max-h-[90vh] p-0 overflow-hidden flex flex-col rounded-2xl shadow-2xl border-none"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <DialogHeader className="px-6 pt-6 pb-4 border-b sticky top-0 bg-background z-10">
-          <DialogTitle className="text-lg sm:text-xl">
+        <DialogHeader className="px-5 pt-5 pb-4 border-b sticky top-0 bg-background z-10">
+          <DialogTitle className="text-lg">
             {type === "add" ? "New Service" : type === "edit" ? "Edit Service" : "Service Details"}
           </DialogTitle>
           <DialogDescription>
@@ -901,7 +959,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
                 : "View service information"}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto px-6 pb-6 -mt-1">
+        <div className="flex-1 overflow-y-auto px-5 pb-5 -mt-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <Tabs
             value={activeTab}
             onValueChange={setActiveTab}

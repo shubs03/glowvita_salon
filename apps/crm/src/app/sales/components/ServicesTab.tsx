@@ -1282,21 +1282,22 @@ export default function ServicesTab({
 
           {/* Cart Items */}
           <div className="flex-1 flex flex-col min-h-0 mb-6">
-            <div className="flex-1 overflow-auto">
+            <div className="flex-1 overflow-auto scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Item</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Qty</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead className="w-[35%]">Item</TableHead>
+                    <TableHead className="w-[15%]">Duration</TableHead>
+                    <TableHead className="w-[15%]">Price</TableHead>
+                    <TableHead className="w-[15%]">Qty</TableHead>
+                    <TableHead className="w-[12%]">Total</TableHead>
+                    <TableHead className="text-right w-[8%]">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {cart.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         <ShoppingCart className="mx-auto h-12 w-12 opacity-50 mb-2" />
                         <div>Your cart is empty</div>
                         <div className="text-sm">Add services from the catalog</div>
@@ -1307,15 +1308,26 @@ export default function ServicesTab({
                       <TableRow key={`${item._id}-${index}`}>
                         <TableCell>
                           <div className="cursor-pointer p-2 rounded hover:bg-muted/50" onClick={() => handleEditItemClick(item, index)}>
-                            <div className="font-medium text-green-600">{item.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {item.duration} min
-                            </div>
+                            <div className="line-clamp-2">{item.name}</div>
                             {item.addOns && item.addOns.length > 0 && (
                               <div className="mt-1 pl-2 border-l-2 border-primary/20">
                                 {item.addOns.map((addon, i) => (
-                                  <div key={i} className="text-xs text-muted-foreground">
+                                  <div key={i} className="text-xs text-muted-foreground line-clamp-1">
                                     + {addon.name}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="p-2">
+                            <div className="text-sm">{item.duration} min</div>
+                            {item.addOns && item.addOns.length > 0 && (
+                              <div className="mt-1">
+                                {item.addOns.map((addon, i) => (
+                                  <div key={i} className="text-xs text-muted-foreground">
+                                    + {addon.duration} min
                                   </div>
                                 ))}
                               </div>

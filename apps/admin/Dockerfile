@@ -1,5 +1,5 @@
 # Dockerfile for admin app
-FROM node:20-alpine AS base
+FROM node:20-bullseye AS base
 WORKDIR /app
 
 # Install turbo
@@ -28,10 +28,14 @@ COPY --from=pruner /app/out/full/ .
 COPY turbo.json .
 
 # Build the app
+
+ARG NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+ENV NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+
 RUN turbo run build --filter=admin
 
 # Runner
-FROM node:20-alpine AS runner
+FROM node:20-bullseye AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production

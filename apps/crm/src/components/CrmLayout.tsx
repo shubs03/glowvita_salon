@@ -78,8 +78,8 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
       
       // Redirect to salon profile if not already there and not on sales page
       // Sales page should remain accessible even with expired subscription
-      if (!pathname.startsWith('/salon-profile') && !pathname.startsWith('/sales')) {
-        router.push('/salon-profile');
+      if (!pathname.startsWith('/profile') && !pathname.startsWith('/sales')) {
+        router.push('/profile');
       }
     } else {
       setShowBanner(false);

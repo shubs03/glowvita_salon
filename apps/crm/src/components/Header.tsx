@@ -101,7 +101,7 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
   };
 
   return (
-    <header className="flex-shrink-0 sticky top-0 z-[60] flex h-16 items-center gap-4 border-b border-border bg-background/95 backdrop-blur-xl px-4 md:px-6 justify-between">
+    <header className="flex-shrink-0 sticky top-0 z-40 flex h-16 items-center gap-4 border-b border-border bg-background/95 backdrop-blur-xl px-4 md:px-6 justify-between">
       {/* Left Section */}
       <div className="flex items-center gap-4">
         <Button
@@ -247,7 +247,7 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
             <DropdownMenuSeparator />
             <DropdownMenuGroup className="p-2">
               <DropdownMenuItem asChild className="rounded-md hover:bg-muted/50 transition-all duration-300">
-                <Link href="/salon-profile" className="flex items-center gap-3 p-3">
+                <Link href="/profile" className="flex items-center gap-3 p-3">
                   <div className="p-2 rounded-lg bg-primary/10">
                     <User className="h-4 w-4 text-primary" />
                   </div>

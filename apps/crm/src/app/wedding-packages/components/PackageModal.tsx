@@ -246,7 +246,7 @@ export function PackageModal({
               </div>
 
               <div className="space-y-2">
-                <Label>Assign Staff (Optional)</Label>
+                <Label>Assign Staff</Label>
                 {staffLoading ? (
                   <div className="flex items-center justify-center p-4 border rounded-lg">
                     <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -348,7 +348,7 @@ export function PackageModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="discountedPrice">Discounted Price (Optional)</Label>
+                <Label htmlFor="discountedPrice">Discounted Price</Label>
                 <Input
                   id="discountedPrice"
                   type="number"

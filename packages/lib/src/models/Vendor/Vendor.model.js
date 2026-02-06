@@ -217,6 +217,11 @@ const vendorSchema = new mongoose.Schema({
       trim: true,
       default: null,
     },
+    upiId: {
+      type: String,
+      trim: true,
+      default: null,
+    },
   },
   documents: {
     aadharCard: {

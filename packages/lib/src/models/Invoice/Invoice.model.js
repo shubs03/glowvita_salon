@@ -110,24 +110,46 @@ invoiceSchema.index({ appointmentId: 1 }, { sparse: true });
 invoiceSchema.statics.generateInvoiceNumber = async function (vendorId) {
     const { default: CounterModel } = await import('../Counter.model.js');
 
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const dateStr = `${year}${month}${day}`;
+    // 1. Ensure vendorId is a clean string
+    const salonId = vendorId.toString();
+    const counterId = `invoice_v2_${salonId}`; // Using v2 key to force a fresh start from 01 for all salons
 
-    const vendorCode = vendorId.toString().slice(-5);
+    const year = new Date().getFullYear();
 
-    // Per-vendor and per-day sequence
-    const counterId = `invoice_${vendorId}_${dateStr}`;
+    // 2. Get vendor initials (e.g., "Glowvita Salon" -> "GS")
+    let vendorCode = salonId.slice(-5).toUpperCase();
+    try {
+        const VendorModel = mongoose.models.Vendor || (await import('../Vendor/Vendor.model.js')).default;
+        const vendor = await VendorModel.findById(vendorId).select('businessName');
+        if (vendor && vendor.businessName) {
+            const words = vendor.businessName.trim().split(/\s+/);
+            if (words.length > 1) {
+                // Multi-word: take initials (e.g., "Glowvita Salon" -> "GS")
+                vendorCode = words
+                    .map(word => word[0])
+                    .join('')
+                    .toUpperCase();
+            } else {
+                // Single word: take first 3 letters (e.g., "allinone" -> "ALL")
+                vendorCode = words[0].substring(0, 3).toUpperCase();
+            }
+        }
+    } catch (error) {
+        console.error("Error fetching vendor name for invoice initials:", error);
+    }
+
+    // 3. Increment the sequence for this SPECIFIC salon
     const counter = await CounterModel.findByIdAndUpdate(
         counterId,
         { $inc: { seq: 1 } },
         { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
+    // 4. Pad sequence (01, 02, ... 99, 100...)
     const sequence = String(counter.seq).padStart(2, '0');
-    return `INV-${vendorCode}-${dateStr}-${sequence}`;
+
+    // Final Format: [CODE]-[YEAR]-[SEQUENCE] (e.g., GS-2026-01)
+    return `${vendorCode}-${year}-${sequence}`;
 };
 
 // Static method to create/get invoice from appointment
