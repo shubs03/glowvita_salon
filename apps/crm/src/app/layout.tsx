@@ -157,7 +157,7 @@ export default function RootLayout({
     '/shipping',
     '/settlements',
     '/expenses',
-    '/salon-profile',
+    '/profile',
     '/offers-coupons',
     '/referrals',
     '/marketing',

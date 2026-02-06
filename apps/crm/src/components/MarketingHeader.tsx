@@ -59,7 +59,7 @@ const getRoleSpecificNavItems = (role: string, permissions: string[] = []) => {
       id: "profile",
       label: "Profile Settings",
       icon: Settings,
-      href: "/salon-profile",
+      href: "/profile",
     },
   ];
 
