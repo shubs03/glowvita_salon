@@ -364,7 +364,14 @@ export default function VendorReports() {
                         <CardDescription>{report.description}</CardDescription>
                       </CardHeader>
                       <CardContent className="flex-grow">
-                        <p className="text-sm text-muted-foreground">{report.details}</p>
+                        <ul className="space-y-2 text-sm text-muted-foreground">
+                          {report.points.map((point, i) => (
+                            <li key={i} className="flex items-start">
+                              <span className="mr-2 mt-1">•</span>
+                              <span>{point}</span>
+                            </li>
+                          ))}
+                        </ul>
                       </CardContent>
                       <CardFooter className="flex justify-end gap-2">
                         <Button variant="outline" size="sm" onClick={() => handleViewClick(report)}>
