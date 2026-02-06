@@ -193,7 +193,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
           
           {visibleNavItems.map((item, index) => {
             const isActive = (pathname.startsWith(item.href) && item.href !== '/') || (pathname === '/' && item.href === '/');
-            const isDisabled = isSubExpired && item.href !== '/salon-profile';
+            const isDisabled = isSubExpired && item.href !== '/profile';
             
             return (
               <Link

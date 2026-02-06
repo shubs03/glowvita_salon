@@ -178,16 +178,17 @@ const AddOnQuickCreateModal = ({ isOpen, onClose, serviceId, serviceName, allSer
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>Create Add-On</DialogTitle>
+      <DialogContent className="max-w-3xl w-[90vw] h-auto max-h-[90vh] p-0 overflow-hidden flex flex-col rounded-2xl shadow-2xl">
+        <DialogHeader className="px-5 py-4 border-b bg-gradient-to-r from-muted/50 to-muted/30">
+          <DialogTitle className="text-lg font-bold tracking-tight">Create Add-On</DialogTitle>
           <DialogDescription>
             Create a new add-on and select which services it applies to.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4 flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-5 py-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div className="space-y-4">
           {/* Addon Details */}
-          <div className="space-y-4 pb-4 border-b">
+          <div className="space-y-3 pb-3 border-b">
             <div className="space-y-2">
               <Label htmlFor="addon-name">Add-On Name *</Label>
               <Input
@@ -198,7 +199,7 @@ const AddOnQuickCreateModal = ({ isOpen, onClose, serviceId, serviceName, allSer
                 disabled={isSaving}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label htmlFor="addon-price">Price (₹) *</Label>
                 <Input
@@ -225,7 +226,7 @@ const AddOnQuickCreateModal = ({ isOpen, onClose, serviceId, serviceName, allSer
           </div>
 
           {/* Service Selection */}
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div className="flex items-center justify-between">
               <Label>Apply to Services *</Label>
               <Badge variant="secondary">
@@ -258,7 +259,7 @@ const AddOnQuickCreateModal = ({ isOpen, onClose, serviceId, serviceName, allSer
                   </Label>
                 </div>
               </div>
-              <div className="max-h-[200px] overflow-y-auto p-3 space-y-2">
+              <div className="max-h-[200px] overflow-y-auto p-2.5 space-y-1.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                 {filteredServices.length > 0 ? (
                   filteredServices.map((service: Service) => (
                     <div key={service._id} className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded-md">
@@ -287,19 +288,20 @@ const AddOnQuickCreateModal = ({ isOpen, onClose, serviceId, serviceName, allSer
             </div>
 
             {serviceId && formData.selectedServices.includes(serviceId) && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+              <div className="p-2.5 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
                 <p className="text-sm text-blue-900 dark:text-blue-100">
                   <span className="font-semibold">{serviceName}</span> is pre-selected
                 </p>
               </div>
             )}
           </div>
+          </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSaving}>
+        <DialogFooter className="px-5 py-3 border-t bg-muted/30">
+          <Button variant="outline" onClick={onClose} disabled={isSaving} className="px-6">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={isSaving || !formData.name.trim()}>
+          <Button onClick={handleSave} disabled={isSaving || !formData.name.trim()} className="px-6">
             {isSaving ? "Creating..." : "Create & Link Add-On"}
           </Button>
         </DialogFooter>
