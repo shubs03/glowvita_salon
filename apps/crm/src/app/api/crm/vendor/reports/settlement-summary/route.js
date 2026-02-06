@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
+import VendorSettlementPaymentModel from '@repo/lib/models/Vendor/VendorSettlementPayment.model';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 import { parseDate } from '../../../../../../utils/dateParser';
@@ -9,9 +10,9 @@ await _db();
 // Helper function to calculate date ranges based on filter period
 const getDateRanges = (period) => {
   const now = new Date();
-  
+
   let startDate, endDate;
-  
+
   if (period === 'day' || period === 'today') {
     // Today only
     startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -28,7 +29,7 @@ const getDateRanges = (period) => {
     startDate = new Date(now);
     startDate.setDate(now.getDate() - dayOfWeek);
     startDate.setHours(0, 0, 0, 0);
-    
+
     endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 6);
     endDate.setHours(23, 59, 59, 999);
@@ -45,7 +46,7 @@ const getDateRanges = (period) => {
     startDate = new Date(2020, 0, 1); // Default to beginning of 2020
     endDate = new Date(now.getFullYear() + 1, 0, 1, 23, 59, 59, 999);
   }
-  
+
   return { startDate, endDate };
 };
 
@@ -54,7 +55,7 @@ export const GET = authMiddlewareCrm(async (req) => {
   try {
     const vendorId = req.user.userId.toString();
     const { searchParams } = new URL(req.url);
-    
+
     // Get filter parameters
     const period = searchParams.get('period') || 'all';
     const startDateParam = searchParams.get('startDate');
@@ -66,10 +67,10 @@ export const GET = authMiddlewareCrm(async (req) => {
     const staffFilter = searchParams.get('staff');
     const statusFilter = searchParams.get('status');
     const bookingTypeFilter = searchParams.get('bookingType');
-    
+
     // Determine date range for appointments
     let startDate, endDate;
-    
+
     // Handle special periods (today, yesterday) with proper date range
     if (period === 'today' || period === 'yesterday') {
       const dateRange = getDateRanges(period);
@@ -79,7 +80,7 @@ export const GET = authMiddlewareCrm(async (req) => {
       // Handle ISO string dates from frontend for custom ranges
       startDate = parseDate(startDateParam);
       endDate = parseDate(endDateParam);
-      
+
       // Ensure we're working with proper date objects
       if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
         // Fallback to period-based dates if parsing fails
@@ -87,7 +88,7 @@ export const GET = authMiddlewareCrm(async (req) => {
         startDate = dateRange.startDate;
         endDate = dateRange.endDate;
       }
-      
+
       // For same-day custom ranges (like today/yesterday sent from frontend),
       // ensure we capture the full day
       if (startDate.toDateString() === endDate.toDateString()) {
@@ -99,16 +100,16 @@ export const GET = authMiddlewareCrm(async (req) => {
       startDate = dateRange.startDate;
       endDate = dateRange.endDate;
     }
-    
+
     // Determine settlement date range for filtering
     let settlementStartDate, settlementEndDate;
     if (settlementFromDateParam && settlementToDateParam) {
       settlementStartDate = parseDate(settlementFromDateParam);
       settlementEndDate = parseDate(settlementToDateParam);
-      
+
       // Ensure we're working with proper date objects
-      if (!settlementStartDate || !settlementEndDate || 
-          isNaN(settlementStartDate.getTime()) || isNaN(settlementEndDate.getTime())) {
+      if (!settlementStartDate || !settlementEndDate ||
+        isNaN(settlementStartDate.getTime()) || isNaN(settlementEndDate.getTime())) {
         settlementStartDate = startDate;
         settlementEndDate = endDate;
       }
@@ -116,29 +117,29 @@ export const GET = authMiddlewareCrm(async (req) => {
       settlementStartDate = startDate;
       settlementEndDate = endDate;
     }
-    
+
     // Base query for appointments
     const baseQuery = {
       vendorId: vendorId,
       date: { $gte: startDate, $lte: endDate }
     };
-    
+
     // Apply additional filters if provided
     if (clientFilter && clientFilter !== '') {
       baseQuery.clientName = clientFilter;
     }
-    
+
     if (statusFilter && statusFilter !== '') {
       baseQuery.status = statusFilter;
     }
-    
+
     // For settlement summary report, only include appointments with completed payment status
     baseQuery.paymentStatus = 'completed';
-    
+
     if (bookingTypeFilter && bookingTypeFilter !== '') {
       baseQuery.mode = bookingTypeFilter;
     }
-    
+
     // Fetch all appointments within date range
     let allAppointments = await AppointmentModel.find(baseQuery)
       .populate({
@@ -162,13 +163,13 @@ export const GET = authMiddlewareCrm(async (req) => {
         strictPopulate: false // Prevent errors if population fails
       })
       .sort({ date: 1 });
-    
+
     // Apply service filter if provided
     if (serviceFilter && serviceFilter !== '') {
       allAppointments = allAppointments.filter(appt => {
         if (appt.isMultiService && appt.serviceItems && appt.serviceItems.length > 0) {
           // For multi-service appointments, check if any service matches
-          return appt.serviceItems.some(item => 
+          return appt.serviceItems.some(item =>
             (item.service?.name || item.serviceName) === serviceFilter
           );
         } else {
@@ -177,13 +178,13 @@ export const GET = authMiddlewareCrm(async (req) => {
         }
       });
     }
-    
+
     // Apply staff filter if provided
     if (staffFilter && staffFilter !== '') {
       allAppointments = allAppointments.filter(appt => {
         if (appt.isMultiService && appt.serviceItems && appt.serviceItems.length > 0) {
           // For multi-service appointments, check if any staff matches
-          return appt.serviceItems.some(item => 
+          return appt.serviceItems.some(item =>
             (item.staff?.fullName || item.staffName) === staffFilter
           );
         } else {
@@ -192,7 +193,13 @@ export const GET = authMiddlewareCrm(async (req) => {
         }
       });
     }
-    
+
+    // Fetch Recorded Transfers (Payments)
+    const transfers = await VendorSettlementPaymentModel.find({
+      vendorId: vendorId,
+      paymentDate: { $gte: startDate, $lte: endDate }
+    }).sort({ paymentDate: 1 });
+
     // Process appointments to create settlement summary data
     // This is a simplified version - in a real implementation, you'd need to connect
     // to actual settlement data which may be stored in a separate collection
@@ -205,49 +212,57 @@ export const GET = authMiddlewareCrm(async (req) => {
     let totalNetServiceAmount = 0;
     let totalVendorEarning = 0;
     let totalSalonCommission = 0;
-    let finalPayableToVendor = 0;
-    
+
+    // Initialize totals for scenarios
+    let totalAdminOwesVendor = 0;
+    let totalVendorOwesAdmin = 0;
+    let totalVendorReceived = 0;
+    let totalPlatformReceived = 0;
+
     allAppointments.forEach(appt => {
       // Handle multi-service appointments
       if (appt.isMultiService && appt.serviceItems && appt.serviceItems.length > 0) {
         appt.serviceItems.forEach((item, index) => {
+          const receivedBy = appt.paymentMethod === 'Pay Online' ? 'Platform' : 'Vendor';
+          const adminOwesVendor = appt.paymentMethod === 'Pay Online' ? (item.amount || 0) : 0;
+          const vendorOwesAdmin = appt.paymentMethod === 'Pay at Salon' ? (appt.platformFee || 0) + (appt.serviceTax || 0) : 0;
+          const finalAmt = appt.finalAmount || appt.totalAmount || 0;
+
           const settlementAppointment = {
-            // Settlement identification fields
             settlementFromDate: settlementStartDate,
             settlementToDate: settlementEndDate,
             settlementDate: appt.updatedAt || appt.createdAt,
             settlementId: `SETTLEMENT_${appt._id}_${index}`,
-            
-            // Service identification fields
             appointmentId: appt._id.toString(),
             date: appt.date,
             serviceName: item.service?.name || item.serviceName || 'Unknown Service',
             staffId: item.staff?._id || appt.staffId || 'N/A',
             staffName: item.staff?.fullName || appt.staffName || 'N/A',
             clientName: appt.clientName || 'N/A',
-            
-            // Time info
             startTime: appt.startTime || 'N/A',
             endTime: appt.endTime || 'N/A',
             duration: appt.duration || 0,
-            
-            // Financial fields
+
             amount: item.amount || 0,
             discountAmount: appt.discountAmount || 0,
             totalAmount: appt.totalAmount || 0,
             platformFee: appt.platformFee || 0,
             serviceTax: appt.serviceTax || 0,
             taxRate: appt.taxRate || 0,
-            finalAmount: appt.finalAmount || appt.totalAmount || 0,
-            
-            // Calculated fields
+            finalAmount: finalAmt,
+
+            receivedBy,
+            adminOwesVendor,
+            vendorOwesAdmin,
+            vendorAmountHandled: appt.paymentMethod === 'Pay at Salon' ? finalAmt : 0,
+            platformAmountHandled: appt.paymentMethod === 'Pay Online' ? finalAmt : 0,
+
             grossServiceAmount: item.amount || 0,
             netServiceAmount: (item.amount || 0) - (appt.discountAmount || 0) + (appt.serviceTax || 0),
-            vendorCommissionRate: appt.vendorCommissionRate || 0.7, // Default 70%
+            vendorCommissionRate: appt.vendorCommissionRate || 0.7,
             vendorServiceEarning: (item.amount || 0) * (appt.vendorCommissionRate || 0.7),
             salonCommissionAmount: (item.amount || 0) * (1 - (appt.vendorCommissionRate || 0.7)),
-            
-            // Payment fields
+
             amountPaid: appt.amountPaid || 0,
             amountRemaining: (appt.totalAmount || 0) - (appt.amountPaid || 0),
             paymentMethod: appt.paymentMethod || 'N/A',
@@ -255,9 +270,9 @@ export const GET = authMiddlewareCrm(async (req) => {
             mode: appt.mode || 'N/A',
             paymentDate: appt.paymentDate || null,
           };
-          
+
           settlementAppointments.push(settlementAppointment);
-          
+
           // Update totals
           totalGrossServiceAmount += settlementAppointment.grossServiceAmount;
           totalDiscountAmount += settlementAppointment.discountAmount;
@@ -266,46 +281,54 @@ export const GET = authMiddlewareCrm(async (req) => {
           totalNetServiceAmount += settlementAppointment.netServiceAmount;
           totalVendorEarning += settlementAppointment.vendorServiceEarning;
           totalSalonCommission += settlementAppointment.salonCommissionAmount;
+
+          totalAdminOwesVendor += adminOwesVendor;
+          totalVendorOwesAdmin += vendorOwesAdmin;
+          if (appt.paymentMethod === 'Pay at Salon') totalVendorReceived += item.amount;
+          if (appt.paymentMethod === 'Pay Online') totalPlatformReceived += item.amount;
         });
       } else {
         // Handle single-service appointments
+        const receivedBy = appt.paymentMethod === 'Pay Online' ? 'Platform' : 'Vendor';
+        const adminOwesVendor = appt.paymentMethod === 'Pay Online' ? (appt.amount || 0) : 0;
+        const vendorOwesAdmin = appt.paymentMethod === 'Pay at Salon' ? (appt.platformFee || 0) + (appt.serviceTax || 0) : 0;
+        const finalAmt = appt.finalAmount || appt.totalAmount || 0;
+
         const settlementAppointment = {
-          // Settlement identification fields
           settlementFromDate: settlementStartDate,
           settlementToDate: settlementEndDate,
           settlementDate: appt.updatedAt || appt.createdAt,
           settlementId: `SETTLEMENT_${appt._id}`,
-          
-          // Service identification fields
           appointmentId: appt._id.toString(),
           date: appt.date,
           serviceName: appt.service?.name || appt.serviceName || 'Unknown Service',
           staffId: appt.staffId || 'N/A',
           staffName: appt.staff?.fullName || appt.staffName || 'N/A',
           clientName: appt.clientName || 'N/A',
-          
-          // Time info
           startTime: appt.startTime || 'N/A',
           endTime: appt.endTime || 'N/A',
           duration: appt.duration || 0,
-          
-          // Financial fields
+
           amount: appt.amount || 0,
           discountAmount: appt.discountAmount || 0,
           totalAmount: appt.totalAmount || 0,
           platformFee: appt.platformFee || 0,
           serviceTax: appt.serviceTax || 0,
           taxRate: appt.taxRate || 0,
-          finalAmount: appt.finalAmount || appt.totalAmount || 0,
-          
-          // Calculated fields
+          finalAmount: finalAmt,
+
+          receivedBy,
+          adminOwesVendor,
+          vendorOwesAdmin,
+          vendorAmountHandled: appt.paymentMethod === 'Pay at Salon' ? finalAmt : 0,
+          platformAmountHandled: appt.paymentMethod === 'Pay Online' ? finalAmt : 0,
+
           grossServiceAmount: appt.amount || 0,
           netServiceAmount: (appt.amount || 0) - (appt.discountAmount || 0) + (appt.serviceTax || 0),
-          vendorCommissionRate: appt.vendorCommissionRate || 0.7, // Default 70%
+          vendorCommissionRate: appt.vendorCommissionRate || 0.7,
           vendorServiceEarning: (appt.amount || 0) * (appt.vendorCommissionRate || 0.7),
           salonCommissionAmount: (appt.amount || 0) * (1 - (appt.vendorCommissionRate || 0.7)),
-          
-          // Payment fields
+
           amountPaid: appt.amountPaid || 0,
           amountRemaining: (appt.totalAmount || 0) - (appt.amountPaid || 0),
           paymentMethod: appt.paymentMethod || 'N/A',
@@ -313,9 +336,9 @@ export const GET = authMiddlewareCrm(async (req) => {
           mode: appt.mode || 'N/A',
           paymentDate: appt.paymentDate || null,
         };
-        
+
         settlementAppointments.push(settlementAppointment);
-        
+
         // Update totals
         totalGrossServiceAmount += settlementAppointment.grossServiceAmount;
         totalDiscountAmount += settlementAppointment.discountAmount;
@@ -324,17 +347,33 @@ export const GET = authMiddlewareCrm(async (req) => {
         totalNetServiceAmount += settlementAppointment.netServiceAmount;
         totalVendorEarning += settlementAppointment.vendorServiceEarning;
         totalSalonCommission += settlementAppointment.salonCommissionAmount;
+
+        totalAdminOwesVendor += adminOwesVendor;
+        totalVendorOwesAdmin += vendorOwesAdmin;
+        if (appt.paymentMethod === 'Pay at Salon') totalVendorReceived += appt.amount;
+        if (appt.paymentMethod === 'Pay Online') totalPlatformReceived += appt.amount;
       }
-      
+
       totalAppointments++;
     });
-    
-    // Calculate final payable to vendor (simplified calculation)
-    finalPayableToVendor = totalVendorEarning - totalPlatformFee;
-    
+
+    // Process Transfers
+    let totalTransferredToVendor = 0;
+    let totalTransferredToAdmin = 0;
+
+    transfers.forEach(t => {
+      if (t.type === "Payment to Vendor") totalTransferredToVendor += t.amount;
+      if (t.type === "Payment to Admin") totalTransferredToAdmin += t.amount;
+    });
+
+    // Calculate final net settlement
+    const netSettlement = totalAdminOwesVendor - totalVendorOwesAdmin;
+    const finalBalance = netSettlement - (totalTransferredToVendor - totalTransferredToAdmin);
+
     const responseData = {
       settlementSummary: {
         appointments: settlementAppointments,
+        transfers: transfers,
         totals: {
           totalAppointments,
           totalGrossServiceAmount,
@@ -344,11 +383,18 @@ export const GET = authMiddlewareCrm(async (req) => {
           totalNetServiceAmount,
           totalVendorEarning,
           totalSalonCommission,
-          finalPayableToVendor
+          totalAdminOwesVendor,
+          totalVendorOwesAdmin,
+          totalVendorReceived,
+          totalPlatformReceived,
+          totalTransferredToVendor,
+          totalTransferredToAdmin,
+          netSettlement,
+          finalBalance
         }
       }
     };
-    
+
     return NextResponse.json({
       success: true,
       data: responseData,
@@ -365,7 +411,7 @@ export const GET = authMiddlewareCrm(async (req) => {
         bookingType: bookingTypeFilter || null
       }
     });
-    
+
   } catch (error) {
     console.error("Error fetching settlement summary report:", error);
     return NextResponse.json(

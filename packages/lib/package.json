@@ -62,6 +62,7 @@
     "./models/Vendor/ProductQuestion.model": "./src/models/Vendor/ProductQuestion.model.js",
     "./models/Review/Review.model": "./src/models/Review/Review.model.js",
     "./models/Vendor/DoctorConsultation.model": "./src/models/Vendor/DoctorConsultation.model.js",
+    "./models/Vendor/VendorSettlementPayment.model": "./src/models/Vendor/VendorSettlementPayment.model.js",
     "./utils": "./src/utils/index.js",
     "./utils/paymentCalculator": "./src/utils/paymentCalculator.js",
     "./modules/scheduling/EnhancedTravelUtils": "./src/modules/scheduling/EnhancedTravelUtils.js",

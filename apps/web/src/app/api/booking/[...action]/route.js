@@ -448,7 +448,7 @@ async function handleServiceDiscovery(searchParams) {
       weddingService: service.weddingService || { available: false, charges: null },
       onlineBooking: service.onlineBooking !== false, // Default to true if not explicitly false
       addOns: service.addOns || [],
-      isAddon: (categoryName && typeof categoryName === 'string') ? categoryName.toLowerCase().includes('addon') : false
+      isAddon: false // Will be determined after category resolution
     };
   });
 
@@ -476,6 +476,12 @@ async function handleServiceDiscovery(searchParams) {
       // Fallback if category name couldn't be resolved
       service.category = 'Other';
     }
+
+    // Set isAddon to true if category name contains 'addon' OR add-ons are present
+    service.isAddon =
+      (service.category && typeof service.category === 'string' && service.category.toLowerCase().includes('addon')) ||
+      (service.addOns && service.addOns.length > 0);
+
     return service;
   });
 
