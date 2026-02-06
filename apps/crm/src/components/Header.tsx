@@ -247,7 +247,7 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
             <DropdownMenuSeparator />
             <DropdownMenuGroup className="p-2">
               <DropdownMenuItem asChild className="rounded-md hover:bg-muted/50 transition-all duration-300">
-                <Link href="/salon-profile" className="flex items-center gap-3 p-3">
+                <Link href="/profile" className="flex items-center gap-3 p-3">
                   <div className="p-2 rounded-lg bg-primary/10">
                     <User className="h-4 w-4 text-primary" />
                   </div>

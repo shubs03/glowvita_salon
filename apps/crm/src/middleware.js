@@ -43,7 +43,7 @@ async function verifyJwt(token) {
   }
 }
 
-const alwaysAllowedPaths = ['/dashboard', '/salon-profile', '/not-found'];
+const alwaysAllowedPaths = ['/dashboard', '/profile', '/not-found'];
 
 const getNavItemsForRole = (role) => {
     switch (role) {

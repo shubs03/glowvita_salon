@@ -1084,101 +1084,12 @@ export default function SalonDetailsPage() {
                 </div>
               </section>
 
-              {/* <section id="offers">
-                <h2 className="text-4xl font-bold mb-2">Offers Available</h2>
-                <p className="text-muted-foreground mb-6">
-                  Take advantage of our special offers and packages.
-                </p>
-                <div className="grid md:grid-cols-3 gap-6">
-                  {isLoadingOffers ? (
-                    // Loading state
-                    Array.from({ length: 3 }).map((_, index) => (
-                      <Card key={index} className="p-6 text-center space-y-4">
-                        <Skeleton className="w-16 h-16 rounded-full mx-auto" />
-                        <Skeleton className="h-5 w-32 mx-auto" />
-                        <Skeleton className="h-16 w-full" />
-                        <Skeleton className="h-8 w-24 mx-auto" />
-                      </Card>
-                    ))
-                  ) : offersData?.data?.length > 0 &&
-                    offersData.data.filter(
-                      (offer: any) => offer.status === "Active"
-                    ).length > 0 ? (
-                    offersData.data
-                      .filter((offer: any) => offer.status === "Active") // Only show active offers
-                      .map((offer: any, index: number) => {
-                        const Icon = Gift; // Using Gift as default icon
-                        return (
-                          <Card
-                            key={offer._id || index}
-                            className="group flex flex-col p-6 text-center border-border/50 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 transform hover:-translate-y-2 bg-gradient-to-br from-background to-primary/5"
-                          >
-                            <div className="mx-auto bg-gradient-to-br from-primary/10 to-primary/20 text-primary p-4 rounded-full w-fit mb-4 group-hover:scale-110 transition-transform duration-300">
-                              <Icon className="h-8 w-8" />
-                            </div>
-                            <h3 className="text-lg font-bold mb-2 group-hover:text-primary transition-colors duration-300">
-                              {offer.code}
-                            </h3>
-                            <p className="text-sm text-muted-foreground flex-grow mb-4">
-                              {offer.type === "percentage"
-                                ? `${offer.value}% discount on selected services`
-                                : `$${offer.value} off on selected services`}
-                            </p>
-                            <div className="text-sm space-y-1 mb-4">
-                              {offer.value && (
-                                <p className="text-primary font-semibold">
-                                  {offer.type === "percentage"
-                                    ? `${offer.value}% OFF`
-                                    : `$${offer.value} OFF`}
-                                </p>
-                              )}
-                              {offer.expires && (
-                                <p className="text-xs text-muted-foreground">
-                                  Valid until:{" "}
-                                  {new Date(offer.expires).toLocaleDateString()}
-                                </p>
-                              )}
-                            </div>
-                            <Button
-                              variant="link"
-                              className="text-primary group-hover:underline"
-                            >
-                              Claim Offer{" "}
-                              <ArrowRight className="h-4 w-4 ml-1 transition-transform group-hover:translate-x-1" />
-                            </Button>
-                          </Card>
-                        );
-                      })
-                  ) : (
-                    // Show placeholder when no offers available
-                    <div className="col-span-3 text-center py-12">
-                      <div className="bg-secondary/20 rounded-lg p-8">
-                        <Gift className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <p className="text-muted-foreground">
-                          No special offers available at the moment
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Check back later for exciting deals!
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </section> */}
-
               <SpecialOffered
                 vendorId={id}
                 isSubscriptionExpired={isSubscriptionExpired}
               />
 
               <ServicesOffered
-                vendorId={id}
-                onBookNow={handleBookNow}
-                isSubscriptionExpired={isSubscriptionExpired}
-              />
-
-              {/* Services Section */}
-              <ServicesSection
                 vendorId={id}
                 onBookNow={handleBookNow}
                 isSubscriptionExpired={isSubscriptionExpired}
