@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Download, Eye, Search } from 'lucide-react';
 import { Input } from '@repo/ui/input';
 import { Skeleton } from "@repo/ui/skeleton";
@@ -32,18 +31,8 @@ export default function VendorReports() {
   // Use the custom hook for managing all filter states
   const { filters, updateFilter } = useVendorFilters();
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isAllAppointmentsModalOpen, setIsAllAppointmentsModalOpen] = useState(false);
-  const [isSummaryByServiceModalOpen, setIsSummaryByServiceModalOpen] = useState(false);
-  const [isCompletedAppointmentsModalOpen, setIsCompletedAppointmentsModalOpen] = useState(false);
-  const [isCancelledAppointmentsModalOpen, setIsCancelledAppointmentsModalOpen] = useState(false);
-  const [isSettlementSummaryModalOpen, setIsSettlementSummaryModalOpen] = useState(false);
-  const [isSalesByServiceModalOpen, setIsSalesByServiceModalOpen] = useState(false);
-  const [isSalesByCustomerModalOpen, setIsSalesByCustomerModalOpen] = useState(false);
-  const [isProductSummaryModalOpen, setIsProductSummaryModalOpen] = useState(false);
-  const [isSalesByProductModalOpen, setIsSalesByProductModalOpen] = useState(false);
-  
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  // Single modal state - tracks which report is currently open
+  const [openReportTitle, setOpenReportTitle] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
@@ -58,6 +47,197 @@ export default function VendorReports() {
   const [cancelledAppointmentsRefresh, setCancelledAppointmentsRefresh] = useState(0);
   const [settlementSummaryRefresh, setSettlementSummaryRefresh] = useState(0);
 
+  // Report registry - maps report titles to their configuration
+  const reportRegistry: Record<string, {
+    title: string;
+    description: string;
+    component: React.ReactNode;
+  }> = {
+    "All Appointments Report": {
+      title: "All Appointments",
+      description: "Complete record of all appointments with detailed information.",
+      component: (
+        <AllAppointmentsTable
+          startDate={filters.allAppointments.startDate || undefined}
+          endDate={filters.allAppointments.endDate || undefined}
+          client={filters.allAppointments.client || undefined}
+          service={filters.allAppointments.service || undefined}
+          staff={filters.allAppointments.staff || undefined}
+          status={filters.allAppointments.status || undefined}
+          bookingType={filters.allAppointments.bookingType || undefined}
+          triggerRefresh={allAppointmentsRefresh}
+          onFiltersChange={(newFilters: any) => updateFilter('allAppointments', newFilters)}
+        />
+      )
+    },
+    "Appointment Summary by Service": {
+      title: "Appointment Summary by Service",
+      description: "Aggregated view showing appointment counts, revenue, and popularity by service type.",
+      component: (
+        <SummaryByServiceTable
+          startDate={filters.summaryByService.startDate || undefined}
+          endDate={filters.summaryByService.endDate || undefined}
+          client={filters.summaryByService.client || undefined}
+          service={filters.summaryByService.service || undefined}
+          staff={filters.summaryByService.staff || undefined}
+          status={filters.summaryByService.status || undefined}
+          bookingType={filters.summaryByService.bookingType || undefined}
+          triggerRefresh={summaryByServiceRefresh}
+          onFiltersChange={(newFilters: any) => updateFilter('summaryByService', newFilters)}
+        />
+      )
+    },
+    "Completed Appointments Report": {
+      title: "Completed Appointments Report",
+      description: "Detailed listing of all successfully completed appointments.",
+      component: (
+        <CompletedAppointmentsTable
+          startDate={filters.completedAppointments.startDate || undefined}
+          endDate={filters.completedAppointments.endDate || undefined}
+          client={filters.completedAppointments.client || undefined}
+          service={filters.completedAppointments.service || undefined}
+          staff={filters.completedAppointments.staff || undefined}
+          bookingType={filters.completedAppointments.bookingType || undefined}
+          triggerRefresh={completedAppointmentsRefresh}
+          onFiltersChange={(newFilters: any) => updateFilter('completedAppointments', newFilters)}
+        />
+      )
+    },
+    "Cancelled Appointments Report": {
+      title: "Cancelled Appointments Report",
+      description: "Comprehensive analysis of cancelled appointments with reasons and impact.",
+      component: (
+        <CancelledAppointmentsTable
+          startDate={filters.cancelledAppointments.startDate || undefined}
+          endDate={filters.cancelledAppointments.endDate || undefined}
+          client={filters.cancelledAppointments.client || undefined}
+          service={filters.cancelledAppointments.service || undefined}
+          staff={filters.cancelledAppointments.staff || undefined}
+          status={filters.cancelledAppointments.status || undefined}
+          bookingType={filters.cancelledAppointments.bookingType || undefined}
+          triggerRefresh={cancelledAppointmentsRefresh}
+          onFiltersChange={(newFilters: any) => updateFilter('cancelledAppointments', newFilters)}
+        />
+      )
+    },
+    "All Appointments by Staff": {
+      title: "All Appointments by Staff",
+      description: "Detailed report showing appointment statistics aggregated by staff member.",
+      component: (
+        <AllAppointmentsByStaffTable
+          startDate={filters.allAppointments.startDate || undefined}
+          endDate={filters.allAppointments.endDate || undefined}
+          client={filters.allAppointments.client || undefined}
+          service={filters.allAppointments.service || undefined}
+          staff={filters.allAppointments.staff || undefined}
+          status={filters.allAppointments.status || undefined}
+          bookingType={filters.allAppointments.bookingType || undefined}
+          triggerRefresh={allAppointmentsRefresh}
+          onFiltersChange={(newFilters: any) => updateFilter('allAppointments', newFilters)}
+        />
+      )
+    },
+    "Settlement Summary Report": {
+      title: "Settlement Summary Report",
+      description: "Detailed report of all settlements, payouts, and financial transactions.",
+      component: (
+        <SettlementSummaryTable
+          startDate={filters.settlementSummary.startDate as any}
+          endDate={filters.settlementSummary.endDate as any}
+          triggerRefresh={settlementSummaryRefresh}
+        />
+      )
+    },
+    "Sales by Service": {
+      title: "Sales by Service",
+      description: "Detailed report showing revenue generated by each service type (only completed appointments).",
+      component: (
+        <SalesByServiceTable
+          startDate={filters.salesByService.startDate || undefined}
+          endDate={filters.salesByService.endDate || undefined}
+          client={filters.salesByService.client || undefined}
+          service={filters.salesByService.service || undefined}
+          staff={filters.salesByService.staff || undefined}
+          bookingType={filters.salesByService.bookingType || undefined}
+          triggerRefresh={salesByServiceRefresh}
+          onFiltersChange={(newFilters: any) => updateFilter('salesByService', newFilters)}
+        />
+      )
+    },
+    "Sales by Customer": {
+      title: "Sales by Customer",
+      description: "Analysis of revenue generated by individual customers.",
+      component: (
+        <SalesByCustomerTable
+          startDate={filters.salesByCustomer.startDate || undefined}
+          endDate={filters.salesByCustomer.endDate || undefined}
+          client={filters.salesByCustomer.client || undefined}
+          service={filters.salesByCustomer.service || undefined}
+          staff={filters.salesByCustomer.staff || undefined}
+          bookingType={filters.salesByCustomer.bookingType || undefined}
+          triggerRefresh={salesByCustomerRefresh}
+          onFiltersChange={(newFilters: any) => updateFilter('salesByCustomer', newFilters)}
+        />
+      )
+    },
+    "Sales by Product": {
+      title: "Sales by Product Report",
+      description: "Detailed report showing revenue generated by each product type (only completed orders).",
+      component: (
+        <SalesByProductTable
+          product={filters.salesByProduct.product || undefined}
+          category={filters.salesByProduct.category || undefined}
+          brand={filters.salesByProduct.brand || undefined}
+          status={filters.salesByProduct.status || undefined}
+          isActive={filters.salesByProduct.isActive || undefined}
+          triggerRefresh={salesByProductRefresh}
+          onFiltersChange={(newFilters: any) => updateFilter('salesByProduct', newFilters)}
+        />
+      )
+    },
+    "All Products Report": {
+      title: "All Products Report",
+      description: "Complete record of all products with detailed information.",
+      component: (
+        <ProductSummaryTable
+          product={filters.productSummary.product || undefined}
+          category={filters.productSummary.category || undefined}
+          brand={filters.productSummary.brand || undefined}
+          status={filters.productSummary.status || undefined}
+          isActive={filters.productSummary.isActive || undefined}
+          triggerRefresh={productSummaryRefresh}
+          onFiltersChange={(newFilters: any) => updateFilter('productSummary', newFilters)}
+        />
+      )
+    },
+    "Inventory / Stock Report": {
+      title: "Inventory / Stock Report",
+      description: "Detailed analysis of product inventory and stock levels.",
+      component: (
+        <InventoryStockTable
+          product={filters.productSummary.product || undefined}
+          category={filters.productSummary.category || undefined}
+          brand={filters.productSummary.brand || undefined}
+          triggerRefresh={productSummaryRefresh}
+          onFiltersChange={(newFilters: any) => updateFilter('productSummary', newFilters)}
+        />
+      )
+    },
+    "Category-wise Product Report": {
+      title: "Category-wise Product Report",
+      description: "Aggregated view showing product counts and sales by category.",
+      component: (
+        <CategoryWiseProductTable
+          product={filters.productSummary.product || undefined}
+          category={filters.productSummary.category || undefined}
+          brand={filters.productSummary.brand || undefined}
+          triggerRefresh={productSummaryRefresh}
+          onFiltersChange={(newFilters: any) => updateFilter('productSummary', newFilters)}
+        />
+      )
+    }
+  };
+
   // Simulate loading for 1.5 seconds
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -67,32 +247,7 @@ export default function VendorReports() {
   }, []);
 
   const handleViewClick = (report: Report) => {
-    setSelectedReport(report);
-
-    // Handle appointment reports specially
-    if (report.title === "All Appointments Report") {
-      setIsAllAppointmentsModalOpen(true);
-    } else if (report.title === "Appointment Summary by Service") {
-      setIsSummaryByServiceModalOpen(true);
-    } else if (report.title === "Completed Appointments Report") {
-      setIsCompletedAppointmentsModalOpen(true);
-    } else if (report.title === "Cancelled Appointments Report") {
-      setIsCancelledAppointmentsModalOpen(true);
-    } else if (report.title === "Sales by Service") {
-      setIsSalesByServiceModalOpen(true);
-    } else if (report.title === "Sales by Customer") {
-      setIsSalesByCustomerModalOpen(true);
-    } else if (report.title === "Sales by Product") {
-      setIsSalesByProductModalOpen(true);
-    } else if (report.title === "All Products Report" || report.title === "Inventory / Stock Report" || report.title === "Category-wise Product Report") {
-      setIsProductSummaryModalOpen(true);
-    } else if (report.title === "All Appointments by Staff") {
-      setIsModalOpen(true);
-    } else if (report.title === "Settlement Summary Report") {
-      setIsSettlementSummaryModalOpen(true);
-    } else {
-      setIsModalOpen(true);
-    }
+    setOpenReportTitle(report.title);
   };
 
   const filteredReportsData = useMemo(() => {
@@ -232,257 +387,17 @@ export default function VendorReports() {
           )}
       </div>
 
-      {/* Generic Report Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{selectedReport?.title}</DialogTitle>
-            <DialogDescription>
-              A preview of the "{selectedReport?.title}".
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* All Appointments Report Modal */}
-      <ReportModal
-        isOpen={isAllAppointmentsModalOpen}
-        onClose={() => setIsAllAppointmentsModalOpen(false)}
-        title="All Appointments"
-        description="Complete record of all appointments with detailed information."
-      >
-        <AllAppointmentsTable
-          startDate={filters.allAppointments.startDate || undefined}
-          endDate={filters.allAppointments.endDate || undefined}
-          client={filters.allAppointments.client || undefined}
-          service={filters.allAppointments.service || undefined}
-          staff={filters.allAppointments.staff || undefined}
-          status={filters.allAppointments.status || undefined}
-          bookingType={filters.allAppointments.bookingType || undefined}
-          triggerRefresh={allAppointmentsRefresh}
-          onFiltersChange={(newFilters: any) => {
-            updateFilter('allAppointments', newFilters);
-          }}
-        />
-      </ReportModal>
-
-      {/* Summary by Service Report Modal */}
-      <ReportModal
-        isOpen={isSummaryByServiceModalOpen}
-        onClose={() => setIsSummaryByServiceModalOpen(false)}
-        title="Appointment Summary by Service"
-        description="Aggregated view showing appointment counts, revenue, and popularity by service type."
-      >
-        <SummaryByServiceTable
-          startDate={filters.summaryByService.startDate || undefined}
-          endDate={filters.summaryByService.endDate || undefined}
-          client={filters.summaryByService.client || undefined}
-          service={filters.summaryByService.service || undefined}
-          staff={filters.summaryByService.staff || undefined}
-          status={filters.summaryByService.status || undefined}
-          bookingType={filters.summaryByService.bookingType || undefined}
-          triggerRefresh={summaryByServiceRefresh}
-          onFiltersChange={(newFilters: any) => {
-            updateFilter('summaryByService', newFilters);
-          }}
-        />
-      </ReportModal>
-
-      {/* Completed Appointments Report Modal */}
-      <ReportModal
-        isOpen={isCompletedAppointmentsModalOpen}
-        onClose={() => setIsCompletedAppointmentsModalOpen(false)}
-        title="Completed Appointments Report"
-        description="Detailed listing of all successfully completed appointments."
-      >
-        <CompletedAppointmentsTable
-          startDate={filters.completedAppointments.startDate || undefined}
-          endDate={filters.completedAppointments.endDate || undefined}
-          client={filters.completedAppointments.client || undefined}
-          service={filters.completedAppointments.service || undefined}
-          staff={filters.completedAppointments.staff || undefined}
-          bookingType={filters.completedAppointments.bookingType || undefined}
-          triggerRefresh={completedAppointmentsRefresh}
-          onFiltersChange={(newFilters: any) => {
-            updateFilter('completedAppointments', newFilters);
-          }}
-        />
-      </ReportModal>
-
-      {/* Cancelled Appointments Report Modal */}
-      <ReportModal
-        isOpen={isCancelledAppointmentsModalOpen}
-        onClose={() => setIsCancelledAppointmentsModalOpen(false)}
-        title="Cancelled Appointments Report"
-        description="Comprehensive analysis of cancelled appointments with reasons and impact."
-      >
-        <CancelledAppointmentsTable
-          startDate={filters.cancelledAppointments.startDate || undefined}
-          endDate={filters.cancelledAppointments.endDate || undefined}
-          client={filters.cancelledAppointments.client || undefined}
-          service={filters.cancelledAppointments.service || undefined}
-          staff={filters.cancelledAppointments.staff || undefined}
-          status={filters.cancelledAppointments.status || undefined}
-          bookingType={filters.cancelledAppointments.bookingType || undefined}
-          triggerRefresh={cancelledAppointmentsRefresh}
-          onFiltersChange={(newFilters: any) => {
-            updateFilter('cancelledAppointments', newFilters);
-          }}
-        />
-      </ReportModal>
-
-      {/* Sales by Service Report Modal */}
-      <ReportModal
-        isOpen={isSalesByServiceModalOpen}
-        onClose={() => setIsSalesByServiceModalOpen(false)}
-        title="Sales by Service"
-        description="Detailed report showing revenue generated by each service type (only completed appointments)."
-      >
-        <SalesByServiceTable
-          startDate={filters.salesByService.startDate || undefined}
-          endDate={filters.salesByService.endDate || undefined}
-          client={filters.salesByService.client || undefined}
-          service={filters.salesByService.service || undefined}
-          staff={filters.salesByService.staff || undefined}
-          bookingType={filters.salesByService.bookingType || undefined}
-          triggerRefresh={salesByServiceRefresh}
-          onFiltersChange={(newFilters: any) => {
-            updateFilter('salesByService', newFilters);
-          }}
-        />
-      </ReportModal>
-
-      {/* Sales by Customer Report Modal */}
-      <ReportModal
-        isOpen={isSalesByCustomerModalOpen}
-        onClose={() => setIsSalesByCustomerModalOpen(false)}
-        title="Sales by Customer"
-        description="Analysis of revenue generated by individual customers."
-      >
-        <SalesByCustomerTable
-          startDate={filters.salesByCustomer.startDate || undefined}
-          endDate={filters.salesByCustomer.endDate || undefined}
-          client={filters.salesByCustomer.client || undefined}
-          service={filters.salesByCustomer.service || undefined}
-          staff={filters.salesByCustomer.staff || undefined}
-          bookingType={filters.salesByCustomer.bookingType || undefined}
-          triggerRefresh={salesByCustomerRefresh}
-          onFiltersChange={(newFilters: any) => {
-            updateFilter('salesByCustomer', newFilters);
-          }}
-        />
-      </ReportModal>
-
-      {/* Product Summary Report Modal */}
-      <ReportModal
-        isOpen={isProductSummaryModalOpen}
-        onClose={() => setIsProductSummaryModalOpen(false)}
-        title={selectedReport?.title || "Product Summary"}
-        description={
-          selectedReport?.title === "All Products Report" 
-            ? "Complete record of all products with detailed information."
-            : selectedReport?.title === "Inventory / Stock Report" 
-            ? "Detailed analysis of product inventory and stock levels."
-            : selectedReport?.title === "Category-wise Product Report"
-            ? "Aggregated view showing product counts and sales by category."
-            : "Product report details"
-        }
-      >
-        {selectedReport?.title === "Inventory / Stock Report" ? (
-          <InventoryStockTable
-            product={filters.productSummary.product || undefined}
-            category={filters.productSummary.category || undefined}
-            brand={filters.productSummary.brand || undefined}
-            triggerRefresh={productSummaryRefresh}
-            onFiltersChange={(newFilters: any) => {
-              updateFilter('productSummary', newFilters);
-            }}
-          />
-        ) : selectedReport?.title === "Category-wise Product Report" ? (
-          <CategoryWiseProductTable
-            product={filters.productSummary.product || undefined}
-            category={filters.productSummary.category || undefined}
-            brand={filters.productSummary.brand || undefined}
-            triggerRefresh={productSummaryRefresh}
-            onFiltersChange={(newFilters: any) => {
-              updateFilter('productSummary', newFilters);
-            }}
-          />
-        ) : (
-          <ProductSummaryTable
-            product={filters.productSummary.product || undefined}
-            category={filters.productSummary.category || undefined}
-            brand={filters.productSummary.brand || undefined}
-            status={filters.productSummary.status || undefined}
-            isActive={filters.productSummary.isActive || undefined}
-            triggerRefresh={productSummaryRefresh}
-            onFiltersChange={(newFilters: any) => {
-              updateFilter('productSummary', newFilters);
-            }}
-          />
-        )}
-      </ReportModal>
-
-      {/* Sales by Product Report Modal */}
-      <ReportModal
-        isOpen={isSalesByProductModalOpen}
-        onClose={() => setIsSalesByProductModalOpen(false)}
-        title="Sales by Product Report"
-        description="Detailed report showing revenue generated by each product type (only completed orders)."
-      >
-        <SalesByProductTable
-          product={filters.salesByProduct.product || undefined}
-          category={filters.salesByProduct.category || undefined}
-          brand={filters.salesByProduct.brand || undefined}
-          status={filters.salesByProduct.status || undefined}
-          isActive={filters.salesByProduct.isActive || undefined}
-          triggerRefresh={salesByProductRefresh}
-          onFiltersChange={(newFilters: any) => {
-            updateFilter('salesByProduct', newFilters);
-          }}
-        />
-      </ReportModal>
-
-      {/* All Appointments by Staff Report Modal */}
-      <ReportModal
-        isOpen={isModalOpen && selectedReport?.title === "All Appointments by Staff"}
-        onClose={() => setIsModalOpen(false)}
-        title="All Appointments by Staff"
-        description="Detailed report showing appointment statistics aggregated by staff member."
-      >
-        <AllAppointmentsByStaffTable
-          startDate={filters.allAppointments.startDate || undefined}
-          endDate={filters.allAppointments.endDate || undefined}
-          client={filters.allAppointments.client || undefined}
-          service={filters.allAppointments.service || undefined}
-          staff={filters.allAppointments.staff || undefined}
-          status={filters.allAppointments.status || undefined}
-          bookingType={filters.allAppointments.bookingType || undefined}
-          triggerRefresh={allAppointmentsRefresh}
-          onFiltersChange={(newFilters: any) => {
-            updateFilter('allAppointments', newFilters);
-          }}
-        />
-      </ReportModal>
-
-      {/* Settlement Summary Report Modal */}
-      <ReportModal
-        isOpen={isSettlementSummaryModalOpen}
-        onClose={() => setIsSettlementSummaryModalOpen(false)}
-        title="Settlement Summary Report"
-        description="Detailed report of all settlements, payouts, and financial transactions."
-      >
-        <SettlementSummaryTable
-          startDate={filters.settlementSummary.startDate as any}
-          endDate={filters.settlementSummary.endDate as any}
-          triggerRefresh={settlementSummaryRefresh}
-        />
-      </ReportModal>
+      {/* Unified Report Modal - Single modal for all reports */}
+      {openReportTitle && reportRegistry[openReportTitle] && (
+        <ReportModal
+          isOpen={true}
+          onClose={() => setOpenReportTitle(null)}
+          title={reportRegistry[openReportTitle].title}
+          description={reportRegistry[openReportTitle].description}
+        >
+          {reportRegistry[openReportTitle].component}
+        </ReportModal>
+      )}
     </div>
   );
 }

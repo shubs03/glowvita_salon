@@ -377,15 +377,15 @@ export const CompletedAppointmentsTable = ({ startDate, endDate, client, service
       />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="border rounded-lg p-4 bg-blue-50">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="border rounded-lg p-4 bg-primary/10">
           <p className="text-sm text-gray-600">Total Completed</p>
           <p className="text-2xl font-bold">{
             // Count unique appointments, treating multi-service appointments as one
             Array.from(new Set<string>(paginatedAppointments.map((appt: any) => appt._id || appt.id))).length
           }</p>
         </div>
-        <div className="border rounded-lg p-4 bg-green-50">
+        <div className="border rounded-lg p-4 bg-primary/5">
           <p className="text-sm text-gray-600">Online Completed</p>
           <p className="text-2xl font-bold">{
             // Count unique online appointments
@@ -398,7 +398,7 @@ export const CompletedAppointmentsTable = ({ startDate, endDate, client, service
             ).length
           }</p>
         </div>
-        <div className="border rounded-lg p-4 bg-orange-50">
+        <div className="border rounded-lg p-4 bg-secondary/20">
           <p className="text-sm text-gray-600">Offline Completed</p>
           <p className="text-2xl font-bold">{
             // Count unique offline appointments
@@ -411,7 +411,7 @@ export const CompletedAppointmentsTable = ({ startDate, endDate, client, service
             ).length
           }</p>
         </div>
-        <div className="border rounded-lg p-4 bg-purple-50">
+        <div className="border rounded-lg p-4 bg-secondary/10">
           <p className="text-sm text-gray-600">Total Revenue</p>
           <p className="text-2xl font-bold">₹{
             // Calculate revenue from all appointments (already filtered as completed)

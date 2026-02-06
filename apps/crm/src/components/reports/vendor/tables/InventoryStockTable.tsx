@@ -178,7 +178,7 @@ export const InventoryStockTable = ({ product, category, brand, onFiltersChange,
   if (isLoading) {
     return (
       <div>
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-4 gap-2">
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -282,7 +282,7 @@ export const InventoryStockTable = ({ product, category, brand, onFiltersChange,
   if (isError) {
     return (
       <div>
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-4 gap-2">
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -343,7 +343,7 @@ export const InventoryStockTable = ({ product, category, brand, onFiltersChange,
   if (paginatedProducts.length === 0) {
     return (
       <div>
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-4 gap-2">
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -417,7 +417,7 @@ export const InventoryStockTable = ({ product, category, brand, onFiltersChange,
 
   return (
     <div ref={tableRef}>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-4 gap-2">
         <div className="relative w-64">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input

@@ -306,20 +306,20 @@ export const AllAppointmentsTable = ({ startDate, endDate, client, service, staf
         showStatusFilter={true}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <div className="border rounded-lg p-4 bg-blue-50">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+        <div className="border rounded-lg p-4 bg-primary/10">
           <p className="text-sm text-gray-600">Total Bookings</p>
           <p className="text-2xl font-bold">{totalAppointments}</p>
         </div>
-        <div className="border rounded-lg p-4 bg-green-50">
+        <div className="border rounded-lg p-4 bg-primary/5">
           <p className="text-sm text-gray-600">Online Bookings</p>
           <p className="text-2xl font-bold">{onlineAppointments}</p>
         </div>
-        <div className="border rounded-lg p-4 bg-orange-50">
+        <div className="border rounded-lg p-4 bg-secondary/20">
           <p className="text-sm text-gray-600">Offline Bookings</p>
           <p className="text-2xl font-bold">{offlineAppointments}</p>
         </div>
-        <div className="border rounded-lg p-4 bg-purple-50">
+        <div className="border rounded-lg p-4 bg-secondary/10">
           <p className="text-sm text-gray-600">Total Revenue</p>
           <p className="text-2xl font-bold">₹{
             paginatedAppointments
@@ -327,7 +327,7 @@ export const AllAppointmentsTable = ({ startDate, endDate, client, service, staf
               .reduce((sum: number, appt: any) => sum + (appt.amount || 0), 0)
           }</p>
         </div>
-        <div className="border rounded-lg p-4 bg-cyan-50">
+        <div className="border rounded-lg p-4 bg-muted">
           <p className="text-sm text-gray-600">Total Business</p>
           <p className="text-2xl font-bold">₹{
             Array.from(new Set(paginatedAppointments

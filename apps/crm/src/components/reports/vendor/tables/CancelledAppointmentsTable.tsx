@@ -399,20 +399,20 @@ export const CancelledAppointmentsTable = ({ startDate, endDate, client, service
       />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="border rounded-lg p-4 bg-blue-50">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="border rounded-lg p-4 bg-primary/10">
           <p className="text-sm text-gray-600">Total Cancelled</p>
           <p className="text-2xl font-bold">{totalCancelled}</p>
         </div>
-        <div className="border rounded-lg p-4 bg-green-50">
+        <div className="border rounded-lg p-4 bg-primary/5">
           <p className="text-sm text-gray-600">Online Cancelled</p>
           <p className="text-2xl font-bold">{onlineCancelled}</p>
         </div>
-        <div className="border rounded-lg p-4 bg-orange-50">
+        <div className="border rounded-lg p-4 bg-secondary/20">
           <p className="text-sm text-gray-600">Offline Cancelled</p>
           <p className="text-2xl font-bold">{offlineCancelled}</p>
         </div>
-        <div className="border rounded-lg p-4 bg-purple-50">
+        <div className="border rounded-lg p-4 bg-secondary/10">
           <p className="text-sm text-gray-600">Revenue Loss</p>
           <p className="text-2xl font-bold">₹{totalRevenueLoss.toFixed(2)}</p>
         </div>

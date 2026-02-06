@@ -12,7 +12,7 @@ interface ReportModalProps {
 export const ReportModal = ({ isOpen, onClose, title, description, children }: ReportModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-[96vw] lg:max-w-[94vw] xl:max-w-[92vw] max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
