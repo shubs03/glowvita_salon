@@ -122,6 +122,8 @@ export default function SettlementsPage() {
       ? 'Payment to Vendor' // Admin sending to Vendor
       : 'Payment to Admin';  // Vendor sending to Admin
 
+    const direction = selectedSettlement.netSettlement < 0 ? 'vendor_owes' : 'admin_owes';
+
     setIsProcessingPayment(true);
     const toastId = toast.loading(
       type === 'Payment to Admin'
@@ -151,11 +153,11 @@ export default function SettlementsPage() {
         toast.success(
           direction === 'vendor_owes'
             ? "Payment received successfully"
-            : "Payment collected successfully",
+            : "Payment sent successfully",
           {
             description: direction === 'vendor_owes'
               ? `₹${amount.toFixed(2)} received from ${selectedSettlement.vendorName}`
-              : `₹${amount.toFixed(2)} to be paid to ${selectedSettlement.vendorName}`,
+              : `₹${amount.toFixed(2)} paid to ${selectedSettlement.vendorName}`,
           }
         );
         handleClosePaymentModal();
@@ -361,7 +363,7 @@ export default function SettlementsPage() {
                                   size="sm"
                                   onClick={() => handleOpenPaymentModal(settlement)}
                                 >
-                                  {direction.type === 'vendor_owes' ? 'Send Payment' : 'Collect Payment'}
+                                  {direction.type === 'vendor_owes' ? 'Collect Payment' : 'Send Payment'}
                                 </Button>
                               )}
                             </div>
