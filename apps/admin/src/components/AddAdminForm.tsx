@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@repo/ui/select";
 import { sidebarNavItems } from '@/lib/routes';
-import { Trash2, Loader2 } from 'lucide-react';
+import { Trash2, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { useCreateAdminMutation, useUpdateAdminMutation, useDeleteAdminMutation, useGetRegionsQuery } from '../../../../packages/store/src/services/api.js';
 
@@ -59,16 +59,16 @@ type AddAdminFormProps = {
   isEditMode?: boolean;
 };
 
-export function AddAdminForm({ 
-  isOpen, 
-  onClose, 
-  roles, 
+export function AddAdminForm({
+  isOpen,
+  onClose,
+  roles,
   initialData = null,
   onSave,
   onDelete,
   isEditMode = false
 }: AddAdminFormProps) {
-    
+
   // RTK Query hooks
   const [createAdmin, { isLoading: isCreating }] = useCreateAdminMutation();
   const [updateAdmin, { isLoading: isUpdating }] = useUpdateAdminMutation();
@@ -89,11 +89,13 @@ export function AddAdminForm({
     assignedRegions: [],
     ...data
   });
-    
+
   const [formData, setFormData] = useState<AdminUser>(getInitialFormData(initialData));
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -103,16 +105,35 @@ export function AddAdminForm({
       setSelectedRegions(initialFormState.assignedRegions || []);
       setSelectedFile(null);
       setErrors({});
+      setShowPassword(false);
+      setShowConfirmPassword(false);
     }
   }, [isOpen, initialData]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
+
+    // Prevent numbers in Full Name and Designation
+    if ((name === 'fullName' || name === 'designation') && /[0-9]/.test(value)) {
+      return;
+    }
+
+    // Limit mobile number to 10 digits and numbers only
+    if (name === 'mobileNo') {
+      const numericValue = value.replace(/\D/g, '');
+      if (numericValue.length > 10) return;
+
+      setFormData(prev => ({
+        ...prev,
+        [name]: numericValue
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
@@ -124,32 +145,49 @@ export function AddAdminForm({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+      const maxSize = 5 * 1024 * 1024; // 5MB
+
+      if (!validTypes.includes(file.type)) {
+        setErrors(prev => ({ ...prev, profileImage: 'Please upload a valid image file (JPG or PNG).' }));
+        e.target.value = '';
+        return;
+      }
+
+      if (file.size > maxSize) {
+        setErrors(prev => ({ ...prev, profileImage: 'Image size should be maximum 5MB.' }));
+        e.target.value = '';
+        return;
+      }
+
+      setSelectedFile(file);
+      setErrors(prev => ({ ...prev, profileImage: '' }));
     }
   };
 
   const handlePermissionChange = (module: string, action: string, checked: boolean) => {
     const permission = `${module}:${action}`;
-    
+
     setSelectedPermissions(prev => {
       let updated = checked ? [...prev, permission] : prev.filter(p => p !== permission);
-      
+
       // If "all" is checked, add all other permissions for this module
       if (action === 'all' && checked) {
         updated = updated.filter(p => !p.startsWith(`${module}:`));
         updated.push(`${module}:all`);
       }
-      
+
       // If "all" is unchecked, remove it
       if (action === 'all' && !checked) {
         updated = updated.filter(p => p !== `${module}:all`);
       }
-      
+
       // If any other permission is checked while "all" exists, remove "all"
       if (action !== 'all' && checked && updated.includes(`${module}:all`)) {
         updated = updated.filter(p => p !== `${module}:all`);
       }
-      
+
       return updated;
     });
   };
@@ -175,16 +213,20 @@ export function AddAdminForm({
 
     if (!formData.fullName.trim()) {
       newErrors.fullName = 'Full name is required';
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.fullName)) {
+      newErrors.fullName = 'Full Name should contain only alphabets and spaces.';
     }
 
     if (!formData.mobileNo.trim()) {
       newErrors.mobileNo = 'Mobile number is required';
+    } else if (!/^\d{10}$/.test(formData.mobileNo)) {
+      newErrors.mobileNo = 'Please enter a valid 10-digit mobile number.';
     }
 
     if (!formData.emailAddress.trim()) {
       newErrors.emailAddress = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.emailAddress)) {
-      newErrors.emailAddress = 'Email is invalid';
+      newErrors.emailAddress = 'Please enter a valid email address.';
     }
 
     if (!formData.roleName) {
@@ -193,46 +235,50 @@ export function AddAdminForm({
 
     if (!formData.designation.trim()) {
       newErrors.designation = 'Designation is required';
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.designation)) {
+      newErrors.designation = 'Designation should contain only text.';
     }
 
     if (!formData.address.trim()) {
       newErrors.address = 'Address is required';
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.address)) {
+      newErrors.address = 'Address should contain only alphabets and spaces.';
     }
 
     // Password validation for new admin or when changing password
     if (!isEditMode || formData.password) {
       if (!formData.password) {
         newErrors.password = 'Password is required';
-      } else if (formData.password.length < 6) {
-        newErrors.password = 'Password must be at least 6 characters';
+      } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(formData.password)) {
+        newErrors.password = 'Password must be at least 8 characters and include uppercase, lowercase, and a number.';
       }
 
       if (formData.password !== formData.confirmPassword) {
-        newErrors.confirmPassword = "Passwords don't match";
+        newErrors.confirmPassword = "Password and Confirm Password must be the same.";
       }
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
-    
+
     try {
       // Handle file upload separately if needed
       let profileImageUrl = formData.profileImage;
-      
+
       // If there's a new file selected, convert to base64
       if (selectedFile) {
         const fileBase64 = await convertFileToBase64(selectedFile);
         profileImageUrl = fileBase64;
       }
-      
+
       // Prepare JSON data matching MongoDB schema
       const jsonDataToSend = {
         fullName: formData.fullName.trim(),
@@ -247,15 +293,15 @@ export function AddAdminForm({
         updatedAt: new Date().toISOString(),
         ...(profileImageUrl && { profileImage: profileImageUrl }),
         // Only include password fields if needed
-        ...(!isEditMode || formData.password ? { 
-          password: formData.password 
+        ...(!isEditMode || formData.password ? {
+          password: formData.password
         } : {}),
         // Add createdAt only for new admin
-        ...(!isEditMode ? { 
-          createdAt: new Date().toISOString() 
+        ...(!isEditMode ? {
+          createdAt: new Date().toISOString()
         } : {}),
       };
-      
+
       if (isEditMode && (formData.id || formData._id)) {
         // Update existing admin
         await updateAdmin({
@@ -266,7 +312,7 @@ export function AddAdminForm({
         // Create new admin
         await createAdmin(jsonDataToSend).unwrap();
       }
-      
+
       // Call onSave callback if provided (for backward compatibility)
       if (onSave) {
         const dataToSave: AdminUser = {
@@ -278,7 +324,7 @@ export function AddAdminForm({
         };
         onSave(dataToSave);
       }
-      
+
       onClose();
     } catch (error: any) {
       console.error('Error saving admin:', error);
@@ -318,22 +364,22 @@ export function AddAdminForm({
   //   const result = await response.json();
   //   return result.url;
   // };
-  
+
   const handleDelete = async () => {
     const adminId = formData.id || formData._id;
     if (!adminId) return;
-    
+
     const confirmed = window.confirm('Are you sure you want to delete this admin?');
     if (!confirmed) return;
-    
+
     try {
       await deleteAdmin(adminId).unwrap();
-      
+
       // Call onDelete callback if provided (for backward compatibility)
       if (onDelete) {
         onDelete(adminId);
       }
-      
+
       onClose();
     } catch (error: any) {
       console.error('Error deleting admin:', error);
@@ -352,49 +398,49 @@ export function AddAdminForm({
               {isEditMode ? 'Edit Admin User' : 'Add New Admin'}
             </DialogTitle>
             <DialogDescription className="text-sm sm:text-base">
-              {isEditMode 
+              {isEditMode
                 ? 'Update the admin user details and permissions below.'
                 : 'Fill in the details below to create a new admin user.'}
             </DialogDescription>
           </DialogHeader>
-          
+
           {errors.general && (
             <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm mb-4">
               {errors.general}
             </div>
           )}
-          
+
           <div className="grid gap-4 sm:gap-6 py-4">
             {/* Basic Information Section */}
             <div className="space-y-4">
               <h3 className="text-base font-medium border-b pb-2">Basic Information</h3>
-              
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="fullName" className="text-sm">Full Name *</Label>
-                  <Input 
-                    id="fullName" 
-                    name="fullName" 
-                    value={formData.fullName} 
-                    onChange={handleInputChange} 
+                  <Input
+                    id="fullName"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
                     className={`text-sm ${errors.fullName ? 'border-destructive' : ''}`}
                     disabled={isLoading}
-                    required 
+                    required
                   />
                   {errors.fullName && <p className="text-xs text-destructive">{errors.fullName}</p>}
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="mobileNo" className="text-sm">Mobile Number *</Label>
-                  <Input 
-                    id="mobileNo" 
-                    name="mobileNo" 
-                    type="tel" 
-                    value={formData.mobileNo} 
-                    onChange={handleInputChange} 
+                  <Input
+                    id="mobileNo"
+                    name="mobileNo"
+                    type="tel"
+                    value={formData.mobileNo}
+                    onChange={handleInputChange}
                     className={`text-sm ${errors.mobileNo ? 'border-destructive' : ''}`}
                     disabled={isLoading}
-                    required 
+                    required
                   />
                   {errors.mobileNo && <p className="text-xs text-destructive">{errors.mobileNo}</p>}
                 </div>
@@ -403,25 +449,25 @@ export function AddAdminForm({
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="emailAddress" className="text-sm">Email Address *</Label>
-                  <Input 
-                    id="emailAddress" 
-                    name="emailAddress" 
-                    type="email" 
-                    value={formData.emailAddress} 
-                    onChange={handleInputChange} 
+                  <Input
+                    id="emailAddress"
+                    name="emailAddress"
+                    type="email"
+                    value={formData.emailAddress}
+                    onChange={handleInputChange}
                     className={`text-sm ${errors.emailAddress ? 'border-destructive' : ''}`}
                     disabled={isLoading}
-                    required 
+                    required
                   />
                   {errors.emailAddress && <p className="text-xs text-destructive">{errors.emailAddress}</p>}
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="designation" className="text-sm">Designation *</Label>
-                  <Input 
-                    id="designation" 
-                    name="designation" 
-                    value={formData.designation} 
+                  <Input
+                    id="designation"
+                    name="designation"
+                    value={formData.designation}
                     onChange={handleInputChange}
                     className={`text-sm ${errors.designation ? 'border-destructive' : ''}`}
                     disabled={isLoading}
@@ -435,39 +481,57 @@ export function AddAdminForm({
             {/* Security Section */}
             <div className="space-y-4">
               <h3 className="text-base font-medium border-b pb-2">Security</h3>
-              
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-sm">
                     {isEditMode ? 'New Password (Optional)' : 'Password *'}
                   </Label>
-                  <Input 
-                    id="password" 
-                    name="password" 
-                    type="password" 
-                    value={formData.password || ''} 
-                    onChange={handleInputChange} 
-                    className={`text-sm ${errors.password ? 'border-destructive' : ''}`}
-                    disabled={isLoading}
-                    required={!isEditMode}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password || ''}
+                      onChange={handleInputChange}
+                      className={`text-sm pr-10 ${errors.password ? 'border-destructive' : ''}`}
+                      disabled={isLoading}
+                      required={!isEditMode}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword" className="text-sm">
                     {isEditMode ? 'Confirm New Password' : 'Confirm Password *'}
                   </Label>
-                  <Input 
-                    id="confirmPassword" 
-                    name="confirmPassword" 
-                    type="password" 
-                    value={formData.confirmPassword || ''} 
-                    onChange={handleInputChange} 
-                    className={`text-sm ${errors.confirmPassword ? 'border-destructive' : ''}`}
-                    disabled={isLoading}
-                    required={!isEditMode || !!formData.password} 
-                  />
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={formData.confirmPassword || ''}
+                      onChange={handleInputChange}
+                      className={`text-sm pr-10 ${errors.confirmPassword ? 'border-destructive' : ''}`}
+                      disabled={isLoading}
+                      required={!isEditMode || !!formData.password}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                   {errors.confirmPassword && <p className="text-xs text-destructive">{errors.confirmPassword}</p>}
                 </div>
               </div>
@@ -476,18 +540,18 @@ export function AddAdminForm({
             {/* Role & Profile Section */}
             <div className="space-y-4">
               <h3 className="text-base font-medium border-b pb-2">Role & Profile</h3>
-              
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="roleName" className="text-sm">Role *</Label>
-                  <Select 
-                    value={formData.roleName} 
+                  <Select
+                    value={formData.roleName}
                     onValueChange={(value) => {
                       setFormData(prev => ({ ...prev, roleName: value }));
                       if (errors.roleName) {
                         setErrors(prev => ({ ...prev, roleName: '' }));
                       }
-                    }} 
+                    }}
                     disabled={isLoading}
                     required
                   >
@@ -501,17 +565,18 @@ export function AddAdminForm({
                   </Select>
                   {errors.roleName && <p className="text-xs text-destructive">{errors.roleName}</p>}
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="profileImage" className="text-sm">Profile Image</Label>
-                  <Input 
-                    id="profileImage" 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={handleFileChange} 
+                  <Input
+                    id="profileImage"
+                    type="file"
+                    accept="image/png, image/jpeg, image/jpg"
+                    onChange={handleFileChange}
                     className="text-sm"
                     disabled={isLoading}
                   />
+                  {errors.profileImage && <p className="text-xs text-destructive">{errors.profileImage}</p>}
                 </div>
               </div>
             </div>
@@ -519,15 +584,15 @@ export function AddAdminForm({
             {/* Address Section */}
             <div className="space-y-4">
               <h3 className="text-base font-medium border-b pb-2">Address</h3>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="address" className="text-sm">Address *</Label>
-                <textarea 
-                  id="address" 
-                  name="address" 
-                  rows={3} 
+                <textarea
+                  id="address"
+                  name="address"
+                  rows={3}
                   className={`flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none ${errors.address ? 'border-destructive' : ''}`}
-                  value={formData.address} 
+                  value={formData.address}
                   onChange={handleInputChange}
                   disabled={isLoading}
                   required
@@ -542,7 +607,7 @@ export function AddAdminForm({
               <p className="text-xs text-muted-foreground mb-2">
                 Select regions this admin will be responsible for. This will filter the data they can see.
               </p>
-              
+
               <div className="rounded-md border p-3 sm:p-4 max-h-40 overflow-y-auto">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {regionsList.map((region: any) => (
@@ -553,8 +618,8 @@ export function AddAdminForm({
                         onCheckedChange={(checked) => handleRegionToggle(region._id, !!checked)}
                         disabled={isLoading}
                       />
-                      <label 
-                        htmlFor={`region_${region._id}`} 
+                      <label
+                        htmlFor={`region_${region._id}`}
                         className="text-xs sm:text-sm font-medium leading-none cursor-pointer"
                       >
                         {region.name} ({region.code})
@@ -571,7 +636,7 @@ export function AddAdminForm({
             {/* Permissions Section */}
             <div className="space-y-4">
               <h3 className="text-base font-medium border-b pb-2">Granular Permissions</h3>
-              
+
               <div className="rounded-md border overflow-hidden">
                 <Table>
                   <TableHeader>
@@ -624,7 +689,7 @@ export function AddAdminForm({
                   </TableBody>
                 </Table>
               </div>
-              
+
               {formData.roleName === 'SUPER_ADMIN' && (
                 <p className="text-xs sm:text-sm text-muted-foreground">
                   Super Admin has access to all permissions by default.
@@ -636,9 +701,9 @@ export function AddAdminForm({
           <DialogFooter className="flex flex-col sm:flex-row sm:justify-between sm:items-center w-full gap-3 sm:gap-0 pt-4 border-t">
             <div className="order-2 sm:order-1">
               {isEditMode && onDelete && (
-                <Button 
-                  type="button" 
-                  variant="destructive" 
+                <Button
+                  type="button"
+                  variant="destructive"
                   onClick={handleDelete}
                   disabled={isLoading}
                   size="sm"
@@ -658,11 +723,11 @@ export function AddAdminForm({
                 </Button>
               )}
             </div>
-            
+
             <div className="flex flex-col sm:flex-row justify-end gap-2 order-1 sm:order-2 w-full sm:w-auto">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={onClose}
                 disabled={isLoading}
                 size="sm"
@@ -670,7 +735,7 @@ export function AddAdminForm({
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 type="submit"
                 disabled={isLoading}
                 size="sm"

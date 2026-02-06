@@ -19,12 +19,12 @@ const initDb = async () => {
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
     await initDb();
-    
+
     const { searchParams } = new URL(req.url);
     const filterType = searchParams.get('filterType');
     const filterValue = searchParams.get('filterValue');
     const selectedRegionId = searchParams.get('regionId');
-    
+
     if (filterType && !filterValue) {
       return NextResponse.json({ success: false, message: "Filter value required" }, { status: 400 });
     }
@@ -99,7 +99,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
         const res = await Model.aggregate(pipeline);
         return res[0]?.count || 0;
       }
-      
+
       if (sumField) {
         pipeline.push({ $group: { _id: null, total: { $sum: `$${sumField}` } } });
         const res = await Model.aggregate(pipeline);
@@ -107,6 +107,75 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }
 
       return pipeline;
+    };
+
+    const runProductAggregation = async () => {
+      const pipeline = [
+        { $match: { ...generalDateMatch, status: 'Delivered' } },
+        {
+          $lookup: {
+            from: 'crm_products',
+            localField: 'items.productId',
+            foreignField: '_id',
+            as: 'productInfo'
+          }
+        },
+        {
+          $lookup: {
+            from: 'vendors',
+            localField: 'vendorId',
+            foreignField: '_id',
+            as: 'vendorDoc'
+          }
+        },
+        {
+          $lookup: {
+            from: 'suppliers',
+            localField: 'vendorId',
+            foreignField: '_id',
+            as: 'supplierDoc'
+          }
+        },
+        { $unwind: { path: '$vendorDoc', preserveNullAndEmptyArrays: true } },
+        { $unwind: { path: '$supplierDoc', preserveNullAndEmptyArrays: true } },
+        {
+          $addFields: {
+            // Determine origin from products in the order
+            origin: { $ifNull: [{ $arrayElemAt: ["$productInfo.origin", 0] }, "Vendor"] },
+            // Fallback for region matching: Order.regionId -> Vendor region -> Supplier region
+            effectiveRegionId: {
+              $ifNull: [
+                "$regionId",
+                "$vendorDoc.regionId",
+                "$supplierDoc.regionId"
+              ]
+            }
+          }
+        },
+        { $match: buildRegionalMatch() },
+        {
+          $group: {
+            _id: "$origin",
+            totalFees: { $sum: "$platformFeeAmount" },
+            totalSales: { $sum: "$totalAmount" }
+          }
+        }
+      ];
+
+      const results = await ClientOrderModel.aggregate(pipeline);
+      const data = {
+        Vendor: { fees: 0, sales: 0 },
+        Supplier: { fees: 0, sales: 0 }
+      };
+
+      results.forEach(r => {
+        if (data[r._id]) {
+          data[r._id].fees = r.totalFees;
+          data[r._id].sales = r.totalSales;
+        }
+      });
+
+      return data;
     };
 
     // 2. Fetch Entity Counts
@@ -117,8 +186,8 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Simple count for top-level entities
     const getTopEntityCount = async (Model) => {
-      const q = (roleName === 'REGIONAL_ADMIN' || selectedRegionId) 
-        ? { regionId: { $in: allowedRegionIds.length > 0 ? allowedRegionIds : [new mongoose.Types.ObjectId(selectedRegionId)] } } 
+      const q = (roleName === 'REGIONAL_ADMIN' || selectedRegionId)
+        ? { regionId: { $in: allowedRegionIds.length > 0 ? allowedRegionIds : [new mongoose.Types.ObjectId(selectedRegionId)] } }
         : {};
       return await Model.countDocuments(q);
     };
@@ -133,25 +202,29 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // 3. Bookings and Revenue
     const totalBookingsAgg = await AppointmentModel.aggregate([
       ...(await runEntityAggregation(AppointmentModel, appointmentDateMatch)),
-      { $group: { 
-          _id: null, 
-          total: { $sum: 1 }, 
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
           online: { $sum: { $cond: [{ $eq: ["$mode", "online"] }, 1, 0] } },
           offline: { $sum: { $cond: [{ $eq: ["$mode", "offline"] }, 1, 0] } }
-      }}
+        }
+      }
     ]);
     const totalData = totalBookingsAgg[0] || { total: 0, online: 0, offline: 0 };
-    
+
     const completedBookingsAgg = await AppointmentModel.aggregate([
       ...(await runEntityAggregation(AppointmentModel, appointmentDateMatch)),
       { $match: { status: 'completed' } },
-      { $group: { 
-          _id: null, 
-          total: { $sum: 1 }, 
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
           online: { $sum: { $cond: [{ $eq: ["$mode", "online"] }, 1, 0] } },
           offline: { $sum: { $cond: [{ $eq: ["$mode", "offline"] }, 1, 0] } },
           fees: { $sum: "$platformFee" }
-      }}
+        }
+      }
     ]);
     const completedData = completedBookingsAgg[0] || { total: 0, online: 0, offline: 0, fees: 0 };
     const servicePlatformFees = completedData.fees;
@@ -159,19 +232,27 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const cancelledBookingsAgg = await AppointmentModel.aggregate([
       ...(await runEntityAggregation(AppointmentModel, appointmentDateMatch)),
       { $match: { status: 'cancelled' } },
-      { $group: { 
-          _id: null, 
-          total: { $sum: 1 }, 
-          online: { $sum: { $cond: [{ $eq: ["$mode", "online"] }, 1, 0] } }, 
-          offline: { $sum: { $cond: [{ $eq: ["$mode", "offline"] }, 1, 0] } } 
-      }}
+      {
+        $group: {
+          _id: null,
+          total: { $sum: 1 },
+          online: { $sum: { $cond: [{ $eq: ["$mode", "online"] }, 1, 0] } },
+          offline: { $sum: { $cond: [{ $eq: ["$mode", "offline"] }, 1, 0] } }
+        }
+      }
     ]);
     const cancelledData = cancelledBookingsAgg[0] || { total: 0, online: 0, offline: 0 };
 
     const ClientOrderModel = (await import('@repo/lib/models/user/ClientOrder.model')).default;
-    const productPlatformFees = await runEntityAggregation(ClientOrderModel, { ...generalDateMatch, status: 'Delivered' }, null, "platformFeeAmount");
+    const productData = await runProductAggregation();
+
+    // Total product platform fees is the sum of vendor and supplier fees
+    const productPlatformFees = productData.Vendor.fees + productData.Supplier.fees;
+    const vendorProductAmount = productData.Vendor.fees;
+    const supplierProductAmount = productData.Supplier.fees;
 
     const subscriptionAmount = await calculateSubscriptionAmount(req, filterType, filterValue);
+    const subscriptionStats = await getSubscriptionStats(req);
     const smsAmount = await getSmsAmount(req, filterType, filterValue, selectedRegionId);
 
     const totalRevenue = servicePlatformFees + productPlatformFees + subscriptionAmount + smsAmount;
@@ -202,9 +283,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
     return NextResponse.json({
       success: true,
       data: {
-        totalRevenue: { 
-          current: totalRevenue, 
-          components: { servicePlatformFees, productPlatformFees, subscriptionAmount, smsAmount } 
+        totalRevenue: {
+          current: totalRevenue,
+          components: { servicePlatformFees, productPlatformFees, subscriptionAmount, smsAmount }
         },
         regionWiseSales,
         cityWiseSales: regionWiseSales, // Legacy UI support
@@ -220,7 +301,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
         totalVendors: { current: totalVendors },
         totalSuppliers: { current: totalSuppliers },
         totalDoctors: { current: totalDoctors },
-        cancelledBookings: { 
+        cancelledBookings: {
           current: cancelledData.total,
           online: cancelledData.online,
           offline: cancelledData.offline
@@ -228,9 +309,15 @@ export const GET = authMiddlewareAdmin(async (req) => {
         services: servicesData?.services || [],
         products: productsData?.salesByProducts || [],
         subscriptionAmount: subscriptionAmount,
+        subscriptionStats: subscriptionStats,
         smsAmount: smsAmount,
         serviceAmount: servicePlatformFees,
         productAmount: productPlatformFees,
+        vendorProductAmount,
+        supplierProductAmount,
+        vendorProductSales: productData.Vendor.sales,
+        supplierProductSales: productData.Supplier.sales,
+        totalProductSales: productData.Vendor.sales + productData.Supplier.sales,
         currentPeriod: filterType ? `${filterType}: ${filterValue}` : 'All time'
       }
     }, { status: 200 });
@@ -248,32 +335,48 @@ async function getRegionWiseRevenueDetailed(req, allowedRegionIds) {
   const VendorModel = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
   const SupplierModel = (await import('@repo/lib/models/Vendor/Supplier.model')).default;
   const SubscriptionPlanModel = (await import('@repo/lib/models/admin/SubscriptionPlan.model')).default;
-  
+
   const basePipeline = (match) => [
     { $match: match },
     { $lookup: { from: 'vendors', localField: 'vendorId', foreignField: '_id', as: 'v' } },
+    { $lookup: { from: 'suppliers', localField: 'vendorId', foreignField: '_id', as: 's' } },
     { $unwind: { path: '$v', preserveNullAndEmptyArrays: true } },
-    { $addFields: { rid: { $ifNull: ["$regionId", "$v.regionId"] } } }
+    { $unwind: { path: '$s', preserveNullAndEmptyArrays: true } },
+    {
+      $addFields: {
+        rid: {
+          $ifNull: [
+            "$regionId",
+            "$v.regionId",
+            "$s.regionId"
+          ]
+        }
+      }
+    }
   ];
 
   const [serviceSales, productSales, vendorCounts, supplierCounts] = await Promise.all([
     AppointmentModel.aggregate([
       ...basePipeline({ status: 'completed' }),
-      { $group: { 
-          _id: "$rid", 
+      {
+        $group: {
+          _id: "$rid",
           totalServiceAmount: { $sum: "$totalAmount" },
           servicePlatformFees: { $sum: "$platformFee" },
           serviceTax: { $sum: "$serviceTax" }
-      }}
+        }
+      }
     ]),
     ClientOrderModel.aggregate([
       ...basePipeline({ status: 'Delivered' }),
-      { $group: { 
-          _id: "$rid", 
+      {
+        $group: {
+          _id: "$rid",
           totalProductAmount: { $sum: "$totalAmount" },
           productPlatformFees: { $sum: "$platformFeeAmount" },
           productTax: { $sum: "$gstAmount" }
-      }}
+        }
+      }
     ]),
     VendorModel.aggregate([
       { $group: { _id: "$regionId", count: { $sum: 1 } } }
@@ -365,7 +468,7 @@ async function getRegionWiseRevenueDetailed(req, allowedRegionIds) {
     result = result.filter(r => allowedStr.includes(r.regionId));
   }
 
-  return result.sort((a,b) => b.totalRevenue - a.totalRevenue);
+  return result.sort((a, b) => b.totalRevenue - a.totalRevenue);
 }
 
 async function getSmsAmount(req, filterType, filterValue, selectedRegionId) {
@@ -387,7 +490,7 @@ async function calculateSubscriptionAmount(req, filterType, filterValue) {
     const SupplierModel = (await import('@repo/lib/models/Vendor/Supplier.model')).default;
     const SubscriptionPlanModel = (await import('@repo/lib/models/admin/SubscriptionPlan.model')).default;
     const regionQuery = buildRegionQueryFromRequest(req);
-    
+
     const [vendors, suppliers] = await Promise.all([
       VendorModel.find({ ...regionQuery, "subscription.plan": { $exists: true } }).populate('subscription.plan subscription.history.plan'),
       SupplierModel.find({ ...regionQuery, "subscription.plan": { $exists: true } }).populate('subscription.plan subscription.history.plan')
@@ -414,4 +517,26 @@ async function calculateSubscriptionAmount(req, filterType, filterValue) {
 
     return process(vendors) + process(suppliers);
   } catch (e) { return 0; }
+}
+
+async function getSubscriptionStats(req) {
+  try {
+    const VendorModel = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
+    const SupplierModel = (await import('@repo/lib/models/Vendor/Supplier.model')).default;
+    const regionQuery = buildRegionQueryFromRequest(req);
+
+    const [activeVendors, inactiveVendors, activeSuppliers, inactiveSuppliers] = await Promise.all([
+      VendorModel.countDocuments({ ...regionQuery, "subscription.status": "Active" }),
+      VendorModel.countDocuments({ ...regionQuery, "subscription.status": { $ne: "Active" } }),
+      SupplierModel.countDocuments({ ...regionQuery, "subscription.status": "Active" }),
+      SupplierModel.countDocuments({ ...regionQuery, "subscription.status": { $ne: "Active" } })
+    ]);
+
+    return {
+      active: activeVendors + activeSuppliers,
+      inactive: inactiveVendors + inactiveSuppliers
+    };
+  } catch (e) {
+    return { active: 0, inactive: 0 };
+  }
 }

@@ -4,7 +4,7 @@
 import { Button } from "@repo/ui/button";
 import Link from 'next/link';
 import { ThemeToggle } from "./ThemeToggle";
-import { Bell, Menu, LogOut, User, Settings, CheckCircle, XCircle } from "lucide-react";
+import { Bell, Menu, LogOut, User, CheckCircle, XCircle } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useAppDispatch } from "@repo/store/hooks";
 import { clearCrmAuth } from "@repo/store/slices/crmAuthSlice";
@@ -43,12 +43,12 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
       Cookies.remove('access_token', { path: '/', domain: window.location.hostname });
       Cookies.remove('token', { path: '/' });
       Cookies.remove('token', { path: '/', domain: window.location.hostname });
-      
+
       // Clear all auth-related data from localStorage
       localStorage.removeItem('adminAuthState');
       localStorage.removeItem('crmAuthState');
       localStorage.removeItem('userAuthState');
-      
+
       // Clear any other possible tokens
       Object.keys(localStorage).forEach(key => {
         if (key.includes('token') || key.includes('auth')) {
@@ -62,7 +62,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
 
       // This action will now trigger the root reducer to reset the entire state
       dispatch(clearAdminAuth());
-      
+
       // Redirect to login page after state is cleared
       router.push('/login');
       // Force a page refresh to ensure all state is cleared
@@ -93,7 +93,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
       <div className="flex items-center gap-2 md:gap-4 ml-auto">
         <RegionSelector />
         <ThemeToggle />
-        
+
         {/* Notification Bell with Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -115,19 +115,19 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <div className="flex items-start gap-3">
-                <div className="bg-green-100 text-green-600 p-2 rounded-full"><CheckCircle className="h-4 w-4"/></div>
+                <div className="bg-green-100 text-green-600 p-2 rounded-full"><CheckCircle className="h-4 w-4" /></div>
                 <div>
-                    <p className="text-sm font-medium">New Appointment</p>
-                    <p className="text-xs text-muted-foreground">Booking with John Doe at 2:00 PM.</p>
+                  <p className="text-sm font-medium">New Appointment</p>
+                  <p className="text-xs text-muted-foreground">Booking with John Doe at 2:00 PM.</p>
                 </div>
               </div>
             </DropdownMenuItem>
             <DropdownMenuItem>
               <div className="flex items-start gap-3">
-                <div className="bg-red-100 text-red-600 p-2 rounded-full"><XCircle className="h-4 w-4"/></div>
+                <div className="bg-red-100 text-red-600 p-2 rounded-full"><XCircle className="h-4 w-4" /></div>
                 <div>
-                    <p className="text-sm font-medium">Cancellation</p>
-                    <p className="text-xs text-muted-foreground">Appointment with Jane Smith cancelled.</p>
+                  <p className="text-sm font-medium">Cancellation</p>
+                  <p className="text-xs text-muted-foreground">Appointment with Jane Smith cancelled.</p>
                 </div>
               </div>
             </DropdownMenuItem>
@@ -152,14 +152,10 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-                <Link href="/admin-roles">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
-                </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <Settings className="mr-2 h-4 w-4" />
-              <span>Settings</span>
+              <Link href="/admin-roles">
+                <User className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setShowLogoutModal(true)}>
