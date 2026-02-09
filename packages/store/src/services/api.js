@@ -1112,6 +1112,39 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Service"],
     }),
 
+    // Product Masters - Admin creates master product templates
+    getProductMasters: builder.query({
+      query: () => ({ url: "/admin/product-masters", method: "GET" }),
+      providesTags: ["ProductMaster"],
+    }),
+
+    createProductMaster: builder.mutation({
+      query: (productMaster) => ({
+        url: "/admin/product-masters",
+        method: "POST",
+        body: productMaster,
+      }),
+      invalidatesTags: ["ProductMaster"],
+    }),
+
+    updateProductMaster: builder.mutation({
+      query: (productMaster) => ({
+        url: `/admin/product-masters`,
+        method: "PUT",
+        body: productMaster,
+      }),
+      invalidatesTags: ["ProductMaster"],
+    }),
+
+    deleteProductMaster: builder.mutation({
+      query: ({ id }) => ({
+        url: `/admin/product-masters`,
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["ProductMaster"],
+    }),
+
     // Notifications
     getNotifications: builder.query({
       query: () => ({ url: "/admin/custompushnotification", method: "GET" }),
@@ -3124,4 +3157,10 @@ export const {
   useUpdateRegionMutation,
   useDeleteRegionMutation,
   useGetVendorServicesForApprovalQuery,
+
+  // Product Masters Hooks
+  useGetProductMastersQuery,
+  useCreateProductMasterMutation,
+  useUpdateProductMasterMutation,
+  useDeleteProductMasterMutation,
 } = glowvitaApi;

@@ -60,6 +60,8 @@ interface Category {
   _id: string;
   name: string;
   description: string;
+  gstType?: 'none' | 'fixed' | 'percentage';
+  gstValue?: number;
 }
 
 export default function ProductsPage() {
@@ -104,6 +106,33 @@ export default function ProductsPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [newCategory, setNewCategory] = useState({ name: "", description: "" });
   const [formData, setFormData] = useState<Partial<Product>>({});
+
+  // Helper function to calculate GST and final price for a product
+  const calculateProductGST = (product: Product) => {
+    const category = categoriesData.find((cat: Category) => cat.name === product.category);
+    
+    if (!category || !category.gstType || category.gstType === 'none') {
+      return { gstAmount: 0, finalPrice: product.salePrice, hasGst: false, gstType: 'none', gstValue: 0 };
+    }
+
+    let gstAmount = 0;
+    const gstValue = Number(category.gstValue) || 0;
+    const salePrice = Number(product.salePrice) || 0;
+
+    if (category.gstType === 'fixed') {
+      gstAmount = gstValue;
+    } else if (category.gstType === 'percentage') {
+      gstAmount = (salePrice * gstValue) / 100;
+    }
+
+    return { 
+      gstAmount, 
+      finalPrice: salePrice + gstAmount, 
+      hasGst: true,
+      gstType: category.gstType,
+      gstValue 
+    };
+  };
 
   const filteredProducts = useMemo(() => {
     if (!Array.isArray(productsData)) return [];
@@ -380,7 +409,9 @@ export default function ProductsPage() {
               </div>
             ) : viewMode === "grid" ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {paginatedProducts.map((product: Product) => (
+                {paginatedProducts.map((product: Product) => {
+                  const gstInfo = calculateProductGST(product);
+                  return (
                   <Card
                     key={product._id}
                     className="group overflow-hidden hover:shadow-md transition-shadow flex flex-col text-left"
@@ -416,10 +447,17 @@ export default function ProductsPage() {
                           No size info
                         </p>
                       )}
-                      <div className="flex justify-between items-center mt-auto">
-                        <p className="font-bold text-primary">
-                          ₹{product.salePrice.toFixed(2)}
-                        </p>
+                      
+                      {/* Price Section with GST */}
+                      <div className="mt-auto space-y-1">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="text-xs text-muted-foreground">Final Price</p>
+                            <p className="font-semibold text-foreground">
+                              ₹{gstInfo.finalPrice.toFixed(2)}
+                            </p>
+                          </div>
+                        </div>
                       </div>
 
                       <div className="flex items-center justify-between gap-2 mt-2">
@@ -453,12 +491,15 @@ export default function ProductsPage() {
                       </div>
                     </div>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               /* Simplified List View */
               <div className="space-y-3">
-                {paginatedProducts.map((product, index) => (
+                {paginatedProducts.map((product: Product) => {
+                  const gstInfo = calculateProductGST(product);
+                  return (
                   <Card
                     key={product._id}
                     className="border border-border bg-card rounded-lg transition-all duration-200"
@@ -517,10 +558,23 @@ export default function ProductsPage() {
                             </div>
 
                             <div className="text-right">
-                              <div className="mb-2">
-                                <span className="font-semibold text-primary">
-                                  ₹{product.salePrice.toFixed(0)}
-                                </span>
+                              <div className="mb-2 space-y-1">
+                                <div className="flex items-center gap-2 justify-end">
+                                  <span className="text-xs text-muted-foreground">Sale:</span>
+                                  <span className="font-semibold text-foreground">
+                                    ₹{product.salePrice.toFixed(2)}
+                                  </span>
+                                  {gstInfo.hasGst && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {gstInfo.gstType === 'fixed' ? `+₹${gstInfo.gstValue}` : `+${gstInfo.gstValue}%`}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {gstInfo.hasGst && (
+                                  <div className="text-xs text-primary font-bold">
+                                    Final: ₹{gstInfo.finalPrice.toFixed(2)}
+                                  </div>
+                                )}
                               </div>
 
                               <div className="flex gap-1">
@@ -552,7 +606,8 @@ export default function ProductsPage() {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
+                  );
+                })}
               </div>
             )}
 
