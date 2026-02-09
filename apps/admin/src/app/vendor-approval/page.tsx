@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
@@ -31,6 +31,9 @@ import {
   FileText
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
+import { Search } from 'lucide-react';
+import { Input } from "@repo/ui/input";
 import { Badge } from '@repo/ui/badge';
 import { Skeleton } from "@repo/ui/skeleton";
 import { cn } from "@repo/ui/cn";
@@ -207,6 +210,7 @@ export default function VendorApprovalPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [vendorFilter, setVendorFilter] = useState("all");
   const [isActionModalOpen, setIsActionModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
@@ -271,14 +275,20 @@ export default function VendorApprovalPage() {
   // Pagination logic
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
+  const filteredPendingServices = useMemo(() => {
+    return pendingServices.filter((service: any) =>
+      vendorFilter === "all" || service.vendorId === vendorFilter || service.vendorName === vendorFilter
+    );
+  }, [pendingServices, vendorFilter]);
+
   const currentVendors = pendingVendors.slice(firstItemIndex, lastItemIndex);
-  const currentServices = pendingServices.slice(firstItemIndex, lastItemIndex);
+  const currentServices = filteredPendingServices.slice(firstItemIndex, lastItemIndex);
   const currentWeddingPackages = pendingWeddingPackages.slice(firstItemIndex, lastItemIndex);
   const currentDoctors = pendingDoctors.slice(firstItemIndex, lastItemIndex);
   const currentSuppliers = pendingSuppliers.slice(firstItemIndex, lastItemIndex);
 
   const totalVendorPages = Math.ceil(pendingVendors.length / itemsPerPage);
-  const totalServicePages = Math.ceil(pendingServices.length / itemsPerPage);
+  const totalServicePages = Math.ceil(filteredPendingServices.length / itemsPerPage);
   const totalWeddingPackagePages = Math.ceil(pendingWeddingPackages.length / itemsPerPage);
   const totalDoctorPages = Math.ceil(pendingDoctors.length / itemsPerPage);
   const totalSupplierPages = Math.ceil(pendingSuppliers.length / itemsPerPage);
@@ -696,9 +706,26 @@ export default function VendorApprovalPage() {
         </TabsContent>
         <TabsContent value="service-approvals">
           <Card>
-            <CardHeader>
-              <CardTitle>Pending Service Approvals</CardTitle>
-              <CardDescription>Services submitted by vendors waiting for approval.</CardDescription>
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between space-y-4 sm:space-y-0">
+              <div>
+                <CardTitle>Pending Service Approvals</CardTitle>
+                <CardDescription>Services submitted by vendors waiting for approval.</CardDescription>
+              </div>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <Select value={vendorFilter} onValueChange={(val) => { setVendorFilter(val); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-full sm:w-[200px] h-10 rounded-lg border-border hover:border-primary">
+                    <SelectValue placeholder="All Vendors" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-lg border border-border/40 max-h-[300px] overflow-y-auto">
+                    <SelectItem value="all">All Vendors</SelectItem>
+                    {vendors.map((vendor: Vendor) => (
+                      <SelectItem key={vendor._id} value={vendor._id}>
+                        {vendor.businessName || `${vendor.firstName} ${vendor.lastName}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -765,7 +792,7 @@ export default function VendorApprovalPage() {
                 onPageChange={setCurrentPage}
                 itemsPerPage={itemsPerPage}
                 onItemsPerPageChange={setItemsPerPage}
-                totalItems={pendingServices.length}
+                totalItems={filteredPendingServices.length}
               />
             </CardContent>
           </Card>
