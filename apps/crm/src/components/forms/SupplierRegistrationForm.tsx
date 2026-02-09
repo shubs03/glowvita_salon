@@ -44,7 +44,7 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep:
     <div className="w-full mb-4 mt-2">
       <div className="flex space-x-2">
         {/* Step 1 Line */}
-        <div 
+        <div
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
             currentStep >= 1 ? "bg-purple-600" : "bg-gray-200"
@@ -52,7 +52,7 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep:
           onClick={() => currentStep > 1 && setStep(1)}
         />
         {/* Step 2 Line */}
-        <div 
+        <div
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
             currentStep >= 2 ? "bg-purple-600" : "bg-gray-200"
@@ -60,7 +60,7 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep:
           onClick={() => currentStep > 2 && setStep(2)}
         />
         {/* Step 3 Line */}
-        <div 
+        <div
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
             currentStep >= 3 ? "bg-purple-600" : "bg-gray-200"
@@ -76,7 +76,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
   const searchParams = useSearchParams();
   const router = useRouter();
   const refCode = searchParams?.get('ref');
-  
+
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
@@ -87,7 +87,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
     country: 'India',
     state: 'N/A',
     city: 'N/A',
-    pincode: '000000',
+    pincode: '',
     address: 'N/A',
     supplierType: 'General',
     businessRegistrationNo: '',
@@ -115,7 +115,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
 
   useEffect(() => {
     if (refCode) {
-      setFormData(prev => ({...prev, referredByCode: refCode}));
+      setFormData(prev => ({ ...prev, referredByCode: refCode }));
     }
   }, [refCode]);
 
@@ -187,8 +187,8 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep1() || !validateStep2() || !validateStep3()) {
-        toast.error("Please ensure all required fields are filled correctly.");
-        return;
+      toast.error("Please ensure all required fields are filled correctly.");
+      return;
     }
 
     try {
@@ -197,25 +197,25 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
         ...formData,
         location: formData.location ? JSON.stringify(formData.location) : ''
       };
-      
+
       await createSupplier(submissionData).unwrap();
       toast.success(`${formData.shopName} supplier registration submitted successfully!`);
       onSuccess();
     } catch (err) {
-       toast.error((err as any)?.data?.message || "Registration failed. Please try again.");
+      toast.error((err as any)?.data?.message || "Registration failed. Please try again.");
     }
   };
-  
+
   const nextStep = () => {
     if (step === 1 && validateStep1()) {
-        setStep(2);
+      setStep(2);
     } else if (step === 2 && validateStep2()) {
-        setStep(3);
+      setStep(3);
     } else {
       // Show error toast if validation fails
-      if ((step === 1 && !validateStep1()) || 
-          (step === 2 && !validateStep2()) || 
-          (step === 3 && !validateStep3())) {
+      if ((step === 1 && !validateStep1()) ||
+        (step === 2 && !validateStep2()) ||
+        (step === 3 && !validateStep3())) {
         toast.error("Please fill all required fields correctly.");
       }
     }
@@ -246,10 +246,10 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
 
     const scriptId = 'google-maps-native-script';
     const existingScript = document.getElementById(scriptId);
-    
+
     if (existingScript) {
       if (checkGoogleMaps()) return;
-      
+
       const checkInterval = setInterval(() => {
         if (checkGoogleMaps()) {
           clearInterval(checkInterval);
@@ -263,7 +263,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
     script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,drawing&v=weekly`;
     script.async = true;
     script.defer = true;
-    
+
     (window as any).gm_authFailure = () => {
       console.error("Google Maps API Key Authentication Failure - This usually means the API Key is invalid, has no billing, or is restricted incorrectly.");
       toast.error("Google Maps Authentication Failed. Please check your API key.");
@@ -281,18 +281,18 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
   // Initialize map when modal opens
   useEffect(() => {
     if (!isMapOpen || !isGoogleMapsLoaded || !GOOGLE_MAPS_API_KEY) return;
-    
+
     const initMap = () => {
       if (!mapContainer.current || !window.google) return;
-      
+
       if (map.current) {
         google.maps.event.clearInstanceListeners(map.current);
       }
-      
-      const center = formData.location 
+
+      const center = formData.location
         ? { lat: formData.location.lat, lng: formData.location.lng }
         : { lat: 23.2599, lng: 77.4126 };
-      
+
       // Ensure container still exists and has height
       if (mapContainer.current) {
         const rect = mapContainer.current.getBoundingClientRect();
@@ -316,12 +316,12 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
       geocoder.current = new google.maps.Geocoder();
       autocompleteService.current = new google.maps.places.AutocompleteService();
       placesService.current = new google.maps.places.PlacesService(map.current);
-      
+
       // Remove existing marker
       if (marker.current) {
         marker.current.setMap(null);
       }
-      
+
       // Add marker if location exists
       if (formData.location) {
         marker.current = new google.maps.Marker({
@@ -330,31 +330,31 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
           draggable: true,
           animation: google.maps.Animation.DROP,
         });
-          
+
         marker.current.addListener('dragend', () => {
           const position = marker.current!.getPosition();
           if (position) {
-            setFormData(prev => ({ 
-              ...prev, 
-              location: { lat: position.lat(), lng: position.lng() } 
+            setFormData(prev => ({
+              ...prev,
+              location: { lat: position.lat(), lng: position.lng() }
             }));
             fetchAddress({ lat: position.lat(), lng: position.lng() });
           }
         });
       }
-      
+
       // Handle map clicks
       map.current.addListener('click', (e: google.maps.MapMouseEvent) => {
         if (!e.latLng) return;
         const lat = e.latLng.lat();
         const lng = e.latLng.lng();
         setFormData(prev => ({ ...prev, location: { lat, lng } }));
-        
+
         // Remove existing marker and add new one
         if (marker.current) {
           marker.current.setMap(null);
         }
-        
+
         if (map.current) {
           marker.current = new google.maps.Marker({
             position: { lat, lng },
@@ -362,26 +362,26 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
             draggable: true,
             animation: google.maps.Animation.DROP,
           });
-            
+
           marker.current.addListener('dragend', () => {
             const position = marker.current!.getPosition();
             if (position) {
-              setFormData(prev => ({ 
-                ...prev, 
-                location: { lat: position.lat(), lng: position.lng() } 
+              setFormData(prev => ({
+                ...prev,
+                location: { lat: position.lat(), lng: position.lng() }
               }));
               fetchAddress({ lat: position.lat(), lng: position.lng() });
             }
           });
         }
-        
+
         fetchAddress({ lat, lng });
       });
     };
-    
+
     // Initialize with a larger delay to ensure DOM is ready and modal animation finished
     const timeoutId = setTimeout(initMap, 500);
-    
+
     return () => {
       clearTimeout(timeoutId);
       if (marker.current) {
@@ -395,7 +395,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
       setSearchResults([]);
       return;
     }
-    
+
     try {
       autocompleteService.current.getPlacePredictions(
         {
@@ -421,7 +421,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
 
   const fetchAddress = async (location: { lat: number; lng: number }) => {
     if (!geocoder.current) return;
-    
+
     try {
       geocoder.current.geocode({ location }, (results, status) => {
         if (status === 'OK' && results && results.length > 0) {
@@ -430,7 +430,8 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
 
           let state = '';
           let city = '';
-          
+          let pincode = '';
+
           result.address_components.forEach((component) => {
             if (component.types.includes('administrative_area_level_1')) {
               state = component.long_name;
@@ -438,13 +439,17 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
             if (component.types.includes('locality')) {
               city = component.long_name;
             }
+            if (component.types.includes('postal_code')) {
+              pincode = component.long_name;
+            }
           });
-          
+
           setFormData(prev => ({
             ...prev,
             address,
             state: state || prev.state,
-            city: city || prev.city 
+            city: city || prev.city,
+            pincode: pincode || prev.pincode
           }));
         }
       });
@@ -469,6 +474,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
 
           let state = '';
           let city = '';
+          let pincode = '';
 
           place.address_components?.forEach((component) => {
             if (component.types.includes('administrative_area_level_1')) {
@@ -477,27 +483,31 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
             if (component.types.includes('locality')) {
               city = component.long_name;
             }
+            if (component.types.includes('postal_code')) {
+              pincode = component.long_name;
+            }
           });
-          
+
           setFormData(prev => ({
             ...prev,
             location: newLocation,
             address: place.formatted_address || result.description,
             state: state || prev.state,
-            city: city || prev.city
+            city: city || prev.city,
+            pincode: pincode || prev.pincode
           }));
-          
+
           // Update map
           if (map.current) {
             map.current.setCenter({ lat, lng });
             map.current.setZoom(15);
           }
-          
+
           // Update marker
           if (marker.current) {
             marker.current.setPosition({ lat, lng });
           }
-          
+
           // Clear search
           setSearchResults([]);
           setSearchQuery('');
@@ -520,26 +530,26 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
     <>
       <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pt-2">
         <div className="fixed top-4 sm:top-8 left-4 sm:left-10 right-4 sm:right-10 flex justify-between items-center z-20">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={step === 1 ? () => window.history.back() : prevStep} 
+          <Button
+            type="button"
+            variant="outline"
+            onClick={step === 1 ? () => window.history.back() : prevStep}
             className="px-3 sm:px-4 py-2 text-base sm:text-lg text-gray-600 border-gray-300 hover:bg-gray-50 h-10 sm:h-auto"
           >
             ← {step === 1 ? 'Back to Role Selection' : 'Back'}
           </Button>
           {step < 3 ? (
-            <Button 
-              type="button" 
-              onClick={nextStep} 
+            <Button
+              type="button"
+              onClick={nextStep}
               className="bg-black text-white px-4 sm:px-6 py-2 rounded-md hover:bg-gray-800 font-medium text-base sm:text-lg h-10 sm:h-auto"
             >
               Continue →
             </Button>
           ) : (
-            <Button 
-              type="submit" 
-              disabled={isLoading} 
+            <Button
+              type="submit"
+              disabled={isLoading}
               className="bg-black text-white px-4 sm:px-6 py-2 rounded-md hover:bg-gray-800 font-medium text-base sm:text-lg h-10 sm:h-auto"
               form="registration-form"
             >
@@ -547,11 +557,11 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
             </Button>
           )}
         </div>
-        
+
         <div className="mt-16 sm:mt-8">
           <StepIndicator currentStep={step} setStep={setStep} />
         </div>
-      
+
         <form id="registration-form" onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 pb-8 mt-4">
           <div className="flex flex-col justify-start" style={{ minHeight: 'calc(100vh - 200px)' }}>
             {step === 1 && (
@@ -563,70 +573,70 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                   <div>
-                    <Input 
-                      name="firstName" 
-                      placeholder="First Name" 
-                      onChange={handleChange} 
-                      value={formData.firstName} 
-                      required 
-                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    <Input
+                      name="firstName"
+                      placeholder="First Name"
+                      onChange={handleChange}
+                      value={formData.firstName}
+                      required
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                     />
                     {renderError('firstName')}
                   </div>
                   <div>
-                    <Input 
-                      name="lastName" 
-                      placeholder="Last Name" 
-                      onChange={handleChange} 
-                      value={formData.lastName} 
-                      required 
-                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    <Input
+                      name="lastName"
+                      placeholder="Last Name"
+                      onChange={handleChange}
+                      value={formData.lastName}
+                      required
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                     />
                     {renderError('lastName')}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                   <div>
-                    <Input 
-                      name="email" 
-                      type="email" 
-                      placeholder="Email Address" 
-                      onChange={handleChange} 
-                      value={formData.email} 
-                      required 
-                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    <Input
+                      name="email"
+                      type="email"
+                      placeholder="Email Address"
+                      onChange={handleChange}
+                      value={formData.email}
+                      required
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                     />
                     {renderError('email')}
                   </div>
                   <div>
-                    <Input 
-                      name="mobile" 
-                      type="tel" 
-                      placeholder="Mobile Number" 
-                      onChange={handleChange} 
-                      value={formData.mobile} 
-                      required 
-                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    <Input
+                      name="mobile"
+                      type="tel"
+                      placeholder="Mobile Number"
+                      onChange={handleChange}
+                      value={formData.mobile}
+                      required
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                     />
                     {renderError('mobile')}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                   <div className="relative">
-                    <Input 
-                      name="password" 
+                    <Input
+                      name="password"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Password (min. 8 characters)" 
-                      onChange={handleChange} 
-                      value={formData.password} 
-                      required 
-                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg w-full" 
+                      placeholder="Password (min. 8 characters)"
+                      onChange={handleChange}
+                      value={formData.password}
+                      required
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg w-full"
                     />
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="icon" 
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10" 
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10"
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
@@ -634,20 +644,20 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                     {renderError('password')}
                   </div>
                   <div className="relative">
-                    <Input 
-                      name="confirmPassword" 
+                    <Input
+                      name="confirmPassword"
                       type={showConfirmPassword ? 'text' : 'password'}
-                      placeholder="Confirm Password" 
-                      onChange={handleChange} 
-                      value={formData.confirmPassword} 
-                      required 
-                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg w-full" 
+                      placeholder="Confirm Password"
+                      onChange={handleChange}
+                      value={formData.confirmPassword}
+                      required
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg w-full"
                     />
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="icon" 
-                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10" 
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     >
                       {showConfirmPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
@@ -655,17 +665,17 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                     {renderError('confirmPassword')}
                   </div>
                 </div>
-                <Input 
-                  name="referredByCode" 
-                  placeholder="Referral Code (Optional)" 
-                  onChange={handleChange} 
-                  value={formData.referredByCode} 
-                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                <Input
+                  name="referredByCode"
+                  placeholder="Referral Code (Optional)"
+                  onChange={handleChange}
+                  value={formData.referredByCode}
+                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                 />
                 {renderError('referredByCode')}
               </div>
             )}
-            
+
             {step === 2 && (
               <div className="space-y-4 sm:space-y-6 animate-in fade-in-50 duration-500">
                 <div className="mb-4 sm:mb-6">
@@ -674,41 +684,41 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                   <p className="text-gray-600 text-base sm:text-lg">Provide basic information about your business.</p>
                 </div>
                 <div>
-                  <Input 
-                    name="shopName" 
-                    placeholder="Shop Name" 
-                    onChange={handleChange} 
-                    value={formData.shopName} 
-                    required 
-                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  <Input
+                    name="shopName"
+                    placeholder="Shop Name"
+                    onChange={handleChange}
+                    value={formData.shopName}
+                    required
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                   />
                   {renderError('shopName')}
                 </div>
                 <div>
-                  <Input 
-                    name="supplierType" 
-                    placeholder="Supplier Type (e.g., Cosmetics, Equipment)" 
-                    onChange={handleChange} 
-                    value={formData.supplierType} 
-                    required 
-                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  <Input
+                    name="supplierType"
+                    placeholder="Supplier Type (e.g., Cosmetics, Equipment)"
+                    onChange={handleChange}
+                    value={formData.supplierType}
+                    required
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                   />
                   {renderError('supplierType')}
                 </div>
                 <div>
-                  <Input 
-                    name="businessRegistrationNo" 
-                    placeholder="Business Registration Number" 
-                    onChange={handleChange} 
-                    value={formData.businessRegistrationNo} 
-                    required 
-                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                  <Input
+                    name="businessRegistrationNo"
+                    placeholder="Business Registration Number"
+                    onChange={handleChange}
+                    value={formData.businessRegistrationNo}
+                    required
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                   />
                   {renderError('businessRegistrationNo')}
                 </div>
               </div>
             )}
-            
+
             {step === 3 && (
               <div className="space-y-4 sm:space-y-6 animate-in fade-in-50 duration-500">
                 <div className="mb-4 sm:mb-6">
@@ -716,7 +726,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                   <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">Business Address Details</h1>
                   <p className="text-gray-600 text-base sm:text-lg">Provide your business location and address details.</p>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="location" className="text-base sm:text-lg">Location</Label>
                   <div className="flex flex-col gap-3">
@@ -740,52 +750,52 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                   <div>
-                    <Input 
-                      name="city" 
-                      placeholder="City" 
-                      onChange={handleChange} 
-                      value={formData.city} 
-                      required 
-                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    <Input
+                      name="city"
+                      placeholder="City"
+                      onChange={handleChange}
+                      value={formData.city}
+                      required
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                     />
                     {renderError('city')}
                   </div>
                   <div>
-                    <Input 
-                      name="state" 
-                      placeholder="State" 
-                      onChange={handleChange} 
-                      value={formData.state} 
-                      required 
-                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    <Input
+                      name="state"
+                      placeholder="State"
+                      onChange={handleChange}
+                      value={formData.state}
+                      required
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                     />
                     {renderError('state')}
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                   <div>
-                    <Input 
-                      name="address" 
-                      placeholder="Business Address" 
-                      onChange={handleChange} 
-                      value={formData.address} 
-                      required 
-                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    <Input
+                      name="address"
+                      placeholder="Business Address"
+                      onChange={handleChange}
+                      value={formData.address}
+                      required
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                     />
                     {renderError('address')}
                   </div>
                   <div>
-                    <Input 
-                      name="pincode" 
-                      placeholder="Pincode" 
-                      onChange={handleChange} 
-                      value={formData.pincode} 
-                      required 
-                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" 
+                    <Input
+                      name="pincode"
+                      placeholder="Pincode"
+                      onChange={handleChange}
+                      value={formData.pincode}
+                      required
+                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                     />
                     {renderError('pincode')}
                   </div>
@@ -829,26 +839,26 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                   </div>
                 )}
               </div>
-              
+
               {formData.location && (
                 <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
                   <strong>Selected Location:</strong> {formData.location?.lat.toFixed(6)}, {formData.location?.lng.toFixed(6)}
                 </div>
               )}
-              
+
               <div className="relative border rounded-lg overflow-hidden" style={{ height: '300px' }}>
-                <div 
-                  ref={mapContainer} 
+                <div
+                  ref={mapContainer}
                   className="w-full h-full"
                 />
-                
+
                 {authError && (
                   <div className="absolute inset-0 bg-red-50 flex flex-col items-center justify-center p-4 text-center z-10">
                     <p className="text-red-600 font-bold mb-2">Google Maps Error</p>
                     <p className="text-xs text-red-500 mb-4 px-4 overflow-hidden text-ellipsis whitespace-nowrap max-w-full">
                       InvalidKeyMapError: The API key is rejected.
                     </p>
-                    <button 
+                    <button
                       onClick={() => window.location.reload()}
                       className="text-xs bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700 font-semibold"
                     >
@@ -868,14 +878,14 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                   </div>
                 )}
               </div>
-              
+
               <div className="text-xs text-gray-500 space-y-1">
                 <p>• Click anywhere on the map to place the marker</p>
                 <p>• Drag the marker to adjust the location</p>
                 <p>• Use the search box to find specific places</p>
               </div>
             </div>
-            
+
             <DialogFooter className="mt-4">
               <Button type="button" variant="outline" onClick={() => setIsMapOpen(false)}>
                 Cancel
@@ -895,7 +905,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
 }
 
 export const SupplierRegistrationFormWithSuspense = (props: any) => (
-    <Suspense fallback={<div>Loading...</div>}>
-        <SupplierRegistrationForm {...props} />
-    </Suspense>
+  <Suspense fallback={<div>Loading...</div>}>
+    <SupplierRegistrationForm {...props} />
+  </Suspense>
 );

@@ -55,12 +55,12 @@ const StatsCards = ({ productStats, filteredProductStats }: StatsCardsProps) => 
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-foreground mb-1">Categories</p>
-              <p className="text-2xl font-bold text-foreground">{filteredProductStats.filteredCategories}</p>
-              <p className="text-xs text-muted-foreground mt-1">Product types</p>
+              <p className="text-sm font-medium text-primary mb-1">Categories</p>
+              <p className="text-2xl font-bold text-primary">{filteredProductStats.filteredCategories}</p>
+              <p className="text-xs text-primary/70 mt-1">Product categories</p>
             </div>
             <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <Tag className="h-6 w-6 text-foreground" />
+              <Tag className="h-6 w-6 text-primary" />
             </div>
           </div>
         </CardContent>
@@ -70,12 +70,12 @@ const StatsCards = ({ productStats, filteredProductStats }: StatsCardsProps) => 
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-foreground mb-1">Total Value</p>
-              <p className="text-2xl font-bold text-foreground">₹{filteredProductStats.filteredTotalValue.toFixed(0)}</p>
-              <p className="text-xs text-muted-foreground mt-1">Inventory worth</p>
+              <p className="text-sm font-medium text-secondary-foreground mb-1">Inventory Value</p>
+              <p className="text-2xl font-bold text-secondary-foreground">₹{filteredProductStats.filteredTotalValue.toLocaleString()}</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1">Total stock value</p>
             </div>
             <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <DollarSign className="h-6 w-6 text-foreground" />
+              <DollarSign className="h-6 w-6 text-secondary-foreground" />
             </div>
           </div>
         </CardContent>
