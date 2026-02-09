@@ -6,7 +6,7 @@ import { NEXT_PUBLIC_ADMIN_URL, NEXT_PUBLIC_CRM_URL, NEXT_PUBLIC_WEB_URL } from 
 
 // Function to get base URLs with intelligent fallbacks for production
 const getBaseUrls = () => {
-  // If environment variables are explicitly set, use them (highest priority)
+  // If explicit env vars exist, use them
   if (NEXT_PUBLIC_WEB_URL && NEXT_PUBLIC_CRM_URL && NEXT_PUBLIC_ADMIN_URL) {
     return {
       admin: `${NEXT_PUBLIC_ADMIN_URL}/api`,
@@ -15,55 +15,20 @@ const getBaseUrls = () => {
     };
   }
 
-  // In browser environment, dynamically determine URLs based on current location
-  if (typeof window !== 'undefined' && window.location) {
-    const protocol = window.location.protocol;
-    const hostname = window.location.hostname;
-    const port = window.location.port ? `:${window.location.port}` : '';
-    const baseUrl = `${protocol}//${hostname}${port}`;
-
-    // For production domains with specific patterns
-    if (hostname.includes('v2winonline.com')) {
-      // Production environment - different subdomains for different services
-      // partners.v2winonline.com is the CRM application
-      if (hostname.includes('partners')) {
-        // CRM application - API is on the same domain
-        return {
-          admin: `${protocol}//admin.v2winonline.com/api`,
-          crm: `${baseUrl}/api`, // CRM API is on the same domain
-          web: `${protocol}//v2winonline.com/api`,
-        };
-      } else if (hostname.includes('admin')) {
-        // Admin application - API is on the same domain
-        return {
-          admin: `${baseUrl}/api`, // Admin API is on the same domain
-          crm: `${protocol}//partners.v2winonline.com/api`,
-          web: `${protocol}//v2winonline.com/api`,
-        };
-      } else {
-        // Main website - API is on the same domain
-        return {
-          admin: `${protocol}//admin.v2winonline.com/api`,
-          crm: `${protocol}//partners.v2winonline.com/api`,
-          web: `${baseUrl}/api`, // Web API is on the same domain
-        };
-      }
-    } else {
-      // Local development - use port-based routing
-      return {
-        admin: `${protocol}//${hostname}:3002/api`,
-        crm: `${protocol}//${hostname}:3001/api`,
-        web: `${protocol}//${hostname}:3000/api`,
-      };
-    }
+  // Production default → always same-domain API
+  if (typeof window !== "undefined") {
+    return {
+      admin: "/api",
+      crm: "/api",
+      web: "/api",
+    };
   }
 
-  // Server-side rendering or when window is not available
-  // Fallback to localhost defaults
+  // SSR fallback
   return {
-    admin: 'http://localhost:3002/api',
-    crm: 'http://localhost:3001/api',
-    web: 'http://localhost:3000/api',
+    admin: "/api",
+    crm: "/api",
+    web: "/api",
   };
 };
 
@@ -1110,6 +1075,39 @@ export const glowvitaApi = createApi({
         body: { id },
       }),
       invalidatesTags: ["Service"],
+    }),
+
+    // Product Masters - Admin creates master product templates
+    getProductMasters: builder.query({
+      query: () => ({ url: "/admin/product-masters", method: "GET" }),
+      providesTags: ["ProductMaster"],
+    }),
+
+    createProductMaster: builder.mutation({
+      query: (productMaster) => ({
+        url: "/admin/product-masters",
+        method: "POST",
+        body: productMaster,
+      }),
+      invalidatesTags: ["ProductMaster"],
+    }),
+
+    updateProductMaster: builder.mutation({
+      query: (productMaster) => ({
+        url: `/admin/product-masters`,
+        method: "PUT",
+        body: productMaster,
+      }),
+      invalidatesTags: ["ProductMaster"],
+    }),
+
+    deleteProductMaster: builder.mutation({
+      query: ({ id }) => ({
+        url: `/admin/product-masters`,
+        method: "DELETE",
+        body: { id },
+      }),
+      invalidatesTags: ["ProductMaster"],
     }),
 
     // Notifications
@@ -3124,4 +3122,10 @@ export const {
   useUpdateRegionMutation,
   useDeleteRegionMutation,
   useGetVendorServicesForApprovalQuery,
+
+  // Product Masters Hooks
+  useGetProductMastersQuery,
+  useCreateProductMasterMutation,
+  useUpdateProductMasterMutation,
+  useDeleteProductMasterMutation,
 } = glowvitaApi;

@@ -96,9 +96,12 @@ export async function POST(req) {
       }
     }
 
-    // Validate stock availability for all items before creating order
+    // Validate stock availability and determine product origin (Vendor or Supplier)
+    let productOrigin = null;
+    let actualOwnerId = null;
+    
     for (const item of items) {
-      const product = await ProductModel.findById(item.productId);
+      const product = await ProductModel.findById(item.productId).lean();
       
       if (!product) {
         return NextResponse.json({ 
@@ -113,7 +116,18 @@ export async function POST(req) {
           message: `Insufficient stock for "${item.name}". Only ${product.stock} units available.` 
         }, { status: 400 });
       }
+
+      // Determine product origin and owner from first item (all items should be from same vendor/supplier)
+      if (!productOrigin) {
+        productOrigin = product.origin; // 'Vendor' or 'Supplier'
+        actualOwnerId = product.vendorId; // This is the actual supplier or vendor who owns the product
+      }
     }
+    
+    // Use the actual product owner ID instead of the vendorId from request body
+    const finalVendorId = actualOwnerId;
+    
+    console.log(`Order validation: productOrigin=${productOrigin}, actualOwnerId=${actualOwnerId}, requestVendorId=${vendorId}`);
     
     // For online payments, verify payment signature
     if (paymentMethod !== 'cash-on-delivery' && razorpayOrderId && razorpayPaymentId && razorpaySignature) {
@@ -142,14 +156,45 @@ export async function POST(req) {
     const orderGstAmount = typeof gstAmount === 'number' ? gstAmount : 0;
     const orderPlatformFeeAmount = typeof platformFeeAmount === 'number' ? platformFeeAmount : 0;
     
-    // Fetch Vendor Region
-    const VendorModel = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
-    const vendor = await VendorModel.findById(vendorId).select('regionId').lean();
+    // Fetch Region from Vendor or Supplier based on product origin
+    let owner = null;
+    let ownerType = 'Vendor'; // Default to Vendor for backward compatibility
+    let ownerName = '';
+    
+    if (productOrigin === 'Supplier') {
+      const SupplierModel = (await import('@repo/lib/models/Vendor/Supplier.model')).default;
+      owner = await SupplierModel.findById(finalVendorId).select('regionId shopName').lean();
+      ownerType = 'Supplier';
+      ownerName = owner?.shopName || 'Unknown Supplier';
+    } else {
+      const VendorModel = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
+      owner = await VendorModel.findById(finalVendorId).select('regionId businessName').lean();
+      ownerType = 'Vendor';
+      ownerName = owner?.businessName || 'Unknown Vendor';
+    }
+
+    // Validate owner exists
+    if (!owner) {
+      return NextResponse.json({ 
+        success: false, 
+        message: `${ownerType} not found` 
+      }, { status: 404 });
+    }
+
+    // Validate owner has a regionId
+    if (!owner.regionId) {
+      return NextResponse.json({ 
+        success: false, 
+        message: `${ownerType} region not configured. Please contact support or choose a different ${ownerType.toLowerCase()}.` 
+      }, { status: 400 });
+    }
+
+    console.log(`Creating order for ${ownerType}: ${ownerName} (${finalVendorId}) in region: ${owner.regionId}`);
 
     const newOrder = new ClientOrder({
       userId: payload.userId,
-      vendorId,
-      regionId: vendor?.regionId || null, // <--- Added Region ID
+      vendorId: finalVendorId, // Use the actual product owner ID (supplier or vendor)
+      regionId: owner.regionId,
       items,
       totalAmount,
       shippingAmount: orderShippingAmount,
