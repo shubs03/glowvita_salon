@@ -15,6 +15,9 @@ interface DashboardMetrics {
   cancelledAppointments: CancelledAppointments;
   upcomingAppointments: number;
   totalBusiness: number;
+  completedAppointments: number;
+  totalExpense: number;
+  totalCounterSale: number;
 }
 
 interface SupplierDashboardMetrics {
@@ -97,34 +100,34 @@ export const useRoleSpecificDashboardMetrics = (
       console.log("Fetching dashboard metrics for user:", user, "role:", role);
       setLoading(true);
       setError(null);
-      
+
       // Build query params based on role
       let url = `/api/crm/${role.toLowerCase()}/metrics`;
-      
+
       // Handle custom date range
       if (filterType === 'custom' && startDate && endDate) {
         // For custom date ranges, we need to pass the dates as query parameters
         url += `?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
-      } 
+      }
       // Handle preset periods
       else if (presetPeriod && presetPeriod !== 'all') {
         url += `?period=${presetPeriod}`;
       }
-      
+
       const response = await fetch(url);
       console.log("API response status:", response.status);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const result = await response.json();
       console.log("API response data:", result);
-      
+
       if (!result.success) {
         throw new Error(result.message || `Failed to fetch ${role} dashboard metrics`);
       }
-      
+
       setMetrics(result.data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : `Failed to fetch ${role} dashboard metrics`;
