@@ -194,7 +194,7 @@ export function Step3_MultiServiceTimeSlot({
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const previousSlotsRef = useRef<MultiServiceSlot[]>([]);
-  
+
   // Use stable local state instead of RTK Query reactive state
   const [stableSlots, setStableSlots] = useState<MultiServiceSlot[]>([]);
   const slots = stableSlots;
@@ -259,12 +259,12 @@ export function Step3_MultiServiceTimeSlot({
         slotsCount: result.slots?.length || 0,
         metadata: result.metadata
       });
-      
+
       const newSlots = result.slots || [];
-      
+
       // Only update state if slots actually changed (prevents unnecessary re-renders)
       const slotsChanged = JSON.stringify(previousSlotsRef.current) !== JSON.stringify(newSlots);
-      
+
       if (slotsChanged || !isBackgroundFetch) {
         setStableSlots(newSlots);
         previousSlotsRef.current = newSlots;
@@ -272,7 +272,7 @@ export function Step3_MultiServiceTimeSlot({
       } else {
         console.log('Slots unchanged, skipping update');
       }
-      
+
       if (isBackgroundFetch) {
         setIsBackgroundRefreshing(false);
       }
@@ -354,7 +354,7 @@ export function Step3_MultiServiceTimeSlot({
         serviceItems: slot.sequence.map(item => {
           const service = selectedServices?.find(s => s.id === item.serviceId);
           const serviceAmount = service ? (service.discountedPrice || service.price || 0) : 0;
-          
+
           // Include addons from the selected service
           const addOns = service?.selectedAddons?.map(addon => ({
             _id: addon._id,
@@ -363,7 +363,7 @@ export function Step3_MultiServiceTimeSlot({
             price: addon.price || 0,
             duration: addon.duration || 0
           })) || [];
-          
+
           return {
             service: item.serviceId,
             serviceName: item.serviceName,
@@ -400,11 +400,11 @@ export function Step3_MultiServiceTimeSlot({
         clientEmail: user?.emailAddress || user?.email || '',
         clientPhone: user?.mobileNo || user?.phone || '',
         // Financials (if provided)
-        platformFee: Math.round(platformFee || 0),
-        serviceTax: Math.round(serviceTax || 0),
+        platformFee: parseFloat(Number(platformFee || 0).toFixed(2)),
+        serviceTax: parseFloat(Number(serviceTax || 0).toFixed(2)),
         taxRate: taxRate,
         couponCode,
-        discountAmount: Math.round(discountAmount || 0)
+        discountAmount: parseFloat(Number(discountAmount || 0).toFixed(2))
       };
 
       const response = await fetch('/api/booking/lock', {
@@ -438,7 +438,7 @@ export function Step3_MultiServiceTimeSlot({
     } catch (error: any) {
       console.error('Lock acquisition failed:', error);
       toast.error(error.message || 'Failed to reserve time slot. Please try another.');
-      
+
       // [NEW] Refresh slots immediately (not background) to get updated availability
       await fetchMultiServiceSlots(false);
     } finally {

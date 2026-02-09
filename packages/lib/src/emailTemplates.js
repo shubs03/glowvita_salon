@@ -127,8 +127,16 @@ export const getInvoiceTemplate = ({
 <html>
 <head>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.4; color: #000; margin: 0; padding: 20px; background-color: #fff; }
-        .invoice-container { max-width: 800px; margin: 0 auto; padding: 20px; background: white; border-radius: 8px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.4; color: #000; margin: 0; padding: 0; background-color: #f4f4f5; }
+        .invoice-container { max-width: 800px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        
+        /* GlowVita Branding Header */
+        .branding-header { background-color: #111827; color: white; padding: 12px 24px; text-align: center; }
+        .branding-title { font-size: 18px; font-weight: bold; margin: 0; color: #ffffff; letter-spacing: 0.025em; }
+        .branding-subtitle { font-size: 10px; margin-top: 2px; opacity: 0.8; }
+        
+        .main-content { padding: 30px; }
+        
         .header { border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
         .salon-info { float: left; width: 60%; }
         .invoice-title-box { float: right; width: 30%; text-align: right; }
@@ -137,124 +145,144 @@ export const getInvoiceTemplate = ({
         .invoice-header-title { font-size: 24px; font-weight: bold; margin: 0; color: #000; }
         .clear { clear: both; }
         
-        .info-section { margin-bottom: 20px; font-size: 14px; }
+        .info-section { margin-bottom: 15px; font-size: 14px; }
         .info-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
         .info-label { font-weight: 600; }
         
         .divider { border-top: 1px solid #000; margin: 15px 0; }
         
         .table { width: 100%; border-collapse: collapse; border: 1px solid #000; margin-bottom: 20px; }
-        .table th { background-color: #e2e8f0; border: 1px solid #000; padding: 8px; text-align: left; font-size: 12px; font-weight: bold; color: #000; }
-        .table td { border: 1px solid #000; padding: 8px; font-size: 12px; color: #000; }
+        .table th { background-color: #e5e7eb; border: 1px solid #000; padding: 10px 8px; text-align: left; font-size: 12px; font-weight: bold; color: #000; }
+        .table td { border: 1px solid #000; padding: 10px 8px; font-size: 12px; color: #000; }
         .text-right { text-align: right; }
         .font-bold { font-weight: bold; }
         .addon-item { padding-left: 15px; }
         
-        .summary-row td { padding: 6px 8px; border: 1px solid #000; }
-        .total-row { background-color: #e2e8f0; }
+        .summary-row td { padding: 8px; border: 1px solid #000; }
+        .total-row { background-color: #e5e7eb; }
         
-        .footer { margin-top: 30px; border-top: 2px solid #000; padding-top: 15px; text-align: center; }
-        .payment-status-note { font-weight: 500; font-size: 14px; margin-bottom: 8px; color: #000; }
-        .computer-generated { font-size: 10px; color: #4b5563; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+        .footer-section { margin-top: 30px; border-top: 2px solid #000; padding-top: 20px; }
+        .payment-status-note { font-weight: 500; font-size: 14px; margin-bottom: 8px; text-align: center; color: #000; }
+        .computer-generated { font-size: 10px; color: #4b5563; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; text-align: center; margin-bottom: 25px; }
+        
+        /* GlowVita Footer Branding */
+        .branding-footer { border-top: 1px solid #e5e7eb; padding-top: 20px; text-align: center; }
+        .footer-brand { display: inline-flex; align-items: center; color: #111827; font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+        .footer-subtitle { font-size: 12px; color: #6b7280; margin: 2px 0; }
+        .footer-link { font-size: 12px; color: #9ca3af; margin: 2px 0; }
     </style>
 </head>
 <body>
     <div class="invoice-container">
-        <!-- Header -->
-        <div class="header">
-            <div class="salon-info">
-                <h1 class="salon-name">${businessName}</h1>
-                <div class="salon-detail">${formatAddress(businessAddress)}</div>
-                <div class="salon-detail">Phone: ${businessPhone}</div>
-            </div>
-            <div class="invoice-title-box">
-                <h2 class="invoice-header-title">INVOICE</h2>
-            </div>
-            <div class="clear"></div>
+        <!-- GlowVita Branding Header -->
+        <div class="branding-header">
+            <div class="branding-title">GlowVita Salon</div>
+            <div class="branding-subtitle">Professional Salon Management Platform</div>
         </div>
 
-        <!-- Date and Invoice No -->
-        <div class="info-section">
-            <div style="float: left;">
-                <span class="info-label">Date:</span> ${date}
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <div class="salon-info">
+                    <h1 class="salon-name">${businessName}</h1>
+                    <div class="salon-detail">${formatAddress(businessAddress)}</div>
+                    <div class="salon-detail">Phone: ${businessPhone}</div>
+                </div>
+                <div class="invoice-title-box">
+                    <h2 class="invoice-header-title">INVOICE</h2>
+                </div>
+                <div class="clear"></div>
             </div>
-            <div style="float: right;">
-                <span class="info-label">Invoice No:</span> ${invoiceNumber}
+
+            <!-- Date and Invoice No -->
+            <div class="info-section">
+                <div style="float: left;">
+                    <span class="info-label">Date:</span> ${date}
+                </div>
+                <div style="float: right;">
+                    <span class="info-label">Invoice No:</span> ${invoiceNumber}
+                </div>
+                <div class="clear"></div>
             </div>
-            <div class="clear"></div>
-        </div>
 
-        <div class="divider"></div>
+            <div class="divider"></div>
 
-        <!-- Client Section -->
-        <div class="info-section" style="margin-bottom: 15px;">
-            <div><span class="info-label">Invoice To:</span> ${clientName || 'N/A'}</div>
-            ${clientPhone ? `<div><span class="info-label">Phone:</span> ${clientPhone}</div>` : ''}
-        </div>
+            <!-- Client Section -->
+            <div class="info-section">
+                <div><span class="info-label">Invoice To:</span> ${clientName || 'N/A'}</div>
+                ${clientPhone ? `<div><span class="info-label">Phone:</span> ${clientPhone}</div>` : ''}
+            </div>
 
-        <!-- Table -->
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>ITEM DESCRIPTION</th>
-                    <th class="text-right">₹ PRICE</th>
-                    <th class="text-right">QTY</th>
-                    <th class="text-right">₹ TAX</th>
-                    <th class="text-right">₹ AMOUNT</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${items.map(item => `
-                <tr>
-                    <td>
-                        <div class="font-bold ${item.type === 'addon' ? 'addon-item' : ''}">
-                            ${item.type === 'addon' ? '+ ' : ''}${item.name}
-                        </div>
-                    </td>
-                    <td class="text-right">₹${(Number(item.price) || 0).toFixed(2)}</td>
-                    <td class="text-right">${item.quantity || 1}</td>
-                    <td class="text-right">₹${((Number(item.price || 0) * Number(item.quantity || 1) * Number(taxRate)) / 100).toFixed(2)}</td>
-                    <td class="text-right font-bold">₹${(Number(item.totalPrice) || 0).toFixed(2)}</td>
-                </tr>
-                `).join('')}
-                
-                <!-- Summary Rows -->
-                <tr class="summary-row">
-                    <td colspan="4" class="text-right font-bold">Subtotal:</td>
-                    <td class="text-right font-bold">₹${(Number(subtotal) || 0).toFixed(2)}</td>
-                </tr>
-                <tr class="summary-row">
-                    <td colspan="4" class="text-right font-bold">Tax (${taxRate}%):</td>
-                    <td class="text-right font-bold">₹${(Number(tax) || 0).toFixed(2)}</td>
-                </tr>
-                <tr class="summary-row">
-                    <td colspan="4" class="text-right font-bold">Platform Fee:</td>
-                    <td class="text-right font-bold">₹${(Number(platformFee) || 0).toFixed(2)}</td>
-                </tr>
-                <tr class="summary-row">
-                    <td colspan="4" class="text-right font-bold" style="color: #16a34a;">
-                        Discount${couponCode ? ` (${couponCode})` : ''}:
-                    </td>
-                    <td class="text-right font-bold" style="color: #16a34a;">-₹${(Number(discount) || 0).toFixed(2)}</td>
-                </tr>
-                <tr class="summary-row total-row">
-                    <td colspan="4" class="text-right font-bold" style="font-size: 15px;">Total:</td>
-                    <td class="text-right font-bold" style="font-size: 15px;">₹${(Number(totalAmount) || 0).toFixed(2)}</td>
-                </tr>
-            </tbody>
-        </table>
+            <!-- Table -->
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ITEM DESCRIPTION</th>
+                        <th class="text-right">₹ PRICE</th>
+                        <th class="text-right">QTY</th>
+                        <th class="text-right">₹ TAX</th>
+                        <th class="text-right">₹ AMOUNT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${items.map(item => `
+                    <tr>
+                        <td>
+                            <div class="font-bold ${item.type === 'addon' ? 'addon-item' : ''}">
+                                ${item.type === 'addon' ? '+ ' : ''}${item.name}
+                            </div>
+                        </td>
+                        <td class="text-right">₹${(Number(item.price) || 0).toFixed(2)}</td>
+                        <td class="text-right">${item.quantity || 1}</td>
+                        <td class="text-right">₹${((Number(item.price || 0) * Number(item.quantity || 1) * Number(taxRate)) / 100).toFixed(2)}</td>
+                        <td class="text-right font-bold">₹${(Number(item.totalPrice) || 0).toFixed(2)}</td>
+                    </tr>
+                    `).join('')}
+                    
+                    <!-- Summary Rows -->
+                    <tr class="summary-row">
+                        <td colspan="4" class="text-right font-bold">Subtotal:</td>
+                        <td class="text-right font-bold">₹${(Number(subtotal) || 0).toFixed(2)}</td>
+                    </tr>
+                    <tr class="summary-row">
+                        <td colspan="4" class="text-right font-bold">Tax (${taxRate}%):</td>
+                        <td class="text-right font-bold">₹${(Number(tax) || 0).toFixed(2)}</td>
+                    </tr>
+                    <tr class="summary-row">
+                        <td colspan="4" class="text-right font-bold">Platform Fee:</td>
+                        <td class="text-right font-bold">₹${(Number(platformFee) || 0).toFixed(2)}</td>
+                    </tr>
+                    <tr class="summary-row">
+                        <td colspan="4" class="text-right font-bold" style="color: #16a34a;">
+                            Discount${couponCode ? ` (${couponCode})` : ''}:
+                        </td>
+                        <td class="text-right font-bold" style="color: #16a34a;">-₹${(Number(discount) || 0).toFixed(2)}</td>
+                    </tr>
+                    <tr class="summary-row total-row">
+                        <td colspan="4" class="text-right font-bold" style="font-size: 15px;">Total:</td>
+                        <td class="text-right font-bold" style="font-size: 15px;">₹${(Number(totalAmount) || 0).toFixed(2)}</td>
+                    </tr>
+                </tbody>
+            </table>
 
-        <!-- Footer -->
-        <div class="footer">
-            <p class="payment-status-note">
-                ${paymentMethod || paymentStatus === 'paid' || paymentStatus === 'completed'
+            <!-- Footer -->
+            <div class="footer-section">
+                <p class="payment-status-note">
+                    ${paymentMethod || paymentStatus === 'paid' || paymentStatus === 'completed'
             ? `Payment Of ₹${(Number(totalAmount) || 0).toFixed(2)} Received By ${paymentMethod || 'Paid at Salon'}`
             : `Payment Of ₹${(Number(totalAmount) || 0).toFixed(2)} Is Pending`
         }
-            </p>
-            <p class="computer-generated">
-                NOTE: This is computer generated receipt and does not require physical signature.
-            </p>
+                </p>
+                <p class="computer-generated">
+                    NOTE: This is computer generated receipt and does not require physical signature.
+                </p>
+                
+                <div class="branding-footer">
+                    <div class="footer-brand">Powered by GlowVita Salon</div>
+                    <p class="footer-subtitle">Professional Salon Management Platform</p>
+                    <p class="footer-link">www.glowvitasalon.com</p>
+                </div>
+            </div>
         </div>
     </div>
 </body>

@@ -426,21 +426,21 @@ export function BookingSummary({
             {priceBreakdown && priceBreakdown.platformFee > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Platform Fee</span>
-                <span>₹{Math.round(priceBreakdown.platformFee)}</span>
+                <span>₹{priceBreakdown.platformFee.toFixed(2)}</span>
               </div>
             )}
 
             {priceBreakdown && priceBreakdown.serviceTax > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">GST</span>
-                <span>₹{Math.round(priceBreakdown.serviceTax)}</span>
+                <span>₹{priceBreakdown.serviceTax.toFixed(2)}</span>
               </div>
             )}
 
             {priceBreakdown && priceBreakdown.vendorServiceTax > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Vendor Service Tax</span>
-                <span>₹{Math.round(priceBreakdown.vendorServiceTax)}</span>
+                <span>₹{priceBreakdown.vendorServiceTax.toFixed(2)}</span>
               </div>
             )}
 
@@ -449,7 +449,7 @@ export function BookingSummary({
                 <span className="text-muted-foreground">
                   Discount {propCouponCode || priceBreakdown.couponCode ? `(${propCouponCode || priceBreakdown.couponCode})` : ''}
                 </span>
-                <span>-₹{Math.round(priceBreakdown.discountAmount)}</span>
+                <span>-₹{priceBreakdown.discountAmount.toFixed(2)}</span>
               </div>
             )}
 
