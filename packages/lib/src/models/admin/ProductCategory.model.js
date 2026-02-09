@@ -11,6 +11,16 @@ const productCategorySchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
+  gstType: {
+    type: String,
+    enum: ['none', 'fixed', 'percentage'],
+    default: 'none',
+  },
+  gstValue: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

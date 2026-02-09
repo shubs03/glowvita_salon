@@ -31,9 +31,20 @@ import {
   useCreateAdminProductCategoryMutation,
   useUpdateAdminProductCategoryMutation,
   useDeleteAdminProductCategoryMutation,
+  useGetProductMastersQuery,
+  useCreateProductMasterMutation,
+  useUpdateProductMasterMutation,
+  useDeleteProductMasterMutation,
 } from '../../../../../packages/store/src/services/api';
 import { Badge } from '@repo/ui/badge';
 import { cn } from '@repo/ui/cn';
+
+// Helper function to capitalize first letter and standardize input
+const capitalizeFirstLetter = (str: string): string => {
+  if (!str) return str;
+  const trimmed = str.trim();
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+};
 
 interface DropdownItem {
   _id: string;
@@ -68,8 +79,21 @@ interface ProductCategory {
     _id: string;
     name: string;
     description?: string;
+    gstType?: 'none' | 'fixed' | 'percentage';
+    gstValue?: number;
     createdAt?: string;
     updatedAt?: string;
+}
+
+interface ProductMaster {
+    _id: string;
+    name: string;
+    category: ProductCategory | string;
+    brand?: string;
+    description?: string;
+    productForm?: string;
+    keyIngredients?: string[];
+    productImage?: string;
 }
 
 const DropdownManager = ({
@@ -798,6 +822,320 @@ const ServiceManager = () => {
     );
 };
 
+const ProductMasterManager = () => {
+    const { data: productMasters = [], isLoading, isError } = useGetProductMastersQuery(undefined);
+    const { data: productCategoriesResponse } = useGetAdminProductCategoriesQuery(undefined);
+    const [createProductMaster] = useCreateProductMasterMutation();
+    const [updateProductMaster] = useUpdateProductMasterMutation();
+    const [deleteProductMaster] = useDeleteProductMasterMutation();
+
+    const productCategories = useMemo(() => {
+        if (productCategoriesResponse && Array.isArray(productCategoriesResponse.data)) {
+            return productCategoriesResponse.data;
+        }
+        return [];
+    }, [productCategoriesResponse]);
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [currentItem, setCurrentItem] = useState<Partial<ProductMaster> | null>(null);
+    const [imageBase64, setImageBase64] = useState<string | null>(null);
+
+    const handleOpenModal = (item: Partial<ProductMaster> | null = null) => {
+        setCurrentItem(item);
+        setImageBase64(item?.productImage || null);
+        setIsModalOpen(true);
+    };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImageBase64(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            setImageBase64(null);
+        }
+    };
+
+    const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const name = capitalizeFirstLetter((form.elements.namedItem('name') as HTMLInputElement).value);
+        const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value.trim();
+        const category = (form.elements.namedItem('category') as HTMLSelectElement).value;
+        const brand = capitalizeFirstLetter((form.elements.namedItem('brand') as HTMLInputElement).value);
+        const productForm = capitalizeFirstLetter((form.elements.namedItem('productForm') as HTMLInputElement).value);
+        const keyIngredientsInput = (form.elements.namedItem('keyIngredients') as HTMLInputElement).value;
+        
+        // Parse key ingredients - comma separated, capitalize each ingredient
+        const keyIngredients = keyIngredientsInput
+            .split(',')
+            .map(ing => capitalizeFirstLetter(ing))
+            .filter(ing => ing.length > 0);
+        
+        const action = currentItem?._id ? 'edit' : 'add';
+        const itemData = {
+            id: currentItem?._id,
+            name,
+            description,
+            category,
+            brand,
+            productForm,
+            keyIngredients,
+            image: imageBase64,
+        };
+        
+        try {
+            if (action === 'add') {
+                await createProductMaster(itemData).unwrap();
+            } else {
+                await updateProductMaster(itemData).unwrap();
+            }
+            toast.success('Success', { description: `Product master ${action}ed successfully.` });
+            setIsModalOpen(false);
+            setCurrentItem(null);
+            setImageBase64(null);
+        } catch (error: any) {
+            toast.error('Error', { description: error?.data?.message || `Failed to ${action} product master.` });
+        }
+    };
+
+    const handleDeleteClick = (item: ProductMaster) => {
+        setCurrentItem(item);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (currentItem?._id) {
+            try {
+                await deleteProductMaster({ id: currentItem._id }).unwrap();
+                toast.success('Success', { description: 'Product master deleted successfully.' });
+                setIsDeleteModalOpen(false);
+                setCurrentItem(null);
+            } catch (error: any) {
+                toast.error('Error', { description: error?.data?.message || 'Failed to delete product master.' });
+            }
+        }
+    };
+
+    if (isLoading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <Skeleton className="h-6 w-32" />
+                            <Skeleton className="h-4 w-52 mt-2" />
+                        </div>
+                        <Skeleton className="h-9 w-32" />
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <div className="overflow-x-auto no-scrollbar rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead><Skeleton className="h-4 w-16" /></TableHead>
+                                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                                    <TableHead><Skeleton className="h-4 w-16" /></TableHead>
+                                    <TableHead><Skeleton className="h-4 w-20" /></TableHead>
+                                    <TableHead className="text-right"><Skeleton className="h-4 w-16" /></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {[...Array(5)].map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-48" /></TableCell>
+                                        <TableCell><Skeleton className="h-8 w-8 rounded" /></TableCell>
+                                        <TableCell className="text-right">
+                                            <Skeleton className="h-8 w-8 inline-block mr-2" />
+                                            <Skeleton className="h-8 w-8 inline-block" />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>Product Masters</CardTitle>
+                        <CardDescription>Manage master product templates for vendors to use.</CardDescription>
+                    </div>
+                    <Button onClick={() => handleOpenModal()} disabled={isLoading || productCategories.length === 0}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Product Master
+                    </Button>
+                </div>
+                {productCategories.length === 0 && <p className="text-sm text-yellow-600 mt-2">Please add a product category first before adding product masters.</p>}
+            </CardHeader>
+            <CardContent>
+                <div className="overflow-x-auto no-scrollbar rounded-md border">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Category</TableHead>
+                                <TableHead>Brand</TableHead>
+                                <TableHead>Product Form</TableHead>
+                                <TableHead>Image</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {productMasters.map((item: ProductMaster) => (
+                                <TableRow key={item._id}>
+                                    <TableCell className="font-medium">{item.name}</TableCell>
+                                    <TableCell>
+                                        <Badge variant="secondary">
+                                            {typeof item.category === 'object' && item.category !== null ? (item.category as ProductCategory).name : 'N/A'}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground">{item.brand || '-'}</TableCell>
+                                    <TableCell className="text-muted-foreground">{item.productForm || '-'}</TableCell>
+                                    <TableCell>
+                                        {item.productImage ? (
+                                            <img src={item.productImage} alt={item.name} className="h-12 w-12 object-cover rounded" />
+                                        ) : (
+                                            <span className="text-muted-foreground">No image</span>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal(item)} disabled={isLoading}>
+                                            <Edit className="h-4 w-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(item)} disabled={isLoading}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                            {productMasters.length === 0 && !isLoading && (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                                        No product masters found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            {isLoading && (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                                        Loading...
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                    <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <form onSubmit={handleSave}>
+                            <DialogHeader>
+                                <DialogTitle>{currentItem?._id ? 'Edit' : 'Add'} Product Master</DialogTitle>
+                                <DialogDescription>
+                                    {currentItem?._id ? `Editing "${(currentItem as ProductMaster).name}".` : 'Add a new product master template.'}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="name">Name *</Label>
+                                        <Input id="name" name="name" defaultValue={currentItem?.name || ''} required placeholder="e.g., Vitamin C Serum" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="category">Category *</Label>
+                                        <Select name="category" defaultValue={typeof currentItem?.category === 'object' ? (currentItem?.category as ProductCategory)?._id : currentItem?.category as string} required>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select a category" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {productCategories.map((cat: ProductCategory) => (
+                                                    <SelectItem key={cat._id} value={cat._id}>{cat.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="brand">Brand</Label>
+                                        <Input id="brand" name="brand" defaultValue={currentItem?.brand || ''} placeholder="e.g., Neutrogena" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="productForm">Product Form</Label>
+                                        <Input id="productForm" name="productForm" defaultValue={currentItem?.productForm || ''} placeholder="e.g., serum, cream, oil" />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="description">Description</Label>
+                                    <Textarea id="description" name="description" defaultValue={currentItem?.description || ''} placeholder="Enter product description..." rows={3} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="keyIngredients">Key Ingredients</Label>
+                                    <Input 
+                                        id="keyIngredients" 
+                                        name="keyIngredients" 
+                                        defaultValue={Array.isArray(currentItem?.keyIngredients) ? currentItem.keyIngredients.join(', ') : ''} 
+                                        placeholder="e.g., Vitamin C, Hyaluronic Acid, Retinol (comma separated)" 
+                                    />
+                                    <p className="text-xs text-muted-foreground">Separate multiple ingredients with commas</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="image">Product Image</Label>
+                                    <Input
+                                        id="image"
+                                        name="image"
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                    />
+                                    {imageBase64 && (
+                                        <img src={imageBase64} alt="Preview" className="mt-2 h-24 w-24 object-cover rounded" />
+                                    )}
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                                <Button type="submit">Save</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Delete Product Master?</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to delete "{(currentItem as ProductMaster)?.name}"? This action cannot be undone.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+                            <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </CardContent>
+        </Card>
+    );
+};
+
 const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: { title: string; description: string; data: DropdownItem[]; onUpdate: (item: Partial<DropdownItem>, action: 'add' | 'edit' | 'delete') => void; isLoading: boolean; }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -1224,6 +1562,7 @@ export default function DropdownManagementPage() {
                 <TabsContent value="products">
                     <div className="space-y-8">
                         <ProductCategoryManager />
+                        <ProductMasterManager />
                     </div>
                 </TabsContent>
                 <TabsContent value="suppliers">
@@ -1262,15 +1601,20 @@ const ProductCategoryManager = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [currentCategory, setCurrentCategory] = useState<ProductCategory | null>(null);
-    const [formData, setFormData] = useState({ name: '', description: '' });
+    const [formData, setFormData] = useState({ name: '', description: '', gstType: 'none', gstValue: 0 });
 
     const handleOpenModal = (category: ProductCategory | null = null) => {
         if (category) {
             setCurrentCategory(category);
-            setFormData({ name: category.name, description: category.description || '' });
+            setFormData({ 
+                name: category.name, 
+                description: category.description || '', 
+                gstType: category.gstType || 'none',
+                gstValue: category.gstValue || 0
+            });
         } else {
             setCurrentCategory(null);
-            setFormData({ name: '', description: '' });
+            setFormData({ name: '', description: '', gstType: 'none', gstValue: 0 });
         }
         setIsModalOpen(true);
     };
@@ -1287,20 +1631,24 @@ const ProductCategoryManager = () => {
             if (currentCategory) {
                 await updateCategory({
                     id: currentCategory._id,
-                    name: formData.name.trim(),
-                    description: formData.description.trim()
+                    name: capitalizeFirstLetter(formData.name),
+                    description: formData.description.trim(),
+                    gstType: formData.gstType,
+                    gstValue: Number(formData.gstValue)
                 }).unwrap();
                 toast.success('Category updated successfully');
             } else {
                 await createCategory({
-                    name: formData.name.trim(),
-                    description: formData.description.trim()
+                    name: capitalizeFirstLetter(formData.name),
+                    description: formData.description.trim(),
+                    gstType: formData.gstType,
+                    gstValue: Number(formData.gstValue)
                 }).unwrap();
                 toast.success('Category created successfully');
             }
             
             setIsModalOpen(false);
-            setFormData({ name: '', description: '' });
+            setFormData({ name: '', description: '', gstType: 'none', gstValue: 0 });
             setCurrentCategory(null);
             refetch();
         } catch (error: any) {
@@ -1391,6 +1739,7 @@ const ProductCategoryManager = () => {
                             <TableRow>
                                 <TableHead>Name</TableHead>
                                 <TableHead>Description</TableHead>
+                                <TableHead>GST</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -1403,7 +1752,7 @@ const ProductCategoryManager = () => {
                                 </TableRow>
                             ) : productCategories.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                                         No categories found. Create your first category.
                                     </TableCell>
                                 </TableRow>
@@ -1413,6 +1762,15 @@ const ProductCategoryManager = () => {
                                         <TableCell className="font-medium">{category.name}</TableCell>
                                         <TableCell className="text-muted-foreground">
                                             {category.description || 'No description'}
+                                        </TableCell>
+                                        <TableCell>
+                                            {category.gstType === 'none' ? (
+                                                <Badge variant="secondary">No GST</Badge>
+                                            ) : category.gstType === 'fixed' ? (
+                                                <Badge variant="default">₹{category.gstValue} Fixed</Badge>
+                                            ) : (
+                                                <Badge variant="default">{category.gstValue}%</Badge>
+                                            )}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
@@ -1473,6 +1831,38 @@ const ProductCategoryManager = () => {
                                     rows={3}
                                 />
                             </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="gstType">GST Type</Label>
+                                <Select
+                                    value={formData.gstType}
+                                    onValueChange={(value) => setFormData({ ...formData, gstType: value as 'none' | 'fixed' | 'percentage' })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select GST type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">No GST</SelectItem>
+                                        <SelectItem value="fixed">Fixed Amount</SelectItem>
+                                        <SelectItem value="percentage">Percentage</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            {formData.gstType !== 'none' && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="gstValue">
+                                        GST Value {formData.gstType === 'percentage' ? '(%)' : '(₹)'}
+                                    </Label>
+                                    <Input
+                                        id="gstValue"
+                                        type="number"
+                                        min="0"
+                                        step={formData.gstType === 'percentage' ? '0.01' : '1'}
+                                        value={formData.gstValue}
+                                        onChange={(e) => setFormData({ ...formData, gstValue: parseFloat(e.target.value) || 0 })}
+                                        placeholder={formData.gstType === 'percentage' ? 'Enter GST percentage' : 'Enter GST amount'}
+                                    />
+                                </div>
+                            )}
                         </div>
                         <DialogFooter>
                             <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
