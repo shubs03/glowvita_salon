@@ -172,6 +172,11 @@ const billingSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
+  taxType: {
+    type: String,
+    enum: ['percentage', 'fixed'],
+    default: 'percentage'
+  },
   platformFee: {
     type: Number,
     default: 0,
