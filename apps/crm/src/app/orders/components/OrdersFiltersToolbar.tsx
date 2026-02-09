@@ -74,29 +74,31 @@ const OrdersFiltersToolbar = ({
           />
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          {/* Tab Switcher Button */}
-          <div className="">
-            <div className="flex items-center rounded-md border border-border/20 overflow-hidden w-fit">
-              <button
-                type="button"
-                onClick={() => onViewModeChange('orders')}
-                className={`h-12 px-4 sm:px-6 flex items-center ${onViewMode === 'orders' ? 'bg-primary hover:bg-primary/90 text-primary-foreground rounded-tl-lg rounded-bl-lg' : 'bg-background text-foreground hover:bg-muted'}`}
-              >
-                <ShoppingCart className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span className="hidden sm:inline">Orders</span>
-                <span className="sm:hidden">O</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => onViewModeChange('purchases')}
-                className={`h-12 px-4 sm:px-6 flex items-center ${onViewMode === 'purchases' ? 'bg-primary hover:bg-primary/90 text-primary-foreground rounded-tr-lg rounded-br-lg' : 'bg-background text-foreground hover:bg-muted'}`}
-              >
-                <Package className="mr-2 h-4 w-4 flex-shrink-0" />
-                <span className="hidden sm:inline">My Purchases</span>
-                <span className="sm:hidden">MP</span>
-              </button>
+          {/* Tab Switcher Button - Only show for vendors, not suppliers */}
+          {role !== 'supplier' && (
+            <div className="">
+              <div className="flex items-center rounded-md border border-border/20 overflow-hidden w-fit">
+                <button
+                  type="button"
+                  onClick={() => onViewModeChange('orders')}
+                  className={`h-12 px-4 sm:px-6 flex items-center ${onViewMode === 'orders' ? 'bg-primary hover:bg-primary/90 text-primary-foreground rounded-tl-lg rounded-bl-lg' : 'bg-background text-foreground hover:bg-muted'}`}
+                >
+                  <ShoppingCart className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span className="hidden sm:inline">Orders</span>
+                  <span className="sm:hidden">O</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onViewModeChange('purchases')}
+                  className={`h-12 px-4 sm:px-6 flex items-center ${onViewMode === 'purchases' ? 'bg-primary hover:bg-primary/90 text-primary-foreground rounded-tr-lg rounded-br-lg' : 'bg-background text-foreground hover:bg-muted'}`}
+                >
+                  <Package className="mr-2 h-4 w-4 flex-shrink-0" />
+                  <span className="hidden sm:inline">My Purchases</span>
+                  <span className="sm:hidden">MP</span>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
           
           <Select value={statusFilter} onValueChange={onStatusChange}>
             <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-lg border-border hover:border-primary">
