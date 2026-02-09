@@ -29,7 +29,7 @@ import DeleteModal from './components/DeleteModal';
 import PaginationControls from './components/PaginationControls';
 
 // Types
-type Product = {
+interface Product {
   _id: string;
   productImages: string[];
   productName: string;
@@ -42,7 +42,8 @@ type Product = {
   description?: string;
   createdAt?: string;
   updatedAt?: string;
-  status: 'pending' | 'approved' | 'disapproved';
+  status: "pending" | "approved" | "disapproved" | "rejected";
+  rejectionReason?: string;
   size?: string;
   sizeMetric?: string;
   keyIngredients?: string[];
@@ -51,13 +52,15 @@ type Product = {
   productForm?: string;
   brand?: string;
   vendorId?: { name: string };
-};
+}
 
-type Category = {
+interface Category {
   _id: string;
   name: string;
   description: string;
-};
+  gstType?: "none" | "fixed" | "percentage";
+  gstValue?: number;
+}
 
 export default function SupplierProductsPage() {
   const { user } = useCrmAuth();
@@ -147,7 +150,15 @@ export default function SupplierProductsPage() {
     }
 
     const mutation = selectedProduct ? updateProduct : createProduct;
-    const payload = selectedProduct ? { id: selectedProduct._id, ...formData } : formData;
+    let payload = selectedProduct ? { id: selectedProduct._id, ...formData } : formData;
+
+    if (
+      selectedProduct &&
+      (selectedProduct.status === "disapproved" ||
+        selectedProduct.status === "rejected")
+    ) {
+      payload = { ...payload, status: "pending" };
+    }
 
     try {
       await mutation(payload).unwrap();
@@ -162,6 +173,7 @@ export default function SupplierProductsPage() {
   const handleDeleteProduct = async () => {
     if (selectedProduct) {
       try {
+        // delete data
         await deleteProduct(selectedProduct._id).unwrap();
         toast.success('Product deleted successfully!');
         setIsDeleteModalOpen(false);
@@ -306,11 +318,10 @@ export default function SupplierProductsPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {paginatedProducts.map((product, index) => (
+                {paginatedProducts.map((product) => (
                   <ProductListItem
                     key={product._id}
                     product={product}
-                    index={index}
                     onEdit={(p) => handleOpenProductModal(p)}
                     onDelete={(p) => { setSelectedProduct(p); setIsDeleteModalOpen(true); }}
                   />
