@@ -1,8 +1,8 @@
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
-import { Button } from '@repo/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@repo/ui/dialog';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
+import { Button } from '@repo/ui/button';
 import { Loader2 } from 'lucide-react';
 
 interface CategoryModalProps {
@@ -11,7 +11,7 @@ interface CategoryModalProps {
   onSave: () => void;
   isCreating: boolean;
   newCategory: { name: string; description: string };
-  setNewCategory: (category: { name: string; description: string }) => void;
+  setNewCategory: React.Dispatch<React.SetStateAction<{ name: string; description: string }>>;
 }
 
 const CategoryModal = ({
@@ -27,34 +27,39 @@ const CategoryModal = ({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add New Category</DialogTitle>
-          <DialogDescription>Create a new product category for your catalog.</DialogDescription>
         </DialogHeader>
+        
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="category-name">Category Name</Label>
-            <Input
-              id="category-name"
-              placeholder="e.g., Hair Care, Skin Care"
-              value={newCategory.name}
-              onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+            <Label className="text-sm font-medium">Category Name</Label>
+            <Input 
+              placeholder="Enter category name" 
+              value={newCategory.name} 
+              onChange={(e) => setNewCategory(prev => ({...prev, name: e.target.value}))}
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="category-description">Description (Optional)</Label>
-            <Textarea
-              id="category-description"
-              placeholder="Brief description of the category"
-              value={newCategory.description}
-              onChange={(e) => setNewCategory({ ...newCategory, description: e.target.value })}
-              rows={3}
+            <Label className="text-sm font-medium">Description</Label>
+            <Textarea 
+              placeholder="Enter category description" 
+              value={newCategory.description} 
+              onChange={(e) => setNewCategory(prev => ({...prev, description: e.target.value}))}
+              className="min-h-[80px]"
             />
           </div>
         </div>
+        
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isCreating}>
+          <Button 
+            variant="secondary" 
+            onClick={onClose}
+          >
             Cancel
           </Button>
-          <Button onClick={onSave} disabled={isCreating}>
+          <Button 
+            onClick={onSave} 
+            disabled={isCreating}
+          >
             {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create Category
           </Button>
