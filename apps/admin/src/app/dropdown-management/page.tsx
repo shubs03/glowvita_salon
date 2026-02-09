@@ -39,6 +39,13 @@ import {
 import { Badge } from '@repo/ui/badge';
 import { cn } from '@repo/ui/cn';
 
+// Helper function to capitalize first letter and standardize input
+const capitalizeFirstLetter = (str: string): string => {
+  if (!str) return str;
+  const trimmed = str.trim();
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+};
+
 interface DropdownItem {
   _id: string;
   name: string;
@@ -856,17 +863,17 @@ const ProductMasterManager = () => {
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const form = e.currentTarget;
-        const name = (form.elements.namedItem('name') as HTMLInputElement).value;
-        const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
+        const name = capitalizeFirstLetter((form.elements.namedItem('name') as HTMLInputElement).value);
+        const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value.trim();
         const category = (form.elements.namedItem('category') as HTMLSelectElement).value;
-        const brand = (form.elements.namedItem('brand') as HTMLInputElement).value;
-        const productForm = (form.elements.namedItem('productForm') as HTMLInputElement).value;
+        const brand = capitalizeFirstLetter((form.elements.namedItem('brand') as HTMLInputElement).value);
+        const productForm = capitalizeFirstLetter((form.elements.namedItem('productForm') as HTMLInputElement).value);
         const keyIngredientsInput = (form.elements.namedItem('keyIngredients') as HTMLInputElement).value;
         
-        // Parse key ingredients - comma separated
+        // Parse key ingredients - comma separated, capitalize each ingredient
         const keyIngredients = keyIngredientsInput
             .split(',')
-            .map(ing => ing.trim())
+            .map(ing => capitalizeFirstLetter(ing))
             .filter(ing => ing.length > 0);
         
         const action = currentItem?._id ? 'edit' : 'add';
@@ -995,7 +1002,7 @@ const ProductMasterManager = () => {
                                     <TableCell className="font-medium">{item.name}</TableCell>
                                     <TableCell>
                                         <Badge variant="secondary">
-                                            {typeof item.category === 'object' ? (item.category as ProductCategory).name : 'N/A'}
+                                            {typeof item.category === 'object' && item.category !== null ? (item.category as ProductCategory).name : 'N/A'}
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-muted-foreground">{item.brand || '-'}</TableCell>
@@ -1624,7 +1631,7 @@ const ProductCategoryManager = () => {
             if (currentCategory) {
                 await updateCategory({
                     id: currentCategory._id,
-                    name: formData.name.trim(),
+                    name: capitalizeFirstLetter(formData.name),
                     description: formData.description.trim(),
                     gstType: formData.gstType,
                     gstValue: Number(formData.gstValue)
@@ -1632,7 +1639,7 @@ const ProductCategoryManager = () => {
                 toast.success('Category updated successfully');
             } else {
                 await createCategory({
-                    name: formData.name.trim(),
+                    name: capitalizeFirstLetter(formData.name),
                     description: formData.description.trim(),
                     gstType: formData.gstType,
                     gstValue: Number(formData.gstValue)
