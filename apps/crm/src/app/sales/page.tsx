@@ -62,12 +62,14 @@ interface Product {
 interface ServiceCartItem extends Service {
   quantity: number;
   totalPrice: number;
+  addOns?: any[];
 }
 
 // Product cart item interface
 interface ProductCartItem extends Product {
   quantity: number;
   totalPrice: number;
+  addOns?: any[];
 }
 
 export default function SalesPage() {
@@ -134,8 +136,8 @@ export default function SalesPage() {
                 <button
                   onClick={() => setActiveTab('services')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'services'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
                     }`}
                 >
                   Services
@@ -145,8 +147,8 @@ export default function SalesPage() {
                 <button
                   onClick={() => setActiveTab('products')}
                   className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'products'
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
                     }`}
                 >
                   Products

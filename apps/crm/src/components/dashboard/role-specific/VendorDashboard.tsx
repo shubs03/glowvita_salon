@@ -18,7 +18,9 @@ import {
   FaShoppingBag,
   FaClock,
   FaBan,
-  FaSyncAlt
+  FaSyncAlt,
+  FaTags,
+  FaCashRegister
 } from "react-icons/fa";
 
 interface DashboardMetrics {
@@ -33,6 +35,9 @@ interface DashboardMetrics {
   };
   upcomingAppointments: number;
   totalBusiness: number;
+  completedAppointments: number;
+  totalExpense: number;
+  totalCounterSale: number;
 }
 
 interface VendorDashboardProps {
@@ -66,7 +71,7 @@ export default function VendorDashboard({
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null); // 0-11 representing Jan-Dec
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  
+
   // Format currency for Indian Rupees
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-IN', {
@@ -184,7 +189,7 @@ export default function VendorDashboard({
                 endDate={endDate}
                 onFilterChange={onFilterChange}
               />
-              
+
               {/* Hierarchical Date Filter */}
               {/* <HierarchicalDateFilter
                 selectedYear={selectedYear}
@@ -198,114 +203,138 @@ export default function VendorDashboard({
           </div>
         </div>
 
-      {/* Stats Cards - Arranged in sequence per Vendor Dashboard Metric Definition Standard */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 mb-6">
-        <StatCard
-          title="Total Revenue"
-          value={metrics ? formatCurrency(metrics.totalRevenue) : '₹0'}
-          subtitle="Overall earnings"
-          change={hasNoData ? "No data" : "+12.5%"}
-          icon={FaDollarSign}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Total Bookings"
-          value={metrics ? formatNumber(metrics.totalBookings) : '0'}
-          subtitle="Appointment count"
-          change={hasNoData ? "No data" : "+15.2%"}
-          icon={FaUsers}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Booking Hours"
-          value={metrics ? formatNumber(Math.round(metrics.bookingHours * 100) / 100) : '0'}
-          subtitle="Total service hours"
-          change={hasNoData ? "No data" : "+8.3%"}
-          icon={FaClock}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Selling Services Revenue"
-          value={metrics ? formatCurrency(metrics.sellingServicesRevenue) : '₹0'}
-          subtitle="Service earnings"
-          change={hasNoData ? "No data" : "+5.7%"}
-          icon={FaShoppingBag}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Selling Products Revenue"
-          value={metrics ? formatCurrency(metrics.sellingProductsRevenue) : '₹0'}
-          subtitle="Product earnings"
-          change={hasNoData ? "No data" : "+5.7%"}
-          icon={FaShoppingBag}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Cancelled Appointments"
-          value={metrics ? formatNumber(metrics.cancelledAppointments.count) : '0'}
-          subtitle="Missed bookings"
-          change={metrics ? `-${formatCurrency(metrics.cancelledAppointments.revenueLoss)}` : '-₹0'}
-          icon={FaBan}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Upcoming Appointments"
-          value={metrics ? formatNumber(metrics.upcomingAppointments) : '0'}
-          subtitle="Scheduled visits"
-          change={hasNoData ? "No data" : "2 today"}
-          icon={FaCalendarAlt}
-          iconColor="text-primary"
-        />
-        <StatCard
-          title="Total Business"
-          value={metrics ? formatCurrency(metrics.totalBusiness) : '₹0'}
-          subtitle="Combined revenue"
-          change={hasNoData ? "No data" : "+10.2%"}
-          icon={FaDollarSign}
-          iconColor="text-primary"
-        />
+        {/* Stats Cards - Arranged in sequence per Vendor Dashboard Metric Definition Standard */}
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 mb-6">
+          <StatCard
+            title="Total Revenue"
+            value={metrics ? formatCurrency(metrics.totalRevenue) : '₹0'}
+            subtitle="Overall earnings"
+            change={hasNoData ? "No data" : "+12.5%"}
+            icon={FaDollarSign}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Total Bookings"
+            value={metrics ? formatNumber(metrics.totalBookings) : '0'}
+            subtitle="Appointment count"
+            change={hasNoData ? "No data" : "+15.2%"}
+            icon={FaUsers}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Booking Hours"
+            value={metrics ? formatNumber(Math.round(metrics.bookingHours * 100) / 100) : '0'}
+            subtitle="Total service hours"
+            change={hasNoData ? "No data" : "+8.3%"}
+            icon={FaClock}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Selling Services Revenue"
+            value={metrics ? formatCurrency(metrics.sellingServicesRevenue) : '₹0'}
+            subtitle="Service earnings"
+            change={hasNoData ? "No data" : "+5.7%"}
+            icon={FaShoppingBag}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Selling Products Revenue"
+            value={metrics ? formatCurrency(metrics.sellingProductsRevenue) : '₹0'}
+            subtitle="Product earnings"
+            change={hasNoData ? "No data" : "+5.7%"}
+            icon={FaShoppingBag}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Cancelled Appointments"
+            value={metrics ? formatNumber(metrics.cancelledAppointments.count) : '0'}
+            subtitle="Missed bookings"
+            change={metrics ? `-${formatCurrency(metrics.cancelledAppointments.revenueLoss)}` : '-₹0'}
+            icon={FaBan}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Upcoming Appointments"
+            value={metrics ? formatNumber(metrics.upcomingAppointments) : '0'}
+            subtitle="Scheduled visits"
+            change={hasNoData ? "No data" : "2 today"}
+            icon={FaCalendarAlt}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Total Business"
+            value={metrics ? formatCurrency(metrics.totalBusiness) : '₹0'}
+            subtitle="Combined revenue"
+            change={hasNoData ? "No data" : "+10.2%"}
+            icon={FaDollarSign}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Completed Appointments"
+            value={metrics ? formatNumber(metrics.completedAppointments) : '0'}
+            subtitle="Successfully finished"
+            change={hasNoData ? "No data" : "+5.1%"}
+            icon={FaCalendarAlt}
+            iconColor="text-primary"
+          />
+          <StatCard
+            title="Total Expense"
+            value={metrics ? formatCurrency(metrics.totalExpense) : '₹0'}
+            subtitle="Recorded expenses"
+            change={hasNoData ? "No data" : "-2.3%"}
+            icon={FaTags}
+            iconColor="text-destructive"
+          />
+          <StatCard
+            title="Total Counter Sale"
+            value={metrics ? formatCurrency(metrics.totalCounterSale) : '₹0'}
+            subtitle="Pay at Salon revenue"
+            change={hasNoData ? "No data" : "+8.7%"}
+            icon={FaCashRegister}
+            iconColor="text-primary"
+          />
+        </div>
+
+        {/* Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <UpcomingAppointments
+            filterType={filterType}
+            presetPeriod={presetPeriod}
+            startDate={startDate}
+            endDate={endDate}
+          />
+          <TopServicesChart
+            filterType={filterType}
+            presetPeriod={presetPeriod}
+            startDate={startDate}
+            endDate={endDate}
+          />
+        </div>
+
+        {/* Sales Overview Chart */}
+        <div className="mb-6">
+          <SalesChart
+            filterType={filterType}
+            presetPeriod={presetPeriod}
+            startDate={startDate}
+            endDate={endDate}
+          />
+        </div>
+
+        {/* Tables */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+          <TopSellingProductsChart
+            filterType={filterType}
+            presetPeriod={presetPeriod}
+            startDate={startDate}
+            endDate={endDate}
+            selectedYear={selectedYear ?? undefined}
+            selectedMonth={selectedMonth ?? undefined}
+            selectedDay={selectedDay ?? undefined}
+          />
+          <ClientFeedback />
+        </div>
       </div>
-
-      {/* Charts */}
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-    <UpcomingAppointments
-      filterType={filterType}
-      presetPeriod={presetPeriod}
-      startDate={startDate}
-      endDate={endDate}
-    />
-    <TopServicesChart
-      filterType={filterType}
-      presetPeriod={presetPeriod}
-      startDate={startDate}
-      endDate={endDate}
-    />
-  </div>
-
-  {/* Sales Overview Chart */ }
-  <div className="mb-6">
-    <SalesChart
-      filterType={filterType}
-      presetPeriod={presetPeriod}
-      startDate={startDate}
-      endDate={endDate}
-    />
-  </div>
-
-  {/* Tables */ }
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-    <TopSellingProductsChart
-      filterType={filterType}
-      presetPeriod={presetPeriod}
-      startDate={startDate}
-      endDate={endDate}
-      selectedYear={selectedYear ?? undefined}
-      selectedMonth={selectedMonth ?? undefined}
-      selectedDay={selectedDay ?? undefined}
-    />
-    <ClientFeedback />
-  </div>
-</div>
-</div>
+    </div>
   );
 }

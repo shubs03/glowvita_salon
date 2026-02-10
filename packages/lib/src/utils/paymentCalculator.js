@@ -20,6 +20,11 @@ async function fetchTaxFeeSettings() {
   }
 }
 
+// Helper to round to 2 decimal places
+const roundToTwo = (num) => {
+  return +(Math.round(num + "e+2") + "e-2");
+};
+
 /**
  * Calculate the final booking amount including platform fees, taxes, and discounts
  * @param {Array} services - Array of service objects with price and tax information
@@ -113,8 +118,8 @@ export async function calculateBookingAmount(
     // Calculate GST (calculated on subtotal + platform fee)
     let serviceTax = 0; // This is GST
     if (taxFeeSettings && taxFeeSettings.serviceTaxEnabled) {
-      // GST is calculated on the subtotal and platform fee
-      const amountForGST = subtotal + platformFee;
+      // GST is calculated on the subtotal only as per user request
+      const amountForGST = subtotal;
       if (taxFeeSettings.serviceTaxType === 'percentage') {
         serviceTax = (amountForGST * taxFeeSettings.serviceTax) / 100;
       } else {
@@ -161,12 +166,12 @@ export async function calculateBookingAmount(
 
     return {
       subtotal: Math.round(subtotal),
-      discountAmount: Math.round(discountAmount),
-      amountAfterDiscount: Math.round(amountAfterDiscount),
-      platformFee: Math.round(platformFee),
-      serviceTax: Math.round(serviceTax), // This is GST
-      vendorServiceTax: Math.round(vendorServiceTaxTotal),
-      totalTax: Math.round(totalTax),
+      discountAmount: roundToTwo(discountAmount),
+      amountAfterDiscount: roundToTwo(amountAfterDiscount),
+      platformFee: roundToTwo(platformFee),
+      serviceTax: roundToTwo(serviceTax), // This is GST
+      vendorServiceTax: roundToTwo(vendorServiceTaxTotal),
+      totalTax: roundToTwo(totalTax),
       finalTotal: Math.round(finalTotal),
       taxFeeSettings
     };

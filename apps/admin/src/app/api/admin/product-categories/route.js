@@ -52,7 +52,7 @@ export const GET = async (req) => {
 export const POST = async (req) => {
   try {
     const body = await req.json();
-    const { name, description } = body;
+    const { name, description, gstType, gstValue } = body;
 
     // Validation
     if (!name || name.trim() === '') {
@@ -83,7 +83,9 @@ export const POST = async (req) => {
     // Create new category
     const newCategory = await ProductCategoryModel.create({ 
       name: name.trim(), 
-      description: description?.trim() || '' 
+      description: description?.trim() || '',
+      gstType: gstType || 'none',
+      gstValue: gstValue ? Number(gstValue) : 0
     });
 
     return Response.json({
@@ -140,7 +142,7 @@ export const POST = async (req) => {
 export const PUT = async (req) => {
   try {
     const body = await req.json();
-    const { id, name, description } = body;
+    const { id, name, description, gstType, gstValue } = body;
 
     if (!id) {
       return Response.json({ 
@@ -184,6 +186,8 @@ export const PUT = async (req) => {
       { 
         name: name.trim(), 
         description: description?.trim() || '',
+        gstType: gstType || 'none',
+        gstValue: gstValue ? Number(gstValue) : 0,
         updatedAt: new Date()
       },
       { new: true, runValidators: true }

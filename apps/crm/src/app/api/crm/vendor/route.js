@@ -12,21 +12,21 @@ await _db();
 // Utility function to convert 12-hour time to 24-hour format for display
 const convertTo24HourFormat = (time12) => {
     if (!time12) return '';
-    
+
     const timePattern = /^(\d{1,2}):(\d{2})(AM|PM)$/i;
     const match = time12.match(timePattern);
-    
+
     if (!match) return time12; // Return as-is if it doesn't match expected format
-    
+
     let [, hours, minutes, ampm] = match;
     hours = parseInt(hours);
-    
+
     if (ampm.toUpperCase() === 'AM') {
         if (hours === 12) hours = 0;
     } else {
         if (hours !== 12) hours += 12;
     }
-    
+
     return `${hours.toString().padStart(2, '0')}:${minutes}`;
 };
 
@@ -34,15 +34,15 @@ const convertTo24HourFormat = (time12) => {
 // Also deletes the old image if a new one is uploaded
 const processBase64Image = async (base64String, fileName, oldImageUrl = null) => {
     if (!base64String) return null;
-    
+
     // Check if it's already a URL (not base64)
     if (base64String.startsWith('http')) {
         return base64String; // Already uploaded, return as is
     }
-    
+
     // Upload the base64 image and return the URL
     const imageUrl = await uploadBase64(base64String, fileName);
-    
+
     // If upload was successful and there's an old image, delete the old one
     if (imageUrl && oldImageUrl && oldImageUrl.startsWith('http')) {
         try {
@@ -55,7 +55,7 @@ const processBase64Image = async (base64String, fileName, oldImageUrl = null) =>
             console.warn('Error deleting old image:', err);
         }
     }
-    
+
     return imageUrl;
 };
 
@@ -63,31 +63,31 @@ const processBase64Image = async (base64String, fileName, oldImageUrl = null) =>
 export const GET = authMiddlewareCrm(async (req) => {
     try {
         const vendorId = req.user.userId;
-        
+
         const vendor = await VendorModel.findById(vendorId)
             .select('-password -__v')
             .populate('subscription.plan')
             .lean();
 
         if (!vendor) {
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: false,
-                message: "Vendor not found" 
+                message: "Vendor not found"
             }, { status: 404 });
         }
 
         // Get the active SMS package information
         let activePackageSmsCount = 0;
-        const activePackages = await SmsTransaction.find({ 
-          userId: vendorId,
-          userType: 'vendor',
-          status: 'active',
-          expiryDate: { $gte: new Date() }
+        const activePackages = await SmsTransaction.find({
+            userId: vendorId,
+            userType: 'vendor',
+            status: 'active',
+            expiryDate: { $gte: new Date() }
         }).sort({ purchaseDate: -1 });
-        
+
         if (activePackages.length > 0) {
-          // Use the most recent active package
-          activePackageSmsCount = activePackages[0].smsCount;
+            // Use the most recent active package
+            activePackageSmsCount = activePackages[0].smsCount;
         }
 
         // Add the active package SMS count to the response (this represents the current balance)
@@ -97,14 +97,14 @@ export const GET = authMiddlewareCrm(async (req) => {
         try {
             const workingHours = await VendorWorkingHours.findOne({ vendor: vendorId })
                 .select('workingHours timezone');
-            
+
             // Transform working hours from the object structure to array structure for frontend
             if (workingHours && workingHours.workingHours) {
                 const workingHoursArray = [];
                 const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
                 const daysMap = {
                     'monday': 'Monday',
-                    'tuesday': 'Tuesday', 
+                    'tuesday': 'Tuesday',
                     'wednesday': 'Wednesday',
                     'thursday': 'Thursday',
                     'friday': 'Friday',
@@ -116,11 +116,11 @@ export const GET = authMiddlewareCrm(async (req) => {
                 daysOrder.forEach(dayKey => {
                     const dayData = workingHours.workingHours[dayKey];
                     if (dayData && typeof dayData === 'object') {
-                        const openTime = dayData.isOpen && dayData.hours && dayData.hours.length > 0 
+                        const openTime = dayData.isOpen && dayData.hours && dayData.hours.length > 0
                             ? convertTo24HourFormat(dayData.hours[0].openTime) : '';
-                        const closeTime = dayData.isOpen && dayData.hours && dayData.hours.length > 0 
+                        const closeTime = dayData.isOpen && dayData.hours && dayData.hours.length > 0
                             ? convertTo24HourFormat(dayData.hours[0].closeTime) : '';
-                        
+
                         workingHoursArray.push({
                             day: daysMap[dayKey] || dayKey,
                             open: openTime,
@@ -158,16 +158,16 @@ export const GET = authMiddlewareCrm(async (req) => {
             ];
         }
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: true,
             data: vendor
         }, { status: 200 });
     } catch (error) {
         console.error('Error fetching vendor profile:', error);
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: false,
-            message: "Failed to fetch vendor profile", 
-            error: error.message 
+            message: "Failed to fetch vendor profile",
+            error: error.message
         }, { status: 500 });
     }
 }, ['vendor']);
@@ -181,9 +181,9 @@ export const PUT = authMiddlewareCrm(async (req) => {
         // Find the vendor with populated subscription data
         const vendor = await VendorModel.findById(vendorId).populate('subscription.plan');
         if (!vendor) {
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: false,
-                message: "Vendor not found" 
+                message: "Vendor not found"
             }, { status: 404 });
         }
 
@@ -199,12 +199,12 @@ export const PUT = authMiddlewareCrm(async (req) => {
             'firstName', 'lastName', 'businessName', 'email', 'phone',
             'state', 'city', 'pincode', 'address', 'category', 'subCategories',
             'website', 'description', 'profileImage', 'gallery', 'bankDetails', 'documents',
-            'vendorType', 'travelRadius', 'travelSpeed', 'baseLocation'
+            'vendorType', 'travelRadius', 'travelSpeed', 'baseLocation', 'taxes'
         ];
 
         // Keep existing subscription data unless specifically provided in the update
         if (body.subscription) {
-             Object.keys(body.subscription).forEach(key => {
+            Object.keys(body.subscription).forEach(key => {
                 if (['plan', 'status', 'startDate', 'endDate', 'history'].includes(key)) {
                     vendor.subscription[key] = body.subscription[key];
                 }
@@ -280,6 +280,15 @@ export const PUT = authMiddlewareCrm(async (req) => {
                             }
                         }
                     }
+                } else if (field === 'taxes' && typeof body[field] === 'object') {
+                    if (!vendor.taxes) vendor.taxes = {};
+                    Object.keys(body[field]).forEach(key => {
+                        if (['taxValue', 'taxType'].includes(key)) {
+                            vendor.taxes[key] = body[field][key];
+                        }
+                    });
+                    vendor.markModified('taxes');
+                    console.log('Updated taxes field:', vendor.taxes);
                 } else if (field !== 'profileImage' && field !== 'gallery') {
                     // Handle all other fields normally
                     vendor[field] = body[field];
@@ -299,77 +308,77 @@ export const PUT = authMiddlewareCrm(async (req) => {
         // Handle subscription validation issues gracefully
         if (!vendor.subscription || !vendor.subscription.plan || !vendor.subscription.endDate) {
             console.log('Vendor has incomplete subscription data, using validateBeforeSave: false');
-            
+
             // For vendors with incomplete subscription data, save without validation
             // and let the admin/system handle subscription setup separately
             try {
                 const updatedVendor = await vendor.save({ validateBeforeSave: false });
-                
+
                 const vendorResponse = updatedVendor.toObject();
                 delete vendorResponse.password;
                 delete vendorResponse.__v;
 
-                return NextResponse.json({ 
+                return NextResponse.json({
                     success: true,
-                    message: "Vendor profile updated successfully. Note: Please contact support to complete your subscription setup.",
+                    message: "Vendor profile updated successfully",
                     data: vendorResponse
                 }, { status: 200 });
             } catch (saveError) {
                 console.error('Error saving vendor without validation:', saveError);
-                return NextResponse.json({ 
+                return NextResponse.json({
                     success: false,
-                    message: "Failed to update vendor profile", 
-                    error: saveError.message 
+                    message: "Failed to update vendor profile",
+                    error: saveError.message
                 }, { status: 500 });
             }
         }
 
         try {
             const updatedVendor = await vendor.save();
-            
+
             // Return updated vendor without sensitive fields
             const vendorResponse = updatedVendor.toObject();
             delete vendorResponse.password;
             delete vendorResponse.__v;
 
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: true,
                 message: "Vendor profile updated successfully",
                 data: vendorResponse
             }, { status: 200 });
         } catch (saveError) {
             console.error('Mongoose validation error:', saveError);
-            
+
             // Check if it's a subscription validation error
             if (saveError.name === 'ValidationError') {
                 // If subscription fields are missing, provide more helpful error
                 if (saveError.errors?.['subscription.plan'] || saveError.errors?.['subscription.endDate']) {
-                    return NextResponse.json({ 
+                    return NextResponse.json({
                         success: false,
                         message: "Vendor subscription data is incomplete. Please contact support to set up your subscription.",
                         error: "Missing required subscription fields"
                     }, { status: 400 });
                 }
             }
-            
+
             // Re-throw other validation errors
             throw saveError;
         }
     } catch (error) {
         console.error('Error updating vendor profile:', error);
-        
+
         if (error.code === 11000) {
             const field = Object.keys(error.keyPattern)[0];
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: false,
-                message: `Vendor with this ${field} already exists` 
+                message: `Vendor with this ${field} already exists`
             }, { status: 409 });
         }
-        
-        return NextResponse.json({ 
+
+        return NextResponse.json({
             success: false,
-            message: "Failed to update vendor profile", 
-            error: error.message 
+            message: "Failed to update vendor profile",
+            error: error.message
         }, { status: 500 });
     }
 }, ['vendor']);

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { Plus, Search, Layers, CheckCircle, XCircle, Eye, Image as ImageIcon } from "lucide-react";
+import { Search, Layers, CheckCircle, XCircle, Eye, Image as ImageIcon } from "lucide-react";
 import { glowvitaApi } from '@repo/store/api';
 import { toast } from 'sonner';
 import {
@@ -61,6 +61,23 @@ export default function ServicesPage() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [searchTerm, setSearchTerm] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("all");
+    const [vendorFilter, setVendorFilter] = useState("all");
+
+    // Fetch categories and vendors
+    const { data: categoriesResponse } = glowvitaApi.useGetCategoriesQuery({});
+    const { data: vendorsResponse } = glowvitaApi.useGetVendorsQuery({});
+
+    const categories = useMemo(() => {
+        if (categoriesResponse && Array.isArray(categoriesResponse)) return categoriesResponse;
+        if (categoriesResponse && categoriesResponse.success && Array.isArray(categoriesResponse.data)) return categoriesResponse.data;
+        return [];
+    }, [categoriesResponse]);
+
+    const vendors = useMemo(() => {
+        if (vendorsResponse && Array.isArray(vendorsResponse)) return vendorsResponse;
+        if (vendorsResponse && vendorsResponse.success && Array.isArray(vendorsResponse.data)) return vendorsResponse.data;
+        return [];
+    }, [vendorsResponse]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedService, setSelectedService] = useState<Service | null>(null);
     const [modalType, setModalType] = useState<"add" | "edit" | "view">("add");
@@ -77,9 +94,10 @@ export default function ServicesPage() {
                 (service.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     service.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                     service.vendorName?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-                (categoryFilter === "all" || service.category === categoryFilter)
+                (categoryFilter === "all" || service.category === categoryFilter) &&
+                (vendorFilter === "all" || service.vendorId === vendorFilter)
         );
-    }, [services, searchTerm, categoryFilter]);
+    }, [services, searchTerm, categoryFilter, vendorFilter]);
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -89,8 +107,7 @@ export default function ServicesPage() {
     );
     const totalPages = Math.ceil(filteredServices.length / itemsPerPage);
 
-    // Filter toolbar data
-    const categories: { _id: string, name: string }[] = []; // Populate if needed
+
 
     // Modal handlers
     const handleOpenModal = (
@@ -241,14 +258,28 @@ export default function ServicesPage() {
                         </div>
                         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                                <SelectTrigger className="w-full sm:w-[200px] h-12 rounded-lg border-border hover:border-primary">
+                                <SelectTrigger className="w-full sm:w-[150px] h-12 rounded-lg border-border hover:border-primary">
                                     <SelectValue placeholder="All Categories" />
                                 </SelectTrigger>
-                                <SelectContent className="rounded-lg border border-border/40">
+                                <SelectContent className="rounded-lg border border-border/40 max-h-[300px] overflow-y-auto">
                                     <SelectItem value="all">All Categories</SelectItem>
-                                    {categories.map((cat) => (
+                                    {categories.map((cat: any) => (
                                         <SelectItem key={cat._id} value={cat.name}>
                                             {cat.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            <Select value={vendorFilter} onValueChange={setVendorFilter}>
+                                <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-lg border-border hover:border-primary">
+                                    <SelectValue placeholder="All Vendors" />
+                                </SelectTrigger>
+                                <SelectContent className="rounded-lg border border-border/40 max-h-[300px] overflow-y-auto">
+                                    <SelectItem value="all">All Vendors</SelectItem>
+                                    {vendors.map((vendor: any) => (
+                                        <SelectItem key={vendor._id} value={vendor._id}>
+                                            {vendor.fullName || vendor.businessName || 'Unnamed Vendor'}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
@@ -269,13 +300,7 @@ export default function ServicesPage() {
                                     ]}
                                     className="h-12 px-4 rounded-lg"
                                 />
-                                <Button
-                                    onClick={() => { }}
-                                    className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1"
-                                >
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add Service
-                                </Button>
+
                             </div>
                         </div>
                     </div>

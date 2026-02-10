@@ -6,7 +6,20 @@ import { Card, CardContent, CardHeader } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Badge } from "@repo/ui/badge";
 import { Skeleton } from "@repo/ui/skeleton";
-import { Plus, Search, Edit, Trash2, PackageCheck, Grid3X3, List, Package, Boxes, Tag, DollarSign, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  PackageCheck,
+  Grid3X3,
+  List,
+  Package,
+  Boxes,
+  Tag,
+  DollarSign,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   useGetAdminProductCategoriesQuery,
@@ -60,6 +73,8 @@ interface Category {
   _id: string;
   name: string;
   description: string;
+  gstType?: "none" | "fixed" | "percentage";
+  gstValue?: number;
 }
 
 export default function ProductsPage() {
@@ -105,12 +120,47 @@ export default function ProductsPage() {
   const [newCategory, setNewCategory] = useState({ name: "", description: "" });
   const [formData, setFormData] = useState<Partial<Product>>({});
 
+  // Helper function to calculate GST and final price for a product
+  const calculateProductGST = (product: Product) => {
+    const category = categoriesData.find(
+      (cat: Category) => cat.name === product.category,
+    );
+
+    if (!category || !category.gstType || category.gstType === "none") {
+      return {
+        gstAmount: 0,
+        finalPrice: product.salePrice,
+        hasGst: false,
+        gstType: "none",
+        gstValue: 0,
+      };
+    }
+
+    let gstAmount = 0;
+    const gstValue = Number(category.gstValue) || 0;
+    const salePrice = Number(product.salePrice) || 0;
+
+    if (category.gstType === "fixed") {
+      gstAmount = gstValue;
+    } else if (category.gstType === "percentage") {
+      gstAmount = (salePrice * gstValue) / 100;
+    }
+
+    return {
+      gstAmount,
+      finalPrice: salePrice + gstAmount,
+      hasGst: true,
+      gstType: category.gstType,
+      gstValue,
+    };
+  };
+
   const filteredProducts = useMemo(() => {
     if (!Array.isArray(productsData)) return [];
     return productsData.filter(
       (p) =>
         p.productName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (statusFilter === "all" || p.status === statusFilter)
+        (statusFilter === "all" || p.status === statusFilter),
     );
   }, [productsData, searchTerm, statusFilter]);
 
@@ -126,7 +176,7 @@ export default function ProductsPage() {
 
     const totalProducts = productsData.length;
     const pendingProducts = productsData.filter(
-      (p) => p.status === "pending"
+      (p) => p.status === "pending",
     ).length;
 
     // Count unique categories
@@ -141,7 +191,7 @@ export default function ProductsPage() {
 
     const totalValue = productsData.reduce(
       (sum, p) => sum + p.salePrice * p.stock,
-      0
+      0,
     );
 
     return {
@@ -163,7 +213,7 @@ export default function ProductsPage() {
     // Calculate total value based on filtered products
     const filteredTotalValue = filteredProducts.reduce(
       (sum, p) => sum + p.salePrice * p.stock,
-      0
+      0,
     );
 
     // Count unique categories in filtered products
@@ -186,13 +236,13 @@ export default function ProductsPage() {
     const firstItemIndex = (currentPage - 1) * itemsPerPage;
     return filteredProducts.slice(
       firstItemIndex,
-      firstItemIndex + itemsPerPage
+      firstItemIndex + itemsPerPage,
     );
   }, [filteredProducts, currentPage, itemsPerPage]);
 
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredProducts.length / itemsPerPage)
+    Math.ceil(filteredProducts.length / itemsPerPage),
   );
 
   // Handlers
@@ -205,7 +255,7 @@ export default function ProductsPage() {
         stock: 0,
         isActive: true,
         status: "pending",
-      }
+      },
     );
     setIsProductModalOpen(true);
   };
@@ -221,14 +271,18 @@ export default function ProductsPage() {
       ? { id: selectedProduct._id, ...formData }
       : formData;
 
-    if (selectedProduct && (selectedProduct.status === 'disapproved' || selectedProduct.status === 'rejected')) {
-      payload = { ...payload, status: 'pending' };
+    if (
+      selectedProduct &&
+      (selectedProduct.status === "disapproved" ||
+        selectedProduct.status === "rejected")
+    ) {
+      payload = { ...payload, status: "pending" };
     }
 
     try {
       await mutation(payload).unwrap();
       toast.success(
-        `Product ${selectedProduct ? "updated" : "created"} successfully!`
+        `Product ${selectedProduct ? "updated" : "created"} successfully!`,
       );
       setIsProductModalOpen(false);
       refetchProducts();
@@ -266,8 +320,6 @@ export default function ProductsPage() {
       toast.error(error.data?.message || "Failed to create category.");
     }
   };
-
-
 
   if (isProductsLoading) {
     return (
@@ -380,179 +432,199 @@ export default function ProductsPage() {
               </div>
             ) : viewMode === "grid" ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {paginatedProducts.map((product: Product) => (
-                  <Card
-                    key={product._id}
-                    className="group overflow-hidden hover:shadow-md transition-shadow flex flex-col text-left"
-                  >
-                    <div className="relative aspect-square overflow-hidden rounded-md m-3">
-                      <Image
-                        src={
-                          product.productImages?.[0] ||
-                          "https://placehold.co/300x300.png"
-                        }
-                        alt={product.productName}
-                        fill
-                        className="group-hover:scale-105 transition-transform duration-300 object-cover"
-                      />
-                      {/* Status Badge */}
-                      <div className="absolute top-2 left-2 text-xs">
-                        <StatusBadge status={product.status} rejectionReason={product.rejectionReason} />
-                      </div>
-                    </div>
-                    <div className="p-3 flex flex-col flex-grow">
-                      <p className="text-xs font-bold text-primary mb-1">
-                        {product.category}
-                      </p>
-                      <h4 className="text-sm font-semibold flex-grow mb-2">
-                        {product.productName}
-                      </h4>
-                      {product.size && product.sizeMetric ? (
-                        <p className="text-xs text-muted-foreground">
-                          Size: {product.size} {product.sizeMetric}
-                        </p>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          No size info
-                        </p>
-                      )}
-                      <div className="flex justify-between items-center mt-auto">
-                        <p className="font-bold text-primary">
-                          ₹{product.salePrice.toFixed(2)}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between gap-2 mt-2">
-                        <div className="flex justify-between w-full">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full text-xs lg:mr-3"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenProductModal(product);
-                            }}
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Edit
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-fit text-xs"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedProduct(product);
-                              setIsDeleteModalOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                {paginatedProducts.map((product: Product) => {
+                  const gstInfo = calculateProductGST(product);
+                  return (
+                    <Card
+                      key={product._id}
+                      className="group overflow-hidden hover:shadow-md transition-shadow flex flex-col text-left"
+                    >
+                      <div className="relative aspect-square overflow-hidden rounded-md m-3">
+                        <Image
+                          src={
+                            product.productImages?.[0] ||
+                            "https://placehold.co/300x300.png"
+                          }
+                          alt={product.productName}
+                          fill
+                          className="group-hover:scale-105 transition-transform duration-300 object-cover"
+                        />
+                        {/* Status Badge */}
+                        <div className="absolute top-2 left-2 text-xs">
+                          <StatusBadge
+                            status={product.status}
+                            rejectionReason={product.rejectionReason}
+                          />
                         </div>
                       </div>
-                    </div>
-                  </Card>
-                ))}
+                      <div className="p-3 flex flex-col flex-grow">
+                        <p className="text-xs font-bold text-primary mb-1">
+                          {product.category}
+                        </p>
+                        <h4 className="text-sm font-semibold flex-grow mb-2">
+                          {product.productName}
+                        </h4>
+                        {product.size && product.sizeMetric ? (
+                          <p className="text-xs text-muted-foreground">
+                            Size: {product.size} {product.sizeMetric}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">
+                            No size info
+                          </p>
+                        )}
+
+                        {/* Price Section with GST */}
+                        <div className="mt-auto space-y-1">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="font-semibold text-foreground">
+                                ₹{gstInfo.finalPrice.toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 mt-2">
+                          <div className="flex justify-between w-full">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-full text-xs lg:mr-3"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenProductModal(product);
+                              }}
+                            >
+                              <Edit className="h-3 w-3 mr-1" />
+                              Edit
+                            </Button>
+
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="w-fit text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedProduct(product);
+                                setIsDeleteModalOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
               </div>
             ) : (
               /* Simplified List View */
               <div className="space-y-3">
-                {paginatedProducts.map((product, index) => (
-                  <Card
-                    key={product._id}
-                    className="border border-border bg-card rounded-lg transition-all duration-200"
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-4">
-                        {/* Product Image */}
-                        <div className="relative w-16 h-16 rounded-md overflow-hidden border border-border/30 flex-shrink-0">
-                          <Image
-                            src={
-                              product.productImages?.[0] ||
-                              "https://placehold.co/80x80.png"
-                            }
-                            alt={product.productName}
-                            fill
-                            className="object-cover"
-                          />
-                          {product.price > product.salePrice && (
-                            <div className="absolute -top-1 -right-1">
-                              <Badge className="bg-primary text-white px-1.5 py-0.5 rounded-full text-xs font-bold">
-                                {Math.round(
-                                  ((product.price - product.salePrice) /
-                                    product.price) *
-                                  100
-                                )}
-                                %
-                              </Badge>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1 space-y-1">
-                              <h3 className="font-medium text-foreground">
-                                {product.productName}
-                              </h3>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <Badge variant="outline" className="text-xs">
-                                  {product.category}
-                                </Badge>
-                                <StatusBadge status={product.status} rejectionReason={product.rejectionReason} />
-                                <Badge
-                                  variant={
-                                    product.stock > 10
-                                      ? "secondary"
-                                      : product.stock > 0
-                                        ? "outline"
-                                        : "destructive"
-                                  }
-                                  className="text-xs"
-                                >
-                                  {product.stock} units
+                {paginatedProducts.map((product: Product) => {
+                  const gstInfo = calculateProductGST(product);
+                  return (
+                    <Card
+                      key={product._id}
+                      className="border border-border bg-card rounded-lg transition-all duration-200"
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-4">
+                          {/* Product Image */}
+                          <div className="relative w-16 h-16 rounded-md overflow-hidden border border-border/30 flex-shrink-0">
+                            <Image
+                              src={
+                                product.productImages?.[0] ||
+                                "https://placehold.co/80x80.png"
+                              }
+                              alt={product.productName}
+                              fill
+                              className="object-cover"
+                            />
+                            {product.price > product.salePrice && (
+                              <div className="absolute -top-1 -right-1">
+                                <Badge className="bg-primary text-white px-1.5 py-0.5 rounded-full text-xs font-bold">
+                                  {Math.round(
+                                    ((product.price - product.salePrice) /
+                                      product.price) *
+                                      100,
+                                  )}
+                                  %
                                 </Badge>
                               </div>
-                            </div>
+                            )}
+                          </div>
 
-                            <div className="text-right">
-                              <div className="mb-2">
-                                <span className="font-semibold text-primary">
-                                  ₹{product.salePrice.toFixed(0)}
-                                </span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1 space-y-1">
+                                <h3 className="font-medium text-foreground">
+                                  {product.productName}
+                                </h3>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge variant="outline" className="text-xs">
+                                    {product.category}
+                                  </Badge>
+                                  <StatusBadge
+                                    status={product.status}
+                                    rejectionReason={product.rejectionReason}
+                                  />
+                                  <Badge
+                                    variant={
+                                      product.stock > 10
+                                        ? "secondary"
+                                        : product.stock > 0
+                                          ? "outline"
+                                          : "destructive"
+                                    }
+                                    className="text-xs"
+                                  >
+                                    {product.stock} units
+                                  </Badge>
+                                </div>
                               </div>
 
-                              <div className="flex gap-1">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleOpenProductModal(product)
-                                  }
-                                  className="h-7 px-2 text-xs"
-                                >
-                                  <Edit className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => {
-                                    setSelectedProduct(product);
-                                    setIsDeleteModalOpen(true);
-                                  }}
-                                  className="h-7 px-2 text-xs"
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
+                              <div className="text-right">
+                                <div className="mb-2 space-y-1">
+                                  <div className="flex items-center gap-2 justify-end">
+                                    <span className="font-semibold text-foreground">
+                                      ₹{gstInfo.finalPrice.toFixed(2)}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleOpenProductModal(product)
+                                    }
+                                    className="h-7 px-2 text-xs"
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedProduct(product);
+                                      setIsDeleteModalOpen(true);
+                                    }}
+                                    className="h-7 px-2 text-xs"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
 

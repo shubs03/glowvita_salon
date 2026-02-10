@@ -18,33 +18,33 @@ export default function AdminPage() {
   const [filterType, setFilterType] = useState<string>(''); // 'day', 'month', 'year', or ''
   const [filterValue, setFilterValue] = useState<string>(''); // specific date value
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   // Reset filter value when filter type changes
   useEffect(() => {
     setFilterValue('');
   }, [filterType]);
-  
+
   // Debounced refetch function
   const debouncedRefetch = () => {
     if (debounceRef.current) {
       clearTimeout(debounceRef.current);
     }
-    
+
     debounceRef.current = setTimeout(() => {
       refetch();
     }, 300); // 300ms debounce
   };
-  
+
   // Prepare query parameters - only include them if both type and value are set
   // If filterType is selected but no filterValue, don't send any params to avoid showing 0 values
   const queryParams = filterType && filterValue ? { filterType, filterValue } : (!filterType ? {} : null);
   const { data: dashboardData, isLoading: isDashboardLoading, isError, error, refetch } = useGetAdminDashboardStatsQuery(
     queryParams !== null ? queryParams : undefined
   );
-  
+
   // Show placeholder data when filter is selected but no value chosen
   const showPlaceholder = filterType && !filterValue;
-  
+
   // Combine loading states
   const isLoading = isDashboardLoading;
 
@@ -68,7 +68,7 @@ export default function AdminPage() {
   const handleFilterValueChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const value = e.target.value;
     setFilterValue(value);
-    
+
     // Auto-refetch when filter value changes (with debounce)
     if (filterType && value) {
       debouncedRefetch();
@@ -100,8 +100,8 @@ export default function AdminPage() {
             <Calendar className="h-4 w-4" />
             <span className="text-sm font-medium">Filter by:</span>
           </div>
-          
-          <select 
+
+          <select
             className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
             value={filterType}
             onChange={handleFilterTypeChange}
@@ -111,27 +111,27 @@ export default function AdminPage() {
             <option value="month">Month</option>
             <option value="year">Year</option>
           </select>
-          
+
           {filterType === 'day' && (
-            <input 
-              type="date" 
+            <input
+              type="date"
               className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
               value={filterValue}
               onChange={handleFilterValueChange}
             />
           )}
-          
+
           {filterType === 'month' && (
-            <input 
-              type="month" 
+            <input
+              type="month"
               className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
               value={filterValue}
               onChange={handleFilterValueChange}
             />
           )}
-          
+
           {filterType === 'year' && (
-            <select 
+            <select
               className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
               value={filterValue}
               onChange={handleFilterValueChange}
@@ -143,8 +143,8 @@ export default function AdminPage() {
               })}
             </select>
           )}
-          
-          <Button 
+
+          <Button
             variant="outline"
             size="sm"
             onClick={resetFilters}
@@ -167,7 +167,7 @@ export default function AdminPage() {
             </Card>
           ))}
         </div>
-        
+
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mt-4">
           {[...Array(4)].map((_, i) => (
             <Card key={i + 5}>
@@ -184,7 +184,7 @@ export default function AdminPage() {
         </div>
 
 
-        
+
         <div className="grid grid-cols-1 gap-6">
           <Card>
             <CardHeader>
@@ -196,7 +196,7 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="grid grid-cols-1 gap-6 mt-6">
           <Card>
             <CardHeader>
@@ -242,8 +242,8 @@ export default function AdminPage() {
           <Calendar className="h-4 w-4" />
           <span className="text-sm font-medium">Filter by:</span>
         </div>
-        
-        <select 
+
+        <select
           className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary min-w-[120px] flex-grow sm:flex-grow-0"
           value={filterType}
           onChange={handleFilterTypeChange}
@@ -253,27 +253,27 @@ export default function AdminPage() {
           <option value="month">Month</option>
           <option value="year">Year</option>
         </select>
-        
+
         {filterType === 'day' && (
-          <input 
-            type="date" 
+          <input
+            type="date"
             className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary flex-grow sm:flex-grow-0"
             value={filterValue}
             onChange={handleFilterValueChange}
           />
         )}
-        
+
         {filterType === 'month' && (
-          <input 
-            type="month" 
+          <input
+            type="month"
             className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary flex-grow sm:flex-grow-0"
             value={filterValue}
             onChange={handleFilterValueChange}
           />
         )}
-        
+
         {filterType === 'year' && (
-          <select 
+          <select
             className="border rounded-lg p-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary min-w-[120px] flex-grow sm:flex-grow-0"
             value={filterValue}
             onChange={handleFilterValueChange}
@@ -285,8 +285,8 @@ export default function AdminPage() {
             })}
           </select>
         )}
-        
-        <Button 
+
+        <Button
           variant="outline"
           size="sm"
           onClick={resetFilters}
@@ -308,8 +308,8 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {showPlaceholder 
-                ? "0" 
+              {showPlaceholder
+                ? "0"
                 : formatCurrency(dashboardData?.totalRevenue?.current || 0)}
             </div>
             {/* Removed percentage change display as per user request */}
@@ -326,13 +326,25 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {showPlaceholder 
-                ? "₹0.00" 
+              {showPlaceholder
+                ? "₹0.00"
                 : formatCurrency(dashboardData?.subscriptionAmount || 0)}
+            </div>
+            <div className="flex text-xs text-muted-foreground mt-1">
+              <span className="mr-3 font-medium">Active:
+                {showPlaceholder
+                  ? "0"
+                  : (dashboardData?.subscriptionStats?.active || 0).toLocaleString()}
+              </span>
+              <span className="font-medium">Inactive:
+                {showPlaceholder
+                  ? "0"
+                  : (dashboardData?.subscriptionStats?.inactive || 0).toLocaleString()}
+              </span>
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Card 3: SMS Amount */}
         <Card className="transition-all duration-300 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -343,13 +355,13 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {showPlaceholder 
-                ? "₹0.00" 
+              {showPlaceholder
+                ? "₹0.00"
                 : formatCurrency(dashboardData?.smsAmount || 0)}
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Card 4: Total Service Amount */}
         <Card className="transition-all duration-300 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -360,13 +372,13 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {showPlaceholder 
-                ? "₹0.00" 
+              {showPlaceholder
+                ? "₹0.00"
                 : formatCurrency(dashboardData?.serviceAmount || 0)}
             </div>
           </CardContent>
         </Card>
-        
+
         {/* Card 5: Total Product Amount */}
         <Card className="transition-all duration-300 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -377,14 +389,26 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {showPlaceholder 
-                ? "₹0.00" 
+              {showPlaceholder
+                ? "₹0.00"
                 : formatCurrency(dashboardData?.productAmount || 0)}
+            </div>
+            <div className="flex text-xs text-muted-foreground mt-1">
+              <span className="mr-3">Vendor:
+                {showPlaceholder
+                  ? "₹0.00"
+                  : formatCurrency(dashboardData?.vendorProductAmount || 0)}
+              </span>
+              <span>Supplier:
+                {showPlaceholder
+                  ? "₹0.00"
+                  : formatCurrency(dashboardData?.supplierProductAmount || 0)}
+              </span>
             </div>
           </CardContent>
         </Card>
       </div>
-      
+
       {/* Second Row: Count Cards */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 mt-4">
         {/* Card 6: Total Bookings */}
@@ -397,19 +421,19 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {showPlaceholder 
-                ? "0" 
+              {showPlaceholder
+                ? "0"
                 : (dashboardData?.totalBookings?.current || 0).toLocaleString()}
             </div>
             <div className="flex text-xs text-muted-foreground mt-1">
-              <span className="mr-3">Online: 
-                {showPlaceholder 
-                  ? "0" 
+              <span className="mr-3">Online:
+                {showPlaceholder
+                  ? "0"
                   : (dashboardData?.totalBookings?.online || 0).toLocaleString()}
               </span>
-              <span>Offline: 
-                {showPlaceholder 
-                  ? "0" 
+              <span>Offline:
+                {showPlaceholder
+                  ? "0"
                   : (dashboardData?.totalBookings?.offline || 0).toLocaleString()}
               </span>
             </div>
@@ -427,19 +451,19 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {showPlaceholder 
-                ? "0" 
+              {showPlaceholder
+                ? "0"
                 : (dashboardData?.totalBookings?.completed || 0).toLocaleString()}
             </div>
             <div className="flex text-xs text-muted-foreground mt-1">
-              <span className="mr-3">Online: 
-                {showPlaceholder 
-                  ? "0" 
+              <span className="mr-3">Online:
+                {showPlaceholder
+                  ? "0"
                   : (dashboardData?.totalBookings?.completedOnline || 0).toLocaleString()}
               </span>
-              <span>Offline: 
-                {showPlaceholder 
-                  ? "0" 
+              <span>Offline:
+                {showPlaceholder
+                  ? "0"
                   : (dashboardData?.totalBookings?.completedOffline || 0).toLocaleString()}
               </span>
             </div>
@@ -456,26 +480,26 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {showPlaceholder 
-                ? "0" 
+              {showPlaceholder
+                ? "0"
                 : (dashboardData?.cancelledBookings?.current || 0).toLocaleString()}
             </div>
             <div className="flex text-xs text-muted-foreground mt-1">
-              <span className="mr-3">Online: 
-                {showPlaceholder 
-                  ? "0" 
+              <span className="mr-3">Online:
+                {showPlaceholder
+                  ? "0"
                   : (dashboardData?.cancelledBookings?.online || 0).toLocaleString()}
               </span>
-              <span>Offline: 
-                {showPlaceholder 
-                  ? "0" 
+              <span>Offline:
+                {showPlaceholder
+                  ? "0"
                   : (dashboardData?.cancelledBookings?.offline || 0).toLocaleString()}
               </span>
             </div>
             {/* Removed percentage change display as per user request */}
           </CardContent>
         </Card>
-                
+
         {/* Card 9: Total Vendors */}
         <Card className="transition-all duration-300 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -486,14 +510,14 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {showPlaceholder 
-                ? "0" 
+              {showPlaceholder
+                ? "0"
                 : (dashboardData?.totalVendors?.current || 0).toLocaleString()}
             </div>
             {/* Removed percentage change display as per user request */}
           </CardContent>
         </Card>
-        
+
         {/* Card 10: Total Suppliers */}
         <Card className="transition-all duration-300 hover:shadow-md">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -504,15 +528,15 @@ export default function AdminPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {showPlaceholder 
-                ? "0" 
+              {showPlaceholder
+                ? "0"
                 : (dashboardData?.totalSuppliers?.current || 0).toLocaleString()}
             </div>
             {/* Removed percentage change display as per user request */}
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -525,7 +549,7 @@ export default function AdminPage() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Product sales</CardTitle>
@@ -538,10 +562,10 @@ export default function AdminPage() {
           </CardContent>
         </Card>
       </div>
-      
+
       <div className="grid grid-cols-1 gap-6 mt-6">
-        <CityWiseSalesTable 
-          data={dashboardData?.cityWiseSales || []} 
+        <CityWiseSalesTable
+          data={dashboardData?.cityWiseSales || []}
           isLoading={isLoading}
           filterType={filterType}
           filterValue={filterValue}

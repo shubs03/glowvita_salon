@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
@@ -6,11 +6,29 @@ import { Textarea } from '@repo/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Button } from '@repo/ui/button';
 import { Trash2, Plus } from 'lucide-react';
+import { useGetProductMastersQuery } from '@repo/store/api';
+import { Badge } from '@repo/ui/badge';
 
 interface Category {
   _id: string;
   name: string;
   description: string;
+  gstType?: 'none' | 'fixed' | 'percentage';
+  gstValue?: number;
+}
+
+interface ProductMaster {
+  _id: string;
+  name: string;
+  category: {
+    _id: string;
+    name: string;
+  };
+  brand?: string;
+  description?: string;
+  productForm?: string;
+  keyIngredients?: string[];
+  productImage?: string;
 }
 
 interface Product {
@@ -49,6 +67,93 @@ const ProductFormFields = ({
   onAddCategoryClick
 }: ProductFormFieldsProps) => {
   const [imagePreviews, setImagePreviews] = useState<string[]>(formData.productImages || []);
+  const [calculatedFinalPrice, setCalculatedFinalPrice] = useState<number>(0);
+  const [gstAmount, setGstAmount] = useState<number>(0);
+
+  // Fetch product masters
+  const { data: productMasters = [], isLoading: productMastersLoading } = useGetProductMastersQuery(undefined);
+
+  // Get selected category details
+  const selectedCategory = useMemo(() => {
+    if (!formData.category) return null;
+    return categories.find((cat: Category) => cat.name === formData.category);
+  }, [formData.category, categories]);
+
+  // Calculate GST and final price whenever sale price or category changes
+  useEffect(() => {
+    const salePrice = Number(formData.salePrice) || 0;
+    
+    if (!selectedCategory || !selectedCategory.gstType || selectedCategory.gstType === 'none') {
+      setGstAmount(0);
+      setCalculatedFinalPrice(salePrice);
+      return;
+    }
+
+    let calculatedGst = 0;
+    const gstValue = Number(selectedCategory.gstValue) || 0;
+
+    if (selectedCategory.gstType === 'fixed') {
+      // Fixed GST: Add fixed amount to sale price
+      calculatedGst = gstValue;
+    } else if (selectedCategory.gstType === 'percentage') {
+      // Percentage GST: Calculate percentage of sale price
+      calculatedGst = (salePrice * gstValue) / 100;
+    }
+
+    const finalPrice = salePrice + calculatedGst;
+    setGstAmount(calculatedGst);
+    setCalculatedFinalPrice(finalPrice);
+  }, [formData.salePrice, selectedCategory]);
+
+  // Filter product masters by selected category
+  const productMastersForCategory = useMemo(() => {
+    if (!formData.category) return [];
+    return productMasters.filter((pm: ProductMaster) => {
+      const categoryName = typeof pm.category === 'object' ? pm.category.name : '';
+      return categoryName === formData.category;
+    });
+  }, [productMasters, formData.category]);
+
+  // Handle product master selection
+  const handleProductMasterChange = (productName: string) => {
+    onFieldChange('productName', productName);
+
+    // Find the selected product master and auto-fill fields
+    const selectedProductMaster = productMastersForCategory.find(
+      (pm: ProductMaster) => pm.name === productName
+    );
+
+    if (selectedProductMaster) {
+      // Auto-fill from master
+      if (selectedProductMaster.brand) {
+        onFieldChange('brand', selectedProductMaster.brand);
+      }
+      if (selectedProductMaster.description) {
+        onFieldChange('description', selectedProductMaster.description);
+      }
+      if (selectedProductMaster.productForm) {
+        onFieldChange('productForm', selectedProductMaster.productForm);
+      }
+      if (selectedProductMaster.keyIngredients && selectedProductMaster.keyIngredients.length > 0) {
+        onFieldChange('keyIngredients', selectedProductMaster.keyIngredients);
+      }
+      // Auto-fill default image if exists (vendor can upload their own later)
+      if (selectedProductMaster.productImage) {
+        const existingImages = formData.productImages || [];
+        // Only set as first image if no images exist yet
+        if (existingImages.length === 0) {
+          onFieldChange('productImages', [selectedProductMaster.productImage]);
+          setImagePreviews([selectedProductMaster.productImage]);
+        }
+      }
+    }
+  };
+
+  // Handle category change - reset product name when category changes
+  const handleCategoryChange = (categoryName: string) => {
+    onFieldChange('category', categoryName);
+    onFieldChange('productName', ''); // Reset product name when category changes
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -86,19 +191,9 @@ const ProductFormFields = ({
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="productName" className="text-sm font-medium">Product Name</Label>
-          <Input
-            placeholder="Enter product name"
-            id="productName"
-            value={formData.productName || ''}
-            onChange={(e) => onFieldChange('productName', e.target.value)}
-            className="rounded-xl border-border/40 focus:border-primary/50 focus:ring-primary/20"
-          />
-        </div>
-        <div className="space-y-2">
           <Label htmlFor="category" className="text-sm font-medium">Category</Label>
           <div className="flex gap-2">
-            <Select value={formData.category} onValueChange={(value) => onFieldChange('category', value)}>
+            <Select value={formData.category} onValueChange={handleCategoryChange}>
               <SelectTrigger className="rounded-xl border-border/40">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
@@ -117,6 +212,35 @@ const ProductFormFields = ({
               <Plus className="h-4 w-4" />
             </Button>
           </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="productName" className="text-sm font-medium">Product Name</Label>
+          <Select
+            value={formData.productName || ''}
+            onValueChange={handleProductMasterChange}
+            disabled={!formData.category}
+          >
+            <SelectTrigger className="rounded-xl border-border/40">
+              <SelectValue placeholder={formData.category ? "Select Product" : "Select Category First"} />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              {productMastersLoading ? (
+                <SelectItem value="loading" disabled>
+                  Loading...
+                </SelectItem>
+              ) : productMastersForCategory.length > 0 ? (
+                productMastersForCategory.map((pm: ProductMaster) => (
+                  <SelectItem key={pm._id} value={pm.name}>
+                    {pm.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-products" disabled>
+                  No products added for this category
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -200,6 +324,35 @@ const ProductFormFields = ({
           />
         </div>
       </div>
+
+      {/* GST and Final Price Display */}
+      {selectedCategory && selectedCategory.gstType !== 'none' && formData.salePrice && (
+        <div className="bg-muted/30 rounded-xl p-4 border border-border/30">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Category GST</Label>
+              <div className="flex items-center gap-2">
+                {selectedCategory.gstType === 'fixed' ? (
+                  <Badge variant="secondary" className="text-sm">₹{selectedCategory.gstValue} Fixed</Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-sm">{selectedCategory.gstValue}%</Badge>
+                )}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">GST Amount</Label>
+              <div className="text-lg font-semibold">₹{gstAmount.toFixed(2)}</div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Final Price (incl. GST)</Label>
+              <div className="text-lg font-bold text-primary">₹{calculatedFinalPrice.toFixed(2)}</div>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Calculation: Sale Price (₹{Number(formData.salePrice).toFixed(2)}) + GST (₹{gstAmount.toFixed(2)}) = Final Price (₹{calculatedFinalPrice.toFixed(2)})
+          </p>
+        </div>
+      )}
 
       {/* New Fields Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

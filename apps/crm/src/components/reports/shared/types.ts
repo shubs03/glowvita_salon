@@ -2,6 +2,7 @@ export interface Report {
     title: string;
     description: string;
     details: string;
+    points: string[];
 }
 
 export interface ReportCategory {

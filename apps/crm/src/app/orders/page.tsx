@@ -133,13 +133,21 @@ export default function OrdersPage() {
     let dataToFilter: Order[] = [];
     
     // Determine data to filter based on viewMode first, then fall back to activeTab
-    if (viewMode === 'purchases') {
+    // Suppliers should never see purchases view
+    if (viewMode === 'purchases' && role !== 'supplier') {
       dataToFilter = myPurchases;
     } else {
       // Default to activeTab logic when not in purchases view
       if (activeTab === 'customer-orders') dataToFilter = [...customerOrders, ...onlineCustomerOrders];
-      if (activeTab === 'my-purchases') dataToFilter = myPurchases;
-      if (activeTab === 'received-orders') dataToFilter = receivedOrders;
+      if (activeTab === 'my-purchases' && role !== 'supplier') dataToFilter = myPurchases;
+      // For received-orders: Suppliers see both B2B orders (from vendors) and B2C orders (from online customers)
+      if (activeTab === 'received-orders') {
+        if (role === 'supplier') {
+          dataToFilter = [...receivedOrders, ...onlineCustomerOrders];
+        } else {
+          dataToFilter = receivedOrders;
+        }
+      }
     }
     
     return dataToFilter.filter((order: Order) =>

@@ -25,6 +25,8 @@ interface InvoiceUIProps {
   vendorName: string;
   vendorProfile: any;
   taxRate: number;
+  taxType?: 'percentage' | 'fixed';
+  isTaxEnabled?: boolean;
   isOrderSaved: boolean;
   onEmailClick: () => void;
   onPrintClick: () => void;
@@ -37,6 +39,8 @@ export function InvoiceUI({
   vendorName,
   vendorProfile,
   taxRate,
+  taxType = 'percentage',
+  isTaxEnabled = true,
   isOrderSaved,
   onEmailClick,
   onPrintClick,
@@ -109,8 +113,8 @@ export function InvoiceUI({
       <div className="bg-gray-900 text-white py-2 px-4 rounded-t-lg -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 print:hidden">
         <div className="flex items-center justify-center gap-2">
           <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" opacity="0.3"/>
-            <path d="M2 17L12 22L22 17V7L12 12L2 7V17Z" fill="currentColor"/>
+            <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" opacity="0.3" />
+            <path d="M2 17L12 22L22 17V7L12 12L2 7V17Z" fill="currentColor" />
           </svg>
           <span className="font-bold text-base sm:text-lg tracking-wide">GlowVita Salon</span>
         </div>
@@ -183,7 +187,13 @@ export function InvoiceUI({
                 </td>
                 <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">₹{(item.price || 0).toFixed(2)}</td>
                 <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">{item.quantity || 0}</td>
-                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">₹{(((item.price || 0) * (item.quantity || 0) * taxRate) / 100).toFixed(2)}</td>
+                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
+                  ₹{isTaxEnabled ? (
+                    taxType === 'percentage' ? (
+                      ((item.totalPrice / (item.quantity || 1)) * (item.quantity || 1) * taxRate) / 100
+                    ).toFixed(2) : 'Included'
+                  ) : '0.00'}
+                </td>
                 <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-black print:text-xs print:p-1">₹{(item.totalPrice || 0).toFixed(2)}</td>
               </tr>
             ))}
@@ -197,7 +207,9 @@ export function InvoiceUI({
               <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-green-600 print:text-xs print:p-1">-₹{(invoiceData.discount || 0).toFixed(2)}</td>
             </tr>
             <tr className="border border-black">
-              <td className="border border-black p-1 sm:p-2 text-right font-semibold text-black text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>Tax ({taxRate}%):</td>
+              <td className="border border-black p-1 sm:p-2 text-right font-semibold text-black text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>
+                Tax ({isTaxEnabled ? (taxType === 'percentage' ? `${taxRate}%` : 'Fixed') : '0%'}):
+              </td>
               <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-black print:text-xs print:p-1">₹{(invoiceData.tax || 0).toFixed(2)}</td>
             </tr>
             <tr className="border border-black">
@@ -223,13 +235,13 @@ export function InvoiceUI({
         <p className="text-center text-xs sm:text-sm font-semibold text-gray-600 print:text-[10px] uppercase tracking-wider px-2">
           NOTE: This is computer generated receipt and does not require physical signature.
         </p>
-        
+
         {/* GlowVita Footer Branding */}
         <div className="mt-6 pt-4 border-t border-gray-300 print:hidden">
           <div className="flex items-center justify-center gap-2 text-gray-900">
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" opacity="0.3"/>
-              <path d="M2 17L12 22L22 17V7L12 12L2 7V17Z" fill="currentColor"/>
+              <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" opacity="0.3" />
+              <path d="M2 17L12 22L22 17V7L12 12L2 7V17Z" fill="currentColor" />
             </svg>
             <span className="font-semibold text-sm">Powered by GlowVita Salon</span>
           </div>
