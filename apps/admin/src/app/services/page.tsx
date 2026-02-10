@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { Plus, Search, Layers, CheckCircle, XCircle, Eye, Image as ImageIcon } from "lucide-react";
+import { Search, Layers, CheckCircle, XCircle, Eye, Image as ImageIcon } from "lucide-react";
 import { glowvitaApi } from '@repo/store/api';
 import { toast } from 'sonner';
 import {
@@ -300,13 +300,7 @@ export default function ServicesPage() {
                                     ]}
                                     className="h-12 px-4 rounded-lg"
                                 />
-                                <Button
-                                    onClick={() => { }}
-                                    className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1"
-                                >
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add Service
-                                </Button>
+
                             </div>
                         </div>
                     </div>
