@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
-import { 
+import {
   LogOut,
   ChevronLeft,
   LayoutGrid
@@ -39,12 +39,12 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
       Cookies.remove('access_token', { path: '/', domain: window.location.hostname });
       Cookies.remove('token', { path: '/' });
       Cookies.remove('token', { path: '/', domain: window.location.hostname });
-      
+
       // Clear all auth-related data from localStorage
       localStorage.removeItem('adminAuthState');
       localStorage.removeItem('crmAuthState');
       localStorage.removeItem('userAuthState');
-      
+
       // Clear any other possible tokens
       Object.keys(localStorage).forEach(key => {
         if (key.includes('token') || key.includes('auth')) {
@@ -58,7 +58,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
 
       // This action will now trigger the root reducer to reset the entire state
       dispatch(clearAdminAuth());
-      
+
       // Redirect to login page after state is cleared
       router.push('/login');
       // Force a page refresh to ensure all state is cleared
@@ -72,60 +72,62 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
       setShowLogoutModal(false);
     }
   };
-  
+
   if (isLoading) {
     return null; // Or a loading skeleton
   }
 
   const permissions = admin?.permissions || [];
   const isSuperAdmin = admin?.roleName === 'SUPER_ADMIN';
-  
+
   const hasModuleAccess = (modulePermission: string) => {
     if (isSuperAdmin) return true;
-    
+
     // Check for :all permission
     if (permissions.includes(`${modulePermission}:all`)) return true;
-    
+
     // Check for :view permission
     if (permissions.includes(`${modulePermission}:view`)) return true;
-    
+
     // Check if user has edit or delete (which implies view)
-    if (permissions.includes(`${modulePermission}:edit`) || 
-        permissions.includes(`${modulePermission}:delete`)) {
+    if (permissions.includes(`${modulePermission}:edit`) ||
+      permissions.includes(`${modulePermission}:delete`)) {
       return true;
     }
-    
+
     // Legacy: check for module permission without action
     if (permissions.includes(modulePermission)) return true;
-    
+
     return false;
   };
-  
+
   const visibleNavItems = sidebarNavItems.filter(item => hasModuleAccess(item.permission));
 
   const SidebarContent = () => (
     <div className={cn(
-        "bg-background border-r flex flex-col transition-all duration-300 ease-in-out h-full overflow-hidden",
-        isOpen ? "w-64" : "w-20",
+      "bg-background border-r flex flex-col transition-all duration-300 ease-in-out h-full overflow-hidden",
+      isOpen ? "w-64" : "w-20",
     )}>
       <div className="flex flex-col flex-grow min-h-0">
         <div className={cn("flex-shrink-0 p-4 h-16 border-b flex items-center gap-3", isOpen ? "justify-between" : "justify-center")}>
-            <Link href="/dashboard" className="flex items-center gap-3 font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-                <div className="bg-primary text-primary-foreground p-2 rounded-lg">
-                    <LayoutGrid className="h-5 w-5" />
-                </div>
-                <span className={cn(!isOpen && "hidden")}>GlowVita</span>
-            </Link>
-          
-            <Button
-                variant="ghost"
-                size="icon"
-                className={cn("hidden lg:flex flex-shrink-0 text-muted-foreground", !isOpen && "rotate-180")}
-                onClick={toggleSidebar}
-            >
-                <ChevronLeft className="h-5 w-5" />
-                <span className="sr-only">Toggle navigation menu</span>
-            </Button>
+          <Link href="/dashboard" className="flex items-center gap-3 font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+            <img
+              src="/favicon.jpeg"
+              alt="GlowVita Logo"
+              className="w-[60px] h-[60px] object-contain rounded-lg border-2 border-primary/20"
+            />
+            <span className={cn(!isOpen && "hidden", "hidden")}>GlowVita</span>
+          </Link>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn("hidden lg:flex flex-shrink-0 text-muted-foreground", !isOpen && "rotate-180")}
+            onClick={toggleSidebar}
+          >
+            <ChevronLeft className="h-5 w-5" />
+            <span className="sr-only">Toggle navigation menu</span>
+          </Button>
         </div>
 
         <nav className="flex-grow px-2 py-4 space-y-1 overflow-y-auto overflow-x-hidden min-h-0 no-scrollbar">
@@ -152,14 +154,14 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
             </Link>
           ))}
         </nav>
-        
+
         <div className="flex-shrink-0 p-3 border-t">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className={cn(
-              "w-full gap-3 min-w-0 text-muted-foreground hover:text-destructive", 
+              "w-full gap-3 min-w-0 text-muted-foreground hover:text-destructive",
               isOpen || isMobile ? "justify-start" : "justify-center"
-            )} 
+            )}
             onClick={() => setShowLogoutModal(true)}
             title="Logout"
           >
@@ -173,7 +175,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
           </Button>
         </div>
       </div>
-      
+
       <LogoutConfirmationModal
         open={showLogoutModal}
         onOpenChange={setShowLogoutModal}
@@ -187,8 +189,8 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
     return (
       <>
         {isOpen && (
-          <div 
-            className="fixed inset-0 bg-black/60 z-30 lg:hidden" 
+          <div
+            className="fixed inset-0 bg-black/60 z-30 lg:hidden"
             onClick={toggleSidebar}
           />
         )}

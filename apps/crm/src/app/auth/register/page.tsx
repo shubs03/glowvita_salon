@@ -22,13 +22,13 @@ interface RoleCardProps {
 }
 
 const RoleCard = ({ icon: Icon, title, description, onClick, isSelected, index }: RoleCardProps) => (
-  <div 
+  <div
     className={cn(
       "group relative p-4 sm:p-6 text-center transition-all duration-300 ease-out transform hover:-translate-y-2 hover:scale-[1.02] w-full rounded-xl cursor-pointer overflow-hidden",
       "bg-white border border-gray-100 shadow-md hover:shadow-lg backdrop-blur-sm",
       "animate-fade-in-up",
-      isSelected 
-        ? 'border-purple-400 ring-2 ring-purple-100 shadow-purple-200/40' 
+      isSelected
+        ? 'border-purple-400 ring-2 ring-purple-100 shadow-purple-200/40'
         : 'hover:border-purple-200 hover:shadow-purple-100/20'
     )}
     style={{
@@ -38,26 +38,26 @@ const RoleCard = ({ icon: Icon, title, description, onClick, isSelected, index }
   >
     {/* Animated background gradient */}
     <div className="absolute inset-0 bg-gradient-to-br from-purple-50/30 via-indigo-50/20 to-pink-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-    
+
     {/* Floating particles effect */}
     <div className="absolute inset-0 overflow-hidden">
       <div className="absolute -top-1 -right-1 w-10 h-10 bg-gradient-to-br from-purple-200/20 to-pink-200/20 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-125 group-hover:rotate-45" />
       <div className="absolute -bottom-2 -left-2 w-12 h-12 bg-gradient-to-br from-indigo-200/20 to-purple-200/20 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 delay-100 transform group-hover:scale-110 group-hover:-rotate-45" />
     </div>
-    
+
     <div className="relative z-10">
       <div className={cn(
         "w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-5 transition-all duration-300 transform group-hover:scale-110",
         "bg-gradient-to-br shadow-lg relative overflow-hidden",
-        isSelected 
-          ? 'from-purple-50 via-indigo-50 to-purple-100 text-purple-600 shadow-purple-100/50 border border-purple-100' 
+        isSelected
+          ? 'from-purple-50 via-indigo-50 to-purple-100 text-purple-600 shadow-purple-100/50 border border-purple-100'
           : 'from-gray-50 via-white to-gray-100 text-gray-500 group-hover:from-purple-50 group-hover:via-indigo-50 group-hover:to-purple-100 group-hover:text-purple-600 group-hover:shadow-purple-100/50 group-hover:border group-hover:border-purple-100'
       )}>
         {/* Icon container shimmer effect */}
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-500" />
         <Icon className="w-9 h-9 relative z-10" />
       </div>
-      
+
       <h3 className="text-xl font-semibold text-gray-900 mb-3 group-hover:text-gray-900 tracking-tight transition-all duration-300">{title}</h3>
       <p className="text-sm text-gray-600 leading-relaxed group-hover:text-gray-700 font-medium transition-all duration-300">{description}</p>
     </div>
@@ -81,6 +81,13 @@ const RoleSelectionScreen = ({ onSelectRole }: RoleSelectionScreenProps) => (
 
     <div className="text-center mb-6 sm:mb-12 relative z-10">
       <div className="inline-block mb-3 sm:mb-5">
+        <div className="flex justify-center mb-6">
+          <img
+            src="/favicon.jpeg"
+            alt="GlowVita Logo"
+            className="w-20 h-20 object-contain rounded-full border-4 border-white shadow-xl animate-fade-in"
+          />
+        </div>
         <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4 tracking-tight bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800 bg-clip-text text-transparent animate-fade-in">
           Join GlowVita
         </h1>
@@ -90,40 +97,40 @@ const RoleSelectionScreen = ({ onSelectRole }: RoleSelectionScreenProps) => (
         Choose your role and become part of our growing beauty and wellness community
       </p>
     </div>
-    
+
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-8 mb-6 sm:mb-12">
-      <RoleCard 
-        icon={Building} 
-        title="Salon/Vendor" 
+      <RoleCard
+        icon={Building}
+        title="Salon/Vendor"
         description="Register your salon or spa to manage bookings and clients."
         onClick={() => onSelectRole('vendor')}
         isSelected={false}
         index={0}
       />
-      <RoleCard 
-        icon={Stethoscope} 
-        title="Doctor/Dermatologist" 
+      <RoleCard
+        icon={Stethoscope}
+        title="Doctor/Dermatologist"
         description="Join as a professional to offer consultations and services."
         onClick={() => onSelectRole('doctor')}
         isSelected={false}
         index={1}
       />
-      <RoleCard 
-        icon={User} 
-        title="Supplier" 
+      <RoleCard
+        icon={User}
+        title="Supplier"
         description="Register as a supplier to provide products to our vendors."
         onClick={() => onSelectRole('supplier')}
         isSelected={false}
         index={2}
       />
     </div>
-    
+
     <div className="text-center relative z-10">
       <div className="inline-flex items-center justify-center p-3 sm:p-5 bg-white/80 backdrop-blur-sm rounded-xl shadow-md border border-gray-100 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
         <p className="text-gray-600 font-medium text-sm sm:text-base">
           Already have an account?{" "}
-          <Link 
-            href="/login" 
+          <Link
+            href="/login"
             className="font-semibold text-purple-600 hover:text-purple-700 transition-all duration-300 hover:underline hover:scale-105 inline-block relative group"
           >
             Sign in
@@ -132,7 +139,7 @@ const RoleSelectionScreen = ({ onSelectRole }: RoleSelectionScreenProps) => (
         </p>
       </div>
     </div>
-  </div>
+  </div >
 );
 
 const RegistrationFlow = () => {
@@ -140,11 +147,11 @@ const RegistrationFlow = () => {
   const router = useRouter();
 
   const handleSuccess = () => {
-    router.push('/dashboard'); 
+    router.push('/dashboard');
   };
 
   const renderForm = () => {
-    switch(selectedRole) {
+    switch (selectedRole) {
       case 'vendor':
         return (
           <VendorRegistrationForm onSuccess={handleSuccess} />

@@ -41,7 +41,7 @@ export default function LoginPage() {
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
         });
-        
+
         dispatch(setAdminAuth({ user: response.user, token: response.admin_access_token }));
         toast.success("Login successful!");
         router.push('/');
@@ -65,8 +65,8 @@ export default function LoginPage() {
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row">
       {/* Back Button */}
-      <button 
-        onClick={() => router.back()} 
+      <button
+        onClick={() => router.back()}
         className="absolute top-4 left-4 z-20 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 shadow-md transition-all duration-200"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -79,6 +79,13 @@ export default function LoginPage() {
         <div className="w-full max-w-md self-center py-6">
           {/* Heading */}
           <div className="text-center mb-8">
+            <div className="flex justify-center mb-4">
+              <img
+                src="/favicon.jpeg"
+                alt="GlowVita Logo"
+                className="w-16 h-16 object-contain rounded-full border-4 border-white shadow-lg"
+              />
+            </div>
             <h1 className="text-2xl font-extrabold text-gray-900 md:text-xl">GlowVita Admin Portal</h1>
             <p className="text-gray-600 text-l mt-3 lg:whitespace-nowrap md:whitespace-normal sm:whitespace-normal">Manage bookings, clients, and operations seamlessly</p>
           </div>
@@ -170,7 +177,7 @@ export default function LoginPage() {
                 )}
               </Button>
 
-              
+
             </form>
           </div>
         </div>

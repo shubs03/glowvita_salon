@@ -24,9 +24,11 @@ export function Header({ className, cartItemCount = 0 }: HeaderProps) {
           {/* Logo */}
           <div className="flex-shrink-0">
             <a href="/" className="flex items-center space-x-2">
-              <div className="h-8 w-8 lg:h-10 lg:w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg lg:text-xl">G</span>
-              </div>
+              <img
+                src="/favicon.jpeg"
+                alt="GlowVita Logo"
+                className="h-8 w-8 lg:h-10 lg:w-10 object-contain rounded-full border border-primary/20"
+              />
               <span className="font-bold text-xl lg:text-2xl text-foreground font-headline">
                 GlowVita
               </span>
@@ -35,32 +37,32 @@ export function Header({ className, cartItemCount = 0 }: HeaderProps) {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <a 
-              href="/" 
+            <a
+              href="/"
               className="text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               Home
             </a>
-            <a 
-              href="/products" 
+            <a
+              href="/products"
               className="text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               Products
             </a>
-            <a 
-              href="/services" 
+            <a
+              href="/services"
               className="text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               Services
             </a>
-            <a 
-              href="/about" 
+            <a
+              href="/about"
               className="text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               About
             </a>
-            <a 
-              href="/contact" 
+            <a
+              href="/contact"
               className="text-muted-foreground hover:text-foreground transition-colors font-medium"
             >
               Contact
