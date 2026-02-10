@@ -3,7 +3,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
-import { useUpdateVendorProfileMutation } from '@repo/store/api';
+import { useUpdateVendorProfileMutation, useUpdateSupplierProfileMutation } from '@repo/store/api';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
 
 interface BankDetails {
@@ -20,12 +21,15 @@ interface BankDetailsTabProps {
 }
 
 export const BankDetailsTab = ({ bankDetails, setVendor }: BankDetailsTabProps) => {
-  console.log("BankDetailsTab received bankDetails:", bankDetails);
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
+  const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
+  const { role } = useCrmAuth();
 
   const handleSave = async () => {
     try {
-      const result: any = await updateVendorProfile({
+      const updateFn = role === 'vendor' ? updateVendorProfile : updateSupplierProfile;
+      const result: any = await updateFn({
+        _id: typeof window !== 'undefined' ? (JSON.parse(localStorage.getItem('user') || '{}')._id) : undefined,
         bankDetails: bankDetails
       }).unwrap();
 

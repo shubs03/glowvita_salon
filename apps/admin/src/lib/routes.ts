@@ -42,7 +42,7 @@ export const sidebarNavItems: NavItem[] = [
   },
   {
     title: "Approvals",
-    href: "/vendor-approval",
+    href: "/approval",
     Icon: FaCheckCircle,
     permission: "vendor-approval",
   },

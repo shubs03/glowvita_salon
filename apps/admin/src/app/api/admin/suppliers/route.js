@@ -22,17 +22,17 @@ const initDb = async () => {
 const generateReferralCode = async (shopName) => {
   let referralCode;
   let isUnique = false;
-  
+
   while (!isUnique) {
     const namePrefix = shopName.substring(0, 3).toUpperCase();
     const randomNumbers = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     referralCode = `${namePrefix}${randomNumbers}`;
-    
+
     // Check if this code already exists for any supplier
     const existingSupplier = await SupplierModel.findOne({ referralCode });
     isUnique = !existingSupplier;
   }
-  
+
   return referralCode;
 };
 
@@ -108,15 +108,15 @@ export const POST = async (req) => {
 
     const newSupplier = await SupplierModel.create({
       ...supplierData,
-      password: hashedPassword, 
-      licenseFiles: finalLicenseFiles, 
+      password: hashedPassword,
+      licenseFiles: finalLicenseFiles,
       referralCode: await generateReferralCode(supplierData.shopName),
       regionId: finalRegionId,
       subscription: {
-          plan: (await SubscriptionPlan.findOne({ name: 'Trial Plan' }))?._id,
-          status: 'Active',
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 
-          history: [],
+        plan: (await SubscriptionPlan.findOne({ name: 'Trial Plan' }))?._id,
+        status: 'Active',
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        history: [],
       }
     });
 
@@ -200,7 +200,7 @@ export const PUT = authMiddlewareAdmin(async (req) => {
         if (file && file.startsWith("data:")) {
           const fileName = `supplier-${Date.now()}-license-${i}`;
           const fileUrl = await uploadBase64(file, fileName);
-          
+
           if (fileUrl) {
             finalLicenseFiles.push(fileUrl);
           }
@@ -237,7 +237,7 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
     if (!deletedSupplier) {
       return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
     }
-    
+
     // Delete license files from VPS storage
     if (deletedSupplier.licenseFiles && Array.isArray(deletedSupplier.licenseFiles)) {
       for (const fileUrl of deletedSupplier.licenseFiles) {
@@ -251,5 +251,122 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
   } catch (error) {
     console.error("Error deleting supplier:", error);
     return NextResponse.json({ message: "Error deleting supplier", error: error.message }, { status: 500 });
+  }
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+
+// PATCH (update status) a supplier
+export const PATCH = authMiddlewareAdmin(async (req) => {
+  try {
+    await initDb();
+    const body = await req.json();
+    const { id, status, supplierId, documentType, rejectionReason } = body;
+
+    // Check if this is a supplier status update
+    if (id && status && !documentType) {
+      if (!id || !status) {
+        return NextResponse.json(
+          { message: "Supplier ID and status (Approved/Disapproved) are required" },
+          { status: 400 }
+        );
+      }
+
+      // If status is "Approved", check if all uploaded documents are approved
+      if (status === "Approved") {
+        const supplier = await SupplierModel.findById(id);
+        if (!supplier) {
+          return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
+        }
+
+        const documents = supplier.documents || {};
+        const mandatoryDocs = [
+          { key: "aadharCard", label: "Aadhar Card" },
+          { key: "panCard", label: "PAN Card" },
+          { key: "udyogAadhar", label: "Udyog Aadhar" },
+          { key: "udhayamCert", label: "Udhayam Certificate" },
+          { key: "shopLicense", label: "Shop License" },
+        ];
+
+        const pendingOrRejectedDocs = mandatoryDocs.filter((doc) => {
+          const isUploaded = documents[doc.key] && documents[doc.key] !== "";
+          const docStatus = documents[`${doc.key}Status`];
+          return isUploaded && docStatus !== "approved";
+        });
+
+        if (pendingOrRejectedDocs.length > 0) {
+          const docLabels = pendingOrRejectedDocs.map((doc) => doc.label).join(", ");
+          return NextResponse.json(
+            {
+              message: `Cannot approve supplier. The following documents are not approved: ${docLabels}`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
+      const updatedSupplier = await SupplierModel.findByIdAndUpdate(
+        id,
+        { $set: { status } },
+        { new: true }
+      ).select("-password");
+
+      if (!updatedSupplier) {
+        return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        message: `Supplier ${status} successfully`,
+        supplier: updatedSupplier,
+      });
+    }
+
+    // Check if this is a document status update
+    else if (supplierId && documentType && status) {
+      const validDocumentTypes = [
+        'aadharCard', 'udyogAadhar', 'udhayamCert',
+        'shopLicense', 'panCard'
+      ];
+
+      if (!validDocumentTypes.includes(documentType)) {
+        return NextResponse.json({ message: "Invalid document type" }, { status: 400 });
+      }
+
+      if (!['pending', 'approved', 'rejected'].includes(status)) {
+        return NextResponse.json({ message: "Invalid status" }, { status: 400 });
+      }
+
+      if (status === 'rejected' && (!rejectionReason || rejectionReason.trim() === '')) {
+        return NextResponse.json({ message: "Rejection reason is required" }, { status: 400 });
+      }
+
+      const updateData = {
+        [`documents.${documentType}Status`]: status,
+      };
+
+      if (status === 'rejected') {
+        updateData[`documents.${documentType}AdminRejectionReason`] = rejectionReason;
+      } else {
+        updateData[`documents.${documentType}AdminRejectionReason`] = null;
+      }
+
+      const updatedSupplier = await SupplierModel.findByIdAndUpdate(
+        supplierId,
+        { $set: updateData },
+        { new: true }
+      ).select("-password");
+
+      if (!updatedSupplier) {
+        return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        message: `Document ${status} successfully`,
+        supplier: updatedSupplier,
+      });
+    }
+
+    return NextResponse.json({ message: "Invalid request parameters" }, { status: 400 });
+  } catch (error) {
+    console.error("Error in supplier PATCH:", error);
+    return NextResponse.json({ message: "Error updating supplier", error: error.message }, { status: 500 });
   }
 }, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);

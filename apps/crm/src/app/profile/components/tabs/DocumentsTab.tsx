@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { FileText, Eye, Trash2, Clock, Check, X } from "lucide-react";
-import { useUpdateVendorProfileMutation } from '@repo/store/api';
+import { useUpdateVendorProfileMutation, useUpdateSupplierProfileMutation } from '@repo/store/api';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
 
 interface DocumentsTabProps {
@@ -12,11 +13,15 @@ interface DocumentsTabProps {
 
 export const DocumentsTab = ({ documents, setVendor }: DocumentsTabProps) => {
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
+  const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
+  const { role } = useCrmAuth();
   const [previewDocument, setPreviewDocument] = useState<{ src: string; type: string } | null>(null);
 
   const handleSave = async () => {
     try {
-      const result: any = await updateVendorProfile({
+      const updateFn = role === 'vendor' ? updateVendorProfile : updateSupplierProfile;
+      const result: any = await updateFn({
+        _id: typeof window !== 'undefined' ? (JSON.parse(localStorage.getItem('user') || '{}')._id) : undefined,
         documents: documents
       }).unwrap();
 

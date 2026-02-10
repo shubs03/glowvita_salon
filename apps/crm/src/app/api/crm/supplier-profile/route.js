@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import _db from '../../../../../../../packages/lib/src/db.js';
-import SupplierModel from '../../../../../../../packages/lib/src/models/Vendor/Supplier.model.js';
-import SmsTransaction from '../../../../../../../packages/lib/src/models/Marketing/SmsPurchaseHistory.model.js';
+import _db from '@repo/lib/db';
+import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
+import SmsTransaction from '@repo/lib/models/Marketing/SmsPurchaseHistory.model';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';
 
@@ -19,7 +19,7 @@ export const GET = authMiddlewareCrm(async (req) => {
       return NextResponse.json({ message: "Supplier ID is required" }, { status: 400 });
     }
 
-    const supplier = await SupplierModel.findById(supplierId).select('firstName lastName shopName description email mobile country state city pincode address supplierType businessRegistrationNo profileImage status referralCode licenseFiles subscription smsBalance');
+    const supplier = await SupplierModel.findById(supplierId).select('firstName lastName shopName description email mobile country state city pincode address supplierType businessRegistrationNo profileImage gallery documents bankDetails status referralCode licenseFiles subscription smsBalance taxes');
 
     console.log("Supplier data from DB:", supplier);
 
@@ -60,6 +60,35 @@ export const GET = authMiddlewareCrm(async (req) => {
   }
 }, ['supplier']);
 
+// Utility function to process base64 image and upload it
+// Also deletes the old image if a new one is uploaded
+const processBase64Image = async (base64String, fileName, oldImageUrl = null) => {
+  if (!base64String) return null;
+
+  // Check if it's already a URL (not base64)
+  if (base64String.startsWith('http')) {
+    return base64String; // Already uploaded, return as is
+  }
+
+  // Upload the base64 image and return the URL
+  const imageUrl = await uploadBase64(base64String, fileName);
+
+  // If upload was successful and there's an old image, delete the old one
+  if (imageUrl && oldImageUrl && oldImageUrl.startsWith('http')) {
+    try {
+      // Attempt to delete the old file
+      // We don't await this as we don't want to fail the whole operation if deletion fails
+      deleteFile(oldImageUrl).catch(err => {
+        console.warn('Failed to delete old image:', err);
+      });
+    } catch (err) {
+      console.warn('Error deleting old image:', err);
+    }
+  }
+
+  return imageUrl;
+};
+
 // PUT - Update supplier profile
 export const PUT = authMiddlewareCrm(async (req) => {
   try {
@@ -67,131 +96,179 @@ export const PUT = authMiddlewareCrm(async (req) => {
     const body = await req.json();
 
     console.log('Updating supplier profile for ID:', supplierId);
-    console.log('Update data:', body);
 
-    // Find the supplier
-    const supplier = await SupplierModel.findById(supplierId);
+    // Find the supplier with populated subscription data
+    const supplier = await SupplierModel.findById(supplierId).populate('subscription.plan');
     if (!supplier) {
-      console.log('Supplier not found with ID:', supplierId);
       return NextResponse.json({
         success: false,
         message: "Supplier not found"
       }, { status: 404 });
     }
 
-    // Debug: Log supplier ID
-    console.log('Supplier ID:', supplierId);
-
     // Remove _id from body if present to prevent accidental updates
     delete body._id;
-    delete body.id; // Also remove id if present
-
-    // Handle profile image upload if provided
-    if (body.profileImage !== undefined) {
-      if (body.profileImage) {
-        // Upload new image to VPS
-        const fileName = `supplier-${supplierId}-profile`;
-        const imageUrl = await uploadBase64(body.profileImage, fileName);
-
-        if (!imageUrl) {
-          return NextResponse.json(
-            { success: false, message: "Failed to upload profile image" },
-            { status: 500 }
-          );
-        }
-
-        // Delete old image from VPS if it exists
-        if (supplier.profileImage) {
-          await deleteFile(supplier.profileImage);
-        }
-
-        body.profileImage = imageUrl;
-      } else {
-        // If image is null/empty, remove it
-        body.profileImage = null;
-
-        // Delete old image from VPS if it exists
-        if (supplier.profileImage) {
-          await deleteFile(supplier.profileImage);
-        }
-      }
-    }
-
-    // Handle license files upload if provided
-    if (body.licenseFiles !== undefined) {
-      if (Array.isArray(body.licenseFiles)) {
-        const uploadedFiles = [];
-        for (let i = 0; i < body.licenseFiles.length; i++) {
-          const file = body.licenseFiles[i];
-          if (file) {
-            // Upload new file to VPS
-            const fileName = `supplier-${supplierId}-license-${i}`;
-            const fileUrl = await uploadBase64(file, fileName);
-
-            if (fileUrl) {
-              uploadedFiles.push(fileUrl);
-            }
-          }
-        }
-        body.licenseFiles = uploadedFiles;
-      } else {
-        body.licenseFiles = [];
-      }
-    }
+    delete body.id;
 
     // Update allowed fields only
     const allowedFields = [
       'firstName', 'lastName', 'shopName', 'description', 'email', 'mobile',
       'country', 'state', 'city', 'pincode', 'address', 'supplierType',
-      'businessRegistrationNo', 'profileImage', 'licenseFiles', 'referralCode'
+      'businessRegistrationNo', 'profileImage', 'gallery', 'documents', 'bankDetails', 'licenseFiles', 'referralCode', 'taxes'
     ];
 
-    console.log('Updating fields:', allowedFields);
+    // Keep existing subscription data unless specifically provided in the update
+    if (body.subscription) {
+      Object.keys(body.subscription).forEach(key => {
+        if (['plan', 'status', 'startDate', 'endDate', 'history'].includes(key)) {
+          supplier.subscription[key] = body.subscription[key];
+        }
+      });
+    }
 
     // Update fields
-    allowedFields.forEach(field => {
+    for (const field of allowedFields) {
       if (body[field] !== undefined) {
-        console.log(`Updating field ${field} with value:`, body[field]);
-        supplier[field] = body[field];
-      }
-    });
-
-    // Handle subscription updates carefully
-    if (body.subscription !== undefined) {
-      // Only update subscription if it contains meaningful data
-      if (body.subscription &&
-        (body.subscription.plan || body.subscription.endDate ||
-          body.subscription.startDate || (body.subscription.history && body.subscription.history.length > 0))) {
-
-        // Validate that required fields are present if any subscription data is provided
-        if (body.subscription.plan && body.subscription.endDate) {
-          supplier.subscription = body.subscription;
+        // Handle profile image upload
+        if (field === 'profileImage') {
+          if (body[field] && !body[field].startsWith('http')) {
+            const imageUrl = await processBase64Image(body[field], `supplier-${supplierId}-profile`, supplier.profileImage);
+            if (imageUrl) {
+              supplier.profileImage = imageUrl;
+            }
+          } else {
+            supplier.profileImage = body[field];
+          }
         }
-        // If partial data is provided, we'll let the model's pre-save hook handle assigning a default subscription
+        // Handle gallery images upload
+        else if (field === 'gallery' && Array.isArray(body[field])) {
+          const finalGallery = [];
+          const currentGallery = supplier.gallery || [];
+
+          for (let i = 0; i < body[field].length; i++) {
+            const item = body[field][i];
+            if (item && !item.startsWith('http')) {
+              // It's a base64 image
+              const oldImageUrl = currentGallery[i] || null;
+              const imageUrl = await processBase64Image(item, `supplier-${supplierId}-gallery-${i}`, oldImageUrl);
+              if (imageUrl) {
+                finalGallery.push(imageUrl);
+              }
+            } else if (item && item.startsWith('http')) {
+              // It's an existing URL
+              finalGallery.push(item);
+            }
+          }
+
+          // Cleanup: Delete images that are no longer in the gallery
+          for (const oldImage of currentGallery) {
+            if (!finalGallery.includes(oldImage)) {
+              await deleteFile(oldImage).catch(err => console.error("Error deleting old gallery image:", err));
+            }
+          }
+          supplier.gallery = finalGallery;
+          supplier.markModified('gallery');
+        }
+        // Handle bankDetails
+        else if (field === 'bankDetails' && typeof body[field] === 'object') {
+          if (!supplier.bankDetails) supplier.bankDetails = {};
+          Object.keys(body[field]).forEach(key => {
+            if (['bankName', 'accountNumber', 'ifscCode', 'accountHolder', 'upiId'].includes(key)) {
+              supplier.bankDetails[key] = body[field][key];
+            }
+          });
+          supplier.markModified('bankDetails');
+        }
+        // Handle documents
+        else if (field === 'documents' && typeof body[field] === 'object') {
+          if (!supplier.documents) supplier.documents = {};
+          const docTypes = ["aadharCard", "udyogAadhar", "udhayamCert", "shopLicense", "panCard"];
+
+          for (const docType of docTypes) {
+            if (body[field][docType] !== undefined) {
+              if (body[field][docType] && !body[field][docType].startsWith('http')) {
+                const oldDocUrl = supplier.documents[docType];
+                const docUrl = await processBase64Image(body[field][docType], `supplier-${supplierId}-doc-${docType}`, oldDocUrl);
+                if (docUrl) {
+                  supplier.documents[docType] = docUrl;
+                  supplier.documents[`${docType}Status`] = "pending";
+                  supplier.documents[`${docType}RejectionReason`] = null;
+                  supplier.documents[`${docType}AdminRejectionReason`] = null;
+                }
+              } else {
+                supplier.documents[docType] = body[field][docType];
+              }
+            }
+          }
+          supplier.markModified('documents');
+        }
+        // Handle taxes
+        else if (field === 'taxes' && typeof body[field] === 'object') {
+          if (!supplier.taxes) supplier.taxes = {};
+          Object.keys(body[field]).forEach(key => {
+            if (['taxValue', 'taxType'].includes(key)) {
+              supplier.taxes[key] = body[field][key];
+            }
+          });
+          supplier.markModified('taxes');
+        }
+        else if (field !== 'profileImage' && field !== 'gallery' && field !== 'documents' && field !== 'bankDetails' && field !== 'taxes') {
+          // Handle other fields
+          supplier[field] = body[field];
+        }
       }
-      // If subscription is explicitly set to null or empty object, let the model's pre-save hook assign a default
     }
-    // If subscription is not mentioned in the update, preserve existing (do nothing)
 
     // Set updatedAt timestamp
     supplier.updatedAt = new Date();
 
-    console.log('Saving supplier with data:', supplier.toObject());
+    // Handle subscription validation issues gracefully (similar to vendor API)
+    if (!supplier.subscription || !supplier.subscription.plan || !supplier.subscription.endDate) {
+      console.log('Supplier has incomplete subscription data, using validateBeforeSave: false');
+      try {
+        const updatedSupplier = await supplier.save({ validateBeforeSave: false });
+        const supplierResponse = updatedSupplier.toObject();
+        delete supplierResponse.password;
+        delete supplierResponse.__v;
+        return NextResponse.json({
+          success: true,
+          message: "Supplier profile updated successfully",
+          data: supplierResponse
+        }, { status: 200 });
+      } catch (saveError) {
+        console.error('Error saving supplier without validation:', saveError);
+        return NextResponse.json({
+          success: false,
+          message: "Failed to update supplier profile",
+          error: saveError.message
+        }, { status: 500 });
+      }
+    }
 
-    const updatedSupplier = await supplier.save();
+    try {
+      const updatedSupplier = await supplier.save();
+      const supplierResponse = updatedSupplier.toObject();
+      delete supplierResponse.password;
+      delete supplierResponse.__v;
 
-    // Return updated supplier without sensitive fields
-    const supplierResponse = updatedSupplier.toObject();
-    delete supplierResponse.password;
-    delete supplierResponse.__v;
-
-    console.log('Supplier updated successfully:', supplierResponse);
-
-    return NextResponse.json({
-      success: true,
-      message: "Supplier profile updated successfully",
-      data: supplierResponse
-    }, { status: 200 });
+      return NextResponse.json({
+        success: true,
+        message: "Supplier profile updated successfully",
+        data: supplierResponse
+      }, { status: 200 });
+    } catch (saveError) {
+      console.error('Mongoose validation error:', saveError);
+      if (saveError.name === 'ValidationError') {
+        if (saveError.errors?.['subscription.plan'] || saveError.errors?.['subscription.endDate']) {
+          return NextResponse.json({
+            success: false,
+            message: "Supplier subscription data is incomplete.",
+            error: "Missing required subscription fields"
+          }, { status: 400 });
+        }
+      }
+      throw saveError;
+    }
   } catch (error) {
     console.error('Error updating supplier profile:', error);
 
@@ -201,25 +278,6 @@ export const PUT = authMiddlewareCrm(async (req) => {
         success: false,
         message: `Supplier with this ${field} already exists`
       }, { status: 409 });
-    }
-
-    // Handle validation errors
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
-      return NextResponse.json({
-        success: false,
-        message: "Validation error",
-        errors: errors
-      }, { status: 400 });
-    }
-
-    // Handle custom validation errors
-    if (error.name === 'Error') {
-      return NextResponse.json({
-        success: false,
-        message: "Validation error",
-        errors: [error.message]
-      }, { status: 400 });
     }
 
     return NextResponse.json({

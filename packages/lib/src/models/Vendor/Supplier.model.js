@@ -31,7 +31,46 @@ const supplierSchema = new mongoose.Schema({
   businessRegistrationNo: { type: String, trim: true },
   supplierType: { type: String, required: true },
   profileImage: { type: String }, // URL to the uploaded image
-  licenseFiles: [{ type: String }], // Changed to array for multiple files
+  gallery: [{ type: String }], // Array of gallery image URLs
+  licenseFiles: [{ type: String }], // Existing license files (for backward compatibility)
+  bankDetails: {
+    bankName: { type: String, trim: true, default: null },
+    accountNumber: { type: String, trim: true, default: null },
+    ifscCode: {
+      type: String,
+      trim: true,
+      match: [/^[A-Z]{4}0[A-Z0-9]{6}$/, "Please enter a valid IFSC code"],
+      default: null
+    },
+    accountHolder: { type: String, trim: true, default: null },
+    upiId: { type: String, trim: true, default: null },
+  },
+  documents: {
+    aadharCard: { type: String, default: null },
+    udyogAadhar: { type: String, default: null },
+    udhayamCert: { type: String, default: null },
+    shopLicense: { type: String, default: null },
+    panCard: { type: String, default: null },
+    otherDocs: [{ type: String, default: null }],
+    // Status fields
+    aadharCardStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    udyogAadharStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    udhayamCertStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    shopLicenseStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    panCardStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    // Rejection reasons
+    aadharCardRejectionReason: { type: String, default: null },
+    udyogAadharRejectionReason: { type: String, default: null },
+    udhayamCertRejectionReason: { type: String, default: null },
+    shopLicenseRejectionReason: { type: String, default: null },
+    panCardRejectionReason: { type: String, default: null },
+    // Admin rejection reasons
+    aadharCardAdminRejectionReason: { type: String, default: null },
+    udyogAadharAdminRejectionReason: { type: String, default: null },
+    udhayamCertAdminRejectionReason: { type: String, default: null },
+    shopLicenseAdminRejectionReason: { type: String, default: null },
+    panCardAdminRejectionReason: { type: String, default: null },
+  },
   password: { type: String, required: true, select: false },
   resetPasswordToken: {
     type: String,
@@ -106,11 +145,40 @@ const supplierSchema = new mongoose.Schema({
     unique: true,
     sparse: true,
   },
+  taxes: {
+    taxValue: { type: Number, default: 0 },
+    taxType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
 
 
+
+// Add validation to ensure rejection reasons are provided when status is rejected
+supplierSchema.pre("validate", function (next) {
+  const docs = this.documents;
+
+  if (docs) {
+    if (docs.aadharCardStatus === "rejected" && !docs.aadharCardRejectionReason) {
+      return next(new Error("Rejection reason is required for rejected Aadhar Card"));
+    }
+    if (docs.udyogAadharStatus === "rejected" && !docs.udyogAadharRejectionReason) {
+      return next(new Error("Rejection reason is required for rejected Udyog Aadhar"));
+    }
+    if (docs.udhayamCertStatus === "rejected" && !docs.udhayamCertRejectionReason) {
+      return next(new Error("Rejection reason is required for rejected Udhayam Certificate"));
+    }
+    if (docs.shopLicenseStatus === "rejected" && !docs.shopLicenseRejectionReason) {
+      return next(new Error("Rejection reason is required for rejected Shop License"));
+    }
+    if (docs.panCardStatus === "rejected" && !docs.panCardRejectionReason) {
+      return next(new Error("Rejection reason is required for rejected PAN Card"));
+    }
+  }
+
+  next();
+});
 
 // Pre-save middleware to auto-update subscription status and ensure consistency
 supplierSchema.pre("validate", async function (next) {

@@ -41,6 +41,7 @@ import { Textarea } from "@repo/ui/textarea";
 import {
   useGetSuppliersQuery,
   useUpdateSupplierMutation,
+  useUpdateSupplierStatusMutation,
   useDeleteSupplierMutation,
   useGetDoctorsQuery,
   useUpdateDoctorMutation,
@@ -166,18 +167,45 @@ type Doctor = {
   doctorAvailability: string;
 };
 
-type Supplier = {
+interface Supplier {
   _id: string;
-  supplierName: string;
-  businessRegistrationNo: string;
-  supplierType: string;
-  licenseFile: string;
-  status: string;
   firstName: string;
   lastName: string;
   email: string;
-  phone: string;
-};
+  mobile: string;
+  shopName: string;
+  country: string;
+  state: string;
+  city: string;
+  pincode: string;
+  address: string;
+  supplierType: string;
+  status: string;
+  documents?: {
+    [key: string]: any;
+    aadharCard?: string | null;
+    udyogAadhar?: string | null;
+    udhayamCert?: string | null;
+    shopLicense?: string | null;
+    panCard?: string | null;
+    otherDocs?: string[] | null;
+    aadharCardStatus?: string;
+    udyogAadharStatus?: string;
+    udhayamCertStatus?: string;
+    shopLicenseStatus?: string;
+    panCardStatus?: string;
+    aadharCardRejectionReason?: string | null;
+    udyogAadharRejectionReason?: string | null;
+    udhayamCertRejectionReason?: string | null;
+    shopLicenseRejectionReason?: string | null;
+    panCardRejectionReason?: string | null;
+    aadharCardAdminRejectionReason?: string | null;
+    udyogAadharAdminRejectionReason?: string | null;
+    udhayamCertAdminRejectionReason?: string | null;
+    shopLicenseAdminRejectionReason?: string | null;
+    panCardAdminRejectionReason?: string | null;
+  };
+}
 
 type ActionType = 'approve' | 'reject' | 'delete';
 type ItemType = 'vendor' | 'service' | 'vendor-product' | 'supplier-product' | 'doctor' | 'supplier' | 'wedding-package';
@@ -186,7 +214,9 @@ export default function VendorApprovalPage() {
   // RTK Query hooks
   const { data: vendors = [], isLoading: vendorsLoading, error: vendorsError, refetch: refetchVendors } = useGetVendorsQuery(undefined);
   const [updateVendorStatus] = useUpdateVendorStatusMutation();
-  const { data: suppliersData = [], isLoading: suppliersLoading } = useGetSuppliersQuery(undefined);
+  const { data: suppliersData = [], isLoading: suppliersLoading, refetch: refetchSuppliers } = useGetSuppliersQuery(undefined);
+  const [updateSupplierStatus] = useUpdateSupplierStatusMutation();
+  const [deleteSupplier] = useDeleteSupplierMutation();
   const { data: doctorsData = [], isLoading: doctorsLoading } = useGetDoctorsQuery(undefined);
   const { data: pendingServices = [], isLoading: servicesLoading, refetch: refetchPendingServices } = useGetVendorServicesForApprovalQuery({ status: 'pending' });
   const [updateServiceStatus] = useUpdateServiceStatusMutation();
@@ -203,8 +233,6 @@ export default function VendorApprovalPage() {
   const { data: pendingWeddingPackages = [], isLoading: weddingPackagesLoading, refetch: refetchPendingWeddingPackages } = useGetPendingWeddingPackagesQuery(undefined);
   const [updateWeddingPackageStatus] = useUpdateWeddingPackageStatusMutation();
 
-  const [updateSupplier] = useUpdateSupplierMutation();
-  const [deleteSupplier] = useDeleteSupplierMutation();
   const [updateDoctor] = useUpdateDoctorMutation();
   const [deleteDoctor] = useDeleteDoctorMutation();
 
@@ -221,7 +249,33 @@ export default function VendorApprovalPage() {
   const [itemType, setItemType] = useState<ItemType | null>(null);
   const [rejectionReason, setRejectionReason] = useState<string>('');
 
-  const pendingSuppliers = suppliersData.filter((s: Supplier) => s.status === 'Pending');
+  const pendingSuppliers = suppliersData.filter((s: Supplier) => {
+    // Include suppliers with Pending status
+    if (s.status === 'Pending') return true;
+
+    // Also include suppliers who have documents with pending status
+    const documents = s.documents;
+    if (documents) {
+      const docTypes = ['aadharCard', 'udyogAadhar', 'udhayamCert', 'shopLicense', 'panCard'] as const;
+      const hasPendingDocuments = docTypes.some(docType => {
+        const status = documents[`${docType}Status`] || 'pending';
+        // Check if document exists (not null or undefined) and not empty string
+        const isUploaded = documents[docType] && documents[docType] !== '';
+        const isPending = status === 'pending' && isUploaded;
+
+        // Debug logging
+        if (isPending) {
+          console.log(`Supplier ${s.shopName} has pending document: ${docType}`);
+        }
+
+        return isPending;
+      });
+
+      return hasPendingDocuments;
+    }
+
+    return false;
+  });
   const pendingDoctors = doctorsData.filter((d: Doctor) => d.status === 'Pending');
   const pendingVendors = vendors.filter((v: Vendor) => {
     // Include vendors with Pending or Disabled status
@@ -251,25 +305,23 @@ export default function VendorApprovalPage() {
     return false;
   });
 
-  const getUnapprovedDocuments = (vendor: Vendor) => {
-    const documents = vendor.documents;
-    if (!documents) return [];
-
+  const getUnapprovedDocuments = (entity: Vendor | Supplier) => {
     const mandatoryDocs = [
-      { key: 'aadharCard', label: 'Aadhar Card' },
-      { key: 'panCard', label: 'PAN Card' },
-      { key: 'udyogAadhar', label: 'Udyog Aadhar' },
-      { key: 'udhayamCert', label: 'Udhayam Certificate' },
-      { key: 'shopLicense', label: 'Shop License' }
-    ] as const;
+      { key: "aadharCard", label: "Aadhar Card" },
+      { key: "panCard", label: "PAN Card" },
+      { key: "udyogAadhar", label: "Udyog Aadhar" },
+      { key: "udhayamCert", label: "Udhayam Certificate" },
+      { key: "shopLicense", label: "Shop License" },
+    ];
 
+    const documents = entity.documents || {};
     return mandatoryDocs
-      .filter(doc => {
-        const isUploaded = documents[doc.key] && documents[doc.key] !== '';
+      .filter((doc) => {
+        const isUploaded = documents[doc.key] && documents[doc.key] !== "";
         const status = (documents as any)[`${doc.key}Status`];
-        return isUploaded && status !== 'approved';
+        return isUploaded && status !== "approved";
       })
-      .map(doc => doc.label);
+      .map((doc) => doc.label);
   };
 
   // Pagination logic
@@ -314,7 +366,7 @@ export default function VendorApprovalPage() {
   const handleConfirmAction = async () => {
     if (!selectedItem || !actionType || !itemType) return;
 
-    const itemName = (selectedItem as any).businessName || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).name || `${(selectedItem as any).firstName} ${(selectedItem as any).lastName}`;
+    const itemName = (selectedItem as any).businessName || (selectedItem as any).serviceName || (selectedItem as any).productName || (selectedItem as any).name || (selectedItem as any).shopName || `${(selectedItem as any).firstName} ${(selectedItem as any).lastName}`;
 
     try {
       if (itemType === 'vendor') {
@@ -333,7 +385,7 @@ export default function VendorApprovalPage() {
           toast.success('Success', { description: `Supplier "${itemName}" deleted.` });
         } else {
           const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
-          await updateSupplier({ id: supplier._id, status: newStatus }).unwrap();
+          await updateSupplierStatus({ id: supplier._id, status: newStatus }).unwrap();
           toast.success('Success', { description: `Supplier "${itemName}" status updated to ${newStatus}.` });
         }
       } else if (itemType === 'doctor') {
@@ -437,7 +489,7 @@ export default function VendorApprovalPage() {
       (selectedItem as any).serviceName ||
       (selectedItem as any).productName ||
       (selectedItem as any).name ||
-      (selectedItem as any).supplierName ||
+      (selectedItem as any).shopName ||
       `${(selectedItem as any).firstName || ''} ${(selectedItem as any).lastName || ''}`.trim() ||
       'N/A';
 
@@ -1217,8 +1269,16 @@ export default function VendorApprovalPage() {
                               <Eye className="h-4 w-4" />
                               <span className="sr-only">View</span>
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(supplier, 'supplier', 'approve')}>
-                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleActionClick(supplier, 'supplier', 'approve')}
+                              disabled={getUnapprovedDocuments(supplier).length > 0}
+                              title={getUnapprovedDocuments(supplier).length > 0
+                                ? `Approve documents first: ${getUnapprovedDocuments(supplier).join(', ')}`
+                                : 'Approve Supplier'}
+                            >
+                              <CheckCircle className={cn("h-4 w-4", getUnapprovedDocuments(supplier).length > 0 ? "text-gray-400" : "text-green-600")} />
                               <span className="sr-only">Approve</span>
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleActionClick(supplier, 'supplier', 'reject')}>
@@ -1300,6 +1360,9 @@ export default function VendorApprovalPage() {
               }
 
               if (!currentDetails) return null;
+
+              const detailType = itemType;
+              const detailData = currentDetails;
 
               if (itemType === 'vendor') {
                 const vendor = currentDetails as Vendor;
@@ -1463,12 +1526,19 @@ export default function VendorApprovalPage() {
                           Verification Required
                         </Badge>
                       </div>
-                      <div className="bg-secondary/10 rounded-2xl p-1">
-                        <DocumentStatusManager
-                          vendor={vendor}
-                          onUpdate={() => refetchVendors()}
-                        />
-                      </div>
+                      {/* Document Management Section */}
+                      {detailType === 'vendor' || detailType === 'supplier' ? (
+                        <div className="bg-secondary/10 rounded-2xl p-4 mb-6">
+                          <DocumentStatusManager
+                            entity={detailData}
+                            role={detailType === 'vendor' ? 'vendor' : 'supplier'}
+                            onUpdate={() => {
+                              if (detailType === 'vendor') refetchVendors();
+                              else if (detailType === 'supplier') refetchSuppliers();
+                            }}
+                          />
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 );
@@ -1580,7 +1650,7 @@ export default function VendorApprovalPage() {
                     <div className="pb-6 border-b">
                       <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
-                          <h3 className="text-2xl font-bold font-headline">{supplier.supplierName || 'N/A'}</h3>
+                          <h3 className="text-2xl font-bold font-headline">{supplier.shopName || 'N/A'}</h3>
                           <p className="text-muted-foreground flex items-center gap-2 mt-1 lowercase">
                             <Hash className="h-3 w-3" /> {supplier._id}
                           </p>
@@ -1642,18 +1712,31 @@ export default function VendorApprovalPage() {
                       </div>
                     </div>
 
-                    {supplier.licenseFile && (
-                      <div className="pt-4">
-                        <a
-                          href={supplier.licenseFile}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-center gap-2 w-full py-3 bg-primary/5 hover:bg-primary/10 border border-primary/20 rounded-xl text-primary font-bold text-sm transition-colors"
-                        >
-                          <Eye className="h-4 w-4" /> View Business License
-                        </a>
+                    {/* Document Management Section */}
+                    <div className="pt-6 border-t mt-6">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-bold flex items-center gap-2">
+                          <Tags className="h-5 w-5 text-primary" />
+                          Business Documents
+                        </h4>
+                        <Badge variant="outline" className="text-[10px] uppercase font-bold tracking-tighter">
+                          Verification Required
+                        </Badge>
                       </div>
-                    )}
+                      {/* Document Management Section */}
+                      {detailType === 'vendor' || detailType === 'supplier' ? (
+                        <div className="bg-secondary/10 rounded-2xl p-4 mb-6">
+                          <DocumentStatusManager
+                            entity={detailData}
+                            role={detailType === 'vendor' ? 'vendor' : 'supplier'}
+                            onUpdate={() => {
+                              if (detailType === 'vendor') refetchVendors();
+                              else if (detailType === 'supplier') refetchSuppliers();
+                            }}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 );
               }
