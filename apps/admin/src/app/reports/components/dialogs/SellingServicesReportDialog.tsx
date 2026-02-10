@@ -39,7 +39,7 @@ export const SellingServicesReportDialog = ({ isOpen, onClose }: SellingServices
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-7xl max-h-[80vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <DialogHeader>
           <DialogTitle>Selling Services</DialogTitle>
           <DialogDescription>

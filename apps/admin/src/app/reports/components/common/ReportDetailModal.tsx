@@ -15,7 +15,7 @@ export const ReportDetailModal = ({ isOpen, onClose, report }: ReportDetailModal
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-6xl overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <DialogHeader>
           <DialogTitle>{report.title}</DialogTitle>
           <DialogDescription>

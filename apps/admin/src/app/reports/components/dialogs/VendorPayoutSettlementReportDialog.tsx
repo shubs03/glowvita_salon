@@ -15,7 +15,7 @@ export const VendorPayoutSettlementReportDialog = ({ isOpen, onClose }: VendorPa
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-7xl max-h-[80vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         <DialogHeader>
           <DialogTitle>Vendor Payout Settlement Report-service</DialogTitle>
           <DialogDescription>
