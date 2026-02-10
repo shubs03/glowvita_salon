@@ -5,3 +5,4 @@ export * from './sales.types';
 export * from './booking.types';
 export * from './vendor.types';
 export * from './campaign.types';
+export * from './referral.types';

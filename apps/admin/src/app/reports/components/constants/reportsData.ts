@@ -57,6 +57,16 @@ export const reportsData: ReportCategory[] = [
     ]
   },
   {
+    category: "Referral Reports",
+    reports: [
+      {
+        title: "Referral Report",
+        description: "Comprehensive report of all referral activities.",
+        details: "Track who referred whom, including clients, vendors, doctors, and suppliers with bonus amounts."
+      }
+    ]
+  },
+  {
     category: "Admin Settlement Reports",
     reports: [
       {

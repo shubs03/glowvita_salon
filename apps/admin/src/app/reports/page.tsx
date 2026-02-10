@@ -18,7 +18,8 @@ import {
   VendorPayoutSettlementReportTable,
   VendorPayoutSettlementReportProductTable,
   VendorPayableReportTable,
-  VendorPayableReportProductTable
+  VendorPayableReportProductTable,
+  ReferralReportTable
 } from './components/tables';
 
 // Import all dialog components
@@ -34,7 +35,8 @@ import {
   VendorPayoutSettlementReportDialog,
   VendorPayoutSettlementReportProductDialog,
   VendorPayableReportDialog,
-  VendorPayableReportProductDialog
+  VendorPayableReportProductDialog,
+  ReferralReportDialog
 } from './components/dialogs';
 
 // Import shared components and data
@@ -60,6 +62,7 @@ export default function ReportsPage() {
   const [showVendorPayoutSettlementProduct, setShowVendorPayoutSettlementProduct] = useState(false);
   const [showVendorPayable, setShowVendorPayable] = useState(false);
   const [showVendorPayableProduct, setShowVendorPayableProduct] = useState(false);
+  const [showReferralReport, setShowReferralReport] = useState(false);
 
   // Map report titles to dialog open functions
   const openReportDialog = (reportTitle: string) => {
@@ -99,6 +102,9 @@ export default function ReportsPage() {
         break;
       case "Vendor Payable to Admin Report - Product":
         setShowVendorPayableProduct(true);
+        break;
+      case "Referral Report":
+        setShowReferralReport(true);
         break;
       default:
         break;
@@ -210,6 +216,10 @@ export default function ReportsPage() {
       <VendorPayableReportProductDialog 
         isOpen={showVendorPayableProduct} 
         onClose={() => setShowVendorPayableProduct(false)} 
+      />
+      <ReferralReportDialog 
+        isOpen={showReferralReport} 
+        onClose={() => setShowReferralReport(false)} 
       />
 
       {/* Report Detail Modal */}

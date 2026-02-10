@@ -10,6 +10,7 @@
     "./generateTokens": "./src/generateTokens.js",
     "./emailService": "./src/emailService.js",
     "./models/user": "./src/models/user/User.model.js",
+    "./models/user/User.model":"./src/models/user/User.model.js",
     "./models/user/ClientOrder.model": "./src/models/user/ClientOrder.model.js",
     "./models/staffModel": "./src/models/Vendor/Staff.model.js",
     "./models/VendorWorkingHours": "./src/models/Vendor/VendorWorkingHours.model.js",
