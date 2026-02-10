@@ -109,6 +109,23 @@ export const ProfileTab = ({ vendor, setVendor }: ProfileTabProps) => {
             ))}
           </div>
         </div>
+        <div className="pt-4 border-t border-border/50">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-md bg-primary/10 text-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+              </div>
+              <div className="space-y-0.5">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-tight">Active Tax Rate</p>
+                <p className="text-sm font-bold">
+                  {vendor.taxes?.taxType === 'percentage' ? `${vendor.taxes?.taxValue}%` : `₹${vendor.taxes?.taxValue}`}
+                  <span className="ml-1 text-[10px] font-normal text-muted-foreground">({vendor.taxes?.taxType || 'Percentage'})</span>
+                </p>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground italic">Update in Taxes tab</p>
+          </div>
+        </div>
       </CardContent>
       <CardFooter className="p-4 sm:p-6">
         <Button onClick={handleSave} className="h-10 sm:h-12 px-4 sm:px-6 text-sm sm:text-base rounded-lg bg-primary hover:bg-primary/90 w-full sm:w-auto">

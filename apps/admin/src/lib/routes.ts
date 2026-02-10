@@ -95,7 +95,7 @@ export const sidebarNavItems: NavItem[] = [
     permission: "referral-management",
   },
   {
-    title: "Dropdowns",
+    title: "Superdata",
     href: "/dropdown-management",
     Icon: FaListUl,
     permission: "dropdown-management",

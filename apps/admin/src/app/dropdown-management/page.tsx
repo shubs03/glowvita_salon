@@ -15,44 +15,44 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@repo/ui/skeleton';
 import { toast } from 'sonner';
 import {
-  useGetSuperDataQuery,
-  useCreateSuperDataItemMutation,
-  useUpdateSuperDataItemMutation,
-  useDeleteSuperDataItemMutation,
-  useGetCategoriesQuery,
-  useCreateCategoryMutation,
-  useUpdateCategoryMutation,
-  useDeleteCategoryMutation,
-  useGetServicesQuery,
-  useCreateServiceMutation,
-  useUpdateServiceMutation,
-  useDeleteServiceMutation,
-  useGetAdminProductCategoriesQuery,
-  useCreateAdminProductCategoryMutation,
-  useUpdateAdminProductCategoryMutation,
-  useDeleteAdminProductCategoryMutation,
-  useGetProductMastersQuery,
-  useCreateProductMasterMutation,
-  useUpdateProductMasterMutation,
-  useDeleteProductMasterMutation,
+    useGetSuperDataQuery,
+    useCreateSuperDataItemMutation,
+    useUpdateSuperDataItemMutation,
+    useDeleteSuperDataItemMutation,
+    useGetCategoriesQuery,
+    useCreateCategoryMutation,
+    useUpdateCategoryMutation,
+    useDeleteCategoryMutation,
+    useGetServicesQuery,
+    useCreateServiceMutation,
+    useUpdateServiceMutation,
+    useDeleteServiceMutation,
+    useGetAdminProductCategoriesQuery,
+    useCreateAdminProductCategoryMutation,
+    useUpdateAdminProductCategoryMutation,
+    useDeleteAdminProductCategoryMutation,
+    useGetProductMastersQuery,
+    useCreateProductMasterMutation,
+    useUpdateProductMasterMutation,
+    useDeleteProductMasterMutation,
 } from '../../../../../packages/store/src/services/api';
 import { Badge } from '@repo/ui/badge';
 import { cn } from '@repo/ui/cn';
 
 // Helper function to capitalize first letter and standardize input
 const capitalizeFirstLetter = (str: string): string => {
-  if (!str) return str;
-  const trimmed = str.trim();
-  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    if (!str) return str;
+    const trimmed = str.trim();
+    return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 };
 
 interface DropdownItem {
-  _id: string;
-  name: string;
-  description?: string;
-  type: string;
-  parentId?: string;
-  doctorType?: 'Physician' | 'Surgeon';
+    _id: string;
+    name: string;
+    description?: string;
+    type: string;
+    parentId?: string;
+    doctorType?: 'Physician' | 'Surgeon';
 }
 
 interface LocationItem extends DropdownItem {
@@ -97,216 +97,216 @@ interface ProductMaster {
 }
 
 const DropdownManager = ({
-  listTitle,
-  listDescription,
-  items,
-  type,
-  onUpdate,
-  isLoading,
+    listTitle,
+    listDescription,
+    items,
+    type,
+    onUpdate,
+    isLoading,
 }: {
-  listTitle: string;
-  listDescription: string;
-  items: DropdownItem[];
-  type: string;
-  onUpdate: (item: Partial<DropdownItem> & { newIndex?: number }, action: 'add' | 'edit' | 'delete' | 'move') => void;
-  isLoading: boolean;
+    listTitle: string;
+    listDescription: string;
+    items: DropdownItem[];
+    type: string;
+    onUpdate: (item: Partial<DropdownItem> & { newIndex?: number }, action: 'add' | 'edit' | 'delete' | 'move') => void;
+    isLoading: boolean;
 }) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [currentItem, setCurrentItem] = useState<Partial<DropdownItem> | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [currentItem, setCurrentItem] = useState<Partial<DropdownItem> | null>(null);
 
-  const handleOpenModal = (item: Partial<DropdownItem> | null = null) => {
-    setCurrentItem(item);
-    setIsModalOpen(true);
-  };
-
-  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.currentTarget;
-    const name = (form.elements.namedItem('name') as HTMLInputElement).value;
-    const descriptionInput = form.elements.namedItem('description');
-    const linkInput = form.elements.namedItem('link');
-    
-    const description = descriptionInput ? (descriptionInput as HTMLTextAreaElement).value : undefined;
-    const link = linkInput ? (linkInput as HTMLInputElement).value : undefined;
-
-    const action = currentItem?._id ? 'edit' : 'add';
-    const itemData: Partial<DropdownItem> = {
-      _id: currentItem?._id,
-      name,
-      description: type === 'socialPlatform' ? link : description,
-      type,
+    const handleOpenModal = (item: Partial<DropdownItem> | null = null) => {
+        setCurrentItem(item);
+        setIsModalOpen(true);
     };
-    
-    onUpdate(itemData, action);
-    setIsModalOpen(false);
-    setCurrentItem(null);
-  };
 
-  const handleDeleteClick = (item: DropdownItem) => {
-    setCurrentItem(item);
-    setIsDeleteModalOpen(true);
-  };
+    const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const form = e.currentTarget;
+        const name = (form.elements.namedItem('name') as HTMLInputElement).value;
+        const descriptionInput = form.elements.namedItem('description');
+        const linkInput = form.elements.namedItem('link');
 
-  const handleConfirmDelete = () => {
-    if (currentItem) {
-      onUpdate({ _id: currentItem._id }, 'delete');
+        const description = descriptionInput ? (descriptionInput as HTMLTextAreaElement).value : undefined;
+        const link = linkInput ? (linkInput as HTMLInputElement).value : undefined;
+
+        const action = currentItem?._id ? 'edit' : 'add';
+        const itemData: Partial<DropdownItem> = {
+            _id: currentItem?._id,
+            name,
+            description: type === 'socialPlatform' ? link : description,
+            type,
+        };
+
+        onUpdate(itemData, action);
+        setIsModalOpen(false);
+        setCurrentItem(null);
+    };
+
+    const handleDeleteClick = (item: DropdownItem) => {
+        setCurrentItem(item);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = () => {
+        if (currentItem) {
+            onUpdate({ _id: currentItem._id }, 'delete');
+        }
+        setIsDeleteModalOpen(false);
+        setCurrentItem(null);
+    };
+
+    const handleMove = (index: number, direction: 'up' | 'down') => {
+        const item = items[index];
+        const newIndex = direction === 'up' ? index - 1 : index + 1;
+        if (newIndex < 0 || newIndex >= items.length) return;
+        onUpdate({ ...item, newIndex }, 'move');
     }
-    setIsDeleteModalOpen(false);
-    setCurrentItem(null);
-  };
 
-  const handleMove = (index: number, direction: 'up' | 'down') => {
-      const item = items[index];
-      const newIndex = direction === 'up' ? index - 1 : index + 1;
-      if (newIndex < 0 || newIndex >= items.length) return;
-      onUpdate({ ...item, newIndex }, 'move');
-  }
+    if (isLoading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <Skeleton className="h-6 w-48" />
+                            <Skeleton className="h-4 w-64 mt-2" />
+                        </div>
+                        <Skeleton className="h-9 w-28" />
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                    {[...Array(3)].map((_, i) => (
+                        <div key={i} className="flex items-center gap-4 bg-secondary p-3 rounded-md">
+                            <Skeleton className="h-6 w-full" />
+                            <Skeleton className="h-8 w-24" />
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+        );
+    }
 
-  if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <div>
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-4 w-64 mt-2" />
-            </div>
-            <Skeleton className="h-9 w-28" />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-            {[...Array(3)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 bg-secondary p-3 rounded-md">
-                    <Skeleton className="h-6 w-full" />
-                    <Skeleton className="h-8 w-24" />
-                </div>
-            ))}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle>{listTitle}</CardTitle>
-            <CardDescription>{listDescription}</CardDescription>
-          </div>
-          <Button onClick={() => handleOpenModal()} disabled={isLoading}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add New
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-            {items.map((item: DropdownItem, index: number) => (
-                <div key={item._id} className="group flex items-center gap-2 bg-secondary/50 hover:bg-secondary p-2 rounded-md transition-colors">
-                    <div className="flex-grow">
-                        <p className="font-medium">{type === 'duration' ? `${item.name} minutes` : item.name}</p>
-                         {type !== 'supplier' && type !== 'duration' && item.description && (
-                            <p className="text-sm text-muted-foreground">
-                                {type === 'socialPlatform' ? (
-                                    <a href={item.description} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
-                                        <LinkIcon className="h-3 w-3" />
-                                        {item.description}
-                                    </a>
-                                ) : item.description}
-                            </p>
-                        )}
+        <Card>
+            <CardHeader>
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle>{listTitle}</CardTitle>
+                        <CardDescription>{listDescription}</CardDescription>
                     </div>
-                    <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                         <Button variant="ghost" size="icon" onClick={() => handleMove(index, 'up')} disabled={index === 0}>
-                            <ArrowUp className="h-4 w-4" />
-                        </Button>
-                         <Button variant="ghost" size="icon" onClick={() => handleMove(index, 'down')} disabled={index === items.length - 1}>
-                            <ArrowDown className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleOpenModal(item)} disabled={isLoading}>
-                            <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(item)} disabled={isLoading}>
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                    </div>
+                    <Button onClick={() => handleOpenModal()} disabled={isLoading}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add New
+                    </Button>
                 </div>
-            ))}
-            {items.length === 0 && !isLoading && (
-                <div className="text-center py-8 text-muted-foreground">
-                    No items found.
-                </div>
-            )}
-        </div>
-
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-lg">
-            <form onSubmit={handleSave}>
-              <DialogHeader>
-                <DialogTitle>{currentItem?._id ? 'Edit' : 'Add'} Item</DialogTitle>
-                <DialogDescription>
-                  {currentItem?._id ? `Editing "${(currentItem as DropdownItem).name}".` : `Add a new item to "${listTitle}".`}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
+            </CardHeader>
+            <CardContent>
                 <div className="space-y-2">
-                  <Label htmlFor="name">{type === 'duration' ? 'Duration (minutes)' : 'Name'}</Label>
-                  {type === 'duration' ? (
-                    <Input 
-                      id="name" 
-                      name="name" 
-                      type="number"
-                      min="1"
-                      step="1"
-                      defaultValue={currentItem?.name || ''} 
-                      placeholder="e.g., 15, 30, 45, 60"
-                      required 
-                    />
-                  ) : (
-                    <Input id="name" name="name" defaultValue={currentItem?.name || ''} required />
-                  )}
-                </div>
-                 <div className="space-y-2">
-                    {type === 'socialPlatform' ? (
-                        <>
-                            <Label htmlFor="link">Profile Link</Label>
-                            <Input id="link" name="link" type="url" defaultValue={currentItem?.description || ''} placeholder="https://example.com/profile"/>
-                        </>
-                    ) : type !== 'duration' && (
-                        <>
-                            <Label htmlFor="description">Description</Label>
-                            <Textarea id="description" name="description" defaultValue={currentItem?.description || ''} />
-                        </>
+                    {items.map((item: DropdownItem, index: number) => (
+                        <div key={item._id} className="group flex items-center gap-2 bg-secondary/50 hover:bg-secondary p-2 rounded-md transition-colors">
+                            <div className="flex-grow">
+                                <p className="font-medium">{type === 'duration' ? `${item.name} minutes` : item.name}</p>
+                                {type !== 'supplier' && type !== 'duration' && item.description && (
+                                    <p className="text-sm text-muted-foreground">
+                                        {type === 'socialPlatform' ? (
+                                            <a href={item.description} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                                                <LinkIcon className="h-3 w-3" />
+                                                {item.description}
+                                            </a>
+                                        ) : item.description}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" onClick={() => handleMove(index, 'up')} disabled={index === 0}>
+                                    <ArrowUp className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleMove(index, 'down')} disabled={index === items.length - 1}>
+                                    <ArrowDown className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleOpenModal(item)} disabled={isLoading}>
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteClick(item)} disabled={isLoading}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </div>
+                    ))}
+                    {items.length === 0 && !isLoading && (
+                        <div className="text-center py-8 text-muted-foreground">
+                            No items found.
+                        </div>
                     )}
                 </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                <Button type="submit">Save</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
 
-        <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Delete Item?</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete "{(currentItem as DropdownItem)?.name}"? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
-  );
+                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                    <DialogContent className="sm:max-w-lg">
+                        <form onSubmit={handleSave}>
+                            <DialogHeader>
+                                <DialogTitle>{currentItem?._id ? 'Edit' : 'Add'} Item</DialogTitle>
+                                <DialogDescription>
+                                    {currentItem?._id ? `Editing "${(currentItem as DropdownItem).name}".` : `Add a new item to "${listTitle}".`}
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4 py-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">{type === 'duration' ? 'Duration (minutes)' : 'Name'}</Label>
+                                    {type === 'duration' ? (
+                                        <Input
+                                            id="name"
+                                            name="name"
+                                            type="number"
+                                            min="1"
+                                            step="1"
+                                            defaultValue={currentItem?.name || ''}
+                                            placeholder="e.g., 15, 30, 45, 60"
+                                            required
+                                        />
+                                    ) : (
+                                        <Input id="name" name="name" defaultValue={currentItem?.name || ''} required />
+                                    )}
+                                </div>
+                                <div className="space-y-2">
+                                    {type === 'socialPlatform' ? (
+                                        <>
+                                            <Label htmlFor="link">Profile Link</Label>
+                                            <Input id="link" name="link" type="url" defaultValue={currentItem?.description || ''} placeholder="https://example.com/profile" />
+                                        </>
+                                    ) : type !== 'duration' && (
+                                        <>
+                                            <Label htmlFor="description">Description</Label>
+                                            <Textarea id="description" name="description" defaultValue={currentItem?.description || ''} />
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                                <Button type="submit">Save</Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Delete Item?</DialogTitle>
+                            <DialogDescription>
+                                Are you sure you want to delete "{(currentItem as DropdownItem)?.name}"? This action cannot be undone.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button variant="secondary" onClick={() => setIsDeleteModalOpen(false)}>Cancel</Button>
+                            <Button variant="destructive" onClick={handleConfirmDelete}>Delete</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </CardContent>
+        </Card>
+    );
 };
 
 const ServiceCategoryManager = () => {
@@ -590,7 +590,7 @@ const ServiceManager = () => {
         const name = (form.elements.namedItem('name') as HTMLInputElement).value;
         const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
         const category = (form.elements.namedItem('category') as HTMLSelectElement).value;
-        
+
         const action = currentItem?._id ? 'edit' : 'add';
         const itemData = {
             id: currentItem?._id,
@@ -599,7 +599,7 @@ const ServiceManager = () => {
             category,
             image: imageBase64,
         };
-        
+
         try {
             if (action === 'add') {
                 await createService(itemData).unwrap();
@@ -691,7 +691,7 @@ const ServiceManager = () => {
                         Add Service
                     </Button>
                 </div>
-                 {categories.length === 0 && <p className="text-sm text-yellow-600 mt-2">Please add a category first before adding services.</p>}
+                {categories.length === 0 && <p className="text-sm text-yellow-600 mt-2">Please add a category first before adding services.</p>}
             </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto no-scrollbar rounded-md border">
@@ -869,13 +869,13 @@ const ProductMasterManager = () => {
         const brand = capitalizeFirstLetter((form.elements.namedItem('brand') as HTMLInputElement).value);
         const productForm = capitalizeFirstLetter((form.elements.namedItem('productForm') as HTMLInputElement).value);
         const keyIngredientsInput = (form.elements.namedItem('keyIngredients') as HTMLInputElement).value;
-        
+
         // Parse key ingredients - comma separated, capitalize each ingredient
         const keyIngredients = keyIngredientsInput
             .split(',')
             .map(ing => capitalizeFirstLetter(ing))
             .filter(ing => ing.length > 0);
-        
+
         const action = currentItem?._id ? 'edit' : 'add';
         const itemData = {
             id: currentItem?._id,
@@ -887,7 +887,7 @@ const ProductMasterManager = () => {
             keyIngredients,
             image: imageBase64,
         };
-        
+
         try {
             if (action === 'add') {
                 await createProductMaster(itemData).unwrap();
@@ -1087,11 +1087,11 @@ const ProductMasterManager = () => {
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="keyIngredients">Key Ingredients</Label>
-                                    <Input 
-                                        id="keyIngredients" 
-                                        name="keyIngredients" 
-                                        defaultValue={Array.isArray(currentItem?.keyIngredients) ? currentItem.keyIngredients.join(', ') : ''} 
-                                        placeholder="e.g., Vitamin C, Hyaluronic Acid, Retinol (comma separated)" 
+                                    <Input
+                                        id="keyIngredients"
+                                        name="keyIngredients"
+                                        defaultValue={Array.isArray(currentItem?.keyIngredients) ? currentItem.keyIngredients.join(', ') : ''}
+                                        placeholder="e.g., Vitamin C, Hyaluronic Acid, Retinol (comma separated)"
                                     />
                                     <p className="text-xs text-muted-foreground">Separate multiple ingredients with commas</p>
                                 </div>
@@ -1142,15 +1142,15 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
     const [currentItem, setCurrentItem] = useState<Partial<DropdownItem> | null>(null);
     const [modalConfig, setModalConfig] = useState<{ type: string; parentId?: string; parentName?: string; action: 'add' | 'edit' }>({ type: 'specialization', action: 'add' });
     const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
-    
+
     const [selectedDoctorType, setSelectedDoctorType] = useState<'Physician' | 'Surgeon'>();
 
     const specializations = useMemo(() => data.filter(item => item.type === 'specialization'), [data]);
-    
+
     const getChildren = (parentId: string) => {
         return data.filter(item => item.type === 'disease' && item.parentId === parentId);
     }
-    
+
     const handleOpenModal = (action: 'add' | 'edit', type: string, item?: Partial<DropdownItem>, parentId?: string, parentName?: string) => {
         setCurrentItem(item || null);
         if (type === 'specialization' && item?.doctorType) {
@@ -1165,7 +1165,7 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         const form = e.currentTarget;
-        
+
         const name = (form.elements.namedItem('name') as HTMLInputElement).value;
         const description = (form.elements.namedItem('description') as HTMLTextAreaElement).value;
 
@@ -1205,7 +1205,7 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
     const toggleExpand = (id: string) => {
         setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
     };
-    
+
     const renderItem = (item: DropdownItem, level: number) => {
         const children = getChildren(item._id);
         const isExpanded = expandedItems[item._id];
@@ -1213,7 +1213,7 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
         return (
             <div key={item._id} className={level === 0 ? "border-t" : "border-t border-dashed"}>
                 <div className="flex items-center gap-2 py-2 pr-2" style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }}>
-                     {item.type === 'specialization' && (
+                    {item.type === 'specialization' && (
                         <button onClick={() => toggleExpand(item._id)} className="p-1 hover:bg-secondary rounded-full">
                             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </button>
@@ -1233,7 +1233,7 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
                 </div>
                 {isExpanded && item.type === 'specialization' && (
                     <div className="ml-4 pl-2">
-                         {children.length > 0 ? children.map(child => renderItem(child, level + 1)) : <div className="pl-8 text-sm text-muted-foreground py-1">No diseases added yet.</div>}
+                        {children.length > 0 ? children.map(child => renderItem(child, level + 1)) : <div className="pl-8 text-sm text-muted-foreground py-1">No diseases added yet.</div>}
                     </div>
                 )}
             </div>
@@ -1304,8 +1304,8 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
             </CardHeader>
             <CardContent className="border rounded-md">
                 {isLoading ? <div className="text-center p-4">Loading...</div> :
-                 specializations.length === 0 ? <div className="text-center p-8 text-muted-foreground">No specializations found.</div> :
-                 specializations.map(item => renderItem(item, 0))}
+                    specializations.length === 0 ? <div className="text-center p-8 text-muted-foreground">No specializations found.</div> :
+                        specializations.map(item => renderItem(item, 0))}
             </CardContent>
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -1317,12 +1317,12 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
                             </DialogTitle>
                         </DialogHeader>
                         <div className="py-4 space-y-4">
-                           {modalConfig.type === 'specialization' && (
+                            {modalConfig.type === 'specialization' && (
                                 <div className="space-y-2">
                                     <Label htmlFor="doctorType">Doctor Type *</Label>
-                                    <Select 
-                                      value={selectedDoctorType} 
-                                      onValueChange={(value) => setSelectedDoctorType(value as 'Physician' | 'Surgeon')}
+                                    <Select
+                                        value={selectedDoctorType}
+                                        onValueChange={(value) => setSelectedDoctorType(value as 'Physician' | 'Surgeon')}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select a Doctor Type" />
@@ -1335,16 +1335,16 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
                                 </div>
                             )}
                             {modalConfig.type === 'disease' && modalConfig.parentId && (
-                                 <div className="space-y-2">
+                                <div className="space-y-2">
                                     <Label>Parent Specialization</Label>
                                     <Input value={modalConfig.parentName} readOnly disabled />
-                                 </div>
+                                </div>
                             )}
                             <div className="space-y-2">
                                 <Label htmlFor="name">{modalConfig.type.replace(/([A-Z])/g, ' $1').trim()} Name</Label>
                                 <Input id="name" name="name" defaultValue={currentItem?.name || ''} required />
                             </div>
-                             <div className="space-y-2">
+                            <div className="space-y-2">
                                 <Label htmlFor="description">Description</Label>
                                 <Textarea id="description" name="description" defaultValue={currentItem?.description || ''} />
                             </div>
@@ -1418,7 +1418,7 @@ export default function DropdownManagementPage() {
                             <Skeleton key={i} className="h-9 w-full" />
                         ))}
                     </div>
-                    
+
                     {/* Tab content skeleton */}
                     <div className="space-y-6">
                         {[...Array(3)].map((_, i) => (
@@ -1472,7 +1472,7 @@ export default function DropdownManagementPage() {
         { key: 'expenseType', title: 'Expense Types', description: 'Manage types of expenses for tracking and reporting.', tab: 'general' },
         { key: 'paymentMode', title: 'Payment Modes', description: 'Manage payment methods for transactions.', tab: 'general' },
         { key: 'duration', title: 'Duration Values', description: 'Manage predefined duration values (in minutes) for services.', tab: 'general' },
-        { key: 'designation', title: 'Admin Designations', description: 'Manage the list of available staff designations.', tab: 'admin' },
+        { key: 'designation', title: 'Admin Designations', description: 'Manage the list of available staff designations.', tab: 'general' },
         { key: 'smsType', title: 'SMS Template Types', description: 'Manage types for SMS templates.', tab: 'marketing' },
         { key: 'socialPlatform', title: 'Social Media Platforms', description: 'Manage platforms for social posts.', tab: 'marketing' },
         { key: 'supplier', title: 'Supplier Types', description: 'Manage types of suppliers.', tab: 'suppliers' }, // Changed from 'supplierType' to 'supplier'
@@ -1480,17 +1480,15 @@ export default function DropdownManagementPage() {
 
     return (
         <div className="p-4 sm:p-6 lg:p-8">
-            <h1 className="text-2xl font-bold font-headline mb-6">Dropdowns</h1>
+            <h1 className="text-2xl font-bold font-headline mb-6">Superdata</h1>
             <Tabs defaultValue="general" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 md:grid-cols-7 max-w-5xl mb-6">
-                    <TabsTrigger value="general">General</TabsTrigger>
-                    <TabsTrigger value="services">Services</TabsTrigger>
-                    <TabsTrigger value="locations">Locations</TabsTrigger>
-                    <TabsTrigger value="doctors">Doctors</TabsTrigger>
-                    <TabsTrigger value="admin">Admin</TabsTrigger>
-                    <TabsTrigger value="marketing">Marketing</TabsTrigger>
-                    <TabsTrigger value="products">Products</TabsTrigger>
-                    <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
+                <TabsList className="flex w-full justify-start overflow-x-auto no-scrollbar mb-6 bg-transparent border-b rounded-none h-auto p-0 gap-6">
+                    <TabsTrigger value="general" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 pb-2">General</TabsTrigger>
+                    <TabsTrigger value="services" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 pb-2">Services</TabsTrigger>
+                    <TabsTrigger value="doctors" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 pb-2">Doctors</TabsTrigger>
+                    <TabsTrigger value="marketing" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 pb-2">Marketing</TabsTrigger>
+                    <TabsTrigger value="products" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 pb-2">Products</TabsTrigger>
+                    <TabsTrigger value="suppliers" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-2 pb-2">Suppliers</TabsTrigger>
                 </TabsList>
                 <TabsContent value="general">
                     <div className="space-y-8">
@@ -1507,43 +1505,25 @@ export default function DropdownManagementPage() {
                         ))}
                     </div>
                 </TabsContent>
-                 <TabsContent value="services">
+                <TabsContent value="services">
                     <div className="space-y-8">
-                       <ServiceCategoryManager />
-                       <ServiceManager />
+                        <ServiceCategoryManager />
+                        <ServiceManager />
                     </div>
                 </TabsContent>
-                 <TabsContent value="locations">
+
+                <TabsContent value="doctors">
                     <div className="space-y-8">
-                      <p>Location Management is being refactored.</p>
+                        <HierarchicalManager
+                            title="Doctor Specialization Management"
+                            description="Manage doctor types, their specializations, and associated diseases."
+                            data={data}
+                            onUpdate={handleUpdate}
+                            isLoading={isLoading}
+                        />
                     </div>
                 </TabsContent>
-                 <TabsContent value="doctors">
-                    <div className="space-y-8">
-                      <HierarchicalManager 
-                          title="Doctor Specialization Management"
-                          description="Manage doctor types, their specializations, and associated diseases."
-                          data={data}
-                          onUpdate={handleUpdate}
-                          isLoading={isLoading}
-                      />
-                    </div>
-                </TabsContent>
-                <TabsContent value="admin">
-                    <div className="space-y-8">
-                        {dropdownTypes.filter(d => d.tab === 'admin').map(d => (
-                            <DropdownManager
-                                key={d.key}
-                                listTitle={d.title}
-                                listDescription={d.description}
-                                items={data.filter((item: DropdownItem) => item.type === d.key)}
-                                type={d.key}
-                                onUpdate={handleUpdate}
-                                isLoading={isLoading}
-                            />
-                        ))}
-                    </div>
-                </TabsContent>
+
                 <TabsContent value="marketing">
                     <div className="space-y-8">
                         {dropdownTypes.filter(d => d.tab === 'marketing').map(d => (
@@ -1590,14 +1570,14 @@ const ProductCategoryManager = () => {
     const [createCategory] = useCreateAdminProductCategoryMutation();
     const [updateCategory] = useUpdateAdminProductCategoryMutation();
     const [deleteCategory] = useDeleteAdminProductCategoryMutation();
-    
+
     const productCategories = useMemo(() => {
         if (productCategoriesResponse && Array.isArray(productCategoriesResponse.data)) {
             return productCategoriesResponse.data;
         }
         return [];
     }, [productCategoriesResponse]);
-    
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [currentCategory, setCurrentCategory] = useState<ProductCategory | null>(null);
@@ -1606,9 +1586,9 @@ const ProductCategoryManager = () => {
     const handleOpenModal = (category: ProductCategory | null = null) => {
         if (category) {
             setCurrentCategory(category);
-            setFormData({ 
-                name: category.name, 
-                description: category.description || '', 
+            setFormData({
+                name: category.name,
+                description: category.description || '',
                 gstType: category.gstType || 'none',
                 gstValue: category.gstValue || 0
             });
@@ -1621,7 +1601,7 @@ const ProductCategoryManager = () => {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!formData.name.trim()) {
             toast.error('Category name is required');
             return;
@@ -1646,7 +1626,7 @@ const ProductCategoryManager = () => {
                 }).unwrap();
                 toast.success('Category created successfully');
             }
-            
+
             setIsModalOpen(false);
             setFormData({ name: '', description: '', gstType: 'none', gstValue: 0 });
             setCurrentCategory(null);
@@ -1731,7 +1711,7 @@ const ProductCategoryManager = () => {
                         Add Category
                     </Button>
                 </div>
-                </CardHeader>
+            </CardHeader>
             <CardContent>
                 <div className="overflow-x-auto no-scrollbar rounded-md border">
                     <Table>

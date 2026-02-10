@@ -141,7 +141,13 @@ export default function ServicesTab({
     preferences: ""
   });
 
-  const [taxRate, setTaxRate] = useState(0); // 0% tax rate
+  const [isTaxEnabled, setIsTaxEnabled] = useState(false);
+  const vendorTaxes = vendorProfile?.data?.taxes || { taxValue: 0, taxType: 'percentage' };
+  const taxValue = isTaxEnabled ? vendorTaxes.taxValue : 0;
+  const taxType = vendorTaxes.taxType;
+
+  // Derive taxRate for display/calculation purposes when it's percentage
+  const effectiveTaxRate = isTaxEnabled && taxType === 'percentage' ? taxValue : 0;
 
   // Fetch services with better loading state
   const { data: servicesData, isLoading: servicesLoading, isFetching: servicesFetching } = useGetVendorServicesQuery(
@@ -482,7 +488,17 @@ export default function ServicesTab({
   }, [cart]);
 
   const subtotal = useMemo(() => cart.reduce((sum, item) => sum + item.totalPrice, 0), [cart]);
-  const taxAmount = useMemo(() => (subtotal * taxRate) / 100, [subtotal, taxRate]);
+  const taxAmount = useMemo(() => {
+    if (!isTaxEnabled) return 0;
+    if (taxType === 'percentage') {
+      return (subtotal * taxValue) / 100;
+    } else {
+      // Fixed amount - only applied once per bill or per item? 
+      // User said "then add add on okk after that total prcethen i want didplay that taxes"
+      // Usually bill-level fixed tax is just added once.
+      return taxValue;
+    }
+  }, [subtotal, isTaxEnabled, taxValue, taxType]);
   const total = useMemo(() => subtotal + taxAmount, [subtotal, taxAmount]);
 
   // Clear cart
@@ -554,8 +570,9 @@ export default function ServicesTab({
           addOns: item.addOns // Include add-ons in billing item
         })),
         subtotal: subtotal,
-        taxRate: taxRate,
+        taxRate: taxType === 'percentage' ? taxValue : 0,
         taxAmount: taxAmount,
+        taxType: taxType,
         platformFee: 0, // You can adjust this as needed
         totalAmount: total,
         balance: total,
@@ -600,6 +617,8 @@ export default function ServicesTab({
         platformFee: 0, // You can adjust this as needed
         total: total,
         balance: total,
+        taxType: taxType,
+        isTaxEnabled: isTaxEnabled,
         paymentMethod: selectedPaymentMethod
       };
 
@@ -1307,13 +1326,14 @@ export default function ServicesTab({
                     cart.map((item, index) => (
                       <TableRow key={`${item._id}-${index}`}>
                         <TableCell>
-                          <div className="cursor-pointer p-2 rounded hover:bg-muted/50" onClick={() => handleEditItemClick(item, index)}>
-                            <div className="line-clamp-2">{item.name}</div>
+                          <div className="cursor-pointer p-2 rounded hover:bg-muted/50 transition-colors" onClick={() => handleEditItemClick(item, index)}>
+                            <div className="font-semibold text-gray-900 leading-tight">{item.name}</div>
                             {item.addOns && item.addOns.length > 0 && (
-                              <div className="mt-1 pl-2 border-l-2 border-primary/20">
+                              <div className="mt-2 space-y-1">
                                 {item.addOns.map((addon, i) => (
-                                  <div key={i} className="text-xs text-muted-foreground line-clamp-1">
-                                    + {addon.name}
+                                  <div key={i} className="flex items-center text-[10px] sm:text-xs text-primary/80 bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10 w-fit">
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    {addon.name}
                                   </div>
                                 ))}
                               </div>
@@ -1388,7 +1408,21 @@ export default function ServicesTab({
           </div>
 
           {/* Order Summary */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="applyTax"
+                  checked={isTaxEnabled}
+                  onCheckedChange={(checked) => setIsTaxEnabled(checked as boolean)}
+                />
+                <Label htmlFor="applyTax" className="text-sm font-medium cursor-pointer">
+                  Apply Taxes ({taxValue}{taxType === 'percentage' ? '%' : ' Fixed'})
+                </Label>
+              </div>
+              <span className="text-xs text-muted-foreground italic">Configured in Profile</span>
+            </div>
+
             <div className="flex justify-between">
               <span>Subtotal</span>
               <span>₹{originalSubtotal.toFixed(2)}</span>
@@ -1401,9 +1435,13 @@ export default function ServicesTab({
               </div>
             )}
 
-            <div className="flex justify-between">
-              <span>Tax ({taxRate}%)</span>
-              <span>₹{taxAmount.toFixed(2)}</span>
+            <div className="flex justify-between items-center">
+              <span className={!isTaxEnabled ? "text-muted-foreground line-through" : ""}>
+                Tax {isTaxEnabled ? `(${taxValue}${taxType === 'percentage' ? '%' : ''})` : ''}
+              </span>
+              <span className={!isTaxEnabled ? "text-muted-foreground line-through" : ""}>
+                ₹{taxAmount.toFixed(2)}
+              </span>
             </div>
 
             <div className="border-t pt-4 flex justify-between font-bold text-lg">
@@ -1996,23 +2034,24 @@ export default function ServicesTab({
                           <div key={index} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 rounded px-2 py-2">
                             <div className="flex justify-between items-start">
                               <div className="flex-1 pr-4">
-                                <p className="font-semibold text-gray-900 text-xs">{item.name}</p>
+                                <p className="font-bold text-gray-900 text-sm">{item.name}</p>
                                 {item.addOns && item.addOns.length > 0 && (
-                                  <div className="mt-1 pl-2 border-l-2 border-primary/20">
+                                  <div className="mt-1.5 space-y-1">
                                     {item.addOns.map((addon: any, i: number) => (
-                                      <div key={i} className="text-xs text-muted-foreground">
-                                        + {addon.name}
+                                      <div key={i} className="flex items-center text-[11px] text-primary/70 bg-primary/5 px-2 py-0.5 rounded-full w-fit">
+                                        <Plus className="h-2.5 w-2.5 mr-1" />
+                                        {addon.name}
                                       </div>
                                     ))}
                                   </div>
                                 )}
                               </div>
                               <div className="text-right whitespace-nowrap">
-                                <p className="font-semibold text-gray-900 text-xs">₹{item.price.toFixed(2)}</p>
+                                <p className="font-bold text-gray-900 text-sm">₹{item.price.toFixed(2)}</p>
                                 {item.addOns && item.addOns.length > 0 && (
-                                  <div className="mt-1">
+                                  <div className="mt-1.5 space-y-1">
                                     {item.addOns.map((addon: any, i: number) => (
-                                      <div key={i} className="text-xs text-muted-foreground">
+                                      <div key={i} className="text-[11px] text-primary/70 py-0.5">
                                         + ₹{addon.price.toFixed(2)}
                                       </div>
                                     ))}
@@ -2035,7 +2074,7 @@ export default function ServicesTab({
                         <span className="font-medium text-green-600 text-xs">-₹{(invoiceData.discount || 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-xs">Tax ({taxRate}%)</span>
+                        <span className="text-gray-600 text-xs">Tax ({invoiceData.tax > 0 ? (invoiceData.taxType === 'percentage' ? `${taxValue}%` : 'Fixed') : '0%'})</span>
                         <span className="font-medium text-xs">₹{invoiceData.tax.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center">
@@ -2297,7 +2336,9 @@ export default function ServicesTab({
             invoiceData={invoiceData}
             vendorName={vendorName}
             vendorProfile={vendorProfile}
-            taxRate={taxRate}
+            taxRate={invoiceData.taxType === 'percentage' ? taxValue : 0}
+            taxType={invoiceData.taxType}
+            isTaxEnabled={invoiceData.isTaxEnabled}
             isOrderSaved={isOrderSaved}
             onEmailClick={() => { }}
             onPrintClick={() => { }}
@@ -2315,7 +2356,9 @@ export default function ServicesTab({
               invoiceData={invoiceData}
               vendorName={vendorName}
               vendorProfile={vendorProfile}
-              taxRate={taxRate}
+              taxRate={invoiceData.taxType === 'percentage' ? taxValue : 0}
+              taxType={invoiceData.taxType}
+              isTaxEnabled={invoiceData.isTaxEnabled}
               isOrderSaved={isOrderSaved}
               onEmailClick={() => { }}
               onPrintClick={() => { }}

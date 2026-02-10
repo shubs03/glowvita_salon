@@ -12,6 +12,7 @@ import { BankDetailsTab } from './tabs/BankDetailsTab';
 import { TravelSettingsTab } from './tabs/TravelSettingsTab';
 import { DocumentsTab } from './tabs/DocumentsTab';
 import { OpeningHoursTab } from './tabs/OpeningHoursTab';
+import { TaxesTab } from './tabs/TaxesTab';
 
 import { SmsPackagesTab } from '@/components/SmsPackagesTab';
 import { QRCodeModal } from './modals/QRCodeModal';
@@ -48,6 +49,10 @@ interface VendorProfile {
   location?: {
     lat: number;
     lng: number;
+  };
+  taxes?: {
+    taxValue: number;
+    taxType: "percentage" | "fixed";
   };
 }
 
@@ -184,7 +189,8 @@ export default function ProfilePage() {
       // Ensure bankDetails is properly initialized
       const vendorWithBankDetails = {
         ...vendorData.data,
-        bankDetails: vendorData.data.bankDetails || {}
+        bankDetails: vendorData.data.bankDetails || {},
+        taxes: vendorData.data.taxes || { taxValue: 0, taxType: 'percentage' }
       };
       setLocalVendor(vendorWithBankDetails);
     }
@@ -334,11 +340,11 @@ export default function ProfilePage() {
 
       // This would be handled by the ProfileHeader component, but we need to update the state here
       if (role === 'vendor' && localVendor) {
-        setLocalVendor({...localVendor, profileImage: base64});
+        setLocalVendor({ ...localVendor, profileImage: base64 });
       } else if (role === 'supplier' && localSupplier) {
-        setLocalSupplier({...localSupplier, profileImage: base64});
+        setLocalSupplier({ ...localSupplier, profileImage: base64 });
       } else if (role === 'doctor' && localDoctor) {
-        setLocalDoctor({...localDoctor, profileImage: base64});
+        setLocalDoctor({ ...localDoctor, profileImage: base64 });
       }
 
       toast.success('Profile image updated successfully');
@@ -366,8 +372,8 @@ export default function ProfilePage() {
             </div>
           </div>
         </div>
-        
-        <ProfileHeader 
+
+        <ProfileHeader
           role={role}
           profileData={profileData}
           localVendor={localVendor}
@@ -378,156 +384,166 @@ export default function ProfilePage() {
           openProfileImagePreview={() => toast.info('Image preview coming soon')}
           setQrModalOpen={setQrModalOpen}
         />
-      
-      <Tabs defaultValue="profile" className="w-full">
-        <div className="relative w-full mb-4 sm:mb-6">
-          <div className="overflow-x-auto overflow-y-hidden scrollbar-hide smooth-scroll">
-            <TabsList className="inline-flex h-auto items-center gap-1.5 sm:gap-2 rounded-xl bg-muted/50 p-1 sm:p-1.5 backdrop-blur-sm border border-border/50 shadow-sm w-auto min-w-full">
-              <TabsTrigger 
-                value="profile" 
-                className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
-              >
-                Profile
-              </TabsTrigger>
-              {role === 'vendor' && (
-                <>
-                  <TabsTrigger 
-                    value="subscription" 
+
+        <Tabs defaultValue="profile" className="w-full">
+          <div className="relative w-full mb-4 sm:mb-6">
+            <div className="overflow-x-auto overflow-y-hidden scrollbar-hide smooth-scroll">
+              <TabsList className="inline-flex h-auto items-center gap-1.5 sm:gap-2 rounded-xl bg-muted/50 p-1 sm:p-1.5 backdrop-blur-sm border border-border/50 shadow-sm w-auto min-w-full">
+                <TabsTrigger
+                  value="profile"
+                  className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                >
+                  Profile
+                </TabsTrigger>
+                {role === 'vendor' && (
+                  <>
+                    <TabsTrigger
+                      value="subscription"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Subscription
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="gallery"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Gallery
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="bank"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      <span className="hidden sm:inline">Bank Details</span>
+                      <span className="sm:hidden">Bank</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="travel"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      <span className="hidden sm:inline">Travel Settings</span>
+                      <span className="sm:hidden">Travel</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="documents"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Documents
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="hours"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      <span className="hidden sm:inline">Opening Hours</span>
+                      <span className="sm:hidden">Hours</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="sms"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      <span className="hidden sm:inline">SMS Packages</span>
+                      <span className="sm:hidden">SMS</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="taxes"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Taxes
+                    </TabsTrigger>
+                  </>
+                )}
+                {role === 'supplier' && (
+                  <TabsTrigger
+                    value="subscription"
                     className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
                   >
                     Subscription
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="gallery" 
+                )}
+                {role === 'doctor' && (
+                  <TabsTrigger
+                    value="subscription"
                     className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
                   >
-                    Gallery
+                    Subscription
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="bank" 
-                    className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
-                  >
-                    <span className="hidden sm:inline">Bank Details</span>
-                    <span className="sm:hidden">Bank</span>
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="travel" 
-                    className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
-                  >
-                    <span className="hidden sm:inline">Travel Settings</span>
-                    <span className="sm:hidden">Travel</span>
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="documents" 
-                    className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
-                  >
-                    Documents
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="hours" 
-                    className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
-                  >
-                    <span className="hidden sm:inline">Opening Hours</span>
-                    <span className="sm:hidden">Hours</span>
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="sms" 
-                    className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
-                  >
-                    <span className="hidden sm:inline">SMS Packages</span>
-                    <span className="sm:hidden">SMS</span>
-                  </TabsTrigger>
-                </>
-              )}
-              {role === 'supplier' && (
-                <TabsTrigger 
-                  value="subscription" 
-                  className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
-                >
-                  Subscription
-                </TabsTrigger>
-              )}
-              {role === 'doctor' && (
-                <TabsTrigger 
-                  value="subscription" 
-                  className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
-                >
-                  Subscription
-                </TabsTrigger>
-              )}
-            </TabsList>
+                )}
+              </TabsList>
+            </div>
           </div>
-        </div>
-        
-        <TabsContent value="profile">
-          {role === 'vendor' && localVendor && (
-            <ProfileTab vendor={localVendor} setVendor={setLocalVendor} />
+
+          <TabsContent value="profile">
+            {role === 'vendor' && localVendor && (
+              <ProfileTab vendor={localVendor} setVendor={setLocalVendor} />
+            )}
+            {role === 'supplier' && localSupplier && (
+              <div>Supplier Profile Tab - Coming Soon</div>
+            )}
+            {role === 'doctor' && localDoctor && (
+              <div>Doctor Profile Tab - Coming Soon</div>
+            )}
+          </TabsContent>
+
+          {role === 'vendor' && (
+            <>
+              <TabsContent value="subscription">
+                <SubscriptionTab subscription={localVendor?.subscription} userType="vendor" />
+              </TabsContent>
+
+              <TabsContent value="gallery">
+                <GalleryTab gallery={localVendor?.gallery || []} setVendor={setLocalVendor} />
+              </TabsContent>
+
+              <TabsContent value="bank">
+                <BankDetailsTab bankDetails={localVendor?.bankDetails || {}} setVendor={setLocalVendor} />
+              </TabsContent>
+
+              <TabsContent value="travel">
+                <TravelSettingsTab vendor={localVendor} setVendor={setLocalVendor} />
+              </TabsContent>
+
+              <TabsContent value="documents">
+                <DocumentsTab documents={localVendor?.documents} setVendor={setLocalVendor} />
+              </TabsContent>
+
+              <TabsContent value="hours">
+                <OpeningHoursTab
+                  hours={openingHours}
+                  setHours={setOpeningHours}
+                  setVendor={setLocalVendor}
+                  refetchWorkingHours={refetchWorkingHours}
+                />
+              </TabsContent>
+
+              <TabsContent value="sms">
+                <SmsPackagesTab />
+              </TabsContent>
+
+              <TabsContent value="taxes">
+                <TaxesTab taxes={localVendor?.taxes || { taxValue: 0, taxType: 'percentage' }} setVendor={setLocalVendor} />
+              </TabsContent>
+            </>
           )}
-          {role === 'supplier' && localSupplier && (
-            <div>Supplier Profile Tab - Coming Soon</div>
-          )}
-          {role === 'doctor' && localDoctor && (
-            <div>Doctor Profile Tab - Coming Soon</div>
-          )}
-        </TabsContent>
-        
-        {role === 'vendor' && (
-          <>
+
+          {role === 'supplier' && (
             <TabsContent value="subscription">
-              <SubscriptionTab subscription={localVendor?.subscription} userType="vendor" />
+              <SubscriptionTab subscription={localSupplier?.subscription} userType="supplier" />
             </TabsContent>
-            
-            <TabsContent value="gallery">
-              <GalleryTab gallery={localVendor?.gallery || []} setVendor={setLocalVendor} />
+          )}
+
+          {role === 'doctor' && (
+            <TabsContent value="subscription">
+              <SubscriptionTab subscription={localDoctor?.subscription} userType="doctor" />
             </TabsContent>
-            
-            <TabsContent value="bank">
-              <BankDetailsTab bankDetails={localVendor?.bankDetails || {}} setVendor={setLocalVendor} />
-            </TabsContent>
-            
-            <TabsContent value="travel">
-              <TravelSettingsTab vendor={localVendor} setVendor={setLocalVendor} />
-            </TabsContent>
-            
-            <TabsContent value="documents">
-              <DocumentsTab documents={localVendor?.documents} setVendor={setLocalVendor} />
-            </TabsContent>
-            
-            <TabsContent value="hours">
-              <OpeningHoursTab 
-                hours={openingHours} 
-                setHours={setOpeningHours} 
-                setVendor={setLocalVendor} 
-                refetchWorkingHours={refetchWorkingHours} 
-              />
-            </TabsContent>
-            
-            <TabsContent value="sms">
-              <SmsPackagesTab />
-            </TabsContent>
-          </>
-        )}
-        
-        {role === 'supplier' && (
-          <TabsContent value="subscription">
-            <SubscriptionTab subscription={localSupplier?.subscription} userType="supplier" />
-          </TabsContent>
-        )}
-        
-        {role === 'doctor' && (
-          <TabsContent value="subscription">
-            <SubscriptionTab subscription={localDoctor?.subscription} userType="doctor" />
-          </TabsContent>
-        )}
-      </Tabs>
-      
-      <QRCodeModal
-        open={qrModalOpen}
-        onOpenChange={setQrModalOpen}
-        profileData={profileData}
-        role={role}
-      />
+          )}
+        </Tabs>
+
+        <QRCodeModal
+          open={qrModalOpen}
+          onOpenChange={setQrModalOpen}
+          profileData={profileData}
+          role={role}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
 }

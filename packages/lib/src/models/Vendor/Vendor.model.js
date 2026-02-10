@@ -330,6 +330,17 @@ const vendorSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
+  taxes: {
+    taxValue: {
+      type: Number,
+      default: 0,
+    },
+    taxType: {
+      type: String,
+      enum: ["percentage", "fixed"],
+      default: "percentage",
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now,
