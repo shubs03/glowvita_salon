@@ -50,6 +50,8 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/apps/admin/.next/standalone ./
 # Copy static assets
 COPY --from=builder --chown=nextjs:nodejs /app/apps/admin/.next/static ./apps/admin/.next/static
+# Copy public folder (IMPORTANT)
+COPY --from=builder --chown=nextjs:nodejs /app/apps/admin/public ./apps/admin/public
 
 USER nextjs
 

@@ -36,18 +36,19 @@ export default function RootLayout({
             }
           `
         }} />
+        <link rel="icon" href="/favicon.jpeg" />
       </head>
       <body>
         <StoreProvider>
           <AuthInitializer>
             <ThemeProvider
-                attribute="class"
-                defaultTheme="system"
-                enableSystem
-                disableTransitionOnChange
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
             >
-                {showLayout ? <AdminLayout>{children}</AdminLayout> : children}
-                <Toaster position="bottom-right" richColors />
+              {showLayout ? <AdminLayout>{children}</AdminLayout> : children}
+              <Toaster position="bottom-right" richColors />
             </ThemeProvider>
           </AuthInitializer>
         </StoreProvider>

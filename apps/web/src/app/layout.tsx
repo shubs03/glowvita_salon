@@ -21,7 +21,7 @@ export default function RootLayout({
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
-  
+
   const marketingPages = [
     '/',
     '/salons',
@@ -39,13 +39,13 @@ export default function RootLayout({
   ];
 
   const footerHiddenPages = [
-  '/search',
-];
-  
-const isSearchPage = pathname.startsWith('/search');
-const isFooterHiddenPage = footerHiddenPages.some(page =>
-  pathname === page || pathname.startsWith(`${page}/`)
-);
+    '/search',
+  ];
+
+  const isSearchPage = pathname.startsWith('/search');
+  const isFooterHiddenPage = footerHiddenPages.some(page =>
+    pathname === page || pathname.startsWith(`${page}/`)
+  );
 
   const isMarketingPage = marketingPages.some(page => {
     // For dynamic routes, check if the pathname starts with the base path
@@ -56,11 +56,11 @@ const isFooterHiddenPage = footerHiddenPages.some(page =>
     // For static routes, check exact match
     return page === pathname;
   });
-  
-  const isAuthPage = pathname.startsWith('/client-login') || 
-                     pathname.startsWith('/client-register') || 
-                     pathname.startsWith('/forgot-password') ||
-                     pathname.startsWith('/reset-password');
+
+  const isAuthPage = pathname.startsWith('/client-login') ||
+    pathname.startsWith('/client-register') ||
+    pathname.startsWith('/forgot-password') ||
+    pathname.startsWith('/reset-password');
   const isProfilePage = pathname.startsWith('/profile');
 
   // Show header on marketing and profile pages, but not on auth pages
@@ -86,13 +86,14 @@ const isFooterHiddenPage = footerHiddenPages.some(page =>
             }
           `
         }} />
+        <link rel="icon" href="/favicon.jpeg" />
       </head>
       <body>
         <StoreProvider>
           <div className="flex flex-col min-h-screen bg-background text-foreground">
             {showHeader && (
-              <MarketingHeader 
-                isMobileMenuOpen={isMobileMenuOpen} 
+              <MarketingHeader
+                isMobileMenuOpen={isMobileMenuOpen}
                 toggleMobileMenu={toggleMobileMenu}
                 isHomePage={pathname === '/'}
               />

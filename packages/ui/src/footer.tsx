@@ -26,7 +26,7 @@ export function Footer({ className }: FooterProps) {
                 </span>
               </div>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                Your trusted partner for premium beauty products and professional salon services. 
+                Your trusted partner for premium beauty products and professional salon services.
                 Enhancing your natural glow with quality and care.
               </p>
               <div className="flex space-x-3">
