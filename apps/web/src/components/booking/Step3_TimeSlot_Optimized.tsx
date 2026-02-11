@@ -10,14 +10,17 @@ import { Service, StaffMember, WeddingPackage } from '@/hooks/useBookingData';
 import { format, addDays } from 'date-fns';
 
 // Breadcrumb navigation component
-const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage }: {
+const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage, isHomeService }: {
   currentStep: number;
   setCurrentStep: (step: number) => void;
   isWeddingPackage?: boolean;
+  isHomeService?: boolean;
 }) => {
   // Wedding packages skip step 2 (staff selection)
+  // Home services add step 3 (location selection)
   // Step mapping: 
   // Regular: [1, 2, 3, 4] -> ['Select Service', 'Select Professional', 'Select Date & Time', 'Confirm Booking']
+  // Home Service: [1, 2, 3, 4] -> ['Select Service', 'Select Professional', 'Select Location', 'Select Date & Time']
   // Wedding: [1, 3, 4, 5] -> ['Select Package', 'Select Date & Time', 'Location Selection', 'Confirm Booking']
 
   const steps = isWeddingPackage
@@ -25,6 +28,13 @@ const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage }: {
       { name: 'Select Package', step: 1 },
       { name: 'Select Date & Time', step: 3 },
       { name: 'Confirm Booking', step: 4 }
+    ]
+    : isHomeService
+    ? [
+      { name: 'Select Service', step: 1 },
+      { name: 'Select Professional', step: 2 },
+      { name: 'Select Location', step: 3 },
+      { name: 'Select Date & Time', step: 4 }
     ]
     : [
       { name: 'Select Service', step: 1 },
@@ -610,7 +620,7 @@ export const Step3_TimeSlot = memo(({
   if (parentLoading || isLoadingSlots) {
     return (
       <div className="w-full">
-        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} />
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} isHomeService={isHomeService} />
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -618,7 +628,7 @@ export const Step3_TimeSlot = memo(({
             </div>
             <h2 className="text-3xl font-bold font-headline">Select Date & Time</h2>
           </div>
-          <p className="text-muted-foreground">Choose a convenient date and time for your appointment.</p>
+          <p className="text-muted-foreground">Choose a convenient time for your appointment.</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
@@ -640,7 +650,7 @@ export const Step3_TimeSlot = memo(({
   if (parentError || slotsError) {
     return (
       <div className="w-full">
-        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} />
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} isHomeService={isHomeService} />
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -664,7 +674,7 @@ export const Step3_TimeSlot = memo(({
 
   return (
     <div className="w-full">
-      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} />
+      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} isHomeService={isHomeService} />
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -672,13 +682,13 @@ export const Step3_TimeSlot = memo(({
           </div>
           <h2 className="text-3xl font-bold font-headline">Select Date & Time</h2>
         </div>
-        <p className="text-muted-foreground">Choose a convenient date and time for your appointment.</p>
+        <p className="text-muted-foreground">Choose a convenient time for your appointment.</p>
       </div>
 
       {/* Stale data warning */}
       {isStale && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
-          <span className="text-sm text-yellow-800">
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
+          <span className="text-sm text-amber-800">
             Availability may have changed. Refresh to see latest slots.
           </span>
           <Button size="sm" variant="outline" onClick={handleRefresh}>
@@ -690,23 +700,14 @@ export const Step3_TimeSlot = memo(({
 
       {/* Locked slot indicator */}
       {lockedSlot && formattedCountdown && (
-        <div className="mb-4 p-4 bg-green-50 border-2 border-green-500 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Lock className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="font-semibold text-green-800">
-                  Slot Locked: {lockedSlot.slot.startTime} - {lockedSlot.slot.endTime}
-                </p>
-                <p className="text-sm text-green-700">
-                  Time remaining: <span className="font-mono font-bold">{formattedCountdown}</span>
-                </p>
-              </div>
-            </div>
-            <Button size="sm" variant="outline" onClick={handleReleaseLock}>
-              Release Lock
-            </Button>
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between text-amber-800">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            <span className="font-medium">Slot reserved! Complete booking in:</span>
           </div>
+          <span className="text-xl font-bold tabular-nums">
+            {formattedCountdown}
+          </span>
         </div>
       )}
 
@@ -771,7 +772,7 @@ export const Step3_TimeSlot = memo(({
               <p className="text-sm text-muted-foreground mt-2">Try selecting a different date</p>
             </div>
           ) : (
-            <div className="max-h-64 overflow-y-auto pr-2 no-scrollbar">
+            <div className="max-h-96 overflow-y-auto pr-2 no-scrollbar">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 transition-opacity duration-300" style={{ opacity: isBackgroundRefreshing ? 0.95 : 1 }}>
                 {displaySlots.map((slot) => {
                   const isSelected = selectedTime === slot.startTime;
@@ -785,7 +786,7 @@ export const Step3_TimeSlot = memo(({
                       className={cn(
                         "p-3 border-2 rounded-lg transition-all text-left",
                         isLocked
-                          ? "border-green-500 bg-green-50 cursor-default"
+                          ? "border-amber-500 bg-amber-50 cursor-default"
                           : isSelected
                             ? "border-primary bg-primary/5"
                             : "border-gray-200 hover:border-primary hover:bg-primary/5",
@@ -809,7 +810,7 @@ export const Step3_TimeSlot = memo(({
                         </div>
                       )}
                       {isLocked && (
-                        <div className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                        <div className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                           <Lock className="h-3 w-3" />
                           Locked
                         </div>

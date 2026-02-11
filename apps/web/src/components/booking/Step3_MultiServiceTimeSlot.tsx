@@ -9,8 +9,15 @@ import { StaffMember, WorkingHours, Service, ServiceStaffAssignment, calculateTo
 import { useGetMultiServiceSlotsMutation } from '@repo/store/api';
 import { toast } from 'react-toastify';
 
-const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
-  const steps = ['Services', 'Select Professionals', 'Time Slot'];
+const Breadcrumb = ({ currentStep, setCurrentStep, isHomeService }: { 
+  currentStep: number; 
+  setCurrentStep: (step: number) => void;
+  isHomeService?: boolean;
+}) => {
+  const steps = isHomeService 
+    ? ['Services', 'Select Professionals', 'Select Location', 'Select Date & Time']
+    : ['Services', 'Select Professionals', 'Select Date & Time'];
+  
   return (
     <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
       {steps.map((step, index) => (
@@ -562,7 +569,7 @@ export function Step3_MultiServiceTimeSlot({
 
   return (
     <div className="w-full">
-      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isHomeService={isHomeService} />
 
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
@@ -698,18 +705,7 @@ export function Step3_MultiServiceTimeSlot({
         )}
       </div>
 
-      {/* Next Button */}
-      {selectedSlot && (
-        <div className="mt-8 flex justify-end">
-          <Button
-            size="lg"
-            onClick={() => setCurrentStep(currentStep + 1)}
-            className="px-8"
-          >
-            Continue to Booking Details
-          </Button>
-        </div>
-      )}
+      {/* Next Button - Removed as per user request */}
     </div>
   );
 }

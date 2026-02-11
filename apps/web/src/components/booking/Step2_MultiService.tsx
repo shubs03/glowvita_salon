@@ -331,21 +331,7 @@ export function Step2_MultiService({
                 )}
             </div>
 
-            {/* Navigation buttons */}
-            <div className="flex justify-between">
-                <button
-                    onClick={handlePrevAssignment}
-                    className="px-4 py-2 text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                >
-                    {currentAssignmentIndex === 0 ? 'Back to Services' : 'Previous Service'}
-                </button>
-                <button
-                    onClick={handleNextAssignment}
-                    className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition-colors"
-                >
-                    {currentAssignmentIndex === serviceStaffAssignments.length - 1 ? 'Select Time Slot' : 'Next Service'}
-                </button>
-            </div>
+            {/* Navigation buttons - Removed as per user request */}
         </div>
     );
 }

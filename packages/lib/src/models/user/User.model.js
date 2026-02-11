@@ -52,6 +52,39 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  address: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  landmark: {
+    type: String,
+    trim: true,
+    default: '',
+  },
+  savedAddresses: [{
+    address: String,
+    city: String,
+    state: String,
+    pincode: String,
+    landmark: String,
+    location: {
+      lat: Number,
+      lng: Number,
+    },
+    label: {
+      type: String,
+      default: 'Home',
+    },
+    isPrimary: {
+      type: Boolean,
+      default: false,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  }],
   password: {
     type: String,
     required: true,
