@@ -47,10 +47,6 @@ export async function POST(request) {
     }
     
     console.log("Found wedding package:", { id: weddingPackage._id, name: weddingPackage.name });
-      } catch (wpError) {
-        console.error("Error with WeddingPackageModel:", wpError);
-      }
-    }
     
     console.log("Final wedding package found:", !!weddingPackage);
     

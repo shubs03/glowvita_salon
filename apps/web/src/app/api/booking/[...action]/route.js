@@ -625,10 +625,9 @@ async function handleSlotDiscovery(searchParams) {
       return Response.json(err, { status: 400 });
     }
 
-    // Get services - for wedding packages, we'll pass minimal info since package has duration
+    // Get services - fetch for both regular and wedding services
     let services = [];
-    if (serviceIds.length > 0 && !isWeddingService) {
-      // Only fetch detailed services for non-wedding bookings
+    if (serviceIds.length > 0) {
       try {
         // First try to find in VendorServices collection where services are stored as subdocuments
         const VendorServicesModel = (await import("@repo/lib/models/Vendor/VendorServices.model")).default;
@@ -637,16 +636,26 @@ async function handleSlotDiscovery(searchParams) {
         if (vendorServicesDoc && vendorServicesDoc.services) {
           services = vendorServicesDoc.services
             .filter(s => serviceIds.includes(s._id.toString()))
-            .map(s => ({ ...s, duration: parseDuration(s.duration) }));
+            .map(s => ({ 
+              ...s, 
+              duration: parseDuration(s.duration),
+              prepTime: parseDuration(s.prepTime, 0),
+              setupCleanupTime: parseDuration(s.setupCleanupTime, 0)
+            }));
         }
 
-        console.log(`Found ${services.length} regular services in VendorServices`);
+        console.log(`Found ${services.length} services in VendorServices`);
 
         // Fallback to ServiceModel if not found (legacy or different structure)
         if (services.length === 0) {
           const rawServices = await ServiceModel.find({ _id: { $in: serviceIds } }).lean();
-          services = rawServices.map(s => ({ ...s, duration: parseDuration(s.duration) }));
-          console.log(`Found ${services.length} regular services in ServiceModel fallback`);
+          services = rawServices.map(s => ({ 
+            ...s, 
+            duration: parseDuration(s.duration),
+            prepTime: parseDuration(s.prepTime, 0),
+            setupCleanupTime: parseDuration(s.setupCleanupTime, 0)
+          }));
+          console.log(`Found ${services.length} services in ServiceModel fallback`);
         }
       } catch (error) {
         console.error('Error fetching services:', error);
