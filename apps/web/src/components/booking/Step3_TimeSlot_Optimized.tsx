@@ -628,7 +628,7 @@ export const Step3_TimeSlot = memo(({
             </div>
             <h2 className="text-3xl font-bold font-headline">Select Date & Time</h2>
           </div>
-          <p className="text-muted-foreground">Choose a convenient date and time for your appointment.</p>
+          <p className="text-muted-foreground">Choose a convenient time for your appointment.</p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6">
@@ -682,13 +682,13 @@ export const Step3_TimeSlot = memo(({
           </div>
           <h2 className="text-3xl font-bold font-headline">Select Date & Time</h2>
         </div>
-        <p className="text-muted-foreground">Choose a convenient date and time for your appointment.</p>
+        <p className="text-muted-foreground">Choose a convenient time for your appointment.</p>
       </div>
 
       {/* Stale data warning */}
       {isStale && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center justify-between">
-          <span className="text-sm text-yellow-800">
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
+          <span className="text-sm text-amber-800">
             Availability may have changed. Refresh to see latest slots.
           </span>
           <Button size="sm" variant="outline" onClick={handleRefresh}>
@@ -700,23 +700,14 @@ export const Step3_TimeSlot = memo(({
 
       {/* Locked slot indicator */}
       {lockedSlot && formattedCountdown && (
-        <div className="mb-4 p-4 bg-green-50 border-2 border-green-500 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Lock className="h-5 w-5 text-green-600" />
-              <div>
-                <p className="font-semibold text-green-800">
-                  Slot Locked: {lockedSlot.slot.startTime} - {lockedSlot.slot.endTime}
-                </p>
-                <p className="text-sm text-green-700">
-                  Time remaining: <span className="font-mono font-bold">{formattedCountdown}</span>
-                </p>
-              </div>
-            </div>
-            <Button size="sm" variant="outline" onClick={handleReleaseLock}>
-              Release Lock
-            </Button>
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between text-amber-800">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            <span className="font-medium">Slot reserved! Complete booking in:</span>
           </div>
+          <span className="text-xl font-bold tabular-nums">
+            {formattedCountdown}
+          </span>
         </div>
       )}
 
@@ -781,7 +772,7 @@ export const Step3_TimeSlot = memo(({
               <p className="text-sm text-muted-foreground mt-2">Try selecting a different date</p>
             </div>
           ) : (
-            <div className="max-h-64 overflow-y-auto pr-2 no-scrollbar">
+            <div className="max-h-96 overflow-y-auto pr-2 no-scrollbar">
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 transition-opacity duration-300" style={{ opacity: isBackgroundRefreshing ? 0.95 : 1 }}>
                 {displaySlots.map((slot) => {
                   const isSelected = selectedTime === slot.startTime;
@@ -795,7 +786,7 @@ export const Step3_TimeSlot = memo(({
                       className={cn(
                         "p-3 border-2 rounded-lg transition-all text-left",
                         isLocked
-                          ? "border-green-500 bg-green-50 cursor-default"
+                          ? "border-amber-500 bg-amber-50 cursor-default"
                           : isSelected
                             ? "border-primary bg-primary/5"
                             : "border-gray-200 hover:border-primary hover:bg-primary/5",
@@ -819,7 +810,7 @@ export const Step3_TimeSlot = memo(({
                         </div>
                       )}
                       {isLocked && (
-                        <div className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                        <div className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                           <Lock className="h-3 w-3" />
                           Locked
                         </div>

@@ -40,7 +40,8 @@ interface BookingSummaryProps {
   onRemoveAddon?: (serviceId: string, addonId: string) => void; // New prop for removing addons
   couponCode?: string | null;
   isHomeService?: boolean; // New prop to indicate home service booking
-  homeServiceLocation?: unknown | null;
+  serviceLocation?: unknown | null;
+  weddingVenueType?: 'salon' | 'venue' | null;
 }
 
 export function BookingSummary({
@@ -61,7 +62,8 @@ export function BookingSummary({
   onRemoveAddon,
   couponCode: propCouponCode,
   isHomeService = false,
-  homeServiceLocation = null
+  serviceLocation = null,
+  weddingVenueType
 }: BookingSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -94,47 +96,95 @@ export function BookingSummary({
     image: "https://picsum.photos/seed/salon/400/400"
   };
 
-  const stepDetails = isHomeService ? [
-    {
-      step: 1,
-      label: 'Select Staff',
-      enabled: selectedServices.length > 0 || !!weddingPackage
-    },
-    {
-      step: 2,
-      label: 'Select Location',
-      enabled: serviceStaffAssignments && serviceStaffAssignments.length > 0
-        ? serviceStaffAssignments.every(a => a.staff !== undefined)
-        : (weddingPackage ? true : !!selectedStaff)
-    },
-    { 
-      step: 3, 
-      label: 'Select Time Slot', 
-      enabled: !!homeServiceLocation
-    },
-    { 
-      step: 4, 
-      label: 'Confirm Booking Details', 
-      enabled: !!selectedTime
-    }
-  ] : [
-    {
-      step: 1,
-      label: 'Select Staff',
-      enabled: selectedServices.length > 0 || !!weddingPackage
-    },
-    {
-      step: 2,
-      label: 'Select Time Slot',
-      enabled: serviceStaffAssignments && serviceStaffAssignments.length > 0
-        ? serviceStaffAssignments.every(a => a.staff !== undefined)
-        : (weddingPackage ? true : !!selectedStaff)
-    },
-    { step: 3, label: 'Confirm Booking Details', enabled: !!selectedTime }
-  ];
+  const isWeddingPackage = !!weddingPackage;
 
-  const nextStepInfo = stepDetails.find(s => s.step === currentStep);
-  const buttonLabel = nextStepInfo?.label || 'Continue';
+  const stepDetails = isWeddingPackage
+    ? [
+        { label: 'Select Package', completed: !!weddingPackage },
+        { 
+          label: 'Select Location', 
+          completed: weddingVenueType === 'salon' || (weddingVenueType === 'venue' && !!(serviceLocation as any)?.address)
+        },
+        { label: 'Select Date & Time', completed: !!selectedTime },
+        { label: 'Confirm Booking', completed: false }
+      ]
+    : isHomeService
+    ? [
+        {
+          step: 1,
+          label: 'Select Staff',
+          enabled: selectedServices.length > 0
+        },
+        {
+          step: 2,
+          label: 'Select Location',
+          enabled: serviceStaffAssignments && serviceStaffAssignments.length > 0
+            ? serviceStaffAssignments.every(a => a.staff !== undefined)
+            : !!selectedStaff
+        },
+        { 
+          step: 3, 
+          label: 'Select Time Slot', 
+          enabled: !!serviceLocation
+        },
+        { 
+          step: 4, 
+          label: 'Confirm Booking Details', 
+          enabled: !!selectedTime
+        }
+      ]
+    : [
+        {
+          step: 1,
+          label: 'Select Staff',
+          enabled: selectedServices.length > 0
+        },
+        {
+          step: 2,
+          label: 'Select Time Slot',
+          enabled: serviceStaffAssignments && serviceStaffAssignments.length > 0
+            ? serviceStaffAssignments.every(a => a.staff !== undefined)
+            : !!selectedStaff
+        },
+        { step: 3, label: 'Confirm Booking Details', enabled: !!selectedTime }
+      ];
+
+  const nextStepInfo = isWeddingPackage 
+    ? stepDetails[Math.min(currentStep - 1, stepDetails.length - 1)]
+    : stepDetails.find(s => (s as any).step === currentStep);
+  
+  const buttonLabel = isWeddingPackage
+    ? (currentStep === 1 ? 'Select Location' : currentStep === 3 ? 'Select Time Slot' : currentStep === 4 ? 'Confirm Booking' : 'Continue')
+    : (nextStepInfo?.label || 'Continue');
+
+  // Helper function to check if venue location is valid
+  const isVenueLocationValid = () => {
+    if (!serviceLocation) return false;
+    const loc = serviceLocation as any;
+    // Check multiple possible address structures
+    const hasAddress = !!loc.address || !!loc.formatted_address;
+    const hasCoordinates = (!!loc.lat && !!loc.lng) || (!!loc.coordinates?.lat && !!loc.coordinates?.lng);
+    return hasAddress || hasCoordinates;
+  };
+
+  const isButtonEnabled = isWeddingPackage
+    ? (currentStep === 1 ? !!weddingPackage : 
+       currentStep === 3 ? (weddingVenueType === 'salon' || (weddingVenueType === 'venue' && isVenueLocationValid())) :
+       currentStep === 4 ? !!selectedTime : false)
+    : !!(nextStepInfo as any)?.enabled;
+
+  // Debug wedding venue button state
+  if (isWeddingPackage && currentStep === 3 && weddingVenueType === 'venue') {
+    console.log('[BookingSummary] Wedding Venue - Button Check:', {
+      weddingVenueType,
+      serviceLocation,
+      serviceLocationKeys: serviceLocation ? Object.keys(serviceLocation) : [],
+      hasAddress: !!(serviceLocation as any)?.address,
+      addressValue: (serviceLocation as any)?.address,
+      isVenueLocationValid: isVenueLocationValid(),
+      isButtonEnabled
+    });
+  }
 
   if (isMobileFooter) {
     return (
@@ -223,7 +273,7 @@ export function BookingSummary({
             <Button
               className="w-40 h-12"
               size="lg"
-              disabled={!nextStepInfo?.enabled}
+              disabled={!isButtonEnabled}
               onClick={onNextStep}
             >
               {buttonLabel}
@@ -263,64 +313,63 @@ export function BookingSummary({
 
           {/* Show Wedding Package or Regular Services */}
           {weddingPackage ? (
-            <div className="p-4 bg-rose-50 border-2 border-rose-200 rounded-lg">
-              <div className="flex items-start gap-3 mb-3">
-                <div className="p-2 bg-rose-100 rounded-md"><Heart className="h-5 w-5 text-rose-600" /></div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-xs text-rose-600 font-medium uppercase tracking-wide">Wedding Package</p>
-                    {weddingPackageMode === 'customized' && (
-                      <span className="text-[10px] bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full font-medium">Customized</span>
-                    )}
-                  </div>
-                  <p className="font-bold text-rose-900">{weddingPackage.name}</p>
-                  <p className="text-xs text-rose-700 mt-1">{weddingPackage.description}</p>
+            <div className="p-3 bg-secondary/50 rounded-md">
+              <div className="w-full">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-xs text-muted-foreground">Wedding Package</p>
+                  {weddingPackageMode === 'customized' && (
+                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-medium">Customized</span>
+                  )}
                 </div>
-              </div>
+                  <p className="font-bold text-sm mb-1">{weddingPackage.name}</p>
+                  {weddingPackage.description && (
+                    <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{weddingPackage.description}</p>
+                  )}
 
-              <div className="space-y-2 border-t border-rose-200 pt-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-rose-700">Services Included:</span>
-                  <span className="font-semibold text-rose-900">
-                    {weddingPackageMode === 'customized' && customizedPackageServices
-                      ? customizedPackageServices.length
-                      : weddingPackage.services?.length || 0}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-rose-700">Total Duration:</span>
-                  <span className="font-semibold text-rose-900">{weddingPackage.duration} min</span>
-                </div>
-                {weddingPackage.staffCount && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-rose-700">Staff Required:</span>
-                    <span className="font-semibold text-rose-900">
-                      {weddingPackage.staffCount} {weddingPackage.staffCount === 1 ? 'Professional' : 'Professionals'}
-                    </span>
-                  </div>
-                )}
-                {weddingPackage.assignedStaff && weddingPackage.assignedStaff.length > 0 && (
-                  <div className="text-sm">
-                    <span className="text-rose-700">Available Staff:</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {weddingPackage.assignedStaff.slice(0, 3).map((staff: any, idx: number) => (
-                        <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-rose-100 text-rose-700">
-                          {typeof staff === 'string' ? staff : staff.name}
+                  <div className="space-y-2 pt-3 border-t">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Services Included</span>
+                      <span className="font-medium">
+                        {weddingPackageMode === 'customized' && customizedPackageServices
+                          ? customizedPackageServices.length
+                          : weddingPackage.services?.length || 0}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Total Duration</span>
+                      <span className="font-medium">{weddingPackage.duration} min</span>
+                    </div>
+                    {weddingPackage.staffCount && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Staff Required</span>
+                        <span className="font-medium">
+                          {weddingPackage.staffCount} {weddingPackage.staffCount === 1 ? 'Professional' : 'Professionals'}
                         </span>
-                      ))}
-                      {weddingPackage.assignedStaff.length > 3 && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-rose-100 text-rose-700">
-                          +{weddingPackage.assignedStaff.length - 3} more
-                        </span>
-                      )}
+                      </div>
+                    )}
+                    {weddingPackage.assignedStaff && weddingPackage.assignedStaff.length > 0 && (
+                      <div className="text-sm">
+                        <span className="text-muted-foreground block mb-1.5">Available Staff</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {weddingPackage.assignedStaff.slice(0, 3).map((staff: any, idx: number) => (
+                            <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground border">
+                              {typeof staff === 'string' ? staff : staff.name}
+                            </span>
+                          ))}
+                          {weddingPackage.assignedStaff.length > 3 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground">
+                              +{weddingPackage.assignedStaff.length - 3} more
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-sm font-semibold border-t pt-2 mt-2">
+                      <span>Package Price</span>
+                      <span className="text-primary">₹{weddingPackage.discountedPrice || weddingPackage.totalPrice}</span>
                     </div>
                   </div>
-                )}
-                <div className="flex justify-between text-base font-bold border-t border-rose-200 pt-2 mt-2">
-                  <span className="text-rose-800">Package Price:</span>
-                  <span className="text-rose-900">₹{weddingPackage.discountedPrice || weddingPackage.totalPrice}</span>
                 </div>
-              </div>
             </div>
           ) : (
             <div className="p-3 bg-secondary/50 rounded-md">
@@ -390,6 +439,31 @@ export function BookingSummary({
               </div>
             </div>
           </div>
+
+          {/* Wedding Location Display */}
+          {isWeddingPackage && (
+            <div className="p-3 bg-secondary/50 rounded-md">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-md"><MapPin className="h-4 w-4 text-primary" /></div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Location</p>
+                  {weddingVenueType === 'salon' ? (
+                    <p className="font-medium text-sm">At Salon</p>
+                  ) : weddingVenueType === 'venue' && (serviceLocation as any)?.address ? (
+                    <div>
+                      <p className="font-medium text-sm">Wedding Venue</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(serviceLocation as any).address}
+                        {(serviceLocation as any).city && `, ${(serviceLocation as any).city}`}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="font-medium text-sm text-muted-foreground">Not selected</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="p-3 bg-secondary/50 rounded-md">
             <div className="flex items-center gap-3">
@@ -505,7 +579,7 @@ export function BookingSummary({
             <Button
               className="w-full h-12 text-base group"
               size="lg"
-              disabled={!nextStepInfo?.enabled}
+              disabled={!isButtonEnabled}
               onClick={onNextStep}
             >
               {buttonLabel}
@@ -516,7 +590,7 @@ export function BookingSummary({
           <Button
             className="w-full h-12 text-base group"
             size="lg"
-            disabled={!nextStepInfo?.enabled}
+            disabled={!isButtonEnabled}
             onClick={onNextStep}
           >
             {buttonLabel}

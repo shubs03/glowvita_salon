@@ -148,6 +148,7 @@ function BookingPageContent() {
   const [isCustomizingPackage, setIsCustomizingPackage] = useState(false);
   const [customizedPackageServices, setCustomizedPackageServices] = useState<Service[]>([]);
   const [weddingPackageMode, setWeddingPackageMode] = useState<'default' | 'customized' | null>(null);
+  const [weddingVenueType, setWeddingVenueType] = useState<'salon' | 'venue' | null>(null);
 
   // State declarations
   const [currentStep, setCurrentStep] = useState(1);
@@ -166,7 +167,7 @@ function BookingPageContent() {
   }>>([]);
 
   const [showLocationModal, setShowLocationModal] = useState(false);
-  const [homeServiceLocation, setHomeServiceLocation] = useState<HomeServiceLocation | null>(null);
+  const [serviceLocation, setServiceLocation] = useState<HomeServiceLocation | null>(null);
   const [showMapSelector, setShowMapSelector] = useState(false);
   const [locationForm, setLocationForm] = useState<HomeServiceLocation>({
     address: '',
@@ -185,12 +186,15 @@ function BookingPageContent() {
   const [isConfirmingBooking, setIsConfirmingBooking] = useState(false);
 
   // Defensive: Ensure location is cleared if mode is salon (catches state inconsistencies)
+  // BUT: Exclude wedding packages as they manage location separately via weddingVenueType
   useEffect(() => {
-    if (bookingMode === 'salon' && homeServiceLocation) {
-      console.log("Defensive Cleanup: Clearing homeServiceLocation because mode is salon");
-      setHomeServiceLocation(null);
+    if (bookingMode === 'salon' && serviceLocation && !selectedWeddingPackage) {
+      console.log("Defensive Cleanup: Clearing serviceLocation because mode is salon (non-wedding)");
+      setServiceLocation(null);
     }
-  }, [bookingMode, homeServiceLocation]);
+  }, [bookingMode, serviceLocation, selectedWeddingPackage]);
+
+
 
   // Wrapper to handle mode switching with cleanup
   const handleBookingModeChange = (mode: 'salon' | 'home') => {
@@ -200,7 +204,7 @@ function BookingPageContent() {
 
     if (mode === 'salon') {
       // Clear home service location when switching to salon mode
-      setHomeServiceLocation(null);
+      setServiceLocation(null);
       setLocationForm({
         address: '',
         city: '',
@@ -371,6 +375,13 @@ function BookingPageContent() {
     }
   }, [selectedServices, selectedWeddingPackage, priceBreakdown]);
 
+  // Reset wedding venue type when wedding package changes or is cleared
+  useEffect(() => {
+    if (!selectedWeddingPackage) {
+      setWeddingVenueType(null);
+    }
+  }, [selectedWeddingPackage]);
+
   // Handle map click to select location
   const handleMapClick = () => {
     // This function is for the div click handler
@@ -515,8 +526,8 @@ function BookingPageContent() {
     };
 
     console.log("✅ Validation passed - setting location data");
-    console.log("Setting homeServiceLocation to:", locationData);
-    setHomeServiceLocation(locationData as any);
+    console.log("Setting serviceLocation to:", locationData);
+    setServiceLocation(locationData as any);
     setShowLocationModal(false);
     setShowMapSelector(false); // Reset map selector state
 
@@ -535,7 +546,7 @@ function BookingPageContent() {
           selectedDate: selectedDate.toISOString(),
           selectedTime,
           salonId,
-          homeServiceLocation: locationData
+          serviceLocation: locationData
         };
         sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
         router.push(`/client-login?redirect=/book/${salonId}`);
@@ -546,7 +557,7 @@ function BookingPageContent() {
 
   const handleAddressDetailsFetched = (locationData: HomeServiceLocation) => {
     console.log("✅ Address details fetched - setting location data");
-    console.log("Setting homeServiceLocation to:", locationData);
+    console.log("Setting serviceLocation to:", locationData);
 
     // Ensure coordinates are present before setting state
     let finalLocation = locationData;
@@ -558,9 +569,9 @@ function BookingPageContent() {
           lng: Number(locationData.lng)
         }
       };
-      setHomeServiceLocation(finalLocation as any);
+      setServiceLocation(finalLocation as any);
     } else {
-      setHomeServiceLocation(locationData as any);
+      setServiceLocation(locationData as any);
     }
     setShowLocationModal(false);
     setShowMapSelector(false); // Reset map selector state
@@ -578,7 +589,7 @@ function BookingPageContent() {
           selectedDate: selectedDate.toISOString(),
           selectedTime,
           salonId,
-          homeServiceLocation: finalLocation
+          serviceLocation: finalLocation
         };
         sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
         router.push(`/client-login?redirect=/book/${salonId}`);
@@ -647,8 +658,8 @@ function BookingPageContent() {
           };
 
           console.log("✅ Address details fetched - setting location data");
-          console.log("Setting homeServiceLocation to:", locationData);
-          setHomeServiceLocation(locationData as any);
+          console.log("Setting serviceLocation to:", locationData);
+          setServiceLocation(locationData as any);
           setShowLocationModal(false);
           setShowMapSelector(false); // Reset map selector state
 
@@ -665,7 +676,7 @@ function BookingPageContent() {
                 selectedDate: selectedDate.toISOString(),
                 selectedTime,
                 salonId,
-                homeServiceLocation: locationData
+                serviceLocation: locationData
               };
               sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
               router.push(`/client-login?redirect=/book/${salonId}`);
@@ -684,10 +695,10 @@ function BookingPageContent() {
     }
   };
 
-  // Add useEffect to monitor homeServiceLocation changes
+  // Add useEffect to monitor serviceLocation changes
   useEffect(() => {
-    console.log("homeServiceLocation state updated:", homeServiceLocation);
-  }, [homeServiceLocation]);
+    console.log("serviceLocation state updated:", serviceLocation);
+  }, [serviceLocation]);
 
   // Set customer info when user is authenticated
   useEffect(() => {
@@ -756,7 +767,7 @@ function BookingPageContent() {
     setOfferCode('');
   };
 
-  const persistHomeServiceAddress = async (location: HomeServiceLocation | null) => {
+  const persistServiceLocation = async (location: HomeServiceLocation | null) => {
     if (!isAuthenticated || !location) return;
     if (!location.city || !location.state || !location.pincode) return;
 
@@ -766,6 +777,11 @@ function BookingPageContent() {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
     try {
+      // Determine label based on context
+      const label = selectedWeddingPackage && weddingVenueType === 'venue' 
+        ? 'Wedding Venue' 
+        : 'Home Service';
+      
       await fetch('/api/client/addresses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -778,7 +794,7 @@ function BookingPageContent() {
           landmark: location.landmark || '',
           lat,
           lng,
-          label: 'Home',
+          label: label,
           isPrimary: false
         })
       });
@@ -868,10 +884,32 @@ function BookingPageContent() {
       
       if (currentStep === 3) {
         // At step 3
+        
+        // WEDDING PACKAGE LOCATION VALIDATION
+        if (selectedWeddingPackage) {
+          // Check if venue type is selected
+          if (!weddingVenueType) {
+            toast.error('Please select whether wedding will be at salon or venue');
+            return;
+          }
+          
+          // If venue selected, validate address
+          if (weddingVenueType === 'venue') {
+            if (!serviceLocation || !serviceLocation.address || !serviceLocation.city) {
+              toast.error('Please provide the wedding venue address');
+              return;
+            }
+          }
+          
+          // Proceed to Step 4 (time slot selection)
+          setCurrentStep(4);
+          return;
+        }
+        
         if (bookingMode === 'home' && !selectedWeddingPackage) {
           // For home services (non-wedding), step 3 is location selection
           // Validate location and proceed to step 4 (time slot)
-          if (!homeServiceLocation) {
+          if (!serviceLocation) {
             console.log("Blocking next step: Home mode without location");
             toast.error("Please select a location for home service");
             setShowLocationModal(true);
@@ -903,7 +941,7 @@ function BookingPageContent() {
               selectedDate: selectedDate.toISOString(),
               selectedTime,
               salonId,
-              homeServiceLocation
+              serviceLocation
             };
             sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
             router.push(`/client-login?redirect=/book/${salonId}`);
@@ -937,7 +975,7 @@ function BookingPageContent() {
               selectedDate: selectedDate.toISOString(),
               selectedTime,
               salonId,
-              homeServiceLocation
+              serviceLocation
             };
             sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
             router.push(`/client-login?redirect=/book/${salonId}`);
@@ -952,7 +990,7 @@ function BookingPageContent() {
 
       // Default fallback: For any unhandled case at steps 3 or higher
       // Only require location if we are in 'home' mode
-      if (bookingMode === 'home' && !homeServiceLocation) {
+      if (bookingMode === 'home' && !serviceLocation) {
         console.log("Blocking next step: Home mode without location");
         toast.error("Please select a location for home service");
         setShowLocationModal(true); // Force show location modal
@@ -975,7 +1013,7 @@ function BookingPageContent() {
           selectedDate: selectedDate.toISOString(),
           selectedTime,
           salonId,
-          homeServiceLocation
+          serviceLocation
         };
         sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
         router.push(`/client-login?redirect=/book/${salonId}`);
@@ -986,9 +1024,13 @@ function BookingPageContent() {
 
   const handlePrevStep = () => {
     if (currentStep > 1) {
-      // For wedding packages, skip step 2 (staff selection) when going back from step 3
+      // Reset venue type when going back to package selection from location step
       if (selectedWeddingPackage && currentStep === 3) {
+        setWeddingVenueType(null);
         setCurrentStep(1);
+      } else if (selectedWeddingPackage && currentStep === 4) {
+        // Going back from time slot to location for wedding packages
+        setCurrentStep(3);
       } else {
         setCurrentStep(currentStep - 1);
       }
@@ -1018,7 +1060,7 @@ function BookingPageContent() {
             setSelectedStaff(bookingData.selectedStaff);
             setSelectedDate(new Date(bookingData.selectedDate));
             setSelectedTime(bookingData.selectedTime);
-            setHomeServiceLocation(bookingData.homeServiceLocation || null);
+            setServiceLocation(bookingData.serviceLocation || null);
             // Clear the pending booking data
             sessionStorage.removeItem('pendingBooking');
             // Set current step to confirmation
@@ -1043,11 +1085,11 @@ function BookingPageContent() {
 
     const requiresLocation = bookingMode === 'home';
 
-    if (requiresLocation && currentStep === 3 && !homeServiceLocation) {
+    if (requiresLocation && currentStep === 3 && !serviceLocation) {
       setShowLocationModal(true);
     }
     */
-  }, [selectedServices, currentStep, homeServiceLocation, bookingMode, selectedWeddingPackage]);
+  }, [selectedServices, currentStep, serviceLocation, bookingMode, selectedWeddingPackage]);
 
   // Ensure service-staff assignments are properly initialized when selectedServices change
   useEffect(() => {
@@ -1236,7 +1278,7 @@ function BookingPageContent() {
         selectedDate,
         selectedTime,
         bookingMode,
-        homeServiceLocation,
+        serviceLocation,
         paymentMethod
       };
       sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
@@ -1294,19 +1336,19 @@ function BookingPageContent() {
             Number(service.price || (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice) / (selectedWeddingPackage.services?.length || 1))
         })),
         isMultiService: true,
-        isHomeService: bookingMode === 'home' && !!homeServiceLocation,
+        isHomeService: bookingMode === 'home' && !!serviceLocation,
         isWeddingService: true,
         weddingPackageId: selectedWeddingPackage.id || selectedWeddingPackage._id,
         weddingPackageMode: weddingPackageMode,
-        ...(bookingMode === 'home' && homeServiceLocation ? {
+        ...(bookingMode === 'home' && serviceLocation ? {
           homeServiceLocation: {
-            address: homeServiceLocation.address,
-            city: homeServiceLocation.city || '',
-            state: homeServiceLocation.state || '',
-            pincode: homeServiceLocation.pincode || '',
-            landmark: homeServiceLocation.landmark || '',
-            lat: homeServiceLocation.coordinates?.lat || 0,
-            lng: homeServiceLocation.coordinates?.lng || 0
+            address: serviceLocation.address,
+            city: serviceLocation.city || '',
+            state: serviceLocation.state || '',
+            pincode: serviceLocation.pincode || '',
+            landmark: serviceLocation.landmark || '',
+            lat: serviceLocation.coordinates?.lat || 0,
+            lng: serviceLocation.coordinates?.lng || 0
           }
         } : {}),
         bufferBefore: 0,
@@ -1355,7 +1397,7 @@ function BookingPageContent() {
     console.log('Service Staff Assignments:', serviceStaffAssignments);
     console.log('Selected Time:', selectedTime);
     console.log('Selected Wedding Package:', selectedWeddingPackage);
-    console.log('Home Service Location:', homeServiceLocation);
+    console.log('Service Location:', serviceLocation);
     console.log('Payment Method:', paymentMethod);
     console.log('Is Authenticated:', isAuthenticated);
 
@@ -1379,7 +1421,7 @@ function BookingPageContent() {
         selectedStaff,
         selectedDate,
         selectedTime,
-        homeServiceLocation
+        serviceLocation
       };
       sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
 
@@ -1459,7 +1501,7 @@ function BookingPageContent() {
     const endTime = calculateEndTime(selectedTime, totalDuration);
 
     // Check if any selected service is a home service or if wedding package is for wedding venue
-    const isHomeService = (bookingMode === 'home' || !!selectedWeddingPackage) && !!homeServiceLocation;
+    const isHomeService = (bookingMode === 'home' || !!selectedWeddingPackage) && !!serviceLocation;
 
     // Check if this is a wedding service (either wedding package or wedding service)
     const isWeddingService = !!selectedWeddingPackage || selectedServices.some(service =>
@@ -1467,12 +1509,12 @@ function BookingPageContent() {
     );
 
     // Log home service location data
-    console.log("Home service location data:", {
+    console.log("Service location data:", {
       isHomeService,
-      homeServiceLocation,
+      serviceLocation,
       locationForm,
-      hasLocationData: !!homeServiceLocation,
-      locationData: homeServiceLocation
+      hasLocationData: !!serviceLocation,
+      locationData: serviceLocation
     });
 
     // Update the appointment data creation to properly set service type flags
@@ -1480,11 +1522,11 @@ function BookingPageContent() {
     // DEBUG: Log home service detection and location data
     console.log("=== HOME SERVICE DEBUG INFO ===");
     console.log("isHomeService:", isHomeService);
-    console.log("homeServiceLocation:", homeServiceLocation);
-    console.log("homeServiceLocation type:", typeof homeServiceLocation);
-    if (homeServiceLocation) {
-      console.log("homeServiceLocation keys:", Object.keys(homeServiceLocation));
-      console.log("homeServiceLocation values:", homeServiceLocation);
+    console.log("serviceLocation:", serviceLocation);
+    console.log("serviceLocation type:", typeof serviceLocation);
+    if (serviceLocation) {
+      console.log("serviceLocation keys:", Object.keys(serviceLocation));
+      console.log("serviceLocation values:", serviceLocation);
     }
     console.log("===============================");
 
@@ -1619,15 +1661,15 @@ function BookingPageContent() {
       isHomeService: isHomeService,
       isWeddingService: isWeddingService,
       // Add home service location if it's a home service - ensure proper structure
-      ...(isHomeService && homeServiceLocation ? {
-        homeServiceLocation: {
-          address: homeServiceLocation.address || locationForm.address || '',
-          city: homeServiceLocation.city || locationForm.city || '',
-          state: homeServiceLocation.state || locationForm.state || '',
-          pincode: homeServiceLocation.pincode || locationForm.pincode || '',
-          landmark: homeServiceLocation.landmark || locationForm.landmark || '',
-          lat: homeServiceLocation.coordinates?.lat || homeServiceLocation.lat || Number(locationForm.lat) || 0,
-          lng: homeServiceLocation.coordinates?.lng || homeServiceLocation.lng || Number(locationForm.lng) || 0
+      ...(isHomeService && serviceLocation ? {
+        serviceLocation: {
+          address: serviceLocation.address || locationForm.address || '',
+          city: serviceLocation.city || locationForm.city || '',
+          state: serviceLocation.state || locationForm.state || '',
+          pincode: serviceLocation.pincode || locationForm.pincode || '',
+          landmark: serviceLocation.landmark || locationForm.landmark || '',
+          lat: serviceLocation.coordinates?.lat || serviceLocation.lat || Number(locationForm.lat) || 0,
+          lng: serviceLocation.coordinates?.lng || serviceLocation.lng || Number(locationForm.lng) || 0
         }
       } : {}),
       // Add travel time fields with default values if not already present
@@ -1644,7 +1686,7 @@ function BookingPageContent() {
     console.log("serviceItems count:", appointmentData.serviceItems?.length);
     console.log("serviceItems:", appointmentData.serviceItems);
     console.log("isHomeService flag:", appointmentData.isHomeService);
-    console.log("homeServiceLocation in data:", appointmentData.homeServiceLocation);
+    console.log("serviceLocation in data:", appointmentData.serviceLocation);
     console.log("================================");
     try {
       // Determine if this is a home service based on booking mode and location availability
@@ -1654,10 +1696,10 @@ function BookingPageContent() {
       console.log("=== FINAL BOOKING DECISION ===");
       console.log("Booking Mode:", bookingMode);
       console.log("Payment Method:", paymentMethod);
-      console.log("Home Service Location exists:", !!homeServiceLocation);
+      console.log("Home Service Location exists:", !!serviceLocation);
       console.log("FINAL isHomeService:", finalIsHomeService);
       console.log("==============================");
-      console.log("Has Location:", !!homeServiceLocation);
+      console.log("Has Location:", !!serviceLocation);
       console.log("Computed isHomeService:", finalIsHomeService);
       console.log("==============================");
 
@@ -1670,7 +1712,7 @@ function BookingPageContent() {
           date: selectedDate,
           startTime: selectedTime,
           endTime: endTime,
-          location: finalIsHomeService ? homeServiceLocation : null,
+          location: finalIsHomeService ? serviceLocation : null,
         });
 
         let lockId = slotLockToken;
@@ -1684,7 +1726,7 @@ function BookingPageContent() {
               date: selectedDate,
               startTime: selectedTime,
               endTime: endTime,
-              location: finalIsHomeService ? homeServiceLocation : null,
+              location: finalIsHomeService ? serviceLocation : null,
               teamMembers: [], // Will be populated by the backend
               totalAmount: appointmentData.totalAmount,
               depositAmount: (selectedWeddingPackage as any).depositAmount || 0
@@ -1726,9 +1768,10 @@ function BookingPageContent() {
               date: selectedDate,
               startTime: selectedTime,
               endTime: endTime,
-              location: finalIsHomeService ? homeServiceLocation : null,
+              location: weddingVenueType === 'venue' ? serviceLocation : null,
               totalAmount: appointmentData.totalAmount,
             },
+            weddingVenueType: weddingVenueType,
             clientName: `${user?.firstName} ${user?.lastName}`,
             customerDetails: {
               userId: user?._id || user?.id,
@@ -1749,7 +1792,7 @@ function BookingPageContent() {
         if (confirmResult.success) {
           toast.success("Wedding package booking confirmed!");
           setIsConfirmationModalOpen(false);
-          await persistHomeServiceAddress(finalIsHomeService ? homeServiceLocation : null);
+          await persistServiceLocation(weddingVenueType === 'venue' ? serviceLocation : null);
           router.push('/profile/appointments');
         } else {
           throw new Error(confirmResult.message || "Failed to confirm booking");
@@ -1777,14 +1820,14 @@ function BookingPageContent() {
             staffName: staffName,
             isHomeService: finalIsHomeService,
             isWeddingService: isWeddingService,
-            location: finalIsHomeService && homeServiceLocation ? {
-              address: homeServiceLocation.address || locationForm.address || '',
-              city: homeServiceLocation.city || locationForm.city || '',
-              state: homeServiceLocation.state || locationForm.state || '',
-              pincode: homeServiceLocation.pincode || locationForm.pincode || '',
-              landmark: homeServiceLocation.landmark || locationForm.landmark || '',
-              lat: Number(homeServiceLocation.coordinates?.lat || homeServiceLocation.lat || locationForm.lat || 0),
-              lng: Number(homeServiceLocation.coordinates?.lng || homeServiceLocation.lng || locationForm.lng || 0)
+            location: finalIsHomeService && serviceLocation ? {
+              address: serviceLocation.address || locationForm.address || '',
+              city: serviceLocation.city || locationForm.city || '',
+              state: serviceLocation.state || locationForm.state || '',
+              pincode: serviceLocation.pincode || locationForm.pincode || '',
+              landmark: serviceLocation.landmark || locationForm.landmark || '',
+              lat: Number(serviceLocation.coordinates?.lat || serviceLocation.lat || locationForm.lat || 0),
+              lng: Number(serviceLocation.coordinates?.lng || serviceLocation.lng || locationForm.lng || 0)
             } : null,
             duration: totalDuration,
             amount: appointmentData.amount,
@@ -1830,7 +1873,7 @@ function BookingPageContent() {
           toast.success("Booking confirmed!");
           setIsConfirmationModalOpen(false);
           setIsPaymentModalOpen(false);
-          await persistHomeServiceAddress(finalIsHomeService ? homeServiceLocation : null);
+          await persistServiceLocation(finalIsHomeService ? serviceLocation : null);
           router.push('/profile/appointments');
         } else {
           throw new Error("Failed to acquire slot lock or session expired.");
@@ -1868,7 +1911,7 @@ function BookingPageContent() {
 
     // If it's a home service, we need to go through the slot-lock process first
     // STRICTER CHECK: Must have mode=home AND a valid location
-    if (isHomeService && selectedTime && homeServiceLocation) {
+    if (isHomeService && selectedTime && serviceLocation) {
       console.log("Processing home service booking through slot-lock process");
 
       // Get the first service as the primary service
@@ -1902,14 +1945,14 @@ function BookingPageContent() {
           staffName: selectedStaff?.name || "Any Professional",
           isHomeService: true,
           isWeddingService: isWeddingService,
-          location: homeServiceLocation ? {
-            address: homeServiceLocation.address,
-            city: homeServiceLocation.city,
-            state: homeServiceLocation.state,
-            pincode: homeServiceLocation.pincode,
-            landmark: homeServiceLocation.landmark || '',
-            lat: Number(homeServiceLocation.coordinates?.lat || homeServiceLocation.lat || 0),
-            lng: Number(homeServiceLocation.coordinates?.lng || homeServiceLocation.lng || 0)
+          location: serviceLocation ? {
+            address: serviceLocation.address,
+            city: serviceLocation.city,
+            state: serviceLocation.state,
+            pincode: serviceLocation.pincode,
+            landmark: serviceLocation.landmark || '',
+            lat: Number(serviceLocation.coordinates?.lat || serviceLocation.lat || 0),
+            lng: Number(serviceLocation.coordinates?.lng || serviceLocation.lng || 0)
           } : null,
           duration: convertDurationToMinutes(primaryService.duration),
           amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
@@ -1997,7 +2040,7 @@ function BookingPageContent() {
       console.log("Processing regular appointment (step check passed or fallback)");
 
       // FALLBACK LOG: If bookingMode is home but we are here, it means location was missing
-      if (bookingMode === 'home' && !homeServiceLocation) {
+      if (bookingMode === 'home' && !serviceLocation) {
         console.warn("Booking Mode is Home but no location found. Falling back to Salon booking.");
         // Optional: toast.warning("Missing home location details. Proceeding as salon booking.");
       }
@@ -2339,7 +2382,7 @@ function BookingPageContent() {
           // Update the appointment data creation to properly set service type flags
           // STRICT FIX: Only set isHomeService to true if the user explicitly chose 'home' mode AND provided location
           // This serves as the final safety net against phantom home bookings
-          const isHomeService = bookingMode === 'home' && !!homeServiceLocation;
+          const isHomeService = bookingMode === 'home' && !!serviceLocation;
 
           // Check if any selected service is a wedding service
           const isWeddingService = selectedServices.some(service =>
@@ -2379,24 +2422,24 @@ function BookingPageContent() {
             isWeddingService: isWeddingService,
             // Add home service location if applicable
             // CRITICAL: Send as both 'homeServiceLocation' and 'location' to ensure backend compatibility
-            ...(isHomeService && homeServiceLocation && {
+            ...(isHomeService && serviceLocation && {
               homeServiceLocation: {
-                address: homeServiceLocation.address,
-                city: homeServiceLocation.city,
-                state: homeServiceLocation.state,
-                pincode: homeServiceLocation.pincode,
-                landmark: homeServiceLocation.landmark || '',
-                lat: Number(homeServiceLocation.lat),
-                lng: Number(homeServiceLocation.lng)
+                address: serviceLocation.address,
+                city: serviceLocation.city,
+                state: serviceLocation.state,
+                pincode: serviceLocation.pincode,
+                landmark: serviceLocation.landmark || '',
+                lat: Number(serviceLocation.lat),
+                lng: Number(serviceLocation.lng)
               },
               location: {
-                address: homeServiceLocation.address,
-                city: homeServiceLocation.city,
-                state: homeServiceLocation.state,
-                pincode: homeServiceLocation.pincode,
-                landmark: homeServiceLocation.landmark || '',
-                lat: Number(homeServiceLocation.lat),
-                lng: Number(homeServiceLocation.lng)
+                address: serviceLocation.address,
+                city: serviceLocation.city,
+                state: serviceLocation.state,
+                pincode: serviceLocation.pincode,
+                landmark: serviceLocation.landmark || '',
+                lat: Number(serviceLocation.lat),
+                lng: Number(serviceLocation.lng)
               }
             }),
             // Add travel time fields -- Pass null/undefined to let backend calculate if not available
@@ -2422,7 +2465,7 @@ function BookingPageContent() {
               duration: si.duration
             })),
             isHomeService: appointmentData.isHomeService
-            // homeServiceLocation is added conditionally to appointmentData but not logged here due to type constraints
+            // serviceLocation is added conditionally to appointmentData but not logged here due to type constraints
           });
           console.log("========================================\n");
 
@@ -2935,19 +2978,24 @@ function BookingPageContent() {
         case 3:
           console.log('Rendering Step3 - Wedding Package:', selectedWeddingPackage, 'isMultiService:', isMultiService, 'bookingMode:', bookingMode);
 
-          // For home services (non-wedding), show location selection at step 3
-          if (bookingMode === 'home' && !selectedWeddingPackage) {
+          // For home services (non-wedding) OR wedding packages, show location selection at step 3
+          if ((bookingMode === 'home' && !selectedWeddingPackage) || selectedWeddingPackage) {
             return (
               <Step3_LocationSelection
                 currentStep={currentStep}
                 setCurrentStep={setCurrentStep}
-                homeServiceLocation={homeServiceLocation}
+                serviceLocation={serviceLocation}
                 onLocationConfirm={(location: HomeServiceLocation) => {
-                  setHomeServiceLocation(location);
+                  console.log('[page.tsx] Location confirmed:', location);
+                  console.log('[page.tsx] Current weddingVenueType:', weddingVenueType);
+                  setServiceLocation(location);
                   // Don't auto-advance - let user review and use summary button
                 }}
                 user={user}
                 isAuthenticated={isAuthenticated}
+                selectedWeddingPackage={selectedWeddingPackage}
+                weddingVenueType={weddingVenueType}
+                onVenueTypeChange={setWeddingVenueType}
               />
             );
           }
@@ -2972,20 +3020,21 @@ function BookingPageContent() {
 
           if (selectedWeddingPackage) {
             // Wedding package
-            const packageServices = weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services;
-            totalDuration = selectedWeddingPackage.duration || packageServices.reduce((total, service: any) => {
+            const weddingPkg = selectedWeddingPackage as any;
+            const packageServices = weddingPackageMode === 'customized' ? customizedPackageServices : weddingPkg.services;
+            totalDuration = weddingPkg.duration || packageServices.reduce((total: number, service: any) => {
               const dur = service.duration || service.serviceDuration || 0;
               const duration = convertDurationToMinutes(dur);
               return total + (duration || 0);
             }, 0);
 
             serviceForTimeSlot = {
-              id: selectedWeddingPackage.id || (selectedWeddingPackage as any)._id || 'wedding-package',
-              name: selectedWeddingPackage.name,
+              id: weddingPkg.id || weddingPkg._id || 'wedding-package',
+              name: weddingPkg.name,
               duration: `${totalDuration} min`,
-              price: (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice).toString(),
+              price: (weddingPkg.discountedPrice || weddingPkg.totalPrice).toString(),
               category: 'Wedding Package',
-              description: selectedWeddingPackage.description
+              description: weddingPkg.description
             } as any;
           } else if (isMultiService) {
             // Multi-service
@@ -3049,7 +3098,7 @@ function BookingPageContent() {
               discountAmount={priceBreakdown?.discountAmount || 0}
               user={user}
               isHomeService={bookingMode === 'home'}
-              homeServiceLocation={homeServiceLocation as any}
+              homeServiceLocation={serviceLocation as any}
               isWeddingService={selectedServices.some(service =>
                 service.weddingService?.available || service.serviceWeddingService?.available
               )}
@@ -3073,7 +3122,7 @@ function BookingPageContent() {
               service={serviceForTimeSlot}
               isWeddingPackage={!!selectedWeddingPackage}
               weddingPackage={selectedWeddingPackage}
-              weddingPackageServices={selectedWeddingPackage ? (weddingPackageMode === 'customized' ? customizedPackageServices : selectedWeddingPackage.services) : undefined}
+              weddingPackageServices={selectedWeddingPackage ? (weddingPackageMode === 'customized' ? customizedPackageServices : (selectedWeddingPackage as any).services) : undefined}
               onLockAcquired={(token, appId) => {
                 setSlotLockToken(token);
                 if (appId) setPendingAppointmentId(appId);
@@ -3085,7 +3134,7 @@ function BookingPageContent() {
               discountAmount={priceBreakdown?.discountAmount || 0}
               user={user}
               isHomeService={bookingMode === 'home'}
-              homeServiceLocation={homeServiceLocation}
+              homeServiceLocation={serviceLocation}
               isWeddingService={selectedServices.some(service =>
                 service.weddingService?.available || service.serviceWeddingService?.available
               )}
@@ -3094,8 +3143,8 @@ function BookingPageContent() {
           break;
 
         case 4:
-          // Step 4: Time Slot for home services OR Location Selection for wedding packages
-          console.log('Rendering Step4 - Wedding Package Location or Home Service Time Slot, bookingMode:', bookingMode);
+          // Step 4: Time Slot selection for home services OR wedding packages
+          console.log('Rendering Step4 - Wedding Package Time Slot or Home Service Time Slot, bookingMode:', bookingMode);
 
           // For home services (non-wedding), show time slot at step 4
           if (bookingMode === 'home' && !selectedWeddingPackage) {
@@ -3176,7 +3225,7 @@ function BookingPageContent() {
                 discountAmount={priceBreakdown?.discountAmount || 0}
                 user={user}
                 isHomeService={true}
-                homeServiceLocation={homeServiceLocation as any}
+                homeServiceLocation={serviceLocation as any}
                 isWeddingService={selectedServices.some(service =>
                   service.weddingService?.available || service.serviceWeddingService?.available
                 )}
@@ -3212,7 +3261,7 @@ function BookingPageContent() {
                 discountAmount={priceBreakdown?.discountAmount || 0}
                 user={user}
                 isHomeService={true}
-                homeServiceLocation={homeServiceLocation}
+                homeServiceLocation={serviceLocation}
                 isWeddingService={selectedServices.some(service =>
                   service.weddingService?.available || service.serviceWeddingService?.available
                 )}
@@ -3220,112 +3269,78 @@ function BookingPageContent() {
             );
           }
 
-          // Wedding package location selection
+          // Wedding package time slot selection
           if (selectedWeddingPackage) {
-            // Wedding package: Always show location selection since weddings are typically at venue
+            // Check if we have working hours data
+            if (!workingHours || workingHours.length === 0) {
+              return (
+                <div className="w-full py-12 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <AlertCircle className="h-8 w-8 text-destructive" />
+                    <p className="text-muted-foreground">Working hours not configured for this salon.</p>
+                    <Button onClick={() => window.location.reload()}>Reload</Button>
+                  </div>
+                </div>
+              );
+            }
+
+            // Prepare wedding package data for time slot
+            const weddingPkg = selectedWeddingPackage as any;
+            const packageServices = weddingPackageMode === 'customized' ? customizedPackageServices : weddingPkg.services;
+            const totalDuration = weddingPkg.duration || packageServices.reduce((total: number, service: any) => {
+              const dur = service.duration || service.serviceDuration || 0;
+              const duration = convertDurationToMinutes(dur);
+              return total + (duration || 0);
+            }, 0);
+
+            const serviceForTimeSlot = {
+              id: weddingPkg.id || weddingPkg._id || 'wedding-package',
+              name: weddingPkg.name,
+              duration: `${totalDuration} min`,
+              price: (weddingPkg.discountedPrice || weddingPkg.totalPrice).toString(),
+              category: 'Wedding Package',
+              description: weddingPkg.description
+            } as any;
+
             return (
-              <div className="w-full space-y-6">
-                {/* Wedding Package Info */}
-                <Card className="border-rose-200 bg-gradient-to-br from-rose-50 to-white">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <MapPin className="h-5 w-5 text-rose-600" />
-                      Select Wedding Location
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="text-sm text-muted-foreground">
-                      Wedding services can be provided at your venue or at our salon. Please select your preferred location.
-                    </div>
-
-                    {/* Location Options */}
-                    <div className="space-y-3">
-                      <Card
-                        className={`cursor-pointer transition-all ${bookingMode === 'salon' ? 'border-rose-500 bg-rose-50 ring-2 ring-rose-200' : 'border-gray-200 hover:border-rose-300'}`}
-                        onClick={() => handleBookingModeChange('salon')}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${bookingMode === 'salon' ? 'border-rose-500' : 'border-gray-300'}`}>
-                              {bookingMode === 'salon' && <div className="h-3 w-3 rounded-full bg-rose-500" />}
-                            </div>
-                            <div>
-                              <div className="font-medium">At Salon</div>
-                              <div className="text-sm text-muted-foreground">Come to our salon</div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      <Card
-                        className={`cursor-pointer transition-all ${bookingMode === 'home' ? 'border-rose-500 bg-rose-50 ring-2 ring-rose-200' : 'border-gray-200 hover:border-rose-300'}`}
-                        onClick={() => handleBookingModeChange('home')}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${bookingMode === 'home' ? 'border-rose-500' : 'border-gray-300'}`}>
-                              {bookingMode === 'home' && <div className="h-3 w-3 rounded-full bg-rose-500" />}
-                            </div>
-                            <div>
-                              <div className="font-medium">Wedding Venue</div>
-                              <div className="text-sm text-muted-foreground">We'll come to your venue</div>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    {/* Location Details for Wedding Venue */}
-                    {bookingMode === 'home' && (
-                      <div className="space-y-4 pt-4 border-t">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">Wedding Venue Location</h3>
-                          {homeServiceLocation && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setShowMapSelector(true)}
-                            >
-                              Change Location
-                            </Button>
-                          )}
-                        </div>
-
-                        {homeServiceLocation ? (
-                          <Card className="bg-green-50 border-green-200">
-                            <CardContent className="p-4">
-                              <div className="flex items-start gap-3">
-                                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                                <div>
-                                  <div className="font-medium text-green-900">Location Selected</div>
-                                  <div className="text-sm text-green-700 mt-1">{homeServiceLocation.address}</div>
-                                  <div className="text-xs text-green-600 mt-2">
-                                    Click "Confirm Booking" button below to proceed
-                                  </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ) : (
-                          <Button
-                            onClick={() => setShowMapSelector(true)}
-                            className="w-full"
-                            variant="outline"
-                          >
-                            <MapPin className="h-4 w-4 mr-2" />
-                            Select Location on Map
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
+              <TimeSlotSelector
+                selectedServices={selectedServices}
+                selectedDate={selectedDate}
+                onSelectDate={setSelectedDate}
+                selectedTime={selectedTime}
+                onSelectTime={setSelectedTime}
+                currentStep={currentStep}
+                setCurrentStep={setCurrentStep}
+                selectedStaff={selectedStaff}
+                onSelectStaff={setSelectedStaff}
+                staff={selectedStaff ? [selectedStaff] : staff}
+                workingHours={workingHours}
+                isLoading={false}
+                error={null}
+                salonId={salonId as string}
+                service={serviceForTimeSlot}
+                isWeddingPackage={true}
+                weddingPackage={selectedWeddingPackage}
+                weddingPackageServices={weddingPackageMode === 'customized' ? customizedPackageServices : (selectedWeddingPackage as any).services}
+                onLockAcquired={(token, appId) => {
+                  setSlotLockToken(token);
+                  if (appId) setPendingAppointmentId(appId);
+                }}
+                platformFee={priceBreakdown?.platformFee}
+                serviceTax={priceBreakdown?.serviceTax}
+                taxRate={priceBreakdown?.taxFeeSettings?.serviceTax}
+                couponCode={appliedOffer?.code || offerCode}
+                discountAmount={priceBreakdown?.discountAmount || 0}
+                user={user}
+                isHomeService={weddingVenueType === 'venue'}
+                homeServiceLocation={weddingVenueType === 'venue' ? serviceLocation : null}
+                isWeddingService={true}
+              />
             );
           }
 
-          // Regular service location selection (existing logic would go here)
-          return <div className="w-full py-12 text-center">Location selection for regular services</div>;
+          // Fallback
+          return <div className="w-full py-12 text-center">Step 4 content</div>;
 
         default:
           console.log('Rendering default case - step not found');
@@ -3576,7 +3591,8 @@ function BookingPageContent() {
               onRemoveAddon={handleRemoveAddon}
               couponCode={appliedOffer?.code || offerCode}
               isHomeService={bookingMode === 'home'}
-              homeServiceLocation={homeServiceLocation}
+              serviceLocation={serviceLocation}
+              weddingVenueType={weddingVenueType}
             />
           </div>
         </aside>
@@ -3601,7 +3617,8 @@ function BookingPageContent() {
           onRemoveAddon={handleRemoveAddon}
           couponCode={appliedOffer?.code || offerCode}
           isHomeService={bookingMode === 'home'}
-          homeServiceLocation={homeServiceLocation}
+          serviceLocation={serviceLocation}
+          weddingVenueType={weddingVenueType}
         />
       </div>
 
@@ -4081,9 +4098,9 @@ function BookingPageContent() {
                       <MapPin className="h-5 w-5 text-primary" />
                     </div>
                     <div>
-                      <div className="font-semibold text-sm">{homeServiceLocation?.address || salonInfo?.address || 'Salon Address'}</div>
+                      <div className="font-semibold text-sm">{serviceLocation?.address || salonInfo?.address || 'Salon Address'}</div>
                       <div className="text-muted-foreground text-xs mt-1">
-                        {homeServiceLocation ? 'Home Service Location' : 'Appointment Location'}
+                        {serviceLocation ? 'Home Service Location' : 'Appointment Location'}
                       </div>
                     </div>
                   </div>
@@ -4675,7 +4692,7 @@ function BookingPageContent() {
                 // Fetch address from coordinates
                 fetchAddressDetails(lat, lng);
 
-                setHomeServiceLocation({
+                setServiceLocation({
                   address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`, // Temporary, will be updated by fetchAddressDetails
                   coordinates: { lat, lng }
                 });
@@ -4686,8 +4703,8 @@ function BookingPageContent() {
                   lng
                 }));
               }}
-              initialLat={homeServiceLocation?.coordinates?.lat || locationForm.lat}
-              initialLng={homeServiceLocation?.coordinates?.lng || locationForm.lng}
+              initialLat={serviceLocation?.coordinates?.lat || locationForm.lat}
+              initialLng={serviceLocation?.coordinates?.lng || locationForm.lng}
             />
           </div>
           <DialogFooter>
@@ -4727,8 +4744,8 @@ function BookingPageContent() {
                   }
                 };
 
-                console.log('Setting homeServiceLocation to:', newLocation);
-                setHomeServiceLocation(newLocation);
+                console.log('Setting serviceLocation to:', newLocation);
+                setServiceLocation(newLocation);
 
                 // Close map modal
                 setShowMapSelector(false);

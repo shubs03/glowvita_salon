@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
-import { MapPin, Loader2, ChevronRight, Home, Edit2, Info } from 'lucide-react';
+import { MapPin, Loader2, ChevronRight, Home, Edit2, Info, CheckCircle, Trash2 } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 import { toast } from 'sonner';
 import { GoogleMapSelector } from '@/components/GoogleMapSelector';
@@ -51,25 +51,41 @@ interface HomeServiceLocation {
 interface Step3LocationSelectionProps {
   currentStep: number;
   setCurrentStep: (step: number) => void;
-  homeServiceLocation: HomeServiceLocation | null;
+  serviceLocation: HomeServiceLocation | null;
   onLocationConfirm: (location: HomeServiceLocation) => void;
   user?: any;
   isAuthenticated: boolean;
+  selectedWeddingPackage?: any | null;
+  weddingVenueType?: 'salon' | 'venue' | null;
+  onVenueTypeChange?: (type: 'salon' | 'venue') => void;
+  onRemoveAddress?: (addressId: string) => void;
 }
 
 export function Step3_LocationSelection({
   currentStep,
   setCurrentStep,
-  homeServiceLocation,
+  serviceLocation,
   onLocationConfirm,
   user,
-  isAuthenticated
+  isAuthenticated,
+  selectedWeddingPackage,
+  weddingVenueType,
+  onVenueTypeChange,
+  onRemoveAddress
 }: Step3LocationSelectionProps) {
   const [showMapSelector, setShowMapSelector] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [registeredAddress, setRegisteredAddress] = useState<HomeServiceLocation | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const lastSavedLocationKeyRef = useRef<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const hasInitiallyLoadedAddress = useRef(false); // Track if we've loaded address on mount
+  const [searchQuery, setSearchQuery] = useState('');
+  const [deleteConfirmModal, setDeleteConfirmModal] = useState<{ show: boolean; addressId: string | null; addressLabel: string }>({
+    show: false,
+    addressId: null,
+    addressLabel: ''
+  });
   const [locationForm, setLocationForm] = useState<HomeServiceLocation>({
     address: '',
     city: '',
@@ -106,7 +122,9 @@ export function Step3_LocationSelection({
         }
       };
       // Silently enable the button without toast
+      console.log('[Step3_Location] Form complete, confirming location:', locationData);
       onLocationConfirm(locationData);
+      hasInitiallyLoadedAddress.current = true; // Mark as loaded to prevent future auto-selects
 
       const existingMatch = savedAddresses.some((address) => {
         const addrLat = Number(address.location?.lat ?? address.lat ?? 0);
@@ -131,10 +149,11 @@ export function Step3_LocationSelection({
     showMapSelector
   ]);
 
-  // Fetch user's registered address and saved addresses
+  // Fetch user's registered address and saved addresses (skip for wedding packages)
   useEffect(() => {
     const fetchUserAddress = async () => {
-      if (!isAuthenticated) return;
+      // Skip fetching addresses for wedding packages - they use map selection only
+      if (!isAuthenticated || selectedWeddingPackage) return;
 
       setIsLoading(true);
       try {
@@ -156,8 +175,16 @@ export function Step3_LocationSelection({
             };
             setRegisteredAddress(addressData);
             setLocationForm(addressData);
-            // Enable button with registered address by default
-            onLocationConfirm(addressData);
+            
+            // Only auto-select on initial load if no address is already selected
+            // This prevents overwriting user's manual selection
+            if (!hasInitiallyLoadedAddress.current && !serviceLocation) {
+              console.log('[Step3_Location] Auto-selecting registered address on initial load');
+              onLocationConfirm(addressData);
+              hasInitiallyLoadedAddress.current = true;
+            } else {
+              console.log('[Step3_Location] Skipping auto-select - address already loaded or selected');
+            }
           }
           // Set saved addresses from API
           if (data.savedAddresses && data.savedAddresses.length > 0) {
@@ -172,7 +199,39 @@ export function Step3_LocationSelection({
     };
 
     fetchUserAddress();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, selectedWeddingPackage]);
+
+  // Initialize Google Places Autocomplete
+  useEffect(() => {
+    if (!searchInputRef.current || !window.google) return;
+
+    const autocomplete = new window.google.maps.places.Autocomplete(searchInputRef.current, {
+      types: ['address'],
+      componentRestrictions: { country: 'in' }
+    });
+
+    autocomplete.addListener('place_changed', () => {
+      const place = autocomplete.getPlace();
+      
+      if (!place.geometry || !place.geometry.location) {
+        toast.error('No location details available for this place');
+        return;
+      }
+
+      const lat = place.geometry.location.lat();
+      const lng = place.geometry.location.lng();
+      
+      // Update location form and trigger reverse geocoding
+      handleMapLocationSelect(lat, lng);
+      setSearchQuery(place.formatted_address || '');
+      
+      toast.success('Location found!');
+    });
+
+    return () => {
+      window.google?.maps.event?.clearInstanceListeners(autocomplete);
+    };
+  }, [searchInputRef.current, showMapSelector]);
 
   // Handle location form field changes
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -246,7 +305,9 @@ export function Step3_LocationSelection({
   // Handle using registered address
   const handleUseRegisteredAddress = () => {
     if (registeredAddress) {
+      console.log('[Step3_Location] Using registered address:', registeredAddress);
       onLocationConfirm(registeredAddress);
+      hasInitiallyLoadedAddress.current = true; // Mark to prevent auto-overwrite
       toast.success('Address selected!');
     }
   };
@@ -263,7 +324,9 @@ export function Step3_LocationSelection({
       lng: savedAddress.location?.lng,
       coordinates: savedAddress.location
     };
+    console.log('[Step3_Location] Using saved address:', locationData);
     onLocationConfirm(locationData);
+    hasInitiallyLoadedAddress.current = true; // Mark to prevent auto-overwrite
     toast.success(`${savedAddress.label} address selected!`);
   };
 
@@ -284,7 +347,8 @@ export function Step3_LocationSelection({
 
   // Save new address to user profile (called when proceeding to next step)
   const saveAddressToProfile = async (locationData: HomeServiceLocation) => {
-    if (isAuthenticated) {
+    // Don't save addresses for wedding packages - they're one-time events
+    if (isAuthenticated && !selectedWeddingPackage) {
       try {
         const response = await fetch('/api/client/addresses', {
           method: 'POST',
@@ -328,6 +392,75 @@ export function Step3_LocationSelection({
     }
   };
 
+  // Helper function to check if an address is currently selected
+  const isAddressSelected = (address: HomeServiceLocation) => {
+    if (!serviceLocation) return false;
+    // Check if coordinates match
+    if (address.lat && address.lng && serviceLocation.lat && serviceLocation.lng) {
+      return Math.abs(address.lat - serviceLocation.lat) < 0.0001 && 
+             Math.abs(address.lng - serviceLocation.lng) < 0.0001;
+    }
+    // Fallback to address string comparison
+    return address.address === serviceLocation.address && 
+           address.city === serviceLocation.city && 
+           address.pincode === serviceLocation.pincode;
+  };
+
+  // Handle opening delete confirmation modal
+  const handleRemoveAddress = (addressId: string, addressLabel: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent triggering the card click
+    setDeleteConfirmModal({
+      show: true,
+      addressId,
+      addressLabel
+    });
+  };
+
+  // Handle confirming address deletion
+  const confirmDeleteAddress = async () => {
+    if (!isAuthenticated || !deleteConfirmModal.addressId) {
+      toast.error('Please login to remove addresses');
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/client/addresses/${deleteConfirmModal.addressId}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setSavedAddresses(result.savedAddresses || []);
+        toast.success('Address removed successfully');
+        
+        // If the removed address was selected, clear the selection
+        if (serviceLocation) {
+          const removedAddr = savedAddresses.find(a => (a as any)._id === deleteConfirmModal.addressId);
+          if (removedAddr && isAddressSelected({
+            address: removedAddr.address,
+            city: removedAddr.city,
+            state: removedAddr.state,
+            pincode: removedAddr.pincode,
+            landmark: removedAddr.landmark,
+            lat: removedAddr.location?.lat,
+            lng: removedAddr.location?.lng,
+            coordinates: removedAddr.location
+          })) {
+            onLocationConfirm(null as any);
+          }
+        }
+      } else {
+        toast.error('Failed to remove address');
+      }
+    } catch (error) {
+      console.error('Error removing address:', error);
+      toast.error('Error removing address');
+    } finally {
+      setDeleteConfirmModal({ show: false, addressId: null, addressLabel: '' });
+    }
+  };
+
   return (
     <div className="w-full">
       <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
@@ -337,10 +470,144 @@ export function Step3_LocationSelection({
           <div className="p-3 bg-primary/10 rounded-full text-primary">
             <MapPin className="h-6 w-6" />
           </div>
-          <h2 className="text-3xl font-bold font-headline">Select Service Location</h2>
+          <h2 className="text-3xl font-bold font-headline">
+            {selectedWeddingPackage ? 'Wedding Location' : 'Select Service Location'}
+          </h2>
         </div>
-        <p className="text-muted-foreground">Choose where you'd like the service to be provided</p>
+        <p className="text-muted-foreground">
+          {selectedWeddingPackage 
+            ? 'Choose where the wedding service will take place'
+            : "Choose where you'd like the service to be provided"}
+        </p>
       </div>
+
+      {/* Wedding Package Venue Selection */}
+      {selectedWeddingPackage && (
+        <Card className="mb-6 border-2 border-primary/20 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
+              Where will the wedding service take place?
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Option 1: At Salon */}
+            <div
+              onClick={() => {
+                onVenueTypeChange?.('salon');
+              }}
+              className={cn(
+                "p-4 border-2 rounded-lg cursor-pointer transition-all",
+                weddingVenueType === 'salon'
+                  ? "border-primary bg-primary/5"
+                  : "border-gray-200 hover:border-primary/50"
+              )}
+            >
+              <div className="flex items-start gap-3">
+                <div className={cn(
+                  "w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5",
+                  weddingVenueType === 'salon' ? "border-primary" : "border-gray-300"
+                )}>
+                  {weddingVenueType === 'salon' && (
+                    <div className="w-3 h-3 rounded-full bg-primary" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base mb-1">At Salon</h3>
+                  <p className="text-sm text-muted-foreground">
+                    The wedding service will be provided at the salon premises
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Option 2: At Venue */}
+            <div
+              onClick={() => {
+                onVenueTypeChange?.('venue');
+              }}
+              className={cn(
+                "p-4 border-2 rounded-lg cursor-pointer transition-all",
+                weddingVenueType === 'venue'
+                  ? "border-primary bg-primary/5"
+                  : "border-gray-200 hover:border-primary/50"
+              )}
+            >
+              <div className="flex items-start gap-3">
+                <div className={cn(
+                  "w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5",
+                  weddingVenueType === 'venue' ? "border-primary" : "border-gray-300"
+                )}>
+                  {weddingVenueType === 'venue' && (
+                    <div className="w-3 h-3 rounded-full bg-primary" />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-base mb-1">At Venue</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Provide the venue address where services will be provided
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Show confirmation for "At Salon" selection */}
+      {selectedWeddingPackage && weddingVenueType === 'salon' && (
+        <Card className="border-2 border-primary/20 bg-card mb-6 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
+                <CheckCircle className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-base mb-2">
+                  Salon Location Confirmed
+                </h3>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Your wedding service will take place at the salon. Our team will ensure everything is perfectly set up for your special day.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Click <span className="font-semibold text-foreground">"Select Time Slot"</span> button to continue
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Show confirmation when wedding venue address is selected */}
+      {selectedWeddingPackage && weddingVenueType === 'venue' && serviceLocation && (serviceLocation as any)?.address && (
+        <Card className="border-2 border-primary/20 bg-card mb-6 shadow-sm">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
+                <CheckCircle className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-base mb-3">
+                  Wedding Venue Address Confirmed
+                </h3>
+                <div className="space-y-1 mb-3">
+                  <p className="text-sm font-medium">{(serviceLocation as any).address}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {(serviceLocation as any).city}, {(serviceLocation as any).state} - {(serviceLocation as any).pincode}
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Click <span className="font-semibold text-foreground">"Select Time Slot"</span> button to continue
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Show address collection only for: home service OR wedding at venue */}
+      {(!selectedWeddingPackage || weddingVenueType === 'venue') && (
+        <>
 
       {/* Loading State */}
       {isLoading && (
@@ -350,21 +617,40 @@ export function Step3_LocationSelection({
         </div>
       )}
 
-      {/* Show Registered Address and Saved Addresses */}
-      {!isLoading && !showMapSelector && (registeredAddress || savedAddresses.length > 0) && (
+      {/* Show Registered Address and Saved Addresses (ONLY for non-wedding bookings) */}
+      {!isLoading && !showMapSelector && (registeredAddress || savedAddresses.length > 0) && !selectedWeddingPackage && (
         <div className="space-y-6 mb-6">
           {/* Registered Address */}
           {registeredAddress && (
             <div>
               <h3 className="font-semibold text-lg mb-3">Your Registered Address</h3>
-              <Card className="border-2">
+              <Card className={cn(
+                "border-2 transition-all",
+                isAddressSelected(registeredAddress)
+                  ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md"
+                  : "border-gray-200 hover:border-primary/30"
+              )}>
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
-                    <div className="p-3 bg-primary/10 rounded-lg">
-                      <Home className="h-6 w-6 text-primary" />
+                    <div className={cn(
+                      "p-3 rounded-lg",
+                      isAddressSelected(registeredAddress) ? "bg-primary/10" : "bg-muted"
+                    )}>
+                      {isAddressSelected(registeredAddress) ? (
+                        <CheckCircle className="h-6 w-6 text-primary" />
+                      ) : (
+                        <Home className="h-6 w-6 text-muted-foreground" />
+                      )}
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium mb-2">{registeredAddress.address}</p>
+                      <div className="flex items-center gap-2 mb-2">
+                        <p className="font-medium">{registeredAddress.address}</p>
+                        {isAddressSelected(registeredAddress) && (
+                          <span className="text-xs bg-primary text-primary-foreground px-2.5 py-1 rounded-full font-medium shadow-sm">
+                            Selected
+                          </span>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         {registeredAddress.city}, {registeredAddress.state} - {registeredAddress.pincode}
                       </p>
@@ -377,14 +663,23 @@ export function Step3_LocationSelection({
                   </div>
                   
                   <div className="mt-4">
-                    <Button
-                      size="lg"
-                      className="w-full"
-                      onClick={handleUseRegisteredAddress}
-                    >
-                      Use This Address
-                      <ChevronRight className="h-5 w-5 ml-2" />
-                    </Button>
+                    {isAddressSelected(registeredAddress) ? (
+                      <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-center">
+                        <p className="text-sm font-medium text-primary flex items-center justify-center gap-2">
+                          <CheckCircle className="h-4 w-4" />
+                          This address is selected. Use the summary button to proceed.
+                        </p>
+                      </div>
+                    ) : (
+                      <Button
+                        size="lg"
+                        className="w-full"
+                        onClick={handleUseRegisteredAddress}
+                      >
+                        Use This Address
+                        <ChevronRight className="h-5 w-5 ml-2" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -396,40 +691,75 @@ export function Step3_LocationSelection({
             <div>
               <h3 className="font-semibold text-lg mb-3">Your Saved Addresses</h3>
               <div className="space-y-3">
-                {savedAddresses.map((addr, index) => (
-                  <Card key={index} className="border-2 hover:border-primary/50 transition-colors">
-                    <CardContent className="p-5">
-                      <div className="flex items-start gap-4">
-                        <div className="p-2 bg-secondary/10 rounded-lg">
-                          <MapPin className="h-5 w-5 text-secondary-foreground" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-medium text-sm">{addr.label || 'Address'}</span>
-                            {addr.isPrimary && (
-                              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">Primary</span>
+                {savedAddresses.map((addr, index) => {
+                  const locationData: HomeServiceLocation = {
+                    address: addr.address,
+                    city: addr.city,
+                    state: addr.state,
+                    pincode: addr.pincode,
+                    landmark: addr.landmark || '',
+                    lat: addr.location?.lat,
+                    lng: addr.location?.lng,
+                    coordinates: addr.location
+                  };
+                  const isSelected = isAddressSelected(locationData);
+                  
+                  return (
+                    <Card 
+                      key={index} 
+                      className={cn(
+                        "border-2 transition-all cursor-pointer",
+                        isSelected 
+                          ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md" 
+                          : "border-gray-200 hover:border-primary/30 hover:shadow-sm"
+                      )}
+                      onClick={() => !isSelected && handleUseSavedAddress(addr)}
+                    >
+                      <CardContent className="p-5">
+                        <div className="flex items-start gap-4">
+                          <div className={cn(
+                            "p-2 rounded-lg",
+                            isSelected ? "bg-primary/10" : "bg-muted"
+                          )}>
+                            {isSelected ? (
+                              <CheckCircle className="h-5 w-5 text-primary" />
+                            ) : (
+                              <MapPin className="h-5 w-5 text-muted-foreground" />
                             )}
                           </div>
-                          <p className="text-sm mb-1">{addr.address}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {addr.city}, {addr.state} - {addr.pincode}
-                          </p>
-                          {addr.landmark && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Landmark: {addr.landmark}
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              {isSelected && (
+                                <span className="text-xs bg-primary text-primary-foreground px-2.5 py-1 rounded-full font-medium shadow-sm">
+                                  Selected
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm font-medium mb-1">{addr.address}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {addr.city}, {addr.state} - {addr.pincode}
                             </p>
-                          )}
+                            {addr.landmark && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Landmark: {addr.landmark}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={(e) => handleRemoveAddress((addr as any)._id, addr.address, e)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <Button
-                          size="sm"
-                          onClick={() => handleUseSavedAddress(addr)}
-                        >
-                          Use
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -447,8 +777,8 @@ export function Step3_LocationSelection({
         </div>
       )}
 
-      {/* No Saved Addresses */}
-      {!isLoading && !showMapSelector && !registeredAddress && savedAddresses.length === 0 && (
+      {/* No Saved Addresses (Only for non-wedding bookings) */}
+      {!isLoading && !showMapSelector && !registeredAddress && savedAddresses.length === 0 && !selectedWeddingPackage && (
         <Card className="border-2 border-dashed">
           <CardContent className="p-8 text-center">
             <div className="flex justify-center mb-4">
@@ -471,6 +801,31 @@ export function Step3_LocationSelection({
         </Card>
       )}
 
+      {/* For Wedding Packages: Show map selector button when venue is selected */}
+      {selectedWeddingPackage && weddingVenueType === 'venue' && !showMapSelector && (
+        <Card className="border-2 border-primary/20">
+          <CardContent className="p-8 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="p-4 bg-primary/10 rounded-full">
+                <MapPin className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+            <h3 className="font-semibold text-lg mb-2">Select Wedding Venue Location</h3>
+            <p className="text-muted-foreground mb-6">
+              Choose the exact location where the wedding service will take place
+            </p>
+            <Button
+              size="lg"
+              onClick={handleSelectNewAddress}
+              className="min-w-[250px]"
+            >
+              <MapPin className="h-4 w-4 mr-2" />
+              Select Venue from Map
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Map Selector and Form */}
       {showMapSelector && (
         <div className="space-y-4">
@@ -486,6 +841,24 @@ export function Step3_LocationSelection({
             </Button>
           </div>
 
+          {/* Location Search Bar */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Search Location
+            </label>
+            <div className="relative">
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search for an address or place..."
+                className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            </div>
+          </div>
+
           {/* Google Map */}
           <div className="h-96 border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm">
             <GoogleMapSelector
@@ -496,9 +869,10 @@ export function Step3_LocationSelection({
           </div>
 
           {locationForm.lat && locationForm.lng && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800 flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Location selected: {locationForm.lat.toFixed(4)}, {locationForm.lng.toFixed(4)}
+            <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg text-sm flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-primary" />
+              <span className="font-medium">Location pinned:</span>
+              <span className="text-muted-foreground">{locationForm.lat.toFixed(4)}, {locationForm.lng.toFixed(4)}</span>
             </div>
           )}
 
@@ -589,15 +963,55 @@ export function Step3_LocationSelection({
           </Card>
 
           {/* Info message about using summary button */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-muted border rounded-lg p-4">
             <div className="flex items-start gap-3">
-              <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-800">
-                <p className="font-medium mb-1">Review & Continue</p>
-                <p>Pin your location on the map and review the address details. The <span className="font-semibold">"Select Time Slot"</span> button on the right will be enabled once a valid location is selected.</p>
-              </div>
+              <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                Pin your location on the map and fill in the address details. The <span className="font-semibold text-foreground">"Select Time Slot"</span> button will be enabled once completed.
+              </p>
             </div>
           </div>
+        </div>
+      )}
+      
+      </>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmModal.show && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Trash2 className="h-5 w-5 text-destructive" />
+                Delete Address
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete this address? This action cannot be undone.
+              </p>
+              <div className="p-3 bg-muted rounded-lg">
+                <p className="text-sm font-medium">{deleteConfirmModal.addressLabel}</p>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setDeleteConfirmModal({ show: false, addressId: null, addressLabel: '' })}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={confirmDeleteAddress}
+                >
+                  Delete
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
