@@ -63,13 +63,13 @@ function ClientRegisterForm() {
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
-  
+
   // New state to track confirmed location
   const [confirmedLocation, setConfirmedLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   const handleContinue = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -80,7 +80,7 @@ function ClientRegisterForm() {
     try {
       // Check if email already exists
       const res = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`);
-      
+
       if (res.ok) {
         const data = await res.json();
         if (data.exists) {
@@ -107,7 +107,7 @@ function ClientRegisterForm() {
 
     // Check each required field individually and provide specific error messages
     const missingFields = [];
-    
+
     if (!firstName) missingFields.push('First name');
     if (!lastName) missingFields.push('Last name');
     if (!email) missingFields.push('Email');
@@ -159,17 +159,17 @@ function ClientRegisterForm() {
       const res = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          firstName, 
-          lastName, 
-          email, 
-          mobileNo, 
-          location: confirmedLocation, 
-          state, 
-          city, 
-          pincode, 
-          referralCode, 
-          password 
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          mobileNo,
+          location: confirmedLocation,
+          state,
+          city,
+          pincode,
+          referralCode,
+          password
         }),
       });
 
@@ -187,7 +187,7 @@ function ClientRegisterForm() {
           // If JSON parsing fails, use status text or generic message
           errorMessage = res.statusText || errorMessage;
         }
-        
+
         // If the error is about email already existing, automatically redirect to step 1
         if (errorMessage.includes('already registered') || errorMessage.includes('already exist')) {
           const toastId = toast.error(errorMessage);
@@ -230,10 +230,10 @@ function ClientRegisterForm() {
 
     const scriptId = 'google-maps-native-script';
     const existingScript = document.getElementById(scriptId);
-    
+
     if (existingScript) {
       if (checkGoogleMaps()) return;
-      
+
       const checkInterval = setInterval(() => {
         if (checkGoogleMaps()) {
           clearInterval(checkInterval);
@@ -247,7 +247,7 @@ function ClientRegisterForm() {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,drawing&v=weekly`;
     script.async = true;
     script.defer = true;
-    
+
     (window as any).gm_authFailure = () => {
       console.error("Google Maps API Key Authentication Failure - This usually means the API Key is invalid, has no billing, or is restricted incorrectly.");
       toast.error("Google Maps Authentication Failed. Please check your API key.");
@@ -273,7 +273,7 @@ function ClientRegisterForm() {
         google.maps.event.clearInstanceListeners(map.current);
       }
 
-      const center = location 
+      const center = location
         ? { lat: location.lat, lng: location.lng }
         : { lat: 23.2599, lng: 77.4126 };
 
@@ -346,7 +346,7 @@ function ClientRegisterForm() {
       setSearchResults([]);
       return;
     }
-    
+
     try {
       autocompleteService.current.getPlacePredictions(
         {
@@ -372,16 +372,16 @@ function ClientRegisterForm() {
 
   const fetchAddress = async (location: { lat: number; lng: number }) => {
     if (!geocoder.current) return;
-    
+
     try {
       geocoder.current.geocode({ location }, (results, status) => {
         if (status === 'OK' && results && results.length > 0) {
           const result = results[0];
-          
+
           let state = '';
           let city = '';
           let pincode = '';
-          
+
           result.address_components.forEach((component) => {
             if (component.types.includes('administrative_area_level_1')) {
               state = component.long_name;
@@ -393,7 +393,7 @@ function ClientRegisterForm() {
               pincode = component.long_name;
             }
           });
-          
+
           setState(state || '');
           setCity(city || '');
           setPincode(pincode || '');
@@ -435,20 +435,20 @@ function ClientRegisterForm() {
               pincode = component.long_name;
             }
           });
-          
+
           setState(state || '');
           setCity(city || '');
           setPincode(pincode || '');
-          
+
           if (map.current) {
             map.current.setCenter({ lat, lng });
             map.current.setZoom(15);
           }
-          
+
           if (marker.current) {
             marker.current.setPosition({ lat, lng });
           }
-          
+
           setSearchResults([]);
           setSearchQuery('');
         }
@@ -459,8 +459,8 @@ function ClientRegisterForm() {
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row">
       {/* Back Button */}
-      <button 
-        onClick={() => showRegistrationForm ? setShowRegistrationForm(false) : router.back()} 
+      <button
+        onClick={() => showRegistrationForm ? setShowRegistrationForm(false) : router.back()}
         className="absolute top-4 left-4 z-20 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 shadow-md transition-all duration-200"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -474,6 +474,13 @@ function ClientRegisterForm() {
           {/* Heading - Only show when not on registration form */}
           {!showRegistrationForm && (
             <div className="text-center mb-6">
+              <div className="flex justify-center mb-4">
+                <img
+                  src="/favicon.jpeg"
+                  alt="GlowVita Logo"
+                  className="w-16 h-16 object-contain rounded-full border-4 border-white shadow-lg"
+                />
+              </div>
               <h1 className="text-2xl font-extrabold text-gray-900 md:text-xl">Glowvita Salon for customers</h1>
               <p className="text-gray-600 text-l mt-3 lg:whitespace-nowrap md:whitespace-normal sm:whitespace-normal">Register to access booking and appointment management.</p>
             </div>
@@ -516,16 +523,16 @@ function ClientRegisterForm() {
                 </div>
 
                 {/* Continue with Google Button */}
-                <Button 
+                <Button
                   type="button"
                   className="w-full h-11 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                 >
                   <div className="flex items-center justify-center w-5 h-5">
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
+                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                     </svg>
                   </div>
                   <span>Continue with Google</span>
@@ -546,8 +553,8 @@ function ClientRegisterForm() {
                   <p className="text-sm font-medium text-gray-600">
                     Already have an account?
                   </p>
-                  <Link 
-                    href="/client-login" 
+                  <Link
+                    href="/client-login"
                     className="text-sm font-medium text-blue-600 hover:text-blue-500 block mt-1"
                   >
                     Sign in to manage your appointments.
@@ -775,7 +782,7 @@ function ClientRegisterForm() {
                 </div>
               </div>
             </DialogHeader>
-            
+
             <div className="flex-1 flex flex-col relative overflow-hidden">
               {/* Floating Search Bar with Glassmorphism */}
               <div className="absolute top-6 left-6 right-6 z-[100] max-w-md">
@@ -821,11 +828,11 @@ function ClientRegisterForm() {
 
               {/* Map Container */}
               <div className="flex-1 relative bg-slate-100">
-                <div 
-                  ref={mapContainer} 
+                <div
+                  ref={mapContainer}
                   className="w-full h-full"
                 />
-                
+
                 {authError && (
                   <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6 z-[200]">
                     <div className="bg-white rounded-3xl p-8 shadow-2xl max-w-md text-center border border-red-100">
@@ -836,7 +843,7 @@ function ClientRegisterForm() {
                       <p className="text-slate-500 text-sm mb-6">
                         We're having trouble connecting to Google Maps. Please check your connection or reload the page.
                       </p>
-                      <Button 
+                      <Button
                         onClick={() => window.location.reload()}
                         className="w-full rounded-xl bg-red-600 hover:bg-red-700 h-12 text-lg font-headline"
                       >
@@ -855,7 +862,7 @@ function ClientRegisterForm() {
                   </div>
                 )}
               </div>
-              
+
               {/* Bottom Action Area */}
               <div className="p-6 bg-slate-50 border-t flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -874,8 +881,8 @@ function ClientRegisterForm() {
                   <Button variant="outline" className="flex-1 sm:flex-none rounded-xl" onClick={() => setIsMapOpen(false)}>
                     Cancel
                   </Button>
-                  <Button 
-                    className="flex-1 sm:flex-none rounded-xl px-8" 
+                  <Button
+                    className="flex-1 sm:flex-none rounded-xl px-8"
                     onClick={() => {
                       setConfirmedLocation(location);
                       setIsMapOpen(false);

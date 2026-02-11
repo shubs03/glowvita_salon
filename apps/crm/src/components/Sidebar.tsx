@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
 import { Button } from "@repo/ui/button";
-import { 
+import {
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -39,12 +39,12 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
       Cookies.remove('access_token', { path: '/', domain: window.location.hostname });
       Cookies.remove('token', { path: '/' });
       Cookies.remove('token', { path: '/', domain: window.location.hostname });
-      
+
       // Clear all auth-related data from localStorage
       localStorage.removeItem('crmAuthState');
       localStorage.removeItem('userAuthState');
       localStorage.removeItem('adminAuthState');
-      
+
       // Clear any other possible tokens
       Object.keys(localStorage).forEach(key => {
         if (key.includes('token') || key.includes('auth')) {
@@ -58,7 +58,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
 
       // This action will now trigger the root reducer to reset the entire state
       dispatch(clearCrmAuth());
-      
+
       // Redirect to login page after state is cleared
       router.push('/login');
       // Force a page refresh to ensure all state is cleared
@@ -72,14 +72,14 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
       setShowLogoutModal(false);
     }
   };
-  
+
   if (isLoading) {
     return null; // Or a loading skeleton
   }
 
   const getNavItemsForRole = () => {
     const userPermissions = permissions || [];
-    
+
     switch (role) {
       case 'vendor':
         return vendorNavItems;
@@ -98,42 +98,47 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
 
   const SidebarContent = () => (
     <div className={cn(
-        "bg-background border-r border-border flex flex-col h-full overflow-hidden relative transition-all duration-300",
-        isOpen ? "w-64" : "w-20",
+      "bg-background border-r border-border flex flex-col h-full overflow-hidden relative transition-all duration-300",
+      isOpen ? "w-64" : "w-20",
     )}>
       <div className="flex flex-col flex-grow min-h-0">
         <div className={cn(
           "flex-shrink-0 h-16 border-b border-border flex items-center relative overflow-hidden",
           isOpen ? "px-4 justify-between" : "px-4 justify-center"
         )}>
-            <Link href="/dashboard" className={cn(
-              "group flex items-center font-bold text-base font-headline text-foreground hover:text-primary transition-all duration-300 relative z-10",
-              isOpen ? "gap-3" : "justify-center"
-            )}>
-                {/* <div className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground p-2 rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:scale-110 group-hover:rotate-3 flex-shrink-0">
-                    <LayoutGrid className="h-5 w-5 transition-transform duration-300 group-hover:rotate-12" />
-                </div> */}
-                {isOpen && (
-                  <span className="font-bold tracking-tight text-foreground text-4 transition-all duration-300">
-                    GlowVita
-                  </span>
-                )}
-            </Link>
-            {/* Toggle Button - Always Visible */}
-            <Button
-                variant="ghost"
-                size="icon"
-                className="group relative rounded-md transition-all duration-300 text-muted-foreground hover:text-primary hover:bg-accent flex-shrink-0"
-                onClick={toggleSidebar}
-            >
+          <Link href="/dashboard" className={cn(
+            "group flex items-center font-bold text-base font-headline text-foreground hover:text-primary transition-all duration-300 relative z-10",
+            isOpen ? "gap-3" : "justify-center"
+          )}>
+            <img
+              src="/favicon.jpeg"
+              alt="GlowVita Logo"
+              className={cn(
+                "object-contain rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:scale-110 group-hover:rotate-3 flex-shrink-0 border border-primary/20",
+                "w-[60px] h-[60px]"
+              )}
+            />
+            {isOpen && (
+              <span className="hidden">
+                GlowVita
+              </span>
+            )}
+          </Link>
+          {/* Toggle Button - Always Visible */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="group relative rounded-md transition-all duration-300 text-muted-foreground hover:text-primary hover:bg-accent flex-shrink-0"
+            onClick={toggleSidebar}
+          >
 
-                {isOpen ? (
-                  <ChevronLeft className="h-4 w-4 relative z-10 transition-transform duration-300 group-hover:-translate-x-0.5" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 relative z-10 transition-transform duration-300 group-hover:translate-x-0.5" />
-                )}
-                <span className="sr-only">{isOpen ? 'Collapse' : 'Expand'} sidebar</span>
-            </Button>
+            {isOpen ? (
+              <ChevronLeft className="h-4 w-4 relative z-10 transition-transform duration-300 group-hover:-translate-x-0.5" />
+            ) : (
+              <ChevronRight className="h-4 w-4 relative z-10 transition-transform duration-300 group-hover:translate-x-0.5" />
+            )}
+            <span className="sr-only">{isOpen ? 'Collapse' : 'Expand'} sidebar</span>
+          </Button>
         </div>
 
         {/* User Profile Section - Enhanced for Collapsed State */}
@@ -153,7 +158,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                   </Avatar>
                   {/* <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full border-2 border-background animate-pulse shadow-lg shadow-green-500/50"></div> */}
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="text-sm font-semibold text-foreground truncate transition-transform duration-300">
@@ -190,11 +195,11 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
           "no-scrollbar overflow-y-auto overflow-x-hidden", // Remove scrollbar
           isOpen ? "px-4" : "px-2"
         )}>
-          
+
           {visibleNavItems.map((item, index) => {
             const isActive = (pathname.startsWith(item.href) && item.href !== '/') || (pathname === '/' && item.href === '/');
             const isDisabled = isSubExpired && item.href !== '/profile';
-            
+
             return (
               <Link
                 key={item.href}
@@ -226,7 +231,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                     isActive && "text-primary-foreground"
                   )} />
                 </div>
-                
+
                 {/* Text with smooth transitions */}
                 <div className={cn(
                   "relative z-10 transition-all duration-300 overflow-hidden",
@@ -239,7 +244,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                     {item.title}
                   </span>
                 </div>
-                
+
                 {/* Notification Badge - Enhanced */}
                 {(item.title === 'Appointments' || item.title === 'Notifications') && (
                   <div className={cn(
@@ -253,18 +258,18 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
             );
           })}
         </nav>
-        
+
         {/* Logout Section - Enhanced for Both States */}
         <div className={cn(
           "flex-shrink-0 border-t border-border transition-all duration-300",
           isOpen ? "p-4" : "p-2"
         )}>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className={cn(
               "group w-full rounded-lg text-foreground hover:bg-accent font-medium",
               isOpen ? "gap-3 justify-start py-2" : "justify-center py-2 px-1.5"
-            )} 
+            )}
             onClick={() => setShowLogoutModal(true)}
             title={!isOpen ? "Sign Out" : undefined}
           >
@@ -272,7 +277,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
               "transition-all duration-300 mr-2",
               isOpen ? "h-4 w-4" : "h-5 w-5"
             )} />
-            
+
             {/* Text with smooth transition */}
             <div className={cn(
               "relative z-10 transition-all duration-300 overflow-hidden",
@@ -285,7 +290,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
           </Button>
         </div>
       </div>
-      
+
       <LogoutConfirmationModal
         open={showLogoutModal}
         onOpenChange={setShowLogoutModal}
@@ -299,8 +304,8 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
     return (
       <>
         {isOpen && (
-          <div 
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 lg:hidden transition-all duration-300" 
+          <div
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 lg:hidden transition-all duration-300"
             onClick={toggleSidebar}
           />
         )}

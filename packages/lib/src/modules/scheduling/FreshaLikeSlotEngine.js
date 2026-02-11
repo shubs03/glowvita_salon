@@ -639,11 +639,17 @@ export async function generateWeddingPackageSlots({
 
     // Get vendor working hours
     const VendorWorkingHoursModel = (await import('../../models/Vendor/VendorWorkingHours.model.js')).default;
+    
+    console.log('Looking up working hours for vendor:', vendorId);
     const vendorWorkingHours = await VendorWorkingHoursModel.findOne({ vendor: vendorId });
 
     if (!vendorWorkingHours) {
       console.error('Vendor working hours not found for vendor:', vendorId);
-      throw new Error('Vendor working hours not found');
+      console.error('This vendor may not have working hours configured in the database');
+      
+      // Return empty array instead of throwing error to prevent 500
+      console.warn('Returning empty slots array - vendor needs working hours configuration');
+      return [];
     }
 
     // Get day of week (convert to lowercase for matching with working hours keys)

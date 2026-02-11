@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useBookingData } from '@/hooks/useBookingData';
+import { useAuth } from '@/hooks/useAuth';
 import { Step1_Services } from './Step1_Services';
 import { Step1_WeddingPackageCustomizer } from './Step1_WeddingPackageCustomizer';
 import { Step2_Staff } from './Step2_Staff';
+import { Step3_LocationSelection } from './Step3_LocationSelection';
 import { Step3_TimeSlot } from './Step3_TimeSlot_Optimized';
 import { Button } from '@repo/ui/button';
 import { Service, StaffMember, WeddingPackage } from '@/hooks/useBookingData';
@@ -250,6 +252,7 @@ interface BookingFlowProps {
 }
 
 export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
+  const { user, isAuthenticated } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(null);
@@ -376,30 +379,32 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
     }
 
     if (currentStep === 2) {
-      // For home services, validate and geocode
-      if (isHomeService && homeServiceOption === 'home') {
-        if (!homeServiceLocation || !homeServiceLocation.address || !homeServiceLocation.city ||
-          !homeServiceLocation.state || !homeServiceLocation.pincode) {
-          toast.error("Please provide complete address details for home service");
-          return;
-        }
-
-        // Auto-geocode if coordinates not provided
-        if (!homeServiceLocation.lat || !homeServiceLocation.lng) {
-          toast.info("Calculating location coordinates...");
-          const geocoded = await geocodeAddress();
-          if (!geocoded) {
-            toast.error("Could not calculate location. Please use the map to pin your location.");
-            return;
-          }
-          toast.success("Location coordinates calculated!");
-        }
-      }
+      // For home services, proceed to location selection (Step 3)
+      // For salon services, proceed to time slot selection (Step 3)
       setCurrentStep(3);
       return;
     }
 
-    if (currentStep < 4) {
+    if (currentStep === 3) {
+      // If home service, validate location and proceed to time slot (Step 4)
+      if (bookingMode === 'home') {
+        if (!homeServiceLocation) {
+          toast.error("Please select your service location");
+          return;
+        }
+        setCurrentStep(4);
+      } else {
+        // For salon services, Step 3 is time slot, proceed to Step 4 (booking details)
+        if (!selectedTime) {
+          toast.error("Please select a time slot");
+          return;
+        }
+        setCurrentStep(4);
+      }
+      return;
+    }
+
+    if (currentStep < 5) {
       setCurrentStep(currentStep + 1);
     } else {
       onBookingComplete({
@@ -414,9 +419,9 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
         homeServiceLocation
       });
     }
-  }, [currentStep, selectedServices, selectedWeddingPackage, customizedWeddingPackage, isHomeService,
-    homeServiceOption, homeServiceLocation, selectedStaff, selectedDate, selectedTime, baseData.salonInfo,
-    isWeddingService, onBookingComplete, geocodeAddress]);
+  }, [currentStep, selectedServices, selectedWeddingPackage, customizedWeddingPackage, bookingMode,
+    homeServiceLocation, selectedStaff, selectedDate, selectedTime, baseData.salonInfo,
+    isWeddingService, onBookingComplete]);
 
   const handleBack = useCallback(() => {
     if (currentStep > 1) {
@@ -433,11 +438,16 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
         if (showPackageCustomizer) {
           return customizedWeddingPackage !== null;
         }
-        if (selectedWeddingPackage || customizedWeddingPackage || isHomeService) {
+        if (selectedWeddingPackage || customizedWeddingPackage) {
           return true;
         }
         return selectedStaff !== null;
       case 3:
+        // For home services, validate location selection
+        if (bookingMode === 'home') {
+          return homeServiceLocation !== null;
+        }
+        // For salon services, validate time slot
         return selectedDate !== null && selectedTime !== null;
       case 4:
         return selectedDate !== null && selectedTime !== null;
@@ -445,7 +455,7 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
         return false;
     }
   }, [currentStep, selectedServices, selectedService, selectedWeddingPackage, showPackageCustomizer,
-    customizedWeddingPackage, isHomeService, selectedStaff, selectedDate, selectedTime]);
+    customizedWeddingPackage, selectedStaff, selectedDate, selectedTime, bookingMode, homeServiceLocation]);
 
   // Reset staff when service changes
   useEffect(() => {
@@ -530,20 +540,48 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
               weddingPackage={customizedWeddingPackage || selectedWeddingPackage}
             />
           )}
+        </>
+      )}
 
-          {/* Location Capture ONLY for Home Services (not for salon) */}
-          {homeServiceOption === 'home' && selectedService && (
-            <LocationCapture
+      {/* Step 3: Location Selection (for home services) OR Time Slot (for salon services) */}
+      {currentStep === 3 && !showPackageCustomizer && (selectedService || selectedWeddingPackage || customizedWeddingPackage) && (
+        <>
+          {bookingMode === 'home' ? (
+            <Step3_LocationSelection
+              currentStep={currentStep}
+              setCurrentStep={setCurrentStep}
               homeServiceLocation={homeServiceLocation}
-              setHomeServiceLocation={setHomeServiceLocation}
-              homeServiceOption={homeServiceOption}
-              isRequired={true}
+              onLocationConfirm={(location) => {
+                setHomeServiceLocation(location);
+                // Don't auto-advance - let user review and use summary button
+              }}
+              user={user}
+              isAuthenticated={isAuthenticated}
+            />
+          ) : (
+            <Step3WithServiceData
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              selectedTime={selectedTime}
+              onSelectTime={setSelectedTime}
+              selectedStaff={selectedStaff}
+              onSelectStaff={setSelectedStaff}
+              currentStep={currentStep}
+              setCurrentStep={setCurrentStep}
+              salonId={salonId}
+              selectedService={selectedService}
+              baseData={baseData}
+              isHomeService={false}
+              isWeddingService={isWeddingService}
+              weddingPackage={customizedWeddingPackage || selectedWeddingPackage}
+              homeServiceLocation={homeServiceLocation}
             />
           )}
         </>
       )}
 
-      {currentStep === 3 && !showPackageCustomizer && (selectedService || selectedWeddingPackage || customizedWeddingPackage) && (
+      {/* Step 4: Time Slot for home services */}
+      {currentStep === 4 && bookingMode === 'home' && !showPackageCustomizer && (selectedService || selectedWeddingPackage || customizedWeddingPackage) && (
         <Step3WithServiceData
           selectedDate={selectedDate}
           onSelectDate={setSelectedDate}
@@ -556,7 +594,7 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
           salonId={salonId}
           selectedService={selectedService}
           baseData={baseData}
-          isHomeService={homeServiceOption === 'home' || isHomeService}
+          isHomeService={true}
           isWeddingService={isWeddingService}
           weddingPackage={customizedWeddingPackage || selectedWeddingPackage}
           homeServiceLocation={homeServiceLocation}
@@ -571,12 +609,6 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
           disabled={currentStep === 1}
         >
           Back
-        </Button>
-        <Button
-          onClick={handleNext}
-          disabled={!isStepValid}
-        >
-          {currentStep === 4 ? 'Confirm Booking' : 'Next'}
         </Button>
       </div>
     </div>

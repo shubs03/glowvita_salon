@@ -219,6 +219,7 @@ export default function RootLayout({
             }
           `
         }} />
+        <link rel="icon" href="/favicon.jpeg" />
       </head>
       <body className="bg-background text-foreground">
         <StoreProvider>
