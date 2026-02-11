@@ -16,6 +16,7 @@ type Appointment = {
   clientName: string;
   service: string;
   serviceName?: string;
+  staff?: string; // Staff ID (ObjectId or string)
   staffName: string;
   date: Date;
   startTime: string;
@@ -38,6 +39,23 @@ type Appointment = {
     duration: number;
     amount: number;
   }>;
+  // Home and Wedding service fields
+  isHomeService?: boolean;
+  isWeddingService?: boolean;
+  homeServiceLocation?: {
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    landmark?: string;
+  };
+  weddingPackageDetails?: {
+    packageName?: string;
+    totalAmount?: number;
+    totalDuration?: number;
+    venueAddress?: string;
+  };
+  teamMembers?: any[];
 };
 
 interface StaffMember {
@@ -730,8 +748,25 @@ export default function DayScheduleView({
                 } as Appointment);
               });
             } else {
-              // Regular single-service appointment
-              if (appt.staffName === staff.name || appt.staffName === staff.id) {
+              // Regular single-service appointment or wedding service
+              // Check multiple ways to match staff (name, ID, or staff field)
+              const staffMatches =
+                appt.staffName === staff.name ||
+                appt.staffName === staff.id ||
+                (appt.staff && staff.id && appt.staff.toString() === staff.id.toString());
+
+              // Wedding staff matching
+              const weddingTeam = appt.teamMembers || (appt as any).weddingPackageDetails?.teamMembers;
+              const isStaffInWeddingTeam = appt.isWeddingService && (
+                weddingTeam?.some((m: any) =>
+                  (typeof m === 'string' && (m === staff.name || m === staff.id)) ||
+                  (typeof m === 'object' && ((m._id && staff.id && String(m._id) === String(staff.id)) || (m.id && staff.id && String(m.id) === String(staff.id)) || m.name === staff.name || m.staffName === staff.name))
+                )
+              );
+
+              if (staffMatches || isStaffInWeddingTeam) {
+                // If it's a wedding service and this staff is part of it, 
+                // we treat it as blocking for everyone in the team
                 staffAppointments.push(appt);
               }
             }
@@ -978,7 +1013,7 @@ export default function DayScheduleView({
 
   const isCurrentDate = isToday(safeSelectedDate);
 
-  const renderAppointment = (appointment: Appointment, index: number, staffIndex: number) => {
+  const renderAppointment = (appointment: Appointment, index: number, staffIndex: number, currentStaff?: StaffMember) => {
     // Define constants for time calculations
     const MINUTES_IN_HOUR = 60;
     const startHour = globalStartHour;
@@ -1195,24 +1230,29 @@ export default function DayScheduleView({
       });
     }
 
-    if (appointment.isBlocked) {
+    const isWeddingTeamCol = currentStaff?.name === 'Wedding Team';
+    if (appointment.isBlocked || (appointment.isWeddingService && !isWeddingTeamCol && appointment.status !== 'completed' && appointment.status !== 'completed without payment')) {
+      const isWedding = appointment.isWeddingService;
       return (
         <div
-          key={`blocked-${index}`}
-          className="absolute left-0 right-0 mx-2 p-2 border-l-4 border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200"
+          key={isWedding ? appointment.id : `blocked-${index}`}
+          className={`absolute left-0 right-0 mx-2 p-2 border-l-4 cursor-pointer ${isWedding ? 'border-red-500 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200' : 'border-amber-500 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200'}`}
           style={{
             top: `${top}px`,
             height: `${height}px`,
           }}
+          onClick={() => isWedding ? handleAppointmentClick(appointment) : undefined}
         >
           <div className="flex items-center gap-2 mb-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-            <div className="font-semibold truncate text-amber-700 dark:text-amber-300 text-sm">Blocked Time</div>
+            <div className={`w-1.5 h-1.5 rounded-full ${isWedding ? 'bg-red-500' : 'bg-amber-500'}`}></div>
+            <div className={`font-semibold truncate text-sm ${isWedding ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'}`}>
+              {isWedding ? 'Wedding (Blocked)' : 'Blocked Time'}
+            </div>
           </div>
-          <div className="text-sm text-amber-600 dark:text-amber-300/90 font-medium mb-1">
-            {appointment.description || 'Not Available'}
+          <div className={`text-sm font-medium mb-1 ${isWedding ? 'text-red-600 dark:text-red-300/90' : 'text-amber-600 dark:text-amber-300/90'}`}>
+            {isWedding ? (appointment.clientName || 'Wedding Service') : (appointment.description || 'Not Available')}
           </div>
-          <div className="text-sm text-amber-600 dark:text-amber-300/90 font-medium flex items-center">
+          <div className={`text-sm font-medium flex items-center ${isWedding ? 'text-red-600 dark:text-red-300/90' : 'text-amber-600 dark:text-amber-300/90'}`}>
             <Clock className="w-3 h-3 mr-1" />
             {startTime} - {endTime}
           </div>
@@ -1297,9 +1337,8 @@ export default function DayScheduleView({
           {/* Web Badge - positioned at bottom right */}
           {appointment.mode && (
             <div className="absolute bottom-1 right-1">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
-                appointment.mode === 'online' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
-              }`}>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${appointment.mode === 'online' ? 'bg-green-500 text-white' : 'bg-blue-500 text-white'
+                }`}>
                 {appointment.mode === 'online' ? 'Web' : 'Offline'}
               </span>
             </div>
@@ -1525,9 +1564,8 @@ export default function DayScheduleView({
                       }}
                     >
                       {/* Show time for all 15-minute intervals */}
-                      <span className={`text-xs font-semibold text-muted-foreground ${
-                        timeSlot.isHourMark ? '' : 'text-[10px] opacity-70'
-                      }`}>
+                      <span className={`text-xs font-semibold text-muted-foreground ${timeSlot.isHourMark ? '' : 'text-[10px] opacity-70'
+                        }`}>
                         {timeSlot.timeString}
                       </span>
                     </div>
@@ -1732,7 +1770,7 @@ export default function DayScheduleView({
 
                       {/* Appointments for this staff */}
                       {isAvailable && staffAppointmentsWithAvailability[staffIndex]?.appointments?.map((appointment: Appointment, index: number) =>
-                        renderAppointment(appointment, index, staffIndex)
+                        renderAppointment(appointment, index, staffIndex, staff)
                       )}
                     </div>
                   );

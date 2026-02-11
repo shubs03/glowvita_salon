@@ -166,6 +166,7 @@ export default function CalendarPage() {
     string | null
   >(null);
   const [isClinicAvailable, setIsClinicAvailable] = useState(true);
+  const [activeTab, setActiveTab] = useState('all');
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { role } = useCrmAuth();
@@ -262,13 +263,34 @@ export default function CalendarPage() {
       tax: appt.tax || 0,
       totalAmount: appt.totalAmount || appt.amount || 0,
       finalAmount: appt.finalAmount || appt.totalAmount || appt.amount || 0,
+      clientEmail: appt.clientEmail,
+      clientPhone: appt.clientPhone,
       mode: appt.mode, // Only include if it exists in backend
       // Multi-service appointment fields
       isMultiService: appt.isMultiService || false,
       serviceItems: appt.serviceItems || [],
       payment: appt.payment,
+      isHomeService: appt.isHomeService,
+      isWeddingService: appt.isWeddingService,
+      homeServiceLocation: appt.homeServiceLocation,
+      weddingPackageDetails: appt.weddingPackageDetails,
     }));
   }, [appointmentsData]);
+
+  // Filter appointments based on active tab
+  const filteredAppointments = useMemo(() => {
+    if (!Array.isArray(appointments)) return [];
+
+    if (activeTab === 'wedding') {
+      return appointments.filter(a => a.isWeddingService === true);
+    }
+    if (activeTab === 'home') {
+      // Exclude wedding services from the home service tab to prevent duplication,
+      // as wedding services are a specific category even if done at home.
+      return appointments.filter(a => a.isHomeService === true && !a.isWeddingService);
+    }
+    return appointments;
+  }, [appointments, activeTab]);
 
   const daysInMonth = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -283,14 +305,14 @@ export default function CalendarPage() {
   }, [currentDate]);
 
   const todaysAppointments = useMemo(() => {
-    return appointments
+    return filteredAppointments
       .filter(
         (a) =>
           isSameDay(a.date, today) &&
           (selectedStaff === "All Staff" || a.staffName === selectedStaff)
       )
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [appointments, selectedStaff, today]);
+  }, [filteredAppointments, selectedStaff, today]);
 
   const selectedDateAppointments = useMemo(() => {
     return appointments
@@ -822,6 +844,14 @@ export default function CalendarPage() {
               <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl">
                 Manage your appointments and schedule.
               </p>
+
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4 max-w-md">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="all">All</TabsTrigger>
+                  <TabsTrigger value="wedding">Wedding</TabsTrigger>
+                  <TabsTrigger value="home">Home Service</TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
 
             {/* Filters and Action Buttons */}
@@ -883,7 +913,7 @@ export default function CalendarPage() {
           {/* Left Column - All Appointments (Primary) */}
           <div className="flex-1 flex flex-col min-h-0">
             <AppointmentListSection
-              appointments={appointments}
+              appointments={filteredAppointments}
               currentDate={currentDate}
               isLoadingAppointments={isLoadingAppointments}
               handleEditAppointment={handleEditAppointment}
@@ -1002,7 +1032,7 @@ export default function CalendarPage() {
                         )}
                       </div>
                     )}
-                    
+
                     {/* Statistics Section */}
                     <div className="mt-6 pt-4 border-t border-border">
                       <div className="space-y-2">
@@ -1012,7 +1042,7 @@ export default function CalendarPage() {
                             {appointments.length}
                           </span>
                         </div>
-                        
+
                         <div className="space-y-1.5">
                           <div className="flex justify-between items-center py-1">
                             <div className="flex items-center">
@@ -1023,7 +1053,7 @@ export default function CalendarPage() {
                               {appointments.filter((a) => a.status === 'confirmed').length}
                             </span>
                           </div>
-                          
+
                           <div className="flex justify-between items-center py-1">
                             <div className="flex items-center">
                               <div className="w-2 h-2 rounded-full bg-secondary mr-1.5"></div>
@@ -1033,7 +1063,7 @@ export default function CalendarPage() {
                               {appointments.filter((a) => a.status === 'completed').length}
                             </span>
                           </div>
-                          
+
                           <div className="flex justify-between items-center py-1">
                             <div className="flex items-center">
                               <div className="w-2 h-2 rounded-full bg-primary/70 mr-1.5"></div>
@@ -1043,7 +1073,7 @@ export default function CalendarPage() {
                               {appointments.filter((a) => a.status === 'scheduled').length}
                             </span>
                           </div>
-                          
+
                           <div className="flex justify-between items-center py-1">
                             <div className="flex items-center">
                               <div className="w-2 h-2 rounded-full bg-primary/30 mr-1.5"></div>

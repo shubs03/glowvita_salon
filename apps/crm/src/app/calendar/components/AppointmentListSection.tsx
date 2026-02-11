@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Badge } from "@repo/ui/badge";
-import { Calendar as CalendarIcon, User, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon, User, Clock, MapPin, Home } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@repo/ui/tabs";
 import { Appointment } from './NewAppointmentForm';
 import { glowvitaApi } from '@repo/store/api';
 import { useAppDispatch } from '@repo/store/hooks';
@@ -33,16 +34,17 @@ export default function AppointmentListSection({
 
   return (
     <Card className="flex-1 flex flex-col min-h-0">
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between mb-2">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between mb-4">
           <CardTitle className="flex items-center text-xl font-bold text-foreground">
-            All Appointments
+            Appointments
           </CardTitle>
           <Badge variant="outline" className="bg-primary/10 text-primary font-bold px-3 py-1.5 rounded-full">
             {appointments.length} {appointments.length === 1 ? 'appointment' : 'appointments'}
           </Badge>
         </div>
-        <p className="text-sm text-muted-foreground font-medium">
+
+        <p className="text-sm text-muted-foreground font-medium mt-2">
           {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
         </p>
       </CardHeader>
@@ -63,41 +65,54 @@ export default function AppointmentListSection({
                   router.push(`/calendar/${formattedDate}?appointmentId=${appointment.id}`);
                 }}
               >
-                <div className="flex items-start justify-between gap-4">
-                  {/* First Column - Client Name and Service Name */}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-foreground truncate">
-                      {appointment.clientName || 'No Name'}
-                    </h4>
-                    <p className="text-sm text-muted-foreground truncate mt-1">
-                      {appointment.serviceName || 'No service specified'}
-                    </p>
-                  </div>
-
-                  {/* Second Column - Staff Name, Date and Time */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <User className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">{appointment.staffName || 'No staff assigned'}</span>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-start justify-between gap-4">
+                    {/* First Column - Client Name and Service Name */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-foreground truncate">
+                          {appointment.clientName || 'No Name'}
+                        </h4>
+                        {appointment.isWeddingService && (
+                          <Badge className="bg-pink-100 text-pink-700 hover:bg-pink-200 border-pink-200 text-[10px] px-1.5 h-4">Wedding</Badge>
+                        )}
+                        {appointment.isHomeService && (
+                          <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-blue-200 text-[10px] px-1.5 h-4">Home</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground truncate mt-1">
+                        {appointment.isWeddingService
+                          ? `${appointment.weddingPackageDetails?.packageName || appointment.serviceName} (Wedding)`
+                          : appointment.isHomeService
+                            ? `${appointment.serviceName} (Home Service)`
+                            : (appointment.serviceName || 'No service specified')}
+                      </p>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                      <Clock className="h-4 w-4 flex-shrink-0" />
-                      <span className="truncate">
-                        {new Date(appointment.date).toLocaleDateString()} • {appointment.startTime}-{appointment.endTime}
-                      </span>
-                      <span className="text-xs font-medium bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
-                        {appointment.duration}m
-                      </span>
-                    </div>
-                  </div>
 
-                  {/* Third Column - Amount and Status */}
-                  <div className="flex flex-col items-end min-w-0">
-                    <p className="font-semibold text-foreground">
-                      ₹{appointment.finalAmount?.toFixed(2) || appointment.totalAmount?.toFixed(2) || '0.00'}
-                    </p>
-                    <span
-                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${appointment.status === 'completed'
+                    {/* Second Column - Staff Name, Date and Time */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <User className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{appointment.staffName || 'No staff assigned'}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                        <Clock className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">
+                          {new Date(appointment.date).toLocaleDateString()} • {appointment.startTime}-{appointment.endTime}
+                        </span>
+                        <span className="text-xs font-medium bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full">
+                          {appointment.duration}m
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Third Column - Amount and Status */}
+                    <div className="flex flex-col items-end min-w-0">
+                      <p className="font-semibold text-foreground">
+                        ₹{appointment.finalAmount?.toFixed(2) || appointment.totalAmount?.toFixed(2) || '0.00'}
+                      </p>
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-1 ${appointment.status === 'completed'
                           ? 'bg-green-100 text-green-800'
                           : appointment.status === 'cancelled'
                             ? 'bg-red-100 text-red-800'
@@ -106,11 +121,34 @@ export default function AppointmentListSection({
                               : appointment.status === 'confirmed'
                                 ? 'bg-blue-100 text-blue-800'
                                 : 'bg-amber-100 text-amber-800'
-                        }`}
-                    >
-                      {appointment.status?.charAt(0).toUpperCase() + appointment.status?.slice(1) || 'Scheduled'}
-                    </span>
+                          }`}
+                      >
+                        {appointment.status?.charAt(0).toUpperCase() + appointment.status?.slice(1) || 'Scheduled'}
+                      </span>
+                    </div>
                   </div>
+
+                  {/* Address Section for Wedding/Home Services */}
+                  {(appointment.isWeddingService || appointment.isHomeService) && (
+                    <div className="flex items-start gap-2 p-2 bg-primary/5 border border-primary/10 rounded-lg text-sm mt-2">
+                      {appointment.isWeddingService ? (
+                        <MapPin className="h-4 w-4 text-pink-500 mt-0.5" />
+                      ) : (
+                        <Home className="h-4 w-4 text-blue-500 mt-0.5" />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-semibold text-foreground">
+                          {appointment.isWeddingService ? '📍 Venue Address:' : '🏠 Home Address:'}
+                        </p>
+                        <p className="text-muted-foreground mt-0.5">
+                          {appointment.isWeddingService
+                            ? (appointment.weddingPackageDetails?.venueAddress || appointment.homeServiceLocation?.address || 'Address not specified')
+                            : (appointment.homeServiceLocation?.address || 'Address not specified')}
+                          {(!appointment.isWeddingService && appointment.homeServiceLocation?.city) ? `, ${appointment.homeServiceLocation.city}` : ''}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             ))
@@ -138,6 +176,6 @@ export default function AppointmentListSection({
           )}
         </div>
       </CardContent>
-    </Card>
+    </Card >
   );
 }

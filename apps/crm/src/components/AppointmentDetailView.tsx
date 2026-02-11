@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@repo/ui/card";
 import NewAppointmentForm, { type Appointment as FormAppointment } from "../app/calendar/components/NewAppointmentForm";
 import { toast } from 'sonner';
-import { useCollectPaymentMutation, useGetAppointmentsQuery, useGetVendorProfileQuery } from '@repo/store/services/api';
+import { useCollectPaymentMutation, useGetAppointmentsQuery, useGetVendorProfileQuery, useGetStaffQuery, useGetVendorWeddingPackagesQuery } from '@repo/store/services/api';
 import { AppointmentInvoice } from './AppointmentInvoice';
 
 interface PaymentDetails {
@@ -82,12 +82,31 @@ interface Appointment {
   tax: number;
   totalAmount: number;
   paymentStatus?: string;
+  clientEmail?: string;
+  clientPhone?: string;
   createdAt?: string;
   updatedAt?: string;
 
   // Multi-service appointment properties
   isMultiService?: boolean;
   serviceItems?: ServiceItem[];
+
+  // Service Type flags
+  isHomeService?: boolean;
+  isWeddingService?: boolean;
+  homeServiceLocation?: {
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    landmark?: string;
+  };
+  weddingPackageDetails?: {
+    packageName?: string;
+    totalAmount?: number;
+    totalDuration?: number;
+    venueAddress?: string;
+  };
 
   // Additional properties used in this component
   payment?: PaymentDetails;
@@ -161,6 +180,21 @@ export function AppointmentDetailView({
   const [isStatusChanging, setIsStatusChanging] = useState(false);
   const [showInvoice, setShowInvoice] = useState(false);
   const { data: vendorProfile, isLoading: isVendorLoading } = useGetVendorProfileQuery({});
+  const { data: staffData } = useGetStaffQuery(undefined);
+  const staffList = useMemo(() => {
+    if (Array.isArray(staffData)) return staffData;
+    if (Array.isArray(staffData?.data)) return staffData.data;
+    return [];
+  }, [staffData]);
+
+  // Fetch wedding packages if it's a wedding appointment for fallback staff resolution
+  const isWeddingOrPackage = (appointment as any).isWeddingService || (appointment as any).weddingPackageDetails?.packageId;
+  const { data: weddingPackagesData } = useGetVendorWeddingPackagesQuery(
+    (appointment as any).vendorId || vendorProfile?.data?._id,
+    { skip: !isWeddingOrPackage }
+  );
+  const weddingPackages = useMemo(() => weddingPackagesData?.data || [], [weddingPackagesData]);
+
   // Tax settings are already stored in the appointment data, no need to fetch separately
   // const { data: taxSettings } = useGetTaxFeeSettingsQuery(undefined);
 
@@ -183,8 +217,118 @@ export function AppointmentDetailView({
     if (overrideStatus) {
       merged.status = overrideStatus;
     }
+
+    // Resolve Staff Names for Wedding Services
+    if (merged.isWeddingService) {
+      let staffNames: string[] = [];
+
+      // 1. Check teamMembers (root level or package level)
+      if (merged.teamMembers && Array.isArray(merged.teamMembers)) {
+        const names = merged.teamMembers.map((m: any) => typeof m === 'string' ? m : (m.name || m.firstName || m.staffName)).filter(Boolean);
+        if (names.length > 0) staffNames = names;
+      }
+
+
+      // 2. Check weddingPackageDetails.teamMembers if still empty
+      if (staffNames.length === 0 && merged.weddingPackageDetails?.teamMembers && Array.isArray(merged.weddingPackageDetails.teamMembers)) {
+        const names = merged.weddingPackageDetails.teamMembers.map((m: any) => typeof m === 'string' ? m : (m.name || m.firstName || m.staffName)).filter(Boolean);
+        if (names.length > 0) staffNames = names;
+      }
+
+      // 3. Fallback: Map Staff IDs from packageServices using staffList
+      if (staffNames.length === 0 && merged.weddingPackageDetails?.packageServices && Array.isArray(merged.weddingPackageDetails.packageServices) && staffList.length > 0) {
+        const staffIds = merged.weddingPackageDetails.packageServices.map((s: any) => s.staffId).filter(Boolean);
+        if (staffIds.length > 0) {
+          // Map IDs to names
+          const names = staffIds.map((id: string) => {
+            const staff = staffList.find((s: any) => String(s._id) === String(id) || String(s.id) === String(id));
+            return staff ? (staff.name || staff.firstName) : null;
+          }).filter(Boolean);
+          if (names.length > 0) {
+            staffNames = [...new Set(names)] as string[];
+          }
+        }
+      }
+
+      // 4. Ultimate Fallback: Look up assigned staff from the original Wedding Package definition
+      if ((staffNames.length === 0 || merged.staffName === 'Wedding Team') && merged.weddingPackageDetails?.packageId) {
+        const packageId = String(merged.weddingPackageDetails.packageId);
+        const packages = Array.isArray(weddingPackages) ? weddingPackages : [];
+        const pkg = packages.find((p: any) => String(p._id) === packageId || String(p.id) === packageId);
+
+        if (pkg && pkg.assignedStaff && Array.isArray(pkg.assignedStaff) && pkg.assignedStaff.length > 0) {
+          const pkgStaffIds = pkg.assignedStaff.map((s: any) => (typeof s === 'object' ? (s._id || s.id) : s));
+
+          const names = pkgStaffIds.map((id: string) => {
+            const staff = staffList.find((s: any) => String(s._id) === String(id) || String(s.id) === String(id));
+            return staff ? (staff.name || staff.firstName) : null;
+          }).filter(Boolean);
+
+          if (names.length > 0) {
+            staffNames = [...new Set(names)] as string[];
+          }
+        }
+      }
+
+      if (staffNames.length > 0) {
+        merged.staffName = staffNames.join(', ');
+      }
+    }
+
+    // Resolve Staff Names for Regular Services if not already resolved or showing IDs
+    if (!merged.isWeddingService && staffList.length > 0) {
+      let staffIds: string[] = [];
+      const currentStaff = merged.staff;
+      const currentStaffName = merged.staffName;
+
+      // Helper to detect if a string looks like a MongoID (24 hex chars)
+      const isMongoIdString = (str: string) => /^[a-f\d]{24}$/i.test(str.trim());
+
+      // 1. Try merged.staff (array, string, or object)
+      if (Array.isArray(currentStaff)) {
+        staffIds = currentStaff.map((s: any) => typeof s === 'object' ? (s._id || s.id) : String(s));
+      } else if (typeof currentStaff === 'string') {
+        if (currentStaff.includes(',') || isMongoIdString(currentStaff)) {
+          staffIds = currentStaff.split(',').map(s => s.trim()).filter(Boolean);
+        }
+      } else if (currentStaff && typeof currentStaff === 'object') {
+        staffIds = [currentStaff._id || currentStaff.id];
+      }
+
+      // 2. Fallback: If no IDs found yet, or if staffName currently holds the IDs (common issue)
+      // Check if staffName looks like a list of IDs
+      if (typeof currentStaffName === 'string' && (currentStaffName.includes(',') || isMongoIdString(currentStaffName))) {
+        const potentialIds = currentStaffName.split(',').map(s => s.trim()).filter(Boolean);
+        // If the "name" is actually valid MongoIDs, treat them as IDs to be resolved
+        if (potentialIds.every(id => isMongoIdString(id))) {
+          // If we found IDs in the name field, prefer them if we didn't find any in the staff field, 
+          // or if the staff field resulted in the same IDs.
+          if (staffIds.length === 0) {
+            staffIds = potentialIds;
+          }
+        }
+      }
+
+      // If we found potential IDs, try to map them to names
+      if (staffIds.length > 0) {
+        const names = staffIds.map(id => {
+          // Find staff in the loaded list
+          const staffMember = staffList.find((s: any) => String(s._id) === String(id) || String(s.id) === String(id));
+          // Prioritize fullName from schema, then other common name fields
+          return staffMember ? (staffMember.fullName || staffMember.name || staffMember.firstName) : null;
+        }).filter(Boolean);
+
+        // If we successfully resolved names, use them
+        if (names.length > 0) {
+          merged.staffName = names.join(', ');
+        }
+      }
+    }
+
+
+
     return merged;
-  }, [allAppointments, appointment, overrideStatus]);
+  }, [allAppointments, appointment, overrideStatus, staffList, weddingPackages]);
 
   // Normalize all appointments into an array regardless of API shape
   const appointmentsList: any[] = useMemo(() => {
@@ -872,6 +1016,21 @@ export function AppointmentDetailView({
   const invoiceData = useMemo(() => {
     if (!liveAppointment) return null;
 
+    // Helper to resolve staff name from ID or object
+    const resolveName = (val: any) => {
+      if (!val) return null;
+      if (typeof val === 'object') return val.name || val.firstName || val.fullName || val.staffName;
+      if (typeof val === 'string') {
+        // Check if it's an ID
+        if (/^[a-f\d]{24}$/i.test(val.trim())) {
+          const staff = staffList.find((s: any) => String(s._id) === val.trim() || String(s.id) === val.trim());
+          return staff ? (staff.name || staff.firstName || staff.fullName) : val;
+        }
+        return val;
+      }
+      return val;
+    };
+
     return {
       invoiceNumber: liveAppointment.invoiceNumber || (() => {
         const dateStr = liveAppointment.date instanceof Date
@@ -895,7 +1054,7 @@ export function AppointmentDetailView({
           quantity: 1,
           totalPrice: item.amount,
           discount: 0,
-          staff: item.staffName,
+          staff: resolveName(item.staffName || item.staff),
           duration: item.duration,
           type: 'service'
         },
@@ -915,7 +1074,39 @@ export function AppointmentDetailView({
           quantity: 1,
           totalPrice: liveAppointment.amount,
           discount: liveAppointment.discount,
-          staff: liveAppointment.staffName,
+          staff: (() => {
+            // For wedding services, check multiple possible data sources for staff names
+            if (liveAppointment.isWeddingService) {
+              // Check if teamMembers (preferred) or staffMembers array exists at root level
+              const teamMembers = (liveAppointment as any).teamMembers || (liveAppointment as any).staffMembers;
+              if (teamMembers && Array.isArray(teamMembers) && teamMembers.length > 0) {
+                const staffNames = teamMembers.map(resolveName).filter(Boolean);
+                if (staffNames.length > 0) {
+                  return staffNames.join(', ');
+                }
+              }
+
+              // Check weddingPackageDetails.teamMembers
+              const pkgTeamMembers = (liveAppointment as any).weddingPackageDetails?.teamMembers;
+              if (pkgTeamMembers && Array.isArray(pkgTeamMembers) && pkgTeamMembers.length > 0) {
+                const staffNames = pkgTeamMembers.map(resolveName).filter(Boolean);
+                if (staffNames.length > 0) {
+                  return staffNames.join(', ');
+                }
+              }
+            }
+            // Fallback to the main staffName
+            const mainStaff = resolveName(liveAppointment.staffName) || liveAppointment.staffName;
+
+            // If mainStaff still looks like a list of IDs (comma separated), try to resolve each
+            if (typeof mainStaff === 'string' && mainStaff.includes(',')) {
+              const parts = mainStaff.split(',').map(s => s.trim());
+              if (parts.some(p => /^[a-f\d]{24}$/i.test(p))) {
+                return parts.map(p => resolveName(p)).join(', ');
+              }
+            }
+            return mainStaff;
+          })(),
           duration: liveAppointment.duration,
           type: 'service'
         },
@@ -940,7 +1131,7 @@ export function AppointmentDetailView({
       paymentMethod: (liveAppointment as any).paymentMethod || liveAppointment.payment?.paymentMethod || null,
       couponCode: (liveAppointment as any).couponCode || ''
     };
-  }, [liveAppointment, totalAmount, remainingAmount, vendorProfile, totalBaseAmount, totalAddOnsAmount, discountAmount]);
+  }, [liveAppointment, totalAmount, remainingAmount, vendorProfile, totalBaseAmount, totalAddOnsAmount, discountAmount, staffList]);
 
   const handleDownloadPdf = async () => {
     const toastId = toast.loading('Generating PDF...');
@@ -1757,27 +1948,41 @@ export function AppointmentDetailView({
                         <div>
                           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Client</p>
                           <p className="text-lg font-semibold text-foreground">{appointment.clientName}</p>
-                          {(appointment as any).client && (
-                            <div className="flex flex-col gap-1 mt-1">
-                              <div className="flex items-center text-sm text-foreground/70">
-                                <Phone className="h-3 w-3 mr-1.5" />
-                                <span>
-                                  {(appointment as any).client?.mobileNo ||
-                                    (appointment as any).client?.phone ||
-                                    (appointment as any).clientPhone ||
-                                    'N/A'}
-                                </span>
-                              </div>
-                              {((appointment as any).client?.email || (appointment as any).client?.emailAddress) && (
+                          {/* Check for client details in multiple places */}
+                          {(() => {
+                            const clientPhone = (appointment as any).client?.mobileNo ||
+                              (appointment as any).client?.phone ||
+                              (appointment as any).client?.mobileNumber ||
+                              (appointment as any).client?.phoneNumber ||
+                              (appointment as any).clientPhone ||
+                              (appointment as any).phone ||
+                              (appointment as any).mobileNo ||
+                              (appointment as any).mobile ||
+                              'N/A';
+
+                            const clientEmail = (appointment as any).client?.email ||
+                              (appointment as any).client?.emailAddress ||
+                              (appointment as any).clientEmail ||
+                              (appointment as any).email ||
+                              (appointment as any).emailAddress;
+
+                            return (
+                              <div className="flex flex-col gap-1 mt-1">
                                 <div className="flex items-center text-sm text-foreground/70">
-                                  <Mail className="h-3 w-3 mr-1.5" />
-                                  <span className="truncate max-w-[200px]">
-                                    {(appointment as any).client?.email || (appointment as any).client?.emailAddress}
-                                  </span>
+                                  <Phone className="h-3 w-3 mr-1.5" />
+                                  <span>{clientPhone}</span>
                                 </div>
-                              )}
-                            </div>
-                          )}
+                                {clientEmail && (
+                                  <div className="flex items-center text-sm text-foreground/70">
+                                    <Mail className="h-3 w-3 mr-1.5" />
+                                    <span className="truncate max-w-[200px]">
+                                      {clientEmail}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
@@ -1860,8 +2065,71 @@ export function AppointmentDetailView({
                           <UserCheck className="h-5 w-5 text-foreground" />
                         </div>
                         <div>
-                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Staff</p>
-                          <p className="text-lg font-semibold text-foreground">{appointment.staffName}</p>
+                          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            {liveAppointment.isWeddingService ? 'Team Members' : 'Staff'}
+                          </p>
+                          <p className="text-lg font-semibold text-foreground">
+                            {(() => {
+                              // Helper to resolve staff name from ID or object
+                              const resolveName = (val: any) => {
+                                if (!val) return null;
+                                if (typeof val === 'object') return val.name || val.firstName || val.fullName || val.staffName;
+                                if (typeof val === 'string') {
+                                  // Check if it's an ID
+                                  if (/^[a-f\d]{24}$/i.test(val.trim())) {
+                                    const staff = staffList.find((s: any) => String(s._id) === val.trim() || String(s.id) === val.trim());
+                                    return staff ? (staff.name || staff.firstName || staff.fullName) : val;
+                                  }
+                                  return val;
+                                }
+                                return val;
+                              };
+
+                              // For wedding services, check multiple possible data sources for staff names
+                              if (liveAppointment.isWeddingService) {
+                                // Check if teamMembers array exists at root level
+                                const teamMembers = (liveAppointment as any).teamMembers;
+                                if (teamMembers && Array.isArray(teamMembers) && teamMembers.length > 0) {
+                                  const staffNames = teamMembers.map(resolveName).filter(Boolean);
+                                  if (staffNames.length > 0) {
+                                    return staffNames.join(', ');
+                                  }
+                                }
+
+                                // Check weddingPackageDetails.teamMembers
+                                const pkgTeamMembers = (liveAppointment as any).weddingPackageDetails?.teamMembers;
+                                if (pkgTeamMembers && Array.isArray(pkgTeamMembers) && pkgTeamMembers.length > 0) {
+                                  const staffNames = pkgTeamMembers.map(resolveName).filter(Boolean);
+                                  if (staffNames.length > 0) {
+                                    return staffNames.join(', ');
+                                  }
+                                }
+                              }
+
+                              // For multi-service appointments with serviceItems, show all staff names
+                              if ((liveAppointment.isWeddingService || liveAppointment.isMultiService) && liveAppointment.serviceItems && liveAppointment.serviceItems.length > 0) {
+                                // Get unique staff names from service items
+                                const staffNames = [...new Set(liveAppointment.serviceItems.map((item: any) => resolveName(item.staffName || item.staff)).filter(Boolean))];
+                                if (staffNames.length > 0) {
+                                  return staffNames.join(', ');
+                                }
+                              }
+
+                              // Fallback to the main staffName (which is now resolved in useMemo)
+                              const mainStaff = resolveName(liveAppointment.staffName) || liveAppointment.staffName;
+
+                              // If mainStaff still looks like a list of IDs (comma separated), try to resolve each
+                              if (typeof mainStaff === 'string' && mainStaff.includes(',')) {
+                                const parts = mainStaff.split(',').map(s => s.trim());
+                                // Only attempt to resolve if at least one part looks like an ID
+                                if (parts.some(p => /^[a-f\d]{24}$/i.test(p))) {
+                                  return parts.map(p => resolveName(p)).join(', ');
+                                }
+                              }
+
+                              return mainStaff;
+                            })()}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1964,6 +2232,39 @@ export function AppointmentDetailView({
                           <div>
                             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Notes</p>
                             <p className="text-foreground/90">{appointment.notes}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Address Section for Wedding/Home Services */}
+                    {(appointment.isWeddingService || appointment.isHomeService) && (
+                      <div className="bg-background p-3 rounded-lg border shadow-sm border-primary/20 bg-primary/5">
+                        <div className="flex items-start space-x-3">
+                          <div className="p-2 bg-primary/10 rounded-lg mt-0.5">
+                            {appointment.isWeddingService ? (
+                              <MapPin className="h-5 w-5 text-pink-500" />
+                            ) : (
+                              <MapPin className="h-5 w-5 text-blue-500" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                              {appointment.isWeddingService ? '📍 Venue Address' : '🏠 Home Address'}
+                            </p>
+                            <p className="font-semibold text-foreground">
+                              {appointment.isWeddingService ? 'Wedding Service Venue' : 'Home Service Location'}
+                            </p>
+                            <p className="text-foreground/90 mt-1">
+                              {(appointment.isWeddingService ? appointment.weddingPackageDetails?.venueAddress : appointment.homeServiceLocation?.address) ||
+                                appointment.homeServiceLocation?.address ||
+                                'Address not specified'}
+                            </p>
+                            {(appointment.homeServiceLocation?.city || appointment.homeServiceLocation?.landmark) && (
+                              <p className="text-sm text-muted-foreground mt-0.5">
+                                {[appointment.homeServiceLocation.landmark, appointment.homeServiceLocation.city].filter(Boolean).join(', ')}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>
