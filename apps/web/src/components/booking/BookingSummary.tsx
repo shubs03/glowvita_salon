@@ -39,6 +39,8 @@ interface BookingSummaryProps {
   onEditPackage?: () => void; // New prop for editing wedding package
   onRemoveAddon?: (serviceId: string, addonId: string) => void; // New prop for removing addons
   couponCode?: string | null;
+  isHomeService?: boolean; // New prop to indicate home service booking
+  homeServiceLocation?: unknown | null;
 }
 
 export function BookingSummary({
@@ -57,7 +59,9 @@ export function BookingSummary({
   customizedPackageServices,
   onEditPackage,
   onRemoveAddon,
-  couponCode: propCouponCode
+  couponCode: propCouponCode,
+  isHomeService = false,
+  homeServiceLocation = null
 }: BookingSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -90,21 +94,43 @@ export function BookingSummary({
     image: "https://picsum.photos/seed/salon/400/400"
   };
 
-  const stepDetails = [
+  const stepDetails = isHomeService ? [
     {
       step: 1,
-      label: weddingPackage ? 'Select Time' : 'Select Staff',
-      enabled: weddingPackage ? true : selectedServices.length > 0
+      label: 'Select Staff',
+      enabled: selectedServices.length > 0 || !!weddingPackage
     },
     {
       step: 2,
-      label: 'Find a Time',
+      label: 'Select Location',
       enabled: serviceStaffAssignments && serviceStaffAssignments.length > 0
         ? serviceStaffAssignments.every(a => a.staff !== undefined)
         : (weddingPackage ? true : !!selectedStaff)
     },
-    { step: 3, label: 'Select Location', enabled: !!selectedTime },
-    { step: 4, label: 'Confirm Booking', enabled: true }, // Enabled on step 4
+    { 
+      step: 3, 
+      label: 'Select Time Slot', 
+      enabled: !!homeServiceLocation
+    },
+    { 
+      step: 4, 
+      label: 'Confirm Booking Details', 
+      enabled: !!selectedTime
+    }
+  ] : [
+    {
+      step: 1,
+      label: 'Select Staff',
+      enabled: selectedServices.length > 0 || !!weddingPackage
+    },
+    {
+      step: 2,
+      label: 'Select Time Slot',
+      enabled: serviceStaffAssignments && serviceStaffAssignments.length > 0
+        ? serviceStaffAssignments.every(a => a.staff !== undefined)
+        : (weddingPackage ? true : !!selectedStaff)
+    },
+    { step: 3, label: 'Confirm Booking Details', enabled: !!selectedTime }
   ];
 
   const nextStepInfo = stepDetails.find(s => s.step === currentStep);

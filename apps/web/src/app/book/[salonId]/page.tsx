@@ -59,6 +59,7 @@ import { Step2_Staff } from "@/components/booking/Step2_Staff";
 import { Step3_TimeSlot as TimeSlotSelector } from "@/components/booking/Step3_TimeSlot_Optimized";
 import { Step2_MultiService } from "@/components/booking/Step2_MultiService";
 import { Step3_MultiServiceTimeSlot } from "@/components/booking/Step3_MultiServiceTimeSlot";
+import { Step3_LocationSelection } from "@/components/booking/Step3_LocationSelection";
 import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@repo/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@repo/ui/card';
@@ -179,6 +180,9 @@ function BookingPageContent() {
 
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState<string>('Pay at Salon');
+  
+  // Booking confirmation loading state to prevent double-clicks
+  const [isConfirmingBooking, setIsConfirmingBooking] = useState(false);
 
   // Defensive: Ensure location is cleared if mode is salon (catches state inconsistencies)
   useEffect(() => {
@@ -752,13 +756,44 @@ function BookingPageContent() {
     setOfferCode('');
   };
 
+  const persistHomeServiceAddress = async (location: HomeServiceLocation | null) => {
+    if (!isAuthenticated || !location) return;
+    if (!location.city || !location.state || !location.pincode) return;
+
+    const lat = Number(location.coordinates?.lat ?? location.lat);
+    const lng = Number(location.coordinates?.lng ?? location.lng);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+    try {
+      await fetch('/api/client/addresses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          address: location.address,
+          city: location.city,
+          state: location.state,
+          pincode: location.pincode,
+          landmark: location.landmark || '',
+          lat,
+          lng,
+          label: 'Home',
+          isPrimary: false
+        })
+      });
+    } catch (error) {
+      console.error('Error saving address for next booking:', error);
+    }
+  };
+
   // Handle confirm appointment
   const handleConfirmAppointment = async () => {
     // Create the appointment
     try {
       await handleFinalBookingConfirmation();
       setIsConfirmationModalOpen(false);
-      setIsSuccessModalOpen(true);
+      router.push('/profile/appointments');
     } catch (error) {
       console.error("Error confirming appointment:", error);
       toast.error("Failed to confirm appointment. Please try again.");
@@ -827,7 +862,95 @@ function BookingPageContent() {
         setCurrentStep(currentStep + 1);
       }
     } else {
-      // We're at step 3 (time selection) - check for home service location if needed
+      // We're at step 3 or higher
+      // For home services: Step 3 is location, Step 4 is time slot
+      // For salon services: Step 3 is time slot
+      
+      if (currentStep === 3) {
+        // At step 3
+        if (bookingMode === 'home' && !selectedWeddingPackage) {
+          // For home services (non-wedding), step 3 is location selection
+          // Validate location and proceed to step 4 (time slot)
+          if (!homeServiceLocation) {
+            console.log("Blocking next step: Home mode without location");
+            toast.error("Please select a location for home service");
+            setShowLocationModal(true);
+            return;
+          }
+          // Location confirmed, proceed to time slot (step 4)
+          setCurrentStep(4);
+          return;
+        } else {
+          // For salon services, step 3 is time slot
+          // Check if time is selected and proceed to confirmation
+          if (!selectedTime) {
+            toast.error("Please select a time slot");
+            return;
+          }
+          // Time selected, open confirmation modal
+          console.log("Step 3 Next: Checking Auth...", { isAuthenticated });
+          if (isAuthenticated) {
+            console.log("User authenticated, opening confirmation modal");
+            setIsConfirmationModalOpen(true);
+          } else {
+            console.log("User NOT authenticated, redirecting to login");
+            toast.info("Please login to complete your booking");
+            // Save booking data to sessionStorage before redirecting to login
+            const bookingData = {
+              selectedServices,
+              serviceStaffAssignments,
+              selectedStaff,
+              selectedDate: selectedDate.toISOString(),
+              selectedTime,
+              salonId,
+              homeServiceLocation
+            };
+            sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+            router.push(`/client-login?redirect=/book/${salonId}`);
+          }
+          return;
+        }
+      }
+      
+      if (currentStep === 4) {
+        // At step 4
+        if (bookingMode === 'home' && !selectedWeddingPackage) {
+          // For home services, step 4 is time slot
+          // Check if time is selected and proceed to confirmation
+          if (!selectedTime) {
+            toast.error("Please select a time slot");
+            return;
+          }
+          // Time selected, open confirmation modal
+          console.log("Step 4 Next: Checking Auth...", { isAuthenticated });
+          if (isAuthenticated) {
+            console.log("User authenticated, opening confirmation modal");
+            setIsConfirmationModalOpen(true);
+          } else {
+            console.log("User NOT authenticated, redirecting to login");
+            toast.info("Please login to complete your booking");
+            // Save booking data to sessionStorage before redirecting to login
+            const bookingData = {
+              selectedServices,
+              serviceStaffAssignments,
+              selectedStaff,
+              selectedDate: selectedDate.toISOString(),
+              selectedTime,
+              salonId,
+              homeServiceLocation
+            };
+            sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+            router.push(`/client-login?redirect=/book/${salonId}`);
+          }
+          return;
+        } else if (selectedWeddingPackage) {
+          // Wedding package flow at step 4 (location selection for weddings)
+          // After location is selected for weddings, maybe proceed or show confirmation?
+          // This depends on your wedding package flow
+        }
+      }
+
+      // Default fallback: For any unhandled case at steps 3 or higher
       // Only require location if we are in 'home' mode
       if (bookingMode === 'home' && !homeServiceLocation) {
         console.log("Blocking next step: Home mode without location");
@@ -1236,6 +1359,12 @@ function BookingPageContent() {
     console.log('Payment Method:', paymentMethod);
     console.log('Is Authenticated:', isAuthenticated);
 
+    // Prevent double-clicks
+    if (isConfirmingBooking) {
+      console.log('Booking already in progress, ignoring duplicate click');
+      return;
+    }
+
     if (!selectedTime) {
       toast.error("Please select a time slot");
       return;
@@ -1264,6 +1393,9 @@ function BookingPageContent() {
       toast.error("Please select at least one service");
       return;
     }
+
+    // Set loading state to prevent double-clicks
+    setIsConfirmingBooking(true);
 
     // Check if this is a multi-service booking
     const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
@@ -1617,7 +1749,8 @@ function BookingPageContent() {
         if (confirmResult.success) {
           toast.success("Wedding package booking confirmed!");
           setIsConfirmationModalOpen(false);
-          setIsSuccessModalOpen(true);
+          await persistHomeServiceAddress(finalIsHomeService ? homeServiceLocation : null);
+          router.push('/profile/appointments');
         } else {
           throw new Error(confirmResult.message || "Failed to confirm booking");
         }
@@ -1695,8 +1828,10 @@ function BookingPageContent() {
           }).unwrap();
 
           toast.success("Booking confirmed!");
+          setIsConfirmationModalOpen(false);
           setIsPaymentModalOpen(false);
-          setIsSuccessModalOpen(true);
+          await persistHomeServiceAddress(finalIsHomeService ? homeServiceLocation : null);
+          router.push('/profile/appointments');
         } else {
           throw new Error("Failed to acquire slot lock or session expired.");
         }
@@ -1707,12 +1842,12 @@ function BookingPageContent() {
         sessionStorage.setItem('appointmentJustCreated', 'true');
       }
 
-      // Clear the selected time to ensure the time slot component refetches data
-      setSelectedTime(null);
-
     } catch (error: any) {
       console.error("Error creating appointment:", error);
       toast.error(error?.data?.message || error?.message || "Failed to create appointment. Please try again.");
+    } finally {
+      // Reset loading state to allow future bookings
+      setIsConfirmingBooking(false);
     }
   };
 
@@ -2798,7 +2933,24 @@ function BookingPageContent() {
           break;
 
         case 3:
-          console.log('Rendering Step3 - Wedding Package:', selectedWeddingPackage, 'isMultiService:', isMultiService);
+          console.log('Rendering Step3 - Wedding Package:', selectedWeddingPackage, 'isMultiService:', isMultiService, 'bookingMode:', bookingMode);
+
+          // For home services (non-wedding), show location selection at step 3
+          if (bookingMode === 'home' && !selectedWeddingPackage) {
+            return (
+              <Step3_LocationSelection
+                currentStep={currentStep}
+                setCurrentStep={setCurrentStep}
+                homeServiceLocation={homeServiceLocation}
+                onLocationConfirm={(location: HomeServiceLocation) => {
+                  setHomeServiceLocation(location);
+                  // Don't auto-advance - let user review and use summary button
+                }}
+                user={user}
+                isAuthenticated={isAuthenticated}
+              />
+            );
+          }
 
           // Check if we have working hours data
           if (!workingHours || workingHours.length === 0) {
@@ -2942,9 +3094,133 @@ function BookingPageContent() {
           break;
 
         case 4:
-          // Step 4: Location Selection (for wedding packages and home services)
-          console.log('Rendering Step4 - Wedding Package or Service Location');
+          // Step 4: Time Slot for home services OR Location Selection for wedding packages
+          console.log('Rendering Step4 - Wedding Package Location or Home Service Time Slot, bookingMode:', bookingMode);
 
+          // For home services (non-wedding), show time slot at step 4
+          if (bookingMode === 'home' && !selectedWeddingPackage) {
+            // Check if we have working hours data
+            if (!workingHours || workingHours.length === 0) {
+              return (
+                <div className="w-full py-12 text-center">
+                  <div className="flex flex-col items-center gap-4">
+                    <AlertCircle className="h-8 w-8 text-destructive" />
+                    <p className="text-muted-foreground">Working hours not configured for this salon.</p>
+                    <Button onClick={() => window.location.reload()}>Reload</Button>
+                  </div>
+                </div>
+              );
+            }
+
+            // Determine service data for time slot generation (copied from case 3)
+            const isMultiService = selectedServices.length > 1 || serviceStaffAssignments.length > 0;
+            let serviceForTimeSlot;
+            let totalDuration = 0;
+
+            if (isMultiService) {
+              totalDuration = selectedServices.reduce((total, service) => {
+                const duration = convertDurationToMinutes(service.duration);
+                return total + (duration || 0);
+              }, 0);
+
+              serviceForTimeSlot = {
+                id: 'multi-service',
+                name: `${selectedServices.length} Services`,
+                duration: `${totalDuration} min`,
+                price: selectedServices.reduce((total, s) => total + Number(s.discountedPrice || s.price || 0), 0).toString(),
+                category: 'Multi-Service',
+                description: selectedServices.map(s => s.name).join(', ')
+              } as any;
+            } else {
+              if (selectedServices.length === 0) {
+                return (
+                  <div className="w-full py-12 text-center">
+                    <div className="flex flex-col items-center gap-4">
+                      <AlertCircle className="h-8 w-8 text-destructive" />
+                      <p className="text-muted-foreground">No services selected. Please go back and select a service.</p>
+                      <Button onClick={() => setCurrentStep(1)}>Go to Step 1</Button>
+                    </div>
+                  </div>
+                );
+              }
+              const service = selectedServices[0];
+              const duration = convertDurationToMinutes(service?.duration || 0);
+              totalDuration = duration || 0;
+              serviceForTimeSlot = service;
+            }
+
+            // Render time slot selector for home services at step 4
+            return isMultiService ? (
+              <Step3_MultiServiceTimeSlot
+                selectedDate={selectedDate}
+                onSelectDate={setSelectedDate}
+                selectedTime={selectedTime}
+                onSelectTime={setSelectedTime}
+                currentStep={currentStep}
+                setCurrentStep={setCurrentStep}
+                serviceStaffAssignments={serviceStaffAssignments}
+                staff={staff}
+                workingHours={workingHours}
+                isLoading={false}
+                error={null}
+                selectedServices={selectedServices}
+                vendorId={salonId as string}
+                onLockAcquired={(token, appId) => {
+                  setSlotLockToken(token);
+                  if (appId) setPendingAppointmentId(appId);
+                }}
+                platformFee={priceBreakdown?.platformFee}
+                serviceTax={priceBreakdown?.serviceTax}
+                taxRate={priceBreakdown?.taxFeeSettings?.serviceTax}
+                couponCode={appliedOffer?.code || offerCode}
+                discountAmount={priceBreakdown?.discountAmount || 0}
+                user={user}
+                isHomeService={true}
+                homeServiceLocation={homeServiceLocation as any}
+                isWeddingService={selectedServices.some(service =>
+                  service.weddingService?.available || service.serviceWeddingService?.available
+                )}
+              />
+            ) : (
+              <TimeSlotSelector
+                selectedServices={selectedServices}
+                selectedDate={selectedDate}
+                onSelectDate={setSelectedDate}
+                selectedTime={selectedTime}
+                onSelectTime={setSelectedTime}
+                currentStep={currentStep}
+                setCurrentStep={setCurrentStep}
+                selectedStaff={selectedStaff}
+                onSelectStaff={setSelectedStaff}
+                staff={selectedStaff ? [selectedStaff] : staff}
+                workingHours={workingHours}
+                isLoading={false}
+                error={null}
+                salonId={salonId as string}
+                service={serviceForTimeSlot}
+                isWeddingPackage={false}
+                weddingPackage={null}
+                weddingPackageServices={undefined}
+                onLockAcquired={(token, appId) => {
+                  setSlotLockToken(token);
+                  if (appId) setPendingAppointmentId(appId);
+                }}
+                platformFee={priceBreakdown?.platformFee}
+                serviceTax={priceBreakdown?.serviceTax}
+                taxRate={priceBreakdown?.taxFeeSettings?.serviceTax}
+                couponCode={appliedOffer?.code || offerCode}
+                discountAmount={priceBreakdown?.discountAmount || 0}
+                user={user}
+                isHomeService={true}
+                homeServiceLocation={homeServiceLocation}
+                isWeddingService={selectedServices.some(service =>
+                  service.weddingService?.available || service.serviceWeddingService?.available
+                )}
+              />
+            );
+          }
+
+          // Wedding package location selection
           if (selectedWeddingPackage) {
             // Wedding package: Always show location selection since weddings are typically at venue
             return (
@@ -3299,6 +3575,8 @@ function BookingPageContent() {
               onEditPackage={handleCustomizePackage}
               onRemoveAddon={handleRemoveAddon}
               couponCode={appliedOffer?.code || offerCode}
+              isHomeService={bookingMode === 'home'}
+              homeServiceLocation={homeServiceLocation}
             />
           </div>
         </aside>
@@ -3322,6 +3600,8 @@ function BookingPageContent() {
           onEditPackage={handleCustomizePackage}
           onRemoveAddon={handleRemoveAddon}
           couponCode={appliedOffer?.code || offerCode}
+          isHomeService={bookingMode === 'home'}
+          homeServiceLocation={homeServiceLocation}
         />
       </div>
 
@@ -3936,13 +4216,31 @@ function BookingPageContent() {
             </Card>
           </div>
           <DialogFooter className="sm:justify-end gap-3 pt-4 border-t border-gray-200 mt-2">
-            <Button variant="outline" onClick={() => setIsConfirmationModalOpen(false)} className="px-6">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsConfirmationModalOpen(false)} 
+              className="px-6"
+              disabled={isConfirmingBooking}
+            >
               <ChevronLeft className="h-4 w-4 mr-2" />
               Edit Details
             </Button>
-            <Button onClick={handleFinalBookingConfirmation} className="bg-primary hover:bg-primary/90 px-6">
-              Confirm & Proceed
-              <ChevronRight className="h-4 w-4 ml-2" />
+            <Button 
+              onClick={handleFinalBookingConfirmation} 
+              className="bg-primary hover:bg-primary/90 px-6"
+              disabled={isConfirmingBooking}
+            >
+              {isConfirmingBooking ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Confirming...
+                </>
+              ) : (
+                <>
+                  Confirm & Proceed
+                  <ChevronRight className="h-4 w-4 ml-2" />
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>

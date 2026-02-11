@@ -802,18 +802,7 @@ export function Step1_Services({
         </div>
       )}
 
-      {/* Continue Button */}
-      <div className="mt-8 flex justify-end sticky bottom-0 bg-white/80 backdrop-blur-sm py-4 border-t">
-        {viewMode === 'services' && selectedServices.length > 0 && (
-          <Button
-            size="lg"
-            onClick={() => setCurrentStep(2)}
-          >
-            Continue
-            <ChevronRight className="h-5 w-5 ml-2" />
-          </Button>
-        )}
-      </div>
+      {/* Continue Button - Removed as per user request */}
 
       {/* Confirmation Dialog */}
       <Dialog open={packageToConfirm !== null} onOpenChange={(open) => !open && setPackageToConfirm(null)}>

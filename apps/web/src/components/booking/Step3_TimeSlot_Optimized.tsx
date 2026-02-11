@@ -10,14 +10,17 @@ import { Service, StaffMember, WeddingPackage } from '@/hooks/useBookingData';
 import { format, addDays } from 'date-fns';
 
 // Breadcrumb navigation component
-const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage }: {
+const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage, isHomeService }: {
   currentStep: number;
   setCurrentStep: (step: number) => void;
   isWeddingPackage?: boolean;
+  isHomeService?: boolean;
 }) => {
   // Wedding packages skip step 2 (staff selection)
+  // Home services add step 3 (location selection)
   // Step mapping: 
   // Regular: [1, 2, 3, 4] -> ['Select Service', 'Select Professional', 'Select Date & Time', 'Confirm Booking']
+  // Home Service: [1, 2, 3, 4] -> ['Select Service', 'Select Professional', 'Select Location', 'Select Date & Time']
   // Wedding: [1, 3, 4, 5] -> ['Select Package', 'Select Date & Time', 'Location Selection', 'Confirm Booking']
 
   const steps = isWeddingPackage
@@ -25,6 +28,13 @@ const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage }: {
       { name: 'Select Package', step: 1 },
       { name: 'Select Date & Time', step: 3 },
       { name: 'Confirm Booking', step: 4 }
+    ]
+    : isHomeService
+    ? [
+      { name: 'Select Service', step: 1 },
+      { name: 'Select Professional', step: 2 },
+      { name: 'Select Location', step: 3 },
+      { name: 'Select Date & Time', step: 4 }
     ]
     : [
       { name: 'Select Service', step: 1 },
@@ -610,7 +620,7 @@ export const Step3_TimeSlot = memo(({
   if (parentLoading || isLoadingSlots) {
     return (
       <div className="w-full">
-        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} />
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} isHomeService={isHomeService} />
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -640,7 +650,7 @@ export const Step3_TimeSlot = memo(({
   if (parentError || slotsError) {
     return (
       <div className="w-full">
-        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} />
+        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} isHomeService={isHomeService} />
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -664,7 +674,7 @@ export const Step3_TimeSlot = memo(({
 
   return (
     <div className="w-full">
-      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} />
+      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} isHomeService={isHomeService} />
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-3 bg-primary/10 rounded-full text-primary">
