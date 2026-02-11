@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@repo/lib/db';
-import EnhancedWeddingPackageModel from '@repo/lib/models/Vendor/EnhancedWeddingPackage.model';
+import WeddingPackageModel from '@repo/lib/models/Vendor/WeddingPackage.model';
 
 /**
  * Lock a wedding package slot
@@ -24,9 +24,6 @@ export async function POST(request) {
 
     console.log("Looking for wedding package with ID:", packageId);
     
-    // Find the wedding package - try both model names
-    let weddingPackage;
-    
     // First, check if packageId is a valid ObjectId
     const mongoose = await import('mongoose');
     if (!mongoose.default.Types.ObjectId.isValid(packageId)) {
@@ -37,27 +34,19 @@ export async function POST(request) {
       );
     }
     
-    try {
-      console.log("Trying EnhancedWeddingPackageModel...");
-      weddingPackage = await EnhancedWeddingPackageModel.findById(packageId).lean();
-      console.log("EnhancedWeddingPackageModel result:", !!weddingPackage);
-      if (weddingPackage) {
-        console.log("Found in EnhancedWeddingPackage:", { id: weddingPackage._id, name: weddingPackage.name });
-      }
-    } catch (modelError) {
-      console.error("Error with EnhancedWeddingPackageModel:", modelError);
+    // Find the wedding package
+    const weddingPackage = await WeddingPackageModel.findById(packageId).lean();
+    console.log("WeddingPackageModel result:", !!weddingPackage);
+    
+    if (!weddingPackage) {
+      console.log("Wedding package not found with ID:", packageId);
+      return NextResponse.json(
+        { success: false, message: 'Wedding package not found' },
+        { status: 404 }
+      );
     }
     
-    // If not found in Enhanced, try regular WeddingPackage model
-    if (!weddingPackage) {
-      console.log("Not found in EnhancedWeddingPackage, trying WeddingPackage model...");
-      try {
-        const WeddingPackageModel = (await import('@repo/lib/models/Vendor/WeddingPackage.model')).default;
-        weddingPackage = await WeddingPackageModel.findById(packageId).lean();
-        console.log("WeddingPackageModel result:", !!weddingPackage);
-        if (weddingPackage) {
-          console.log("Found in WeddingPackage:", { id: weddingPackage._id, name: weddingPackage.name });
-        }
+    console.log("Found wedding package:", { id: weddingPackage._id, name: weddingPackage.name });
       } catch (wpError) {
         console.error("Error with WeddingPackageModel:", wpError);
       }
@@ -157,22 +146,9 @@ export async function PUT(request) {
 
     console.log("Confirming wedding package booking for package:", packageId);
     
-    // Find the wedding package again
-    let weddingPackage;
-    const mongoose = await import('mongoose');
-    
-    try {
-      weddingPackage = await EnhancedWeddingPackageModel.findById(packageId).lean();
-      console.log("EnhancedWeddingPackageModel result:", !!weddingPackage);
-    } catch (error) {
-      console.error("Error with EnhancedWeddingPackageModel:", error);
-    }
-    
-    if (!weddingPackage) {
-      const WeddingPackageModel = (await import('@repo/lib/models/Vendor/WeddingPackage.model')).default;
-      weddingPackage = await WeddingPackageModel.findById(packageId).lean();
-      console.log("WeddingPackageModel result:", !!weddingPackage);
-    }
+    // Find the wedding package
+    const weddingPackage = await WeddingPackageModel.findById(packageId).lean();
+    console.log("WeddingPackageModel result:", !!weddingPackage);
     
     if (!weddingPackage) {
       return NextResponse.json(
