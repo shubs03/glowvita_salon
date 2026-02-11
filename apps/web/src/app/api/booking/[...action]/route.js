@@ -809,8 +809,8 @@ async function handleWeddingPackageDiscovery(searchParams) {
     });
   }
 
-  // Import the EnhancedWeddingPackageModel dynamically
-  const EnhancedWeddingPackageModel = (await import("@repo/lib/models/Vendor/EnhancedWeddingPackage.model")).default;
+  // Import the WeddingPackageModel dynamically
+  const WeddingPackageModel = (await import("@repo/lib/models/Vendor/WeddingPackage.model")).default;
 
   let query = { vendorId };
 
@@ -822,12 +822,12 @@ async function handleWeddingPackageDiscovery(searchParams) {
     query.isActive = isActive === 'true';
   }
 
-  const weddingPackages = await EnhancedWeddingPackageModel.find(query)
+  const weddingPackages = await WeddingPackageModel.find(query)
     .sort({ createdAt: -1 });
 
   // Populate service details for each package
   const populatedPackages = await Promise.all(weddingPackages.map(async (pkg) => {
-    return await pkg.populateEnhancedServiceDetails();
+    return await pkg.populateServiceDetails();
   }));
 
   // Cache the results
@@ -1457,11 +1457,11 @@ async function handleWeddingPackageCustomization(body) {
     return Response.json(errorRes, { status: 400 });
   }
 
-  // Import the EnhancedWeddingPackageModel dynamically
-  const EnhancedWeddingPackageModel = (await import("@repo/lib/models/Vendor/EnhancedWeddingPackage.model")).default;
+  // Import the WeddingPackageModel dynamically
+  const WeddingPackageModel = (await import("@repo/lib/models/Vendor/WeddingPackage.model")).default;
 
   // Find the package
-  const weddingPackage = await EnhancedWeddingPackageModel.findById(packageId);
+  const weddingPackage = await WeddingPackageModel.findById(packageId);
 
   if (!weddingPackage) {
     const errorRes = formatErrorResponse(new AppError('Wedding package not found', 'PACKAGE_NOT_FOUND', 'CLIENT_ERROR', 404));
@@ -1497,11 +1497,11 @@ async function handleWeddingPackageUpdate(body) {
     return Response.json(errorRes, { status: 400 });
   }
 
-  // Import the EnhancedWeddingPackageModel dynamically
-  const EnhancedWeddingPackageModel = (await import("@repo/lib/models/Vendor/EnhancedWeddingPackage.model")).default;
+  // Import the WeddingPackageModel dynamically
+  const WeddingPackageModel = (await import("@repo/lib/models/Vendor/WeddingPackage.model")).default;
 
   // Update the package
-  const updatedPackage = await EnhancedWeddingPackageModel.findByIdAndUpdate(
+  const updatedPackage = await WeddingPackageModel.findByIdAndUpdate(
     packageId,
     { ...updateData, updatedAt: new Date() },
     { new: true, runValidators: true }
