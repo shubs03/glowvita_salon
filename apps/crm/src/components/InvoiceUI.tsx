@@ -183,6 +183,11 @@ export function InvoiceUI({
                         ))}
                       </div>
                     )}
+                    {item.staffMember?.name && (
+                      <div className="mt-1 text-[10px] sm:text-xs text-gray-500 italic print:text-[10px]">
+                        Staff: {item.staffMember.name}
+                      </div>
+                    )}
                   </div>
                 </td>
                 <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">₹{(item.price || 0).toFixed(2)}</td>

@@ -29,12 +29,30 @@ export const POST = withSubscriptionCheck(async (req) => {
             if (item.staffMember?.id) {
                 const staff = await StaffModel.findById(item.staffMember.id);
                 if (staff && staff.commission) {
+                    // Calculate effective amount after item-level discount
+                    let effectiveAmount = item.totalPrice;
+                    if (item.discount > 0) {
+                        if (item.discountType === 'percentage') {
+                             effectiveAmount = Math.max(0, item.totalPrice * (1 - item.discount / 100));
+                        } else if (item.discountType === 'flat') {
+                             effectiveAmount = Math.max(0, item.totalPrice - item.discount);
+                        }
+                    }
+
                     const rate = staff.commissionRate || 0;
-                    const amount = (item.totalPrice * rate) / 100;
+                    const amount = (effectiveAmount * rate) / 100;
+                    
+                    console.log(`Applying commission for staff ${staff.fullName}: Rate ${rate}%, Amount ${amount} on Effective Amount ${effectiveAmount}`);
+                    
                     return {
                         ...item,
-                        staffCommissionRate: rate,
-                        staffCommissionAmount: amount
+                        staffMember: {
+                            ...(item.staffMember || {}),
+                            staffCommissionRate: rate,
+                            staffCommissionAmount: amount,
+                            id: item.staffMember.id, // Ensure ID is preserved
+                            name: staff.fullName // Ensure name is preserved
+                        }
                     };
                 }
             }
