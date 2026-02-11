@@ -4,7 +4,7 @@ import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
-import { Plus, Check, Scissors, Loader2, AlertCircle, Home, Heart, Users, X, Clock, List, User } from 'lucide-react';
+import { Bolt, Plus, Check, Scissors, Loader2, AlertCircle, Home, Heart, Users, X, Clock , List, User } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 import { ChevronRight } from 'lucide-react';
 import { Service, WeddingPackage } from '@/hooks/useBookingData';
@@ -434,7 +434,7 @@ export function Step1_Services({
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-3 bg-primary/10 rounded-full text-primary">
-            {viewMode === 'services' ? <Scissors className="h-6 w-6" /> : <Heart className="h-6 w-6 text-rose-600" />}
+            {viewMode === 'services' ? <Scissors className="h-6 w-6" /> : <Heart className="h-6 w-6" />}
           </div>
           <h2 className="text-3xl font-bold font-headline">
             {viewMode === 'services' ? 'Select Your Services' : 'Choose Wedding Package'}
@@ -467,14 +467,14 @@ export function Step1_Services({
             className={cn(
               "px-6 py-3 rounded-md font-medium transition-all flex items-center gap-2",
               viewMode === 'packages'
-                ? "bg-white shadow-sm text-rose-600"
+                ? "bg-white shadow-sm text-primary"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
             <Heart className="h-4 w-4" />
             Wedding Packages
             {displayWeddingPackages.length > 0 && (
-              <span className="ml-1 px-2 py-0.5 bg-rose-100 text-rose-600 rounded-full text-xs font-semibold">
+              <span className="ml-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-semibold">
                 {displayWeddingPackages.length}
               </span>
             )}
@@ -486,14 +486,14 @@ export function Step1_Services({
       {viewMode === 'services' && (
         <>
           {/* Tab-like navigation for categories */}
-          <div className="sticky top-0 z-10 py-4 bg-background/80 backdrop-blur-sm -mx-6 px-6">
+          <div className="sticky top-0 z-10 pb-4 -mx-6 px-6">
             <div className="relative">
               <div className="flex space-x-2 overflow-x-auto pb-2 no-scrollbar">
                 {displayCategories.map((category: { name: string }) => (
                   <Button
                     key={category.name}
                     variant={activeCategory === category.name ? 'default' : 'outline'}
-                    className={`rounded-full px-5 py-2 h-auto text-sm transition-all duration-200 ${activeCategory === category.name ? 'shadow-lg' : 'hover:bg-primary/5 hover:border-primary/50'
+                    className={`rounded-full px-5 py-2 h-auto text-sm transition-all duration-200 ${activeCategory === category.name ? '' : 'hover:bg-primary/5 hover:border-primary/50'
                       }`}
                     onClick={() => setActiveCategory(category.name)}
                   >
@@ -501,7 +501,7 @@ export function Step1_Services({
                   </Button>
                 ))}
               </div>
-              <div className="absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+            
             </div>
           </div>
 
@@ -552,8 +552,8 @@ export function Step1_Services({
             </div>
 
             {bookingMode === 'home' && (
-              <div className="mt-3 text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-md border border-amber-100 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div className="mt-3 text-xs text-primary bg-primary/10 px-3 py-2 rounded-md border border-primary/20 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>You are browsing services available for <strong>Home Visit</strong>. Salon-only services are disabled.</span>
               </div>
             )}
@@ -613,7 +613,7 @@ export function Step1_Services({
                       {isHomeService && (
                         <span className={cn(
                           "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
-                          isDisabled ? "bg-muted text-muted-foreground" : "bg-blue-100 text-blue-800"
+                          isDisabled ? "bg-muted text-muted-foreground" : "bg-primary text-secondary"
                         )}>
                           <Home className="h-3 w-3 mr-1" />
                           Home Service
@@ -633,8 +633,8 @@ export function Step1_Services({
                       )}
                       {/* Swiggy-style Customisable Badge */}
                       {service.addOns && service.addOns.length > 0 && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                          <span className="mr-1 text-[10px]">✨</span>
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                          <Bolt className="h-3 w-3 mr-1" />
                           Customisable
                         </span>
                       )}
