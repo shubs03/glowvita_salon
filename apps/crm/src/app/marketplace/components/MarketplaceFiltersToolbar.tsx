@@ -1,5 +1,5 @@
 import { Input } from '@repo/ui/input';
-import { Search, Grid3X3, List, Package } from 'lucide-react';
+import { Search, Grid3X3, List, Package, ArrowLeft } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Button } from '@repo/ui/button';
 
@@ -10,6 +10,8 @@ interface MarketplaceFiltersToolbarProps {
   onSearchChange: (value: string) => void;
   onStatusChange: (value: string) => void;
   onViewModeChange: (mode: 'grid' | 'list') => void;
+  pageViewMode?: 'suppliers' | 'products';
+  onBack?: () => void;
 }
 
 export const MarketplaceFiltersToolbar = ({
@@ -18,16 +20,35 @@ export const MarketplaceFiltersToolbar = ({
   viewMode,
   onSearchChange,
   onStatusChange,
-  onViewModeChange
+  onViewModeChange,
+  pageViewMode = 'suppliers',
+  onBack
 }: MarketplaceFiltersToolbarProps) => {
+  const searchPlaceholder = pageViewMode === 'suppliers' 
+    ? "Search suppliers by name, location, email..."
+    : "Search products, categories...";
+
   return (
     <div className=" rounded-lg">
+      {pageViewMode === 'products' && onBack && (
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="text-muted-foreground hover:text-primary"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Suppliers
+          </Button>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search products, suppliers, categories..."
+            placeholder={searchPlaceholder}
             className="pl-10 h-12 rounded-lg border border-border focus:border-primary text-base"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}

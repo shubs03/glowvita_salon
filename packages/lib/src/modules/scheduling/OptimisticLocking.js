@@ -255,6 +255,57 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
       console.error("Error fetching vendor region for appointment:", err);
     }
 
+    // CRITICAL FIX: Calculate fees if missing
+    let finalPlatformFee = Math.round(cleanAppointmentData.platformFee || 0);
+    let finalServiceTax = Math.round(cleanAppointmentData.serviceTax || 0);
+    let finalTaxRate = cleanAppointmentData.taxRate || 0;
+    let finalAmount = Math.round(cleanAppointmentData.finalAmount || cleanAppointmentData.totalAmount || cleanAppointmentData.amount || 0);
+    
+    // If fees are 0 but we have an amount, try to calculate them
+    if ((finalPlatformFee === 0 || finalServiceTax === 0) && cleanAppointmentData.amount > 0) {
+      console.log('⚠️ Platform fee or service tax is 0, attempting to calculate from tax settings...');
+      
+      try {
+        const TaxFeeSettings = (await import('../../models/admin/TaxFeeSettings.model.js')).default;
+        const taxSettings = await TaxFeeSettings.getLatestSettings();
+        
+        if (taxSettings) {
+          const baseAmount = cleanAppointmentData.totalAmount || cleanAppointmentData.amount || 0;
+          
+          // Calculate platform fee if enabled and not provided
+          if (finalPlatformFee === 0 && taxSettings.platformFeeEnabled) {
+            if (taxSettings.platformFeeType === 'percentage') {
+              finalPlatformFee = Math.round((baseAmount * taxSettings.platformFee) / 100);
+            } else {
+              finalPlatformFee = Math.round(taxSettings.platformFee);
+            }
+            console.log('✅ Calculated platform fee:', finalPlatformFee);
+          }
+          
+          // Calculate service tax (GST) if enabled and not provided
+          if (finalServiceTax === 0 && taxSettings.serviceTaxEnabled) {
+            if (taxSettings.serviceTaxType === 'percentage') {
+              finalServiceTax = Math.round((baseAmount * taxSettings.serviceTax) / 100);
+              finalTaxRate = taxSettings.serviceTax;
+            } else {
+              finalServiceTax = Math.round(taxSettings.serviceTax);
+            }
+            console.log('✅ Calculated service tax (GST):', finalServiceTax);
+          }
+          
+          // Recalculate final amount if fees were calculated
+          if (finalPlatformFee > 0 || finalServiceTax > 0) {
+            const discountAmount = Math.round(cleanAppointmentData.discountAmount || 0);
+            finalAmount = Math.round(baseAmount + finalPlatformFee + finalServiceTax - discountAmount);
+            console.log('✅ Recalculated final amount:', finalAmount);
+          }
+        }
+      } catch (error) {
+        console.error('Error calculating fees from tax settings:', error);
+        // Continue with original values
+      }
+    }
+
     // Add lock information to appointment data
     const tempAppointmentData = {
       ...cleanAppointmentData, // Spread the original data first
@@ -278,12 +329,13 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
       duration: cleanAppointmentData.duration || 0,
       amount: Math.round(cleanAppointmentData.amount || 0),
       totalAmount: Math.round(cleanAppointmentData.totalAmount || cleanAppointmentData.amount || 0),
-      finalAmount: Math.round(cleanAppointmentData.finalAmount || cleanAppointmentData.totalAmount || cleanAppointmentData.amount || 0),
-      platformFee: Math.round(cleanAppointmentData.platformFee || 0),
-      serviceTax: Math.round(cleanAppointmentData.serviceTax || 0),
-      taxRate: cleanAppointmentData.taxRate || 0,
+      finalAmount: finalAmount,
+      platformFee: finalPlatformFee,
+      serviceTax: finalServiceTax,
+      taxRate: finalTaxRate,
       couponCode: cleanAppointmentData.couponCode || null,
       discountAmount: Math.round(cleanAppointmentData.discountAmount || 0),
+      discount: cleanAppointmentData.discount || 0,
       mode: 'online', // Web bookings are always online
       isHomeService: cleanAppointmentData.isHomeService || false,
       isWeddingService: cleanAppointmentData.isWeddingService || false,
@@ -534,6 +586,20 @@ export async function confirmAppointment(appointmentId, lockToken, paymentDetail
     if (couponData.finalAmount !== undefined) {
       console.log(`Setting finalAmount for appointment ${appointmentId}: ${couponData.finalAmount} (discount: ${couponData.discountAmount})`);
       appointment.finalAmount = Math.round(couponData.finalAmount);
+    }
+    
+    // Update fee data if provided in confirmation request
+    if (couponData.platformFee !== undefined) {
+      appointment.platformFee = Math.round(couponData.platformFee);
+      console.log(`Updated platformFee: ${appointment.platformFee}`);
+    }
+    if (couponData.serviceTax !== undefined) {
+      appointment.serviceTax = Math.round(couponData.serviceTax);
+      console.log(`Updated serviceTax (GST): ${appointment.serviceTax}`);
+    }
+    if (couponData.taxRate !== undefined) {
+      appointment.taxRate = couponData.taxRate;
+      console.log(`Updated taxRate: ${appointment.taxRate}`);
     }
 
     // Preserve home service location and travel time data

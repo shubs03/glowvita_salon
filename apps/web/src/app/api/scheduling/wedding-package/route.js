@@ -204,6 +204,11 @@ export async function PUT(request) {
     const discountAmount = selectedSlot.discountAmount || 0;
     const finalAmount = selectedSlot.totalAmount || (baseAmount - discountAmount);
     
+    // Extract fee fields from selectedSlot
+    const platformFee = selectedSlot.platformFee || 0;
+    const serviceTax = selectedSlot.serviceTax || 0;
+    const taxRate = selectedSlot.taxRate || 0;
+    
     const appointment = new AppointmentModel({
       vendorId: weddingPackage.vendorId,
       regionId: vendor?.regionId || null, // <--- Added Region ID
@@ -222,6 +227,9 @@ export async function PUT(request) {
       totalAmount: baseAmount,
       discountAmount: discountAmount,
       couponCode: selectedSlot.couponCode || null,
+      platformFee: platformFee,
+      serviceTax: serviceTax,
+      taxRate: taxRate,
       finalAmount: finalAmount,
       status: 'scheduled', // Confirmed booking
       paymentStatus: paymentDetails?.status || 'pending',

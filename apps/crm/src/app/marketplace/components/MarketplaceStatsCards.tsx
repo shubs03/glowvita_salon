@@ -10,18 +10,28 @@ interface MarketplaceStats {
 
 interface MarketplaceStatsCardsProps {
   stats: MarketplaceStats;
+  viewMode?: 'suppliers' | 'products';
+  selectedSupplier?: { shopName: string; totalStock?: number } | null;
 }
 
-export const MarketplaceStatsCards = ({ stats }: MarketplaceStatsCardsProps) => {
+export const MarketplaceStatsCards = ({ 
+  stats, 
+  viewMode = 'suppliers',
+  selectedSupplier = null 
+}: MarketplaceStatsCardsProps) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-primary mb-1">Total Products</p>
+              <p className="text-sm font-medium text-primary mb-1">
+                {viewMode === 'suppliers' ? 'Total Products' : 'Supplier Products'}
+              </p>
               <p className="text-2xl font-bold text-primary">{stats.totalProducts}</p>
-              <p className="text-xs text-primary/70 mt-1">Available for purchase</p>
+              <p className="text-xs text-primary/70 mt-1">
+                {viewMode === 'suppliers' ? 'Available for purchase' : `From ${selectedSupplier?.shopName || 'this supplier'}`}
+              </p>
             </div>
             <div className="p-3 bg-primary/10 rounded-full transition-colors">
               <Package className="h-6 w-6 text-primary" />
@@ -34,9 +44,15 @@ export const MarketplaceStatsCards = ({ stats }: MarketplaceStatsCardsProps) => 
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-secondary-foreground mb-1">Suppliers</p>
-              <p className="text-2xl font-bold text-secondary-foreground">{stats.totalSuppliers}</p>
-              <p className="text-xs text-secondary-foreground/70 mt-1">Verified suppliers</p>
+              <p className="text-sm font-medium text-secondary-foreground mb-1">
+                {viewMode === 'suppliers' ? 'Suppliers' : 'Total Stock'}
+              </p>
+              <p className="text-2xl font-bold text-secondary-foreground">
+                {viewMode === 'suppliers' ? stats.totalSuppliers : (selectedSupplier?.totalStock || 0)}
+              </p>
+              <p className="text-xs text-secondary-foreground/70 mt-1">
+                {viewMode === 'suppliers' ? 'Verified suppliers' : 'Items available'}
+              </p>
             </div>
             <div className="p-3 bg-primary/10 rounded-full transition-colors">
               <Users className="h-6 w-6 text-secondary-foreground" />
