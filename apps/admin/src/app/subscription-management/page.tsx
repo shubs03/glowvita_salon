@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Skeleton } from '@repo/ui/skeleton';
-import { Edit2, Plus, Trash2, Eye, Calendar, Users, FileText, BadgeCheck, RefreshCw } from 'lucide-react';
+import { Edit2, Plus, Trash2, Eye, Calendar, Users, FileText, BadgeCheck, RefreshCw, AlertCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Switch } from '@repo/ui/switch';
@@ -336,6 +336,7 @@ export default function SubscriptionManagementPage() {
 
   // Active count derived from live data
   const activeSubscribersCount = subscribers.filter((s) => s.status === 'Active').length;
+  const expiredSubscribersCount = subscribers.filter((s) => s.status === 'Expired').length;
 
   // Pagination logic with safeguards
   const totalPlanPages = Math.ceil(plans.length / (planItemsPerPage || 1)) || 1;
@@ -370,8 +371,8 @@ export default function SubscriptionManagementPage() {
         <Skeleton className="h-8 w-56 mb-6" />
 
         {/* Stats cards skeleton */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
+          {[...Array(5)].map((_, i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <Skeleton className="h-4 w-24" />
@@ -448,7 +449,7 @@ export default function SubscriptionManagementPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Subscription Management</h1>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Plans</CardTitle>
@@ -477,6 +478,16 @@ export default function SubscriptionManagementPage() {
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{activeSubscribersCount}</div>
             <p className="text-xs text-muted-foreground">Currently active plans</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Inactive Subscriptions</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{expiredSubscribersCount}</div>
+            <p className="text-xs text-muted-foreground">With expired status</p>
           </CardContent>
         </Card>
         <Card>

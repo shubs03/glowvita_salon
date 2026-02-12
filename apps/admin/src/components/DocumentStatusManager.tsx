@@ -8,16 +8,39 @@ import { Textarea } from "@repo/ui/textarea";
 import { Label } from "@repo/ui/label";
 import { Badge } from "@repo/ui/badge";
 import { CheckCircle2, X, Clock, Eye, FileText } from "lucide-react";
-import { useUpdateVendorDocumentStatusMutation } from '@repo/store/api';
+import { useUpdateVendorDocumentStatusMutation, useUpdateSupplierDocumentStatusMutation } from '@repo/store/api';
 import { toast } from 'sonner';
 
 interface DocumentStatusManagerProps {
-  vendor: any;
+  entity: any;
+  role: 'vendor' | 'supplier';
   onUpdate: () => void;
 }
 
-const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ vendor, onUpdate }) => {
-  const [updateDocumentStatus] = useUpdateVendorDocumentStatusMutation();
+const getAbsoluteUrl = (url: string) => {
+  if (!url || typeof url !== 'string') return '';
+
+  // Already absolute URL or data URL
+  if (url.startsWith('http') || url.startsWith('data:')) return url;
+
+  // Handle relative paths
+  if (url.startsWith('/')) {
+    // Use CRM URL from env if available, fallback to localhost:3001
+    const crmUrl = process.env.NEXT_PUBLIC_CRM_URL || 'http://localhost:3001';
+    // Remove trailing slash from CRM URL if present
+    const baseUrl = crmUrl.endsWith('/') ? crmUrl.slice(0, -1) : crmUrl;
+    return `${baseUrl}${url}`;
+  }
+
+  // If it doesn't start with /, assume it's a relative path that needs /uploads/ prefix
+  const crmUrl = process.env.NEXT_PUBLIC_CRM_URL || 'http://localhost:3001';
+  const baseUrl = crmUrl.endsWith('/') ? crmUrl.slice(0, -1) : crmUrl;
+  return `${baseUrl}/uploads/${url}`;
+};
+
+const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ entity, role, onUpdate }) => {
+  const [updateVendorDocumentStatus] = useUpdateVendorDocumentStatusMutation();
+  const [updateSupplierDocumentStatus] = useUpdateSupplierDocumentStatusMutation();
   const [previewDocument, setPreviewDocument] = useState<{ src: string; type: string } | null>(null);
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState<string | null>(null);
@@ -32,26 +55,35 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ vendor, o
   ];
 
   const getDocumentStatus = (docType: string) => {
-    if (vendor?.documents && typeof vendor.documents === 'object') {
+    if (entity?.documents && typeof entity.documents === 'object') {
       const statusKey = `${docType}Status`;
-      return vendor.documents[statusKey] || 'pending';
+      return entity.documents[statusKey] || 'pending';
     }
     return 'pending';
   };
 
   const getRejectionReason = (docType: string) => {
-    if (vendor?.documents && typeof vendor.documents === 'object') {
+    if (entity?.documents && typeof entity.documents === 'object') {
       const reasonKey = `${docType}AdminRejectionReason`;
-      return vendor.documents[reasonKey] || '';
+      return entity.documents[reasonKey] || '';
     }
     return '';
   };
 
   const getDocumentValue = (docType: string) => {
-    if (vendor?.documents && typeof vendor.documents === 'object') {
-      return vendor.documents[docType] || null;
+    if (entity?.documents && typeof entity.documents === 'object') {
+      return entity.documents[docType] || null;
     }
     return null;
+  };
+
+  const openDocumentPreview = (src: string, type: string) => {
+    console.log('🔍 Document Preview Debug:');
+    console.log('  Original src:', src);
+    console.log('  Document type:', type);
+    const absoluteUrl = getAbsoluteUrl(src);
+    console.log('  Absolute URL:', absoluteUrl);
+    setPreviewDocument({ src: absoluteUrl, type });
   };
 
   const getStatusBadge = (status: string) => {
@@ -68,12 +100,21 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ vendor, o
 
   const handleApproveDocument = async (docType: string) => {
     try {
-      await updateDocumentStatus({
-        vendorId: vendor._id,
-        documentType: docType,
-        status: 'approved',
-        rejectionReason: ''
-      }).unwrap();
+      if (role === 'vendor') {
+        await updateVendorDocumentStatus({
+          vendorId: entity._id,
+          documentType: docType,
+          status: 'approved',
+          rejectionReason: ''
+        }).unwrap();
+      } else {
+        await updateSupplierDocumentStatus({
+          supplierId: entity._id,
+          documentType: docType,
+          status: 'approved',
+          rejectionReason: ''
+        }).unwrap();
+      }
 
       const documentLabel = documentTypes.find(d => d.key === docType)?.label || docType;
       toast.success(`${documentLabel} approved successfully`);
@@ -93,12 +134,21 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ vendor, o
     if (!selectedDocumentType) return;
 
     try {
-      await updateDocumentStatus({
-        vendorId: vendor._id,
-        documentType: selectedDocumentType,
-        status: 'rejected',
-        rejectionReason
-      }).unwrap();
+      if (role === 'vendor') {
+        await updateVendorDocumentStatus({
+          vendorId: entity._id,
+          documentType: selectedDocumentType,
+          status: 'rejected',
+          rejectionReason
+        }).unwrap();
+      } else {
+        await updateSupplierDocumentStatus({
+          supplierId: entity._id,
+          documentType: selectedDocumentType,
+          status: 'rejected',
+          rejectionReason
+        }).unwrap();
+      }
 
       const documentLabel = documentTypes.find(d => d.key === selectedDocumentType)?.label || selectedDocumentType;
       toast.success(`${documentLabel} rejected successfully`);
@@ -110,10 +160,6 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ vendor, o
     } catch (error: any) {
       toast.error(error?.data?.message || 'Failed to reject document');
     }
-  };
-
-  const openDocumentPreview = (src: string, type: string) => {
-    setPreviewDocument({ src, type });
   };
 
   return (
@@ -180,9 +226,6 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ vendor, o
                     {docValue ? (
                       <>
                         {getStatusBadge(docStatus)}
-                        {docStatus === 'pending' && (
-                          <Badge className="bg-yellow-500 text-white text-[10px] hover:bg-yellow-600 border-none shadow-none">Needs Review</Badge>
-                        )}
                         <Button
                           variant="secondary"
                           size="icon"
@@ -238,9 +281,13 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ vendor, o
       {/* Document Preview Modal */}
       <Dialog open={!!previewDocument} onOpenChange={(open) => !open && setPreviewDocument(null)}>
         <DialogContent className="max-w-4xl w-[90vw] h-[90vh] p-0 overflow-hidden border-none bg-transparent shadow-none">
+          <DialogTitle className="sr-only">Document Preview</DialogTitle>
+          <DialogDescription className="sr-only">
+            Preview of uploaded document
+          </DialogDescription>
           <div className="relative w-full h-full flex flex-col items-center justify-center bg-black/5 backdrop-blur-sm rounded-xl overflow-hidden border border-white/10">
             <div className="w-full h-full flex items-center justify-center p-2">
-              {previewDocument?.src?.toLowerCase().endsWith('.pdf') || previewDocument?.src?.startsWith('data:application/pdf') ? (
+              {previewDocument?.src?.toLowerCase().includes('.pdf') || previewDocument?.src?.startsWith('data:application/pdf') ? (
                 <iframe
                   src={previewDocument?.src}
                   className="w-full h-full rounded-lg bg-white"
@@ -267,7 +314,7 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ vendor, o
               Reject Document
             </DialogTitle>
             <DialogDescription>
-              Provide a clear reason why this document is being rejected. The vendor will see this reason.
+              Provide a clear reason why this document is being rejected. The {role} will see this reason.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-4">

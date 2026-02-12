@@ -86,7 +86,7 @@ const referralSettingsSchema = new mongoose.Schema({
 const referralSchema = new mongoose.Schema({
   referralType: {
     type: String,
-    enum: ['C2C', 'C2V', 'V2V'],
+    enum: ['C2C', 'C2V', 'V2V', 'S2S', 'D2D'],
     required: true,
   },
   referralId: {

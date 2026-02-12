@@ -385,7 +385,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
   // Otherwise fetch all vendors with region filter
   const regionQuery = buildRegionQueryFromRequest(req);
   console.log('[Vendor GET] Query:', regionQuery);
-  const vendors = await VendorModel.find(regionQuery).select("-password").lean();
+  const vendors = await VendorModel.find(regionQuery).populate("subscription.plan", "name").select("-password").lean();
   console.log('[Vendor GET] Found vendors:', vendors.length);
   return Response.json(vendors);
 }, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
@@ -677,7 +677,7 @@ export const PUT = authMiddlewareAdmin(
       id,
       { $set: updateData },
       { new: true }
-    ).select("-password");
+    ).populate("subscription.plan", "name").select("-password");
 
     if (!updatedVendor) {
       return Response.json({ message: "Vendor not found" }, { status: 404 });
@@ -764,7 +764,7 @@ export const PATCH = authMiddlewareAdmin(
         id,
         { $set: updateData },
         { new: true }
-      ).select("-password");
+      ).populate("subscription.plan", "name").select("-password");
 
       if (!updatedVendor) {
         return Response.json({ message: "Vendor not found" }, { status: 404 });
@@ -774,7 +774,7 @@ export const PATCH = authMiddlewareAdmin(
       if (status === "Approved") {
         try {
           const VendorServicesModel = (await import('@repo/lib/models/Vendor/VendorServices.model')).default;
-          
+
           // Update all pending services for this vendor to approved status
           await VendorServicesModel.updateMany(
             { vendor: id, "services.status": "pending" },

@@ -112,7 +112,6 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
           )}>
             <img
               src="/favicon.jpeg"
-              alt="GlowVita Logo"
               className={cn(
                 "object-contain rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:scale-110 group-hover:rotate-3 flex-shrink-0 border border-primary/20",
                 "w-[60px] h-[60px]"
