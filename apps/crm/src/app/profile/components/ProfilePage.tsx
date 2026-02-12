@@ -6,6 +6,7 @@ import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { useGetVendorProfileQuery, useGetWorkingHoursQuery, useGetCurrentSupplierProfileQuery, useGetDoctorProfileQuery } from '@repo/store/api';
 import { toast } from 'sonner';
 import { ProfileTab } from './tabs/ProfileTab';
+import { SupplierProfileTab } from './tabs/SupplierProfileTab';
 import { SubscriptionTab } from './tabs/SubscriptionTab';
 import { GalleryTab } from './tabs/GalleryTab';
 import { BankDetailsTab } from './tabs/BankDetailsTab';
@@ -106,10 +107,17 @@ interface SupplierProfile {
   supplierType: string;
   businessRegistrationNo?: string;
   profileImage?: string;
+  gallery?: string[];
+  documents?: Record<string, any>;
+  bankDetails?: BankDetails;
   type?: UserType;
   subscription?: Subscription;
   referralCode?: string;
   licenseFiles?: string[];
+  taxes?: {
+    taxValue: number;
+    taxType: "percentage" | "fixed";
+  };
 }
 
 interface DoctorProfile {
@@ -217,10 +225,14 @@ export default function ProfilePage() {
         supplierType: supplierInfo.supplierType || '',
         businessRegistrationNo: supplierInfo.businessRegistrationNo || '',
         profileImage: supplierInfo.profileImage || '',
+        gallery: supplierInfo.gallery || [],
+        documents: supplierInfo.documents || {},
+        bankDetails: supplierInfo.bankDetails || {},
         type: 'supplier',
         subscription: supplierInfo.subscription || undefined,
         referralCode: supplierInfo.referralCode || '',
         licenseFiles: supplierInfo.licenseFiles || [],
+        taxes: supplierInfo.taxes || { taxValue: 0, taxType: 'percentage' },
       });
     }
   }, [supplierData]);
@@ -452,12 +464,45 @@ export default function ProfilePage() {
                   </>
                 )}
                 {role === 'supplier' && (
-                  <TabsTrigger
-                    value="subscription"
-                    className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
-                  >
-                    Subscription
-                  </TabsTrigger>
+                  <>
+                    <TabsTrigger
+                      value="subscription"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Subscription
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="gallery"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Gallery
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="bank"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Bank Details
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="documents"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Documents
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="sms"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      <span className="hidden sm:inline">SMS Packages</span>
+                      <span className="sm:hidden">SMS</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="taxes"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Taxes
+                    </TabsTrigger>
+                  </>
                 )}
                 {role === 'doctor' && (
                   <TabsTrigger
@@ -476,10 +521,12 @@ export default function ProfilePage() {
               <ProfileTab vendor={localVendor} setVendor={setLocalVendor} />
             )}
             {role === 'supplier' && localSupplier && (
-              <div>Supplier Profile Tab - Coming Soon</div>
+              <SupplierProfileTab supplier={localSupplier} setSupplier={setLocalSupplier} />
             )}
             {role === 'doctor' && localDoctor && (
-              <div>Doctor Profile Tab - Coming Soon</div>
+              <div className="p-8 text-center bg-card rounded-xl border border-dashed">
+                <p className="text-muted-foreground">Doctor Profile Tab - Coming Soon</p>
+              </div>
             )}
           </TabsContent>
 
@@ -525,9 +572,31 @@ export default function ProfilePage() {
           )}
 
           {role === 'supplier' && (
-            <TabsContent value="subscription">
-              <SubscriptionTab subscription={localSupplier?.subscription} userType="supplier" />
-            </TabsContent>
+            <>
+              <TabsContent value="subscription">
+                <SubscriptionTab subscription={localSupplier?.subscription} userType="supplier" />
+              </TabsContent>
+
+              <TabsContent value="gallery">
+                <GalleryTab gallery={localSupplier?.gallery || []} setVendor={setLocalSupplier} />
+              </TabsContent>
+
+              <TabsContent value="bank">
+                <BankDetailsTab bankDetails={localSupplier?.bankDetails || {}} setVendor={setLocalSupplier} />
+              </TabsContent>
+
+              <TabsContent value="documents">
+                <DocumentsTab documents={localSupplier?.documents} setVendor={setLocalSupplier} />
+              </TabsContent>
+
+              <TabsContent value="sms">
+                <SmsPackagesTab />
+              </TabsContent>
+
+              <TabsContent value="taxes">
+                <TaxesTab taxes={localSupplier?.taxes || { taxValue: 0, taxType: 'percentage' }} setVendor={setLocalSupplier} />
+              </TabsContent>
+            </>
           )}
 
           {role === 'doctor' && (

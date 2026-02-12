@@ -3,7 +3,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { UploadCloud, Eye, Trash2, FileText, X } from "lucide-react";
-import { useUpdateVendorProfileMutation } from '@repo/store/api';
+import { useUpdateVendorProfileMutation, useUpdateSupplierProfileMutation } from '@repo/store/api';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
 
 interface GalleryTabProps {
@@ -13,11 +14,15 @@ interface GalleryTabProps {
 
 export const GalleryTab = ({ gallery, setVendor }: GalleryTabProps) => {
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
+  const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
+  const { role } = useCrmAuth();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const handleSave = async () => {
     try {
-      const result: any = await updateVendorProfile({
+      const updateFn = role === 'vendor' ? updateVendorProfile : updateSupplierProfile;
+      const result: any = await updateFn({
+        _id: typeof window !== 'undefined' ? (JSON.parse(localStorage.getItem('user') || '{}')._id) : undefined,
         gallery: gallery
       }).unwrap();
 
@@ -98,7 +103,7 @@ export const GalleryTab = ({ gallery, setVendor }: GalleryTabProps) => {
         <CardDescription>Manage your salon's photo gallery.</CardDescription>
       </CardHeader>
       <CardContent>
-        <div 
+        <div
           className="mb-6 p-6 border-2 border-dashed rounded-lg text-center cursor-pointer hover:border-primary/50 transition-colors"
           onClick={() => document.getElementById('gallery-upload')?.click()}
         >

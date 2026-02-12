@@ -962,6 +962,15 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Supplier"],
     }),
 
+    registerSupplier: builder.mutation({
+      query: (supplierData) => ({
+        url: "/crm/supplier/register",
+        method: "POST",
+        body: supplierData,
+      }),
+      invalidatesTags: ["Supplier"],
+    }),
+
     updateSupplier: builder.mutation({
       query: ({ id, ...supplierData }) => ({
         url: `/admin/suppliers`,
@@ -978,6 +987,30 @@ export const glowvitaApi = createApi({
         body: { id },
       }),
       invalidatesTags: ["Supplier"],
+    }),
+
+    updateSupplierStatus: builder.mutation({
+      query: ({ id, status }) => ({
+        url: "/admin/suppliers",
+        method: "PATCH",
+        body: { id, status },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "Supplier", id },
+        "Supplier",
+      ],
+    }),
+
+    updateSupplierDocumentStatus: builder.mutation({
+      query: ({ supplierId, documentType, status, rejectionReason }) => ({
+        url: "/admin/suppliers",
+        method: "PATCH",
+        body: { supplierId, documentType, status, rejectionReason },
+      }),
+      invalidatesTags: (result, error, { supplierId }) => [
+        { type: "Supplier", id: supplierId },
+        "Supplier",
+      ],
     }),
 
     // Geo Fence Endpoints
@@ -2842,7 +2875,10 @@ export const {
   useDeleteDoctorMutation,
   useGetSuppliersQuery,
   useCreateSupplierMutation,
+  useRegisterSupplierMutation,
   useUpdateSupplierMutation,
+  useUpdateSupplierStatusMutation,
+  useUpdateSupplierDocumentStatusMutation,
   useDeleteSupplierMutation,
   useGetSubscriptionPlansQuery,
   useGetCrmSubscriptionPlansQuery,

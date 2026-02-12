@@ -7,7 +7,7 @@ import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { toast } from 'sonner';
-import { useCreateSupplierMutation } from '@repo/store/api';
+import { useRegisterSupplierMutation } from '@repo/store/api';
 import { cn } from '@repo/ui/cn';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '@repo/config/config';
@@ -98,7 +98,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
-  const [createSupplier, { isLoading }] = useCreateSupplierMutation();
+  const [registerSupplier, { isLoading }] = useRegisterSupplierMutation();
 
   // Map functionality states
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -198,7 +198,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
         location: formData.location ? JSON.stringify(formData.location) : ''
       };
 
-      await createSupplier(submissionData).unwrap();
+      await registerSupplier(submissionData).unwrap();
       toast.success(`${formData.shopName} supplier registration submitted successfully!`);
       onSuccess();
     } catch (err) {

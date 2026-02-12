@@ -253,3 +253,120 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
     return NextResponse.json({ message: "Error deleting supplier", error: error.message }, { status: 500 });
   }
 }, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+
+// PATCH (update status) a supplier
+export const PATCH = authMiddlewareAdmin(async (req) => {
+  try {
+    await initDb();
+    const body = await req.json();
+    const { id, status, supplierId, documentType, rejectionReason } = body;
+
+    // Check if this is a supplier status update
+    if (id && status && !documentType) {
+      if (!id || !status) {
+        return NextResponse.json(
+          { message: "Supplier ID and status (Approved/Disapproved) are required" },
+          { status: 400 }
+        );
+      }
+
+      // If status is "Approved", check if all uploaded documents are approved
+      if (status === "Approved") {
+        const supplier = await SupplierModel.findById(id);
+        if (!supplier) {
+          return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
+        }
+
+        const documents = supplier.documents || {};
+        const mandatoryDocs = [
+          { key: "aadharCard", label: "Aadhar Card" },
+          { key: "panCard", label: "PAN Card" },
+          { key: "udyogAadhar", label: "Udyog Aadhar" },
+          { key: "udhayamCert", label: "Udhayam Certificate" },
+          { key: "shopLicense", label: "Shop License" },
+        ];
+
+        const pendingOrRejectedDocs = mandatoryDocs.filter((doc) => {
+          const isUploaded = documents[doc.key] && documents[doc.key] !== "";
+          const docStatus = documents[`${doc.key}Status`];
+          return isUploaded && docStatus !== "approved";
+        });
+
+        if (pendingOrRejectedDocs.length > 0) {
+          const docLabels = pendingOrRejectedDocs.map((doc) => doc.label).join(", ");
+          return NextResponse.json(
+            {
+              message: `Cannot approve supplier. The following documents are not approved: ${docLabels}`,
+            },
+            { status: 400 }
+          );
+        }
+      }
+
+      const updatedSupplier = await SupplierModel.findByIdAndUpdate(
+        id,
+        { $set: { status } },
+        { new: true }
+      ).select("-password");
+
+      if (!updatedSupplier) {
+        return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        message: `Supplier ${status} successfully`,
+        supplier: updatedSupplier,
+      });
+    }
+
+    // Check if this is a document status update
+    else if (supplierId && documentType && status) {
+      const validDocumentTypes = [
+        'aadharCard', 'udyogAadhar', 'udhayamCert',
+        'shopLicense', 'panCard'
+      ];
+
+      if (!validDocumentTypes.includes(documentType)) {
+        return NextResponse.json({ message: "Invalid document type" }, { status: 400 });
+      }
+
+      if (!['pending', 'approved', 'rejected'].includes(status)) {
+        return NextResponse.json({ message: "Invalid status" }, { status: 400 });
+      }
+
+      if (status === 'rejected' && (!rejectionReason || rejectionReason.trim() === '')) {
+        return NextResponse.json({ message: "Rejection reason is required" }, { status: 400 });
+      }
+
+      const updateData = {
+        [`documents.${documentType}Status`]: status,
+      };
+
+      if (status === 'rejected') {
+        updateData[`documents.${documentType}AdminRejectionReason`] = rejectionReason;
+      } else {
+        updateData[`documents.${documentType}AdminRejectionReason`] = null;
+      }
+
+      const updatedSupplier = await SupplierModel.findByIdAndUpdate(
+        supplierId,
+        { $set: updateData },
+        { new: true }
+      ).select("-password");
+
+      if (!updatedSupplier) {
+        return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        message: `Document ${status} successfully`,
+        supplier: updatedSupplier,
+      });
+    }
+
+    return NextResponse.json({ message: "Invalid request parameters" }, { status: 400 });
+  } catch (error) {
+    console.error("Error in supplier PATCH:", error);
+    return NextResponse.json({ message: "Error updating supplier", error: error.message }, { status: 500 });
+  }
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
