@@ -179,6 +179,7 @@ interface Supplier {
   city: string;
   pincode: string;
   address: string;
+  businessRegistrationNo?: string;
   supplierType: string;
   status: string;
   documents?: {
