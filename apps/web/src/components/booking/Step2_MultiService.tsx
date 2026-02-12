@@ -331,7 +331,34 @@ export function Step2_MultiService({
                 )}
             </div>
 
-            {/* Navigation buttons - Removed as per user request */}
+            {/* Navigation buttons */}
+            <div className="flex flex-col sm:flex-row justify-between gap-4 mt-8 pt-6 border-t border-border">
+                <button
+                    onClick={handlePrevAssignment}
+                    className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background border border-input hover:bg-accent hover:text-accent-foreground h-10 py-2 px-4"
+                >
+                    <ChevronRight className="h-4 w-4 mr-2 rotate-180" />
+                    {currentAssignmentIndex === 0 ? 'Back to Services' : 'Previous Service'}
+                </button>
+                
+                <div className="flex items-center gap-2">
+                    {serviceStaffAssignments.length > 1 && (
+                        <span className="text-sm text-muted-foreground hidden sm:inline">
+                            {serviceStaffAssignments.filter(a => a.staff !== null).length} of {serviceStaffAssignments.length} assigned
+                        </span>
+                    )}
+                    <button
+                        onClick={handleNextAssignment}
+                        className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background bg-primary text-primary-foreground hover:bg-primary/90 h-10 py-2 px-4 sm:ml-auto"
+                    >
+                        {currentAssignmentIndex === serviceStaffAssignments.length - 1 
+                            ? 'Continue to Time Slot' 
+                            : 'Next Service'
+                        }
+                        <ChevronRight className="h-4 w-4 ml-2" />
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

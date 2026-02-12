@@ -1753,7 +1753,9 @@ function BookingPageContent() {
               startTime: selectedTime,
               endTime: endTime,
               location: weddingVenueType === 'venue' ? serviceLocation : null,
-              totalAmount: appointmentData.totalAmount,
+              totalAmount: priceBreakdown?.finalTotal || appointmentData.totalAmount,
+              couponCode: appliedOffer?.code || offerCode || null,
+              discountAmount: priceBreakdown?.discountAmount || 0,
             },
             weddingVenueType: weddingVenueType,
             clientName: `${user?.firstName} ${user?.lastName}`,
@@ -3349,21 +3351,40 @@ function BookingPageContent() {
   // Calculate price breakdown when selected services or wedding package changes
   useEffect(() => {
     const calculatePrices = async () => {
-      // Handle wedding package pricing
+      // Handle wedding package pricing with offer code support
       if (selectedWeddingPackage) {
         const packagePrice = selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice || 0;
-        const defaultBreakdown = {
-          subtotal: packagePrice,
-          discountAmount: 0,
-          amountAfterDiscount: packagePrice,
-          platformFee: 0,
-          serviceTax: 0,
-          vendorServiceTax: 0,
-          totalTax: 0,
-          finalTotal: packagePrice,
-          taxFeeSettings: null
-        };
-        setPriceBreakdown(defaultBreakdown);
+        
+        // Create a service-like object for calculateBookingAmount to enable offer code support
+        const packageAsService = [{
+          id: selectedWeddingPackage.id || selectedWeddingPackage._id,
+          name: selectedWeddingPackage.name,
+          price: selectedWeddingPackage.totalPrice,
+          discountedPrice: selectedWeddingPackage.discountedPrice || null,
+          selectedAddons: []
+        }];
+        
+        try {
+          // Call calculateBookingAmount WITH offer support (pass offer and taxFeeSettings)
+          const breakdown = await calculateBookingAmount(packageAsService, offer, taxFeeSettings);
+          console.log('Wedding package price breakdown with offer:', breakdown);
+          setPriceBreakdown(breakdown);
+        } catch (error) {
+          console.error('Error calculating wedding package prices:', error);
+          // Fallback to default breakdown if calculation fails
+          const defaultBreakdown = {
+            subtotal: packagePrice,
+            discountAmount: 0,
+            amountAfterDiscount: packagePrice,
+            platformFee: 0,
+            serviceTax: 0,
+            vendorServiceTax: 0,
+            totalTax: 0,
+            finalTotal: packagePrice,
+            taxFeeSettings: null
+          };
+          setPriceBreakdown(defaultBreakdown);
+        }
         return;
       }
 

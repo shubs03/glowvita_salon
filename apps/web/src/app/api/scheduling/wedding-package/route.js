@@ -157,6 +157,8 @@ export async function PUT(request) {
     const AppointmentModel = (await import('@repo/lib/models/Appointment/Appointment.model')).default;
     
     console.log("Creating confirmed appointment after payment...");
+    console.log("Coupon code from request:", selectedSlot.couponCode);
+    console.log("Discount amount from request:", selectedSlot.discountAmount);
     
     // Check if appointment already exists for this time slot to prevent duplicates
     const startOfDay = new Date(selectedSlot.date);
@@ -197,6 +199,11 @@ export async function PUT(request) {
     const VendorModel = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
     const vendor = await VendorModel.findById(weddingPackage.vendorId).select('regionId').lean();
     
+    // Calculate amounts with offer code discount
+    const baseAmount = weddingPackage.discountedPrice || weddingPackage.totalPrice;
+    const discountAmount = selectedSlot.discountAmount || 0;
+    const finalAmount = selectedSlot.totalAmount || (baseAmount - discountAmount);
+    
     const appointment = new AppointmentModel({
       vendorId: weddingPackage.vendorId,
       regionId: vendor?.regionId || null, // <--- Added Region ID
@@ -211,9 +218,11 @@ export async function PUT(request) {
       startTime: selectedSlot.startTime,
       endTime: selectedSlot.endTime,
       duration: weddingPackage.duration || 120,
-      amount: selectedSlot.totalAmount || weddingPackage.discountedPrice || weddingPackage.totalPrice,
-      totalAmount: selectedSlot.totalAmount || weddingPackage.discountedPrice || weddingPackage.totalPrice,
-      finalAmount: selectedSlot.totalAmount || weddingPackage.discountedPrice || weddingPackage.totalPrice,
+      amount: baseAmount,
+      totalAmount: baseAmount,
+      discountAmount: discountAmount,
+      couponCode: selectedSlot.couponCode || null,
+      finalAmount: finalAmount,
       status: 'scheduled', // Confirmed booking
       paymentStatus: paymentDetails?.status || 'pending',
       paymentMethod: paymentDetails?.method || 'Pay at Salon',
