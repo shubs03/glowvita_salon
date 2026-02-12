@@ -57,7 +57,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     await initDb(); // Initialize DB connection
     const { buildRegionQueryFromRequest } = await import("@repo/lib");
     const query = buildRegionQueryFromRequest(req);
-    const suppliers = await SupplierModel.find(query);
+    const suppliers = await SupplierModel.find(query).populate("subscription.plan", "name");
     return NextResponse.json(suppliers, { status: 200 });
   } catch (error) {
     console.error("Error fetching suppliers:", error);
@@ -213,7 +213,7 @@ export const PUT = authMiddlewareAdmin(async (req) => {
       id,
       { ...updateData, licenseFiles: finalLicenseFiles },
       { new: true }
-    );
+    ).populate("subscription.plan", "name");
 
     return NextResponse.json(updatedSupplier, { status: 200 });
   } catch (error) {

@@ -124,7 +124,8 @@ export const glowvitaApi = createApi({
     "Consultations", "Consultation", "Expense", "PublicAppointments", "ClientCart", "ClientReferrals",
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
-    "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "Regions", "PublicAllOffers", "AddOns", "PendingWeddingPackages"
+    "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "Regions", "PublicAllOffers", "AddOns", "PendingWeddingPackages",
+    "ReferralReport"
   ],
 
   endpoints: (builder) => ({
@@ -1416,6 +1417,17 @@ export const glowvitaApi = createApi({
         params: params || {}
       }),
       providesTags: ["VendorPayableReportProduct"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    // Referral Report
+    getReferralReport: builder.query({
+      query: (params) => ({
+        url: "/admin/reports/referral-reports/all-referrals",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["ReferralReport"],
       transformResponse: (response) => (response && response.success ? response.data : {}),
     }),
     // Admin Product Categories 
@@ -3123,6 +3135,7 @@ export const {
   useGetVendorPayoutSettlementReportQuery,
   useGetVendorPayoutSettlementReportProductQuery,
   useGetVendorPayableReportProductQuery,
+  useGetReferralReportQuery,
   // Product Report Hooks
   useGetProductSummaryReportQuery,
   useGetSalesByProductReportQuery,

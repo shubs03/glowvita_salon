@@ -12,7 +12,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { selectBlockedTimesByStaffAndDate } from '@repo/store/slices/blockTimeSlice';
 
 import { getDay } from 'date-fns';
-import { Calendar as CalendarIcon, Trash2, Loader2, Search, X, PlusCircle } from 'lucide-react';
+import { Calendar as CalendarIcon, Trash2, Loader2, Search, X, PlusCircle, MapPin, Home, Briefcase } from 'lucide-react';
 import { glowvitaApi, useCreateClientMutation, useGetWorkingHoursQuery, useGetPublicTaxFeeSettingsQuery } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
@@ -548,8 +548,57 @@ export default function NewAppointmentForm({
     discount: defaultValues?.discount || 0,
     tax: defaultValues?.tax || 0,
     totalAmount: defaultValues?.totalAmount || 0,
+    clientEmail: defaultValues?.clientEmail || '',
+    clientPhone: defaultValues?.clientPhone || '',
     paymentStatus: defaultValues?.paymentStatus || 'pending',
+    isHomeService: defaultValues?.isHomeService || false,
+    isWeddingService: defaultValues?.isWeddingService || false,
+    homeServiceLocation: defaultValues?.homeServiceLocation || {
+      address: '',
+      city: '',
+      state: '',
+      pincode: '',
+      landmark: ''
+    },
+    weddingPackageDetails: defaultValues?.weddingPackageDetails || {
+      packageName: '',
+      totalAmount: 0,
+      totalDuration: 0,
+      venueAddress: ''
+    }
   });
+
+  // Handle service type change
+  const handleServiceTypeChange = (type: 'regular' | 'home' | 'wedding') => {
+    setAppointmentData(prev => ({
+      ...prev,
+      isHomeService: type === 'home',
+      isWeddingService: type === 'wedding',
+      // Reset irrelevant fields when switching types if needed, or keep them
+    }));
+  };
+
+  // Handle home service location change
+  const handleHomeLocationChange = (field: string, value: string) => {
+    setAppointmentData(prev => ({
+      ...prev,
+      homeServiceLocation: {
+        ...prev.homeServiceLocation,
+        [field]: value
+      }
+    }));
+  };
+
+  // Handle wedding package details change
+  const handleWeddingDetailsChange = (field: string, value: any) => {
+    setAppointmentData(prev => ({
+      ...prev,
+      weddingPackageDetails: {
+        ...prev.weddingPackageDetails,
+        [field]: value
+      }
+    }));
+  };
 
   // Get blocked times for the selected staff and date - MOVED TO TOP LEVEL
   const blockedTimes = useSelector((state: any) => {
@@ -1574,6 +1623,7 @@ export default function NewAppointmentForm({
       const appointmentPayload: any = {
         clientName: appointmentData.clientName.trim(),
         clientEmail: appointmentData.clientEmail?.trim(),
+        clientPhone: appointmentData.clientPhone?.trim(),
         service: appointmentData.service,
         serviceName: appointmentData.serviceName || '',
         staff: appointmentData.staff,
@@ -1924,21 +1974,35 @@ export default function NewAppointmentForm({
           </Button>
         </div>
 
-        {/* Guest Email Input */}
         {isGuest && (
-          <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-            <Label htmlFor="clientEmail" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Guest Email <span className="text-gray-400 text-xs">(Optional - for receipts)</span>
-            </Label>
-            <Input
-              id="clientEmail"
-              type="email"
-              value={appointmentData.clientEmail || ''}
-              onChange={(e) => handleFieldChange('clientEmail', e.target.value)}
-              placeholder="client@example.com"
-              className="w-full bg-background text-foreground border border-border"
-            />
-          </div>
+          <>
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <Label htmlFor="clientEmail" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Guest Email <span className="text-gray-400 text-xs">(Optional - for receipts)</span>
+              </Label>
+              <Input
+                id="clientEmail"
+                type="email"
+                value={appointmentData.clientEmail || ''}
+                onChange={(e) => setAppointmentData(prev => ({ ...prev, clientEmail: e.target.value }))}
+                placeholder="client@example.com"
+                className="w-full bg-background text-foreground border border-border"
+              />
+            </div>
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <Label htmlFor="clientPhone" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Guest Phone <span className="text-gray-400 text-xs">(Optional - for contact)</span>
+              </Label>
+              <Input
+                id="clientPhone"
+                type="tel"
+                value={appointmentData.clientPhone || ''}
+                onChange={(e) => setAppointmentData(prev => ({ ...prev, clientPhone: e.target.value }))}
+                placeholder="Phone number"
+                className="w-full bg-background text-foreground border border-border"
+              />
+            </div>
+          </>
         )}
       </div>
     );
@@ -1976,6 +2040,109 @@ export default function NewAppointmentForm({
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Client Field */}
         {clientSection}
+
+        {/* Service Type Selection */}
+        <div className="space-y-3 p-4 bg-muted/30 rounded-lg border border-border">
+          <Label className="text-sm font-medium text-foreground">Appointment Type</Label>
+          <div className="grid grid-cols-3 gap-3">
+            <button
+              type="button"
+              onClick={() => handleServiceTypeChange('regular')}
+              className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${!appointmentData.isHomeService && !appointmentData.isWeddingService
+                ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                : 'bg-background text-muted-foreground border-border hover:bg-muted/50'
+                }`}
+            >
+              <Briefcase className="h-5 w-5 mb-1" />
+              <span className="text-xs font-medium">Regular (In-Salon)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleServiceTypeChange('home')}
+              className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${appointmentData.isHomeService
+                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                : 'bg-background text-muted-foreground border-border hover:bg-muted/50'
+                }`}
+            >
+              <Home className="h-5 w-5 mb-1" />
+              <span className="text-xs font-medium">Home Service</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleServiceTypeChange('wedding')}
+              className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${appointmentData.isWeddingService
+                ? 'bg-pink-600 text-white border-pink-600 shadow-sm'
+                : 'bg-background text-muted-foreground border-border hover:bg-muted/50'
+                }`}
+            >
+              <MapPin className="h-5 w-5 mb-1" />
+              <span className="text-xs font-medium">Wedding Service</span>
+            </button>
+          </div>
+
+          {/* Condition Fields for Home Service */}
+          {appointmentData.isHomeService && (
+            <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="hs-address" className="text-xs">Home Address <span className="text-red-500">*</span></Label>
+                  <Textarea
+                    id="hs-address"
+                    value={appointmentData.homeServiceLocation?.address || ''}
+                    onChange={(e) => handleHomeLocationChange('address', e.target.value)}
+                    placeholder="Enter full address"
+                    className="resize-none h-20"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="hs-city" className="text-xs">City</Label>
+                  <Input
+                    id="hs-city"
+                    value={appointmentData.homeServiceLocation?.city || ''}
+                    onChange={(e) => handleHomeLocationChange('city', e.target.value)}
+                    placeholder="City"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="hs-pincode" className="text-xs">Pincode</Label>
+                  <Input
+                    id="hs-pincode"
+                    value={appointmentData.homeServiceLocation?.pincode || ''}
+                    onChange={(e) => handleHomeLocationChange('pincode', e.target.value)}
+                    placeholder="Pincode"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Condition Fields for Wedding Service */}
+          {appointmentData.isWeddingService && (
+            <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="space-y-2">
+                <Label htmlFor="wp-name" className="text-xs">Wedding Package Name</Label>
+                <Input
+                  id="wp-name"
+                  value={appointmentData.weddingPackageDetails?.packageName || ''}
+                  onChange={(e) => handleWeddingDetailsChange('packageName', e.target.value)}
+                  placeholder="e.g. Gold Bridal Package"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="wp-venue" className="text-xs">Venue Address <span className="text-red-500">*</span></Label>
+                <Textarea
+                  id="wp-venue"
+                  value={appointmentData.weddingPackageDetails?.venueAddress || ''}
+                  onChange={(e) => handleWeddingDetailsChange('venueAddress', e.target.value)}
+                  placeholder="Enter venue address"
+                  className="resize-none h-20"
+                />
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Date and Time Row */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

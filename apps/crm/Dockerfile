@@ -50,6 +50,8 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder /app/apps/crm/.next/standalone ./
 # Copy static assets
 COPY --from=builder --chown=nextjs:nodejs /app/apps/crm/.next/static ./apps/crm/.next/static
+# Copy public folder (IMPORTANT)
+COPY --from=builder --chown=nextjs:nodejs /app/apps/crm/public ./apps/crm/public
 
 USER nextjs
 

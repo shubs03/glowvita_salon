@@ -60,6 +60,21 @@ export interface Appointment {
   discount?: number;
   taxRate?: number;
   finalAmount?: number;
+  isHomeService?: boolean;
+  isWeddingService?: boolean;
+  homeServiceLocation?: {
+    address?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+    landmark?: string;
+  };
+  weddingPackageDetails?: {
+    packageName?: string;
+    totalAmount?: number;
+    totalDuration?: number;
+    venueAddress?: string;
+  };
   payment?: {
     paid?: number;
     paymentMode?: string;

@@ -14,11 +14,11 @@ const generateDoctorReferralCode = async (name) => {
   let referralCode;
   let isUnique = false;
   const namePrefix = name.replace(/[^a-zA-Z]/g, '').toUpperCase().substring(0, 3);
-  
+
   while (!isUnique) {
     const randomNumbers = Math.floor(100 + Math.random() * 900); // Generates 3-digit number
     referralCode = `DR${namePrefix}${randomNumbers}`;
-    
+
     const existingDoctor = await DoctorModel.findOne({ referralCode });
     if (!existingDoctor) {
       isUnique = true;
@@ -35,9 +35,9 @@ export const POST = authMiddlewareAdmin(async (req) => {
     // ... other fields
     regionId
   } = body;
-  
+
   // ... (keeping existing validation)
-  
+
   // Validate and lock region
   const { validateAndLockRegion } = await import("@repo/lib");
   const finalRegionId = validateAndLockRegion(req.user, regionId);
@@ -46,29 +46,29 @@ export const POST = authMiddlewareAdmin(async (req) => {
   if (
     !body.name || !body.email || !body.phone || !body.password // and others...
   ) {
-     // I will use the actual body object to avoid destructuring issues in this replacement
+    // I will use the actual body object to avoid destructuring issues in this replacement
   }
 
   // ... (keeping existing logic)
 
   // Fetch trial plan and set subscription end date
   let trialPlan = await SubscriptionPlan.findOne({ name: 'Trial Plan' });
-  
+
   // If no trial plan, try to create one or fallback (though creating one is safer if logic allows)
   if (!trialPlan) {
-      // For now, let's create a dummy object if missing to prevent crash, 
-      // but ideally this should be seeded or created.
-      // Or we can throw an error. 
-      // Let's create a default one for now to be safe as done in Supplier route
-       trialPlan = await SubscriptionPlan.create({
-          name: 'Trial Plan',
-          description: 'Default trial plan',
-          price: 0,
-          duration: 30,
-          features: ['Basic features'],
-          userType: 'doctor',
-          status: 'active'
-      });
+    // For now, let's create a dummy object if missing to prevent crash, 
+    // but ideally this should be seeded or created.
+    // Or we can throw an error. 
+    // Let's create a default one for now to be safe as done in Supplier route
+    trialPlan = await SubscriptionPlan.create({
+      name: 'Trial Plan',
+      description: 'Default trial plan',
+      price: 0,
+      duration: 30,
+      features: ['Basic features'],
+      userType: 'doctor',
+      status: 'active'
+    });
   }
 
   const subscriptionEndDate = new Date();
@@ -81,20 +81,20 @@ export const POST = authMiddlewareAdmin(async (req) => {
     referralCode: await generateDoctorReferralCode(body.name),
     regionId: finalRegionId,
     subscription: {
-        plan: trialPlan._id,
-        status: 'Active',
-        endDate: subscriptionEndDate,
-        history: [],
+      plan: trialPlan._id,
+      status: 'Active',
+      endDate: subscriptionEndDate,
+      history: [],
     }
   });
-  
+
   // ... (rest of the code)
 }, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 export const GET = authMiddlewareAdmin(async (req) => {
   const { buildRegionQueryFromRequest } = await import("@repo/lib");
   const query = buildRegionQueryFromRequest(req);
-  const doctors = await DoctorModel.find(query).select("-password"); // Hide password
+  const doctors = await DoctorModel.find(query).populate("subscription.plan", "name").select("-password"); // Hide password
   return Response.json(doctors);
 }, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
@@ -106,7 +106,7 @@ export const PUT = authMiddlewareAdmin(
     if (password) {
       body.password = await bcrypt.hash(password, 10);
     }
-    
+
     // Legacy support for single specialization (can be removed if no longer needed)
     if (body.specialization && !body.specialties) {
       body.specialties = [body.specialization];
@@ -117,7 +117,7 @@ export const PUT = authMiddlewareAdmin(
       id,
       { ...body, updatedAt: Date.now() },
       { new: true }
-    ).select("-password");
+    ).populate("subscription.plan", "name").select("-password");
 
     if (!updatedDoctor) {
       return Response.json({ message: "Doctor not found" }, { status: 404 });

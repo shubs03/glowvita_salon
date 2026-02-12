@@ -67,6 +67,11 @@ export async function middleware(request: NextRequest) {
   const publicPaths = ['/login', '/auth/register', '/', '/apps', '/pricing', '/support', '/forgot-password', '/reset-password', '/about'];
   const isPublicPath = publicPaths.some(path => pathname === path);
 
+  // Allow static files and Next.js internal assets
+  if (pathname.includes('.') || pathname.startsWith('/_next/')) {
+    return NextResponse.next();
+  }
+
   if (isPublicPath) {
     return NextResponse.next();
   }

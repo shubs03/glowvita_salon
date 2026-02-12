@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { Card, CardContent } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
-import { Plus, Check, Scissors, Loader2, AlertCircle, Home, Heart, Users, X, Clock, List, User } from 'lucide-react';
+import { Bolt, Plus, Check, Scissors, Loader2, AlertCircle, Home, Heart, Users, X, Clock , List, User } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 import { ChevronRight } from 'lucide-react';
 import { Service, WeddingPackage } from '@/hooks/useBookingData';
+import { useParams } from 'next/navigation';
+import { useGetPublicVendorStaffQuery } from '@repo/store/api';
 import {
   Dialog,
   DialogContent,
@@ -106,6 +108,107 @@ export function Step1_Services({
   bookingMode,
   setBookingMode
 }: Step1ServicesProps) {
+  // Get vendor ID from URL params
+  const params = useParams();
+  const vendorId = params?.salonId as string;
+
+  // Fetch staff data for the vendor to resolve staff IDs to names
+  const { data: staffData, isLoading: isStaffLoading } = useGetPublicVendorStaffQuery(vendorId, {
+    skip: !vendorId,
+  });
+
+  console.log('Raw Staff Data:', staffData);
+  console.log('Staff Data Structure:', {
+    hasData: !!staffData,
+    hasDataProperty: !!(staffData as any)?.data,
+    isArray: Array.isArray(staffData),
+    isDataArray: Array.isArray((staffData as any)?.data),
+    keys: staffData ? Object.keys(staffData) : [],
+    firstItem: staffData ? (Array.isArray(staffData) ? staffData[0] : (staffData as any)?.data?.[0]) : null
+  });
+
+  // Create a staff lookup map for quick ID to name resolution
+  const staffLookup = useMemo(() => {
+    console.log('Creating staff lookup from:', staffData);
+    
+    if (!staffData) {
+      console.log('No staff data available');
+      return {};
+    }
+    
+    const lookup: { [key: string]: string } = {};
+    
+    // Try multiple data structure patterns
+    let staffArray: any[] = [];
+    
+    if (Array.isArray(staffData)) {
+      staffArray = staffData;
+    } else if ((staffData as any)?.data && Array.isArray((staffData as any).data)) {
+      staffArray = (staffData as any).data;
+    } else if ((staffData as any)?.staff && Array.isArray((staffData as any).staff)) {
+      staffArray = (staffData as any).staff;
+    }
+    
+    console.log('Staff Array to process:', staffArray, 'Length:', staffArray.length);
+    
+    if (staffArray.length > 0) {
+      staffArray.forEach((staff: any, index: number) => {
+        console.log(`Processing staff ${index}:`, staff);
+        
+        if (staff) {
+          // Try all possible ID fields
+          const staffId = staff._id || staff.id || staff.staffId;
+          // Try all possible name fields
+          const staffName = staff.name || staff.fullName || staff.staffName || staff.firstName 
+            || (staff.firstName && staff.lastName ? `${staff.firstName} ${staff.lastName}` : null);
+          
+          console.log(`Staff ${index} - ID: ${staffId}, Name: ${staffName}`);
+          
+          if (staffId && staffName) {
+            lookup[String(staffId)] = staffName;
+          }
+        }
+      });
+    }
+    
+    console.log('Final Staff Lookup Map:', lookup);
+    return lookup;
+  }, [staffData]);
+
+  // Helper function to get staff name from ID with fallback
+  const getStaffName = (staff: any): string => {
+    console.log('Getting staff name for:', staff);
+    
+    // If staff is already a string, treat it as an ID and look it up
+    if (typeof staff === 'string') {
+      const resolvedName = staffLookup[staff];
+      console.log(`Resolved ID "${staff}" to name:`, resolvedName);
+      return resolvedName || staff || 'Staff Member';
+    }
+    
+    // If staff is an object, try to extract information
+    if (staff && typeof staff === 'object') {
+      // First try to get the ID and look it up
+      const staffId = staff._id || staff.id || staff.staffId;
+      if (staffId && staffLookup[String(staffId)]) {
+        console.log(`Found staff name in lookup for ID ${staffId}:`, staffLookup[String(staffId)]);
+        return staffLookup[String(staffId)];
+      }
+      
+      // Try to get name directly from the object
+      const directName = staff.name || staff.fullName || staff.staffName || staff.firstName
+        || (staff.firstName && staff.lastName ? `${staff.firstName} ${staff.lastName}` : null);
+      
+      if (directName) {
+        console.log('Found staff name directly from object:', directName);
+        return directName;
+      }
+    }
+    
+    console.log('Falling back to default Staff Member');
+    return 'Staff Member';
+  };
+
   // Ensure weddingPackages is always an array and filter out nulls
   const safeWeddingPackages = Array.isArray(weddingPackages) ? weddingPackages.filter(Boolean) : [];
 
@@ -331,7 +434,7 @@ export function Step1_Services({
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-3 bg-primary/10 rounded-full text-primary">
-            {viewMode === 'services' ? <Scissors className="h-6 w-6" /> : <Heart className="h-6 w-6 text-rose-600" />}
+            {viewMode === 'services' ? <Scissors className="h-6 w-6" /> : <Heart className="h-6 w-6" />}
           </div>
           <h2 className="text-3xl font-bold font-headline">
             {viewMode === 'services' ? 'Select Your Services' : 'Choose Wedding Package'}
@@ -364,14 +467,14 @@ export function Step1_Services({
             className={cn(
               "px-6 py-3 rounded-md font-medium transition-all flex items-center gap-2",
               viewMode === 'packages'
-                ? "bg-white shadow-sm text-rose-600"
+                ? "bg-white shadow-sm text-primary"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
             <Heart className="h-4 w-4" />
             Wedding Packages
             {displayWeddingPackages.length > 0 && (
-              <span className="ml-1 px-2 py-0.5 bg-rose-100 text-rose-600 rounded-full text-xs font-semibold">
+              <span className="ml-1 px-2 py-0.5 bg-primary/10 text-primary rounded-full text-xs font-semibold">
                 {displayWeddingPackages.length}
               </span>
             )}
@@ -383,14 +486,14 @@ export function Step1_Services({
       {viewMode === 'services' && (
         <>
           {/* Tab-like navigation for categories */}
-          <div className="sticky top-0 z-10 py-4 bg-background/80 backdrop-blur-sm -mx-6 px-6">
+          <div className="sticky top-0 z-10 pb-4 -mx-6 px-6">
             <div className="relative">
               <div className="flex space-x-2 overflow-x-auto pb-2 no-scrollbar">
                 {displayCategories.map((category: { name: string }) => (
                   <Button
                     key={category.name}
                     variant={activeCategory === category.name ? 'default' : 'outline'}
-                    className={`rounded-full px-5 py-2 h-auto text-sm transition-all duration-200 ${activeCategory === category.name ? 'shadow-lg' : 'hover:bg-primary/5 hover:border-primary/50'
+                    className={`rounded-full px-5 py-2 h-auto text-sm transition-all duration-200 ${activeCategory === category.name ? '' : 'hover:bg-primary/5 hover:border-primary/50'
                       }`}
                     onClick={() => setActiveCategory(category.name)}
                   >
@@ -398,7 +501,7 @@ export function Step1_Services({
                   </Button>
                 ))}
               </div>
-              <div className="absolute right-0 top-0 bottom-2 w-12 bg-gradient-to-l from-background to-transparent pointer-events-none" />
+            
             </div>
           </div>
 
@@ -449,8 +552,8 @@ export function Step1_Services({
             </div>
 
             {bookingMode === 'home' && (
-              <div className="mt-3 text-xs text-amber-600 bg-amber-50 px-3 py-2 rounded-md border border-amber-100 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <div className="mt-3 text-xs text-primary bg-primary/10 px-3 py-2 rounded-md border border-primary/20 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>You are browsing services available for <strong>Home Visit</strong>. Salon-only services are disabled.</span>
               </div>
             )}
@@ -510,7 +613,7 @@ export function Step1_Services({
                       {isHomeService && (
                         <span className={cn(
                           "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium",
-                          isDisabled ? "bg-muted text-muted-foreground" : "bg-blue-100 text-blue-800"
+                          isDisabled ? "bg-muted text-muted-foreground" : "bg-primary text-secondary"
                         )}>
                           <Home className="h-3 w-3 mr-1" />
                           Home Service
@@ -530,8 +633,8 @@ export function Step1_Services({
                       )}
                       {/* Swiggy-style Customisable Badge */}
                       {service.addOns && service.addOns.length > 0 && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                          <span className="mr-1 text-[10px]">✨</span>
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                          <Bolt className="h-3 w-3 mr-1" />
                           Customisable
                         </span>
                       )}
@@ -603,29 +706,29 @@ export function Step1_Services({
                   <Card
                     key={pkg.id || pkg._id}
                     className={cn(
-                      'overflow-hidden transition-all duration-500 hover:-translate-y-1 cursor-pointer group relative',
-                      'bg-gradient-to-br from-white via-white to-rose-50/30',
+                      'overflow-hidden transition-all duration-300 hover:shadow-lg cursor-pointer group relative',
+                      'bg-card flex flex-col h-full',
                       isSelected
-                        ? 'ring-2 ring-rose-500 shadow-2xl shadow-rose-200/50 scale-[1.01]'
-                        : 'shadow-md hover:shadow-xl border border-gray-100'
+                        ? 'ring-2 ring-primary shadow-lg'
+                        : 'shadow-sm hover:shadow-md border'
                     )}
                   >
                     {/* Discount Badge */}
                     {discount > 0 && (
-                      <div className="absolute top-2 left-2 z-10 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-2.5 py-1 rounded-full text-xs font-bold shadow-lg">
+                      <div className="absolute top-3 left-3 z-10 bg-primary text-primary-foreground px-3 py-1 rounded-md text-xs font-semibold shadow-sm">
                         {discount}% OFF
                       </div>
                     )}
 
                     {/* Selected Badge */}
                     {isSelected && (
-                      <div className="absolute top-2 right-2 z-10 bg-rose-600 text-white rounded-full p-1.5 shadow-xl animate-in zoom-in duration-300">
+                      <div className="absolute top-3 right-3 z-10 bg-primary text-primary-foreground rounded-full p-1.5 shadow-sm">
                         <Check className="h-4 w-4" />
                       </div>
                     )}
 
                     {/* Image Header */}
-                    <div className="relative w-full h-40 sm:h-48 overflow-hidden bg-gradient-to-br from-rose-100 to-pink-100">
+                    <div className="relative w-full h-40 sm:h-48 overflow-hidden bg-muted">
                       <Image
                         src={pkg.image || `https://picsum.photos/seed/${pkg.name}/800/600`}
                         alt={pkg.name}
@@ -640,20 +743,20 @@ export function Step1_Services({
 
                       {/* Title Overlay */}
                       <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-                        <h4 className="font-bold text-lg sm:text-xl text-white mb-1.5 drop-shadow-2xl line-clamp-2">
+                        <h4 className="font-bold text-lg sm:text-xl text-white mb-1.5 line-clamp-2">
                           {pkg.name}
                         </h4>
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-white/95 text-gray-800 backdrop-blur-md shadow-lg">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
                             <List className="h-3 w-3 mr-1" />
                             {pkg.services?.length || 0} Services
                           </span>
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-white/95 text-gray-800 backdrop-blur-md shadow-lg">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
                             <Clock className="h-3 w-3 mr-1" />
                             {pkg.duration || 0}m
                           </span>
                           {pkg.staffCount && (
-                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-white/95 text-gray-800 backdrop-blur-md shadow-lg">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
                               <Users className="h-3 w-3 mr-1" />
                               {pkg.staffCount} Staff
                             </span>
@@ -663,24 +766,24 @@ export function Step1_Services({
                     </div>
 
                     {/* Content Section */}
-                    <div className="p-4 space-y-3">
+                    <div className="p-4 space-y-3 flex-1">
                       {/* Description */}
                       {pkg.description && (
-                        <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 leading-relaxed">{pkg.description}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 leading-relaxed">{pkg.description}</p>
                       )}
 
                       {/* Services Preview */}
                       {pkg.services && pkg.services.length > 0 && (
                         <div className="space-y-1.5">
-                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">What's Included</p>
+                          <p className="text-xs font-semibold text-foreground">What's Included</p>
                           <div className="flex flex-wrap gap-1.5">
                             {pkg.services.slice(0, 3).map((service, idx) => (
-                              <span key={idx} className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-gradient-to-r from-rose-50 to-pink-50 text-rose-700 border border-rose-200/50 shadow-sm">
-                                {service.serviceName}
+                              <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary/10 text-primary border">
+                                <span className="line-clamp-1">{service.serviceName}</span>
                               </span>
                             ))}
                             {pkg.services.length > 3 && (
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 border border-gray-200 shadow-sm">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-secondary text-secondary-foreground">
                                 +{pkg.services.length - 3} more
                               </span>
                             )}
@@ -691,22 +794,20 @@ export function Step1_Services({
                       {/* Staff Preview */}
                       {pkg.assignedStaff && pkg.assignedStaff.length > 0 && (
                         <div className="space-y-1.5">
-                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Expert Staff</p>
+                          <p className="text-xs font-semibold text-foreground">Expert Staff</p>
                           <div className="flex flex-wrap gap-1.5">
                             {pkg.assignedStaff.slice(0, 2).map((staff, idx) => {
-                              const staffName = typeof staff === 'string'
-                                ? staff
-                                : staff.name;
+                              const staffName = getStaffName(staff);
 
                               return (
-                                <span key={idx} className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-purple-50 to-indigo-50 text-purple-700 border border-purple-200/50 shadow-sm">
-                                  <User className="h-3 w-3 mr-1.5" />
-                                  {staffName}
+                                <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-secondary text-secondary-foreground">
+                                  <User className="h-3 w-3 mr-1" />
+                                  <span className="line-clamp-1">{staffName}</span>
                                 </span>
                               );
                             })}
                             {pkg.assignedStaff.length > 2 && (
-                              <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-medium bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 border border-gray-200 shadow-sm">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-secondary text-secondary-foreground">
                                 +{pkg.assignedStaff.length - 2} more
                               </span>
                             )}
@@ -716,27 +817,25 @@ export function Step1_Services({
                     </div>
 
                     {/* Footer Section */}
-                    <div className="px-4 pb-4 space-y-3">
+                    <div className="px-4 pb-4 space-y-3 mt-auto">
                       {/* Divider */}
-                      <div className="border-t border-gray-200"></div>
+                      <div className="border-t"></div>
 
                       {/* Pricing */}
-                      <div className="flex items-end justify-between">
+                      <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-xs text-gray-500 mb-0.5 font-medium">Package Price</p>
+                          <p className="text-xs text-muted-foreground mb-0.5">Package Price</p>
                           {pkg.discountedPrice && pkg.discountedPrice !== pkg.totalPrice ? (
-                            <div className="space-y-0.5">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-gray-400 line-through text-sm">
-                                  ₹{pkg.totalPrice?.toLocaleString('en-IN')}
-                                </span>
-                              </div>
-                              <span className="font-bold text-2xl sm:text-3xl text-rose-600 block">
+                            <div className="flex items-baseline gap-2">
+                              <span className="font-bold text-xl sm:text-2xl text-foreground">
                                 ₹{pkg.discountedPrice?.toLocaleString('en-IN')}
+                              </span>
+                              <span className="text-muted-foreground line-through text-sm">
+                                ₹{pkg.totalPrice?.toLocaleString('en-IN')}
                               </span>
                             </div>
                           ) : (
-                            <span className="font-bold text-2xl sm:text-3xl text-gray-900 block">
+                            <span className="font-bold text-xl sm:text-2xl text-foreground">
                               ₹{pkg.totalPrice?.toLocaleString('en-IN')}
                             </span>
                           )}
@@ -746,9 +845,9 @@ export function Step1_Services({
                       {/* Action Buttons */}
                       <div className="flex gap-2">
                         <Button
-                          size="default"
+                          size="sm"
                           variant="outline"
-                          className="flex-1 text-xs sm:text-sm border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all font-semibold"
+                          className="flex-1 text-xs"
                           onClick={(e) => {
                             e.stopPropagation();
                             setSelectedPackageForDetails(pkg);
@@ -758,9 +857,9 @@ export function Step1_Services({
                         </Button>
                         {isSelected ? (
                           <Button
-                            size="default"
+                            size="sm"
                             variant="outline"
-                            className="flex-1 text-xs sm:text-sm border-2 border-rose-400 text-rose-600 hover:bg-rose-50 hover:border-rose-500 transition-all font-semibold"
+                            className="flex-1 text-xs"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSelectWeddingPackage(null);
@@ -771,8 +870,9 @@ export function Step1_Services({
                           </Button>
                         ) : (
                           <Button
-                            size="default"
-                            className="flex-1 text-xs sm:text-sm bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all font-semibold"
+                            size="sm"
+                            variant="default"
+                            className="flex-1 text-xs"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSelectWeddingPackage(pkg);
@@ -790,11 +890,11 @@ export function Step1_Services({
             </div>
           ) : (
             <div className="text-center py-16">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-rose-100 mb-6">
-                <Heart className="h-10 w-10 text-rose-400" />
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted mb-6">
+                <Heart className="h-10 w-10 text-muted-foreground" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Wedding Packages Available</h3>
-              <p className="text-gray-500">
+              <h3 className="text-xl font-semibold mb-2">No Wedding Packages Available</h3>
+              <p className="text-muted-foreground">
                 Check back later for our exclusive wedding packages
               </p>
             </div>
@@ -802,18 +902,7 @@ export function Step1_Services({
         </div>
       )}
 
-      {/* Continue Button */}
-      <div className="mt-8 flex justify-end sticky bottom-0 bg-white/80 backdrop-blur-sm py-4 border-t">
-        {viewMode === 'services' && selectedServices.length > 0 && (
-          <Button
-            size="lg"
-            onClick={() => setCurrentStep(2)}
-          >
-            Continue
-            <ChevronRight className="h-5 w-5 ml-2" />
-          </Button>
-        )}
-      </div>
+      {/* Continue Button - Removed as per user request */}
 
       {/* Confirmation Dialog */}
       <Dialog open={packageToConfirm !== null} onOpenChange={(open) => !open && setPackageToConfirm(null)}>
@@ -822,33 +911,33 @@ export function Step1_Services({
             <>
               <DialogHeader>
                 <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                  <Heart className="h-6 w-6 text-rose-600" />
+                  <Heart className="h-6 w-6 text-primary" />
                   Confirm Package Selection
                 </DialogTitle>
                 <DialogDescription className="text-base pt-2">
-                  Are you sure you want to select <span className="font-semibold text-gray-900">{packageToConfirm.name}</span>?
+                  Are you sure you want to select <span className="font-semibold">{packageToConfirm.name}</span>?
                 </DialogDescription>
               </DialogHeader>
 
               <div className="space-y-3 py-4">
-                <div className="bg-gradient-to-br from-rose-50 to-pink-50 border border-rose-200 rounded-lg p-4">
+                <div className="bg-muted border rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">Total Services:</span>
-                    <span className="font-semibold text-gray-900">{packageToConfirm.services?.length || 0}</span>
+                    <span className="text-sm font-medium text-muted-foreground">Total Services:</span>
+                    <span className="font-semibold">{packageToConfirm.services?.length || 0}</span>
                   </div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700">Duration:</span>
-                    <span className="font-semibold text-gray-900">{packageToConfirm.duration || 0} minutes</span>
+                    <span className="text-sm font-medium text-muted-foreground">Duration:</span>
+                    <span className="font-semibold">{packageToConfirm.duration || 0} minutes</span>
                   </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-rose-200">
-                    <span className="text-base font-bold text-gray-900">Price:</span>
-                    <span className="text-2xl font-bold text-rose-600">
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <span className="text-base font-bold">Price:</span>
+                    <span className="text-2xl font-bold text-primary">
                       ₹{(packageToConfirm.discountedPrice || packageToConfirm.totalPrice)?.toLocaleString('en-IN')}
                     </span>
                   </div>
                 </div>
 
-                <p className="text-xs text-gray-500 text-center">
+                <p className="text-xs text-muted-foreground text-center">
                   You can change your selection anytime before confirming the booking.
                 </p>
               </div>
@@ -863,7 +952,7 @@ export function Step1_Services({
                 </Button>
                 <Button
                   onClick={confirmPackageSelection}
-                  className="flex-1 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700"
+                  className="flex-1"
                 >
                   <Check className="h-4 w-4 mr-2" />
                   Confirm
@@ -880,7 +969,7 @@ export function Step1_Services({
           {selectedPackageForDetails && (
             <div className="flex flex-col h-full max-h-[90vh]">
               {/* Header with Image */}
-              <div className="relative w-full h-40 sm:h-52 flex-shrink-0 overflow-hidden bg-gradient-to-br from-rose-100 to-pink-100">
+              <div className="relative w-full h-40 sm:h-52 flex-shrink-0 overflow-hidden bg-muted">
                 <Image
                   src={selectedPackageForDetails.image || `https://picsum.photos/seed/${selectedPackageForDetails.name}/1200/600`}
                   alt={selectedPackageForDetails.name}
@@ -895,20 +984,20 @@ export function Step1_Services({
 
                 {/* Title & Info Overlay */}
                 <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
-                  <DialogTitle className="text-xl sm:text-2xl font-bold text-white drop-shadow-2xl mb-2">
+                  <DialogTitle className="text-xl sm:text-2xl font-bold text-white mb-2 line-clamp-2">
                     {selectedPackageForDetails.name}
                   </DialogTitle>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-white/95 text-gray-800 backdrop-blur-md shadow-lg">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
                       <List className="h-3 w-3 mr-1" />
                       {selectedPackageForDetails.services?.length || 0} Services
                     </span>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-white/95 text-gray-800 backdrop-blur-md shadow-lg">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
                       <Clock className="h-3 w-3 mr-1" />
                       {selectedPackageForDetails.duration || 0} min
                     </span>
                     {selectedPackageForDetails.staffCount && (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-white/95 text-gray-800 backdrop-blur-md shadow-lg">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-white/90 text-foreground">
                         <Users className="h-3 w-3 mr-1" />
                         {selectedPackageForDetails.staffCount} Staff
                       </span>
@@ -921,8 +1010,9 @@ export function Step1_Services({
               <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
                 {/* Description */}
                 {selectedPackageForDetails.description && (
-                  <div className="bg-gradient-to-br from-rose-50/50 to-pink-50/50 border border-rose-100 rounded-xl p-4">
-                    <DialogDescription className="text-sm sm:text-base text-gray-700 leading-relaxed">
+                  <div className="pb-4 border-b">
+                    <h4 className="font-semibold text-sm mb-2">Description</h4>
+                    <DialogDescription className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                       {selectedPackageForDetails.description}
                     </DialogDescription>
                   </div>
@@ -930,20 +1020,16 @@ export function Step1_Services({
 
                 {/* Services List */}
                 {selectedPackageForDetails.services && selectedPackageForDetails.services.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="p-2 bg-rose-100 rounded-lg">
-                        <List className="h-5 w-5 text-rose-600" />
-                      </div>
-                      <h4 className="font-bold text-lg sm:text-xl text-gray-900">Included Services</h4>
+                  <div className="pb-4 border-b">
+                    <div className="flex items-center gap-2 mb-3">
+                      <List className="h-4 w-4 text-primary" />
+                      <h4 className="font-semibold text-base">Included Services ({selectedPackageForDetails.services.length})</h4>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-2">
                       {selectedPackageForDetails.services.map((service, idx) => (
-                        <div key={idx} className="flex items-start gap-3 p-3 sm:p-4 bg-gradient-to-br from-rose-50 to-pink-50 border border-rose-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                          <div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full bg-rose-600 flex items-center justify-center">
-                            <Check className="h-3 w-3 text-white" />
-                          </div>
-                          <span className="text-sm sm:text-base font-medium text-gray-800 leading-relaxed">{service.serviceName}</span>
+                        <div key={idx} className="flex items-start gap-2 text-sm">
+                          <div className="mt-1 flex-shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
+                          <span className="leading-relaxed line-clamp-2">{service.serviceName}</span>
                         </div>
                       ))}
                     </div>
@@ -952,25 +1038,19 @@ export function Step1_Services({
 
                 {/* Staff List */}
                 {selectedPackageForDetails.assignedStaff && selectedPackageForDetails.assignedStaff.length > 0 && (
-                  <div>
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="p-2 bg-purple-100 rounded-lg">
-                        <Users className="h-5 w-5 text-purple-600" />
-                      </div>
-                      <h4 className="font-bold text-lg sm:text-xl text-gray-900">Expert Staff Members</h4>
+                  <div className="pb-4 border-b">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Users className="h-4 w-4 text-primary" />
+                      <h4 className="font-semibold text-base">Expert Staff Members ({selectedPackageForDetails.assignedStaff.length})</h4>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {selectedPackageForDetails.assignedStaff.map((staff, idx) => {
-                        const staffName = typeof staff === 'string'
-                          ? staff
-                          : staff.name;
+                        const staffName = getStaffName(staff);
 
                         return (
-                          <div key={idx} className="flex items-center gap-3 p-3 sm:p-4 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500 flex items-center justify-center flex-shrink-0 shadow-md">
-                              <User className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                            </div>
-                            <span className="text-sm sm:text-base font-semibold text-gray-800">{staffName}</span>
+                          <div key={idx} className="flex items-center gap-2 text-sm">
+                            <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            <span className="line-clamp-1">{staffName}</span>
                           </div>
                         );
                       })}
@@ -979,39 +1059,34 @@ export function Step1_Services({
                 )}
 
                 {/* Pricing Section */}
-                <div className="bg-gradient-to-br from-rose-100 via-pink-100 to-rose-100 border-2 border-rose-300 rounded-2xl p-5 sm:p-6 shadow-lg">
-                  <h4 className="font-bold text-lg sm:text-xl mb-4 text-gray-900 flex items-center gap-2">
-                    <span className="text-2xl">💰</span>
-                    Package Pricing
-                  </h4>
+                <div>
+                  <h4 className="font-semibold text-base mb-3">Package Pricing</h4>
                   {selectedPackageForDetails.discountedPrice &&
                     selectedPackageForDetails.discountedPrice !== selectedPackageForDetails.totalPrice ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-sm sm:text-base">
-                        <span className="text-gray-700 font-medium">Original Price:</span>
-                        <span className="text-gray-500 line-through text-lg sm:text-xl">
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Original Price:</span>
+                        <span className="text-muted-foreground line-through">
                           ₹{selectedPackageForDetails.totalPrice?.toLocaleString('en-IN')}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-sm sm:text-base">
-                        <span className="text-gray-700 font-medium">You Save:</span>
-                        <span className="text-green-600 font-bold text-lg sm:text-xl flex items-center gap-2">
-                          <span className="bg-green-100 px-3 py-1 rounded-full text-sm">
-                            {Math.round(((selectedPackageForDetails.totalPrice - selectedPackageForDetails.discountedPrice) / selectedPackageForDetails.totalPrice) * 100)}% OFF
-                          </span>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">You Save:</span>
+                        <span className="font-semibold text-primary">
+                          {Math.round(((selectedPackageForDetails.totalPrice - selectedPackageForDetails.discountedPrice) / selectedPackageForDetails.totalPrice) * 100)}% OFF
                         </span>
                       </div>
-                      <div className="flex items-center justify-between pt-3 border-t-2 border-rose-400">
-                        <span className="text-gray-900 font-bold text-base sm:text-lg">Final Price:</span>
-                        <span className="text-rose-600 font-bold text-2xl sm:text-3xl lg:text-4xl">
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <span className="font-bold">Final Price:</span>
+                        <span className="text-primary font-bold text-xl sm:text-2xl">
                           ₹{selectedPackageForDetails.discountedPrice?.toLocaleString('en-IN')}
                         </span>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-900 font-bold text-base sm:text-lg">Total Price:</span>
-                      <span className="text-rose-600 font-bold text-2xl sm:text-3xl lg:text-4xl">
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="font-bold">Total Price:</span>
+                      <span className="text-primary font-bold text-xl sm:text-2xl">
                         ₹{selectedPackageForDetails.totalPrice?.toLocaleString('en-IN')}
                       </span>
                     </div>
@@ -1020,38 +1095,39 @@ export function Step1_Services({
               </div>
 
               {/* Footer Actions */}
-              <DialogFooter className="border-t bg-gray-50/80 backdrop-blur-sm p-4 sm:p-6 gap-2 sm:gap-3 flex-shrink-0">
+              <DialogFooter className="border-t bg-muted/50 p-4 sm:p-5 gap-2 flex-shrink-0">
                 <Button
-                  size="lg"
+                  size="default"
                   variant="outline"
                   onClick={() => setSelectedPackageForDetails(null)}
-                  className="flex-1 sm:flex-none border-2 font-semibold"
+                  className="flex-1 sm:flex-none"
                 >
                   Close
                 </Button>
                 {selectedWeddingPackage?.id === (selectedPackageForDetails.id || selectedPackageForDetails._id) ? (
                   <Button
-                    size="lg"
+                    size="default"
                     variant="outline"
-                    className="flex-1 sm:flex-none border-2 border-rose-400 text-rose-600 hover:bg-rose-50 font-semibold"
+                    className="flex-1 sm:flex-none"
                     onClick={() => {
                       handleSelectWeddingPackage(null);
                       setSelectedPackageForDetails(null);
                     }}
                   >
-                    <X className="h-5 w-5 mr-2" />
+                    <X className="h-4 w-4 mr-2" />
                     Deselect Package
                   </Button>
                 ) : (
                   <Button
-                    size="lg"
-                    className="flex-1 sm:flex-none bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white shadow-lg font-semibold"
+                    size="default"
+                    variant="default"
+                    className="flex-1 sm:flex-none"
                     onClick={() => {
                       handleSelectWeddingPackage(selectedPackageForDetails);
                       setSelectedPackageForDetails(null);
                     }}
                   >
-                    <Heart className="h-5 w-5 mr-2" />
+                    <Heart className="h-4 w-4 mr-2" />
                     Select Package
                   </Button>
                 )}

@@ -9,13 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui/dialog";
 import { Textarea } from "@repo/ui/textarea";
 import { Checkbox } from "@repo/ui/checkbox";
-import { Search, Plus, Minus, Trash2, ShoppingCart, Package, Clock, UserCheck, CheckCircle, X, Mail, Printer, DownloadCloud, Calendar, Paperclip } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, Package, Clock, UserCheck, CheckCircle, X, Mail, Printer, DownloadCloud, Calendar, Paperclip, Check, UserCircle } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useGetCategoriesQuery, useGetVendorServicesQuery, useGetClientsQuery, useCreateClientMutation, useGetVendorProfileQuery, useCreateBillingMutation, useGetStaffQuery, useGetAddOnsQuery } from "@repo/store/api";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { toast } from 'sonner';
 import InvoiceUI from "@/components/InvoiceUI";
 import { ScrollArea } from "@repo/ui/scroll-area";
+
 
 // Dynamically import html2pdf to avoid SSR issues
 let html2pdf: any = null;
@@ -56,6 +57,7 @@ interface Service {
   duration: number;
   description: string;
   status: string;
+  staff?: string[];
 }
 
 // Client interface
@@ -457,6 +459,26 @@ export default function ServicesTab({
     );
   };
 
+  // Update item staff member
+  const updateStaffMember = (index: number, staffId: string) => {
+    setCart(prevCart =>
+      prevCart.map((item, i) => {
+        if (i === index) {
+          if (staffId === 'none') {
+             const { staffMember, ...rest } = item;
+             return rest;
+          }
+          const staff = staffData.find((s: any) => s._id === staffId);
+          return {
+            ...item,
+            staffMember: staff ? { id: staff._id, name: staff.fullName } : undefined
+          };
+        }
+        return item;
+      })
+    );
+  };
+
   // Remove item from cart (using index because multiple items can share same service ID but different add-ons)
   const removeFromCart = (index: number) => {
     setCart(prevCart => prevCart.filter((_, i) => i !== index));
@@ -677,7 +699,11 @@ export default function ServicesTab({
 
   // State for invoice dialog
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
-  const [invoiceData, setInvoiceData] = useState<any>(null);
+  const [invoiceData, setInvoiceData] = useState<any>(null); // Restored
+  const [printInvoiceData, setPrintInvoiceData] = useState<any>(null);
+  
+
+
   const [isOrderSaved, setIsOrderSaved] = useState(false);
 
   // State for email dialog
@@ -1299,6 +1325,8 @@ export default function ServicesTab({
             )}
           </div>
 
+
+
           {/* Cart Items */}
           <div className="flex-1 flex flex-col min-h-0 mb-6">
             <div className="flex-1 overflow-auto scrollbar-hide [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -1323,84 +1351,113 @@ export default function ServicesTab({
                       </TableCell>
                     </TableRow>
                   ) : (
-                    cart.map((item, index) => (
-                      <TableRow key={`${item._id}-${index}`}>
-                        <TableCell>
-                          <div className="cursor-pointer p-2 rounded hover:bg-muted/50 transition-colors" onClick={() => handleEditItemClick(item, index)}>
-                            <div className="font-semibold text-gray-900 leading-tight">{item.name}</div>
-                            {item.addOns && item.addOns.length > 0 && (
-                              <div className="mt-2 space-y-1">
-                                {item.addOns.map((addon, i) => (
-                                  <div key={i} className="flex items-center text-[10px] sm:text-xs text-primary/80 bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10 w-fit">
-                                    <Plus className="h-3 w-3 mr-1" />
-                                    {addon.name}
+                    cart.map((item, index) => {
+                      // Filter staff if item has staff restrictions
+                      const availableStaff = item.staff && item.staff.length > 0
+                        ? staffData.filter((staff: any) => item.staff!.includes(staff._id))
+                        : staffData;
+
+                      return (
+                        <TableRow key={`${item._id}-${index}`}>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <div className="cursor-pointer p-2 rounded hover:bg-muted/50 transition-colors -ml-2" onClick={() => handleEditItemClick(item, index)}>
+                                <div className="font-semibold text-gray-900 leading-tight">{item.name}</div>
+                                {item.addOns && item.addOns.length > 0 && (
+                                  <div className="mt-1 space-y-1">
+                                    {item.addOns.map((addon, i) => (
+                                      <div key={i} className="flex items-center text-[10px] sm:text-xs text-primary/80 bg-primary/5 px-2 py-0.5 rounded-md border border-primary/10 w-fit">
+                                        <Plus className="h-3 w-3 mr-1" />
+                                        {addon.name}
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
+                                )}
                               </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="p-2">
-                            <div className="text-sm">{item.duration} min</div>
-                            {item.addOns && item.addOns.length > 0 && (
+                              {/* Per-item Staff Selector */}
                               <div className="mt-1">
-                                {item.addOns.map((addon, i) => (
-                                  <div key={i} className="text-xs text-muted-foreground">
-                                    + {addon.duration} min
-                                  </div>
-                                ))}
+                                <Select
+                                  value={item.staffMember?.id || 'none'}
+                                  onValueChange={(value) => updateStaffMember(index, value)}
+                                >
+                                  <SelectTrigger className="h-7 text-xs w-fit min-w-[120px] px-2 bg-transparent border-gray-200 hover:bg-gray-50 focus:ring-0 focus:ring-offset-0 gap-1">
+                                    <UserCircle className="h-3 w-3 text-gray-500" />
+                                    <SelectValue placeholder="Select Staff" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none" className="text-xs">No Staff</SelectItem>
+                                    {availableStaff.map((staff: any) => (
+                                      <SelectItem key={staff._id} value={staff._id} className="text-xs">
+                                        {staff.fullName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="p-2">
-                            <div>₹{item.price.toFixed(2)}</div>
-                            {item.addOns && item.addOns.length > 0 && (
-                              <div className="mt-1">
-                                {item.addOns.map((addon, i) => (
-                                  <div key={i} className="text-xs text-muted-foreground whitespace-nowrap">
-                                    + ₹{addon.price.toFixed(2)}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="p-2">
+                              <div className="text-sm">{item.duration} min</div>
+                              {item.addOns && item.addOns.length > 0 && (
+                                <div className="mt-1">
+                                  {item.addOns.map((addon, i) => (
+                                    <div key={i} className="text-xs text-muted-foreground">
+                                      + {addon.duration} min
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="p-2">
+                              <div>₹{item.price.toFixed(2)}</div>
+                              {item.addOns && item.addOns.length > 0 && (
+                                <div className="mt-1">
+                                  {item.addOns.map((addon, i) => (
+                                    <div key={i} className="text-xs text-muted-foreground whitespace-nowrap">
+                                      + ₹{addon.price.toFixed(2)}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center">
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => updateQuantity(index, item.quantity - 1)}
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                              <div className="mx-2 w-8 text-center">{item.quantity}</div>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => updateQuantity(index, item.quantity + 1)}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell>₹{item.totalPrice.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="icon"
-                              className="h-8 w-8"
-                              onClick={() => updateQuantity(index, item.quantity - 1)}
+                              onClick={() => removeFromCart(index)}
                             >
-                              <Minus className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
-                            <div className="mx-2 w-8 text-center">{item.quantity}</div>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => updateQuantity(index, item.quantity + 1)}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                        <TableCell>₹{item.totalPrice.toFixed(2)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeFromCart(index)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>

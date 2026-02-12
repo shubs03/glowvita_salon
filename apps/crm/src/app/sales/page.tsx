@@ -63,6 +63,10 @@ interface ServiceCartItem extends Service {
   quantity: number;
   totalPrice: number;
   addOns?: any[];
+  staffMember?: {
+    id: string;
+    name: string;
+  };
 }
 
 // Product cart item interface

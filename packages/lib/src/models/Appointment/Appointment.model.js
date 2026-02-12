@@ -264,6 +264,7 @@ const appointmentSchema = new mongoose.Schema(
       ],
       default: "scheduled",
     },
+
     invoiceNumber: {
       type: String,
       index: true,
@@ -334,6 +335,9 @@ const appointmentSchema = new mongoose.Schema(
       packageName: {
         type: String,
       },
+      venueAddress: {
+        type: String,
+      },
       packageServices: [
         {
           serviceId: {
@@ -359,6 +363,11 @@ const appointmentSchema = new mongoose.Schema(
           },
         },
       ],
+      // Store team members specific to this package booking
+      teamMembers: {
+        type: [mongoose.Schema.Types.Mixed],
+        default: []
+      },
       totalDuration: {
         type: Number,
       },

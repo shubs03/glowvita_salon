@@ -26,6 +26,8 @@ type Appointment = {
   vendorId: string;
   client?: string;
   clientName?: string;
+  clientEmail?: string;
+  clientPhone?: string;
   service?: string;
   serviceName?: string;
   staff?: string;
@@ -234,7 +236,13 @@ export default function DailySchedulePage() {
         taxRate: appt.taxRate || 0,
         discountAmount: appt.discountAmount || 0,
         finalAmount: appt.finalAmount || appt.totalAmount || appt.amount || 0,
+        clientEmail: appt.clientEmail,
+        clientPhone: appt.clientPhone,
         paymentMethod: appt.paymentMethod || 'Pay at Salon',
+        isHomeService: appt.isHomeService,
+        isWeddingService: appt.isWeddingService,
+        homeServiceLocation: appt.homeServiceLocation,
+        weddingPackageDetails: appt.weddingPackageDetails,
       }));
   }, [appointmentsData]);
 
@@ -585,8 +593,68 @@ export default function DailySchedulePage() {
       timezone: 'Asia/Kolkata'
     };
 
-    return [anyProfessional, ...transformed];
-  }, [staffData, doctorStaffData, role]);
+    // Find any staff in appointments that are not in the sourceData
+    // This ensures that appointments assigned to "Wedding Team" or inactive staff still show up
+    const missingStaffMap = new Map();
+
+    if (appointments && Array.isArray(appointments)) {
+      appointments.forEach((appt: any) => {
+        // Skip if no staff assigned or if it's "Any Professional"
+        if (!appt.staffName || appt.staffName === 'Any Professional') return;
+
+        // Check if this staff already exists in our transformed list
+        const exists = transformed.some(s =>
+          s.id === appt.staff ||
+          s.name === appt.staffName ||
+          (s.id && appt.staff && s.id.toString() === appt.staff.toString())
+        );
+
+        if (!exists && !missingStaffMap.has(appt.staffName)) {
+          // Create a virtual staff member for this appointment
+          missingStaffMap.set(appt.staffName, {
+            id: appt.staff || `virtual-${appt.staffName.replace(/\s+/g, '-')}`,
+            name: appt.staffName,
+            position: appt.isWeddingService ? 'Wedding Team' : (appt.isHomeService ? 'Home Service' : 'External/Inactive'),
+            isActive: true, // Force active so it shows up
+            isAvailable: true,
+            isCurrentlyAvailable: true,
+            workingHours: {
+              startTime: '08:00',
+              endTime: '20:00',
+              startHour: 8,
+              endHour: 20
+            },
+            mondayAvailable: true,
+            tuesdayAvailable: true,
+            wednesdayAvailable: true,
+            thursdayAvailable: true,
+            fridayAvailable: true,
+            saturdayAvailable: true,
+            sundayAvailable: true,
+            mondaySlots: [],
+            tuesdaySlots: [],
+            wednesdaySlots: [],
+            thursdaySlots: [],
+            fridaySlots: [],
+            saturdaySlots: [],
+            sundaySlots: [],
+            hasWeekdayAvailability: true,
+            hasWeekendAvailability: true,
+            blockedTimes: [],
+            startTime: '08:00',
+            endTime: '20:00',
+            timezone: 'Asia/Kolkata',
+            isVirtual: true // Flag to identify auto-generated staff
+          });
+        }
+      });
+    }
+
+    const virtualStaff = Array.from(missingStaffMap.values());
+    console.log('Injecting virtual staff for missing assignments:', virtualStaff);
+
+    return [anyProfessional, ...transformed, ...virtualStaff];
+  }, [staffData, doctorStaffData, role, appointments]);
 
   // Debug: Log the response structure
   useEffect(() => {
@@ -920,94 +988,94 @@ export default function DailySchedulePage() {
             role={role}
             onAppointmentClick={handleAppointmentClick}
             onTimeSlotClick={handleTimeSlotClick}
-          timeSlots={useMemo(() => {
-            try {
-              // Get working hours with fallbacks
-              const startTime = dayWorkingHours?.startTime || '09:00';
-              const endTime = dayWorkingHours?.endTime || '18:00';
-              const isWorking = dayWorkingHours?.isWorking !== false;
+            timeSlots={useMemo(() => {
+              try {
+                // Get working hours with fallbacks
+                const startTime = dayWorkingHours?.startTime || '09:00';
+                const endTime = dayWorkingHours?.endTime || '18:00';
+                const isWorking = dayWorkingHours?.isWorking !== false;
 
-              // Parse start and end times
-              const [startHour, startMinute] = parseTimeString(startTime);
-              const [endHour, endMinute] = parseTimeString(endTime);
+                // Parse start and end times
+                const [startHour, startMinute] = parseTimeString(startTime);
+                const [endHour, endMinute] = parseTimeString(endTime);
 
-              // Create date objects in local timezone
-              const startDate = new Date(selectedDate);
-              startDate.setHours(startHour, startMinute, 0, 0);
+                // Create date objects in local timezone
+                const startDate = new Date(selectedDate);
+                startDate.setHours(startHour, startMinute, 0, 0);
 
-              const endDate = new Date(selectedDate);
-              endDate.setHours(endHour, endMinute, 0, 0);
+                const endDate = new Date(selectedDate);
+                endDate.setHours(endHour, endMinute, 0, 0);
 
-              // Handle case where end time is on the next day
-              if (endDate <= startDate) {
-                endDate.setDate(endDate.getDate() + 1);
-              }
+                // Handle case where end time is on the next day
+                if (endDate <= startDate) {
+                  endDate.setDate(endDate.getDate() + 1);
+                }
 
-              const slots = [];
-              let current = new Date(startDate);
-              const slotDuration = 30; // minutes
+                const slots = [];
+                let current = new Date(startDate);
+                const slotDuration = 30; // minutes
 
-              // Generate slots every 30 minutes within working hours
-              while (current < endDate) {
-                const hours = current.getHours();
-                const minutes = current.getMinutes();
+                // Generate slots every 30 minutes within working hours
+                while (current < endDate) {
+                  const hours = current.getHours();
+                  const minutes = current.getMinutes();
 
-                // Format time in 24-hour format for internal use (HH:MM)
-                const time24 = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                  // Format time in 24-hour format for internal use (HH:MM)
+                  const time24 = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
-                // Format time in 12-hour format for display (h:MM AM/PM)
-                const displayHours = hours % 12 || 12;
-                const period = hours >= 12 ? 'PM' : 'AM';
-                const formattedTime = `${displayHours}:${String(minutes).padStart(2, '0')}${period}`;
+                  // Format time in 12-hour format for display (h:MM AM/PM)
+                  const displayHours = hours % 12 || 12;
+                  const period = hours >= 12 ? 'PM' : 'AM';
+                  const formattedTime = `${displayHours}:${String(minutes).padStart(2, '0')}${period}`;
 
-                slots.push({
-                  id: `${formatDateForAPI(selectedDate)}-${time24}`,
-                  time: time24, // Internal: 24-hour format (HH:MM)
-                  formattedTime: formattedTime, // Display: 12-hour format (h:MM AM/PM)
-                  isAvailable: isWorking, // Respect working/non-working day
-                  staffId: 'default',
-                  date: new Date(current) // Store the exact date object for this slot
+                  slots.push({
+                    id: `${formatDateForAPI(selectedDate)}-${time24}`,
+                    time: time24, // Internal: 24-hour format (HH:MM)
+                    formattedTime: formattedTime, // Display: 12-hour format (h:MM AM/PM)
+                    isAvailable: isWorking, // Respect working/non-working day
+                    staffId: 'default',
+                    date: new Date(current) // Store the exact date object for this slot
+                  });
+
+                  // Move to next time slot
+                  current = new Date(current.getTime() + slotDuration * 60000);
+                }
+
+                console.log('Generated time slots:', {
+                  date: selectedDate.toISOString().split('T')[0],
+                  startTime: startTime,
+                  endTime: endTime,
+                  isWorking,
+                  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                  slotCount: slots.length,
+                  firstSlot: slots[0],
+                  lastSlot: slots[slots.length - 1] || 'No slots'
                 });
 
-                // Move to next time slot
-                current = new Date(current.getTime() + slotDuration * 60000);
+                return slots;
+
+              } catch (error) {
+                console.error('Error generating time slots:', error);
+                // Fallback to default time slots if there's an error
+                return [
+                  '09:00am', '09:30am', '10:00am', '10:30am', '11:00am', '11:30am',
+                  '12:00pm', '12:30pm', '01:00pm', '01:30pm', '02:00pm', '02:30pm',
+                  '03:00pm', '03:30pm', '04:00pm', '04:30pm', '05:00pm', '05:30pm',
+                  '06:00pm', '06:30pm', '07:00pm'
+                ].map(time => ({
+                  id: `${formatDateForAPI(selectedDate)}-${time}`,
+                  time: time,
+                  formattedTime: time,
+                  isAvailable: true,
+                  staffId: 'default',
+                  date: new Date(selectedDate)
+                }));
               }
-
-              console.log('Generated time slots:', {
-                date: selectedDate.toISOString().split('T')[0],
-                startTime: startTime,
-                endTime: endTime,
-                isWorking,
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-                slotCount: slots.length,
-                firstSlot: slots[0],
-                lastSlot: slots[slots.length - 1] || 'No slots'
-              });
-
-              return slots;
-
-            } catch (error) {
-              console.error('Error generating time slots:', error);
-              // Fallback to default time slots if there's an error
-              return [
-                '09:00am', '09:30am', '10:00am', '10:30am', '11:00am', '11:30am',
-                '12:00pm', '12:30pm', '01:00pm', '01:30pm', '02:00pm', '02:30pm',
-                '03:00pm', '03:30pm', '04:00pm', '04:30pm', '05:00pm', '05:30pm',
-                '06:00pm', '06:30pm', '07:00pm'
-              ].map(time => ({
-                id: `${formatDateForAPI(selectedDate)}-${time}`,
-                time: time,
-                formattedTime: time,
-                isAvailable: true,
-                staffId: 'default',
-                date: new Date(selectedDate)
-              }));
-            }
-          }, [dayWorkingHours, selectedDate])}
-          onCreateAppointment={handleCreateNewAppointment}
-          onDateChange={handleDateChange}
-          onUpdateAppointmentStatus={handleUpdateStatus}
-        />
+            }, [dayWorkingHours, selectedDate])}
+            onCreateAppointment={handleCreateNewAppointment}
+            onDateChange={handleDateChange}
+            onUpdateAppointmentStatus={handleUpdateStatus}
+          />
         </div>
       </div>
 
