@@ -9,11 +9,11 @@ const JWT_SECRET_SUPPLIER = process.env.JWT_SECRET_SUPPLIER;
 
 async function verifyJwt(token: string | undefined): Promise<any> {
   if (!token) return null;
-  
+
   try {
     const decoded = jose.decodeJwt(token);
     const role = decoded.role;
-    
+
     let secret: string | undefined;
     switch (role) {
       case 'vendor':
@@ -29,12 +29,12 @@ async function verifyJwt(token: string | undefined): Promise<any> {
       default:
         return null;
     }
-    
+
     if (!secret) {
       console.log("CRM JWT Verification Error in Middleware: No secret for role", role);
       return null;
     }
-    
+
     const secretKey = new TextEncoder().encode(secret);
     const { payload } = await jose.jwtVerify(token, secretKey);
     return payload;
@@ -47,17 +47,17 @@ async function verifyJwt(token: string | undefined): Promise<any> {
 const alwaysAllowedPaths = ['/dashboard', '/profile', '/not-found'];
 
 const getNavItemsForRole = (role: string) => {
-    switch (role) {
-      case 'vendor':
-      case 'staff':
-        return vendorNavItems;
-      case 'doctor':
-        return doctorNavItems;
-      case 'supplier':
-        return supplierNavItems;
-      default:
-        return [];
-    }
+  switch (role) {
+    case 'vendor':
+    case 'staff':
+      return vendorNavItems;
+    case 'doctor':
+      return doctorNavItems;
+    case 'supplier':
+      return supplierNavItems;
+    default:
+      return [];
+  }
 };
 
 export async function middleware(request: NextRequest) {
@@ -66,6 +66,11 @@ export async function middleware(request: NextRequest) {
 
   const publicPaths = ['/login', '/auth/register', '/', '/apps', '/pricing', '/support', '/forgot-password', '/reset-password', '/about'];
   const isPublicPath = publicPaths.some(path => pathname === path);
+
+  // Allow static files and Next.js internal assets
+  if (pathname.includes('.') || pathname.startsWith('/_next/')) {
+    return NextResponse.next();
+  }
 
   if (isPublicPath) {
     return NextResponse.next();
@@ -81,7 +86,7 @@ export async function middleware(request: NextRequest) {
       response.cookies.set('crm_access_token', '', { expires: new Date(0) });
       return response;
     }
-    
+
     // For other verification errors, try once more before clearing
     console.log("Token verification failed but not clearing cookie");
     return NextResponse.redirect(new URL('/not-found', request.url));

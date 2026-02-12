@@ -56,18 +56,39 @@ export function withSubscriptionCheck(handler) {
 
     await connectDB();
 
-    const UserModel = MODELS[payload.role];
-    if (!UserModel) {
-      return NextResponse.json({ message: 'Invalid user role' }, { status: 403 });
+    const userRole = payload.role;
+    const userId = payload.userId;
+
+    let subscriptionContainer;
+    let mainUser;
+
+    if (userRole === 'staff') {
+      const Staff = (await import('@repo/lib/models/Vendor/Staff.model')).default;
+      const staffMember = await Staff.findById(userId);
+      if (!staffMember) {
+        return NextResponse.json({ message: 'Staff record not found' }, { status: 404 });
+      }
+
+      // Staff depends on their employer's subscription
+      const EmployerModel = staffMember.userType === 'Doctor' ? Doctor : Vendor;
+      mainUser = await EmployerModel.findById(staffMember.vendorId);
+      if (!mainUser) {
+        return NextResponse.json({ message: 'Employer not found' }, { status: 404 });
+      }
+      subscriptionContainer = mainUser;
+    } else {
+      const UserModel = MODELS[userRole];
+      if (!UserModel) {
+        return NextResponse.json({ message: 'Invalid user role' }, { status: 403 });
+      }
+      mainUser = await UserModel.findById(userId);
+      if (!mainUser) {
+        return NextResponse.json({ message: 'User not found' }, { status: 404 });
+      }
+      subscriptionContainer = mainUser;
     }
 
-    const user = await UserModel.findById(payload.userId);
-
-    if (!user) {
-      return NextResponse.json({ message: 'User not found' }, { status: 404 });
-    }
-
-    const { subscription } = user;
+    const { subscription } = subscriptionContainer;
     const now = new Date();
 
     const isSubExpired = !subscription ||
@@ -76,10 +97,10 @@ export function withSubscriptionCheck(handler) {
 
     if (isSubExpired) {
       // If the subscription is expired but the status is not yet 'expired' in the DB,
-      // update it now. This makes the middleware the single source of truth.
+      // update it now on the subscription container (Vendor/Doctor/Supplier).
       if (subscription && subscription.status?.toLowerCase() !== 'expired') {
-        user.subscription.status = 'expired';
-        await user.save();
+        subscriptionContainer.subscription.status = 'expired';
+        await subscriptionContainer.save();
       }
       return NextResponse.json({ message: 'Subscription expired' }, { status: 403 });
     }

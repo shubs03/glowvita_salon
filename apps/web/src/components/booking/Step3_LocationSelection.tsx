@@ -82,13 +82,13 @@ export function Step3_LocationSelection({
 
   // When form is complete (from map selection), enable summary button by setting location
   useEffect(() => {
-    const isFormComplete = 
+    const isFormComplete =
       showMapSelector &&
-      locationForm.address && 
-      locationForm.city && 
-      locationForm.state && 
-      locationForm.pincode && 
-      locationForm.lat && 
+      locationForm.address &&
+      locationForm.city &&
+      locationForm.state &&
+      locationForm.pincode &&
+      locationForm.lat &&
       locationForm.lng;
 
     if (isFormComplete) {
@@ -331,7 +331,7 @@ export function Step3_LocationSelection({
   return (
     <div className="w-full">
       <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
-      
+
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -375,7 +375,7 @@ export function Step3_LocationSelection({
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="mt-4">
                     <Button
                       size="lg"

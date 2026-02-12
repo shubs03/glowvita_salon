@@ -91,21 +91,26 @@ export const POST = authMiddlewareAdmin(async (req) => {
         const startDate = new Date(now);
         const endDate = new Date(now);
 
-        // Add duration (in days) to start date to get end date
-        let durationDays = 30;
-        if (typeof plan.duration === 'number') {
-            durationDays = plan.duration;
-        } else if (typeof plan.duration === 'string') {
-            const lower = plan.duration.toLowerCase();
-            if (lower.includes('year')) durationDays = 365;
-            else if (lower.includes('month')) durationDays = 30;
-            else if (lower.includes('week')) durationDays = 7;
-            else {
-                const parsed = parseInt(plan.duration);
-                if (!isNaN(parsed)) durationDays = parsed;
-            }
+        // Calculate endDate based on duration and durationType
+        const duration = plan.duration || 1;
+        const unit = (plan.durationType || 'months').toLowerCase();
+
+        switch (unit) {
+            case 'days':
+                endDate.setDate(endDate.getDate() + duration);
+                break;
+            case 'weeks':
+                endDate.setDate(endDate.getDate() + (duration * 7));
+                break;
+            case 'months':
+                endDate.setMonth(endDate.getMonth() + duration);
+                break;
+            case 'years':
+                endDate.setFullYear(endDate.getFullYear() + duration);
+                break;
+            default:
+                endDate.setMonth(endDate.getMonth() + duration);
         }
-        endDate.setDate(endDate.getDate() + durationDays);
 
         // 4. Archive Current Subscription if exists
         if (user.subscription && user.subscription.plan) {

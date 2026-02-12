@@ -12,7 +12,7 @@ export function Footer() {
             <div className="flex items-center gap-2 font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
               <img
                 src="/favicon.jpeg"
-                alt="GlowVita Logo"
+
                 className="w-8 h-8 object-contain rounded-full border border-primary/20"
               />
               GlowVita Salon

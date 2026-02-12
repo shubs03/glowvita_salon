@@ -477,7 +477,7 @@ function ClientRegisterForm() {
               <div className="flex justify-center mb-4">
                 <img
                   src="/favicon.jpeg"
-                  alt="GlowVita Logo"
+
                   className="w-16 h-16 object-contain rounded-full border-4 border-white shadow-lg"
                 />
               </div>

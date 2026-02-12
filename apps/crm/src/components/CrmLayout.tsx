@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { useGetProfileQuery, useRefreshTokenMutation } from '@repo/store/api';
 import { updateUser, selectIsSubscriptionExpired } from '@repo/store/slices/crmAuthSlice';
@@ -30,6 +30,17 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
 
   // Use the subscription check hook for client-side validation
   const { isExpired, daysRemaining, willExpireSoon } = useSubscriptionCheck();
+
+  const isAllowedOnExpired = useMemo(() => {
+    return (
+      pathname.startsWith('/profile') ||
+      pathname.startsWith('/sales') ||
+      pathname.startsWith('/renew-plan') ||
+      pathname.startsWith('/support') ||
+      pathname.startsWith('/help') ||
+      pathname.includes('expired')
+    );
+  }, [pathname]);
 
   // Fetch the user's profile on mount only
   const { data: profileData, isSuccess, isLoading: isProfileLoading, refetch: refetchProfile } = useGetProfileQuery(undefined, {
@@ -73,13 +84,14 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
   // Check subscription status on route change (instant detection)
   useEffect(() => {
     if (isExpired && isCrmAuthenticated) {
-      // Show banner on all pages except sales page
-      setShowBanner(!pathname.startsWith('/sales'));
-      
-      // Redirect to salon profile if not already there and not on sales page
-      // Sales page should remain accessible even with expired subscription
-      if (!pathname.startsWith('/profile') && !pathname.startsWith('/sales')) {
-        router.push('/profile');
+      // Show banner on all pages except those with their own full billing/support UI
+      const isSpecialPage = pathname.startsWith('/sales') || pathname.startsWith('/renew-plan');
+      setShowBanner(!isSpecialPage);
+
+      // If we're on an expired status and not on an allowed page, subtly suggest going to profile
+      // But don't forcefully redirect to avoid infinite loops with layout.tsx
+      if (!isAllowedOnExpired && !pathname.includes('expired')) {
+        // Just show the banner and blur, let the user decide to click "Renew"
       }
     } else {
       setShowBanner(false);
@@ -183,19 +195,19 @@ export function CrmLayout({ children }: { children: React.ReactNode; }) {
         isOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         isMobile={isMobile}
-        isSubExpired={isExpired && !pathname.startsWith('/sales')}
-        className={cn(isExpired && !pathname.startsWith('/sales') && 'pointer-events-none filter blur-sm')} />
+        isSubExpired={isExpired && !isAllowedOnExpired}
+        className={cn(isExpired && !isAllowedOnExpired && 'pointer-events-none filter blur-sm')} />
 
       <div className={cn(
         "flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden transition-all duration-300",
         !isMobile && (isSidebarOpen ? "lg:ml-64" : "lg:ml-20"),
         showBanner && "mt-[88px]" // Offset for banner height
       )}>
-        <Header toggleSidebar={toggleSidebar} subscription={subscription} isSubExpired={isExpired && !pathname.startsWith('/sales')} />
+        <Header toggleSidebar={toggleSidebar} subscription={subscription} isSubExpired={isExpired && !isAllowedOnExpired} />
 
         <main className={cn(
           "flex-1 overflow-y-auto overflow-x-hidden bg-muted/20",
-          isExpired && !pathname.startsWith('/sales') && 'pointer-events-none filter blur-sm'
+          isExpired && !isAllowedOnExpired && 'pointer-events-none filter blur-sm'
         )}>
           <div className="w-full max-w-none overflow-hidden min-h-full">
             {children}

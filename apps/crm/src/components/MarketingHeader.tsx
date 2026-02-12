@@ -495,7 +495,6 @@ export function MarketingHeader({
           >
             <img
               src="/favicon.jpeg"
-              alt="GlowVita Logo"
               className="w-[60px] h-[60px] object-contain rounded-full border-2 border-primary/20"
             />
             <span className="hidden sm:inline"></span>
