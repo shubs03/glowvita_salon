@@ -31,15 +31,11 @@ interface ProfileData {
 }
 
 function SubscriptionCheck({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
   const { isCrmAuthenticated, isLoading: isAuthLoading } = useCrmAuth();
   const [isLoading, setIsLoading] = useState(true);
-  const [showExpired, setShowExpired] = useState(false);
   const [initialCheckComplete, setInitialCheckComplete] = useState(false);
 
   const {
-    data: profileData,
-    isSuccess,
     refetch
   } = useGetProfileQuery(undefined, {
     skip: !isCrmAuthenticated,
@@ -48,8 +44,6 @@ function SubscriptionCheck({ children }: { children: React.ReactNode }) {
     refetchOnReconnect: true,
     pollingInterval: 30000,
   }) as {
-    data: ProfileData | undefined;
-    isSuccess: boolean;
     refetch: () => Promise<any>;
   };
 
@@ -77,36 +71,12 @@ function SubscriptionCheck({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthLoading, isCrmAuthenticated, refetch]);
 
-  // Check subscription status when profile data is loaded
-  useEffect(() => {
-    if (isSuccess && profileData?.user && isCrmAuthenticated) {
-      try {
-        const subscription = profileData.user.subscription;
-        const endDate = subscription?.endDate ? new Date(subscription.endDate) : null;
-        const isExpired = !subscription ||
-          (subscription.status?.toLowerCase() === 'expired') ||
-          (endDate && endDate.getTime() <= Date.now());
-
-        setShowExpired(isExpired || false);
-
-        // If expired, redirect to subscription expired page
-        if (isExpired && typeof window !== 'undefined' && !window.location.pathname.startsWith('/subscription-expired')) {
-          router.push('/subscription-expired');
-        }
-      } catch (err) {
-        console.error('Error checking subscription status:', err);
-        // Continue with the app if there's an error checking subscription
-        setShowExpired(false);
-      }
-    }
-  }, [isSuccess, profileData, isCrmAuthenticated, router]);
-
   // Light polling safety net in case the server updates mid-session
   useEffect(() => {
     if (!isCrmAuthenticated) return;
     const id = setInterval(() => {
       refetch();
-    }, 30000);
+    }, 60000); // Increased interval as CrmLayout also handles refresh
     return () => clearInterval(id);
   }, [isCrmAuthenticated, refetch]);
 
@@ -118,16 +88,6 @@ function SubscriptionCheck({ children }: { children: React.ReactNode }) {
         <p className="text-muted-foreground">Loading your account...</p>
       </div>
     );
-  }
-
-  // If we're on the subscription expired page, don't redirect
-  if (typeof window !== 'undefined' && window.location.pathname === '/subscription-expired') {
-    return <>{children}</>;
-  }
-
-  // If subscription is expired and we're not already on the expired page, redirect
-  if (showExpired) {
-    return null; // The useEffect will handle the redirect
   }
 
   return <>{children}</>;
@@ -176,7 +136,11 @@ export default function RootLayout({
     '/patients',
     '/crm',
     '/wedding-packages',
-    '/add-ons'
+    '/add-ons',
+    '/doctor-calendar',
+    '/supplier-referrals',
+    '/renew-plan',
+    '/about'
   ].some(path => pathname.startsWith(path));
 
   const isAuthPage = pathname.startsWith('/login') ||

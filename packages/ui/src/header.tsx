@@ -26,7 +26,6 @@ export function Header({ className, cartItemCount = 0 }: HeaderProps) {
             <a href="/" className="flex items-center space-x-2">
               <img
                 src="/favicon.jpeg"
-                alt="GlowVita Logo"
                 className="h-8 w-8 lg:h-10 lg:w-10 object-contain rounded-full border border-primary/20"
               />
               <span className="font-bold text-xl lg:text-2xl text-foreground font-headline">

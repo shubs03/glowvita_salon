@@ -22,6 +22,11 @@ export async function middleware(request) {
 
   const isLoginPage = pathname === '/login';
 
+  // Allow static files and Next.js internal assets
+  if (pathname.includes('.') || pathname.startsWith('/_next/')) {
+    return NextResponse.next();
+  }
+
   const payload = await verifyJwt(token);
 
   if (isLoginPage) {

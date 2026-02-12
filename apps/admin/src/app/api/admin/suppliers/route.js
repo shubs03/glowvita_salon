@@ -22,17 +22,17 @@ const initDb = async () => {
 const generateReferralCode = async (shopName) => {
   let referralCode;
   let isUnique = false;
-  
+
   while (!isUnique) {
     const namePrefix = shopName.substring(0, 3).toUpperCase();
     const randomNumbers = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     referralCode = `${namePrefix}${randomNumbers}`;
-    
+
     // Check if this code already exists for any supplier
     const existingSupplier = await SupplierModel.findOne({ referralCode });
     isUnique = !existingSupplier;
   }
-  
+
   return referralCode;
 };
 
@@ -57,7 +57,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     await initDb(); // Initialize DB connection
     const { buildRegionQueryFromRequest } = await import("@repo/lib");
     const query = buildRegionQueryFromRequest(req);
-    const suppliers = await SupplierModel.find(query);
+    const suppliers = await SupplierModel.find(query).populate("subscription.plan", "name");
     return NextResponse.json(suppliers, { status: 200 });
   } catch (error) {
     console.error("Error fetching suppliers:", error);
@@ -108,15 +108,15 @@ export const POST = async (req) => {
 
     const newSupplier = await SupplierModel.create({
       ...supplierData,
-      password: hashedPassword, 
-      licenseFiles: finalLicenseFiles, 
+      password: hashedPassword,
+      licenseFiles: finalLicenseFiles,
       referralCode: await generateReferralCode(supplierData.shopName),
       regionId: finalRegionId,
       subscription: {
-          plan: (await SubscriptionPlan.findOne({ name: 'Trial Plan' }))?._id,
-          status: 'Active',
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 
-          history: [],
+        plan: (await SubscriptionPlan.findOne({ name: 'Trial Plan' }))?._id,
+        status: 'Active',
+        endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        history: [],
       }
     });
 
@@ -200,7 +200,7 @@ export const PUT = authMiddlewareAdmin(async (req) => {
         if (file && file.startsWith("data:")) {
           const fileName = `supplier-${Date.now()}-license-${i}`;
           const fileUrl = await uploadBase64(file, fileName);
-          
+
           if (fileUrl) {
             finalLicenseFiles.push(fileUrl);
           }
@@ -213,7 +213,7 @@ export const PUT = authMiddlewareAdmin(async (req) => {
       id,
       { ...updateData, licenseFiles: finalLicenseFiles },
       { new: true }
-    );
+    ).populate("subscription.plan", "name");
 
     return NextResponse.json(updatedSupplier, { status: 200 });
   } catch (error) {
@@ -237,7 +237,7 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
     if (!deletedSupplier) {
       return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
     }
-    
+
     // Delete license files from VPS storage
     if (deletedSupplier.licenseFiles && Array.isArray(deletedSupplier.licenseFiles)) {
       for (const fileUrl of deletedSupplier.licenseFiles) {

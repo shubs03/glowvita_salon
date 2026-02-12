@@ -84,7 +84,6 @@ const RoleSelectionScreen = ({ onSelectRole }: RoleSelectionScreenProps) => (
         <div className="flex justify-center mb-6">
           <img
             src="/favicon.jpeg"
-            alt="GlowVita Logo"
             className="w-20 h-20 object-contain rounded-full border-4 border-white shadow-xl animate-fade-in"
           />
         </div>

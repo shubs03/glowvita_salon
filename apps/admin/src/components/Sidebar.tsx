@@ -113,7 +113,6 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
           <Link href="/dashboard" className="flex items-center gap-3 font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
             <img
               src="/favicon.jpeg"
-              alt="GlowVita Logo"
               className="w-[60px] h-[60px] object-contain rounded-lg border-2 border-primary/20"
             />
             <span className={cn(!isOpen && "hidden", "hidden")}>GlowVita</span>
