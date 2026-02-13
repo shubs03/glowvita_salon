@@ -71,7 +71,16 @@ const ProductFormFields = ({
   const [gstAmount, setGstAmount] = useState<number>(0);
 
   // Fetch product masters
-  const { data: productMasters = [], isLoading: productMastersLoading } = useGetProductMastersQuery(undefined);
+  const { data: productMastersData, isLoading: productMastersLoading, error: productMastersError } = useGetProductMastersQuery(undefined);
+  const productMasters = productMastersData || [];
+
+  // Debug logging
+  useEffect(() => {
+    if (productMastersData) {
+      console.log('[CRM Products] Product Masters loaded:', productMasters.length, 'items');
+      console.log('[CRM Products] Sample product master:', productMasters[0]);
+    }
+  }, [productMastersData, productMasters]);
 
   // Get selected category details
   const selectedCategory = useMemo(() => {
@@ -108,14 +117,21 @@ const ProductFormFields = ({
   // Filter product masters by selected category
   const productMastersForCategory = useMemo(() => {
     if (!formData.category) return [];
-    return productMasters.filter((pm: ProductMaster) => {
+    const filtered = productMasters.filter((pm: ProductMaster) => {
       const categoryName = typeof pm.category === 'object' ? pm.category.name : '';
       return categoryName === formData.category;
     });
+    console.log(`[CRM Products] Filtering for category "${formData.category}":`, filtered.length, 'products');
+    return filtered;
   }, [productMasters, formData.category]);
 
   // Handle product master selection
   const handleProductMasterChange = (productName: string) => {
+    // Allow manual entry by checking if it's a special value
+    if (productName === 'manual-entry') {
+      return; // Don't update, let user type
+    }
+    
     onFieldChange('productName', productName);
 
     // Find the selected product master and auto-fill fields
@@ -215,32 +231,46 @@ const ProductFormFields = ({
         </div>
         <div className="space-y-2">
           <Label htmlFor="productName" className="text-sm font-medium">Product Name</Label>
-          <Select
-            value={formData.productName || ''}
-            onValueChange={handleProductMasterChange}
-            disabled={!formData.category}
-          >
-            <SelectTrigger className="rounded-xl border-border/40">
-              <SelectValue placeholder={formData.category ? "Select Product" : "Select Category First"} />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              {productMastersLoading ? (
-                <SelectItem value="loading" disabled>
-                  Loading...
-                </SelectItem>
-              ) : productMastersForCategory.length > 0 ? (
-                productMastersForCategory.map((pm: ProductMaster) => (
-                  <SelectItem key={pm._id} value={pm.name}>
-                    {pm.name}
+          <div className="space-y-2">
+            <Select
+              value={formData.productName || ''}
+              onValueChange={handleProductMasterChange}
+              disabled={!formData.category}
+            >
+              <SelectTrigger className="rounded-xl border-border/40">
+                <SelectValue placeholder={formData.category ? "Select Product" : "Select Category First"} />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {productMastersLoading ? (
+                  <SelectItem value="loading" disabled>
+                    Loading products...
                   </SelectItem>
-                ))
-              ) : (
-                <SelectItem value="no-products" disabled>
-                  No products added for this category
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
+                ) : productMastersError ? (
+                  <SelectItem value="error" disabled>
+                    Error loading products - Please try again
+                  </SelectItem>
+                ) : productMastersForCategory.length > 0 ? (
+                  productMastersForCategory.map((pm: ProductMaster) => (
+                    <SelectItem key={pm._id} value={pm.name}>
+                      {pm.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-products" disabled>
+                    No products available for this category
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+            {formData.category && (!productMastersLoading && !productMastersError && productMastersForCategory.length === 0) && (
+              <Input
+                placeholder="Or enter custom product name"
+                value={formData.productName || ''}
+                onChange={(e) => onFieldChange('productName', e.target.value)}
+                className="rounded-xl border-border/40 focus:border-primary/50 focus:ring-primary/20"
+              />
+            )}
+          </div>
         </div>
       </div>
 

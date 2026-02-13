@@ -94,7 +94,7 @@ export default function ProductsPage() {
     useDeleteCrmProductMutation();
 
   const {
-    data: categoriesDatas = [],
+    data: categoriesDatas = { data: [] },
     isLoading: isCategoriesLoading,
     refetch: refetchCategories,
   } = useGetAdminProductCategoriesQuery({});

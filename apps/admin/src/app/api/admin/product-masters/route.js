@@ -6,18 +6,28 @@ import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 
 await _db();
 
-// GET all product masters
-export const GET = authMiddlewareAdmin(async (req) => {
+// GET all product masters - No auth required for reading templates
+export const GET = async (req) => {
   try {
     const productMasters = await ProductMasterModel.find({}).populate("category", "name");
-    return Response.json(productMasters, { status: 200 });
+    console.log('Admin: Sending product masters:', productMasters.length, 'items');
+    return Response.json({ 
+      success: true,
+      data: productMasters,
+      count: productMasters.length
+    }, { status: 200 });
   } catch (error) {
+    console.error('Admin: Error fetching product masters:', error);
     return Response.json(
-      { message: "Error fetching product masters", error: error.message },
+      { 
+        success: false,
+        message: "Error fetching product masters", 
+        error: error.message 
+      },
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "vendor", "staff", "doctor", "supplier"]);
+};
 
 // POST a new product master
 export const POST = authMiddlewareAdmin(async (req) => {
@@ -26,7 +36,10 @@ export const POST = authMiddlewareAdmin(async (req) => {
 
   if (!name || !category) {
     return Response.json(
-      { message: "Name and category are required" },
+      { 
+        success: false,
+        message: "Name and category are required" 
+      },
       { status: 400 }
     );
   }
@@ -41,7 +54,10 @@ export const POST = authMiddlewareAdmin(async (req) => {
 
       if (!imageUrl) {
         return Response.json(
-          { message: "Failed to upload image" },
+          { 
+            success: false,
+            message: "Failed to upload image" 
+          },
           { status: 500 }
         );
       }
@@ -57,10 +73,18 @@ export const POST = authMiddlewareAdmin(async (req) => {
       productImage: imageUrl
     });
     
-    return Response.json(newProductMaster, { status: 201 });
+    return Response.json({ 
+      success: true,
+      data: newProductMaster,
+      message: "Product master created successfully"
+    }, { status: 201 });
   } catch (error) {
     return Response.json(
-      { message: "Error creating product master", error: error.message },
+      { 
+        success: false,
+        message: "Error creating product master", 
+        error: error.message 
+      },
       { status: 500 }
     );
   }
@@ -74,7 +98,10 @@ export const PUT = authMiddlewareAdmin(
 
     if (!id) {
       return Response.json(
-        { message: "ID is required for update" },
+        { 
+          success: false,
+          message: "ID is required for update" 
+        },
         { status: 400 }
       );
     }
@@ -83,7 +110,10 @@ export const PUT = authMiddlewareAdmin(
       // Get existing product master to check for old image
       const existingProductMaster = await ProductMasterModel.findById(id);
       if (!existingProductMaster) {
-        return Response.json({ message: "Product master not found" }, { status: 404 });
+        return Response.json({ 
+          success: false,
+          message: "Product master not found" 
+        }, { status: 404 });
       }
 
       // Handle image upload if new image is provided
@@ -95,7 +125,10 @@ export const PUT = authMiddlewareAdmin(
 
           if (!imageUrl) {
             return Response.json(
-              { message: "Failed to upload image" },
+              { 
+                success: false,
+                message: "Failed to upload image" 
+              },
               { status: 500 }
             );
           }
@@ -129,10 +162,18 @@ export const PUT = authMiddlewareAdmin(
         { new: true }
       );
 
-      return Response.json(updatedProductMaster, { status: 200 });
+      return Response.json({ 
+        success: true,
+        data: updatedProductMaster,
+        message: "Product master updated successfully"
+      }, { status: 200 });
     } catch (error) {
       return Response.json(
-        { message: "Error updating product master", error: error.message },
+        { 
+          success: false,
+          message: "Error updating product master", 
+          error: error.message 
+        },
         { status: 500 }
       );
     }
@@ -147,7 +188,10 @@ export const DELETE = authMiddlewareAdmin(
 
     if (!id) {
       return Response.json(
-        { message: "ID is required for deletion" },
+        { 
+          success: false,
+          message: "ID is required for deletion" 
+        },
         { status: 400 }
       );
     }
@@ -156,7 +200,10 @@ export const DELETE = authMiddlewareAdmin(
       const deletedProductMaster = await ProductMasterModel.findByIdAndDelete(id);
       if (!deletedProductMaster) {
         return Response.json(
-          { message: "Product master not found" },
+          { 
+            success: false,
+            message: "Product master not found" 
+          },
           { status: 404 }
         );
       }
@@ -167,12 +214,19 @@ export const DELETE = authMiddlewareAdmin(
       }
 
       return Response.json(
-        { message: "Product master deleted successfully" },
+        { 
+          success: true,
+          message: "Product master deleted successfully" 
+        },
         { status: 200 }
       );
     } catch (error) {
       return Response.json(
-        { message: "Error deleting product master", error: error.message },
+        { 
+          success: false,
+          message: "Error deleting product master", 
+          error: error.message 
+        },
         { status: 500 }
       );
     }
