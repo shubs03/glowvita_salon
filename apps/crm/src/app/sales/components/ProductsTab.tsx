@@ -2073,28 +2073,18 @@ export default function ProductsTab({
       {/* Print Styles */}
       <style>{`
         @media print {
-          /* Reset everything for a clean print */
-          html, body {
-            height: auto !important;
-            overflow: visible !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: white !important;
-          }
-          
-          /* Hide all default content - use visibility so parent-child rules work */
+          /* Hide everything first */
           body * {
             visibility: hidden !important;
           }
           
-          /* ONLY show the invoice section and its children */
+          /* Only show the printable invoice section and its children */
           #printable-invoice-section,
           #printable-invoice-section * {
             visibility: visible !important;
           }
           
-          /* POP the invoice to the very top of the page using FIXED positioning */
-          /* This prevents whitespace from hidden background elements */
+          /* Ensure the printable section is positioned at the top left and fills the page */
           #printable-invoice-section {
             display: block !important;
             position: fixed !important;
@@ -2103,26 +2093,26 @@ export default function ProductsTab({
             width: 100% !important;
             height: auto !important;
             margin: 0 !important;
-            padding: 5mm !important; /* Standard print padding */
+            padding: 5mm !important;
             background: white !important;
             z-index: 2147483647 !important;
           }
-          
-          /* Ensure the table doesn't break from display blocks */
-          #printable-invoice-section table {
-            display: table !important;
-            width: 100% !important;
-            border-collapse: collapse !important;
-          }
-          #printable-invoice-section thead { display: table-header-group !important; }
-          #printable-invoice-section tbody { display: table-row-group !important; }
-          #printable-invoice-section tr { display: table-row !important; }
-          #printable-invoice-section td, #printable-invoice-section th { display: table-cell !important; }
 
-          /* Standard page settings */
+          /* Hide UI elements that shouldn't be printed within the printable section */
+          .print\:hidden {
+            display: none !important;
+          }
+
+          /* Reset body margins for printing */
           @page {
             margin: 0;
             size: auto;
+          }
+
+          /* Remove background colors and shadows for cleaner print */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         }
       `}</style>

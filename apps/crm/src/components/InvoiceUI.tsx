@@ -114,9 +114,39 @@ export function InvoiceUI({
   const items = invoiceData.items || [];
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 bg-white font-sans print:p-0 print:max-w-none print:w-full rounded-lg print:rounded-none" style={{ minWidth: 'auto' }}>
+    <div id="invoice-content" className="max-w-4xl mx-auto p-4 sm:p-6 bg-white font-sans print:p-0 print:max-w-none print:w-full rounded-lg print:rounded-none" style={{ minWidth: 'auto' }}>
+      <style type="text/css" media="print">
+        {`
+          @page { size: auto; margin: 10mm; }
+          html, body {
+              height: auto !important; 
+              overflow: visible !important; 
+              position: static !important;
+          }
+          body * { visibility: hidden !important; }
+          #invoice-content, #invoice-content * { visibility: visible !important; }
+          #invoice-content { 
+            display: block !important;
+            position: fixed !important; 
+            left: 0 !important; 
+            top: 0 !important; 
+            width: 100% !important; 
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 5mm !important;
+            background: white !important;
+            box-shadow: none !important;
+            border: none !important;
+            min-width: 0 !important;
+            z-index: 2147483647 !important;
+            overflow: visible !important;
+          }
+          .print\\:hidden { display: none !important; }
+        `}
+      </style>
+
       {/* GlowVita Branding */}
-      <div className="bg-gray-900 text-white py-2 px-4 rounded-t-lg -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 print:hidden">
+      <div className="bg-gray-900 text-white py-2 px-4 rounded-t-lg -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 print:mx-0 print:mt-0">
         <div className="flex items-center justify-center gap-2">
           <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" opacity="0.3" />
@@ -158,7 +188,7 @@ export function InvoiceUI({
       </div>
 
       {/* Combined Items and Payment Summary Table */}
-      <div className="mb-6 print:mb-4 overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+      <div className="mb-6 print:mb-4 overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 print:mx-0 print:px-0 print:overflow-visible">
         <table className="w-full border-collapse border border-black min-w-[600px] sm:min-w-0">
           <thead>
             <tr className="bg-gray-200">
@@ -264,7 +294,7 @@ export function InvoiceUI({
             : `Payment Of ₹${(invoiceData.total || 0).toFixed(2)} Is Pending`
           }
         </p>
-        <p className="text-center text-xs sm:text-sm font-semibold text-gray-600 print:text-[10px] uppercase tracking-wider px-2">
+        <p className="text-center text-xs sm:text-sm font-semibold text-gray-600 print:text-xs uppercase tracking-wider px-2">
           NOTE: This is computer generated receipt and does not require physical signature.
         </p>
 

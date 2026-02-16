@@ -432,7 +432,7 @@ export default function InvoiceManagementPage() {
       />
 
       {/* Hidden PDF generation area */}
-      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+      <div className="print-area-container" style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
         {selectedBilling && (
           <div id="invoice-to-pdf">
             <InvoiceUI
@@ -462,6 +462,54 @@ export default function InvoiceManagementPage() {
           </div>
         )}
       </div>
+
+      {/* Print Styles */}
+      <style>{`
+        @media print {
+          /* Hide everything first */
+          body * {
+            visibility: hidden !important;
+          }
+          
+          /* Only show the printable invoice section and its children */
+          #invoice-to-pdf,
+          #invoice-to-pdf *,
+          #appointment-invoice-to-pdf,
+          #appointment-invoice-to-pdf * {
+            visibility: visible !important;
+          }
+          
+          /* Ensure the printable section is positioned at the top left and fills the page */
+          #invoice-to-pdf,
+          #appointment-invoice-to-pdf {
+            display: block !important;
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 5mm !important;
+            background: white !important;
+            z-index: 2147483647 !important;
+          }
+
+          /* Hide UI elements that shouldn't be printed */
+          .print\:hidden {
+            display: none !important;
+          }
+
+          @page {
+            margin: 0;
+            size: auto;
+          }
+
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
