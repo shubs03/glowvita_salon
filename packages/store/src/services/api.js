@@ -1114,6 +1114,7 @@ export const glowvitaApi = createApi({
     // Product Masters - Admin creates master product templates
     getProductMasters: builder.query({
       query: () => ({ url: "/admin/product-masters", method: "GET" }),
+      transformResponse: (response) => (response && response.success ? response.data || [] : []),
       providesTags: ["ProductMaster"],
     }),
 

@@ -103,7 +103,7 @@ export const GET = async (req) => {
 
         // Fetch appointments with populated vendor data
         const appointments = await AppointmentModel.find(query)
-            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId amount totalAmount finalAmount platformFee serviceTax discountAmount vendorId cancellationReason notes isHomeService homeServiceLocation travelTime travelDistance distanceMeters blockedTravelWindows isWeddingService weddingPackageDetails')
+            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId amount addOnsAmount totalAmount finalAmount platformFee serviceTax discountAmount vendorId cancellationReason notes isHomeService homeServiceLocation travelTime travelDistance distanceMeters blockedTravelWindows isWeddingService weddingPackageDetails')
             .populate('vendorId', 'businessName address')
             .lean(); // Use lean() to get plain JavaScript objects with raw ObjectIds
 
@@ -207,6 +207,7 @@ export const GET = async (req) => {
                 price: price,
                 duration: duration,
                 amount: apt.amount || 0,
+                addOnsAmount: apt.addOnsAmount || 0, // Add-ons total amount
                 totalAmount: apt.totalAmount || 0,
                 platformFee: apt.platformFee || 0,
                 serviceTax: apt.serviceTax || 0,
@@ -216,7 +217,7 @@ export const GET = async (req) => {
                     name: salonName,
                     address: salonAddress
                 },
-                serviceItems: apt.serviceItems || [],
+                serviceItems: apt.serviceItems || [], // This includes add-ons per service
                 vendorId: apt.vendorId?._id || apt.vendorId, // Handle both populated and non-populated cases
                 client: apt.client,
                 userId: apt.userId,
@@ -357,12 +358,63 @@ export const POST = async (req) => {
             }
         }
 
+        // Process service items with add-ons (for both single and multi-service appointments)
+        let serviceItems = [];
+        if (body.serviceItems && Array.isArray(body.serviceItems) && body.serviceItems.length > 0) {
+            // Multi-service appointment: process each service item
+            serviceItems = body.serviceItems.map(item => ({
+                service: item.service || item._id || item.id,
+                serviceName: item.serviceName || item.name,
+                staff: item.staff !== undefined ? item.staff : body.staff,
+                staffName: item.staffName || body.staffName || "Any Professional",
+                startTime: item.startTime || body.startTime,
+                endTime: item.endTime || body.endTime,
+                duration: Number(item.duration) || Number(body.duration) || 0,
+                amount: Number(item.amount) || Number(item.price) || 0,
+                // Process add-ons if they exist (supports both 'addOns' and 'selectedAddons' keys)
+                addOns: (item.addOns || item.selectedAddons || []).map(addon => ({
+                    _id: addon._id || addon.id,
+                    name: addon.name,
+                    price: Number(addon.price) || 0,
+                    duration: Number(addon.duration) || 0
+                }))
+            }));
+        } else {
+            // Single service appointment: create a single service item from body
+            serviceItems = [{
+                service: body.service,
+                serviceName: body.serviceName,
+                staff: body.staff !== undefined ? body.staff : null,
+                staffName: body.staffName || "Any Professional",
+                startTime: body.startTime,
+                endTime: body.endTime,
+                duration: Number(body.duration) || 0,
+                amount: Number(body.amount) || 0,
+                // Process add-ons from body level (supports both 'addOns' and 'selectedAddons' keys)
+                addOns: (body.addOns || body.selectedAddons || []).map(addon => ({
+                    _id: addon._id || addon.id,
+                    name: addon.name,
+                    price: Number(addon.price) || 0,
+                    duration: Number(addon.duration) || 0
+                }))
+            }];
+        }
+
+        // Calculate total add-ons amount from all service items
+        const addOnsAmount = serviceItems.reduce((sum, item) => {
+            return sum + (item.addOns?.reduce((addonSum, addon) => 
+                addonSum + (Number(addon.price) || 0), 0) || 0);
+        }, 0);
+
+        console.log('Processed service items with add-ons:', JSON.stringify(serviceItems, null, 2));
+        console.log('Total add-ons amount:', addOnsAmount);
+
         // Set default values and ensure proper data types
         const appointmentData = {
             vendorId: body.vendorId,
             client: body.client || body.userId || null, // Either client or userId or null
             clientName: body.clientName,
-            service: body.service === "combo" ? (body.serviceItems?.[0]?.service || body.service) : body.service,
+            service: body.service === "combo" ? (serviceItems[0]?.service || body.service) : body.service,
             serviceName: body.serviceName,
             staff: body.staff !== undefined ? body.staff : null, // This can be null
             staffName: body.staffName || "Any Professional", // Provide default if not present
@@ -371,6 +423,7 @@ export const POST = async (req) => {
             endTime: body.endTime,
             duration: Number(body.duration) || 0,
             amount: Number(body.amount) || 0,
+            addOnsAmount: addOnsAmount, // Add-ons total amount
             totalAmount: Number(body.totalAmount) || 0,
             platformFee: Number(body.platformFee) || 0,
             serviceTax: Number(body.serviceTax) || 0,
@@ -380,8 +433,8 @@ export const POST = async (req) => {
             paymentStatus: body.paymentStatus || 'pending',
             status: body.status || 'scheduled',
             notes: body.notes || '',
-            serviceItems: body.serviceItems || [],
-            isMultiService: body.isMultiService || (body.serviceItems && body.serviceItems.length > 1),
+            serviceItems: serviceItems, // Use processed service items with add-ons
+            isMultiService: body.isMultiService || (serviceItems && serviceItems.length > 1),
             // Add home service fields
             isHomeService: isHomeService,
             isWeddingService: body.isWeddingService || false,

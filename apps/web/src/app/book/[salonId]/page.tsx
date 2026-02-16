@@ -1673,7 +1673,40 @@ function BookingPageContent() {
     console.log("serviceLocation in data:", appointmentData.serviceLocation);
     console.log("================================");
     try {
-      // Determine if this is a home service based on booking mode and location availability
+        // CRITICAL FIX: Recalculate price breakdown right before appointment creation
+        // This ensures we have the latest fees and taxes
+        let finalPriceBreakdown = priceBreakdown;
+        
+        if (!finalPriceBreakdown || finalPriceBreakdown.platformFee === 0) {
+          console.log('⚠️ Price breakdown missing or incomplete, recalculating...');
+          
+          // Determine services to calculate
+          let servicesToCalculate = [];
+          if (selectedWeddingPackage) {
+            servicesToCalculate = [{
+              id: selectedWeddingPackage.id || selectedWeddingPackage._id,
+              name: selectedWeddingPackage.name,
+              price: selectedWeddingPackage.totalPrice,
+              discountedPrice: selectedWeddingPackage.discountedPrice || null,
+              selectedAddons: []
+            }];
+          } else {
+            servicesToCalculate = selectedServices;
+          }
+          
+          // Recalculate with current offer and tax settings
+          finalPriceBreakdown = await calculateBookingAmount(servicesToCalculate, appliedOffer || offer, taxFeeSettings);
+          console.log('✅ Recalculated price breakdown:', finalPriceBreakdown);
+        }
+        
+        console.log('=== PRICE BREAKDOWN VALIDATION ===');
+        console.log('Platform Fee:', finalPriceBreakdown?.platformFee);
+        console.log('Service Tax (GST):', finalPriceBreakdown?.serviceTax);
+        console.log('Tax Rate:', finalPriceBreakdown?.taxFeeSettings?.serviceTax);
+        console.log('Discount Amount:', finalPriceBreakdown?.discountAmount);
+        console.log('Final Total:', finalPriceBreakdown?.finalTotal);
+        console.log('==================================');
+
       // Payment method should NOT affect whether it's a home service or not
       const finalIsHomeService = isHomeService;
 
@@ -1753,9 +1786,12 @@ function BookingPageContent() {
               startTime: selectedTime,
               endTime: endTime,
               location: weddingVenueType === 'venue' ? serviceLocation : null,
-              totalAmount: priceBreakdown?.finalTotal || appointmentData.totalAmount,
+              totalAmount: finalPriceBreakdown?.finalTotal || appointmentData.totalAmount,
               couponCode: appliedOffer?.code || offerCode || null,
-              discountAmount: priceBreakdown?.discountAmount || 0,
+              discountAmount: finalPriceBreakdown?.discountAmount || 0,
+              platformFee: finalPriceBreakdown?.platformFee || 0,
+              serviceTax: finalPriceBreakdown?.serviceTax || 0,
+              taxRate: finalPriceBreakdown?.taxFeeSettings?.serviceTax || 0,
             },
             weddingVenueType: weddingVenueType,
             clientName: `${user?.firstName} ${user?.lastName}`,
@@ -1818,12 +1854,12 @@ function BookingPageContent() {
             duration: totalDuration,
             amount: appointmentData.amount,
             totalAmount: appointmentData.totalAmount,
-            finalAmount: appointmentData.finalAmount,
-            platformFee: appointmentData.platformFee,
-            serviceTax: appointmentData.serviceTax,
-            taxRate: appointmentData.taxRate,
+            finalAmount: finalPriceBreakdown?.finalTotal || appointmentData.finalAmount,
+            platformFee: finalPriceBreakdown?.platformFee || 0,
+            serviceTax: finalPriceBreakdown?.serviceTax || 0,
+            taxRate: finalPriceBreakdown?.taxFeeSettings?.serviceTax || 0,
             couponCode: appliedOffer?.code || offerCode,
-            discountAmount: priceBreakdown?.discountAmount || 0,
+            discountAmount: finalPriceBreakdown?.discountAmount || 0,
             serviceItems: appointmentData.serviceItems,
             addOnIds: appointmentData.serviceItems.flatMap((item: any) =>
               item.addOns?.map((a: any) => a._id) || []
@@ -1852,8 +1888,11 @@ function BookingPageContent() {
             paymentMethod: paymentMethod,
             paymentStatus: paymentMethod === 'Pay at Salon' ? 'pending' : 'paid',
             couponCode: appliedOffer?.code || offerCode,
-            discountAmount: priceBreakdown?.discountAmount || 0,
-            finalAmount: priceBreakdown?.finalTotal || 0
+            discountAmount: finalPriceBreakdown?.discountAmount || 0,
+            finalAmount: finalPriceBreakdown?.finalTotal || 0,
+            platformFee: finalPriceBreakdown?.platformFee || 0,
+            serviceTax: finalPriceBreakdown?.serviceTax || 0,
+            taxRate: finalPriceBreakdown?.taxFeeSettings?.serviceTax || 0
           }).unwrap();
 
           toast.success("Booking confirmed!");

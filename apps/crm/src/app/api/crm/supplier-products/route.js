@@ -29,7 +29,7 @@ export const GET = authMiddlewareCrm(async (req) => {
       .populate({
         path: 'vendorId',
         model: 'Supplier', // Explicitly specify the Supplier model for population
-        select: 'shopName email'
+        select: 'shopName email businessRegistrationNo city state country'
       })
       .populate('category', 'name description')
       .sort({ createdAt: -1 })
@@ -39,6 +39,10 @@ export const GET = authMiddlewareCrm(async (req) => {
         ...p,
         supplierName: p.vendorId?.shopName,
         supplierEmail: p.vendorId?.email,
+        supplierBusinessRegistrationNo: p.vendorId?.businessRegistrationNo,
+        supplierCity: p.vendorId?.city,
+        supplierState: p.vendorId?.state,
+        supplierCountry: p.vendorId?.country,
         // Ensure category is a string to match vendor products structure
         category: p.category?.name || 'Uncategorized',
         categoryDescription: p.category?.description || p.categoryDescription || '',

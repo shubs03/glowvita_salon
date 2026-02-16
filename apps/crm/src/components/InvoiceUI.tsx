@@ -47,10 +47,16 @@ export function InvoiceUI({
   onDownloadClick,
   onRebookClick
 }: InvoiceUIProps) {
-  // Get vendor contact info
-  const vendorPhone = vendorProfile?.data?.phone || vendorProfile?.data?.mobile || 'N/A';
+  // Get vendor contact info - handle both vendor and supplier field names
+  const vendorPhone = vendorProfile?.data?.phone || vendorProfile?.data?.mobile || vendorProfile?.data?.mobileNumber || 'N/A';
+
+  // Use shopName as a fallback for vendorName if it's pointing to a placeholder
+  const displayBusinessName = (vendorName && vendorName !== 'Your Salon' && vendorName !== 'Your Supplier Business')
+    ? vendorName
+    : (vendorProfile?.data?.shopName || vendorProfile?.data?.businessName || vendorName || 'GlowVita Salon');
+
   const vendorAddress = [
-    vendorProfile?.data?.address,
+    vendorProfile?.data?.address || vendorProfile?.data?.shopAddress,
     vendorProfile?.data?.city,
     vendorProfile?.data?.state,
     vendorProfile?.data?.pincode
@@ -124,7 +130,7 @@ export function InvoiceUI({
       {/* Header with Salon Info */}
       <div className="flex flex-col sm:flex-row justify-between items-start mb-4 print:mb-3 border-b-2 border-black pb-4 gap-3 sm:gap-0">
         <div className="w-full sm:w-auto">
-          <h1 className="text-lg sm:text-xl font-bold text-black print:text-lg">{vendorName || 'Salon Name'}</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-black print:text-lg">{displayBusinessName}</h1>
           <div className="text-black text-xs sm:text-sm mt-1 print:text-xs" dangerouslySetInnerHTML={{ __html: formatAddress(vendorAddress) }} />
           <p className="text-black text-xs sm:text-sm mt-1 print:text-xs">Phone: {vendorPhone}</p>
         </div>
@@ -170,27 +176,49 @@ export function InvoiceUI({
                 className="border border-black cursor-pointer hover:bg-gray-50"
                 onClick={() => handleItemClick(item)}
               >
-                <td className="border border-black p-1 sm:p-2 print:p-1">
-                  <div className="font-semibold text-xs sm:text-sm text-black print:text-xs">
-                    {item.productName || item.name || 'Unnamed Item'}
+                <td className="border border-black p-0">
+                  <div className="text-xs sm:text-sm text-black print:text-xs">
+                    <div className="p-1 sm:p-2 print:p-1">
+                      <div className="font-bold">{item.productName || item.name || 'Unnamed Item'}</div>
+                      {item.staffMember?.name && (
+                        <div className="text-[10px] sm:text-xs text-gray-500 italic">
+                          Staff: {item.staffMember.name}
+                        </div>
+                      )}
+                    </div>
                     {item.addOns && item.addOns.length > 0 && (
-                      <div className="mt-1 text-[10px] sm:text-xs text-gray-600 print:text-[10px]">
+                      <div className="border-t border-black p-1 sm:p-2 print:p-1 space-y-1">
                         {item.addOns.map((addon: any, i: number) => (
-                          <div key={i} className="flex justify-between">
+                          <div key={i} className="flex items-center gap-1">
                             <span>+ {addon.name}</span>
-                            <span>₹{addon.price}</span>
                           </div>
                         ))}
                       </div>
                     )}
-                    {item.staffMember?.name && (
-                      <div className="mt-1 text-[10px] sm:text-xs text-gray-500 italic print:text-[10px]">
-                        Staff: {item.staffMember.name}
+                  </div>
+                </td>
+                <td className="border border-black p-0 text-right text-xs sm:text-sm text-black print:text-xs">
+                  <div className="flex flex-col h-full">
+                    <div className="p-1 sm:p-2 print:p-1 flex items-center justify-end gap-1 font-bold">
+                      {item.discountedPrice > 0 ? (
+                        <span>₹{item.discountedPrice.toFixed(2)}</span>
+                      ) : item.salePrice > 0 ? (
+                        <span>₹{item.salePrice.toFixed(2)}</span>
+                      ) : (
+                        <span>₹{(item.price || 0).toFixed(2)}</span>
+                      )}
+                    </div>
+                    {item.addOns && item.addOns.length > 0 && (
+                      <div className="border-t border-black p-1 sm:p-2 print:p-1 space-y-1 flex flex-col items-end">
+                        {item.addOns.map((addon: any, i: number) => (
+                          <div key={i} className="flex justify-end">
+                            ₹{addon.price.toFixed(2)}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
                 </td>
-                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">₹{(item.price || 0).toFixed(2)}</td>
                 <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">{item.quantity || 0}</td>
                 <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
                   ₹{isTaxEnabled ? (
@@ -211,16 +239,15 @@ export function InvoiceUI({
               <td className="border border-black p-1 sm:p-2 text-right font-semibold text-green-600 text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>Discount:</td>
               <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-green-600 print:text-xs print:p-1">-₹{(invoiceData.discount || 0).toFixed(2)}</td>
             </tr>
-            <tr className="border border-black">
-              <td className="border border-black p-1 sm:p-2 text-right font-semibold text-black text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>
-                Tax ({isTaxEnabled ? (taxType === 'percentage' ? `${taxRate}%` : 'Fixed') : '0%'}):
-              </td>
-              <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-black print:text-xs print:p-1">₹{(invoiceData.tax || 0).toFixed(2)}</td>
-            </tr>
-            <tr className="border border-black">
-              <td className="border border-black p-1 sm:p-2 text-right font-semibold text-black text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>Platform Fee:</td>
-              <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-black print:text-xs print:p-1">₹{(invoiceData.platformFee || 0).toFixed(2)}</td>
-            </tr>
+            {invoiceData.tax > 0 && (
+              <tr className="border border-black">
+                <td className="border border-black p-1 sm:p-2 text-right font-semibold text-black text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>
+                  GST/Tax Component ({isTaxEnabled ? (taxType === 'percentage' ? `${taxRate}%` : 'Fixed') : '0%'}):
+                </td>
+                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-black print:text-xs print:p-1">₹{(invoiceData.tax || 0).toFixed(2)}</td>
+              </tr>
+            )}
+
             <tr className="border border-black bg-gray-200">
               <td className="border border-black p-1 sm:p-2 text-right font-bold text-black text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>Total:</td>
               <td className="border border-black p-1 sm:p-2 text-right font-bold text-black text-xs sm:text-sm print:text-xs print:p-1">₹{(invoiceData.total || 0).toFixed(2)}</td>
@@ -280,7 +307,15 @@ export function InvoiceUI({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-semibold">Price</p>
-                  <p className="text-sm">₹{(selectedItem.price || 0).toFixed(2)}</p>
+                  <p className="text-sm">
+                    {selectedItem.discountedPrice > 0 ? (
+                      <span>₹{selectedItem.discountedPrice.toFixed(2)}</span>
+                    ) : selectedItem.salePrice > 0 ? (
+                      <span>₹{selectedItem.salePrice.toFixed(2)}</span>
+                    ) : (
+                      `₹${(selectedItem.price || 0).toFixed(2)}`
+                    )}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm font-semibold">Quantity</p>

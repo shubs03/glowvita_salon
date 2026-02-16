@@ -71,7 +71,7 @@ export default function SupplierProductsPage() {
   const [updateProduct, { isLoading: isUpdatingProduct }] = useUpdateCrmProductMutation();
   const [deleteProduct, { isLoading: isDeletingProduct }] = useDeleteCrmProductMutation();
   
-  const { data: categoriesDatas = [], isLoading: isCategoriesLoading, refetch: refetchCategories } = useGetAdminProductCategoriesQuery({});
+  const { data: categoriesDatas = { data: [] }, isLoading: isCategoriesLoading, refetch: refetchCategories } = useGetAdminProductCategoriesQuery({});
   const categoriesData = categoriesDatas?.data || [];
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateAdminProductCategoryMutation();
 

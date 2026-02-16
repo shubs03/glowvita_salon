@@ -21,6 +21,7 @@ import { MarketplaceHeader } from './components/MarketplaceHeader';
 import { MarketplaceFiltersToolbar } from './components/MarketplaceFiltersToolbar';
 import { MarketplaceStatsCards } from './components/MarketplaceStatsCards';
 import { MarketplaceProductsSection } from './components/MarketplaceProductsSection';
+import { MarketplaceSuppliersSection } from './components/MarketplaceSuppliersSection';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { BuyNowModal } from './components/BuyNowModal';
 import { SupplierModal } from './components/SupplierModal';
@@ -37,6 +38,10 @@ type Product = {
   vendorId: string;
   supplierName: string;
   supplierEmail: string;
+  supplierBusinessRegistrationNo?: string;
+  supplierCity?: string;
+  supplierState?: string;
+  supplierCountry?: string;
   description: string;
   discount?: number;
   rating?: number;
@@ -53,17 +58,29 @@ type Supplier = {
   _id: string;
   shopName: string;
   email: string;
-  country: string;
-  city: string;
-  description: string;
-  profileImage: string;
+  country?: string;
+  city?: string;
+  state?: string;
+  description?: string;
+  profileImage?: string;
+  productCount: number;
+  totalStock: number;
+  averagePrice?: number;
+  rating?: number;
+  products?: Product[];
+  businessRegistrationNo?: string;
 };
+
+type ViewMode = 'suppliers' | 'products';
 
 export default function MarketplacePage() {
   const { data: productsData, isLoading, isError, refetch } = useGetSupplierProductsQuery(undefined);
+  console.log("Products Data:", productsData);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<ViewMode>('suppliers');
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(12);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -77,6 +94,7 @@ export default function MarketplacePage() {
   const [shippingAddress, setShippingAddress] = useState(user?.address || '');
   
   const { data: supplierData, isLoading: isSupplierLoading } = useGetSupplierProfileQuery(selectedSupplierId, { skip: !selectedSupplierId });
+
   const [addToCart, { isLoading: isAddingToCart }] = useAddToCartMutation();
   const [createOrder, { isLoading: isCreatingOrder }] = useCreateCrmOrderMutation();
   
@@ -88,8 +106,64 @@ export default function MarketplacePage() {
     return [];
   }, [productsData]);
 
+  // Derive unique suppliers from products
+  const suppliers = useMemo(() => {
+    const supplierMap = new Map<string, Supplier>();
+    productsArray.forEach((product: Product) => {
+      if (!supplierMap.has(product.vendorId)) {
+        supplierMap.set(product.vendorId, {
+          _id: product.vendorId,
+          shopName: product.supplierName || 'Unknown Supplier',
+          email: product.supplierEmail || '',
+          city: product.supplierCity,
+          state: product.supplierState,
+          country: product.supplierCountry,
+          productCount: 1,
+          totalStock: product.stock,
+          products: [product],
+          rating: 4.5,
+          businessRegistrationNo: product.supplierBusinessRegistrationNo,
+        });
+      } else {
+        const supplier = supplierMap.get(product.vendorId)!;
+        supplier.productCount++;
+        supplier.totalStock += product.stock;
+        supplier.products?.push(product);
+      }
+    });
+    
+    // Calculate average price for each supplier
+    Array.from(supplierMap.values()).forEach(supplier => {
+      if (supplier.products && supplier.products.length > 0) {
+        const totalPrice = supplier.products.reduce((sum, p) => sum + (p.salePrice || p.price), 0);
+        supplier.averagePrice = totalPrice / supplier.products.length;
+      }
+    });
+    
+    return Array.from(supplierMap.values());
+  }, [productsArray]);
+
+  // Filter suppliers based on search
+  const filteredSuppliers = useMemo(() => {
+    return suppliers.filter((supplier: Supplier) =>
+      supplier.shopName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      supplier.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      supplier.city?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      supplier.country?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [suppliers, searchTerm]);
+
+  // Filter products when a supplier is selected
+  const supplierProducts = useMemo(() => {
+    if (!selectedSupplier) return [];
+    return productsArray.filter((product: Product) => 
+      product.vendorId === selectedSupplier._id
+    );
+  }, [selectedSupplier, productsArray]);
+
   const filteredProducts = useMemo(() => {
-    return productsArray.filter((product: any) =>
+    const baseProducts = viewMode === 'suppliers' ? productsArray : supplierProducts;
+    return baseProducts.filter((product: any) =>
       (product.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
        product.supplierName?.toLowerCase().includes(searchTerm.toLowerCase())) &&
       (statusFilter === 'all' || 
@@ -97,7 +171,15 @@ export default function MarketplacePage() {
        (statusFilter === 'low_stock' && product.stock > 0 && product.stock <= 10) ||
        (statusFilter === 'out_of_stock' && product.stock === 0))
     );
-  }, [productsArray, searchTerm, statusFilter]);
+  }, [viewMode, productsArray, supplierProducts, searchTerm, statusFilter]);
+
+  const paginatedSuppliers = useMemo(() => {
+    const firstItemIndex = (currentPage - 1) * itemsPerPage;
+    return filteredSuppliers.slice(
+      firstItemIndex,
+      firstItemIndex + itemsPerPage
+    );
+  }, [filteredSuppliers, currentPage, itemsPerPage]);
 
   const paginatedProducts = useMemo(() => {
     const firstItemIndex = (currentPage - 1) * itemsPerPage;
@@ -109,45 +191,51 @@ export default function MarketplacePage() {
 
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredProducts.length / itemsPerPage)
+    Math.ceil((viewMode === 'suppliers' ? filteredSuppliers.length : filteredProducts.length) / itemsPerPage)
   );
 
   const productStats = useMemo(() => {
-    if (!Array.isArray(productsData))
+    if (viewMode === 'suppliers') {
+      // Stats for suppliers view
       return {
-        totalProducts: 0,
-        totalSuppliers: 0,
-        totalValue: 0,
-        averageRating: 0,
+        totalProducts: productsArray.length,
+        totalSuppliers: suppliers.length,
+        totalValue: productsArray.reduce(
+          (sum: number, p: Product) => sum + (p.salePrice || p.price) * p.stock,
+          0
+        ),
+        averageRating: 4.5,
       };
-
-    const totalProducts = productsData.length;
-    
-    // Count unique suppliers
-    var uniqueSuppliers = [];
-    for (var i = 0; i < productsData.length; i++) {
-      var supplier = productsData[i].vendorId;
-      if (uniqueSuppliers.indexOf(supplier) === -1) {
-        uniqueSuppliers.push(supplier);
-      }
+    } else {
+      // Stats for individual supplier's products
+      const supplierProds = selectedSupplier?.products || [];
+      return {
+        totalProducts: supplierProds.length,
+        totalSuppliers: 1,
+        totalValue: supplierProds.reduce(
+          (sum: number, p: Product) => sum + (p.salePrice || p.price) * p.stock,
+          0
+        ),
+        averageRating: selectedSupplier?.rating || 4.5,
+      };
     }
-    const totalSuppliers = uniqueSuppliers.length;
+  }, [viewMode, productsArray, suppliers, selectedSupplier]);
 
-    const totalValue = productsData.reduce(
-      (sum, p) => sum + (p.salePrice || p.price) * p.stock,
-      0
-    );
+  const handleSupplierClick = (supplier: Supplier) => {
+    setSelectedSupplier(supplier);
+    setViewMode('products');
+    setSearchTerm('');
+    setStatusFilter('all');
+    setCurrentPage(1);
+  };
 
-    // Mock average rating
-    const averageRating = 4.3;
-
-    return {
-      totalProducts,
-      totalSuppliers,
-      totalValue,
-      averageRating,
-    };
-  }, [productsData]);
+  const handleBackToSuppliers = () => {
+    setSelectedSupplier(null);
+    setViewMode('suppliers');
+    setSearchTerm('');
+    setStatusFilter('all');
+    setCurrentPage(1);
+  };
 
   const handleViewDetails = (product: Product) => {
     setSelectedProduct(product);
@@ -324,39 +412,63 @@ export default function MarketplacePage() {
     <div className="min-h-screen bg-background">
       
       <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
-        <MarketplaceHeader />
-        
-        <MarketplaceStatsCards stats={productStats} />
+        {viewMode === 'suppliers' && (
+          <>
+            <MarketplaceHeader 
+              viewMode={viewMode}
+              selectedSupplier={selectedSupplier}
+              onBack={handleBackToSuppliers}
+            />
+            
+            <MarketplaceStatsCards 
+              stats={productStats} 
+              viewMode={viewMode}
+              selectedSupplier={selectedSupplier}
+            />
+          </>
+        )}
 
             <MarketplaceFiltersToolbar 
               searchTerm={searchTerm}
               statusFilter={statusFilter}
-              viewMode={viewMode}
+              viewMode={displayMode}
               onSearchChange={setSearchTerm}
               onStatusChange={setStatusFilter}
-              onViewModeChange={setViewMode}
+              onViewModeChange={setDisplayMode}
+              pageViewMode={viewMode}
+              onBack={handleBackToSuppliers}
             />
         
-        <MarketplaceProductsSection 
-          filteredProducts={paginatedProducts}
-          isLoading={isLoading}
-          searchTerm={searchTerm}
-          viewMode={viewMode}
-          onSearchClear={() => setSearchTerm('')}
-          onQuickAddToCart={handleQuickAddToCart}
-          onViewDetails={handleViewDetails}
-          onBuyNow={handleBuyNow}
-          onViewSupplier={handleViewSupplier}
-        />
+        {viewMode === 'suppliers' ? (
+          <MarketplaceSuppliersSection 
+            filteredSuppliers={paginatedSuppliers}
+            isLoading={isLoading}
+            searchTerm={searchTerm}
+            viewMode={displayMode}
+            onSupplierClick={handleSupplierClick}
+          />
+        ) : (
+          <MarketplaceProductsSection 
+            filteredProducts={paginatedProducts}
+            isLoading={isLoading}
+            searchTerm={searchTerm}
+            viewMode={displayMode}
+            onSearchClear={() => setSearchTerm('')}
+            onQuickAddToCart={handleQuickAddToCart}
+            onViewDetails={handleViewDetails}
+            onBuyNow={handleBuyNow}
+            onViewSupplier={handleViewSupplier}
+          />
+        )}
 
-        {filteredProducts.length > 0 && (
+        {(viewMode === 'suppliers' ? filteredSuppliers.length : filteredProducts.length) > 0 && (
           <PaginationControls
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
             itemsPerPage={itemsPerPage}
             onItemsPerPageChange={setItemsPerPage}
-            totalItems={filteredProducts.length}
+            totalItems={viewMode === 'suppliers' ? filteredSuppliers.length : filteredProducts.length}
           />
         )}
       </div>

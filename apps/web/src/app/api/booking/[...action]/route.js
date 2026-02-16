@@ -1409,7 +1409,10 @@ async function handleBookingConfirmation(body) {
     paymentStatus,
     couponCode,
     discountAmount,
-    finalAmount
+    finalAmount,
+    platformFee,
+    serviceTax,
+    taxRate
   } = body;
 
   // consolidate payment info
@@ -1426,7 +1429,15 @@ async function handleBookingConfirmation(body) {
   let confirmResult;
   try {
     // Pass lockId as lockToken to match the function signature
-    confirmResult = await confirmAppointment(appointmentId, lockId, effectivePaymentDetails, { couponCode, discountAmount, finalAmount });
+    // CRITICAL FIX: Also pass platformFee, serviceTax, and taxRate to ensure they're saved
+    confirmResult = await confirmAppointment(appointmentId, lockId, effectivePaymentDetails, { 
+      couponCode, 
+      discountAmount, 
+      finalAmount,
+      platformFee,
+      serviceTax,
+      taxRate
+    });
   } catch (error) {
     console.error('Error during appointment confirmation:', error);
     // Handle specific error cases with appropriate user messages

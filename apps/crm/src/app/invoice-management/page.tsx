@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@repo/ui/tabs";
 import AppointmentInvoice from "@/components/AppointmentInvoice";
 import InvoiceUI from "@/components/InvoiceUI";
 import { toast } from 'sonner';
-import { useGetBillingRecordsQuery, useGetVendorProfileQuery, useGetAppointmentsQuery } from "@repo/store/api";
+import { useGetBillingRecordsQuery, useGetVendorProfileQuery, useGetAppointmentsQuery, useGetCurrentSupplierProfileQuery } from "@repo/store/api";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 
 // Import components
@@ -62,25 +62,39 @@ export default function InvoiceManagementPage() {
   });
 
   // Fetch vendor profile
+  const { role: authRole } = useCrmAuth();
+  const userRole = (authRole || user?.role || "").toLowerCase();
+  const isSupplier = userRole === 'supplier';
+
   const { data: vendorProfile } = useGetVendorProfileQuery(undefined, {
-    skip: !VENDOR_ID
+    skip: !VENDOR_ID || isSupplier
   });
 
-  // Debug vendor profile
-  useEffect(() => {
-    if (vendorProfile) {
-      console.log('Vendor Profile Data:', vendorProfile);
-      console.log('Salon Name:', vendorProfile?.data?.salonName);
-      console.log('Name:', vendorProfile?.data?.name);
-    }
-  }, [vendorProfile]);
+  const { data: supplierProfile } = useGetCurrentSupplierProfileQuery(undefined, {
+    skip: !VENDOR_ID || !isSupplier
+  });
 
-  const VENDOR_NAME = vendorProfile?.data?.name || "Salon";
-  const vendorName = vendorProfile?.data?.salonName ||
-    vendorProfile?.data?.name ||
-    vendorProfile?.data?.businessName ||
-    vendorProfile?.name ||
-    "Salon Name";
+  // Use the appropriate profile based on role
+  const currentProfile = isSupplier ? supplierProfile : vendorProfile;
+
+  // Debug profile
+  useEffect(() => {
+    if (currentProfile) {
+      console.log('Current Profile Data:', currentProfile);
+    }
+  }, [currentProfile]);
+
+  const VENDOR_NAME = isSupplier
+    ? (supplierProfile?.data?.shopName || "Supplier")
+    : (vendorProfile?.data?.name || "Salon");
+
+  const vendorName = isSupplier
+    ? (supplierProfile?.data?.shopName || "Your Supplier Business")
+    : (vendorProfile?.data?.salonName ||
+      vendorProfile?.data?.name ||
+      vendorProfile?.data?.businessName ||
+      vendorProfile?.name ||
+      "Salon Name");
 
   // Reset page when tab changes
   useEffect(() => {
@@ -162,7 +176,7 @@ export default function InvoiceManagementPage() {
       }
 
       // Sort by invoice number descending (newest/highest invoice number first)
-      filtered.sort((a: any, b : any) => {
+      filtered.sort((a: any, b: any) => {
         const invoiceA = a.invoiceNumber || '';
         const invoiceB = b.invoiceNumber || '';
         return invoiceB.localeCompare(invoiceA, undefined, { numeric: true, sensitivity: 'base' });
@@ -346,7 +360,7 @@ export default function InvoiceManagementPage() {
         <div className="">
           <div className="">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              
+
               <InvoiceFiltersToolbar
                 searchTerm={searchTerm}
                 selectedPaymentMethod={selectedPaymentMethod}
@@ -364,7 +378,7 @@ export default function InvoiceManagementPage() {
                 onTabChange={setActiveTab}
                 exportData={activeTab === 'billing' ? billings : appointments}
               />
-              
+
               <div className="mt-6">
                 <TabsContent value="billing" className="mt-0">
                   <BillingTable
@@ -412,7 +426,7 @@ export default function InvoiceManagementPage() {
         selectedBilling={selectedBilling}
         selectedAppointment={selectedAppointment}
         vendorName={vendorName}
-        vendorProfile={vendorProfile}
+        vendorProfile={currentProfile}
         onDownloadBilling={downloadInvoice}
         onDownloadAppointment={downloadAppointmentInvoice}
       />
@@ -424,7 +438,7 @@ export default function InvoiceManagementPage() {
             <InvoiceUI
               invoiceData={prepareInvoiceData(selectedBilling)}
               vendorName={vendorName}
-              vendorProfile={vendorProfile}
+              vendorProfile={currentProfile}
               taxRate={selectedBilling.taxRate}
               isOrderSaved={selectedBilling.paymentStatus === "Paid"}
               onEmailClick={() => { }}
@@ -439,7 +453,7 @@ export default function InvoiceManagementPage() {
             <AppointmentInvoice
               invoiceData={prepareAppointmentInvoiceData(selectedAppointment)}
               vendorName={vendorName}
-              vendorProfile={vendorProfile}
+              vendorProfile={currentProfile}
               taxRate={selectedAppointment.taxRate || 0}
               isOrderSaved={true}
               onEmailClick={() => { }}
