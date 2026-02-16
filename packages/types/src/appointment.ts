@@ -70,10 +70,17 @@ export interface Appointment {
     landmark?: string;
   };
   weddingPackageDetails?: {
+    packageId?: string;
     packageName?: string;
     totalAmount?: number;
     totalDuration?: number;
     venueAddress?: string;
+    packageServices?: Array<{
+      serviceId: string;
+      serviceName: string;
+      _id?: string;
+    }>;
+    teamMembers?: string[];
   };
   payment?: {
     paid?: number;
