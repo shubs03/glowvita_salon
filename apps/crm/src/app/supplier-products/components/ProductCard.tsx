@@ -1,8 +1,9 @@
 import Image from 'next/image';
 import { Card } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Eye } from 'lucide-react';
 import StatusBadge from './StatusBadge';
+import { Badge } from '@repo/ui/badge';
 
 interface Product {
   _id: string;
@@ -30,9 +31,10 @@ interface ProductCardProps {
   product: Product;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
+  onView: (product: Product) => void;
 }
 
-const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
+const ProductCard = ({ product, onEdit, onDelete, onView }: ProductCardProps) => {
   const calculateDiscountPercentage = () => {
     if (product.price > product.salePrice) {
       return Math.round(((product.price - product.salePrice) / product.price) * 100);
@@ -54,17 +56,26 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
           fill
           className="group-hover:scale-105 transition-transform duration-300 object-cover"
         />
-        {/* Status Badge */}
+        {/* Status Badge - Top Left */}
         <div className="absolute top-2 left-2 text-xs">
           <StatusBadge status={product.status} rejectionReason={product.rejectionReason} />
         </div>
 
-        {/* Discount Badge */}
-        {discountPercentage > 0 && (
-          <div className="absolute -top-1 -right-1">
-            <div className="bg-primary text-white px-1.5 py-0.5 rounded-full text-xs font-bold">
+        {/* Out of Stock Badge - Top Right */}
+        {product.stock <= 0 && (
+          <div className="absolute top-2 right-2 z-10">
+            <Badge variant="destructive" className="px-2 py-0.5 text-[10px] font-bold uppercase shadow-sm">
+              Out of Stock
+            </Badge>
+          </div>
+        )}
+
+        {/* Discount Badge - Top Right (if not out of stock) */}
+        {discountPercentage > 0 && product.stock > 0 && (
+          <div className="absolute top-2 right-2 z-10">
+            <Badge className="bg-primary text-white px-2 py-0.5 text-[10px] font-bold shadow-sm">
               {discountPercentage}%
-            </div>
+            </Badge>
           </div>
         )}
       </div>
@@ -91,11 +102,24 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
         </div>
 
         <div className="flex items-center justify-between gap-2 mt-2">
-          <div className="flex justify-between w-full">
+          <div className="flex justify-between w-full gap-2">
             <Button
               size="sm"
               variant="outline"
-              className="w-full text-xs lg:mr-3"
+              className="flex-1 text-xs"
+              onClick={(e) => {
+                e.stopPropagation();
+                onView(product);
+              }}
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              View
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 text-xs"
               onClick={(e) => {
                 e.stopPropagation();
                 onEdit(product);
@@ -108,7 +132,7 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
             <Button
               size="sm"
               variant="outline"
-              className="w-fit text-xs"
+              className="w-10 text-xs px-0"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(product);
@@ -124,3 +148,4 @@ const ProductCard = ({ product, onEdit, onDelete }: ProductCardProps) => {
 };
 
 export default ProductCard;
+
