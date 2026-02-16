@@ -210,11 +210,11 @@ async function sendCancellationNotifications(appointment, options = {}) {
                 reason: appointment.cancellationReason
             });
 
-            await sendEmail(
-                appointment.clientEmail,
-                'Appointment Marked as No-Show',
-                clientEmailContent
-            );
+            await sendEmail({
+                to: appointment.clientEmail,
+                subject: 'Appointment Marked as No-Show',
+                html: clientEmailContent
+            });
 
             console.log(`Notification sent to client: ${appointment.clientEmail}`);
         }
@@ -233,11 +233,11 @@ async function sendCancellationNotifications(appointment, options = {}) {
         </ul>
       `;
 
-            await sendEmail(
-                vendor.email,
-                'Appointment Auto-Cancelled - No Show',
-                vendorEmailContent
-            );
+            await sendEmail({
+                to: vendor.email,
+                subject: 'Appointment Auto-Cancelled - No Show',
+                html: vendorEmailContent
+            });
 
             console.log(`Notification sent to vendor: ${vendor.email}`);
         }

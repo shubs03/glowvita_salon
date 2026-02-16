@@ -258,7 +258,7 @@ export default function NewAppointmentForm({
 
           const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-          days.forEach(day => {
+          days.forEach((day: string) => {
             const dayData = workingHoursData.workingHours[day];
 
             if (dayData && typeof dayData === 'object') {
@@ -376,7 +376,7 @@ export default function NewAppointmentForm({
   useEffect(() => {
     if (workingHours) {
       console.log('🔄 Working hours state updated:', {
-        availableDays: Object.keys(workingHours).filter(day => workingHours[day]?.isOpen),
+        availableDays: Object.keys(workingHours).filter((day: any) => workingHours[day]?.isOpen),
         tuesday: workingHours.tuesday || 'No Tuesday data'
       });
     }
@@ -707,7 +707,7 @@ export default function NewAppointmentForm({
 
   // Handle wedding package selection from dropdown
   const handleWeddingPackageSelect = (packageId: string) => {
-    const pkg = weddingPackages.find(p => p.id === packageId);
+    const pkg = weddingPackages.find((p: any) => p.id === packageId);
     if (!pkg) return;
 
     setAppointmentData(prev => {
@@ -801,7 +801,7 @@ export default function NewAppointmentForm({
 
   // Handler to add a new service to wedding package
   const handleAddWeddingPackageService = (serviceId: string) => {
-    const selectedService = services.find(s => s.id === serviceId || s._id === serviceId);
+    const selectedService = services.find((s: any) => s.id === serviceId || s._id === serviceId);
     if (!selectedService) return;
 
     setAppointmentData(prev => {
@@ -1338,7 +1338,7 @@ export default function NewAppointmentForm({
 
   // Update the service change handler to update both start and end times
   const handleServiceChange = (serviceId: string) => {
-    const selectedService = services.find(s => s.id === serviceId || s._id === serviceId);
+    const selectedService = services.find((s: any) => s.id === serviceId || s._id === serviceId);
     if (selectedService) {
       if ((selectedService as any).isPackage) {
         handleWeddingPackageSelect(selectedService.id);
@@ -1384,7 +1384,7 @@ export default function NewAppointmentForm({
       return;
     }
 
-    const selectedService = services.find(s => s.id === appointmentData.service || s._id === appointmentData.service);
+    const selectedService = services.find((s: any) => s.id === appointmentData.service || s._id === appointmentData.service);
     if (!selectedService) return;
 
     const selectedStaff = staffData.find((s: StaffMember) => s._id === appointmentData.staff);
@@ -1459,7 +1459,7 @@ export default function NewAppointmentForm({
 
     // Recalculate start/end times for remaining services
     let currentStartTime = appointmentData.startTime;
-    const recalculatedServices = updatedServices.map(service => {
+    const recalculatedServices = updatedServices.map((service: any) => {
       const startTime = currentStartTime;
       const endTime = calculateEndTime(startTime, service.duration);
       currentStartTime = endTime;
@@ -1488,7 +1488,7 @@ export default function NewAppointmentForm({
 
   // Handle adding an add-on
   const handleAddAddOn = (addOnId: string) => {
-    const selectedAddOn = addOns.find(a => a.id === addOnId);
+    const selectedAddOn = addOns.find((a: any) => a.id === addOnId);
     if (!selectedAddOn) return;
 
     if ((appointmentData as any).addOns?.some((a: any) => a.id === addOnId)) {
@@ -1498,8 +1498,8 @@ export default function NewAppointmentForm({
 
     setAppointmentData(prev => {
       const newAddOns = [...((prev as any).addOns || []), selectedAddOn];
-      const addOnAmount = newAddOns.reduce((sum, a) => sum + (a.price || 0), 0);
-      const addOnDuration = newAddOns.reduce((sum, a) => sum + (a.duration || 0), 0);
+      const addOnAmount = newAddOns.reduce((sum: number, a: any) => sum + (a.price || 0), 0);
+      const addOnDuration = newAddOns.reduce((sum: number, a: any) => sum + (a.duration || 0), 0);
 
       // Calculate base service duration (total duration minus previous add-ons duration)
       const prevAddOnDuration = ((prev as any).addOns || []).reduce((sum: number, a: any) => sum + (a.duration || 0), 0);
@@ -1948,7 +1948,7 @@ export default function NewAppointmentForm({
       appointmentPayload.addOnsAmount = totalAddOnAmount;
 
       if (appointmentData.services && appointmentData.services.length > 0) {
-        appointmentPayload.serviceItems = appointmentData.services.map(si => {
+        appointmentPayload.serviceItems = appointmentData.services.map((si: any) => {
           // Use string comparison for IDs to handle potential ObjectId objects
           const isMain = String(si.service) === String(appointmentData.service);
           const siAddOns = isMain ? currentAddOns : [];
@@ -2454,7 +2454,7 @@ export default function NewAppointmentForm({
                   </div>
                 ) : (
                   <Select
-                    value={weddingPackages.find(p => p.name === appointmentData.weddingPackageDetails?.packageName)?.id || ""}
+                    value={weddingPackages.find((p: any) => p.name === appointmentData.weddingPackageDetails?.packageName)?.id || ""}
                     onValueChange={handleWeddingPackageSelect}
                     disabled={weddingPackages.length === 0}
                   >
@@ -2789,7 +2789,7 @@ export default function NewAppointmentForm({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none" className="text-[10px]">No Staff Assigned</SelectItem>
-                            {staffData.map(s => (
+                            {staffData.map((s: any) => (
                               <SelectItem key={s._id} value={s._id} className="text-[10px]">
                                 {s.name}
                               </SelectItem>
@@ -2811,7 +2811,7 @@ export default function NewAppointmentForm({
                       </div>
                     </SelectTrigger>
                     <SelectContent>
-                      {services.filter(s => !(s as any).isPackage).map(s => (
+                      {services.filter((s: any) => !(s as any).isPackage).map((s: any) => (
                         <SelectItem key={s.id || s._id} value={s.id || s._id} className="text-xs">
                           {s.name} (₹{s.price})
                         </SelectItem>
@@ -2902,7 +2902,7 @@ export default function NewAppointmentForm({
             ) : availableAddOns.length === 0 && !isLoadingAddOns ? (
               <span className="text-[11px] text-muted-foreground italic">No add-ons available for this service</span>
             ) : (
-              availableAddOns.map(addon => (
+              availableAddOns.map((addon: any) => (
                 <Button
                   key={addon.id}
                   type="button"

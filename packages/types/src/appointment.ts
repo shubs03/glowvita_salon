@@ -24,6 +24,7 @@ export interface ServiceItem {
     name: string;
     price: number;
     duration: number;
+    [key: string]: any;
   }>;
 }
 
@@ -89,4 +90,11 @@ export interface Appointment {
     paymentMethod?: string;
     [key: string]: any;
   };
+  addOns?: Array<{
+    _id: string;
+    name: string;
+    price: number;
+    duration: number;
+    [key: string]: any;
+  }>;
 }

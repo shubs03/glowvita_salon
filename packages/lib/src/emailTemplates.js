@@ -329,3 +329,43 @@ export const getCancellationTemplate = ({ clientName, businessName, serviceName,
 </body>
 </html>
 `;
+
+export const noshowAppointmentEmail = ({ clientName, serviceName, appointmentDate, appointmentTime, salonName, reason }) => `
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; }
+        .header { background-color: #fff9f0; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { padding: 20px; }
+        .footer { font-size: 12px; color: #777; text-align: center; margin-top: 20px; }
+        .details { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #f39c12; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2 style="color: #f39c12;">Appointment Marked as No-Show</h2>
+        </div>
+        <div class="content">
+            <p>Hi ${clientName},</p>
+            <p>Your appointment at <strong>${salonName}</strong> was marked as a no-show because it wasn't completed or checked in.</p>
+            
+            <div class="details">
+                <p><strong>Service:</strong> ${serviceName}</p>
+                <p><strong>Date:</strong> ${new Date(appointmentDate).toLocaleDateString()}</p>
+                <p><strong>Time:</strong> ${appointmentTime}</p>
+                ${reason ? `<p><strong>Status Detail:</strong> ${reason}</p>` : ''}
+            </div>
+            
+            <p>If you believe this is an error, please contact the salon directly to resolve your appointment status.</p>
+            <p>We hope to see you again soon!</p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message from GlowVita Salon.</p>
+        </div>
+    </div>
+</body>
+</html>
+`;
