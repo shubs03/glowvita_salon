@@ -125,7 +125,7 @@ export const glowvitaApi = createApi({
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "Regions", "PublicAllOffers", "AddOns", "PendingWeddingPackages",
-    "ReferralReport"
+    "ReferralReport", "Inventory"
   ],
 
   endpoints: (builder) => ({
@@ -1595,6 +1595,40 @@ export const glowvitaApi = createApi({
         body: typeof data === 'object' && data.id ? data : { id: data }
       }),
       invalidatesTags: ["CrmProducts"],
+    }),
+
+    // Inventory Endpoints
+    adjustInventory: builder.mutation({
+      query: (body) => ({
+        url: "/crm/inventory/adjust",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Inventory", "CrmProducts"],
+    }),
+
+    getInventoryTransactions: builder.query({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params) {
+          Object.keys(params).forEach(key => {
+            if (params[key]) queryParams.append(key, params[key]);
+          });
+        }
+        return {
+          url: `/crm/inventory/transactions?${queryParams.toString()}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["Inventory"],
+    }),
+
+    getLowStockProducts: builder.query({
+      query: (threshold) => ({
+        url: `/crm/inventory/low-stock${threshold ? `?threshold=${threshold}` : ''}`,
+        method: "GET",
+      }),
+      providesTags: ["Inventory", "CrmProducts"],
     }),
 
     // CRM Product Questions - Get all questions for vendor's products
@@ -3178,4 +3212,9 @@ export const {
   useCreateProductMasterMutation,
   useUpdateProductMasterMutation,
   useDeleteProductMasterMutation,
+
+  // Inventory Hooks
+  useAdjustInventoryMutation,
+  useGetInventoryTransactionsQuery,
+  useGetLowStockProductsQuery,
 } = glowvitaApi;
