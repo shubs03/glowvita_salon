@@ -362,6 +362,13 @@ export function AppointmentDetailView({
     // Map 'pending' status to 'scheduled' since NewAppointmentForm doesn't support 'pending'
     const status = liveAppointment.status === 'pending' ? 'scheduled' : liveAppointment.status;
 
+    // Extract add-ons from serviceItems or root level
+    const addOns = (liveAppointment as any).addOns ||
+      (liveAppointment.serviceItems && liveAppointment.serviceItems.length > 0
+        ? liveAppointment.serviceItems[0].addOns
+        : []) ||
+      [];
+
     return {
       ...appointment,
       date: appointment.date instanceof Date ? appointment.date : new Date(appointment.date),
@@ -382,9 +389,11 @@ export function AppointmentDetailView({
       totalAmount: appointment.totalAmount || appointment.amount || 0,
       discount: appointment.discount || 0,
       tax: (appointment as any).tax || 0,
-      paymentStatus: (appointment as any).paymentStatus || 'pending'
+      paymentStatus: (appointment as any).paymentStatus || 'pending',
+      // Include add-ons for rescheduling
+      addOns: addOns
     };
-  }, [appointment]);
+  }, [appointment, liveAppointment]);
 
   // Create service object in the format expected by NewAppointmentForm
   const currentService = {

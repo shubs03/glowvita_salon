@@ -1095,7 +1095,7 @@ export default function CalendarPage() {
 
         {isModalOpen && (
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {isEditing ? "Edit Appointment" : "New Appointment"}

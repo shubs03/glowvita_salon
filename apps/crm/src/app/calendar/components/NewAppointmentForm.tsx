@@ -16,6 +16,7 @@ import { Calendar as CalendarIcon, Trash2, Loader2, Search, X, PlusCircle, MapPi
 import { glowvitaApi, useCreateClientMutation, useGetWorkingHoursQuery, useGetPublicTaxFeeSettingsQuery } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
+import { Badge } from '@repo/ui/badge';
 import { toast } from 'sonner';
 
 import { Appointment, AppointmentStatus, ServiceItem } from '../../../../../../packages/types/src/appointment';
@@ -143,39 +144,50 @@ export default function NewAppointmentForm({
   // Fetch tax settings
   const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
 
-  // Update taxRate if settings change
+  // Calculate total amount with proper tax/fee logic
+  const calculateFinancials = (baseAmount: number, discount: number, addOnAmount: number = 0) => {
+    const totalBase = baseAmount + addOnAmount;
+    let tax = 0;
+    if (taxSettings?.serviceTaxEnabled !== false) {
+      if (taxSettings?.serviceTaxType === 'fixed') {
+        tax = Number(taxSettings.serviceTax) || 0;
+      } else {
+        tax = (totalBase * (Number(taxSettings?.serviceTax) || 0)) / 100;
+      }
+    }
+
+    let platformFee = 0;
+    if (taxSettings?.platformFeeEnabled !== false) {
+      if (taxSettings?.platformFeeType === 'fixed') {
+        platformFee = Number(taxSettings.platformFee) || 0;
+      } else {
+        platformFee = (totalBase * (Number(taxSettings?.platformFee) || 0)) / 100;
+      }
+    }
+
+    const totalAmount = Math.max(0, totalBase - discount + tax + platformFee);
+    return { tax, platformFee, totalAmount };
+  };
+
+  const getAddOnsDuration = (addOns: any[]) => {
+    return addOns.reduce((sum, a) => sum + (a.duration || 0), 0);
+  };
+
   // Update taxRate and calculate fees if settings change and we are creating a new appointment
   useEffect(() => {
     if (taxSettings && !isEditing && !isRescheduling) {
       setAppointmentData(prev => {
         const amount = prev.amount || 0;
         const discount = prev.discount || 0;
+        const addOnAmount = ((prev as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0);
 
-        let tax = 0;
-        if (taxSettings.serviceTaxEnabled !== false) {
-          if (taxSettings.serviceTaxType === 'fixed') {
-            tax = Number(taxSettings.serviceTax) || 0;
-          } else {
-            tax = (amount * (Number(taxSettings.serviceTax) || 0)) / 100;
-          }
-        }
-
-        let platformFee = 0;
-        if (taxSettings.platformFeeEnabled !== false) {
-          if (taxSettings.platformFeeType === 'fixed') {
-            platformFee = Number(taxSettings.platformFee) || 0;
-          } else {
-            platformFee = (amount * (Number(taxSettings.platformFee) || 0)) / 100;
-          }
-        }
-
-        const totalAmount = Math.max(0, amount - discount + tax + platformFee);
+        const { tax, platformFee, totalAmount } = calculateFinancials(amount, discount, addOnAmount);
 
         return {
           ...prev,
           taxRate: taxSettings.serviceTax,
           tax,
-          platformFee, // Store platform fee in state if needed
+          platformFee,
           totalAmount
         };
       });
@@ -246,7 +258,7 @@ export default function NewAppointmentForm({
 
           const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-          days.forEach(day => {
+          days.forEach((day: string) => {
             const dayData = workingHoursData.workingHours[day];
 
             if (dayData && typeof dayData === 'object') {
@@ -364,7 +376,7 @@ export default function NewAppointmentForm({
   useEffect(() => {
     if (workingHours) {
       console.log('🔄 Working hours state updated:', {
-        availableDays: Object.keys(workingHours).filter(day => workingHours[day]?.isOpen),
+        availableDays: Object.keys(workingHours).filter((day: any) => workingHours[day]?.isOpen),
         tuesday: workingHours.tuesday || 'No Tuesday data'
       });
     }
@@ -421,6 +433,17 @@ export default function NewAppointmentForm({
     }
   );
 
+  // Fetch wedding packages
+  const { data: weddingPackagesResponse, isLoading: isLoadingWeddingPackages } = glowvitaApi.useGetVendorWeddingPackagesQuery(
+    vendorId || '',
+    {
+      skip: !vendorId,
+      refetchOnMountOrArgChange: true
+    }
+  );
+
+
+
   // Transform services data to match our expected format
   const services = React.useMemo(() => {
     let servicesData = [];
@@ -438,10 +461,10 @@ export default function NewAppointmentForm({
 
     if (!Array.isArray(servicesData)) {
       console.error('Invalid services data format:', servicesResponse);
-      return [];
+      servicesData = [];
     }
 
-    return servicesData.map((service: any) => ({
+    const transformedServices = servicesData.map((service: any) => ({
       id: service._id || service.id,
       _id: service._id || service.id,
       name: service.name || service.serviceName || 'Unnamed Service',  // Added serviceName fallback
@@ -450,9 +473,60 @@ export default function NewAppointmentForm({
       category: service.category,
       staff: service.staff || [],
       description: service.description || '',
-      gender: service.gender || 'unisex'
+      gender: service.gender || 'unisex',
+      isPackage: false
     }));
-  }, [servicesResponse, servicesError]);
+
+    // Add wedding packages to the services list as well
+    let weddingPkgData = [];
+    if (weddingPackagesResponse?.weddingPackages) {
+      weddingPkgData = weddingPackagesResponse.weddingPackages;
+    } else if (Array.isArray(weddingPackagesResponse?.data)) {
+      weddingPkgData = weddingPackagesResponse.data;
+    } else if (Array.isArray(weddingPackagesResponse)) {
+      weddingPkgData = weddingPackagesResponse;
+    }
+
+    const transformedPackages = Array.isArray(weddingPkgData) ? weddingPkgData.map((pkg: any) => ({
+      id: pkg._id || pkg.id,
+      _id: pkg._id || pkg.id,
+      name: `[Package] ${pkg.name}`,
+      duration: pkg.duration || 0,
+      price: pkg.discountedPrice || pkg.totalPrice || 0,
+      category: 'Wedding Package',
+      staff: pkg.assignedStaff || [],
+      description: pkg.description || '',
+      gender: 'unisex',
+      isPackage: true
+    })) : [];
+
+    return [...transformedServices, ...transformedPackages];
+  }, [servicesResponse, weddingPackagesResponse]);
+
+  // Transform wedding packages
+  const weddingPackages = React.useMemo(() => {
+    let packagesData = [];
+
+    if (weddingPackagesResponse?.weddingPackages) {
+      packagesData = weddingPackagesResponse.weddingPackages;
+    } else if (Array.isArray(weddingPackagesResponse?.data)) {
+      packagesData = weddingPackagesResponse.data;
+    } else if (Array.isArray(weddingPackagesResponse)) {
+      packagesData = weddingPackagesResponse;
+    }
+
+    if (!Array.isArray(packagesData)) return [];
+
+    return packagesData.map((pkg: any) => ({
+      id: pkg._id || pkg.id,
+      name: pkg.name,
+      price: pkg.discountedPrice || pkg.totalPrice || 0,
+      duration: pkg.duration || 0,
+      services: pkg.services || [],
+      staffCount: pkg.staffCount || 1,
+      description: pkg.description || ''
+    }));
+  }, [weddingPackagesResponse]);
 
   const [createAppointment, { isLoading: isCreating }] = glowvitaApi.useCreateAppointmentMutation();
   const [updateAppointment, { isLoading: isUpdating }] = glowvitaApi.useUpdateAppointmentMutation();
@@ -565,8 +639,39 @@ export default function NewAppointmentForm({
       totalAmount: 0,
       totalDuration: 0,
       venueAddress: ''
-    }
+    },
+    addOns: defaultValues?.addOns || []
   });
+
+  // Fetch add-ons
+  const { data: addOnsResponse, isLoading: isLoadingAddOns } = glowvitaApi.useGetAddOnsQuery(undefined);
+  const addOns = React.useMemo(() => {
+    let rawAddOns = [];
+    if (addOnsResponse?.addOns) rawAddOns = addOnsResponse.addOns;
+    else if (addOnsResponse?.data) rawAddOns = addOnsResponse.data;
+    else if (Array.isArray(addOnsResponse)) rawAddOns = addOnsResponse;
+
+    return rawAddOns.map((item: any) => ({
+      id: item._id || item.id,
+      _id: item._id || item.id,
+      name: item.name,
+      price: item.price || 0,
+      duration: item.duration || 0,
+      services: item.services || [],
+      service: item.service || null
+    }));
+  }, [addOnsResponse]);
+
+  // Filter add-ons based on selected service
+  const availableAddOns = React.useMemo(() => {
+    if (!appointmentData.service) return [];
+    return addOns.filter((addon: any) => {
+      const serviceId = String(appointmentData.service);
+      const linkedServices = addon.services || [];
+      return linkedServices.some((id: any) => String(id) === serviceId) || String(addon.service) === serviceId;
+    });
+  }, [addOns, appointmentData.service]);
+
 
   // Handle service type change
   const handleServiceTypeChange = (type: 'regular' | 'home' | 'wedding') => {
@@ -598,6 +703,128 @@ export default function NewAppointmentForm({
         [field]: value
       }
     }));
+  };
+
+  // Handle wedding package selection from dropdown
+  const handleWeddingPackageSelect = (packageId: string) => {
+    const pkg = weddingPackages.find((p: any) => p.id === packageId);
+    if (!pkg) return;
+
+    setAppointmentData(prev => {
+      const packageServices = prev.weddingPackageDetails?.packageServices || [];
+      const teamMembers = prev.weddingPackageDetails?.teamMembers || [];
+
+      // Add services from the selected package to current ones if preferred, 
+      // or replace them. Usually selecting a package replaces the current selection.
+      const newPackageServices = pkg.services.map((s: any) => ({
+        serviceId: s.serviceId,
+        serviceName: s.serviceName
+      }));
+
+      const newTeamMembers = pkg.services.map(() => "");
+
+      // Recalculate financials
+      const addOnAmount = ((prev as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0);
+      const addOnDuration = ((prev as any).addOns || []).reduce((sum: number, a: any) => sum + (a.duration || 0), 0);
+      const { tax, platformFee, totalAmount } = calculateFinancials(pkg.price, prev.discount || 0, addOnAmount);
+
+      return {
+        ...prev,
+        serviceName: pkg.name, // Use package name as service name
+        amount: pkg.price,
+        duration: pkg.duration + addOnDuration,
+        endTime: calculateEndTime(prev.startTime, pkg.duration + addOnDuration),
+        tax,
+        platformFee,
+        totalAmount,
+        weddingPackageDetails: {
+          ...prev.weddingPackageDetails,
+          packageName: pkg.name,
+          totalAmount: pkg.price,
+          totalDuration: pkg.duration,
+          packageServices: newPackageServices,
+          teamMembers: newTeamMembers
+        }
+      };
+    });
+  };
+
+  // Handler to edit a service name in wedding package
+  const handleEditWeddingService = (index: number, newName: string) => {
+    setAppointmentData(prev => {
+      const packageServices = [...(prev.weddingPackageDetails?.packageServices || [])];
+      if (packageServices[index]) {
+        packageServices[index] = { ...packageServices[index], serviceName: newName };
+      }
+      return {
+        ...prev,
+        weddingPackageDetails: {
+          ...prev.weddingPackageDetails,
+          packageServices
+        }
+      };
+    });
+  };
+
+  // Handler to remove a service and corresponding staff from wedding package
+  const handleRemoveWeddingService = (index: number) => {
+    setAppointmentData(prev => {
+      const packageServices = (prev.weddingPackageDetails?.packageServices || []).filter((_, i) => i !== index);
+      const teamMembers = (prev.weddingPackageDetails?.teamMembers || []).filter((_, i) => i !== index);
+      return {
+        ...prev,
+        weddingPackageDetails: {
+          ...prev.weddingPackageDetails,
+          packageServices,
+          teamMembers
+        }
+      };
+    });
+  };
+
+  // Handler to update a staff member in wedding package team
+  const handleUpdateWeddingStaff = (index: number, staffId: string) => {
+    setAppointmentData(prev => {
+      const teamMembers = [...(prev.weddingPackageDetails?.teamMembers || [])];
+      // Pad array if needed to reach index
+      while (teamMembers.length <= index) teamMembers.push("");
+      teamMembers[index] = staffId;
+      return {
+        ...prev,
+        weddingPackageDetails: {
+          ...prev.weddingPackageDetails,
+          teamMembers
+        }
+      };
+    });
+  };
+
+  // Handler to add a new service to wedding package
+  const handleAddWeddingPackageService = (serviceId: string) => {
+    const selectedService = services.find((s: any) => s.id === serviceId || s._id === serviceId);
+    if (!selectedService) return;
+
+    setAppointmentData(prev => {
+      const currentServices = prev.weddingPackageDetails?.packageServices || [];
+      const currentTeam = prev.weddingPackageDetails?.teamMembers || [];
+      return {
+        ...prev,
+        weddingPackageDetails: {
+          ...prev.weddingPackageDetails,
+          packageServices: [
+            ...currentServices,
+            {
+              serviceId: selectedService.id || selectedService._id,
+              serviceName: selectedService.name
+            }
+          ],
+          teamMembers: [
+            ...currentTeam,
+            "" // Placeholder for team member
+          ]
+        }
+      };
+    });
   };
 
   // Get blocked times for the selected staff and date - MOVED TO TOP LEVEL
@@ -1111,22 +1338,36 @@ export default function NewAppointmentForm({
 
   // Update the service change handler to update both start and end times
   const handleServiceChange = (serviceId: string) => {
-    const selectedService = services.find(s => s.id === serviceId || s._id === serviceId);
+    const selectedService = services.find((s: any) => s.id === serviceId || s._id === serviceId);
     if (selectedService) {
+      if ((selectedService as any).isPackage) {
+        handleWeddingPackageSelect(selectedService.id);
+        setAppointmentData(prev => ({
+          ...prev,
+          service: selectedService.id,
+          isWeddingService: true // Switch to wedding mode when a package is selected
+        }));
+        return;
+      }
+
       // Calculate total amount based on service price, discount and tax
       const amount = selectedService.price || 0;
       const discount = appointmentData.discount || 0;
-      const tax = appointmentData.tax || 0;
-      const totalAmount = Math.max(0, amount - discount + tax);
+      const addOnAmount = ((appointmentData as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0);
+      const addOnDuration = ((appointmentData as any).addOns || []).reduce((sum: number, a: any) => sum + (a.duration || 0), 0);
+      const { tax: calculatedTax, platformFee, totalAmount } = calculateFinancials(amount, discount, addOnAmount);
 
       setAppointmentData((prev: Appointment) => ({
         ...prev,
         service: selectedService.id || selectedService._id,
         serviceName: selectedService.name,
-        duration: selectedService.duration || 60,
+        duration: (selectedService.duration || 60) + addOnDuration,
         amount: amount,
+        tax: calculatedTax,
+        platformFee,
         totalAmount: totalAmount,
-        endTime: calculateEndTime(prev.startTime, selectedService.duration || 60)
+        endTime: calculateEndTime(prev.startTime, (selectedService.duration || 60) + addOnDuration),
+        isWeddingService: false // Switch off wedding mode for regular services if selected from main dropdown
       }));
     }
   };
@@ -1143,7 +1384,7 @@ export default function NewAppointmentForm({
       return;
     }
 
-    const selectedService = services.find(s => s.id === appointmentData.service || s._id === appointmentData.service);
+    const selectedService = services.find((s: any) => s.id === appointmentData.service || s._id === appointmentData.service);
     if (!selectedService) return;
 
     const selectedStaff = staffData.find((s: StaffMember) => s._id === appointmentData.staff);
@@ -1195,16 +1436,18 @@ export default function NewAppointmentForm({
     };
 
     const updatedServices = [...previousServices, newService];
-    const totalDuration = updatedServices.reduce((sum, s) => sum + s.duration, 0);
+    const baseDuration = updatedServices.reduce((sum, s) => sum + s.duration, 0);
+    const addOnDuration = getAddOnsDuration((appointmentData as any).addOns || []);
+    const totalDurationIncludingAddOns = baseDuration + addOnDuration;
     const totalAmount = updatedServices.reduce((sum, s) => sum + s.amount, 0);
 
     setAppointmentData((prev: Appointment) => ({
       ...prev,
       services: updatedServices,
-      duration: totalDuration,
+      duration: totalDurationIncludingAddOns,
       amount: totalAmount,
       totalAmount: calculateTotalAmount(totalAmount, prev.discount || 0, prev.tax || 0),
-      endTime: calculateEndTime(prev.startTime, totalDuration)
+      endTime: calculateEndTime(prev.startTime, totalDurationIncludingAddOns)
     }));
 
     toast.success(`${selectedService.name} with ${selectedStaff.name} added`);
@@ -1216,7 +1459,7 @@ export default function NewAppointmentForm({
 
     // Recalculate start/end times for remaining services
     let currentStartTime = appointmentData.startTime;
-    const recalculatedServices = updatedServices.map(service => {
+    const recalculatedServices = updatedServices.map((service: any) => {
       const startTime = currentStartTime;
       const endTime = calculateEndTime(startTime, service.duration);
       currentStartTime = endTime;
@@ -1229,16 +1472,78 @@ export default function NewAppointmentForm({
     });
 
     const totalDuration = recalculatedServices.reduce((sum, s) => sum + s.duration, 0) || 60;
+    const addOnDuration = getAddOnsDuration((appointmentData as any).addOns || []);
+    const totalDurationIncludingAddOns = totalDuration + addOnDuration;
     const totalAmount = recalculatedServices.reduce((sum, s) => sum + s.amount, 0);
 
     setAppointmentData((prev: Appointment) => ({
       ...prev,
       services: recalculatedServices,
-      duration: totalDuration,
+      duration: totalDurationIncludingAddOns,
       amount: totalAmount,
       totalAmount: calculateTotalAmount(totalAmount, prev.discount || 0, prev.tax || 0),
-      endTime: calculateEndTime(prev.startTime, totalDuration)
+      endTime: calculateEndTime(prev.startTime, totalDurationIncludingAddOns)
     }));
+  };
+
+  // Handle adding an add-on
+  const handleAddAddOn = (addOnId: string) => {
+    const selectedAddOn = addOns.find((a: any) => a.id === addOnId);
+    if (!selectedAddOn) return;
+
+    if ((appointmentData as any).addOns?.some((a: any) => a.id === addOnId)) {
+      toast.error('Add-on already added');
+      return;
+    }
+
+    setAppointmentData(prev => {
+      const newAddOns = [...((prev as any).addOns || []), selectedAddOn];
+      const addOnAmount = newAddOns.reduce((sum: number, a: any) => sum + (a.price || 0), 0);
+      const addOnDuration = newAddOns.reduce((sum: number, a: any) => sum + (a.duration || 0), 0);
+
+      // Calculate base service duration (total duration minus previous add-ons duration)
+      const prevAddOnDuration = ((prev as any).addOns || []).reduce((sum: number, a: any) => sum + (a.duration || 0), 0);
+      const baseServiceDuration = Math.max(0, (prev.duration || 60) - prevAddOnDuration);
+
+      const newTotalDuration = baseServiceDuration + addOnDuration;
+      const { tax, platformFee, totalAmount } = calculateFinancials(prev.amount || 0, prev.discount || 0, addOnAmount);
+
+      return {
+        ...prev,
+        addOns: newAddOns,
+        duration: newTotalDuration,
+        endTime: calculateEndTime(prev.startTime, newTotalDuration),
+        tax,
+        platformFee,
+        totalAmount
+      };
+    });
+    toast.success(`${selectedAddOn.name} added`);
+  };
+
+  // Handle removing an add-on
+  const handleRemoveAddOn = (index: number) => {
+    setAppointmentData(prev => {
+      const newAddOns = ((prev as any).addOns || []).filter((_: any, i: number) => i !== index);
+      const addOnAmount = newAddOns.reduce((sum: number, a: any) => sum + (a.price || 0), 0);
+      const addOnDuration = newAddOns.reduce((sum: number, a: any) => sum + (a.duration || 0), 0);
+
+      const prevAddOnDuration = ((prev as any).addOns || []).reduce((sum: number, a: any) => sum + (a.duration || 0), 0);
+      const baseServiceDuration = Math.max(0, (prev.duration || 60) - prevAddOnDuration);
+
+      const newTotalDuration = baseServiceDuration + addOnDuration;
+      const { tax, platformFee, totalAmount } = calculateFinancials(prev.amount || 0, prev.discount || 0, addOnAmount);
+
+      return {
+        ...prev,
+        addOns: newAddOns,
+        duration: newTotalDuration,
+        endTime: calculateEndTime(prev.startTime, newTotalDuration),
+        tax,
+        platformFee,
+        totalAmount
+      };
+    });
   };
 
   // Find the next available time slot that fits the duration
@@ -1383,29 +1688,7 @@ export default function NewAppointmentForm({
     return Math.max(0, amount - discount + tax);
   };
 
-  // Calculate total amount with proper tax/fee logic
-  const calculateFinancials = (baseAmount: number, discount: number) => {
-    let tax = 0;
-    if (taxSettings?.serviceTaxEnabled !== false) {
-      if (taxSettings?.serviceTaxType === 'fixed') {
-        tax = Number(taxSettings.serviceTax) || 0;
-      } else {
-        tax = (baseAmount * (Number(taxSettings?.serviceTax) || 0)) / 100;
-      }
-    }
 
-    let platformFee = 0;
-    if (taxSettings?.platformFeeEnabled !== false) {
-      if (taxSettings?.platformFeeType === 'fixed') {
-        platformFee = Number(taxSettings.platformFee) || 0;
-      } else {
-        platformFee = (baseAmount * (Number(taxSettings?.platformFee) || 0)) / 100;
-      }
-    }
-
-    const totalAmount = Math.max(0, baseAmount - discount + tax + platformFee);
-    return { tax, platformFee, totalAmount };
-  };
 
   // Handle form field changes
   const handleFieldChange = (field: keyof Appointment, value: any) => {
@@ -1419,9 +1702,13 @@ export default function NewAppointmentForm({
 
       // Auto-calculate dependent fields
       if (field === 'startTime' || field === 'duration') {
+        const addOnDuration = ((prev as any).addOns || []).reduce((sum: number, a: any) => sum + (a.duration || 0), 0);
+        const durationValue = field === 'duration' ? (numericValue + addOnDuration) : prev.duration;
+
+        updated.duration = durationValue;
         updated.endTime = calculateEndTime(
           field === 'startTime' ? value : prev.startTime,
-          field === 'duration' ? value : prev.duration
+          durationValue
         );
       }
 
@@ -1429,8 +1716,9 @@ export default function NewAppointmentForm({
       if (['amount', 'discount'].includes(field)) {
         const amount = field === 'amount' ? numericValue : updated.amount || 0;
         const discount = field === 'discount' ? numericValue : updated.discount || 0;
+        const addOnAmount = ((updated as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0);
 
-        const { tax, platformFee, totalAmount } = calculateFinancials(amount, discount);
+        const { tax, platformFee, totalAmount } = calculateFinancials(amount, discount, addOnAmount);
         updated.tax = tax;
         updated.totalAmount = totalAmount;
         // checking if platformFee exists on the type before assigning would be ideal, 
@@ -1469,7 +1757,7 @@ export default function NewAppointmentForm({
 
       // Validate that at least one service is selected (either single or multiple)
       const hasServices = appointmentData.services && appointmentData.services.length > 0;
-      const hasSingleService = appointmentData.service;
+      const hasSingleService = appointmentData.service || (appointmentData.isWeddingService && appointmentData.serviceName);
 
       if (!hasServices && !hasSingleService) {
         console.error('❌ Service is missing');
@@ -1479,7 +1767,7 @@ export default function NewAppointmentForm({
       }
 
       // Validate that at least one staff member is selected
-      if (!appointmentData.staff) {
+      if (!appointmentData.staff && !appointmentData.isWeddingService) {
         console.error('❌ Staff is missing');
         toast.error('Please select a staff member');
         console.groupEnd();
@@ -1639,18 +1927,53 @@ export default function NewAppointmentForm({
         tax: Number(appointmentData.tax) || 0,
         taxRate: Number(appointmentData.taxRate) || Number(taxSettings?.serviceTax) || 0,
         totalAmount: Number(appointmentData.totalAmount) || 0,
+        addOns: (appointmentData as any).addOns || [],
+        addOnsAmount: ((appointmentData as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0),
         finalAmount: Number(appointmentData.totalAmount) || 0,
         paymentStatus: appointmentData.paymentStatus || 'pending',
         platformFee: (appointmentData as any).platformFee || 0,
         mode: 'offline', // CRM bookings are offline mode
+        isHomeService: appointmentData.isHomeService,
+        homeServiceLocation: appointmentData.isHomeService ? appointmentData.homeServiceLocation : undefined,
+        isWeddingService: appointmentData.isWeddingService,
+        weddingPackageDetails: appointmentData.isWeddingService ? appointmentData.weddingPackageDetails : undefined,
       };
 
       // Include multiple services if available (as serviceItems)
+      const currentAddOns = (appointmentData as any).addOns || [];
+      const totalAddOnDuration = getAddOnsDuration(currentAddOns);
+      const totalAddOnAmount = currentAddOns.reduce((sum: number, a: any) => sum + (a.price || 0), 0);
+
+      // Update root payload with calculated add-on amount
+      appointmentPayload.addOnsAmount = totalAddOnAmount;
+
       if (appointmentData.services && appointmentData.services.length > 0) {
-        appointmentPayload.serviceItems = appointmentData.services;
+        appointmentPayload.serviceItems = appointmentData.services.map((si: any) => {
+          // Use string comparison for IDs to handle potential ObjectId objects
+          const isMain = String(si.service) === String(appointmentData.service);
+          const siAddOns = isMain ? currentAddOns : [];
+          return {
+            ...si,
+            addOns: siAddOns
+          };
+        });
         appointmentPayload.isMultiService = true;
       } else {
         appointmentPayload.isMultiService = false;
+        // For single service, ensure serviceItems is populated with the main service and add-ons
+        const baseDuration = Math.max(0, (Number(appointmentData.duration) || 60) - totalAddOnDuration);
+
+        appointmentPayload.serviceItems = [{
+          service: appointmentData.service,
+          serviceName: appointmentData.serviceName,
+          staff: appointmentData.staff,
+          staffName: appointmentPayload.staffName,
+          startTime: appointmentData.startTime,
+          endTime: appointmentData.endTime,
+          duration: baseDuration,
+          amount: Number(appointmentData.amount) || 0,
+          addOns: currentAddOns
+        }];
       }
 
       console.log('📦 Full appointment payload:', JSON.stringify(appointmentPayload, null, 2));
@@ -1878,7 +2201,6 @@ export default function NewAppointmentForm({
   } else if (isEditing) {
     formTitle = 'Edit Appointment';
     formDescription = 'Update the appointment details';
-    formDescription = 'Update the appointment details';
   }
 
   const isGuest = !appointmentData.client && appointmentData.clientName;
@@ -2041,6 +2363,8 @@ export default function NewAppointmentForm({
         {/* Client Field */}
         {clientSection}
 
+
+
         {/* Service Type Selection */}
         <div className="space-y-3 p-4 bg-muted/30 rounded-lg border border-border">
           <Label className="text-sm font-medium text-foreground">Appointment Type</Label>
@@ -2122,13 +2446,34 @@ export default function NewAppointmentForm({
           {appointmentData.isWeddingService && (
             <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="space-y-2">
-                <Label htmlFor="wp-name" className="text-xs">Wedding Package Name</Label>
-                <Input
-                  id="wp-name"
-                  value={appointmentData.weddingPackageDetails?.packageName || ''}
-                  onChange={(e) => handleWeddingDetailsChange('packageName', e.target.value)}
-                  placeholder="e.g. Gold Bridal Package"
-                />
+                <Label htmlFor="wp-name" className="text-xs">Wedding Package <span className="text-red-500">*</span></Label>
+                {isLoadingWeddingPackages ? (
+                  <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span className="text-[10px]">Loading packages...</span>
+                  </div>
+                ) : (
+                  <Select
+                    value={weddingPackages.find((p: any) => p.name === appointmentData.weddingPackageDetails?.packageName)?.id || ""}
+                    onValueChange={handleWeddingPackageSelect}
+                    disabled={weddingPackages.length === 0}
+                  >
+                    <SelectTrigger id="wp-name" className="h-9 text-xs bg-background border-pink-100 dark:border-pink-900/30">
+                      <SelectValue placeholder={weddingPackages.length === 0 ? "No packages available" : "Select a wedding package"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {weddingPackages.map((pkg) => (
+                        <SelectItem key={pkg.id} value={pkg.id} className="text-xs">
+                          <div className="flex justify-between w-full gap-4">
+                            <span>{pkg.name}</span>
+                            <span className="text-muted-foreground">₹{pkg.price}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-[10px] text-muted-foreground">Select a predefined package to auto-fill details</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="wp-venue" className="text-xs">Venue Address <span className="text-red-500">*</span></Label>
@@ -2280,7 +2625,8 @@ export default function NewAppointmentForm({
                     <SelectTrigger className="w-full bg-background text-foreground border border-border">
                       <SelectValue placeholder={
                         isLoadingServices ? 'Loading services...' :
-                          services.length === 0 ? 'No services available' : 'Select a service'
+                          appointmentData.isWeddingService && appointmentData.serviceName ? appointmentData.serviceName :
+                            services.length === 0 ? 'No services available' : 'Select a service'
                       }>
                         {appointmentData.serviceName && (
                           <div className="flex justify-between w-full">
@@ -2404,11 +2750,76 @@ export default function NewAppointmentForm({
                 )}
               </div>
             )}
-            {!isLoadingServices && services.length === 0 && (
-              <p className="text-sm text-red-500">No services found. Please add services first.</p>
-            )}
             {servicesError && (
               <p className="text-sm text-red-500">Error loading services. Please try again.</p>
+            )}
+
+            {appointmentData.isWeddingService && appointmentData.weddingPackageDetails?.packageServices && appointmentData.weddingPackageDetails.packageServices.length > 0 && (
+              <div className="space-y-2 mt-3 animate-in fade-in slide-in-from-bottom-1 duration-200">
+                <p className="text-[11px] font-semibold text-pink-600 dark:text-pink-400 uppercase tracking-wider">Package Services</p>
+                <div className="grid grid-cols-1 gap-2">
+                  {appointmentData.weddingPackageDetails.packageServices.map((service, idx) => (
+                    <div key={idx} className="p-2.5 bg-pink-50/50 dark:bg-pink-950/30 border border-pink-100 dark:border-pink-900/50 rounded-lg space-y-2 group transition-all">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-pink-400 shrink-0" />
+                        <input
+                          type="text"
+                          value={service.serviceName}
+                          onChange={(e) => handleEditWeddingService(idx, e.target.value)}
+                          className="bg-transparent border-none focus:outline-none focus:ring-0 p-0 flex-1 text-xs font-semibold text-foreground/90"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveWeddingService(idx)}
+                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-600 transition-opacity p-0.5"
+                          title="Remove service and staff"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2 pl-3.5">
+                        <span className="text-[10px] text-muted-foreground shrink-0 w-12 font-medium">Staff:</span>
+                        <Select
+                          value={appointmentData.weddingPackageDetails?.teamMembers?.[idx] || ""}
+                          onValueChange={(val) => handleUpdateWeddingStaff(idx, val)}
+                        >
+                          <SelectTrigger className="h-7 text-[10px] py-0 bg-background/50 border-pink-100/50 dark:border-pink-900/20">
+                            <SelectValue placeholder="Select staff member" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none" className="text-[10px]">No Staff Assigned</SelectItem>
+                            {staffData.map((s: any) => (
+                              <SelectItem key={s._id} value={s._id} className="text-[10px]">
+                                {s.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Dropdown to add more services to the package */}
+                <div className="mt-2">
+                  <Select onValueChange={handleAddWeddingPackageService}>
+                    <SelectTrigger className="h-8 text-[10px] w-full bg-pink-50/20 border-dashed border-pink-200 dark:border-pink-900/40 text-pink-600 dark:text-pink-400">
+                      <div className="flex items-center gap-1.5 justify-center w-full">
+                        <PlusCircle className="h-3 w-3" />
+                        <span>Add Service to Package</span>
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {services.filter((s: any) => !(s as any).isPackage).map((s: any) => (
+                        <SelectItem key={s.id || s._id} value={s.id || s._id} className="text-xs">
+                          {s.name} (₹{s.price})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             )}
           </div>
 
@@ -2425,7 +2836,8 @@ export default function NewAppointmentForm({
                 <SelectTrigger className="w-full bg-background text-foreground border border-border">
                   <SelectValue placeholder={
                     isLoadingStaff ? 'Loading staff...' :
-                      staffData.length === 0 ? 'No staff available' : 'Select a staff member'
+                      appointmentData.isWeddingService && appointmentData.staffName ? appointmentData.staffName :
+                        staffData.length === 0 ? 'No staff available' : 'Select a staff member'
                   } className="placeholder:text-muted-foreground">
                     {appointmentData.staffName && (
                       <span>{appointmentData.staffName}</span>
@@ -2453,7 +2865,74 @@ export default function NewAppointmentForm({
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Select staff member for each service when adding
             </p>
+
+            {appointmentData.isWeddingService && appointmentData.weddingPackageDetails?.teamMembers && appointmentData.weddingPackageDetails.teamMembers.length > 0 && (
+              <div className="space-y-2 mt-3 p-2 bg-blue-50/30 dark:bg-blue-950/10 rounded-lg border border-blue-100/30 dark:border-blue-900/20 animate-in fade-in slide-in-from-top-1 duration-200">
+                <p className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wider px-1">Current Team Summary</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {appointmentData.weddingPackageDetails.teamMembers.map((memberId, idx) => {
+                    const member = staffData.find((s: any) => s._id === memberId);
+                    if (!memberId || memberId === "none") return null;
+                    return (
+                      <div key={idx} className="text-[10px] px-2 py-1 bg-white dark:bg-neutral-800 border border-blue-100 dark:border-blue-900/50 rounded flex items-center gap-1.5">
+                        <div className="w-1 h-1 rounded-full bg-green-500" />
+                        <span className="font-medium text-foreground/70">{member?.name || 'Assigned'}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Add-ons Section */}
+        <div className="space-y-4 p-4 bg-purple-50/30 dark:bg-purple-900/10 rounded-lg border border-purple-100 dark:border-purple-900/30">
+          <div className="flex items-center justify-between">
+            <Label className="text-sm font-semibold flex items-center gap-2 text-purple-900 dark:text-purple-300">
+              <PlusCircle className="h-4 w-4 text-purple-600" />
+              Available Add-ons (Optional)
+            </Label>
+            {isLoadingAddOns && <Loader2 className="h-3 w-3 animate-spin" />}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {!appointmentData.service ? (
+              <span className="text-[11px] text-muted-foreground italic">Select a service to see available add-ons</span>
+            ) : availableAddOns.length === 0 && !isLoadingAddOns ? (
+              <span className="text-[11px] text-muted-foreground italic">No add-ons available for this service</span>
+            ) : (
+              availableAddOns.map((addon: any) => (
+                <Button
+                  key={addon.id}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleAddAddOn(addon.id)}
+                  className="h-8 text-[11px] bg-background hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200 border-dashed"
+                >
+                  {addon.name} (+₹{addon.price})
+                </Button>
+              ))
+            )}
+          </div>
+
+          {(appointmentData as any).addOns && (appointmentData as any).addOns.length > 0 && (
+            <div className="mt-3 space-y-2 pt-2 border-t border-purple-100 dark:border-purple-900/30">
+              <p className="text-[10px] font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider">Applied Add-ons:</p>
+              <div className="flex flex-wrap gap-2">
+                {(appointmentData as any).addOns.map((addon: any, index: number) => (
+                  <Badge key={index} variant="secondary" className="pl-2 pr-1 py-1 gap-1 bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200 transition-colors">
+                    <span className="text-[11px]">{addon.name} (+₹{addon.price})</span>
+                    <X
+                      className="h-3 w-3 cursor-pointer text-purple-400 hover:text-red-500 transition-colors"
+                      onClick={() => handleRemoveAddOn(index)}
+                    />
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Financial Information Row */}
