@@ -179,7 +179,7 @@ export const POST = withSubscriptionCheck(async (req) => {
         const body = await req.json();
 
         // Validate required fields
-        const requiredFields = ['fullName', 'email', 'phone'];
+        const requiredFields = ['fullName', 'phone']; // email is now optional
         for (const field of requiredFields) {
             if (!body[field]) {
                 return NextResponse.json({
@@ -190,16 +190,18 @@ export const POST = withSubscriptionCheck(async (req) => {
         }
 
         // Check for existing client with same email or phone
+        const orConditions = [{ phone: body.phone }];
+        if (body.email) {
+            orConditions.push({ email: body.email.toLowerCase() });
+        }
+
         const existingClient = await ClientModel.findOne({
             vendorId,
-            $or: [
-                { email: body.email.toLowerCase() },
-                { phone: body.phone }
-            ]
+            $or: orConditions
         });
 
         if (existingClient) {
-            const conflictField = existingClient.email === body.email.toLowerCase() ? 'email' : 'phone';
+            const conflictField = existingClient.phone === body.phone ? 'phone' : 'email';
             return NextResponse.json({
                 success: false,
                 message: `Client with this ${conflictField} already exists`
@@ -208,7 +210,7 @@ export const POST = withSubscriptionCheck(async (req) => {
 
         // Handle profile picture upload if provided
         let profilePictureUrl = body.profilePicture || '';
-        if (body.profilePicture) {
+        if (body.profilePicture && body.profilePicture.startsWith('data:image')) {
             const fileName = `client-${vendorId}-${Date.now()}`;
             const imageUrl = await uploadBase64(body.profilePicture, fileName);
 
@@ -222,16 +224,24 @@ export const POST = withSubscriptionCheck(async (req) => {
             profilePictureUrl = imageUrl;
         }
 
-        // Fetch vendor's region to inherit
-        const VendorModel = (await import("@repo/lib/models/Vendor/Vendor.model")).default;
-        const vendor = await VendorModel.findById(vendorId).select('regionId');
+        // Fetch vendor/supplier's region to inherit
+        let regionId = null;
+        if (req.user.role === 'supplier') {
+            const SupplierModel = (await import("@repo/lib/models/Vendor/Supplier.model")).default;
+            const supplier = await SupplierModel.findById(vendorId).select('regionId');
+            regionId = supplier?.regionId;
+        } else {
+            const VendorModel = (await import("@repo/lib/models/Vendor/Vendor.model")).default;
+            const vendor = await VendorModel.findById(vendorId).select('regionId');
+            regionId = vendor?.regionId;
+        }
 
         // Create client data
         const clientData = {
             vendorId,
-            regionId: vendor?.regionId,
+            regionId,
             fullName: body.fullName.trim(),
-            email: body.email.toLowerCase().trim(),
+            email: body.email ? body.email.toLowerCase().trim() : undefined,
             phone: body.phone.trim(),
             birthdayDate: body.birthdayDate ? new Date(body.birthdayDate) : null,
             gender: body.gender || 'Other',
@@ -242,7 +252,7 @@ export const POST = withSubscriptionCheck(async (req) => {
             status: 'New'
         };
 
-        console.log('Creating client with regionId:', clientData.regionId);
+        console.log('Creating client with regionId:', clientData.regionId, 'role:', req.user.role);
 
         const client = new ClientModel(clientData);
         await client.save();
@@ -353,7 +363,7 @@ export const PUT = withSubscriptionCheck(async (req) => {
 
         // Handle profile picture upload if provided
         if (updateData.profilePicture !== undefined) {
-            if (updateData.profilePicture) {
+            if (updateData.profilePicture && updateData.profilePicture.startsWith('data:image')) {
                 // Upload new image to VPS
                 const fileName = `client-${vendorId}-${Date.now()}`;
                 const imageUrl = await uploadBase64(updateData.profilePicture, fileName);

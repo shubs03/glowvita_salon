@@ -116,26 +116,43 @@ invoiceSchema.statics.generateInvoiceNumber = async function (vendorId) {
 
     const year = new Date().getFullYear();
 
-    // 2. Get vendor initials (e.g., "Glowvita Salon" -> "GS")
+    // 2. Get initials from Vendor (businessName) or Supplier (shopName)
     let vendorCode = salonId.slice(-5).toUpperCase();
     try {
+        // Ensure both models are registered
         const VendorModel = mongoose.models.Vendor || (await import('../Vendor/Vendor.model.js')).default;
-        const vendor = await VendorModel.findById(vendorId).select('businessName');
-        if (vendor && vendor.businessName) {
-            const words = vendor.businessName.trim().split(/\s+/);
+        const SupplierModel = mongoose.models.Supplier || (await import('../Vendor/Supplier.model.js')).default;
+
+        // Fetch both in parallel to see which one matches this vendorId
+        const [vendorData, supplierData] = await Promise.all([
+            VendorModel.findById(vendorId).select('businessName').lean(),
+            SupplierModel.findById(vendorId).select('shopName').lean()
+        ]);
+
+        const name = vendorData?.businessName || supplierData?.shopName;
+
+        if (name && name.trim()) {
+            const cleanName = name.trim();
+            const words = cleanName.split(/\s+/).filter(word => word.length > 0);
+
             if (words.length > 1) {
-                // Multi-word: take initials (e.g., "Glowvita Salon" -> "GS")
+                // Multi-word: take initials (e.g., "Manish Enterprises" -> "ME")
                 vendorCode = words
                     .map(word => word[0])
                     .join('')
                     .toUpperCase();
-            } else {
-                // Single word: take first 3 letters (e.g., "allinone" -> "ALL")
+            } else if (words.length === 1) {
+                // Single word: take first 3 letters (e.g., "Manish" -> "MAN")
                 vendorCode = words[0].substring(0, 3).toUpperCase();
+            }
+
+            // Limit to 5 characters max just in case
+            if (vendorCode.length > 5) {
+                vendorCode = vendorCode.substring(0, 5);
             }
         }
     } catch (error) {
-        console.error("Error fetching vendor name for invoice initials:", error);
+        console.error("Error generating invoice initials:", error);
     }
 
     // 3. Increment the sequence for this SPECIFIC salon

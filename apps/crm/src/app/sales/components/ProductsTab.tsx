@@ -94,21 +94,23 @@ export default function ProductsTab({
   selectedClient,
   setSelectedClient
 }: ProductsTabProps) {
-  const { user } = useCrmAuth();
+  const { user, role: authRole } = useCrmAuth();
   const VENDOR_ID = user?._id || "";
-  const userRole = user?.role;
+  // Check role robustly (case-insensitive)
+  const userRole = (authRole || user?.role || "").toLowerCase();
+  const isSupplier = userRole === 'supplier';
 
   // Fetch profile based on user role
   const { data: vendorProfile } = useGetVendorProfileQuery(undefined, {
-    skip: !user?._id || userRole === 'supplier'
+    skip: !user?._id || isSupplier
   });
 
   const { data: supplierProfile } = useGetCurrentSupplierProfileQuery(undefined, {
-    skip: !user?._id || userRole !== 'supplier'
+    skip: !user?._id || !isSupplier
   });
 
   // Get business name from profile based on user role
-  const businessName = userRole === 'supplier'
+  const businessName = isSupplier
     ? (supplierProfile?.data?.shopName || "Your Supplier Business")
     : (vendorProfile?.data?.businessName || vendorProfile?.data?.shopName || "Your Salon");
 
@@ -140,22 +142,22 @@ export default function ProductsTab({
 
   // Fetch products with better loading state
   // Use different endpoints for vendors and suppliers
-  const { data: crmProductsData, isLoading: crmProductsLoading, isFetching: crmProductsFetching } = useGetCrmProductsQuery(
+  const { data: crmProductsData, isLoading: crmProductsLoading, isFetching: crmProductsFetching, refetch: refetchCrmProducts } = useGetCrmProductsQuery(
     { vendorId: VENDOR_ID },
-    { skip: !VENDOR_ID || userRole === 'supplier' }
+    { skip: !VENDOR_ID || isSupplier }
   );
 
-  const { data: supplierProductsData, isLoading: supplierProductsLoading, isFetching: supplierProductsFetching } = useGetSupplierProductsQuery(
+  const { data: supplierProductsData, isLoading: supplierProductsLoading, isFetching: supplierProductsFetching, refetch: refetchSupplierProducts } = useGetSupplierProductsQuery(
     undefined,
-    { skip: !VENDOR_ID || userRole !== 'supplier' }
+    { skip: !VENDOR_ID || !isSupplier }
   );
 
   // Use appropriate data based on user role and extract the data array
-  const productsData = userRole === 'supplier'
+  const productsData = isSupplier
     ? (supplierProductsData?.data || supplierProductsData)
     : (crmProductsData?.data || crmProductsData);
-  const productsLoading = userRole === 'supplier' ? supplierProductsLoading : crmProductsLoading;
-  const productsFetching = userRole === 'supplier' ? supplierProductsFetching : crmProductsFetching;
+  const productsLoading = isSupplier ? supplierProductsLoading : crmProductsLoading;
+  const productsFetching = isSupplier ? supplierProductsFetching : crmProductsFetching;
 
   // Fetch clients
   const { data: clientList = [], isLoading: clientsLoading } = useGetClientsQuery({
@@ -312,18 +314,36 @@ export default function ProductsTab({
     }
   };
 
+  // Helper to get effective price
+  const getEffectivePrice = (product: Product | CartItem) => {
+    return product.salePrice > 0 ? product.salePrice : product.price;
+  };
+
   // Add item to cart
   const addToCart = (product: Product) => {
+    if (product.stock <= 0) {
+      toast.error(`${product.productName} is out of stock`);
+      return;
+    }
+
+    const effectivePrice = getEffectivePrice(product);
+
     setCart(prevCart => {
       const existingItem = prevCart.find(item => item._id === product._id);
 
       if (existingItem) {
+        // Optional: Check if quantity exceeds stock
+        if (existingItem.quantity >= product.stock) {
+          toast.error(`Cannot add more than ${product.stock} items of ${product.productName}`);
+          return prevCart;
+        }
+
         return prevCart.map(item =>
           item._id === product._id
             ? {
               ...item,
               quantity: item.quantity + 1,
-              totalPrice: (item.quantity + 1) * item.price
+              totalPrice: (item.quantity + 1) * getEffectivePrice(item)
             }
             : item
         );
@@ -333,7 +353,7 @@ export default function ProductsTab({
           {
             ...product,
             quantity: 1,
-            totalPrice: product.price
+            totalPrice: effectivePrice
           }
         ];
       }
@@ -355,7 +375,7 @@ export default function ProductsTab({
           ? {
             ...item,
             quantity,
-            totalPrice: quantity * item.price
+            totalPrice: quantity * getEffectivePrice(item)
           }
           : item
       )
@@ -369,19 +389,36 @@ export default function ProductsTab({
   };
 
   // Calculate cart totals
-  const originalSubtotal = useMemo(() => {
-    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const displaySubtotal = useMemo(() => {
+    return cart.reduce((sum, item) => sum + (getEffectivePrice(item) * item.quantity), 0);
   }, [cart]);
+
+  // Helper to get GST for an item
+  const getItemGST = (item: CartItem) => {
+    const category = categories.find((cat: any) => cat.name === item.category);
+    if (!category || category.gstType === 'none') return 0;
+
+    const baseAmount = item.totalPrice;
+    if (category.gstType === 'fixed') {
+      return category.gstValue * item.quantity;
+    } else if (category.gstType === 'percentage') {
+      return (baseAmount * category.gstValue) / 100;
+    }
+    return 0;
+  };
 
   const totalDiscount = useMemo(() => {
     return cart.reduce((sum, item) => {
-      const itemTotal = item.price * item.quantity;
+      // Manual discount applied later
+      const itemBaseTotal = getEffectivePrice(item) * item.quantity;
+      let manualDiscount = 0;
       if (item.discountType === 'flat') {
-        return sum + (item.discount || 0);
+        manualDiscount = item.discount || 0;
       } else if (item.discountType === 'percentage') {
-        return sum + (itemTotal * (item.discount || 0) / 100);
+        manualDiscount = (itemBaseTotal * (item.discount || 0) / 100);
       }
-      return sum;
+
+      return sum + manualDiscount;
     }, 0);
   }, [cart]);
 
@@ -389,7 +426,13 @@ export default function ProductsTab({
     return cart.reduce((sum, item) => sum + item.totalPrice, 0);
   }, [cart]);
 
-  const taxAmount = useMemo(() => (subtotal * taxRate) / 100, [subtotal, taxRate]);
+  const taxAmount = useMemo(() => {
+    // Standard platform/vendor tax + Item-specific GST from categories
+    const itemGSTTotal = cart.reduce((sum, item) => sum + getItemGST(item), 0);
+    const baseTax = (subtotal * taxRate) / 100;
+    return baseTax + itemGSTTotal;
+  }, [cart, subtotal, taxRate, categories]);
+
   const total = useMemo(() => subtotal + taxAmount, [subtotal, taxAmount]);
 
   // Clear cart
@@ -501,7 +544,7 @@ export default function ProductsTab({
         status: "Completed",
         items: cart,
         subtotal: subtotal,
-        originalSubtotal: originalSubtotal,
+        originalSubtotal: displaySubtotal,
         discount: totalDiscount,
         tax: taxAmount,
         platformFee: 0, // You can adjust this as needed
@@ -517,6 +560,13 @@ export default function ProductsTab({
       // Show success toast
       toast.dismiss(); // Dismiss loading toast
       toast.success("Order saved successfully!");
+
+      // Force a refetch of products to update stock levels immediately
+      if (isSupplier) {
+        refetchSupplierProducts();
+      } else {
+        refetchCrmProducts();
+      }
 
       // Clear cart and reset
       clearCart();
@@ -957,7 +1007,7 @@ export default function ProductsTab({
 
   // Calculate item total price with discount
   const calculateItemTotalPrice = (item: CartItem, quantity: number, discount: number, discountType: 'flat' | 'percentage') => {
-    const basePrice = item.price * quantity;
+    const basePrice = getEffectivePrice(item) * quantity;
     if (discountType === 'flat') {
       return Math.max(0, basePrice - discount);
     } else {
@@ -1029,22 +1079,52 @@ export default function ProductsTab({
                     </TableRow>
                   ) : (
                     products.map((product) => (
-                      <TableRow key={product._id}>
+                      <TableRow key={product._id} className={product.stock <= 0 ? "opacity-60" : ""}>
                         <TableCell>
-                          <div>
+                          <div className="flex flex-col gap-1">
                             <div className="font-medium">{product.productName}</div>
+                            <div className="flex flex-wrap gap-1">
+                              {product.stock <= 0 && (
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-100">
+                                  Out of Stock
+                                </span>
+                              )}
+                              {(() => {
+                                const category = categories.find((cat: any) => cat.name === product.category);
+                                if (category && category.gstType !== 'none') {
+                                  return (
+                                    <span className="text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                                      GST: {category.gstType === 'percentage' ? `${category.gstValue}%` : `₹${category.gstValue}`}
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
                           </div>
                         </TableCell>
-                        <TableCell>₹{product.price.toFixed(2)}</TableCell>
-                        <TableCell>{product.stock}</TableCell>
+                        <TableCell>
+                          {product.salePrice > 0 ? (
+                            <div className="flex flex-col">
+                              <span className="text-xs text-muted-foreground line-through">₹{product.price.toFixed(2)}</span>
+                              <span className="font-bold text-green-600">₹{product.salePrice.toFixed(2)}</span>
+                            </div>
+                          ) : (
+                            <span>₹{product.price.toFixed(2)}</span>
+                          )}
+                        </TableCell>
+                        <TableCell className={product.stock <= 0 ? "text-red-600 font-bold" : ""}>
+                          {product.stock}
+                        </TableCell>
                         <TableCell className="text-right">
                           <Button
                             size="sm"
                             onClick={() => addToCart(product)}
-                            className="h-8 px-2"
+                            className={`h-8 px-2 ${product.stock <= 0 ? "bg-gray-100 text-gray-400 hover:bg-gray-100 cursor-not-allowed" : ""}`}
+                            disabled={product.stock <= 0}
                           >
                             <Plus className="h-4 w-4 mr-1" />
-                            Add
+                            {product.stock <= 0 ? "No Stock" : "Add"}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -1118,7 +1198,7 @@ export default function ProductsTab({
             )}
 
             {/* Show when search is focused or has content */}
-            {(isSearchFocused || clientSearchTerm) && (
+            {(isSearchFocused || clientSearchTerm || clientsLoading) && (
               <div className="space-y-3">
                 {/* Add New Client Button */}
                 <Button
@@ -1132,38 +1212,44 @@ export default function ProductsTab({
 
                 {/* Client List */}
                 <div className="space-y-2 max-h-48 overflow-y-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#cbd5e1 #f1f5f9' }}>
-                  {filteredClients.map((client: Client) => (
-                    <div
-                      key={client._id}
-                      className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${selectedClient?._id === client._id
-                        ? 'bg-blue-50 border-blue-300 shadow-md'
-                        : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm'
-                        }`}
-                      onMouseDown={(e) => {
-                        e.preventDefault(); // Prevent input blur
-                        handleSelectClient(client);
-                      }}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <img
-                          src={client.profilePicture || `https://placehold.co/32x32.png?text=${client.fullName[0]}`}
-                          alt={client.fullName}
-                          className="w-8 h-8 rounded-full object-cover border border-white shadow-sm"
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900 text-sm">{client.fullName}</p>
-                          <p className="text-xs text-gray-600">{client.phone}</p>
-                        </div>
-                        {selectedClient?._id === client._id && (
-                          <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
-                            <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
+                  {clientsLoading ? (
+                    <div className="p-3 text-center text-gray-500">Loading clients...</div>
+                  ) : filteredClients.length > 0 ? (
+                    filteredClients.map((client: Client) => (
+                      <div
+                        key={client._id}
+                        className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 ${selectedClient?._id === client._id
+                          ? 'bg-blue-50 border-blue-300 shadow-md'
+                          : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm'
+                          }`}
+                        onMouseDown={(e) => {
+                          e.preventDefault(); // Prevent input blur
+                          handleSelectClient(client);
+                        }}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <img
+                            src={client.profilePicture || `https://placehold.co/32x32.png?text=${client.fullName[0]}`}
+                            alt={client.fullName}
+                            className="w-8 h-8 rounded-full object-cover border border-white shadow-sm"
+                          />
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900 text-sm">{client.fullName}</p>
+                            <p className="text-xs text-gray-600">{client.phone}</p>
                           </div>
-                        )}
+                          {selectedClient?._id === client._id && (
+                            <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+                              <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : clientSearchTerm && (
+                    <div className="p-3 text-center text-gray-500">No clients found matching "{clientSearchTerm}"</div>
+                  )}
                 </div>
               </div>
             )}
@@ -1199,7 +1285,16 @@ export default function ProductsTab({
                             <div className="font-medium line-clamp-2">{item.productName}</div>
                           </div>
                         </TableCell>
-                        <TableCell>₹{item.price.toFixed(2)}</TableCell>
+                        <TableCell>
+                          {item.salePrice > 0 ? (
+                            <div className="flex flex-col">
+                              <span className="text-xs text-muted-foreground line-through">₹{item.price.toFixed(2)}</span>
+                              <span className="font-bold text-green-600">₹{item.salePrice.toFixed(2)}</span>
+                            </div>
+                          ) : (
+                            <span>₹{item.price.toFixed(2)}</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Button
@@ -1247,7 +1342,7 @@ export default function ProductsTab({
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>₹{subtotal.toFixed(2)}</span>
+                <span>₹{displaySubtotal.toFixed(2)}</span>
               </div>
               {totalDiscount > 0 && (
                 <div className="flex justify-between text-green-600">
@@ -1256,13 +1351,13 @@ export default function ProductsTab({
                 </div>
               )}
               {taxAmount > 0 && (
-                <div className="flex justify-between">
-                  <span>Tax ({taxRate}%)</span>
+                <div className="flex justify-between font-medium text-xs text-blue-600">
+                  <span>GST/Tax Component</span>
                   <span>₹{taxAmount.toFixed(2)}</span>
                 </div>
               )}
               <div className="border-t border-gray-200 pt-2 flex justify-between font-semibold">
-                <span>Total</span>
+                <span>Total Amount</span>
                 <span className="text-lg">₹{total.toFixed(2)}</span>
               </div>
             </div>
@@ -1431,60 +1526,121 @@ export default function ProductsTab({
         </DialogContent>
       </Dialog>
 
-      {/* Add Client Modal */}
+      {/* Add New Client Modal */}
       <Dialog open={isAddClientModalOpen} onOpenChange={setIsAddClientModalOpen}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Client</DialogTitle>
             <DialogDescription>
-              Enter client details to add them to your client list
+              Enter the details for the new client.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1">
-                <Label htmlFor="fullName">Full Name *</Label>
+          <div className="space-y-4 py-4">
+            {/* Profile Picture */}
+            <div className="space-y-2">
+              <div className="flex justify-center">
+                <div className="relative">
+                  <p className="text-sm font-medium text-gray-700 text-center mb-2">Profile Photo</p>
+                  <div className="relative">
+                    {clientFormData.profilePicture ? (
+                      <img
+                        src={clientFormData.profilePicture}
+                        alt="Profile Preview"
+                        className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-md mx-auto"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center mx-auto">
+                        <span className="text-2xl text-gray-500">
+                          {clientFormData.fullName ? clientFormData.fullName.charAt(0).toUpperCase() : "U"}
+                        </span>
+                      </div>
+                    )}
+                    <label
+                      htmlFor="profilePicture"
+                      className="absolute bottom-0 right-0 bg-blue-600 rounded-full p-1 cursor-pointer shadow-md hover:bg-blue-700 transition-colors"
+                    >
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </label>
+                    <input
+                      id="profilePicture"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleClientFileChange}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Full Name and Email */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="fullName">Full Name <span className="text-red-500">*</span></Label>
                 <Input
                   id="fullName"
                   name="fullName"
                   value={clientFormData.fullName}
                   onChange={handleClientInputChange}
-                  placeholder="John Doe"
+                  placeholder="Enter full name"
+                  required
                 />
               </div>
-              <div className="flex-1">
-                <Label htmlFor="phone">Phone *</Label>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={clientFormData.email}
+                  onChange={handleClientInputChange}
+                  placeholder="Enter email address"
+                />
+              </div>
+            </div>
+
+            {/* Phone and Birthday */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone <span className="text-red-500">*</span></Label>
                 <Input
                   id="phone"
                   name="phone"
+                  type="tel"
                   value={clientFormData.phone}
                   onChange={handleClientInputChange}
-                  placeholder="1234567890"
+                  inputMode="numeric"
+                  pattern="\d{10}"
                   maxLength={10}
+                  placeholder="Enter 10-digit phone number"
+                  title="Phone number must be exactly 10 digits"
+                  onKeyDown={(e) => { if (e.key === ' ') e.preventDefault(); }}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="birthdayDate">Birthday Date</Label>
+                <Input
+                  id="birthdayDate"
+                  name="birthdayDate"
+                  type="date"
+                  value={clientFormData.birthdayDate}
+                  onChange={handleClientInputChange}
                 />
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={clientFormData.email}
-                onChange={handleClientInputChange}
-                placeholder="john@example.com"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
+            {/* Gender and Country */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
                 <Label htmlFor="gender">Gender</Label>
-                <Select
-                  value={clientFormData.gender}
-                  onValueChange={(value) => handleClientSelectChange('gender', value)}
-                >
+                <Select value={clientFormData.gender} onValueChange={(value) => handleClientSelectChange("gender", value)}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
@@ -1496,77 +1652,64 @@ export default function ProductsTab({
                 </Select>
               </div>
 
-              <div>
-                <Label htmlFor="birthdayDate">Birthday</Label>
-                <Input
-                  id="birthdayDate"
-                  name="birthdayDate"
-                  type="date"
-                  value={clientFormData.birthdayDate}
-                  onChange={handleClientInputChange}
-                />
-              </div>
-            </div>
-
-            <div>
-              <Label htmlFor="address">Address</Label>
-              <Textarea
-                id="address"
-                name="address"
-                value={clientFormData.address}
-                onChange={handleClientInputChange}
-                placeholder="123 Main St, City, State"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
+              <div className="space-y-2">
                 <Label htmlFor="country">Country</Label>
                 <Input
                   id="country"
                   name="country"
                   value={clientFormData.country}
                   onChange={handleClientInputChange}
-                  placeholder="India"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="occupation">Occupation</Label>
-                <Input
-                  id="occupation"
-                  name="occupation"
-                  value={clientFormData.occupation}
-                  onChange={handleClientInputChange}
-                  placeholder="Software Engineer"
+                  placeholder="e.g., India"
                 />
               </div>
             </div>
 
-            <div>
+            {/* Occupation */}
+            <div className="space-y-2">
+              <Label htmlFor="occupation">Occupation</Label>
+              <Input
+                id="occupation"
+                name="occupation"
+                value={clientFormData.occupation}
+                onChange={handleClientInputChange}
+                placeholder="e.g., Software Engineer"
+              />
+            </div>
+
+            {/* Address */}
+            <div className="space-y-2">
+              <Label htmlFor="address">Address</Label>
+              <Textarea
+                id="address"
+                name="address"
+                value={clientFormData.address}
+                onChange={handleClientInputChange}
+                placeholder="Enter full address"
+                rows={3}
+              />
+            </div>
+
+            {/* Preferences */}
+            <div className="space-y-2">
               <Label htmlFor="preferences">Preferences</Label>
               <Textarea
                 id="preferences"
                 name="preferences"
                 value={clientFormData.preferences}
                 onChange={handleClientInputChange}
-                placeholder="Client preferences and notes"
+                placeholder="Enter any client preferences or notes"
+                rows={3}
               />
             </div>
           </div>
 
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsAddClientModalOpen(false)}
-            >
-              Cancel
-            </Button>
+            <Button variant="secondary" onClick={() => setIsAddClientModalOpen(false)}>Cancel</Button>
             <Button
               onClick={handleSaveClient}
               disabled={isCreatingClient || !clientFormData.fullName || !clientFormData.phone || clientFormData.phone.length !== 10}
             >
-              {isCreatingClient ? 'Saving...' : 'Save Client'}
+              {isCreatingClient ? "Saving..." : "Save Client"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1841,22 +1984,18 @@ export default function ProductsTab({
                         <span className="text-green-600 text-xs font-medium">Discount</span>
                         <span className="font-medium text-green-600 text-xs">-₹{(invoiceData.discount || 0).toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-xs">Tax ({taxRate}%)</span>
-                        <span className="font-medium text-xs">₹{invoiceData.tax.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-xs">Platform Fee</span>
-                        <span className="font-medium text-xs">₹{invoiceData.platformFee.toFixed(2)}</span>
-                      </div>
+                      {invoiceData.tax > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-xs text-blue-600 font-medium">GST/Tax Component</span>
+                          <span className="font-medium text-xs text-blue-600">₹{invoiceData.tax.toFixed(2)}</span>
+                        </div>
+                      )}
+
                       <div className="flex justify-between items-center pt-2 border-t border-gray-300">
                         <span className="font-semibold text-gray-900 text-sm">Total</span>
                         <span className="font-bold text-gray-900 text-base">₹{invoiceData.total.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between items-center pt-1">
-                        <span className="font-semibold text-gray-900 text-sm">Balance</span>
-                        <span className="font-bold text-red-600 text-base">₹{invoiceData.balance.toFixed(2)}</span>
-                      </div>
+
                     </div>
                   </div>
                 </div>
