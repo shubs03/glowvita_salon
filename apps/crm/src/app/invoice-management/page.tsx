@@ -31,8 +31,10 @@ if (typeof window !== 'undefined') {
 }
 
 export default function InvoiceManagementPage() {
-  const { user } = useCrmAuth();
+  const { user, role: authRole } = useCrmAuth();
   const VENDOR_ID = user?._id || "";
+  const userRole = (authRole || user?.role || "").toLowerCase();
+  const isSupplier = userRole === 'supplier';
 
   // States
   const [billings, setBillings] = useState<Billing[]>([]);
@@ -58,13 +60,10 @@ export default function InvoiceManagementPage() {
 
   // Fetch appointments
   const { data: appointmentsData, isLoading: isAppointmentsLoading, refetch: refetchAppointments } = useGetAppointmentsQuery(undefined, {
-    skip: !VENDOR_ID
+    skip: !VENDOR_ID || isSupplier
   });
 
   // Fetch vendor profile
-  const { role: authRole } = useCrmAuth();
-  const userRole = (authRole || user?.role || "").toLowerCase();
-  const isSupplier = userRole === 'supplier';
 
   const { data: vendorProfile } = useGetVendorProfileQuery(undefined, {
     skip: !VENDOR_ID || isSupplier
@@ -355,7 +354,7 @@ export default function InvoiceManagementPage() {
         <InvoiceHeader />
 
         {/* Summary Stats - Combined Billing & Appointments */}
-        <SummaryStats billings={billings} appointments={appointments} activeTab={activeTab} />
+        <SummaryStats billings={billings} appointments={appointments} activeTab={activeTab} isSupplier={isSupplier} />
 
         <div className="">
           <div className="">
@@ -377,6 +376,7 @@ export default function InvoiceManagementPage() {
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
                 exportData={activeTab === 'billing' ? billings : appointments}
+                isSupplier={isSupplier}
               />
 
               <div className="mt-6">

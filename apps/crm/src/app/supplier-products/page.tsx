@@ -24,6 +24,7 @@ import FiltersToolbar from './components/FiltersToolbar';
 import ProductCard from './components/ProductCard';
 import ProductListItem from './components/ProductListItem';
 import ProductModal from './components/ProductModal';
+import ProductViewModal from './components/ProductViewModal';
 import CategoryModal from './components/CategoryModal';
 import DeleteModal from './components/DeleteModal';
 import PaginationControls from './components/PaginationControls';
@@ -64,13 +65,13 @@ interface Category {
 
 export default function SupplierProductsPage() {
   const { user } = useCrmAuth();
-  
+
   // RTK Query Hooks
   const { data: productsData = [], isLoading: isProductsLoading, refetch: refetchProducts } = useGetCrmProductsQuery(user?._id, { skip: !user });
   const [createProduct, { isLoading: isCreatingProduct }] = useCreateCrmProductMutation();
   const [updateProduct, { isLoading: isUpdatingProduct }] = useUpdateCrmProductMutation();
   const [deleteProduct, { isLoading: isDeletingProduct }] = useDeleteCrmProductMutation();
-  
+
   const { data: categoriesDatas = { data: [] }, isLoading: isCategoriesLoading, refetch: refetchCategories } = useGetAdminProductCategoriesQuery({});
   const categoriesData = categoriesDatas?.data || [];
   const [createCategory, { isLoading: isCreatingCategory }] = useCreateAdminProductCategoryMutation();
@@ -81,12 +82,13 @@ export default function SupplierProductsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  
+
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
-  
+
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
   const [formData, setFormData] = useState<Partial<Product>>({});
@@ -94,7 +96,7 @@ export default function SupplierProductsPage() {
   // Filtered products
   const filteredProducts = useMemo(() => {
     if (!Array.isArray(productsData)) return [];
-    return productsData.filter(p => 
+    return productsData.filter(p =>
       p.productName.toLowerCase().includes(searchTerm.toLowerCase()) &&
       (statusFilter === 'all' || p.status === statusFilter)
     );
@@ -111,36 +113,41 @@ export default function SupplierProductsPage() {
   // Calculate product statistics
   const productStats = useMemo(() => {
     if (!Array.isArray(productsData)) return { totalProducts: 0, pendingProducts: 0, categories: 0, totalValue: 0 };
-    
+
     const totalProducts = productsData.length;
     const pendingProducts = productsData.filter(p => p.status === 'pending').length;
-    
+
     const uniqueCategories = [...new Set(productsData.map(p => p.category))];
     const categories = uniqueCategories.length;
-    
+
     const totalValue = productsData.reduce((sum, p) => sum + p.salePrice * p.stock, 0);
-    
+
     return { totalProducts, pendingProducts, categories, totalValue };
   }, [productsData]);
 
   // Calculate filtered statistics
   const filteredProductStats = useMemo(() => {
     if (!Array.isArray(filteredProducts)) return { filteredTotalValue: 0, filteredCategories: 0 };
-    
+
     const filteredTotalValue = filteredProducts.reduce((sum, p) => sum + p.salePrice * p.stock, 0);
     const uniqueFilteredCategories = [...new Set(filteredProducts.map(p => p.category))];
     const filteredCategories = uniqueFilteredCategories.length;
-    
+
     return { filteredTotalValue, filteredCategories };
   }, [filteredProducts]);
 
   // Handlers
   const handleOpenProductModal = (product: Product | null = null) => {
     setSelectedProduct(product);
-    setFormData(product || { 
-      price: 0, salePrice: 0, stock: 0, isActive: true, status: 'pending' 
+    setFormData(product || {
+      price: 0, salePrice: 0, stock: 0, isActive: true, status: 'pending'
     });
     setIsProductModalOpen(true);
+  };
+
+  const handleViewProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setIsViewModalOpen(true);
   };
 
   const handleSaveProduct = async () => {
@@ -169,7 +176,7 @@ export default function SupplierProductsPage() {
       toast.error(error.data?.message || `Failed to save product.`);
     }
   };
-  
+
   const handleDeleteProduct = async () => {
     if (selectedProduct) {
       try {
@@ -213,7 +220,7 @@ export default function SupplierProductsPage() {
               </div>
             </div>
           </div>
-          
+
           <Card className="bg-card border border-border rounded-lg">
             <CardHeader className="pb-6">
               <div className="flex justify-between items-center">
@@ -297,7 +304,7 @@ export default function SupplierProductsPage() {
                 <p className="text-muted-foreground mb-8 text-lg max-w-md mx-auto leading-relaxed">
                   Create your first product to start building your catalog.
                 </p>
-                <Button 
+                <Button
                   onClick={() => handleOpenProductModal()}
                   className="rounded-lg bg-primary hover:bg-primary/90 px-6 h-12"
                 >
@@ -311,6 +318,7 @@ export default function SupplierProductsPage() {
                   <ProductCard
                     key={product._id}
                     product={product}
+                    onView={handleViewProduct}
                     onEdit={(p) => handleOpenProductModal(p)}
                     onDelete={(p) => { setSelectedProduct(p); setIsDeleteModalOpen(true); }}
                   />
@@ -322,13 +330,14 @@ export default function SupplierProductsPage() {
                   <ProductListItem
                     key={product._id}
                     product={product}
+                    onView={handleViewProduct}
                     onEdit={(p) => handleOpenProductModal(p)}
                     onDelete={(p) => { setSelectedProduct(p); setIsDeleteModalOpen(true); }}
                   />
                 ))}
               </div>
             )}
-            
+
             {paginatedProducts.length > 0 && (
               <div className="mt-8">
                 <PaginationControls
@@ -357,6 +366,13 @@ export default function SupplierProductsPage() {
           onAddCategory={() => setIsCategoryModalOpen(true)}
         />
 
+        <ProductViewModal
+          isOpen={isViewModalOpen}
+          onClose={() => setIsViewModalOpen(false)}
+          product={selectedProduct}
+          categories={categoriesData}
+        />
+
         <CategoryModal
           isOpen={isCategoryModalOpen}
           onClose={() => setIsCategoryModalOpen(false)}
@@ -373,8 +389,8 @@ export default function SupplierProductsPage() {
           isDeleting={isDeletingProduct}
           productName={selectedProduct?.productName}
         />
-        
-        <BulkProductAddition 
+
+        <BulkProductAddition
           isOpen={isBulkModalOpen}
           onOpenChange={setIsBulkModalOpen}
           onProductsAdded={refetchProducts}

@@ -65,6 +65,7 @@ export const supplierNavItems: NavItem[] = [
   { title: "Reviews", href: "/reviews", Icon: FaStar, permission: 'reviews_view' },
   { title: "Orders", href: "/orders", Icon: FaShoppingCart, permission: 'orders_view' },
   { title: "Sales", href: "/sales", Icon: FaDollarSign, permission: 'sales_view' },
+  { title: "Invoice Management", href: "/invoice-management", Icon: FaReceipt, permission: 'invoice_management_view' },
   { title: "Expenses", href: "/expenses", Icon: FaReceipt, permission: 'expenses_view' },
   { title: "Offers & Coupons", href: "/offers-coupons", Icon: FaGift, permission: 'offers_view' },
   { title: "Referrals", href: "/referrals", Icon: FaUserFriends, permission: 'referrals_view' },
