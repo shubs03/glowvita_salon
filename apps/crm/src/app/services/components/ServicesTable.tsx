@@ -51,6 +51,7 @@ const ServicesTable = ({
               <TableHead>Category</TableHead>
               <TableHead>Duration</TableHead>
               <TableHead>Price</TableHead>
+              <TableHead>Discount Price</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Active</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -60,7 +61,7 @@ const ServicesTable = ({
             {isError && !isNoServicesError ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="text-center py-10 text-muted-foreground"
                 >
                   Failed to load services. Please try again later.
@@ -100,6 +101,7 @@ const ServicesTable = ({
                     </div>
                   </TableCell>
                   <TableCell>₹{service.price?.toFixed(2)}</TableCell>
+                  <TableCell>₹{service.discountedPrice?.toFixed(2) || '0.00'}</TableCell>
                   <TableCell>
                     <div className="flex flex-col items-start gap-1">
                       <Badge
@@ -181,7 +183,7 @@ const ServicesTable = ({
             ) : (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="text-center py-10 text-muted-foreground"
                 >
                   {isNoServicesError ? "No services found. Add your first service to get started!" : "No matching services found."}

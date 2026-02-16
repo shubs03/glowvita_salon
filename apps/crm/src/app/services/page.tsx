@@ -238,7 +238,7 @@ export default function ServicesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  {["Service", "Category", "Duration", "Price", "Status", "Active", "Actions"].map((_, i) => (
+                  {["Service", "Category", "Duration", "Price", "Discount Price", "Status", "Active", "Actions"].map((_, i) => (
                     <TableHead key={i}>
                       <Skeleton className="h-5 w-full" />
                     </TableHead>
@@ -254,7 +254,7 @@ export default function ServicesPage() {
                         <Skeleton className="h-5 w-32" />
                       </div>
                     </TableCell>
-                    {[...Array(6)].map((_, j) => (
+                    {[...Array(7)].map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -303,6 +303,7 @@ export default function ServicesPage() {
             { header: 'Category', key: 'categoryName' },
             { header: 'Duration', key: 'duration', transform: (val) => `${val} mins` },
             { header: 'Price', key: 'price', transform: (val) => `₹${val?.toFixed(2)}` },
+            { header: 'Discount Price', key: 'discountedPrice', transform: (val) => `₹${val?.toFixed(2) || '0.00'}` },
             { header: 'Status', key: 'status' },
             { header: 'Online Booking', key: 'onlineBooking', transform: (val) => val ? 'Yes' : 'No' }
           ]}

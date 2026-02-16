@@ -393,13 +393,13 @@ export const POST = withSubscriptionCheck(async (req) => {
                 endTime: item.endTime || body.endTime,
                 duration: item.duration || body.duration,
                 amount: item.amount || item.price || 0,
-                // Include add-ons if they exist
-                addOns: item.selectedAddons?.map(addon => ({
+                // Include add-ons if they exist - check both 'addOns' and 'selectedAddons'
+                addOns: (item.addOns || item.selectedAddons || []).map(addon => ({
                     name: addon.name,
                     price: addon.price,
                     duration: addon.duration || 0,
                     _id: addon._id || addon.id
-                })) || []
+                }))
             }));
         } else {
             // For single service appointments, create a single service item
@@ -412,13 +412,13 @@ export const POST = withSubscriptionCheck(async (req) => {
                 endTime: body.endTime,
                 duration: body.duration,
                 amount: body.amount,
-                // Include add-ons if they exist in the main body
-                addOns: body.selectedAddons?.map(addon => ({
+                // Include add-ons if they exist in the main body - check both 'addOns' and 'selectedAddons'
+                addOns: (body.addOns || body.selectedAddons || []).map(addon => ({
                     name: addon.name,
                     price: addon.price,
                     duration: addon.duration || 0,
                     _id: addon._id || addon.id
-                })) || []
+                }))
             }];
         }
 

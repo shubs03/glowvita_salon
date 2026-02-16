@@ -74,7 +74,9 @@
     "./modules/scheduling/ConflictChecker": "./src/modules/scheduling/ConflictChecker.js",
     "./utils/regionQuery": "./src/utils/regionQuery.js",
     "./utils/assignRegion.js": "./src/utils/assignRegion.js",
-    "./VPSUpload": "./VPSUpload.js"
+    "./VPSUpload": "./VPSUpload.js",
+    "./modules/scheduling/AutoCancellation": "./src/modules/scheduling/AutoCancellation.js",
+    "./modules/scheduling/scheduledJobs": "./src/modules/scheduling/scheduledJobs.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

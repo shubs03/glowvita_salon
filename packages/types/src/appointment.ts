@@ -24,6 +24,7 @@ export interface ServiceItem {
     name: string;
     price: number;
     duration: number;
+    [key: string]: any;
   }>;
 }
 
@@ -70,10 +71,17 @@ export interface Appointment {
     landmark?: string;
   };
   weddingPackageDetails?: {
+    packageId?: string;
     packageName?: string;
     totalAmount?: number;
     totalDuration?: number;
     venueAddress?: string;
+    packageServices?: Array<{
+      serviceId: string;
+      serviceName: string;
+      _id?: string;
+    }>;
+    teamMembers?: string[];
   };
   payment?: {
     paid?: number;
@@ -82,4 +90,11 @@ export interface Appointment {
     paymentMethod?: string;
     [key: string]: any;
   };
+  addOns?: Array<{
+    _id: string;
+    name: string;
+    price: number;
+    duration: number;
+    [key: string]: any;
+  }>;
 }
