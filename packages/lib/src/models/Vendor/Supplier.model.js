@@ -29,6 +29,7 @@ const supplierSchema = new mongoose.Schema({
   },
   address: { type: String, required: true, trim: true },
   businessRegistrationNo: { type: String, trim: true },
+  gstNo: { type: String, trim: true },
   supplierType: { type: String, required: true },
   profileImage: { type: String }, // URL to the uploaded image
   gallery: [{ type: String }], // Array of gallery image URLs

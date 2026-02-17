@@ -19,7 +19,7 @@ export const GET = authMiddlewareCrm(async (req) => {
       return NextResponse.json({ message: "Supplier ID is required" }, { status: 400 });
     }
 
-    const supplier = await SupplierModel.findById(supplierId).select('firstName lastName shopName description email mobile country state city pincode address supplierType businessRegistrationNo profileImage gallery documents bankDetails status referralCode licenseFiles subscription smsBalance taxes');
+    const supplier = await SupplierModel.findById(supplierId).select('firstName lastName shopName description email mobile country state city pincode address supplierType businessRegistrationNo gstNo profileImage gallery documents bankDetails status referralCode licenseFiles subscription smsBalance taxes');
 
     console.log("Supplier data from DB:", supplier);
 
@@ -114,7 +114,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
     const allowedFields = [
       'firstName', 'lastName', 'shopName', 'description', 'email', 'mobile',
       'country', 'state', 'city', 'pincode', 'address', 'supplierType',
-      'businessRegistrationNo', 'profileImage', 'gallery', 'documents', 'bankDetails', 'licenseFiles', 'referralCode', 'taxes'
+      'businessRegistrationNo', 'gstNo', 'profileImage', 'gallery', 'documents', 'bankDetails', 'licenseFiles', 'referralCode', 'taxes'
     ];
 
     // Keep existing subscription data unless specifically provided in the update

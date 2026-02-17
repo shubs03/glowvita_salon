@@ -32,6 +32,7 @@ interface FormData {
   password: string;
   confirmPassword: string;
   referredByCode: string;
+  gstNo: string;
 }
 
 interface GooglePlacesResult {
@@ -95,6 +96,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
     password: '',
     confirmPassword: '',
     referredByCode: refCode || '',
+    gstNo: '',
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -665,13 +667,22 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                     {renderError('confirmPassword')}
                   </div>
                 </div>
-                <Input
-                  name="referredByCode"
-                  placeholder="Referral Code (Optional)"
-                  onChange={handleChange}
-                  value={formData.referredByCode}
-                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+                  <Input
+                    name="referredByCode"
+                    placeholder="Referral Code (Optional)"
+                    onChange={handleChange}
+                    value={formData.referredByCode}
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                  />
+                  <Input
+                    name="gstNo"
+                    placeholder="GST No (Optional)"
+                    onChange={handleChange}
+                    value={formData.gstNo}
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                  />
+                </div>
                 {renderError('referredByCode')}
               </div>
             )}

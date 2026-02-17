@@ -41,6 +41,7 @@ interface FormData {
   pincode: string;
   location: { lat: number; lng: number } | null;
   referredByCode: string;
+  gstNo: string;
 }
 
 interface GooglePlacesResult {
@@ -49,8 +50,8 @@ interface GooglePlacesResult {
 }
 
 interface StepIndicatorProps {
-    currentStep: number;
-    setStep: (step: number) => void;
+  currentStep: number;
+  setStep: (step: number) => void;
 }
 
 const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, setStep }) => {
@@ -58,7 +59,7 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, setStep }) =
     <div className="w-full mb-4 mt-2">
       <div className="flex space-x-2">
         {/* Step 1 Line */}
-        <div 
+        <div
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
             currentStep >= 1 ? "bg-purple-600" : "bg-gray-200"
@@ -66,7 +67,7 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, setStep }) =
           onClick={() => currentStep > 1 && setStep(1)}
         />
         {/* Step 2 Line */}
-        <div 
+        <div
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
             currentStep >= 2 ? "bg-purple-600" : "bg-gray-200"
@@ -74,7 +75,7 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, setStep }) =
           onClick={() => currentStep > 2 && setStep(2)}
         />
         {/* Step 3 Line */}
-        <div 
+        <div
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
             currentStep >= 3 ? "bg-purple-600" : "bg-gray-200"
@@ -88,7 +89,7 @@ const StepIndicator: React.FC<StepIndicatorProps> = ({ currentStep, setStep }) =
 
 
 interface VendorFormProps {
-    onSuccess: () => void;
+  onSuccess: () => void;
 }
 
 export function VendorForm({ onSuccess }: VendorFormProps) {
@@ -115,6 +116,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
     pincode: '',
     location: null,
     referredByCode: refCode || '',
+    gstNo: '',
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -135,7 +137,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
 
   useEffect(() => {
     if (refCode) {
-      setFormData(prev => ({...prev, referredByCode: refCode}));
+      setFormData(prev => ({ ...prev, referredByCode: refCode }));
     }
   }, [refCode]);
 
@@ -143,7 +145,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handleCheckboxChange = (id: SubCategory, checked: boolean) => {
     setFormData(prev => ({
       ...prev,
@@ -189,7 +191,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
+
   const validateStep2 = () => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.businessName) newErrors.businessName = 'Business name is required';
@@ -217,8 +219,8 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateStep1() || !validateStep2() || !validateStep3()) {
-        toast.error("Please ensure all required fields are filled correctly.");
-        return;
+      toast.error("Please ensure all required fields are filled correctly.");
+      return;
     }
 
     try {
@@ -227,25 +229,25 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
         ...formData,
         location: formData.location ? JSON.stringify(formData.location) : ''
       };
-      
+
       await createVendor(submissionData).unwrap();
       toast.success(`${formData.businessName} vendor registration submitted successfully!`);
       onSuccess();
     } catch (err: any) {
-       toast.error(err.data?.error || 'Registration failed');
+      toast.error(err.data?.error || 'Registration failed');
     }
   };
-  
+
   const nextStep = () => {
     if (step === 1 && validateStep1()) {
-        setStep(2);
+      setStep(2);
     } else if (step === 2 && validateStep2()) {
-        setStep(3);
+      setStep(3);
     } else {
       // Show error toast if validation fails
-      if ((step === 1 && !validateStep1()) || 
-          (step === 2 && !validateStep2()) || 
-          (step === 3 && !validateStep3())) {
+      if ((step === 1 && !validateStep1()) ||
+        (step === 2 && !validateStep2()) ||
+        (step === 3 && !validateStep3())) {
         toast.error("Please fill all required fields correctly.");
       }
     }
@@ -276,10 +278,10 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
 
     const scriptId = 'google-maps-native-script';
     const existingScript = document.getElementById(scriptId);
-    
+
     if (existingScript) {
       if (checkGoogleMaps()) return;
-      
+
       const checkInterval = setInterval(() => {
         if (checkGoogleMaps()) {
           clearInterval(checkInterval);
@@ -293,7 +295,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,drawing,geometry&v=weekly`;
     script.async = true;
     script.defer = true;
-    
+
     (window as any).gm_authFailure = () => {
       console.error("Google Maps API Key Authentication Failure - This usually means the API Key is invalid, has no billing, or is restricted incorrectly.");
       toast.error("Google Maps Authentication Failed. Please check your API key.");
@@ -313,19 +315,19 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
   // Initialize map when modal opens
   useEffect(() => {
     if (!isMapOpen || !isGoogleMapsLoaded || !GOOGLE_MAPS_API_KEY) return;
-    
+
     const initMap = () => {
       if (!mapContainer.current || !window.google) return;
-      
+
       // Clean up existing map
       if (map.current) {
         google.maps.event.clearInstanceListeners(map.current);
       }
-      
-      const center = formData.location 
+
+      const center = formData.location
         ? { lat: formData.location.lat, lng: formData.location.lng }
         : { lat: 23.2599, lng: 77.4126 }; // Center of India
-      
+
       // Ensure container still exists and has height
       if (mapContainer.current) {
         const rect = mapContainer.current.getBoundingClientRect();
@@ -345,17 +347,17 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
         streetViewControl: true,
         fullscreenControl: false,
       });
-      
+
       // Initialize services
       geocoder.current = new google.maps.Geocoder();
       autocompleteService.current = new google.maps.places.AutocompleteService();
       placesService.current = new google.maps.places.PlacesService(map.current);
-      
+
       // Remove existing marker
       if (marker.current) {
         marker.current.setMap(null);
       }
-      
+
       // Add marker if location exists
       if (formData.location) {
         marker.current = new google.maps.Marker({
@@ -364,32 +366,32 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
           draggable: true,
           animation: google.maps.Animation.DROP,
         });
-          
+
         marker.current.addListener('dragend', () => {
           const position = marker.current!.getPosition();
           if (position) {
-            setFormData(prev => ({ 
-              ...prev, 
-              location: { lat: position.lat(), lng: position.lng() } 
+            setFormData(prev => ({
+              ...prev,
+              location: { lat: position.lat(), lng: position.lng() }
             }));
             fetchAddress({ lat: position.lat(), lng: position.lng() });
           }
         });
       }
-      
+
       // Handle map clicks
       map.current.addListener('click', (e: google.maps.MapMouseEvent) => {
         if (!e.latLng) return;
-        
+
         const lat = e.latLng.lat();
         const lng = e.latLng.lng();
         setFormData(prev => ({ ...prev, location: { lat, lng } }));
-        
+
         // Remove existing marker and add new one
         if (marker.current) {
           marker.current.setMap(null);
         }
-        
+
         if (map.current) {
           marker.current = new google.maps.Marker({
             position: { lat, lng },
@@ -397,26 +399,26 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
             draggable: true,
             animation: google.maps.Animation.DROP,
           });
-            
+
           marker.current.addListener('dragend', () => {
             const position = marker.current!.getPosition();
             if (position) {
-              setFormData(prev => ({ 
-                ...prev, 
-                location: { lat: position.lat(), lng: position.lng() } 
+              setFormData(prev => ({
+                ...prev,
+                location: { lat: position.lat(), lng: position.lng() }
               }));
               fetchAddress({ lat: position.lat(), lng: position.lng() });
             }
           });
         }
-        
+
         fetchAddress({ lat, lng });
       });
     };
-    
+
     // Initialize with a larger delay to ensure DOM is ready and modal animation finished
     const timeoutId = setTimeout(initMap, 500);
-    
+
     // Cleanup function
     return () => {
       clearTimeout(timeoutId);
@@ -432,7 +434,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
       setSearchResults([]);
       return;
     }
-    
+
     try {
       autocompleteService.current.getPlacePredictions(
         {
@@ -455,11 +457,11 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
       setSearchResults([]);
     }
   };
-  
+
   // Fetch address details based on coordinates using reverse geocoding
   const fetchAddress = async (location: { lat: number; lng: number }) => {
     if (!geocoder.current) return;
-    
+
     try {
       geocoder.current.geocode(
         { location },
@@ -467,10 +469,10 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
           if (status === 'OK' && results && results.length > 0) {
             const result = results[0];
             const address = result.formatted_address;
-            
+
             let state = '';
             let city = '';
-            
+
             result.address_components.forEach((component) => {
               if (component.types.includes('administrative_area_level_1')) {
                 state = component.long_name;
@@ -479,7 +481,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
                 city = component.long_name;
               }
             });
-            
+
             setFormData(prev => ({
               ...prev,
               address,
@@ -493,11 +495,11 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
       console.error('Error fetching address:', error);
     }
   };
-  
+
   // Handle selection of a search result
   const handleSearchResultSelect = (result: GooglePlacesResult) => {
     if (!placesService.current) return;
-    
+
     placesService.current.getDetails(
       {
         placeId: result.place_id,
@@ -508,10 +510,10 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
           const lat = place.geometry.location.lat();
           const lng = place.geometry.location.lng();
           const newLocation = { lat, lng };
-          
+
           let state = '';
           let city = '';
-          
+
           place.address_components?.forEach((component) => {
             if (component.types.includes('administrative_area_level_1')) {
               state = component.long_name;
@@ -520,7 +522,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
               city = component.long_name;
             }
           });
-          
+
           setFormData(prev => ({
             ...prev,
             location: newLocation,
@@ -528,12 +530,12 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
             state: state || prev.state,
             city: city || prev.city,
           }));
-          
+
           if (map.current) {
             map.current.setCenter({ lat, lng });
             map.current.setZoom(15);
           }
-          
+
           if (marker.current) {
             marker.current.setPosition({ lat, lng });
           } else if (map.current) {
@@ -543,19 +545,19 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
               draggable: true,
               animation: google.maps.Animation.DROP,
             });
-            
+
             marker.current.addListener('dragend', () => {
               const position = marker.current!.getPosition();
               if (position) {
-                setFormData(prev => ({ 
-                  ...prev, 
-                  location: { lat: position.lat(), lng: position.lng() } 
+                setFormData(prev => ({
+                  ...prev,
+                  location: { lat: position.lat(), lng: position.lng() }
                 }));
                 fetchAddress({ lat: position.lat(), lng: position.lng() });
               }
             });
           }
-          
+
           setSearchResults([]);
           setSearchQuery('');
         }
@@ -574,26 +576,26 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
     <>
       <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pt-2">
         <div className="fixed top-4 sm:top-8 left-4 sm:left-10 right-4 sm:right-10 flex justify-between items-center z-20">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={step === 1 ? () => router.back() : prevStep} 
+          <Button
+            type="button"
+            variant="outline"
+            onClick={step === 1 ? () => router.back() : prevStep}
             className="px-3 sm:px-4 py-2 text-base sm:text-lg text-gray-600 border-gray-300 hover:bg-gray-50 h-10 sm:h-auto"
           >
             ← {step === 1 ? 'Back' : 'Back'}
           </Button>
           {step < 3 ? (
-            <Button 
-              type="button" 
-              onClick={nextStep} 
+            <Button
+              type="button"
+              onClick={nextStep}
               className="bg-black text-white px-4 sm:px-6 py-2 rounded-md hover:bg-gray-800 font-medium text-base sm:text-lg h-10 sm:h-auto"
             >
               Continue →
             </Button>
           ) : (
-            <Button 
-              type="submit" 
-              disabled={isLoading} 
+            <Button
+              type="submit"
+              disabled={isLoading}
               className="bg-black text-white px-4 sm:px-6 py-2 rounded-md hover:bg-gray-800 font-medium text-base sm:text-lg h-10 sm:h-auto"
               form="registration-form"
             >
@@ -601,11 +603,11 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
             </Button>
           )}
         </div>
-        
+
         <div className="mt-16 sm:mt-8">
           <StepIndicator currentStep={step} setStep={setStep} />
         </div>
-      
+
         <form id="registration-form" onSubmit={handleSubmit} className="space-y-4 sm:space-y-6 pb-8 mt-4">
           <div className="flex flex-col justify-start" style={{ minHeight: 'calc(100vh - 200px)' }}>
             {step === 1 && (
@@ -648,7 +650,10 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
                     {renderError('confirmPassword')}
                   </div>
                 </div>
-                <Input name="referredByCode" placeholder="Referral Code (Optional)" onChange={handleChange} value={formData.referredByCode} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+                  <Input name="referredByCode" placeholder="Referral Code (Optional)" onChange={handleChange} value={formData.referredByCode} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                  <Input name="gstNo" placeholder="GST No (Optional)" onChange={handleChange} value={formData.gstNo} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                </div>
               </div>
             )}
 
@@ -670,7 +675,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
                   <div>
-                    <Select name="category" onValueChange={(value) => setFormData(prev => ({...prev, category: value as SalonCategory}))} value={formData.category}>
+                    <Select name="category" onValueChange={(value) => setFormData(prev => ({ ...prev, category: value as SalonCategory }))} value={formData.category}>
                       <SelectTrigger className="h-12 sm:h-14 w-full text-base sm:text-lg">
                         <SelectValue placeholder="Select salon category" />
                       </SelectTrigger>
@@ -686,9 +691,9 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
                       {(['at-salon', 'at-home', 'custom-location'] as SubCategory[]).map(sc => (
                         <div key={sc} className="flex items-center space-x-2 p-2 sm:p-3 border rounded-md hover:bg-gray-50">
-                          <Checkbox 
-                            id={sc} 
-                            checked={formData.subCategories.includes(sc)} 
+                          <Checkbox
+                            id={sc}
+                            checked={formData.subCategories.includes(sc)}
                             onCheckedChange={(checked) => handleCheckboxChange(sc, checked as boolean)}
                             className="h-3 w-3 sm:h-4 sm:w-4"
                           />
@@ -764,7 +769,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
             )}
           </div>
         </form>
-      
+
         {/* Map Modal */}
         <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
           <DialogContent className="sm:max-w-5xl h-[85vh] p-0 overflow-hidden flex flex-col border-none shadow-2xl">
@@ -778,7 +783,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
                 </div>
               </div>
             </DialogHeader>
-            
+
             <div className="flex-1 flex flex-col relative overflow-hidden">
               {/* Floating Search Bar with Glassmorphism */}
               <div className="absolute top-6 left-6 right-6 z-[100] max-w-md">
@@ -820,17 +825,17 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
 
               {/* Map Container */}
               <div className="flex-1 relative bg-slate-100">
-                <div 
-                  ref={mapContainer} 
+                <div
+                  ref={mapContainer}
                   className="w-full h-full"
                 />
                 <div className="absolute bottom-6 left-6 z-50">
-                   <div className="bg-white/90 backdrop-blur-md px-4 py-3 rounded-2xl shadow-xl border border-white/20 flex items-center gap-3">
-                      <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                      <span className="text-sm font-bold text-slate-700 font-headline uppercase tracking-wider">Live Mapper</span>
-                   </div>
+                  <div className="bg-white/90 backdrop-blur-md px-4 py-3 rounded-2xl shadow-xl border border-white/20 flex items-center gap-3">
+                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                    <span className="text-sm font-bold text-slate-700 font-headline uppercase tracking-wider">Live Mapper</span>
+                  </div>
                 </div>
-                
+
                 {authError && (
                   <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6 z-[200]">
                     <div className="bg-white rounded-3xl p-8 shadow-2xl max-w-md text-center border border-red-100">
@@ -841,7 +846,7 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
                       <p className="text-slate-500 text-sm mb-6">
                         The API key is invalid or rejected. Please check billing and project restrictions.
                       </p>
-                      <Button 
+                      <Button
                         onClick={() => window.location.reload()}
                         className="w-full rounded-xl bg-red-600 hover:bg-red-700 h-12 text-lg"
                       >
@@ -854,43 +859,43 @@ export function VendorForm({ onSuccess }: VendorFormProps) {
                 {!isGoogleMapsLoaded && !authError && (
                   <div className="absolute inset-0 bg-slate-50 flex flex-col items-center justify-center z-[150]">
                     <div className="relative">
-                       <div className="h-24 w-24 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
-                       <div className="absolute inset-0 flex items-center justify-center">
-                          <MapIcon className="h-8 w-8 text-primary/40" />
-                       </div>
+                      <div className="h-24 w-24 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <MapIcon className="h-8 w-8 text-primary/40" />
+                      </div>
                     </div>
                     <p className="mt-6 text-lg font-bold text-slate-800 tracking-tight font-headline">Synchronizing Maps...</p>
                   </div>
                 )}
               </div>
             </div>
-            
+
             <DialogFooter className="p-6 bg-slate-50 border-t flex flex-row items-center justify-between gap-4">
-               <div className="flex items-center gap-4">
-                  {formData.location && (
-                    <div className="hidden sm:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
-                       <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
-                          <CheckCircle2 className="h-4 w-4" />
-                       </div>
-                       <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Coords Selected</div>
-                       <div className="text-xs font-mono font-bold text-slate-800">
-                         {formData.location.lat.toFixed(4)}, {formData.location.lng.toFixed(4)}
-                       </div>
+              <div className="flex items-center gap-4">
+                {formData.location && (
+                  <div className="hidden sm:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+                      <CheckCircle2 className="h-4 w-4" />
                     </div>
-                  )}
-               </div>
-               <div className="flex items-center gap-3">
+                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Coords Selected</div>
+                    <div className="text-xs font-mono font-bold text-slate-800">
+                      {formData.location.lat.toFixed(4)}, {formData.location.lng.toFixed(4)}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
                 <Button variant="ghost" onClick={() => setIsMapOpen(false)} className="rounded-xl h-12 px-6 font-bold text-slate-600 hover:bg-slate-200">
                   Dismiss
                 </Button>
-                <Button 
-                  onClick={() => setIsMapOpen(false)} 
+                <Button
+                  onClick={() => setIsMapOpen(false)}
                   disabled={!formData.location}
                   className="rounded-xl h-12 px-8 font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
                 >
                   Verify & Select Position
                 </Button>
-               </div>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>

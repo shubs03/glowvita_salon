@@ -26,6 +26,7 @@ export const ProfileTab = ({ vendor, setVendor }: ProfileTabProps) => {
         category: vendor.category,
         subCategories: vendor.subCategories,
         website: vendor.website,
+        gstNo: vendor.gstNo,
       }).unwrap();
 
       if (result.success) {
@@ -82,6 +83,18 @@ export const ProfileTab = ({ vendor, setVendor }: ProfileTabProps) => {
               <SelectItem value="women">Women</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="gstNo" className="text-sm sm:text-base">GST Number</Label>
+          <Input
+            id="gstNo"
+            value={vendor.gstNo || ''}
+            onChange={(e) =>
+              setVendor({ ...vendor, gstNo: e.target.value })
+            }
+            placeholder="Enter GST Number (Optional)"
+            className="h-10 sm:h-12 rounded-lg border border-border focus:border-primary text-sm sm:text-base"
+          />
         </div>
         <div className="space-y-2">
           <Label className="text-sm sm:text-base">Sub Categories</Label>

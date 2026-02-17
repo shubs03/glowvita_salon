@@ -53,7 +53,7 @@ export async function POST(req) {
     try {
         await initDb();
         const body = await req.json();
-        const { password, referredByCode, location, ...supplierData } = body;
+        const { password, referredByCode, location, gstNo, ...supplierData } = body;
 
         const validationError = validateSupplierData({ password, ...supplierData });
         if (validationError) {
@@ -105,6 +105,7 @@ export async function POST(req) {
 
         const newSupplier = await SupplierModel.create({
             ...supplierData,
+            gstNo,
             password: hashedPassword,
             location: finalLocation ? { type: 'Point', coordinates: [finalLocation.lng, finalLocation.lat] } : undefined,
             referralCode: await generateReferralCode(supplierData.shopName),
