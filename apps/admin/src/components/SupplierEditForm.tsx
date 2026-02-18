@@ -87,7 +87,7 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch }:
       refetch();
       // Don't close immediately, let user see success or close manually
     } catch (error: any) {
-      toast.error(error.data?.message || "Failed to update supplier");
+      console.error("Failed to update supplier:", error);
     }
   };
 
@@ -150,7 +150,7 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch }:
       setSelectedRenewalPlan(null);
       refetch();
     } catch (error: any) {
-      toast.error(error.message || "Failed to renew subscription");
+      console.error("Failed to renew subscription:", error);
     } finally {
       setIsRenewingManual(false);
     }

@@ -235,7 +235,6 @@ export default function PlatformMarketingPage() {
       toast.success('Package deleted successfully');
     } catch (error) {
       console.error('Failed to delete package:', error);
-      toast.error('Failed to delete package');
     } finally {
       setIsDeleteModalOpen(false);
       setSelectedPackage(null);
@@ -285,7 +284,6 @@ export default function PlatformMarketingPage() {
       setSelectedPackage(null);
     } catch (error: any) {
       console.error('Failed to save package:', error);
-      toast.error(error?.data?.message || 'Failed to save package');
     }
   }, [isEditMode, selectedPackage, createSmsPackage, updateSmsPackage]);
 
@@ -311,7 +309,6 @@ export default function PlatformMarketingPage() {
       refetchTemplates();
     } catch (error: any) {
       console.error('Failed to save template:', error);
-      toast.error(error?.data?.message || 'Failed to save template');
     }
   };
 
@@ -356,7 +353,6 @@ export default function PlatformMarketingPage() {
       refetchSocialMediaTemplates();
     } catch (error: any) {
       console.error('Failed to save social media template:', error);
-      toast.error(error?.message || error?.data?.message || 'Failed to save social media template');
     }
   };
   
@@ -369,7 +365,6 @@ export default function PlatformMarketingPage() {
       refetchSocialMediaTemplates();
     } catch (error: any) {
       console.error('Failed to delete social media template:', error);
-      toast.error(error?.data?.message || error.message || 'Failed to delete template');
     } finally {
       setIsDeleteModalOpen(false);
       setItemToDelete(null);
@@ -395,7 +390,6 @@ export default function PlatformMarketingPage() {
       refetchTemplates();
     } catch (error: any) {
       console.error('Failed to delete template:', error);
-      toast.error(error?.data?.message || 'Failed to delete template');
     } finally {
       setIsDeleteTemplateModalOpen(false);
       setSelectedTemplate(null);

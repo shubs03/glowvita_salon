@@ -225,7 +225,7 @@ export default function OffersCouponsPage() {
         setIsDeleteModalOpen(false);
         setSelectedCoupon(null);
       } catch (error) {
-        toast.error('Failed to delete coupon');
+        console.error('Failed to delete coupon:', error);
       }
     }
   };
@@ -250,7 +250,7 @@ export default function OffersCouponsPage() {
       handleCloseModal();
       refetch();
     } catch (error) {
-      toast.error(modalType === 'addCoupon' ? 'Failed to create coupon' : 'Failed to update coupon');
+      console.error('Coupon submit error:', error);
     }
   };
 

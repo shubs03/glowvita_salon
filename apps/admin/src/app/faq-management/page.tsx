@@ -107,10 +107,7 @@ export default function FaqManagementPage() {
         setIsDeleteModalOpen(false);
         setFaqToDelete(null);
       } catch (err: any) {
-        toast.error("Failed to delete FAQ. Please try again.", {
-          description: err.data?.message || err.message || 'Unknown error',
-          duration: 5000,
-        });
+        console.error("Failed to delete FAQ:", err);
       }
     }
   };
@@ -125,10 +122,7 @@ export default function FaqManagementPage() {
       toast.success(`FAQ ${!currentVisibility ? 'made visible' : 'hidden'} successfully!`);
       refetch();
     } catch (err: any) {
-      toast.error("Failed to toggle FAQ visibility. Please try again.", {
-        description: err.data?.message || err.message || 'Unknown error',
-        duration: 5000,
-      });
+      console.error("Failed to toggle FAQ visibility:", err);
     }
   };
 
@@ -417,10 +411,7 @@ export default function FaqManagementPage() {
                     setIsNewModalOpen(false);
                     setNewFaq({ question: '', answer: '', category: '', visible: true });
                   } catch (err: any) {
-                    toast.error("Failed to save FAQ. Please try again.", {
-                      description: err.data?.message || err.message || 'Unknown error',
-                      duration: 5000,
-                    });
+                    console.error("Failed to save FAQ:", err);
                   }
                 } else {
                   toast.error("Please fill in all required fields.", {
@@ -556,9 +547,7 @@ export default function FaqManagementPage() {
                     setSelectedFaq(null);
                     dispatch(resetError());
                   } catch (err: any) {
-                    toast.error(`Failed to update FAQ: ${err.data?.message || err.message || 'Unknown error'}`, {
-                      duration: 5000,
-                    });
+                    console.error("Failed to update FAQ:", err);
                   }
                 }
               }}

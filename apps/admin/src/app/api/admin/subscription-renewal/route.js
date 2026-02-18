@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js"; // Adjust based on file depth
+import { forbiddenResponse } from "@repo/lib";
 import _db from "@repo/lib/db";
 import Vendor from "@repo/lib/models/Vendor.model";
 import Supplier from "@repo/lib/models/Vendor/Supplier.model";
@@ -80,10 +81,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
         if ((roleName === "REGIONAL_ADMIN") && assignedRegions && assignedRegions.length > 0) {
             const userRegionId = user.regionId ? user.regionId.toString() : null;
             if (!userRegionId || !assignedRegions.includes(userRegionId)) {
-                return NextResponse.json(
-                    { message: "Forbidden: You cannot renew subscriptions for users outside your assigned regions" },
-                    { status: 403 }
-                );
+                return forbiddenResponse("You cannot renew subscriptions for users outside your assigned regions");
             }
         }
 

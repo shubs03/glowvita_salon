@@ -373,38 +373,38 @@ export default function VendorApprovalPage() {
       if (itemType === 'vendor') {
         const vendor = selectedItem as Vendor;
         if (actionType === 'delete') {
-          toast.error('Error', { description: 'Delete functionality for vendors is not yet implemented.' });
+          toast.error('Delete functionality for vendors is not yet implemented.');
         } else {
           const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
           await updateVendorStatus({ id: vendor._id, status: newStatus }).unwrap();
-          toast.success('Success', { description: `Vendor "${itemName}" status updated to ${newStatus}.` });
+          toast.success(`Vendor "${itemName}" status updated to ${newStatus}.`);
         }
       } else if (itemType === 'supplier') {
         const supplier = selectedItem as Supplier;
         if (actionType === 'delete') {
           await deleteSupplier(supplier._id).unwrap();
-          toast.success('Success', { description: `Supplier "${itemName}" deleted.` });
+          toast.success(`Supplier "${itemName}" deleted.`);
         } else {
           const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
           await updateSupplierStatus({ id: supplier._id, status: newStatus }).unwrap();
-          toast.success('Success', { description: `Supplier "${itemName}" status updated to ${newStatus}.` });
+          toast.success(`Supplier "${itemName}" status updated to ${newStatus}.`);
         }
       } else if (itemType === 'doctor') {
         const doctor = selectedItem as Doctor;
         if (actionType === 'delete') {
           await deleteDoctor(doctor._id).unwrap();
-          toast.success('Success', { description: `Doctor "${itemName}" deleted.` });
+          toast.success(`Doctor "${itemName}" deleted.`);
         } else {
           const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
           await updateDoctor({ id: doctor._id, status: newStatus }).unwrap();
-          toast.success('Success', { description: `Doctor "${itemName}" status updated to ${newStatus}.` });
+          toast.success(`Doctor "${itemName}" status updated to ${newStatus}.`);
         }
       } else if (itemType === 'service') {
         const service = selectedItem as Service;
         const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
 
         if (actionType === 'reject' && !rejectionReason.trim()) {
-          toast.error('Reason Required', { description: 'Please provide a reason for rejection.' });
+          toast.error('Please provide a reason for rejection.');
           return;
         }
 
@@ -418,12 +418,12 @@ export default function VendorApprovalPage() {
       } else if (itemType === 'vendor-product') {
         const product = selectedItem as Product;
         if (actionType === 'delete') {
-          toast.error('Error', { description: 'Delete functionality for products is not yet implemented.' });
+          toast.error('Delete functionality for products is not yet implemented.');
         } else {
           const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
 
           if (actionType === 'reject' && !rejectionReason.trim()) {
-            toast.error('Reason Required', { description: 'Please provide a reason for rejection.' });
+            toast.error('Please provide a reason for rejection.');
             return;
           }
 
@@ -438,12 +438,12 @@ export default function VendorApprovalPage() {
       } else if (itemType === 'supplier-product') {
         const product = selectedItem as Product;
         if (actionType === 'delete') {
-          toast.error('Error', { description: 'Delete functionality for products is not yet implemented.' });
+          toast.error('Delete functionality for products is not yet implemented.');
         } else {
           const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
 
           if (actionType === 'reject' && !rejectionReason.trim()) {
-            toast.error('Reason Required', { description: 'Please provide a reason for rejection.' });
+            toast.error('Please provide a reason for rejection.');
             return;
           }
 
@@ -460,7 +460,7 @@ export default function VendorApprovalPage() {
         const newStatus = actionType === 'approve' ? 'approved' : 'disapproved';
 
         if (actionType === 'reject' && !rejectionReason.trim()) {
-          toast.error('Reason Required', { description: 'Please provide a reason for rejection.' });
+          toast.error('Please provide a reason for rejection.');
           return;
         }
 
@@ -473,7 +473,8 @@ export default function VendorApprovalPage() {
         refetchPendingWeddingPackages();
       }
     } catch (error) {
-      toast.error('Error', { description: `Failed to perform action on ${itemType}.` });
+      // Global error handler handles network/server errors with better messages
+      console.error('Action failed:', error);
     }
 
     setIsActionModalOpen(false);

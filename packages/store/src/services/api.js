@@ -81,20 +81,22 @@ const baseQuery = async (args, api, extraOptions) => {
       extraOptions
     );
 
-    // Handle 401 Unauthorized
-    // Handle 403 Forbidden (Subscription Expired)
+    // Handle 403 Forbidden
     if (result.error?.status === 403) {
-      api.dispatch(handleSubscriptionExpired());
-      // Force a refetch of the profile to ensure the UI updates with the latest user data
-      api.dispatch(glowvitaApi.endpoints.getProfile.initiate(undefined, { forceRefetch: true }));
+      if (targetService === "crm" || targetService === "web") {
+        api.dispatch(handleSubscriptionExpired());
+        // Force a refetch of the profile to ensure the UI updates with the latest user data
+        api.dispatch(glowvitaApi.endpoints.getProfile.initiate(undefined, { forceRefetch: true }));
+      }
+      // For targetService === "admin", we don't automatically clear or expire things
+      // as 403 in admin usually means "Missing Permission", not "Subscription Expired"
     }
 
     // Handle 401 Unauthorized
     if (result.error?.status === 401) {
-      const state = api.getState();
-      if (state.crmAuth?.token) {
+      if (targetService === "crm" || targetService === "web") {
         api.dispatch(clearCrmAuth());
-      } else if (state.adminAuth?.token) {
+      } else if (targetService === "admin") {
         api.dispatch(clearAdminAuth());
       }
     }

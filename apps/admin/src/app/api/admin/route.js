@@ -4,6 +4,7 @@ import AdminUserModel from "@repo/lib/models/admin/AdminUser";
 import { authMiddlewareAdmin } from "../../../middlewareAdmin.js";
 import bcrypt from "bcryptjs";
 import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
+import { forbiddenResponse } from "@repo/lib";
 
 await _db();
 
@@ -45,20 +46,14 @@ export const POST = authMiddlewareAdmin(
     if (requester.roleName?.toUpperCase() === 'REGIONAL_ADMIN') {
       // Regional Admin can ONLY create STAFF
       if (roleName !== 'STAFF') {
-        return Response.json(
-          { message: "Regional Admin can only create Staff members" },
-          { status: 403 }
-        );
+        return forbiddenResponse("Regional Admin can only create Staff members");
       }
       
       // Ensure assignedRegions is a subset of requester's regions
       if (assignedRegions && assignedRegions.length > 0) {
         const hasInvalidRegion = assignedRegions.some(rId => !requester.assignedRegions.map(rid => rid.toString()).includes(rId.toString()));
         if (hasInvalidRegion) {
-          return Response.json(
-            { message: "You can only assign staff to your own regions" },
-            { status: 403 }
-          );
+          return forbiddenResponse("You can only assign staff to your own regions");
         }
       } else if (!assignedRegions || assignedRegions.length === 0) {
         // If no regions provided, default to all requester's regions
@@ -177,7 +172,7 @@ export const PUT = authMiddlewareAdmin(
     // Role-based validation
     if (requester.roleName?.toUpperCase() === 'REGIONAL_ADMIN') {
       if (targetAdmin.roleName?.toUpperCase() === 'SUPER_ADMIN') {
-        return Response.json({ message: "Regional Admin cannot edit Super Admin" }, { status: 403 });
+        return forbiddenResponse("Regional Admin cannot edit Super Admin");
       }
 
       // If editing self
@@ -189,20 +184,20 @@ export const PUT = authMiddlewareAdmin(
       } else {
         // Editing someone else (presumably STAFF)
         if (targetAdmin.roleName?.toUpperCase() === 'REGIONAL_ADMIN') {
-          return Response.json({ message: "Regional Admin cannot edit other Regional Admins" }, { status: 403 });
+          return forbiddenResponse("Regional Admin cannot edit other Regional Admins");
         }
 
         // Check if target admin is in requester's region
         const hasOverlap = targetAdmin.assignedRegions.some(rId => requester.assignedRegions.map(rid => rid.toString()).includes(rId.toString()));
         if (!hasOverlap && targetAdmin.assignedRegions.length > 0) {
-          return Response.json({ message: "You don't have permission to edit this admin" }, { status: 403 });
+          return forbiddenResponse("You don't have permission to edit this admin");
         }
 
         // Ensure new assignedRegions are also within requester's regions
         if (body.assignedRegions) {
           const hasInvalidRegion = body.assignedRegions.some(rId => !requester.assignedRegions.map(rid => rid.toString()).includes(rId.toString()));
           if (hasInvalidRegion) {
-            return Response.json({ message: "You can only assign staff to your own regions" }, { status: 403 });
+            return forbiddenResponse("You can only assign staff to your own regions");
           }
         }
       }
@@ -264,12 +259,12 @@ export const DELETE = authMiddlewareAdmin(
     // Role-based validation
     if (requester.roleName?.toUpperCase() === 'REGIONAL_ADMIN') {
       if (targetAdmin.roleName?.toUpperCase() === 'SUPER_ADMIN' || targetAdmin.roleName?.toUpperCase() === 'REGIONAL_ADMIN') {
-        return Response.json({ message: "Regional Admin cannot delete other Admins" }, { status: 403 });
+        return forbiddenResponse("Regional Admin cannot delete other Admins");
       }
       
       const hasOverlap = targetAdmin.assignedRegions.some(rId => requester.assignedRegions.map(rid => rid.toString()).includes(rId.toString()));
       if (!hasOverlap && targetAdmin.assignedRegions.length > 0) {
-        return Response.json({ message: "You don't have permission to delete this admin" }, { status: 403 });
+        return forbiddenResponse("You don't have permission to delete this admin");
       }
     }
 

@@ -227,7 +227,6 @@ export default function SubscriptionManagementPage() {
         refetch();
       } catch (error) {
         console.error('Error deleting plan:', error);
-        toast.error(`Error deleting plan: ${(error as any).data?.message || 'Unknown error'}`);
       } finally {
         setIsDeleteModalOpen(false);
       }
@@ -278,7 +277,6 @@ export default function SubscriptionManagementPage() {
       refetch();
     } catch (error) {
       console.error('Error saving plan:', error);
-      toast.error(`Error saving plan: ${(error as any).data?.message || 'Unknown error'}`);
     }
   };
 
@@ -327,7 +325,6 @@ export default function SubscriptionManagementPage() {
       }
     } catch (error: any) {
       console.error('Error renewing subscription:', error);
-      toast.error(error.message || 'Failed to renew subscription');
     } finally {
       setIsRenewingManual(false);
     }

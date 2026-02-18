@@ -17,6 +17,8 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   
+  const [hasAccess, setHasAccess] = useState<boolean | null>(null);
+  
   // Enable global API error handling
   useApiErrorHandler();
 
@@ -38,32 +40,39 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
   useEffect(() => {
     if (!isLoading && !isAdminAuthenticated) {
         router.push('/login');
-        return; // Early return to prevent further checks
+        return;
     }
 
     if (!isLoading && admin) {
-      // Find the required permission for the current route
-      const requiredPermission = sidebarNavItems.find(item => item.href === pathname)?.permission;
+      // Find the most specific (longest) matching sidebar item for the current path
+      const matchedItem = [...sidebarNavItems]
+        .sort((a, b) => b.href.length - a.href.length)
+        .find(item => 
+          item.href === '/' 
+            ? pathname === '/' 
+            : pathname.startsWith(item.href)
+        );
+
+      const requiredPermission = matchedItem?.permission;
              
-      // Allow access if no specific permission is required for the route (e.g., dashboard)
-      if (!requiredPermission) {
+      if (!requiredPermission || pathname === '/') {
+        setHasAccess(true);
         return;
       }
              
-      // Check if the user has permission
       const isSuperAdmin = admin.roleName === 'SUPER_ADMIN';
-      
-      // Check for various permission formats
-      const hasAccess = isSuperAdmin || 
+      const userHasAccess = isSuperAdmin || 
         admin.permissions?.includes(`${requiredPermission}:all`) ||
         admin.permissions?.includes(`${requiredPermission}:view`) ||
         admin.permissions?.includes(`${requiredPermission}:edit`) ||
         admin.permissions?.includes(`${requiredPermission}:delete`) ||
         admin.permissions?.includes(requiredPermission);
 
-      // If user doesn't have access, redirect
-      if (!hasAccess) {
+      if (!userHasAccess) {
+        setHasAccess(false);
         router.push('/');
+      } else {
+        setHasAccess(true);
       }
     }
   }, [admin, isLoading, isAdminAuthenticated, router, pathname]);
@@ -98,8 +107,17 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
         <Header toggleSidebar={toggleSidebar} />
                  
         <main className="flex-1 overflow-y-auto overflow-x-hidden bg-secondary/50">
-          <div className="w-full max-w-none overflow-hidden">
-            {children}
+          <div className="w-full max-w-none overflow-hidden h-full">
+            {hasAccess === true ? (
+              children
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <div className="flex flex-col items-center">
+                  <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin"></div>
+                  <p className="mt-4 text-sm text-muted-foreground font-medium">Verifying Access...</p>
+                </div>
+              </div>
+            )}
           </div>
         </main>
       </div>

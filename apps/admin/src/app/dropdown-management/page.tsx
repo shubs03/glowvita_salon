@@ -364,7 +364,7 @@ const ServiceCategoryManager = () => {
             setCurrentItem(null);
             setImageBase64(null);
         } catch (error: any) {
-            toast.error('Error', { description: error?.data?.message || `Failed to ${action} category.` });
+            console.error(`Failed to ${action} category:`, error);
         }
     };
 
@@ -381,7 +381,7 @@ const ServiceCategoryManager = () => {
                 setIsDeleteModalOpen(false);
                 setCurrentItem(null);
             } catch (error: any) {
-                toast.error('Error', { description: error?.data?.message || 'Failed to delete category.' });
+                console.error('Failed to delete category:', error);
             }
         }
     };
@@ -611,7 +611,7 @@ const ServiceManager = () => {
             setCurrentItem(null);
             setImageBase64(null);
         } catch (error: any) {
-            toast.error('Error', { description: error?.data?.message || `Failed to ${action} service.` });
+            console.error(`Failed to ${action} service:`, error);
         }
     };
 
@@ -628,7 +628,7 @@ const ServiceManager = () => {
                 setIsDeleteModalOpen(false);
                 setCurrentItem(null);
             } catch (error: any) {
-                toast.error('Error', { description: error?.data?.message || 'Failed to delete service.' });
+                console.error('Failed to delete service:', error);
             }
         }
     };
@@ -899,7 +899,7 @@ const ProductMasterManager = () => {
             setCurrentItem(null);
             setImageBase64(null);
         } catch (error: any) {
-            toast.error('Error', { description: error?.data?.message || `Failed to ${action} product master.` });
+            console.error(`Failed to ${action} product master:`, error);
         }
     };
 
@@ -916,7 +916,7 @@ const ProductMasterManager = () => {
                 setIsDeleteModalOpen(false);
                 setCurrentItem(null);
             } catch (error: any) {
-                toast.error('Error', { description: error?.data?.message || 'Failed to delete product master.' });
+                console.error('Failed to delete product master:', error);
             }
         }
     };
@@ -1632,7 +1632,7 @@ const ProductCategoryManager = () => {
             setCurrentCategory(null);
             refetch();
         } catch (error: any) {
-            toast.error(error?.data?.message || 'Failed to save category');
+            console.error('Failed to save category:', error);
         }
     };
 
@@ -1651,7 +1651,7 @@ const ProductCategoryManager = () => {
             setCurrentCategory(null);
             refetch();
         } catch (error: any) {
-            toast.error(error?.data?.message || 'Failed to delete category');
+            console.error('Error deleting category:', error);
         }
     };
 
