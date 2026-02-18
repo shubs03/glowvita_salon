@@ -11,7 +11,7 @@ import marketingReducer from './slices/marketingslice.js';
 import supplierReducer from './slices/supplierSlice.js';
 import subscriptionReducer from './slices/subscriptionSlice.js';
 import notificationReducer from './slices/notificationSlice.js';
-import geoFencingReducer from './slices/geoFencingSlice.js';
+
 import refferalReducer from './slices/Admin/refferalSlice.js';
 import faqReducer from './slices/faqSlice.js';
 import shippingReducer from './slices/shippingSlice.js';
@@ -46,7 +46,7 @@ const appReducer = combineReducers({
   suppliers: supplierReducer,
   subscription: subscriptionReducer,
   notification: notificationReducer,
-  geoFencing: geoFencingReducer,
+
   refferal: refferalReducer,
   shipping: shippingReducer,
   products: productReducer,

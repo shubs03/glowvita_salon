@@ -233,7 +233,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
             { status: 500 }
         );
     }
-}, ['admin', 'SUPER_ADMIN', 'REGIONAL_ADMIN']);
+}, ['admin', 'SUPER_ADMIN', 'REGIONAL_ADMIN', 'STAFF'], "payout:view");
 
 /**
  * POST /api/admin/settlements
@@ -286,4 +286,4 @@ export const POST = authMiddlewareAdmin(async (req) => {
             { status: 500 }
         );
     }
-}, ['admin', 'SUPER_ADMIN', 'REGIONAL_ADMIN']);
+}, ['admin', 'SUPER_ADMIN', 'REGIONAL_ADMIN', 'STAFF'], "payout:edit");

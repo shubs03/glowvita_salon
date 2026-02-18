@@ -130,7 +130,8 @@ export const POST = authMiddlewareAdmin(
       { status: 201 }
     );
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "offers-coupons:edit"
 );
 
 // Get All Offers
@@ -161,7 +162,8 @@ export const GET = authMiddlewareAdmin(
 
     return Response.json(sanitizedOffers);
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "offers-coupons:view"
 );
 
 // Update Offer
@@ -258,7 +260,8 @@ export const PUT = authMiddlewareAdmin(
 
     return Response.json(updatedOffer);
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "offers-coupons:edit"
 );
 
 
@@ -279,5 +282,6 @@ export const DELETE = authMiddlewareAdmin(
 
     return Response.json({ message: "Offer deleted successfully" });
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "offers-coupons:delete"
 );

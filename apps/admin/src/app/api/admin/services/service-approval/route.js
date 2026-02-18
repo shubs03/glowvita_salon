@@ -42,8 +42,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { $unwind: "$vendorDetails" },
       // Apply region filter from vendorDetails
       {
-        $match: regionQuery.regionId ? { "vendorDetails.regionId": new mongoose.Types.ObjectId(regionQuery.regionId) } :
-          regionQuery.regionId?.$in ? { "vendorDetails.regionId": { $in: regionQuery.regionId.$in.map(id => new mongoose.Types.ObjectId(id)) } } : {}
+        $match: Object.keys(regionQuery).length > 0 ? {
+          "vendorDetails.regionId": regionQuery.regionId?.$in
+            ? { $in: (regionQuery.regionId.$in || []).map(id => mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id) }
+            : (mongoose.Types.ObjectId.isValid(regionQuery.regionId) ? new mongoose.Types.ObjectId(regionQuery.regionId) : regionQuery.regionId)
+        } : {}
       },
       // Lookup category details
       {
@@ -87,7 +90,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "vendor-approval:view");
 
 // PATCH (update status) a service by ID
 export const PATCH = authMiddlewareAdmin(async (req) => {
@@ -144,7 +147,7 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "vendor-approval:edit");
 
 // PUT (update onlineBooking) for a vendor service
 export const PUT = authMiddlewareAdmin(async (req) => {
@@ -190,4 +193,4 @@ export const PUT = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "vendor-approval:edit");

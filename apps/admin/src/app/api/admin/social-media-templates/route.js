@@ -110,7 +110,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }
     });
   }
-});
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "marketing:view");
 
 // POST a new Social Media template
 export const POST = authMiddlewareAdmin(async (req) => {
@@ -316,7 +316,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
     
     return NextResponse.json({ success: false, message: "Failed to create social media template", error: error.message }, { status: 500 });
   }
-});
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "marketing:edit");
 
 // PUT a new Social Media template
 export const PUT = authMiddlewareAdmin(async (req, { params }) => {
@@ -561,7 +561,7 @@ export const PUT = authMiddlewareAdmin(async (req, { params }) => {
       { status: 500 }
     );
   }
-});
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "marketing:edit");
 
 // DELETE a Social Media template
 export const DELETE = authMiddlewareAdmin(async (req) => {
@@ -600,4 +600,4 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
     
     return NextResponse.json({ success: false, message: 'Failed to delete template', error: error.message }, { status: 500 });
   }
-});
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "marketing:delete");

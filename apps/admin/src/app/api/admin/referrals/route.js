@@ -103,7 +103,8 @@ export const POST = authMiddlewareAdmin(
       { status: 201 }
     );
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "referral:edit"
 );
 
 // Get Referrals or Settings
@@ -148,7 +149,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     console.error("Referral GET error:", error);
     return Response.json({ message: "An error occurred", error: error.message }, { status: 500 });
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"], "referral:view");
 
 // Update Referral
 export const PUT = authMiddlewareAdmin(
@@ -175,7 +176,8 @@ export const PUT = authMiddlewareAdmin(
 
     return Response.json(updatedReferral);
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "referral:edit"
 );
 
 // Delete Referral
@@ -190,7 +192,8 @@ export const DELETE = authMiddlewareAdmin(
 
     return Response.json({ message: "Referral deleted successfully" });
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "referral:delete"
 );
 
 // Update Referral Settings
@@ -232,5 +235,6 @@ export const PATCH = authMiddlewareAdmin(
       settings: updatedSettings
     });
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "referral:edit"
 );

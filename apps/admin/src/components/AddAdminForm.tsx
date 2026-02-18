@@ -24,6 +24,7 @@ import { sidebarNavItems } from '@/lib/routes';
 import { Trash2, Loader2, Eye, EyeOff } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { useCreateAdminMutation, useUpdateAdminMutation, useDeleteAdminMutation, useGetRegionsQuery } from '../../../../packages/store/src/services/api.js';
+import { useAuth } from '@/hooks/useAuth';
 
 export type AdminUser = {
   _id?: string;
@@ -69,26 +70,42 @@ export function AddAdminForm({
   isEditMode = false
 }: AddAdminFormProps) {
 
+  const { admin: currentAdmin } = useAuth();
+
   // RTK Query hooks
   const [createAdmin, { isLoading: isCreating }] = useCreateAdminMutation();
   const [updateAdmin, { isLoading: isUpdating }] = useUpdateAdminMutation();
   const [deleteAdmin, { isLoading: isDeleting }] = useDeleteAdminMutation();
   const { data: regionsResponse } = useGetRegionsQuery({});
-  const regionsList = regionsResponse?.data || [];
+  const allRegions = regionsResponse?.data || [];
 
-  const getInitialFormData = (data: AdminUser | null) => ({
-    fullName: '',
-    mobileNo: '',
-    emailAddress: '',
-    password: '',
-    confirmPassword: '',
-    roleName: '',
-    designation: '',
-    address: '',
-    permissions: [],
-    assignedRegions: [],
-    ...data
-  });
+  // Filter regions based on current admin's assigned regions if they are not SUPER_ADMIN
+  const regionsList = (currentAdmin?.roleName?.toUpperCase() === 'SUPER_ADMIN') 
+    ? allRegions 
+    : allRegions.filter((r: any) => currentAdmin?.assignedRegions?.includes(r._id));
+
+  const getInitialFormData = (data: AdminUser | null) => {
+    const base = {
+      fullName: '',
+      mobileNo: '',
+      emailAddress: '',
+      password: '',
+      confirmPassword: '',
+      roleName: (!isEditMode && currentAdmin?.roleName?.toUpperCase() === 'REGIONAL_ADMIN') ? 'STAFF' : '',
+      designation: '',
+      address: '',
+      permissions: [],
+      assignedRegions: [],
+      ...data
+    };
+
+    // Normalize roleName to UPPERCASE for consistent UI matching in Select component
+    if (base.roleName) {
+      base.roleName = base.roleName.toUpperCase();
+    }
+
+    return base as AdminUser;
+  };
 
   const [formData, setFormData] = useState<AdminUser>(getInitialFormData(initialData));
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
@@ -167,28 +184,33 @@ export function AddAdminForm({
   };
 
   const handlePermissionChange = (module: string, action: string, checked: boolean) => {
-    const permission = `${module}:${action}`;
-
     setSelectedPermissions(prev => {
-      let updated = checked ? [...prev, permission] : prev.filter(p => p !== permission);
+      let updated = checked ? [...prev, `${module}:${action}`] : prev.filter(p => p !== `${module}:${action}`);
 
-      // If "all" is checked, add all other permissions for this module
+      // If "all" is checked, automatically check everything else
       if (action === 'all' && checked) {
         updated = updated.filter(p => !p.startsWith(`${module}:`));
-        updated.push(`${module}:all`);
+        updated.push(`${module}:all`, `${module}:view`, `${module}:edit`, `${module}:delete`);
       }
 
-      // If "all" is unchecked, remove it
+      // If "all" is unchecked, remove the :all flag
       if (action === 'all' && !checked) {
         updated = updated.filter(p => p !== `${module}:all`);
       }
 
-      // If any other permission is checked while "all" exists, remove "all"
-      if (action !== 'all' && checked && updated.includes(`${module}:all`)) {
-        updated = updated.filter(p => p !== `${module}:all`);
+      // If "edit" or "delete" is checked, automatically check "view"
+      if (checked && (action === 'edit' || action === 'delete')) {
+        if (!updated.includes(`${module}:view`)) {
+          updated.push(`${module}:view`);
+        }
       }
 
-      return updated;
+      // If "view" is unchecked, also uncheck "edit", "delete", and "all" (because you can't edit what you can't see)
+      if (action === 'view' && !checked) {
+        updated = updated.filter(p => p !== `${module}:edit` && p !== `${module}:delete` && p !== `${module}:all`);
+      }
+
+      return Array.from(new Set(updated)); // Ensure uniqueness
     });
   };
 
@@ -288,7 +310,9 @@ export function AddAdminForm({
         designation: formData.designation.trim(),
         address: formData.address.trim(),
         permissions: selectedPermissions,
-        assignedRegions: selectedRegions,
+        assignedRegions: currentAdmin?.roleName?.toUpperCase() === 'REGIONAL_ADMIN' 
+          ? (selectedRegions.length > 0 ? selectedRegions : currentAdmin.assignedRegions) 
+          : selectedRegions,
         isActive: formData.isActive ?? true,
         updatedAt: new Date().toISOString(),
         ...(profileImageUrl && { profileImage: profileImageUrl }),
@@ -552,15 +576,30 @@ export function AddAdminForm({
                         setErrors(prev => ({ ...prev, roleName: '' }));
                       }
                     }}
-                    disabled={isLoading}
+                    disabled={isLoading || (isEditMode && (initialData?._id?.toString() === currentAdmin?.userId?.toString()) && currentAdmin?.roleName?.toUpperCase() !== 'SUPER_ADMIN')}
                     required
                   >
                     <SelectTrigger className={`text-sm ${errors.roleName ? 'border-destructive' : ''}`}>
                       <SelectValue placeholder="Select a role" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="SUPER_ADMIN" className="text-sm">SUPER_ADMIN</SelectItem>
-                      <SelectItem value="REGIONAL_ADMIN" className="text-sm">REGIONAL_ADMIN</SelectItem>
+                      {currentAdmin?.roleName?.toUpperCase() === 'SUPER_ADMIN' ? (
+                        <>
+                          <SelectItem value="SUPER_ADMIN" className="text-sm">SUPER_ADMIN</SelectItem>
+                          <SelectItem value="REGIONAL_ADMIN" className="text-sm">REGIONAL_ADMIN</SelectItem>
+                          <SelectItem value="STAFF" className="text-sm">STAFF</SelectItem>
+                          {/* Allow dynamic roles if they exist in props */}
+                          {roles.map((role) => (
+                            !['SUPER_ADMIN', 'REGIONAL_ADMIN', 'STAFF'].includes(role.roleName) && (
+                              <SelectItem key={role.roleName} value={role.roleName.toUpperCase()} className="text-sm">
+                                {role.roleName}
+                              </SelectItem>
+                            )
+                          ))}
+                        </>
+                      ) : currentAdmin?.roleName?.toUpperCase() === 'REGIONAL_ADMIN' ? (
+                        <SelectItem value="STAFF" className="text-sm">STAFF</SelectItem>
+                      ) : null}
                     </SelectContent>
                   </Select>
                   {errors.roleName && <p className="text-xs text-destructive">{errors.roleName}</p>}
@@ -602,100 +641,116 @@ export function AddAdminForm({
             </div>
 
             {/* Region Assignment Section */}
-            <div className="space-y-4">
-              <h3 className="text-base font-medium border-b pb-2">Region Assignment</h3>
-              <p className="text-xs text-muted-foreground mb-2">
-                Select regions this admin will be responsible for. This will filter the data they can see.
-              </p>
+            {/* Super Admin can assign regions to Regional Admins. Staff are handled separately (global or auto-assigned). */}
+            {((currentAdmin?.roleName?.toUpperCase() === 'SUPER_ADMIN' && (formData.roleName?.toUpperCase() === 'REGIONAL_ADMIN')) || 
+              (currentAdmin?.roleName?.toUpperCase() === 'REGIONAL_ADMIN' && (formData.roleName?.toUpperCase() === 'STAFF'))) && 
+             !(isEditMode && (initialData?._id?.toString() === currentAdmin?.userId?.toString())) ? (
+              <div className="space-y-4">
+                <h3 className="text-base font-medium border-b pb-2">Region Assignment</h3>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Select regions this admin will be responsible for.
+                </p>
 
-              <div className="rounded-md border p-3 sm:p-4 max-h-40 overflow-y-auto">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {regionsList.map((region: any) => (
-                    <div key={region._id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`region_${region._id}`}
-                        checked={selectedRegions.includes(region._id)}
-                        onCheckedChange={(checked) => handleRegionToggle(region._id, !!checked)}
-                        disabled={isLoading}
-                      />
-                      <label
-                        htmlFor={`region_${region._id}`}
-                        className="text-xs sm:text-sm font-medium leading-none cursor-pointer"
-                      >
-                        {region.name} ({region.code})
-                      </label>
-                    </div>
-                  ))}
-                  {regionsList.length === 0 && (
-                    <p className="text-sm text-muted-foreground">No regions available. Create regions first.</p>
-                  )}
+                <div className="rounded-md border p-3 sm:p-4 max-h-40 overflow-y-auto">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {regionsList.map((region: any) => (
+                      <div key={region._id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`region_${region._id}`}
+                          checked={selectedRegions.includes(region._id)}
+                          onCheckedChange={(checked) => handleRegionToggle(region._id, !!checked)}
+                          disabled={isLoading}
+                        />
+                        <label
+                          htmlFor={`region_${region._id}`}
+                          className="text-xs sm:text-sm font-medium leading-none cursor-pointer"
+                        >
+                          {region.name} ({region.code})
+                        </label>
+                      </div>
+                    ))}
+                    {regionsList.length === 0 && (
+                      <p className="text-sm text-muted-foreground">No regions available. Create regions first.</p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : null}
 
             {/* Permissions Section */}
-            <div className="space-y-4">
-              <h3 className="text-base font-medium border-b pb-2">Granular Permissions</h3>
+            {(currentAdmin?.roleName?.toUpperCase() === 'SUPER_ADMIN' || (currentAdmin?.roleName?.toUpperCase() === 'REGIONAL_ADMIN' && (formData.roleName?.toUpperCase() === 'STAFF'))) && 
+             !(isEditMode && (initialData?._id?.toString() === currentAdmin?.userId?.toString())) ? (
+              <div className="space-y-4">
+                <h3 className="text-base font-medium border-b pb-2">Granular Permissions</h3>
 
-              <div className="rounded-md border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[200px]">Module / Page</TableHead>
-                      <TableHead className="text-center">All</TableHead>
-                      <TableHead className="text-center">View</TableHead>
-                      <TableHead className="text-center">Edit</TableHead>
-                      <TableHead className="text-center">Delete</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sidebarNavItems.map(item => (
-                      <TableRow key={item.permission}>
-                        <TableCell className="font-medium">{item.title}</TableCell>
-                        <TableCell className="text-center">
-                          <Checkbox
-                            id={`all_${item.permission}`}
-                            checked={isPermissionChecked(item.permission, 'all')}
-                            onCheckedChange={(checked) => handlePermissionChange(item.permission, 'all', !!checked)}
-                            disabled={formData.roleName === 'SUPER_ADMIN' || isLoading}
-                          />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Checkbox
-                            id={`view_${item.permission}`}
-                            checked={isPermissionChecked(item.permission, 'view')}
-                            onCheckedChange={(checked) => handlePermissionChange(item.permission, 'view', !!checked)}
-                            disabled={formData.roleName === 'SUPER_ADMIN' || isLoading}
-                          />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Checkbox
-                            id={`edit_${item.permission}`}
-                            checked={isPermissionChecked(item.permission, 'edit')}
-                            onCheckedChange={(checked) => handlePermissionChange(item.permission, 'edit', !!checked)}
-                            disabled={formData.roleName === 'SUPER_ADMIN' || isLoading}
-                          />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Checkbox
-                            id={`delete_${item.permission}`}
-                            checked={isPermissionChecked(item.permission, 'delete')}
-                            onCheckedChange={(checked) => handlePermissionChange(item.permission, 'delete', !!checked)}
-                            disabled={formData.roleName === 'SUPER_ADMIN' || isLoading}
-                          />
-                        </TableCell>
+                <div className="rounded-md border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[200px]">Module / Page</TableHead>
+                        <TableHead className="text-center">All</TableHead>
+                        <TableHead className="text-center">View</TableHead>
+                        <TableHead className="text-center">Edit</TableHead>
+                        <TableHead className="text-center">Delete</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {sidebarNavItems
+                        .filter(item => {
+                          // Regional Admin cannot see or assign "Region" or "Admin Roles" permissions for their staff
+                          if (currentAdmin?.roleName?.toUpperCase() === 'REGIONAL_ADMIN') {
+                            return item.permission !== 'admin-roles';
+                          }
+                          return true;
+                        })
+                        .map(item => (
+                        <TableRow key={item.permission}>
+                          <TableCell className="font-medium">{item.title}</TableCell>
+                          <TableCell className="text-center">
+                            <Checkbox
+                              id={`all_${item.permission}`}
+                              checked={isPermissionChecked(item.permission, 'all')}
+                              onCheckedChange={(checked) => handlePermissionChange(item.permission, 'all', !!checked)}
+                              disabled={formData.roleName === 'SUPER_ADMIN' || isLoading}
+                            />
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Checkbox
+                              id={`view_${item.permission}`}
+                              checked={isPermissionChecked(item.permission, 'view')}
+                              onCheckedChange={(checked) => handlePermissionChange(item.permission, 'view', !!checked)}
+                              disabled={formData.roleName === 'SUPER_ADMIN' || isLoading}
+                            />
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Checkbox
+                              id={`edit_${item.permission}`}
+                              checked={isPermissionChecked(item.permission, 'edit')}
+                              onCheckedChange={(checked) => handlePermissionChange(item.permission, 'edit', !!checked)}
+                              disabled={formData.roleName === 'SUPER_ADMIN' || isLoading}
+                            />
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Checkbox
+                              id={`delete_${item.permission}`}
+                              checked={isPermissionChecked(item.permission, 'delete')}
+                              onCheckedChange={(checked) => handlePermissionChange(item.permission, 'delete', !!checked)}
+                              disabled={formData.roleName === 'SUPER_ADMIN' || isLoading}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
 
-              {formData.roleName === 'SUPER_ADMIN' && (
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Super Admin has access to all permissions by default.
-                </p>
-              )}
-            </div>
+                {formData.roleName === 'SUPER_ADMIN' && (
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Super Admin has access to all permissions by default.
+                  </p>
+                )}
+              </div>
+            ) : null}
           </div>
 
           <DialogFooter className="flex flex-col sm:flex-row sm:justify-between sm:items-center w-full gap-3 sm:gap-0 pt-4 border-t">

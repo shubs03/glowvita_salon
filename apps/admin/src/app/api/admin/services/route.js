@@ -3,12 +3,14 @@ import ServiceModel from "@repo/lib/models/admin/Service";
 import CategoryModel from "@repo/lib/models/admin/Category";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
+import { hasPermission, forbiddenResponse } from "@repo/lib";
 
 await _db();
 
 // GET all services
-export const GET = authMiddlewareAdmin(async (req) => {
-  try {
+export const GET = authMiddlewareAdmin(
+  async (req) => {
+    try {
     const services = await ServiceModel.find({}).populate("category", "name");
     return Response.json(services, { status: 200 });
   } catch (error) {
@@ -17,11 +19,14 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "vendor", "staff", "doctor", "supplier"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF", "vendor", "staff", "doctor", "supplier"],
+  "services:view"
+);
 
 // POST a new service
-export const POST = authMiddlewareAdmin(async (req) => {
-  const body = await req.json();
+export const POST = authMiddlewareAdmin(
+  async (req) => {
+    const body = await req.json();
   const { name, description, category, image } = body;
 
   if (!name || !category) {
@@ -60,7 +65,9 @@ export const POST = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "vendor", "staff", "doctor", "supplier"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF", "vendor", "staff", "doctor", "supplier"],
+  "services:edit"
+);
 
 // PUT (update) a service by ID
 export const PUT = authMiddlewareAdmin(
@@ -128,7 +135,8 @@ export const PUT = authMiddlewareAdmin(
       );
     }
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "services:edit"
 );
 
 // DELETE a service by ID
@@ -165,5 +173,6 @@ export const DELETE = authMiddlewareAdmin(
       );
     }
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "services:delete"
 );

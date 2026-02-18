@@ -45,7 +45,8 @@ export const POST = authMiddlewareAdmin(
       { status: 201 }
     );
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "push-notifications:edit"
 );
 
 export const GET = authMiddlewareAdmin(
@@ -53,7 +54,8 @@ export const GET = authMiddlewareAdmin(
     const notifications = await NotificationModel.find().sort({ createdAt: -1 });
     return Response.json(notifications);
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "push-notifications:view"
 );
 
 export const PUT = authMiddlewareAdmin(
@@ -72,7 +74,8 @@ export const PUT = authMiddlewareAdmin(
 
     return Response.json(updatedNotification);
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "push-notifications:edit"
 );
 
 export const DELETE = authMiddlewareAdmin(
@@ -86,5 +89,6 @@ export const DELETE = authMiddlewareAdmin(
 
     return Response.json({ message: "Notification deleted successfully" });
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "push-notifications:delete"
 );

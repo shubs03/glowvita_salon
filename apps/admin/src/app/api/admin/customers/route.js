@@ -10,9 +10,6 @@ import mongoose from "mongoose";
 
 // GET - Fetch customers for admin dashboard
 export const GET = authMiddlewareAdmin(async (req) => {
-    if (!hasPermission(req.user, "customers:view")) {
-        return forbiddenResponse();
-    }
     // Validate models are properly imported
     if (!ClientModel) {
         console.error('ClientModel is not properly imported');
@@ -450,7 +447,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
             error: error.message 
         }, { status: 500 });
     }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "customers:view");
 
 // Validate models have expected methods
 if (ClientModel && typeof ClientModel.find !== 'function') {

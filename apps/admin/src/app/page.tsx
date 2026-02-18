@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
+import { useAppSelector } from '@repo/store/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { FaRupeeSign, FaShoppingCart } from "react-icons/fa";
 import { FiUsers, FiActivity, FiXCircle } from "react-icons/fi";
@@ -37,10 +38,11 @@ export default function AdminPage() {
 
   // Prepare query parameters - only include them if both type and value are set
   // If filterType is selected but no filterValue, don't send any params to avoid showing 0 values
-  const queryParams = filterType && filterValue ? { filterType, filterValue } : (!filterType ? {} : null);
-  const { data: dashboardData, isLoading: isDashboardLoading, isError, error, refetch } = useGetAdminDashboardStatsQuery(
-    queryParams !== null ? queryParams : undefined
-  );
+  const selectedRegion = useAppSelector((state: any) => state.adminAuth.selectedRegion);
+  const { data: dashboardData, isLoading: isDashboardLoading, isError, error, refetch } = useGetAdminDashboardStatsQuery({
+    ...(filterType && filterValue ? { filterType, filterValue } : {}),
+    ...(selectedRegion ? { regionId: selectedRegion } : {})
+  });
 
   // Show placeholder data when filter is selected but no value chosen
   const showPlaceholder = filterType && !filterValue;

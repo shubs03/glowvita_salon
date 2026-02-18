@@ -1,21 +1,22 @@
 
 import _db from "@repo/lib/db";
 import SuperDataModel from "@repo/lib/models/admin/SuperData";
+import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 
 await _db();
 
 // GET all items
-export const GET = async (req) => {
+export const GET = authMiddlewareAdmin(async (req) => {
     try {
       const items = await SuperDataModel.find({});
       return Response.json(items, { status: 200 });
     } catch (error) {
       return Response.json({ message: "Error fetching data", error }, { status: 500 });
     }
-};
+}, ["SUPER_ADMIN"], "superdata:view");
 
 // POST a new item
-export const POST = async (req) => {
+export const POST = authMiddlewareAdmin(async (req) => {
     const body = await req.json();
     const { name, description, type, parentId, countryId, stateId, doctorType } = body;
 
@@ -38,10 +39,10 @@ export const POST = async (req) => {
        console.error("Error creating SuperData item:", error);
       return Response.json({ message: "Error creating item", error }, { status: 500 });
     }
-  };
+  }, ["SUPER_ADMIN"], "superdata:edit");
 
 // PUT (update) an item by ID
-export const PUT = async (req) => {
+export const PUT = authMiddlewareAdmin(async (req) => {
     const { id, ...updateData } = await req.json();
 
     if (!id) {
@@ -57,10 +58,10 @@ export const PUT = async (req) => {
     } catch (error) {
       return Response.json({ message: "Error updating item", error }, { status: 500 });
     }
-  };
+  }, ["SUPER_ADMIN"], "superdata:edit");
 
 // DELETE an item by ID
-export const DELETE = async (req) => {
+export const DELETE = authMiddlewareAdmin(async (req) => {
     const { id } = await req.json();
 
     if (!id) {
@@ -76,4 +77,4 @@ export const DELETE = async (req) => {
     } catch (error) {
       return Response.json({ message: "Error deleting item", error }, { status: 500 });
     }
-  };
+  }, ["SUPER_ADMIN"], "superdata:delete");

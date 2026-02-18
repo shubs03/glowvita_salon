@@ -173,4 +173,4 @@ export const POST = authMiddlewareAdmin(async (req) => {
             { status: 500 }
         );
     }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"], "subscription-plans:edit");

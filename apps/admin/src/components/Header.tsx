@@ -34,7 +34,10 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      // Remove all possible auth tokens from cookies
+      // Call the server-side logout API to clear HttpOnly cookies
+      await fetch('/api/admin/auth/logout', { method: 'POST' });
+
+      // Fallback: Remove all possible auth tokens from cookies (only works if not HttpOnly)
       Cookies.remove('admin_access_token', { path: '/' });
       Cookies.remove('admin_access_token', { path: '/', domain: window.location.hostname });
       Cookies.remove('crm_access_token', { path: '/' });

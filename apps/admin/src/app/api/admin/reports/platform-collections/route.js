@@ -133,4 +133,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }
     });
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "reports:view");

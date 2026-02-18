@@ -1013,38 +1013,7 @@ export const glowvitaApi = createApi({
       ],
     }),
 
-    // Geo Fence Endpoints
-    getGeoFences: builder.query({
-      query: () => ({ url: "/admin/geofence", method: "GET" }),
-      providesTags: ["GeoFence"],
-    }),
 
-    createGeoFence: builder.mutation({
-      query: (geoFence) => ({
-        url: "/admin/geofence",
-        method: "POST",
-        body: geoFence,
-      }),
-      invalidatesTags: ["GeoFence"],
-    }),
-
-    updateGeoFence: builder.mutation({
-      query: ({ _id, ...geoFence }) => ({
-        url: "/admin/geofence",
-        method: "PUT",
-        body: { _id, ...geoFence },
-      }),
-      invalidatesTags: ["GeoFence"],
-    }),
-
-    deleteGeoFence: builder.mutation({
-      query: (_id) => ({
-        url: "/admin/geofence",
-        method: "DELETE",
-        body: { _id },
-      }),
-      invalidatesTags: ["GeoFence"],
-    }),
     // Categories
     getCategories: builder.query({
       query: () => ({ url: "/admin/categories", method: "GET" }),

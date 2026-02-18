@@ -89,14 +89,14 @@ export const POST = authMiddlewareAdmin(async (req) => {
   });
 
   // ... (rest of the code)
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "doctors:edit");
 
 export const GET = authMiddlewareAdmin(async (req) => {
   const { buildRegionQueryFromRequest } = await import("@repo/lib");
   const query = buildRegionQueryFromRequest(req);
   const doctors = await DoctorModel.find(query).populate("subscription.plan", "name").select("-password"); // Hide password
   return Response.json(doctors);
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "doctors:view");
 
 export const PUT = authMiddlewareAdmin(
   async (req) => {
@@ -125,7 +125,8 @@ export const PUT = authMiddlewareAdmin(
 
     return Response.json(updatedDoctor);
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "doctors:edit"
 );
 
 export const DELETE = authMiddlewareAdmin(
@@ -139,5 +140,6 @@ export const DELETE = authMiddlewareAdmin(
 
     return Response.json({ message: "Doctor deleted successfully" });
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "doctors:delete"
 );

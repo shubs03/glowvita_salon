@@ -14,6 +14,7 @@ import { closeModal, openModal } from '../../../../../packages/store/src/slices/
 import { useGetRegionsQuery } from '@repo/store/services/api';
 import Link from 'next/link';
 import { MapPin } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 // No hardcoded rolesData here anymore
 
@@ -22,6 +23,7 @@ import { MapPin } from 'lucide-react';
 
 
 export default function AdminRolesPage() {
+  const { admin: currentAdmin } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
   const [editingAdmin, setEditingAdmin] = useState<AdminUser | null>(null);
@@ -161,16 +163,20 @@ export default function AdminRolesPage() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <Link href="/regions">
-                  <Button variant="outline">
-                    <MapPin className="mr-2 h-4 w-4" />
-                    Manage Regions
-                  </Button>
-                </Link>
-                <Button onClick={() => dispatch(openModal({ modalType: 'addAdmin' }))}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add New Admin
-                </Button>
+                {currentAdmin?.roleName !== 'STAFF' && (
+                  <>
+                    <Link href="/regions">
+                      <Button variant="outline">
+                        <MapPin className="mr-2 h-4 w-4" />
+                        Manage Regions
+                      </Button>
+                    </Link>
+                    <Button onClick={() => dispatch(openModal({ modalType: 'addAdmin' }))}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add New Admin
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -185,7 +191,7 @@ export default function AdminRolesPage() {
                     <TableHead>Regions</TableHead>
                     <TableHead>Permissions</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    {currentAdmin?.roleName !== 'STAFF' && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -210,7 +216,7 @@ export default function AdminRolesPage() {
                         <div className="flex flex-wrap gap-1">
                           {admin.assignedRegions && admin.assignedRegions.length > 0 ? (
                             admin.assignedRegions.map((regionId: string) => {
-                              const region = regions.find((r: any) => r._id === regionId);
+                              const region = regions.find((r: any) => r._id.toString() === regionId.toString());
                               return (
                                 <span key={regionId} className="px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-700 text-[10px] font-medium border border-indigo-100">
                                   {region ? region.name : 'Unknown'}
@@ -244,16 +250,18 @@ export default function AdminRolesPage() {
                           {admin.isActive ? "Active" : "Inactive"}
                         </span>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => dispatch(openModal({ modalType: 'editAdmin', data: admin }))}
-                        >
-                          <Edit className="h-4 w-4" />
-                          <span className="sr-only">Edit</span>
-                        </Button>
-                      </TableCell>
+                      {currentAdmin?.roleName !== 'STAFF' && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => dispatch(openModal({ modalType: 'editAdmin', data: admin }))}
+                          >
+                            <Edit className="h-4 w-4" />
+                            <span className="sr-only">Edit</span>
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

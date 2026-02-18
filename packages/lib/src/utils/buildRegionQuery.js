@@ -56,12 +56,25 @@ export function buildRegionQuery(admin, baseQuery = {}, selectedRegionId = null)
     return baseQuery; // No region filter for Super Admin by default
   }
 
+  // Global STAFF (created by Super Admin with no specific regions)
+  if (roleName === "STAFF" && (!assignedRegions || assignedRegions.length === 0)) {
+    if (selectedRegionId) {
+      console.log('[buildRegionQuery] Global STAFF filtering by region:', selectedRegionId);
+      return {
+        ...baseQuery,
+        regionId: selectedRegionId
+      };
+    }
+    console.log('[buildRegionQuery] Global STAFF viewing all regions');
+    return baseQuery;
+  }
+
   // Regional Admin is scoped to their assigned regions
   if (assignedRegions && assignedRegions.length > 0) {
     console.log('[buildRegionQuery] Regional Admin scoped to regions:', assignedRegions);
     
     // If a specific region is selected and it's in their assigned regions, use it
-    if (selectedRegionId && assignedRegions.includes(selectedRegionId)) {
+    if (selectedRegionId && assignedRegions.some(id => id.toString() === selectedRegionId.toString())) {
       return {
         ...baseQuery,
         regionId: selectedRegionId
@@ -79,7 +92,7 @@ export function buildRegionQuery(admin, baseQuery = {}, selectedRegionId = null)
   console.warn('[buildRegionQuery] Admin has no assigned regions, returning restrictive query');
   return {
     ...baseQuery,
-    regionId: "none" // This will match no documents
+    regionId: "000000000000000000000000" // This is a valid ObjectId format but will match no real documents
   };
 }
 

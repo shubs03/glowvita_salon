@@ -220,4 +220,4 @@ export const GET = authMiddlewareAdmin(async (request) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "reports:view");

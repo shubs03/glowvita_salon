@@ -12,9 +12,10 @@ import {
   JWT_SECRET_DOCTOR,
   JWT_SECRET_SUPPLIER
 } from "@repo/config/config";
+import { hasPermission, forbiddenResponse } from "@repo/lib";
 
 
-export function authMiddlewareAdmin(handler, allowedRoles = []) {
+export function authMiddlewareAdmin(handler, allowedRoles = [], requiredPermission = null) {
   return async (req, ctx) => {
     await _db();
 
@@ -40,7 +41,7 @@ export function authMiddlewareAdmin(handler, allowedRoles = []) {
       const role = decoded.role;
 
       // Determine secret and model based on role
-      if (role === 'admin' || role === 'SUPER_ADMIN' || role === 'REGIONAL_ADMIN') {
+      if (role === 'admin' || role === 'SUPER_ADMIN' || role === 'REGIONAL_ADMIN' || role === 'STAFF') {
         secret = JWT_SECRET_ADMIN;
         Model = AdminUserModel;
       } else if (role === 'vendor' || role === 'staff') {
@@ -71,6 +72,11 @@ export function authMiddlewareAdmin(handler, allowedRoles = []) {
       const userRoleLabel = user.roleName || user.role || role;
       if (allowedRoles.length && !allowedRoles.includes(userRoleLabel)) {
         return Response.json({ message: "Forbidden: You do not have permission to access this resource" }, { status: 403 });
+      }
+
+      // 🛑 Granular Permission Check
+      if (requiredPermission && !hasPermission(user, requiredPermission)) {
+        return forbiddenResponse(`You do not have permission to ${requiredPermission.split(':')[1] || 'access'} this module`);
       }
 
       req.user = user;

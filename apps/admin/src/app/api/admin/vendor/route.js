@@ -48,9 +48,6 @@ const processBase64Image = async (base64String, fileName, oldImageUrl = null) =>
 // Create Vendor
 export const POST = authMiddlewareAdmin(
   async (req) => {
-    if (!hasPermission(req.user, "vendors:edit")) {
-      return forbiddenResponse();
-    }
     const body = await req.json();
     const {
       firstName,
@@ -348,15 +345,14 @@ export const POST = authMiddlewareAdmin(
       { status: 201 }
     );
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "vendors:edit"
 );
 
 // Get All Vendors
-export const GET = authMiddlewareAdmin(async (req) => {
-  if (!hasPermission(req.user, "vendors:view")) {
-    return forbiddenResponse();
-  }
-  const url = new URL(req.url);
+export const GET = authMiddlewareAdmin(
+  async (req) => {
+    const url = new URL(req.url);
   const vendorIdParam = url.searchParams.get('vendorId');
 
   console.log('[Vendor GET] Request from user:', {
@@ -388,14 +384,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
   const vendors = await VendorModel.find(regionQuery).populate("subscription.plan", "name").select("-password").lean();
   console.log('[Vendor GET] Found vendors:', vendors.length);
   return Response.json(vendors);
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN","STAFF"],
+  "vendors:view"
+);
 
 // Update Vendor
 export const PUT = authMiddlewareAdmin(
   async (req) => {
-    if (!hasPermission(req.user, "vendors:edit")) {
-      return forbiddenResponse();
-    }
     const body = await req.json();
     const id = body.id || body._id;
 
@@ -420,6 +415,7 @@ export const PUT = authMiddlewareAdmin(
       password,
       website,
       address,
+      location,
       description,
       profileImage,
       subscription,
@@ -427,6 +423,24 @@ export const PUT = authMiddlewareAdmin(
       bankDetails,
       documents,
     } = body;
+
+    const updateData = {
+      firstName,
+      lastName,
+      businessName,
+      email,
+      phone,
+      state,
+      city,
+      pincode,
+      category,
+      subCategories,
+      website,
+      address,
+      location,
+      description,
+      updatedAt: Date.now()
+    };
 
     // Validate required fields
     if (
@@ -540,7 +554,9 @@ export const PUT = authMiddlewareAdmin(
       }
     }
 
-    // Transform subscription fields (resolve plan ObjectId)
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
     let planId = null;
     if (subscription?.package) {
       const planDoc = await PlanModel.findOne({ name: subscription.package });
@@ -589,6 +605,10 @@ export const PUT = authMiddlewareAdmin(
         [],
     };
 
+    updateData.subscription = subscriptionData;
+    updateData.bankDetails = bankDetailsData;
+    updateData.documents = documentsData;
+
     // Handle profile image upload if provided
     let profileImageUrl = profileImage;
     if (profileImage && !profileImage.startsWith('http')) {
@@ -604,6 +624,7 @@ export const PUT = authMiddlewareAdmin(
         );
       }
     }
+    updateData.profileImage = profileImageUrl;
 
     // Handle gallery images upload if provided
     let galleryUrls = gallery || [];
@@ -656,7 +677,7 @@ export const PUT = authMiddlewareAdmin(
           }
         }
       }
-      updateData.documents = documentsData;
+      updateData.documents = documentsDataWithUrls;
     }
 
     // Check for duplicate email/phone
@@ -688,7 +709,8 @@ export const PUT = authMiddlewareAdmin(
       vendor: updatedVendor,
     });
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "vendors:edit"
 );
 
 // Delete Vendor
@@ -703,7 +725,8 @@ export const DELETE = authMiddlewareAdmin(
 
     return Response.json({ message: "Vendor deleted successfully" });
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "vendors:delete"
 );
 
 // Update Vendor Status or Document Status
@@ -869,5 +892,6 @@ export const PATCH = authMiddlewareAdmin(
       );
     }
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "vendors:edit"
 );
