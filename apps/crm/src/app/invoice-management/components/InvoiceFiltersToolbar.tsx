@@ -23,6 +23,7 @@ interface InvoiceFiltersToolbarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   exportData?: Billing[];
+  isSupplier?: boolean;
 }
 
 const InvoiceFiltersToolbar = ({
@@ -40,7 +41,8 @@ const InvoiceFiltersToolbar = ({
   paymentMethods,
   activeTab,
   onTabChange,
-  exportData
+  exportData,
+  isSupplier
 }: InvoiceFiltersToolbarProps) => {
   const getExportColumns = () => {
     if (activeTab === 'billing') {
@@ -96,17 +98,19 @@ const InvoiceFiltersToolbar = ({
               <span className="hidden sm:inline">Counter Billing</span>
               <span className="sm:hidden">CB</span>
             </button>
-            <button
-              type="button"
-              onClick={() => onTabChange('appointments')}
-              className={`h-12 px-4 sm:px-6 flex items-center transition-colors ${activeTab === 'appointments' ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-background text-foreground hover:bg-muted'}`}
-            >
-              <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
-              <span className="hidden sm:inline">Appointments</span>
-              <span className="sm:hidden">AP</span>
-            </button>
+            {!isSupplier && (
+              <button
+                type="button"
+                onClick={() => onTabChange('appointments')}
+                className={`h-12 px-4 sm:px-6 flex items-center transition-colors ${activeTab === 'appointments' ? 'bg-primary hover:bg-primary/90 text-primary-foreground' : 'bg-background text-foreground hover:bg-muted'}`}
+              >
+                <Calendar className="mr-2 h-4 w-4 flex-shrink-0" />
+                <span className="hidden sm:inline">Appointments</span>
+                <span className="sm:hidden">AP</span>
+              </button>
+            )}
           </div>
-          
+
           <Select value={selectedPaymentMethod} onValueChange={onPaymentMethodChange}>
             <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-lg border-border hover:border-primary">
               <SelectValue placeholder="Payment Method" />
@@ -120,8 +124,8 @@ const InvoiceFiltersToolbar = ({
               ))}
             </SelectContent>
           </Select>
-          
-          {activeTab === 'billing' && (
+
+          {activeTab === 'billing' && !isSupplier && (
             <Select value={selectedItemType} onValueChange={(value) => onItemTypeChange(value as any)}>
               <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-lg border-border hover:border-primary">
                 <SelectValue placeholder="Item Type" />
@@ -143,7 +147,7 @@ const InvoiceFiltersToolbar = ({
               </SelectContent>
             </Select>
           )}
-          
+
           {exportData && (
             <ExportButtons
               data={exportData}
@@ -155,7 +159,7 @@ const InvoiceFiltersToolbar = ({
           )}
         </div>
       </div>
-      
+
       {/* Date Range Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="flex flex-col gap-2 flex-1">
@@ -172,7 +176,7 @@ const InvoiceFiltersToolbar = ({
             />
           </div>
         </div>
-        
+
         <div className="flex flex-col gap-2 flex-1">
           <Label htmlFor="endDate" className="text-sm font-medium">End Date</Label>
           <div className="relative">
@@ -187,11 +191,11 @@ const InvoiceFiltersToolbar = ({
             />
           </div>
         </div>
-        
+
         {(startDate || endDate) && (
-          <Button 
-            variant="outline" 
-            onClick={onClearDateFilters} 
+          <Button
+            variant="outline"
+            onClick={onClearDateFilters}
             className="h-12 self-end rounded-lg"
           >
             Clear Dates

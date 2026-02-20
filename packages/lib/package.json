@@ -10,7 +10,7 @@
     "./generateTokens": "./src/generateTokens.js",
     "./emailService": "./src/emailService.js",
     "./models/user": "./src/models/user/User.model.js",
-    "./models/user/User.model":"./src/models/user/User.model.js",
+    "./models/user/User.model": "./src/models/user/User.model.js",
     "./models/user/ClientOrder.model": "./src/models/user/ClientOrder.model.js",
     "./models/staffModel": "./src/models/Vendor/Staff.model.js",
     "./models/VendorWorkingHours": "./src/models/Vendor/VendorWorkingHours.model.js",
@@ -41,6 +41,7 @@
     "./models/Vendor/CRMOffer.model": "./src/models/Vendor/CRMOffer.model.js",
     "./models/Vendor/Order.model": "./src/models/Vendor/Order.model.js",
     "./models/Vendor/Product.model": "./src/models/Vendor/Product.model.js",
+    "./models/Vendor/InventoryTransaction.model": "./src/models/Vendor/InventoryTransaction.model.js",
     "./models/Vendor/Shipping.model": "./src/models/Vendor/Shipping.model.js",
     "./models/Vendor/Staff.model": "./src/models/Vendor/Staff.model.js",
     "./models/Vendor/VendorWorkingHours.model": "./src/models/Vendor/VendorWorkingHours.model.js",
@@ -77,7 +78,9 @@
     "./modules/scheduling/ConflictChecker": "./src/modules/scheduling/ConflictChecker.js",
     "./utils/regionQuery": "./src/utils/regionQuery.js",
     "./utils/assignRegion.js": "./src/utils/assignRegion.js",
-    "./VPSUpload": "./VPSUpload.js"
+    "./VPSUpload": "./VPSUpload.js",
+    "./modules/scheduling/AutoCancellation": "./src/modules/scheduling/AutoCancellation.js",
+    "./modules/scheduling/scheduledJobs": "./src/modules/scheduling/scheduledJobs.js"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

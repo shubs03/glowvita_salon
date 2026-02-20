@@ -325,6 +325,10 @@ const vendorSchema = new mongoose.Schema({
     unique: true,
     sparse: true, // Allows multiple documents to have a null value for this field
   },
+  gstNo: {
+    type: String,
+    trim: true,
+  },
   smsBalance: {
     type: Number,
     default: 0,
@@ -457,7 +461,32 @@ vendorSchema.index({ location: "2dsphere" }); // Geospatial index for location-b
 vendorSchema.index({ 'subscription.status': 1, 'subscription.endDate': 1 });
 // Email index removed as it is already defined in the schema with unique: true
 
-const VendorModel =
-  mongoose.models.Vendor || mongoose.model("Vendor", vendorSchema);
+// Ensure the model is registered correctly
+let VendorModel;
+if (mongoose.models.Vendor) {
+  VendorModel = mongoose.models.Vendor;
+  // If model exists but doesn't have gstNo in schema, we might be in a stale dev state
+  if (!VendorModel.schema.paths.gstNo) {
+    VendorModel.schema.add({
+      gstNo: {
+        type: String,
+        trim: true,
+      },
+    });
+  }
+  // Ensure referralCode is also present
+  if (!VendorModel.schema.paths.referralCode) {
+    VendorModel.schema.add({
+      referralCode: {
+        type: String,
+        trim: true,
+        unique: true,
+        sparse: true,
+      },
+    });
+  }
+} else {
+  VendorModel = mongoose.model("Vendor", vendorSchema);
+}
 
 export default VendorModel;

@@ -29,7 +29,7 @@ const clientSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
+      required: false, // Email is optional
       lowercase: true,
       trim: true,
       index: true,
@@ -102,7 +102,7 @@ const clientSchema = new mongoose.Schema(
 
 // COMPOUND INDEXES for common query patterns
 clientSchema.index({ vendorId: 1, status: 1 });
-clientSchema.index({ vendorId: 1, email: 1 }, { unique: true });
+clientSchema.index({ vendorId: 1, email: 1 }, { unique: true, sparse: true });
 clientSchema.index({ vendorId: 1, phone: 1 }, { unique: true });
 clientSchema.index({ vendorId: 1, totalSpent: -1 });
 clientSchema.index({ vendorId: 1, totalBookings: -1 });
@@ -119,12 +119,20 @@ clientSchema.index({
 // Pre-save middleware to automate regionId inheritance
 clientSchema.pre("save", async function (next) {
   try {
-    // 1. Inherit regionId from Vendor if missing
+    // 1. Inherit regionId from Vendor or Supplier if missing
     if (!this.regionId && this.vendorId) {
+      // Try Vendor first
       const Vendor = mongoose.models.Vendor || (await import('./Vendor.model.js')).default;
-      const vendor = await Vendor.findById(this.vendorId).select('regionId');
-      if (vendor && vendor.regionId) {
-        this.regionId = vendor.regionId;
+      let profile = await Vendor.findById(this.vendorId).select('regionId');
+
+      // If not found in Vendor, try Supplier
+      if (!profile) {
+        const Supplier = mongoose.models.Supplier || (await import('./Supplier.model.js')).default;
+        profile = await Supplier.findById(this.vendorId).select('regionId');
+      }
+
+      if (profile && profile.regionId) {
+        this.regionId = profile.regionId;
       }
     }
     next();
@@ -135,7 +143,7 @@ clientSchema.pre("save", async function (next) {
 });
 
 // Instance methods
-clientSchema.methods.updateVisitStats = function(amount = 0) {
+clientSchema.methods.updateVisitStats = function (amount = 0) {
   this.totalBookings += 1;
   this.totalSpent += amount;
   this.lastVisit = new Date();
@@ -146,9 +154,9 @@ clientSchema.methods.updateVisitStats = function(amount = 0) {
 };
 
 // Static methods
-clientSchema.statics.findByVendor = function(vendorId, options = {}) {
+clientSchema.statics.findByVendor = function (vendorId, options = {}) {
   const query = { vendorId };
-  
+
   if (options.status) query.status = options.status;
   if (options.searchTerm) {
     query.$or = [
@@ -157,13 +165,13 @@ clientSchema.statics.findByVendor = function(vendorId, options = {}) {
       { phone: { $regex: options.searchTerm, $options: 'i' } },
     ];
   }
-  
+
   return this.find(query)
     .sort(options.sort || { lastVisit: -1 })
     .limit(options.limit || 100);
 };
 
-clientSchema.statics.getTopClients = function(vendorId, limit = 10) {
+clientSchema.statics.getTopClients = function (vendorId, limit = 10) {
   return this.find({ vendorId, status: 'Active' })
     .sort({ totalSpent: -1, totalBookings: -1 })
     .limit(limit);

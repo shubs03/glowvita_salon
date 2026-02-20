@@ -230,6 +230,18 @@ export default function AdminPage() {
     );
   }
 
+  // Calculate Total Business (Sum of all components across regions)
+  const totalBusinessValue = dashboardData?.cityWiseSales?.reduce((acc: number, item: any) => {
+    return acc + (item.totalServiceAmount || 0) +
+      (item.totalProductAmount || 0) +
+      (item.servicePlatformFees || 0) +
+      (item.productPlatformFees || 0) +
+      (item.serviceTax || 0) +
+      (item.productTax || 0) +
+      (item.subscriptionAmount || 0) +
+      (item.smsAmount || 0);
+  }, 0) || 0;
+
   return (
     <div className="flex-1 space-y-6 p-4 md:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -296,47 +308,95 @@ export default function AdminPage() {
         </Button>
       </div>
 
-      {/* First Row: Financial Cards */}
+      {/* First Row: Business & Financial Overview */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-        {/* Card 1: Total Revenue */}
-        <Card className="transition-all duration-300 hover:shadow-md">
+        {/* Card 1: Total Business (Sum of all revenue components) */}
+        <Card className="transition-all duration-300 hover:shadow-md bg-white">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Business
+            </CardTitle>
+            <FaRupeeSign className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">
+              {showPlaceholder
+                ? "₹0.00"
+                : formatCurrency(totalBusinessValue)}
+            </div>
+            <div className="text-[10px] text-muted-foreground mt-1 line-clamp-1">
+              Includes Service, Product, Fees, Tax, Subs & SMS
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 2: Total Revenue */}
+        <Card className="transition-all duration-300 hover:shadow-md bg-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Revenue
             </CardTitle>
-            <FaRupeeSign className="h-4 w-4 text-muted-foreground" />
+            <FaRupeeSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-primary">
               {showPlaceholder
-                ? "0"
+                ? "₹0.00"
                 : formatCurrency(dashboardData?.totalRevenue?.current || 0)}
             </div>
-            {/* Removed percentage change display as per user request */}
           </CardContent>
         </Card>
 
-        {/* Card 2: Subscription Amount */}
-        <Card className="transition-all duration-300 hover:shadow-md">
+        {/* Card 3: Total Business User (Merged Vendors & Suppliers) */}
+        <Card className="transition-all duration-300 hover:shadow-md bg-white">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Business User
+            </CardTitle>
+            <FiUsers className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">
+              {showPlaceholder
+                ? "0"
+                : ((dashboardData?.totalVendors?.current || 0) + (dashboardData?.totalSuppliers?.current || 0)).toLocaleString()}
+            </div>
+            <div className="flex text-xs text-muted-foreground mt-1">
+              <span className="mr-3 font-medium">Vendors:
+                {showPlaceholder
+                  ? "0"
+                  : (dashboardData?.totalVendors?.current || 0).toLocaleString()}
+              </span>
+              <span className="font-medium">Suppliers:
+                {showPlaceholder
+                  ? "0"
+                  : (dashboardData?.totalSuppliers?.current || 0).toLocaleString()}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Card 4: Subscription Amount */}
+        <Card className="transition-all duration-300 hover:shadow-md bg-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Subscription Amount
             </CardTitle>
-            <FaRupeeSign className="h-4 w-4 text-muted-foreground" />
+            <FaRupeeSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-primary">
               {showPlaceholder
                 ? "₹0.00"
                 : formatCurrency(dashboardData?.subscriptionAmount || 0)}
             </div>
             <div className="flex text-xs text-muted-foreground mt-1">
-              <span className="mr-3 font-medium">Active:
+              <span className="mr-3 font-medium text-primary/80">Active:
                 {showPlaceholder
                   ? "0"
                   : (dashboardData?.subscriptionStats?.active || 0).toLocaleString()}
               </span>
-              <span className="font-medium">Inactive:
+              <span className="font-medium text-muted-foreground">Inactive:
                 {showPlaceholder
                   ? "0"
                   : (dashboardData?.subscriptionStats?.inactive || 0).toLocaleString()}
@@ -345,33 +405,36 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* Card 3: SMS Amount */}
-        <Card className="transition-all duration-300 hover:shadow-md">
+        {/* Card 5: SMS Amount */}
+        <Card className="transition-all duration-300 hover:shadow-md bg-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               SMS Amount
             </CardTitle>
-            <FaRupeeSign className="h-4 w-4 text-muted-foreground" />
+            <FaRupeeSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-primary">
               {showPlaceholder
                 ? "₹0.00"
                 : formatCurrency(dashboardData?.smsAmount || 0)}
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        {/* Card 4: Total Service Amount */}
-        <Card className="transition-all duration-300 hover:shadow-md">
+      {/* Second Row: Detailed Performance Cards */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 mt-4">
+        {/* Card 6: Total Service Amount */}
+        <Card className="transition-all duration-300 hover:shadow-md bg-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Service Amount
             </CardTitle>
-            <FaRupeeSign className="h-4 w-4 text-muted-foreground" />
+            <FaRupeeSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-primary">
               {showPlaceholder
                 ? "₹0.00"
                 : formatCurrency(dashboardData?.serviceAmount || 0)}
@@ -379,27 +442,27 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* Card 5: Total Product Amount */}
-        <Card className="transition-all duration-300 hover:shadow-md">
+        {/* Card 7: Total Product Amount */}
+        <Card className="transition-all duration-300 hover:shadow-md bg-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Product Amount
             </CardTitle>
-            <FaRupeeSign className="h-4 w-4 text-muted-foreground" />
+            <FaRupeeSign className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-primary">
               {showPlaceholder
                 ? "₹0.00"
                 : formatCurrency(dashboardData?.productAmount || 0)}
             </div>
             <div className="flex text-xs text-muted-foreground mt-1">
-              <span className="mr-3">Vendor:
+              <span className="mr-3 font-medium text-primary/80">Vendor:
                 {showPlaceholder
                   ? "₹0.00"
                   : formatCurrency(dashboardData?.vendorProductAmount || 0)}
               </span>
-              <span>Supplier:
+              <span className="font-medium">Supplier:
                 {showPlaceholder
                   ? "₹0.00"
                   : formatCurrency(dashboardData?.supplierProductAmount || 0)}
@@ -407,61 +470,57 @@ export default function AdminPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
 
-      {/* Second Row: Count Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 mt-4">
-        {/* Card 6: Total Bookings */}
-        <Card className="transition-all duration-300 hover:shadow-md">
+        {/* Card 8: Total Bookings */}
+        <Card className="transition-all duration-300 hover:shadow-md bg-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Total Bookings
             </CardTitle>
-            <FaShoppingCart className="h-4 w-4 text-muted-foreground" />
+            <FaShoppingCart className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-primary">
               {showPlaceholder
                 ? "0"
                 : (dashboardData?.totalBookings?.current || 0).toLocaleString()}
             </div>
             <div className="flex text-xs text-muted-foreground mt-1">
-              <span className="mr-3">Online:
+              <span className="mr-3 font-medium text-primary/80">Online:
                 {showPlaceholder
                   ? "0"
                   : (dashboardData?.totalBookings?.online || 0).toLocaleString()}
               </span>
-              <span>Offline:
+              <span className="font-medium text-muted-foreground">Offline:
                 {showPlaceholder
                   ? "0"
                   : (dashboardData?.totalBookings?.offline || 0).toLocaleString()}
               </span>
             </div>
-            {/* Removed percentage change display as per user request */}
           </CardContent>
         </Card>
 
-        {/* Card 7: Completed Appointments */}
-        <Card className="transition-all duration-300 hover:shadow-md">
+        {/* Card 9: Completed Appointments */}
+        <Card className="transition-all duration-300 hover:shadow-md bg-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Completed Appointments
             </CardTitle>
-            <FiActivity className="h-4 w-4 text-muted-foreground" />
+            <FiActivity className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-primary">
               {showPlaceholder
                 ? "0"
                 : (dashboardData?.totalBookings?.completed || 0).toLocaleString()}
             </div>
             <div className="flex text-xs text-muted-foreground mt-1">
-              <span className="mr-3">Online:
+              <span className="mr-3 font-medium text-primary/80">Online:
                 {showPlaceholder
                   ? "0"
                   : (dashboardData?.totalBookings?.completedOnline || 0).toLocaleString()}
               </span>
-              <span>Offline:
+              <span className="font-medium text-muted-foreground">Offline:
                 {showPlaceholder
                   ? "0"
                   : (dashboardData?.totalBookings?.completedOffline || 0).toLocaleString()}
@@ -470,69 +529,32 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        {/* Card 8: Cancelled Bookings */}
-        <Card className="transition-all duration-300 hover:shadow-md">
+        {/* Card 10: Cancelled Bookings */}
+        <Card className="transition-all duration-300 hover:shadow-md bg-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
               Cancelled Bookings
             </CardTitle>
-            <FiXCircle className="h-4 w-4 text-muted-foreground" />
+            <FiXCircle className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-2xl font-bold text-primary">
               {showPlaceholder
                 ? "0"
                 : (dashboardData?.cancelledBookings?.current || 0).toLocaleString()}
             </div>
             <div className="flex text-xs text-muted-foreground mt-1">
-              <span className="mr-3">Online:
+              <span className="mr-3 font-medium text-primary/80">Online:
                 {showPlaceholder
                   ? "0"
                   : (dashboardData?.cancelledBookings?.online || 0).toLocaleString()}
               </span>
-              <span>Offline:
+              <span className="font-medium text-muted-foreground">Offline:
                 {showPlaceholder
                   ? "0"
                   : (dashboardData?.cancelledBookings?.offline || 0).toLocaleString()}
               </span>
             </div>
-            {/* Removed percentage change display as per user request */}
-          </CardContent>
-        </Card>
-
-        {/* Card 9: Total Vendors */}
-        <Card className="transition-all duration-300 hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Vendors
-            </CardTitle>
-            <FiUsers className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {showPlaceholder
-                ? "0"
-                : (dashboardData?.totalVendors?.current || 0).toLocaleString()}
-            </div>
-            {/* Removed percentage change display as per user request */}
-          </CardContent>
-        </Card>
-
-        {/* Card 10: Total Suppliers */}
-        <Card className="transition-all duration-300 hover:shadow-md">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Suppliers
-            </CardTitle>
-            <FiUsers className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {showPlaceholder
-                ? "0"
-                : (dashboardData?.totalSuppliers?.current || 0).toLocaleString()}
-            </div>
-            {/* Removed percentage change display as per user request */}
           </CardContent>
         </Card>
       </div>

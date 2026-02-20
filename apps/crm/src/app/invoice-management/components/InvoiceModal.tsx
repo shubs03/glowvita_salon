@@ -2,7 +2,7 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@repo/ui/dialog";
 import { Button } from "@repo/ui/button";
-import { Download } from "lucide-react";
+import { Download, Printer } from "lucide-react";
 import InvoiceUI from "@/components/InvoiceUI";
 import AppointmentInvoice from "@/components/AppointmentInvoice";
 import { Billing } from './types';
@@ -83,6 +83,10 @@ export default function InvoiceModal({
 
         <div className="p-6 pt-4 border-t bg-muted/30 flex-shrink-0">
           <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => window.print()}>
+              <Printer className="h-4 w-4 mr-2" />
+              Print
+            </Button>
             {isBilling && selectedBilling && (
               <Button variant="outline" onClick={() => onDownloadBilling(selectedBilling)}>
                 <Download className="h-4 w-4 mr-2" />

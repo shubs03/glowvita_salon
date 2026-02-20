@@ -7,7 +7,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@repo/ui/tabs";
 import AppointmentInvoice from "@/components/AppointmentInvoice";
 import InvoiceUI from "@/components/InvoiceUI";
 import { toast } from 'sonner';
-import { useGetBillingRecordsQuery, useGetVendorProfileQuery, useGetAppointmentsQuery } from "@repo/store/api";
+import { useGetBillingRecordsQuery, useGetVendorProfileQuery, useGetAppointmentsQuery, useGetCurrentSupplierProfileQuery } from "@repo/store/api";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 
 // Import components
@@ -31,8 +31,10 @@ if (typeof window !== 'undefined') {
 }
 
 export default function InvoiceManagementPage() {
-  const { user } = useCrmAuth();
+  const { user, role: authRole } = useCrmAuth();
   const VENDOR_ID = user?._id || "";
+  const userRole = (authRole || user?.role || "").toLowerCase();
+  const isSupplier = userRole === 'supplier';
 
   // States
   const [billings, setBillings] = useState<Billing[]>([]);
@@ -58,29 +60,40 @@ export default function InvoiceManagementPage() {
 
   // Fetch appointments
   const { data: appointmentsData, isLoading: isAppointmentsLoading, refetch: refetchAppointments } = useGetAppointmentsQuery(undefined, {
-    skip: !VENDOR_ID
+    skip: !VENDOR_ID || isSupplier
   });
 
   // Fetch vendor profile
+
   const { data: vendorProfile } = useGetVendorProfileQuery(undefined, {
-    skip: !VENDOR_ID
+    skip: !VENDOR_ID || isSupplier
   });
 
-  // Debug vendor profile
-  useEffect(() => {
-    if (vendorProfile) {
-      console.log('Vendor Profile Data:', vendorProfile);
-      console.log('Salon Name:', vendorProfile?.data?.salonName);
-      console.log('Name:', vendorProfile?.data?.name);
-    }
-  }, [vendorProfile]);
+  const { data: supplierProfile } = useGetCurrentSupplierProfileQuery(undefined, {
+    skip: !VENDOR_ID || !isSupplier
+  });
 
-  const VENDOR_NAME = vendorProfile?.data?.name || "Salon";
-  const vendorName = vendorProfile?.data?.salonName ||
-    vendorProfile?.data?.name ||
-    vendorProfile?.data?.businessName ||
-    vendorProfile?.name ||
-    "Salon Name";
+  // Use the appropriate profile based on role
+  const currentProfile = isSupplier ? supplierProfile : vendorProfile;
+
+  // Debug profile
+  useEffect(() => {
+    if (currentProfile) {
+      console.log('Current Profile Data:', currentProfile);
+    }
+  }, [currentProfile]);
+
+  const VENDOR_NAME = isSupplier
+    ? (supplierProfile?.data?.shopName || "Supplier")
+    : (vendorProfile?.data?.name || "Salon");
+
+  const vendorName = isSupplier
+    ? (supplierProfile?.data?.shopName || "Your Supplier Business")
+    : (vendorProfile?.data?.salonName ||
+      vendorProfile?.data?.name ||
+      vendorProfile?.data?.businessName ||
+      vendorProfile?.name ||
+      "Salon Name");
 
   // Reset page when tab changes
   useEffect(() => {
@@ -162,7 +175,7 @@ export default function InvoiceManagementPage() {
       }
 
       // Sort by invoice number descending (newest/highest invoice number first)
-      filtered.sort((a: any, b : any) => {
+      filtered.sort((a: any, b: any) => {
         const invoiceA = a.invoiceNumber || '';
         const invoiceB = b.invoiceNumber || '';
         return invoiceB.localeCompare(invoiceA, undefined, { numeric: true, sensitivity: 'base' });
@@ -341,12 +354,12 @@ export default function InvoiceManagementPage() {
         <InvoiceHeader />
 
         {/* Summary Stats - Combined Billing & Appointments */}
-        <SummaryStats billings={billings} appointments={appointments} activeTab={activeTab} />
+        <SummaryStats billings={billings} appointments={appointments} activeTab={activeTab} isSupplier={isSupplier} />
 
         <div className="">
           <div className="">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              
+
               <InvoiceFiltersToolbar
                 searchTerm={searchTerm}
                 selectedPaymentMethod={selectedPaymentMethod}
@@ -363,8 +376,9 @@ export default function InvoiceManagementPage() {
                 activeTab={activeTab}
                 onTabChange={setActiveTab}
                 exportData={activeTab === 'billing' ? billings : appointments}
+                isSupplier={isSupplier}
               />
-              
+
               <div className="mt-6">
                 <TabsContent value="billing" className="mt-0">
                   <BillingTable
@@ -412,19 +426,19 @@ export default function InvoiceManagementPage() {
         selectedBilling={selectedBilling}
         selectedAppointment={selectedAppointment}
         vendorName={vendorName}
-        vendorProfile={vendorProfile}
+        vendorProfile={currentProfile}
         onDownloadBilling={downloadInvoice}
         onDownloadAppointment={downloadAppointmentInvoice}
       />
 
       {/* Hidden PDF generation area */}
-      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+      <div className="print-area-container" style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
         {selectedBilling && (
           <div id="invoice-to-pdf">
             <InvoiceUI
               invoiceData={prepareInvoiceData(selectedBilling)}
               vendorName={vendorName}
-              vendorProfile={vendorProfile}
+              vendorProfile={currentProfile}
               taxRate={selectedBilling.taxRate}
               isOrderSaved={selectedBilling.paymentStatus === "Paid"}
               onEmailClick={() => { }}
@@ -439,7 +453,7 @@ export default function InvoiceManagementPage() {
             <AppointmentInvoice
               invoiceData={prepareAppointmentInvoiceData(selectedAppointment)}
               vendorName={vendorName}
-              vendorProfile={vendorProfile}
+              vendorProfile={currentProfile}
               taxRate={selectedAppointment.taxRate || 0}
               isOrderSaved={true}
               onEmailClick={() => { }}
@@ -448,6 +462,54 @@ export default function InvoiceManagementPage() {
           </div>
         )}
       </div>
+
+      {/* Print Styles */}
+      <style>{`
+        @media print {
+          /* Hide everything first */
+          body * {
+            visibility: hidden !important;
+          }
+          
+          /* Only show the printable invoice section and its children */
+          #invoice-to-pdf,
+          #invoice-to-pdf *,
+          #appointment-invoice-to-pdf,
+          #appointment-invoice-to-pdf * {
+            visibility: visible !important;
+          }
+          
+          /* Ensure the printable section is positioned at the top left and fills the page */
+          #invoice-to-pdf,
+          #appointment-invoice-to-pdf {
+            display: block !important;
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 5mm !important;
+            background: white !important;
+            z-index: 2147483647 !important;
+          }
+
+          /* Hide UI elements that shouldn't be printed */
+          .print\:hidden {
+            display: none !important;
+          }
+
+          @page {
+            margin: 0;
+            size: auto;
+          }
+
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

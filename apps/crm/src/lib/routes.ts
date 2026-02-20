@@ -2,7 +2,7 @@
 import {
   FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut,
   FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn,
-  FaBell, FaGift, FaHeart, FaUserFriends, FaUserCircle, FaStethoscope, FaDollarSign, FaClock, FaTruck, FaShoppingCart, FaShippingFast, FaMoneyCheckAlt, FaStore, FaReceipt, FaQuestionCircle, FaStar, FaPlusSquare
+  FaBell, FaGift, FaHeart, FaUserFriends, FaUserCircle, FaStethoscope, FaDollarSign, FaClock, FaTruck, FaShoppingCart, FaShippingFast, FaMoneyCheckAlt, FaStore, FaReceipt, FaQuestionCircle, FaStar, FaPlusSquare, FaWarehouse
 } from "react-icons/fa";
 import { IconType } from "react-icons";
 
@@ -59,11 +59,13 @@ export const doctorNavItems: NavItem[] = [
 
 export const supplierNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
+  { title: "Inventory", href: "/inventory", Icon: FaWarehouse, permission: 'products_view' },
   { title: "Products", href: "/supplier-products", Icon: FaBoxOpen, permission: 'products_view' },
   { title: "Product Questions", href: "/product-questions", Icon: FaQuestionCircle, permission: 'product_questions_view' },
   { title: "Reviews", href: "/reviews", Icon: FaStar, permission: 'reviews_view' },
   { title: "Orders", href: "/orders", Icon: FaShoppingCart, permission: 'orders_view' },
   { title: "Sales", href: "/sales", Icon: FaDollarSign, permission: 'sales_view' },
+  { title: "Invoice Management", href: "/invoice-management", Icon: FaReceipt, permission: 'invoice_management_view' },
   { title: "Expenses", href: "/expenses", Icon: FaReceipt, permission: 'expenses_view' },
   { title: "Offers & Coupons", href: "/offers-coupons", Icon: FaGift, permission: 'offers_view' },
   { title: "Referrals", href: "/referrals", Icon: FaUserFriends, permission: 'referrals_view' },

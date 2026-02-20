@@ -30,7 +30,7 @@ import { ReportModal } from './modals/ReportModal';
 export default function VendorReports() {
   // Use the custom hook for managing all filter states
   const { filters, updateFilter } = useVendorFilters();
-  
+
   // Single modal state - tracks which report is currently open
   const [openReportTitle, setOpenReportTitle] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');

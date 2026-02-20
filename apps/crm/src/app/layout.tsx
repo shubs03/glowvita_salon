@@ -103,6 +103,7 @@ export default function RootLayout({
     '/dashboard',
     '/calendar',
     '/appointments',
+    '/inventory',
     '/clients',
     '/customers/summary',
     '/services',

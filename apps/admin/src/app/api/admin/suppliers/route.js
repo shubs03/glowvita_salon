@@ -70,7 +70,7 @@ export const POST = async (req) => {
   try {
     await initDb(); // Initialize DB connection
     const body = await req.json();
-    const { licenseFiles, password, referredByCode, regionId, ...supplierData } = body;
+    const { licenseFiles, password, referredByCode, regionId, gstNo, ...supplierData } = body;
 
     const validationError = validateSupplierData({ password, ...supplierData });
     if (validationError) {
@@ -108,6 +108,7 @@ export const POST = async (req) => {
 
     const newSupplier = await SupplierModel.create({
       ...supplierData,
+      gstNo,
       password: hashedPassword,
       licenseFiles: finalLicenseFiles,
       referralCode: await generateReferralCode(supplierData.shopName),

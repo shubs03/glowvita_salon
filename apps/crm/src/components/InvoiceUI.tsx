@@ -47,10 +47,16 @@ export function InvoiceUI({
   onDownloadClick,
   onRebookClick
 }: InvoiceUIProps) {
-  // Get vendor contact info
-  const vendorPhone = vendorProfile?.data?.phone || vendorProfile?.data?.mobile || 'N/A';
+  // Get vendor contact info - handle both vendor and supplier field names
+  const vendorPhone = vendorProfile?.data?.phone || vendorProfile?.data?.mobile || vendorProfile?.data?.mobileNumber || 'N/A';
+
+  // Use shopName as a fallback for vendorName if it's pointing to a placeholder
+  const displayBusinessName = (vendorName && vendorName !== 'Your Salon' && vendorName !== 'Your Supplier Business')
+    ? vendorName
+    : (vendorProfile?.data?.shopName || vendorProfile?.data?.businessName || vendorName || 'GlowVita Salon');
+
   const vendorAddress = [
-    vendorProfile?.data?.address,
+    vendorProfile?.data?.address || vendorProfile?.data?.shopAddress,
     vendorProfile?.data?.city,
     vendorProfile?.data?.state,
     vendorProfile?.data?.pincode
@@ -108,9 +114,39 @@ export function InvoiceUI({
   const items = invoiceData.items || [];
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 bg-white font-sans print:p-0 print:max-w-none print:w-full rounded-lg print:rounded-none" style={{ minWidth: 'auto' }}>
+    <div id="invoice-content" className="max-w-4xl mx-auto p-4 sm:p-6 bg-white font-sans print:p-0 print:max-w-none print:w-full rounded-lg print:rounded-none" style={{ minWidth: 'auto' }}>
+      <style type="text/css" media="print">
+        {`
+          @page { size: auto; margin: 10mm; }
+          html, body {
+              height: auto !important; 
+              overflow: visible !important; 
+              position: static !important;
+          }
+          body * { visibility: hidden !important; }
+          #invoice-content, #invoice-content * { visibility: visible !important; }
+          #invoice-content { 
+            display: block !important;
+            position: fixed !important; 
+            left: 0 !important; 
+            top: 0 !important; 
+            width: 100% !important; 
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 5mm !important;
+            background: white !important;
+            box-shadow: none !important;
+            border: none !important;
+            min-width: 0 !important;
+            z-index: 2147483647 !important;
+            overflow: visible !important;
+          }
+          .print\\:hidden { display: none !important; }
+        `}
+      </style>
+
       {/* GlowVita Branding */}
-      <div className="bg-gray-900 text-white py-2 px-4 rounded-t-lg -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 print:hidden">
+      <div className="bg-gray-900 text-white py-2 px-4 rounded-t-lg -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 mb-4 print:mx-0 print:mt-0">
         <div className="flex items-center justify-center gap-2">
           <svg className="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="currentColor" opacity="0.3" />
@@ -124,7 +160,7 @@ export function InvoiceUI({
       {/* Header with Salon Info */}
       <div className="flex flex-col sm:flex-row justify-between items-start mb-4 print:mb-3 border-b-2 border-black pb-4 gap-3 sm:gap-0">
         <div className="w-full sm:w-auto">
-          <h1 className="text-lg sm:text-xl font-bold text-black print:text-lg">{vendorName || 'Salon Name'}</h1>
+          <h1 className="text-lg sm:text-xl font-bold text-black print:text-lg">{displayBusinessName}</h1>
           <div className="text-black text-xs sm:text-sm mt-1 print:text-xs" dangerouslySetInnerHTML={{ __html: formatAddress(vendorAddress) }} />
           <p className="text-black text-xs sm:text-sm mt-1 print:text-xs">Phone: {vendorPhone}</p>
         </div>
@@ -152,7 +188,7 @@ export function InvoiceUI({
       </div>
 
       {/* Combined Items and Payment Summary Table */}
-      <div className="mb-6 print:mb-4 overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+      <div className="mb-6 print:mb-4 overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0 print:mx-0 print:px-0 print:overflow-visible">
         <table className="w-full border-collapse border border-black min-w-[600px] sm:min-w-0">
           <thead>
             <tr className="bg-gray-200">
@@ -170,27 +206,49 @@ export function InvoiceUI({
                 className="border border-black cursor-pointer hover:bg-gray-50"
                 onClick={() => handleItemClick(item)}
               >
-                <td className="border border-black p-1 sm:p-2 print:p-1">
-                  <div className="font-semibold text-xs sm:text-sm text-black print:text-xs">
-                    {item.productName || item.name || 'Unnamed Item'}
+                <td className="border border-black p-0">
+                  <div className="text-xs sm:text-sm text-black print:text-xs">
+                    <div className="p-1 sm:p-2 print:p-1">
+                      <div className="font-bold">{item.productName || item.name || 'Unnamed Item'}</div>
+                      {item.staffMember?.name && (
+                        <div className="text-[10px] sm:text-xs text-gray-500 italic">
+                          Staff: {item.staffMember.name}
+                        </div>
+                      )}
+                    </div>
                     {item.addOns && item.addOns.length > 0 && (
-                      <div className="mt-1 text-[10px] sm:text-xs text-gray-600 print:text-[10px]">
+                      <div className="border-t border-black p-1 sm:p-2 print:p-1 space-y-1">
                         {item.addOns.map((addon: any, i: number) => (
-                          <div key={i} className="flex justify-between">
+                          <div key={i} className="flex items-center gap-1">
                             <span>+ {addon.name}</span>
-                            <span>₹{addon.price}</span>
                           </div>
                         ))}
                       </div>
                     )}
-                    {item.staffMember?.name && (
-                      <div className="mt-1 text-[10px] sm:text-xs text-gray-500 italic print:text-[10px]">
-                        Staff: {item.staffMember.name}
+                  </div>
+                </td>
+                <td className="border border-black p-0 text-right text-xs sm:text-sm text-black print:text-xs">
+                  <div className="flex flex-col h-full">
+                    <div className="p-1 sm:p-2 print:p-1 flex items-center justify-end gap-1 font-bold">
+                      {item.discountedPrice > 0 ? (
+                        <span>₹{item.discountedPrice.toFixed(2)}</span>
+                      ) : item.salePrice > 0 ? (
+                        <span>₹{item.salePrice.toFixed(2)}</span>
+                      ) : (
+                        <span>₹{(item.price || 0).toFixed(2)}</span>
+                      )}
+                    </div>
+                    {item.addOns && item.addOns.length > 0 && (
+                      <div className="border-t border-black p-1 sm:p-2 print:p-1 space-y-1 flex flex-col items-end">
+                        {item.addOns.map((addon: any, i: number) => (
+                          <div key={i} className="flex justify-end">
+                            ₹{addon.price.toFixed(2)}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
                 </td>
-                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">₹{(item.price || 0).toFixed(2)}</td>
                 <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">{item.quantity || 0}</td>
                 <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm text-black print:text-xs print:p-1">
                   ₹{isTaxEnabled ? (
@@ -211,16 +269,15 @@ export function InvoiceUI({
               <td className="border border-black p-1 sm:p-2 text-right font-semibold text-green-600 text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>Discount:</td>
               <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-green-600 print:text-xs print:p-1">-₹{(invoiceData.discount || 0).toFixed(2)}</td>
             </tr>
-            <tr className="border border-black">
-              <td className="border border-black p-1 sm:p-2 text-right font-semibold text-black text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>
-                Tax ({isTaxEnabled ? (taxType === 'percentage' ? `${taxRate}%` : 'Fixed') : '0%'}):
-              </td>
-              <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-black print:text-xs print:p-1">₹{(invoiceData.tax || 0).toFixed(2)}</td>
-            </tr>
-            <tr className="border border-black">
-              <td className="border border-black p-1 sm:p-2 text-right font-semibold text-black text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>Platform Fee:</td>
-              <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-black print:text-xs print:p-1">₹{(invoiceData.platformFee || 0).toFixed(2)}</td>
-            </tr>
+            {invoiceData.tax > 0 && (
+              <tr className="border border-black">
+                <td className="border border-black p-1 sm:p-2 text-right font-semibold text-black text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>
+                  GST/Tax Component ({isTaxEnabled ? (taxType === 'percentage' ? `${taxRate}%` : 'Fixed') : '0%'}):
+                </td>
+                <td className="border border-black p-1 sm:p-2 text-right text-xs sm:text-sm font-semibold text-black print:text-xs print:p-1">₹{(invoiceData.tax || 0).toFixed(2)}</td>
+              </tr>
+            )}
+
             <tr className="border border-black bg-gray-200">
               <td className="border border-black p-1 sm:p-2 text-right font-bold text-black text-xs sm:text-sm print:text-xs print:p-1" colSpan={4}>Total:</td>
               <td className="border border-black p-1 sm:p-2 text-right font-bold text-black text-xs sm:text-sm print:text-xs print:p-1">₹{(invoiceData.total || 0).toFixed(2)}</td>
@@ -237,7 +294,7 @@ export function InvoiceUI({
             : `Payment Of ₹${(invoiceData.total || 0).toFixed(2)} Is Pending`
           }
         </p>
-        <p className="text-center text-xs sm:text-sm font-semibold text-gray-600 print:text-[10px] uppercase tracking-wider px-2">
+        <p className="text-center text-xs sm:text-sm font-semibold text-gray-600 print:text-xs uppercase tracking-wider px-2">
           NOTE: This is computer generated receipt and does not require physical signature.
         </p>
 
@@ -280,7 +337,15 @@ export function InvoiceUI({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm font-semibold">Price</p>
-                  <p className="text-sm">₹{(selectedItem.price || 0).toFixed(2)}</p>
+                  <p className="text-sm">
+                    {selectedItem.discountedPrice > 0 ? (
+                      <span>₹{selectedItem.discountedPrice.toFixed(2)}</span>
+                    ) : selectedItem.salePrice > 0 ? (
+                      <span>₹{selectedItem.salePrice.toFixed(2)}</span>
+                    ) : (
+                      `₹${(selectedItem.price || 0).toFixed(2)}`
+                    )}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm font-semibold">Quantity</p>

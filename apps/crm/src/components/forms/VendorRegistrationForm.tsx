@@ -40,6 +40,7 @@ interface FormData {
   pincode: string;
   location: { lat: number; lng: number } | null;
   referredByCode: string;
+  gstNo: string;
 }
 
 interface GooglePlacesResult {
@@ -103,6 +104,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     pincode: '',
     location: null,
     referredByCode: refCode || '',
+    gstNo: '',
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -279,10 +281,10 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
 
     const scriptId = 'google-maps-native-script';
     const existingScript = document.getElementById(scriptId);
-    
+
     if (existingScript) {
       if (checkGoogleMaps()) return;
-      
+
       const checkInterval = setInterval(() => {
         if (checkGoogleMaps()) {
           clearInterval(checkInterval);
@@ -296,7 +298,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,drawing&v=weekly`;
     script.async = true;
     script.defer = true;
-    
+
     (window as any).gm_authFailure = () => {
       console.error("Google Maps API Key Authentication Failure - This usually means the API Key is invalid, has no billing, or is restricted incorrectly.");
       toast.error("Google Maps Authentication Failed. Please check your API key.");
@@ -314,18 +316,18 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
   // Initialize map when modal opens
   useEffect(() => {
     if (!isMapOpen || !isGoogleMapsLoaded || !GOOGLE_MAPS_API_KEY) return;
-    
+
     const initMap = () => {
       if (!mapContainer.current || !window.google) return;
-      
+
       if (map.current) {
         google.maps.event.clearInstanceListeners(map.current);
       }
-      
-      const center = formData.location 
+
+      const center = formData.location
         ? { lat: formData.location.lat, lng: formData.location.lng }
         : { lat: 23.2599, lng: 77.4126 };
-      
+
       // Ensure container still exists and has height
       if (mapContainer.current) {
         const rect = mapContainer.current.getBoundingClientRect();
@@ -349,12 +351,12 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
       geocoder.current = new google.maps.Geocoder();
       autocompleteService.current = new google.maps.places.AutocompleteService();
       placesService.current = new google.maps.places.PlacesService(map.current);
-      
+
       // Remove existing marker
       if (marker.current) {
         marker.current.setMap(null);
       }
-      
+
       // Add marker if location exists
       if (formData.location) {
         marker.current = new google.maps.Marker({
@@ -363,31 +365,31 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
           draggable: true,
           animation: google.maps.Animation.DROP,
         });
-          
+
         marker.current.addListener('dragend', () => {
           const position = marker.current!.getPosition();
           if (position) {
-            setFormData(prev => ({ 
-              ...prev, 
-              location: { lat: position.lat(), lng: position.lng() } 
+            setFormData(prev => ({
+              ...prev,
+              location: { lat: position.lat(), lng: position.lng() }
             }));
             fetchAddress({ lat: position.lat(), lng: position.lng() });
           }
         });
       }
-      
+
       // Handle map clicks
       map.current.addListener('click', (e: google.maps.MapMouseEvent) => {
         if (!e.latLng) return;
         const lat = e.latLng.lat();
         const lng = e.latLng.lng();
         setFormData(prev => ({ ...prev, location: { lat, lng } }));
-        
+
         // Remove existing marker and add new one
         if (marker.current) {
           marker.current.setMap(null);
         }
-        
+
         if (map.current) {
           marker.current = new google.maps.Marker({
             position: { lat, lng },
@@ -395,26 +397,26 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
             draggable: true,
             animation: google.maps.Animation.DROP,
           });
-            
+
           marker.current.addListener('dragend', () => {
             const position = marker.current!.getPosition();
             if (position) {
-              setFormData(prev => ({ 
-                ...prev, 
-                location: { lat: position.lat(), lng: position.lng() } 
+              setFormData(prev => ({
+                ...prev,
+                location: { lat: position.lat(), lng: position.lng() }
               }));
               fetchAddress({ lat: position.lat(), lng: position.lng() });
             }
           });
         }
-        
+
         fetchAddress({ lat, lng });
       });
     };
-    
+
     // Initialize with a larger delay to ensure DOM is ready and modal animation finished
     const timeoutId = setTimeout(initMap, 500);
-    
+
     return () => {
       clearTimeout(timeoutId);
       if (marker.current) {
@@ -428,7 +430,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
       setSearchResults([]);
       return;
     }
-    
+
     try {
       autocompleteService.current.getPlacePredictions(
         {
@@ -454,7 +456,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
 
   const fetchAddress = async (location: { lat: number; lng: number }) => {
     if (!geocoder.current) return;
-    
+
     try {
       geocoder.current.geocode({ location }, (results, status) => {
         if (status === 'OK' && results && results.length > 0) {
@@ -464,7 +466,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
           let state = '';
           let city = '';
           let pincode = '';
-          
+
           result.address_components.forEach((component) => {
             if (component.types.includes('administrative_area_level_1')) {
               state = component.long_name;
@@ -476,7 +478,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
               pincode = component.long_name;
             }
           });
-          
+
           setFormData(prev => ({
             ...prev,
             address,
@@ -520,7 +522,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
               pincode = component.long_name;
             }
           });
-          
+
           setFormData(prev => ({
             ...prev,
             location: newLocation,
@@ -529,18 +531,18 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
             city: city || prev.city,
             pincode: pincode || prev.pincode,
           }));
-          
+
           // Update map
           if (map.current) {
             map.current.setCenter({ lat, lng });
             map.current.setZoom(15);
           }
-          
+
           // Update marker
           if (marker.current) {
             marker.current.setPosition({ lat, lng });
           }
-          
+
           // Clear search
           setSearchResults([]);
           setSearchQuery('');
@@ -639,7 +641,10 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                     {renderError('confirmPassword')}
                   </div>
                 </div>
-                <Input name="referredByCode" placeholder="Referral Code (Optional)" onChange={handleChange} value={formData.referredByCode} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+                  <Input name="referredByCode" placeholder="Referral Code (Optional)" onChange={handleChange} value={formData.referredByCode} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                  <Input name="gstNo" placeholder="GST No (Optional)" onChange={handleChange} value={formData.gstNo} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                </div>
                 {renderError('referredByCode')}
               </div>
             )}
@@ -808,7 +813,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                     <p className="text-xs text-red-500 mb-4">
                       InvalidKeyMapError: The API key is rejected.
                     </p>
-                    <button 
+                    <button
                       onClick={() => window.location.reload()}
                       className="text-xs bg-red-600 text-white px-3 py-1.5 rounded hover:bg-red-700 font-semibold"
                     >

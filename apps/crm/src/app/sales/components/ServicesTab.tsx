@@ -54,6 +54,7 @@ interface Service {
   };
   categoryName: string;
   price: number;
+  discountedPrice?: number;
   duration: number;
   description: string;
   status: string;
@@ -346,9 +347,15 @@ export default function ServicesTab({
     );
   };
 
+  // Helper to get effective price
+  const getEffectivePrice = (service: Service | CartItem) => {
+    return (service.discountedPrice && service.discountedPrice > 0) ? service.discountedPrice : service.price;
+  };
+
   // Calculate item total price including add-ons
-  const calculateItemTotal = (servicePrice: number, addOns: AddOn[], quantity: number) => {
-    const addOnsTotal = addOns.reduce((sum, addOn) => sum + addOn.price, 0);
+  const calculateItemTotal = (service: Service | CartItem, addOns: AddOn[], quantity: number) => {
+    const servicePrice = getEffectivePrice(service);
+    const addOnsTotal = (addOns || []).reduce((sum, addOn) => sum + addOn.price, 0);
     return (servicePrice + addOnsTotal) * quantity;
   };
 
@@ -366,7 +373,7 @@ export default function ServicesTab({
         updatedCart[existingItemIndex] = {
           ...existingItem,
           quantity: newQuantity,
-          totalPrice: calculateItemTotal(existingItem.price, [], newQuantity)
+          totalPrice: calculateItemTotal(existingItem, [], newQuantity)
         };
         return updatedCart;
       } else {
@@ -376,7 +383,7 @@ export default function ServicesTab({
             ...service,
             quantity: 1,
             addOns: [],
-            totalPrice: service.price,
+            totalPrice: getEffectivePrice(service),
             duration: service.duration
           }
         ];
@@ -414,7 +421,7 @@ export default function ServicesTab({
         updatedCart[existingItemIndex] = {
           ...existingItem,
           quantity: newQuantity,
-          totalPrice: calculateItemTotal(existingItem.price, existingItem.addOns || [], newQuantity)
+          totalPrice: calculateItemTotal(existingItem, existingItem.addOns || [], newQuantity)
         };
         return updatedCart;
       } else {
@@ -426,7 +433,7 @@ export default function ServicesTab({
             ...selectedServiceForAdd,
             quantity: 1,
             addOns: selectedAddOns,
-            totalPrice: calculateItemTotal(selectedServiceForAdd.price, selectedAddOns, 1),
+            totalPrice: calculateItemTotal(selectedServiceForAdd, selectedAddOns, 1),
             duration: totalDuration
           }
         ];
@@ -452,7 +459,7 @@ export default function ServicesTab({
           ? {
             ...item,
             quantity,
-            totalPrice: calculateItemTotal(item.price, item.addOns || [], quantity)
+            totalPrice: calculateItemTotal(item, item.addOns || [], quantity)
           }
           : item
       )
@@ -465,8 +472,8 @@ export default function ServicesTab({
       prevCart.map((item, i) => {
         if (i === index) {
           if (staffId === 'none') {
-             const { staffMember, ...rest } = item;
-             return rest;
+            const { staffMember, ...rest } = item;
+            return rest;
           }
           const staff = staffData.find((s: any) => s._id === staffId);
           return {
@@ -486,23 +493,23 @@ export default function ServicesTab({
   };
 
   // Calculate cart totals
-  const originalSubtotal = useMemo(() => {
+  const effectiveSubtotal = useMemo(() => {
     return cart.reduce((sum, item) => {
       const addOnsTotal = (item.addOns || []).reduce((aSum, a) => aSum + a.price, 0);
-      return sum + ((item.price + addOnsTotal) * item.quantity);
+      return sum + ((getEffectivePrice(item) + addOnsTotal) * item.quantity);
     }, 0);
   }, [cart]);
 
-  const totalDiscount = useMemo(() => {
+  const manualDiscountTotal = useMemo(() => {
     return cart.reduce((sum, item) => {
-      // Only calculate discount for items that actually have a discount applied
       if (item.discount && item.discount > 0) {
         const addOnsTotal = (item.addOns || []).reduce((aSum, a) => aSum + a.price, 0);
-        const itemTotal = (item.price + addOnsTotal) * item.quantity;
+        const itemEffectiveBaseTotal = (getEffectivePrice(item) + addOnsTotal) * item.quantity;
+
         if (item.discountType === 'flat') {
           return sum + item.discount;
         } else if (item.discountType === 'percentage') {
-          return sum + (itemTotal * item.discount / 100);
+          return sum + (itemEffectiveBaseTotal * item.discount / 100);
         }
       }
       return sum;
@@ -591,7 +598,7 @@ export default function ServicesTab({
           staffMember: item.staffMember,
           addOns: item.addOns // Include add-ons in billing item
         })),
-        subtotal: subtotal,
+        subtotal: effectiveSubtotal,
         taxRate: taxType === 'percentage' ? taxValue : 0,
         taxAmount: taxAmount,
         taxType: taxType,
@@ -632,9 +639,9 @@ export default function ServicesTab({
         client: selectedClient,
         status: "Completed",
         items: cart,
-        subtotal: subtotal,
-        originalSubtotal: originalSubtotal,
-        discount: totalDiscount,
+        subtotal: effectiveSubtotal,
+        originalSubtotal: effectiveSubtotal,
+        discount: manualDiscountTotal,
         tax: taxAmount,
         platformFee: 0, // You can adjust this as needed
         total: total,
@@ -701,7 +708,7 @@ export default function ServicesTab({
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [invoiceData, setInvoiceData] = useState<any>(null); // Restored
   const [printInvoiceData, setPrintInvoiceData] = useState<any>(null);
-  
+
 
 
   const [isOrderSaved, setIsOrderSaved] = useState(false);
@@ -1101,7 +1108,7 @@ export default function ServicesTab({
   // Calculate item total price with discount
   const calculateItemTotalPrice = (item: CartItem, quantity: number, discount: number, discountType: 'flat' | 'percentage') => {
     const addOnsTotal = (item.addOns || []).reduce((sum, addOn) => sum + addOn.price, 0);
-    const basePrice = (item.price + addOnsTotal) * quantity;
+    const basePrice = (getEffectivePrice(item) + addOnsTotal) * quantity;
     if (discountType === 'flat') {
       return Math.max(0, basePrice - discount);
     } else {
@@ -1185,7 +1192,16 @@ export default function ServicesTab({
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>₹{service.price.toFixed(2)}</TableCell>
+                        <TableCell>
+                          {service.discountedPrice && service.discountedPrice > 0 ? (
+                            <div className="flex flex-col">
+                              <span className="text-xs text-muted-foreground line-through">₹{service.price.toFixed(2)}</span>
+                              <span className="font-bold text-green-600">₹{service.discountedPrice.toFixed(2)}</span>
+                            </div>
+                          ) : (
+                            <span>₹{service.price.toFixed(2)}</span>
+                          )}
+                        </TableCell>
                         <TableCell>{service.duration} min</TableCell>
                         <TableCell className="text-right">
                           <Button
@@ -1335,7 +1351,7 @@ export default function ServicesTab({
                   <TableRow>
                     <TableHead className="w-[35%]">Item</TableHead>
                     <TableHead className="w-[15%]">Duration</TableHead>
-                    <TableHead className="w-[15%]">Price</TableHead>
+                    <TableHead className="w-[15%] whitespace-nowrap">Price</TableHead>
                     <TableHead className="w-[15%]">Qty</TableHead>
                     <TableHead className="w-[12%]">Total</TableHead>
                     <TableHead className="text-right w-[8%]">Actions</TableHead>
@@ -1410,9 +1426,16 @@ export default function ServicesTab({
                               )}
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="whitespace-nowrap">
                             <div className="p-2">
-                              <div>₹{item.price.toFixed(2)}</div>
+                              {item.discountedPrice && item.discountedPrice > 0 ? (
+                                <div className="flex flex-col">
+                                  <span className="text-xs text-muted-foreground line-through">₹{item.price.toFixed(2)}</span>
+                                  <span className="font-bold text-green-600">₹{item.discountedPrice.toFixed(2)}</span>
+                                </div>
+                              ) : (
+                                <div>₹{item.price.toFixed(2)}</div>
+                              )}
                               {item.addOns && item.addOns.length > 0 && (
                                 <div className="mt-1">
                                   {item.addOns.map((addon, i) => (
@@ -1482,27 +1505,29 @@ export default function ServicesTab({
 
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span>₹{originalSubtotal.toFixed(2)}</span>
+              <span>₹{effectiveSubtotal.toFixed(2)}</span>
             </div>
 
-            {totalDiscount > 0 && (
+            {manualDiscountTotal > 0 && (
               <div className="flex justify-between text-green-600">
                 <span>Discount</span>
-                <span>-₹{totalDiscount.toFixed(2)}</span>
+                <span>-₹{manualDiscountTotal.toFixed(2)}</span>
               </div>
             )}
 
-            <div className="flex justify-between items-center">
-              <span className={!isTaxEnabled ? "text-muted-foreground line-through" : ""}>
-                Tax {isTaxEnabled ? `(${taxValue}${taxType === 'percentage' ? '%' : ''})` : ''}
-              </span>
-              <span className={!isTaxEnabled ? "text-muted-foreground line-through" : ""}>
-                ₹{taxAmount.toFixed(2)}
-              </span>
-            </div>
+            {taxAmount > 0 && (
+              <div className="flex justify-between items-center text-xs text-blue-600 font-medium">
+                <span className={!isTaxEnabled ? "text-muted-foreground line-through" : ""}>
+                  GST/Tax Component {isTaxEnabled ? `(${taxValue}${taxType === 'percentage' ? '%' : ''})` : ''}
+                </span>
+                <span className={!isTaxEnabled ? "text-muted-foreground line-through" : ""}>
+                  ₹{taxAmount.toFixed(2)}
+                </span>
+              </div>
+            )}
 
             <div className="border-t pt-4 flex justify-between font-bold text-lg">
-              <span>Total</span>
+              <span>Total Amount</span>
               <span>₹{total.toFixed(2)}</span>
             </div>
 
@@ -2104,7 +2129,7 @@ export default function ServicesTab({
                                 )}
                               </div>
                               <div className="text-right whitespace-nowrap">
-                                <p className="font-bold text-gray-900 text-sm">₹{item.price.toFixed(2)}</p>
+                                <p className="font-bold text-gray-900 text-sm">₹{((item.discountedPrice && item.discountedPrice > 0) ? item.discountedPrice : item.price).toFixed(2)}</p>
                                 {item.addOns && item.addOns.length > 0 && (
                                   <div className="mt-1.5 space-y-1">
                                     {item.addOns.map((addon: any, i: number) => (
@@ -2124,27 +2149,21 @@ export default function ServicesTab({
                     <div className="space-y-2 bg-gradient-to-br from-gray-50 to-gray-100 p-4 rounded-xl">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-600 text-xs">Subtotal</span>
-                        <span className="font-medium text-xs">₹{invoiceData.originalSubtotal?.toFixed(2) || invoiceData.subtotal.toFixed(2)}</span>
+                        <span className="font-medium text-xs">₹{invoiceData.subtotal.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-green-600 text-xs font-medium">Discount</span>
-                        <span className="font-medium text-green-600 text-xs">-₹{(invoiceData.discount || 0).toFixed(2)}</span>
+                        <span className="font-medium text-green-600 text-xs">-₹{invoiceData.discount.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-xs">Tax ({invoiceData.tax > 0 ? (invoiceData.taxType === 'percentage' ? `${taxValue}%` : 'Fixed') : '0%'})</span>
-                        <span className="font-medium text-xs">₹{invoiceData.tax.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-600 text-xs">Platform Fee</span>
-                        <span className="font-medium text-xs">₹{invoiceData.platformFee.toFixed(2)}</span>
-                      </div>
+                      {invoiceData.tax > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-blue-600 text-xs font-medium">GST/Tax Component</span>
+                          <span className="font-medium text-blue-600 text-xs">₹{invoiceData.tax.toFixed(2)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between items-center pt-2 border-t border-gray-300">
-                        <span className="font-semibold text-gray-900 text-sm">Total</span>
+                        <span className="font-semibold text-gray-900 text-sm">Total Amount</span>
                         <span className="font-bold text-gray-900 text-base">₹{invoiceData.total.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between items-center pt-1">
-                        <span className="font-semibold text-gray-900 text-sm">Balance</span>
-                        <span className="font-bold text-red-600 text-base">₹{invoiceData.balance.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -2332,28 +2351,18 @@ export default function ServicesTab({
       {/* Print Styles */}
       <style>{`
         @media print {
-          /* Reset everything for a clean print */
-          html, body {
-            height: auto !important;
-            overflow: visible !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: white !important;
-          }
-          
-          /* Hide all default content - use visibility so parent-child rules work */
+          /* Hide everything first */
           body * {
             visibility: hidden !important;
           }
           
-          /* ONLY show the invoice section and its children */
+          /* Only show the printable invoice section and its children */
           #printable-invoice-section,
           #printable-invoice-section * {
             visibility: visible !important;
           }
           
-          /* POP the invoice to the very top of the page using FIXED positioning */
-          /* This prevents whitespace from hidden background elements */
+          /* Ensure the printable section is positioned at the top left and fills the page */
           #printable-invoice-section {
             display: block !important;
             position: fixed !important;
@@ -2362,26 +2371,26 @@ export default function ServicesTab({
             width: 100% !important;
             height: auto !important;
             margin: 0 !important;
-            padding: 5mm !important; /* Standard print padding */
+            padding: 5mm !important;
             background: white !important;
             z-index: 2147483647 !important;
           }
-          
-          /* Ensure the table doesn't break from display blocks */
-          #printable-invoice-section table {
-            display: table !important;
-            width: 100% !important;
-            border-collapse: collapse !important;
-          }
-          #printable-invoice-section thead { display: table-header-group !important; }
-          #printable-invoice-section tbody { display: table-row-group !important; }
-          #printable-invoice-section tr { display: table-row !important; }
-          #printable-invoice-section td, #printable-invoice-section th { display: table-cell !important; }
 
-          /* Standard page settings */
+          /* Hide UI elements that shouldn't be printed within the printable section */
+          .print\:hidden {
+            display: none !important;
+          }
+
+          /* Reset body margins for printing */
           @page {
             margin: 0;
             size: auto;
+          }
+
+          /* Remove background colors and shadows for cleaner print */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
         }
       `}</style>

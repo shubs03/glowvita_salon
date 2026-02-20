@@ -33,17 +33,17 @@ export const POST = withSubscriptionCheck(async (req) => {
                     let effectiveAmount = item.totalPrice;
                     if (item.discount > 0) {
                         if (item.discountType === 'percentage') {
-                             effectiveAmount = Math.max(0, item.totalPrice * (1 - item.discount / 100));
+                            effectiveAmount = Math.max(0, item.totalPrice * (1 - item.discount / 100));
                         } else if (item.discountType === 'flat') {
-                             effectiveAmount = Math.max(0, item.totalPrice - item.discount);
+                            effectiveAmount = Math.max(0, item.totalPrice - item.discount);
                         }
                     }
 
                     const rate = staff.commissionRate || 0;
                     const amount = (effectiveAmount * rate) / 100;
-                    
+
                     console.log(`Applying commission for staff ${staff.fullName}: Rate ${rate}%, Amount ${amount} on Effective Amount ${effectiveAmount}`);
-                    
+
                     return {
                         ...item,
                         staffMember: {
@@ -69,6 +69,24 @@ export const POST = withSubscriptionCheck(async (req) => {
 
         // Save to database
         const savedRecord = await billingRecord.save();
+
+        // Update product stock if items were products
+        try {
+            const { default: ProductModel } = await import('@repo/lib/models/Vendor/Product.model');
+            for (const item of processedItems) {
+                if (item.itemType === 'Product' && item.itemId) {
+                    const updatedProduct = await ProductModel.findByIdAndUpdate(
+                        item.itemId,
+                        { $inc: { stock: -1 * (item.quantity || 1) } },
+                        { new: true }
+                    );
+                    console.log(`Updated stock for product ${item.name}: New stock ${updatedProduct?.stock}`);
+                }
+            }
+        } catch (stockError) {
+            console.error('Error updating product stock:', stockError);
+            // We don't want to fail the whole billing if stock update fails, but we log it
+        }
 
         return NextResponse.json(
             {

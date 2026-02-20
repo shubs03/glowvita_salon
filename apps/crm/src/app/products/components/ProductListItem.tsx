@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { Card, CardContent } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
-import { Edit, Trash2 } from 'lucide-react';
+import { Edit, Trash2, Eye } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 
 interface Product {
@@ -32,9 +32,10 @@ interface ProductListItemProps {
   product: Product;
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
+  onView: (product: Product) => void;
 }
 
-const ProductListItem = ({ product, onEdit, onDelete }: ProductListItemProps) => {
+const ProductListItem = ({ product, onEdit, onDelete, onView }: ProductListItemProps) => {
   const calculateDiscountPercentage = () => {
     if (product.price > product.salePrice) {
       return Math.round(((product.price - product.salePrice) / product.price) * 100);
@@ -83,7 +84,7 @@ const ProductListItem = ({ product, onEdit, onDelete }: ProductListItemProps) =>
                     variant={product.stock > 10 ? "secondary" : product.stock > 0 ? "outline" : "destructive"}
                     className="text-xs"
                   >
-                    {product.stock} units
+                    {product.stock > 0 ? `${product.stock} units` : "Out of Stock"}
                   </Badge>
                 </div>
               </div>
@@ -96,6 +97,15 @@ const ProductListItem = ({ product, onEdit, onDelete }: ProductListItemProps) =>
                 </div>
 
                 <div className="flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onView(product)}
+                    className="h-7 px-2 text-xs"
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    View
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"

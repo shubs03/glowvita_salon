@@ -33,6 +33,7 @@ export const SupplierProfileTab = ({ supplier, setSupplier }: SupplierProfileTab
                 address: supplier.address,
                 supplierType: supplier.supplierType,
                 businessRegistrationNo: supplier.businessRegistrationNo,
+                gstNo: supplier.gstNo,
                 profileImage: supplier.profileImage,
             }).unwrap();
 
@@ -140,6 +141,17 @@ export const SupplierProfileTab = ({ supplier, setSupplier }: SupplierProfileTab
                         id="businessRegistrationNo"
                         value={supplier.businessRegistrationNo || ''}
                         onChange={(e) => setSupplier({ ...supplier, businessRegistrationNo: e.target.value })}
+                        className="h-10 sm:h-12 rounded-lg"
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="gstNo" className="text-sm sm:text-base">GST Number</Label>
+                    <Input
+                        id="gstNo"
+                        value={supplier.gstNo || ''}
+                        onChange={(e) => setSupplier({ ...supplier, gstNo: e.target.value })}
+                        placeholder="Enter GST Number (Optional)"
                         className="h-10 sm:h-12 rounded-lg"
                     />
                 </div>

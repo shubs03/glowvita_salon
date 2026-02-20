@@ -32,6 +32,7 @@ interface VendorProfile {
   category: SalonCategory;
   subCategories: SubCategory[];
   website?: string;
+  gstNo?: string;
   address?: string;
   profileImage?: string;
   gallery?: string[];
@@ -106,6 +107,7 @@ interface SupplierProfile {
   address: string;
   supplierType: string;
   businessRegistrationNo?: string;
+  gstNo?: string;
   profileImage?: string;
   gallery?: string[];
   documents?: Record<string, any>;
@@ -198,7 +200,8 @@ export default function ProfilePage() {
       const vendorWithBankDetails = {
         ...vendorData.data,
         bankDetails: vendorData.data.bankDetails || {},
-        taxes: vendorData.data.taxes || { taxValue: 0, taxType: 'percentage' }
+        taxes: vendorData.data.taxes || { taxValue: 0, taxType: 'percentage' },
+        gstNo: vendorData.data.gstNo || '',
       };
       setLocalVendor(vendorWithBankDetails);
     }
@@ -233,6 +236,7 @@ export default function ProfilePage() {
         referralCode: supplierInfo.referralCode || '',
         licenseFiles: supplierInfo.licenseFiles || [],
         taxes: supplierInfo.taxes || { taxValue: 0, taxType: 'percentage' },
+        gstNo: supplierInfo.gstNo || '',
       });
     }
   }, [supplierData]);

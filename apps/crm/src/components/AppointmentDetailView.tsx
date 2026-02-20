@@ -362,6 +362,13 @@ export function AppointmentDetailView({
     // Map 'pending' status to 'scheduled' since NewAppointmentForm doesn't support 'pending'
     const status = liveAppointment.status === 'pending' ? 'scheduled' : liveAppointment.status;
 
+    // Extract add-ons from serviceItems or root level
+    const addOns = (liveAppointment as any).addOns ||
+      (liveAppointment.serviceItems && liveAppointment.serviceItems.length > 0
+        ? liveAppointment.serviceItems[0].addOns
+        : []) ||
+      [];
+
     return {
       ...appointment,
       date: appointment.date instanceof Date ? appointment.date : new Date(appointment.date),
@@ -382,9 +389,11 @@ export function AppointmentDetailView({
       totalAmount: appointment.totalAmount || appointment.amount || 0,
       discount: appointment.discount || 0,
       tax: (appointment as any).tax || 0,
-      paymentStatus: (appointment as any).paymentStatus || 'pending'
+      paymentStatus: (appointment as any).paymentStatus || 'pending',
+      // Include add-ons for rescheduling
+      addOns: addOns
     };
-  }, [appointment]);
+  }, [appointment, liveAppointment]);
 
   // Create service object in the format expected by NewAppointmentForm
   const currentService = {
@@ -1187,63 +1196,8 @@ export function AppointmentDetailView({
     }
   };
 
-  const handlePrintPdf = async () => {
-    const toastId = toast.loading('Preparing print preview...');
-    try {
-      const html2pdf = (await import('html2pdf.js')).default;
-      const element = document.getElementById('invoice-content');
-
-      if (!element) {
-        throw new Error('Invoice element not found');
-      }
-
-      // Clone the element to avoid modifying the visible one
-      const clone = element.cloneNode(true) as HTMLElement;
-
-      // Create a temporary container for the clone
-      const container = document.createElement('div');
-      container.style.position = 'absolute';
-      container.style.left = '-9999px';
-      container.style.top = '0';
-      container.style.width = '800px'; // Force standard A4 width
-      container.style.backgroundColor = 'white';
-      container.appendChild(clone);
-      document.body.appendChild(container);
-
-      // Ensure buttons are hidden in the clone (double check)
-      const buttons = clone.querySelector('[data-html2canvas-ignore="true"]');
-      if (buttons) {
-        (buttons as HTMLElement).style.display = 'none';
-      }
-
-      const opt: any = {
-        margin: [10, 10, 10, 10] as [number, number, number, number],
-        image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
-      };
-
-      // Generate PDF as blob and open it in a new tab for printing
-      const pdfBlob = await html2pdf().set(opt).from(clone).output('blob');
-      const url = URL.createObjectURL(pdfBlob);
-      const printWindow = window.open(url, '_blank');
-
-      if (printWindow) {
-        printWindow.focus();
-      } else {
-        toast.error('Pop-up blocked. Please allow pop-ups to view print preview.');
-      }
-
-      // Cleanup
-      document.body.removeChild(container);
-    } catch (error: any) {
-      console.error('Error printing PDF:', error);
-      toast.error('Failed to prepare print preview', {
-        description: error?.message || 'Please try again.'
-      });
-    } finally {
-      toast.dismiss(toastId);
-    }
+  const handlePrintPdf = () => {
+    window.print();
   };
 
   const renderActionButtons = () => (
