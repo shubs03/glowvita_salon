@@ -53,23 +53,54 @@ export type Staff = {
         recurringType?: string;
         isActive: boolean;
     }>;
+    commission?: boolean;
+    commissionRate?: number;
+    earningsSummary?: {
+        netBalance: number;
+        accumulatedEarnings: number;
+        totalPaidOut: number;
+        commissionCount: number;
+    };
     createdAt?: string;
     updatedAt?: string;
 };
 
 export default function StaffPage() {
     const { user } = useCrmAuth();
+
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [positionFilter, setPositionFilter] = useState('all');
+    const [commissionStatus, setCommissionStatus] = useState('all');
+    const [sortBy, setSortBy] = useState<'createdAt' | 'balance' | 'name'>('createdAt');
+    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalTab, setModalTab] = useState('personal');
+    const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const { data: staffListRaw = [], isLoading, isError, refetch } = useGetStaffQuery(user?._id, {
         skip: !user?._id,
     });
 
     const staffList = useMemo(() => {
         return [...staffListRaw].sort((a: Staff, b: Staff) => {
-            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return dateB - dateA;
+            if (sortBy === 'createdAt') {
+                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+            } else if (sortBy === 'balance') {
+                const balA = a.earningsSummary?.netBalance || 0;
+                const balB = b.earningsSummary?.netBalance || 0;
+                return sortOrder === 'desc' ? balB - balA : balA - balB;
+            } else if (sortBy === 'name') {
+                return sortOrder === 'desc'
+                    ? b.fullName.localeCompare(a.fullName)
+                    : a.fullName.localeCompare(b.fullName);
+            }
+            return 0;
         });
-    }, [staffListRaw]);
+    }, [staffListRaw, sortBy, sortOrder]);
 
     console.log("Staff List:", staffList)
 
@@ -99,15 +130,6 @@ export default function StaffPage() {
         };
     }, [refetch]);
 
-    const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState(10);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [positionFilter, setPositionFilter] = useState('all');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalTab, setModalTab] = useState('personal');
-    const [selectedStaff, setSelectedStaff] = useState<Staff | null>(null);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-
     const filteredStaff = useMemo(() => {
         if (!staffList) return [];
         return staffList.filter((staff: Staff) => {
@@ -115,9 +137,15 @@ export default function StaffPage() {
                 staff.emailAddress.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 staff.mobileNo.includes(searchTerm);
             const matchesPosition = positionFilter === 'all' || staff.position.toLowerCase().includes(positionFilter.toLowerCase());
-            return matchesSearch && matchesPosition;
+
+            let matchesCommission = true;
+            if (commissionStatus === 'enabled') matchesCommission = !!staff.commission;
+            else if (commissionStatus === 'disabled') matchesCommission = !staff.commission;
+            else if (commissionStatus === 'has_balance') matchesCommission = (staff.earningsSummary?.netBalance || 0) > 0;
+
+            return matchesSearch && matchesPosition && matchesCommission;
         });
-    }, [staffList, searchTerm, positionFilter]);
+    }, [staffList, searchTerm, positionFilter, commissionStatus]);
 
     // Extract unique positions for the filter dropdown
     const positions = useMemo(() => {
@@ -131,6 +159,15 @@ export default function StaffPage() {
         });
         return uniquePositions;
     }, [staffList]);
+
+    const handleSort = (field: 'createdAt' | 'balance' | 'name') => {
+        if (sortBy === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortOrder('desc');
+        }
+    };
 
     const lastItemIndex = currentPage * itemsPerPage;
     const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -293,8 +330,10 @@ export default function StaffPage() {
                 <StaffFiltersToolbar
                     searchTerm={searchTerm}
                     positionFilter={positionFilter}
+                    commissionStatus={commissionStatus}
                     onSearchChange={setSearchTerm}
                     onPositionChange={setPositionFilter}
+                    onCommissionStatusChange={setCommissionStatus}
                     onAddStaff={() => handleOpenModal()}
                     exportData={filteredStaff}
                     positions={positions}
@@ -307,6 +346,9 @@ export default function StaffPage() {
                             <StaffTable
                                 currentItems={currentItems}
                                 searchTerm={searchTerm}
+                                sortBy={sortBy}
+                                sortOrder={sortOrder}
+                                onSort={handleSort}
                                 onOpenModal={handleOpenModal}
                                 onDeleteClick={handleDeleteClick}
                                 onSendMail={handleSendMail}
@@ -331,7 +373,6 @@ export default function StaffPage() {
                     onClose={() => setIsModalOpen(false)}
                     staff={selectedStaff}
                     initialTab={modalTab}
-                    hideTabs={modalTab === 'earnings'}
                     onSuccess={() => {
                         setIsModalOpen(false);
                         refetch();

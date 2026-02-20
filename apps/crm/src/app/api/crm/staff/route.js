@@ -42,156 +42,69 @@ export const GET = authMiddlewareCrm(async (req) => {
         const ownerId = req.user.userId;
         const userRole = req.user.role;
 
-        console.log(`=== STAFF FETCH DEBUG INFO ===`);
-        console.log(`User ID: ${ownerId} (type: ${typeof ownerId})`);
-        console.log(`User Role: ${userRole}`);
-        console.log(`Is valid ObjectId: ${mongoose.Types.ObjectId.isValid(ownerId)}`);
-
-        let staff = [];
         let vendorIdToUse = null;
 
-        if (userRole === 'vendor') {
-            console.log('User is a vendor - using their ID as vendorId');
-            // Convert ownerId to ObjectId for consistent querying
-            if (typeof ownerId === 'string' && mongoose.Types.ObjectId.isValid(ownerId)) {
-                vendorIdToUse = new mongoose.Types.ObjectId(ownerId);
-            } else if (ownerId instanceof mongoose.Types.ObjectId) {
-                vendorIdToUse = ownerId;
-            } else {
-                // Fallback - try to convert
-                try {
-                    vendorIdToUse = new mongoose.Types.ObjectId(ownerId.toString());
-                } catch (err) {
-                    console.error('Could not convert vendor ID to ObjectId:', err);
-                    vendorIdToUse = ownerId;
-                }
-            }
+        if (userRole === 'vendor' || userRole === 'doctor') {
+            vendorIdToUse = ownerId;
         } else if (userRole === 'staff') {
-            console.log('User is a staff member - finding their vendorId');
             // Find the staff member to get their vendorId
-            const staffMember = await StaffModel.findById(ownerId);
-            console.log(`Staff member found: ${!!staffMember}`);
-            if (staffMember && staffMember.vendorId) {
-                console.log(`Staff member vendorId: ${staffMember.vendorId} (type: ${typeof staffMember.vendorId})`);
-                // Convert staff member's vendorId to ObjectId for consistent querying
-                if (typeof staffMember.vendorId === 'string' && mongoose.Types.ObjectId.isValid(staffMember.vendorId)) {
-                    vendorIdToUse = new mongoose.Types.ObjectId(staffMember.vendorId);
-                } else if (staffMember.vendorId instanceof mongoose.Types.ObjectId) {
+            if (mongoose.Types.ObjectId.isValid(ownerId)) {
+                const staffMember = await StaffModel.findById(ownerId).select('vendorId').lean();
+                if (staffMember) {
                     vendorIdToUse = staffMember.vendorId;
-                } else {
-                    // Fallback - try to convert
-                    try {
-                        vendorIdToUse = new mongoose.Types.ObjectId(staffMember.vendorId.toString());
-                    } catch (err) {
-                        console.error('Could not convert staff member vendor ID to ObjectId:', err);
-                        vendorIdToUse = staffMember.vendorId;
-                    }
                 }
-            } else {
-                console.log('Could not find staff member or vendorId');
-                // Fallback - try using the ownerId directly
-                vendorIdToUse = ownerId;
+            }
+
+            // If still not found, check if it was already provided in req.user
+            if (!vendorIdToUse && req.user.vendorId) {
+                vendorIdToUse = req.user.vendorId;
             }
         }
 
-        console.log(`Vendor ID to use for query: ${vendorIdToUse} (type: ${typeof vendorIdToUse})`);
+        if (!vendorIdToUse) {
+            console.error('Staff API: Could not determine vendorId for user', ownerId);
+            return NextResponse.json({ message: "Could not determine organization context" }, { status: 400 });
+        }
 
-        if (vendorIdToUse) {
-            // Try multiple query approaches
-            console.log('=== TRYING DIFFERENT QUERY APPROACHES ===');
+        // Fetch staff with lean() for better performance and to avoid document overhead
+        let staff = await StaffModel.find({ vendorId: vendorIdToUse }).lean();
 
-            // Approach 1: Direct query with the vendorId
-            console.log('Approach 1: Direct query');
-            staff = await StaffModel.find({ vendorId: vendorIdToUse });
-            console.log(`Found ${staff.length} staff members with direct query`);
-
-            // Approach 2: If none found, try with ObjectId conversion
-            if (staff.length === 0 && typeof vendorIdToUse === 'string' && mongoose.Types.ObjectId.isValid(vendorIdToUse)) {
-                console.log('Approach 2: ObjectId conversion');
-                try {
-                    const objectIdVersion = new mongoose.Types.ObjectId(vendorIdToUse);
-                    staff = await StaffModel.find({ vendorId: objectIdVersion });
-                    console.log(`Found ${staff.length} staff members with ObjectId conversion`);
-                } catch (err) {
-                    console.error('ObjectId conversion failed:', err.message);
+        // Manual backup search if nothing found (handles edge cases with ID types)
+        if (!staff || staff.length === 0) {
+            try {
+                const allStaff = await StaffModel.find({}).select('vendorId fullName').lean();
+                const matched = allStaff.filter(s =>
+                    s.vendorId && s.vendorId.toString() === vendorIdToUse.toString()
+                );
+                if (matched.length > 0) {
+                    staff = await StaffModel.find({ _id: { $in: matched.map(m => m._id) } }).lean();
                 }
-            }
-
-            // Approach 3: If still none found, try string conversion
-            if (staff.length === 0 && typeof vendorIdToUse === 'object') {
-                console.log('Approach 3: String conversion');
-                try {
-                    const stringVersion = vendorIdToUse.toString();
-                    staff = await StaffModel.find({ vendorId: stringVersion });
-                    console.log(`Found ${staff.length} staff members with string conversion`);
-                } catch (err) {
-                    console.error('String conversion failed:', err.message);
-                }
-            }
-
-            // Approach 4: Find all staff and manually check (debug only)
-            if (staff.length === 0) {
-                console.log('Approach 4: Manual check of all staff (DEBUG)');
-                const allStaff = await StaffModel.find({});
-                console.log(`Total staff in DB: ${allStaff.length}`);
-                console.log('All staff vendorIds:');
-                allStaff.forEach(s => {
-                    console.log(`  - Staff: ${s.fullName} (${s._id}), vendorId: ${s.vendorId} (type: ${typeof s.vendorId})`);
-                });
-
-                // Try to match manually
-                const manualMatch = allStaff.filter(s => {
-                    if (!s.vendorId) return false;
-
-                    // Try different comparison methods
-                    try {
-                        if (s.vendorId.toString() === vendorIdToUse.toString()) return true;
-                        if (s.vendorId.equals && s.vendorId.equals(vendorIdToUse)) return true;
-
-                        // If both are ObjectIds, compare them
-                        if (s.vendorId instanceof mongoose.Types.ObjectId && vendorIdToUse instanceof mongoose.Types.ObjectId) {
-                            return s.vendorId.equals(vendorIdToUse);
-                        }
-
-                        // If one is string and other is ObjectId, convert and compare
-                        if (typeof s.vendorId === 'string' && mongoose.Types.ObjectId.isValid(s.vendorId) && vendorIdToUse instanceof mongoose.Types.ObjectId) {
-                            return new mongoose.Types.ObjectId(s.vendorId).equals(vendorIdToUse);
-                        }
-
-                        if (s.vendorId instanceof mongoose.Types.ObjectId && typeof vendorIdToUse === 'string' && mongoose.Types.ObjectId.isValid(vendorIdToUse)) {
-                            return s.vendorId.equals(new mongoose.Types.ObjectId(vendorIdToUse));
-                        }
-                    } catch (err) {
-                        console.error('Error in manual comparison:', err);
-                    }
-
-                    return false;
-                });
-
-                console.log(`Manual match found ${manualMatch.length} staff members`);
-                if (manualMatch.length > 0) {
-                    staff = manualMatch;
-                }
+            } catch (err) {
+                console.error('Staff manual fallback failed:', err);
             }
         }
 
-        console.log(`=== FINAL RESULT ===`);
-        console.log(`Found ${staff.length} staff member(s).`);
-        if (staff.length > 0) {
-            console.log('Staff members:', staff.map(s => ({
-                id: s._id,
-                fullName: s.fullName,
-                position: s.position,
-                emailAddress: s.emailAddress,
-                vendorId: s.vendorId,
-                vendorIdType: typeof s.vendorId
-            })));
-        }
+        // Map the earnings summary from the consolidated fields
+        const formattedStaff = staff.map(s => {
+            return {
+                ...s,
+                id: s._id, // Add id for frontend convenience
+                earningsSummary: {
+                    netBalance: s.netBalance || 0,
+                    accumulatedEarnings: s.accumulatedEarnings || 0,
+                    totalPaidOut: s.totalPaidOut || 0,
+                    commissionCount: s.commissionCount || 0
+                }
+            };
+        });
 
-        return NextResponse.json(staff, { status: 200 });
+        return NextResponse.json(formattedStaff, { status: 200 });
     } catch (error) {
-        console.error('Error fetching staff:', error);
-        return NextResponse.json({ message: "Error fetching staff", error: error.message }, { status: 500 });
+        console.error('Error fetching staff list:', error);
+        return NextResponse.json({
+            message: "Error fetching staff",
+            error: error.message
+        }, { status: 500 });
     }
 }, ['vendor', 'doctor', 'staff']); // Allow staff role as well
 
