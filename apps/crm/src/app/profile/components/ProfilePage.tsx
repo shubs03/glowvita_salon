@@ -120,6 +120,7 @@ interface SupplierProfile {
     taxValue: number;
     taxType: "percentage" | "fixed";
   };
+  minOrderValue?: number;
 }
 
 interface DoctorProfile {
@@ -237,6 +238,7 @@ export default function ProfilePage() {
         licenseFiles: supplierInfo.licenseFiles || [],
         taxes: supplierInfo.taxes || { taxValue: 0, taxType: 'percentage' },
         gstNo: supplierInfo.gstNo || '',
+        minOrderValue: supplierInfo.minOrderValue || 0,
       });
     }
   }, [supplierData]);

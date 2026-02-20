@@ -35,6 +35,7 @@ export const SupplierProfileTab = ({ supplier, setSupplier }: SupplierProfileTab
                 businessRegistrationNo: supplier.businessRegistrationNo,
                 gstNo: supplier.gstNo,
                 profileImage: supplier.profileImage,
+                minOrderValue: supplier.minOrderValue,
             }).unwrap();
 
             if (result.success) {
@@ -93,6 +94,19 @@ export const SupplierProfileTab = ({ supplier, setSupplier }: SupplierProfileTab
                         onChange={(e) => setSupplier({ ...supplier, description: e.target.value })}
                         className="min-h-[80px] rounded-lg"
                     />
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="minOrderValue" className="text-sm sm:text-base">Minimum Order Value (₹)</Label>
+                    <Input
+                        id="minOrderValue"
+                        type="number"
+                        value={supplier.minOrderValue || ''}
+                        onChange={(e) => setSupplier({ ...supplier, minOrderValue: Number(e.target.value) })}
+                        placeholder="Enter minimum order amount"
+                        className="h-10 sm:h-12 rounded-lg"
+                    />
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Orders below this amount will be blocked for customers.</p>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
