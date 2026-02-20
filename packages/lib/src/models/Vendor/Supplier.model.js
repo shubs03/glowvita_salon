@@ -150,6 +150,11 @@ const supplierSchema = new mongoose.Schema({
     taxValue: { type: Number, default: 0 },
     taxType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
   },
+  minOrderValue: {
+    type: Number,
+    default: 0,
+    min: [0, "Minimum order value cannot be negative"]
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

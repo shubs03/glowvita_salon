@@ -23,7 +23,7 @@ export async function GET(req) {
     }
 
     const orders = await ClientOrder.find({ userId: payload.userId }).sort({ createdAt: -1 });
-    
+
     // Enhance orders with product origin information
     const enhancedOrders = await Promise.all(orders.map(async (order) => {
       const enhancedItems = await Promise.all(order.items.map(async (item) => {
@@ -72,12 +72,12 @@ export async function POST(req) {
     }
 
     const body = await req.json();
-    const { 
-      items, 
-      totalAmount, 
-      shippingAddress, 
-      contactNumber, 
-      paymentMethod, 
+    const {
+      items,
+      totalAmount,
+      shippingAddress,
+      contactNumber,
+      paymentMethod,
       vendorId,
       shippingAmount = 0,
       taxAmount = 0,
@@ -85,7 +85,7 @@ export async function POST(req) {
       platformFeeAmount = 0,
       razorpayOrderId,
       razorpayPaymentId,
-      razorpaySignature 
+      razorpaySignature
     } = body;
 
     console.log('Creating order with data body:', body);
@@ -100,21 +100,21 @@ export async function POST(req) {
     // Validate stock availability and determine product origin (Vendor or Supplier)
     let productOrigin = null;
     let actualOwnerId = null;
-    
+
     for (const item of items) {
       const product = await ProductModel.findById(item.productId).lean();
-      
+
       if (!product) {
-        return NextResponse.json({ 
-          success: false, 
-          message: `Product "${item.name}" not found` 
+        return NextResponse.json({
+          success: false,
+          message: `Product "${item.name}" not found`
         }, { status: 404 });
       }
 
       if (product.stock < item.quantity) {
-        return NextResponse.json({ 
-          success: false, 
-          message: `Insufficient stock for "${item.name}". Only ${product.stock} units available.` 
+        return NextResponse.json({
+          success: false,
+          message: `Insufficient stock for "${item.name}". Only ${product.stock} units available.`
         }, { status: 400 });
       }
 
@@ -124,12 +124,12 @@ export async function POST(req) {
         actualOwnerId = product.vendorId; // This is the actual supplier or vendor who owns the product
       }
     }
-    
+
     // Use the actual product owner ID instead of the vendorId from request body
     const finalVendorId = actualOwnerId;
-    
+
     console.log(`Order validation: productOrigin=${productOrigin}, actualOwnerId=${actualOwnerId}, requestVendorId=${vendorId}`);
-    
+
     // For online payments, verify payment signature
     if (paymentMethod !== 'cash-on-delivery' && razorpayOrderId && razorpayPaymentId && razorpaySignature) {
       // Verify payment with Razorpay
@@ -150,21 +150,21 @@ export async function POST(req) {
         return NextResponse.json({ success: false, message: 'Payment verification failed in client orders route' }, { status: 400 });
       }
     }
-    
+
     // Ensure all amount fields have proper default values
     const orderShippingAmount = typeof shippingAmount === 'number' ? shippingAmount : 0;
     const orderTaxAmount = typeof taxAmount === 'number' ? taxAmount : 0;
     const orderGstAmount = typeof gstAmount === 'number' ? gstAmount : 0;
     const orderPlatformFeeAmount = typeof platformFeeAmount === 'number' ? platformFeeAmount : 0;
-    
+
     // Fetch Region from Vendor or Supplier based on product origin
     let owner = null;
     let ownerType = 'Vendor'; // Default to Vendor for backward compatibility
     let ownerName = '';
-    
+
     if (productOrigin === 'Supplier') {
       const SupplierModel = (await import('@repo/lib/models/Vendor/Supplier.model')).default;
-      owner = await SupplierModel.findById(finalVendorId).select('regionId shopName').lean();
+      owner = await SupplierModel.findById(finalVendorId).select('regionId shopName minOrderValue').lean();
       ownerType = 'Supplier';
       ownerName = owner?.shopName || 'Unknown Supplier';
     } else {
@@ -176,21 +176,29 @@ export async function POST(req) {
 
     // Validate owner exists
     if (!owner) {
-      return NextResponse.json({ 
-        success: false, 
-        message: `${ownerType} not found` 
+      return NextResponse.json({
+        success: false,
+        message: `${ownerType} not found`
       }, { status: 404 });
     }
 
     // Validate owner has a regionId
     if (!owner.regionId) {
-      return NextResponse.json({ 
-        success: false, 
-        message: `${ownerType} region not configured. Please contact support or choose a different ${ownerType.toLowerCase()}.` 
+      return NextResponse.json({
+        success: false,
+        message: `${ownerType} region not configured. Please contact support or choose a different ${ownerType.toLowerCase()}.`
       }, { status: 400 });
     }
 
     console.log(`Creating order for ${ownerType}: ${ownerName} (${finalVendorId}) in region: ${owner.regionId}`);
+
+    // Enforce Minimum Order Value for Supplier products
+    if (ownerType === 'Supplier' && owner.minOrderValue > 0 && totalAmount < owner.minOrderValue) {
+      return NextResponse.json({
+        success: false,
+        message: `Order total must be at least ₹${owner.minOrderValue} for products from ${ownerName}.`
+      }, { status: 400 });
+    }
 
     const newOrder = new ClientOrder({
       userId: payload.userId,
@@ -281,7 +289,7 @@ export async function PATCH(req) {
     console.log('Finding order with ID:', orderId, 'for user:', payload.userId);
     const order = await ClientOrder.findOne({ _id: orderId, userId: payload.userId });
     console.log('Found order:', order);
-    
+
     if (!order) {
       return NextResponse.json({ success: false, message: 'Order not found or unauthorized' }, { status: 404 });
     }
@@ -299,17 +307,17 @@ export async function PATCH(req) {
       cancellationReason: cancellationReason,
       updatedAt: new Date()
     });
-    
+
     await order.save();
     console.log('Order after save:', order);
     // Also log specific fields
     console.log('Saved order status:', order.status);
     console.log('Saved order cancellationReason:', order.cancellationReason);
 
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Order cancelled successfully', 
-      data: order 
+    return NextResponse.json({
+      success: true,
+      message: 'Order cancelled successfully',
+      data: order
     }, { status: 200 });
 
   } catch (error) {
