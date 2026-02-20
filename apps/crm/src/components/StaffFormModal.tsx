@@ -83,12 +83,21 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
         };
     }, [dateFilter]);
 
-    const { data: earningsData, refetch: refetchEarnings } = useGetStaffEarningsQuery({
+    const [recalculate, setRecalculate] = useState(false);
+
+    const { data: earningsData, isFetching: isFetchingEarnings, refetch: refetchEarnings } = useGetStaffEarningsQuery({
         id: staff?._id,
-        ...dateRange
+        ...dateRange,
+        recalc: recalculate
     }, {
         skip: !staff?._id || !isOpen
     });
+
+    const handleRecalculate = () => {
+        setRecalculate(true);
+        toast.info("Recalculating ledger...");
+        setTimeout(() => setRecalculate(false), 2000); // Reset after 2 seconds to allow query to fire
+    };
 
     const [recordPayout] = useRecordStaffPayoutMutation();
 
@@ -313,7 +322,17 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
         return (
             <div className="space-y-6">
                 {/* Date Filter Controls */}
-                <div className="flex justify-end">
+                <div className="flex justify-between items-center">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRecalculate}
+                        disabled={isFetchingEarnings}
+                        title="Force recalculate ledger from all history"
+                    >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${isFetchingEarnings ? 'animate-spin' : ''}`} />
+                        {isFetchingEarnings ? 'Syncing...' : 'Sync History'}
+                    </Button>
                     <div className="inline-flex rounded-md shadow-sm" role="group">
                         {['today', 'week', 'month', 'year', 'all'].map((filter) => (
                             <button
@@ -375,7 +394,18 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="payoutAmount">Payout Amount (₹)</Label>
+                                <div className="flex justify-between items-center">
+                                    <Label htmlFor="payoutAmount">Payout Amount (₹)</Label>
+                                    {summary.balance > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setPayoutAmount(summary.balance.toString())}
+                                            className="text-[10px] uppercase font-bold text-primary hover:text-primary/70 transition-colors"
+                                        >
+                                            Pay Full Balance
+                                        </button>
+                                    )}
+                                </div>
                                 <Input
                                     id="payoutAmount"
                                     type="number"
@@ -715,18 +745,22 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
 
     const handleNextTab = () => {
         if (activeTab === 'personal') setActiveTab('employment');
-        else if (activeTab === 'employment') setActiveTab('bank');
+        else if (activeTab === 'employment') setActiveTab('commission');
+        else if (activeTab === 'commission') setActiveTab('bank');
         else if (activeTab === 'bank') setActiveTab('permissions');
         else if (activeTab === 'permissions') setActiveTab('timing');
         else if (activeTab === 'timing') setActiveTab('blockTime');
+        else if (activeTab === 'blockTime' && staff) setActiveTab('earnings');
     }
 
     const handlePreviousTab = () => {
         if (activeTab === 'employment') setActiveTab('personal');
-        else if (activeTab === 'bank') setActiveTab('employment');
+        else if (activeTab === 'commission') setActiveTab('employment');
+        else if (activeTab === 'bank') setActiveTab('commission');
         else if (activeTab === 'permissions') setActiveTab('bank');
         else if (activeTab === 'timing') setActiveTab('permissions');
         else if (activeTab === 'blockTime') setActiveTab('timing');
+        else if (activeTab === 'earnings') setActiveTab('blockTime');
     }
 
     const renderPersonalTab = () => (
@@ -811,36 +845,87 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
                 <Label htmlFor="clientsServed">Clients Served</Label>
                 <Input id="clientsServed" name="clientsServed" type="number" value={formData.clientsServed} onChange={handleInputChange} />
             </div>
-            <div className="flex items-center space-x-2 pt-2">
+        </div>
+    );
+
+    const renderCommissionTab = () => (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
+                <div className="space-y-1">
+                    <Label htmlFor="commission" className="text-base font-semibold">Enable Commission</Label>
+                    <p className="text-sm text-muted-foreground">Enable automatic commission calculation for this staff member.</p>
+                </div>
                 <Switch
                     id="commission"
                     checked={formData.commission}
                     onCheckedChange={(checked) => setFormData((prev: any) => ({ ...prev, commission: checked }))}
                 />
-                <Label htmlFor="commission">Enable Staff Commission</Label>
             </div>
 
             {formData.commission && (
-                <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                    <Label htmlFor="commissionRate">Commission Percentage (%)</Label>
-                    <div className="relative">
-                        <Input
-                            id="commissionRate"
-                            type="number"
-                            placeholder="e.g. 10"
-                            value={formData.commissionRate}
-                            onChange={(e) => setFormData((prev: any) => ({ ...prev, commissionRate: parseFloat(e.target.value) || 0 }))}
-                            className="pr-12"
-                            min="0"
-                            max="100"
-                        />
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground font-medium">
-                            %
+                <div className="space-y-4 animate-in fade-in slide-in-from-top-1 duration-300">
+                    <div className="space-y-2">
+                        <Label htmlFor="commissionRate" className="font-semibold text-sm flex items-center">
+                            <TrendingUp className="h-4 w-4 mr-2 text-primary" />
+                            Global Commission Rate (%)
+                        </Label>
+                        <div className="relative">
+                            <Input
+                                id="commissionRate"
+                                type="number"
+                                placeholder="e.g. 10"
+                                value={formData.commissionRate}
+                                onChange={(e) => setFormData((prev: any) => ({ ...prev, commissionRate: parseFloat(e.target.value) || 0 }))}
+                                className="pr-12 text-lg h-12 font-bold"
+                                min="0"
+                                max="100"
+                            />
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-muted-foreground font-bold text-lg">
+                                %
+                            </div>
                         </div>
+                        <p className="text-xs text-muted-foreground">
+                            This staff member will earn {formData.commissionRate}% of the service value for every completed appointment assigned to them.
+                        </p>
                     </div>
-                    <p className="text-xs text-muted-foreground flex items-center">
-                        <TrendingUp className="h-3 w-3 mr-1" />
-                        Staff will earn {formData.commissionRate}% on all completed appointments.
+
+                    {staff && (
+                        <div className="pt-4 border-t">
+                            <div className="flex items-center justify-between mb-4">
+                                <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Earnings Summary</h4>
+                                <Button variant="ghost" size="sm" onClick={() => setActiveTab('earnings')} className="text-primary hover:text-primary/80 h-auto p-0 flex items-center gap-1">
+                                    Full Ledger <Eye className="h-3 w-3" />
+                                </Button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-3 bg-green-50 rounded-md border border-green-100">
+                                    <p className="text-[10px] text-green-600 font-bold uppercase">Balance Due</p>
+                                    <p className="text-xl font-bold text-green-700 flex items-center">
+                                        <IndianRupee className="h-4 w-4 mr-0.5" />
+                                        {(earningsData?.summary?.balance || 0).toFixed(2)}
+                                    </p>
+                                </div>
+                                <div className="p-3 bg-blue-50 rounded-md border border-blue-100">
+                                    <p className="text-[10px] text-blue-600 font-bold uppercase">Total Earned</p>
+                                    <p className="text-xl font-bold text-blue-700 flex items-center">
+                                        <IndianRupee className="h-4 w-4 mr-0.5" />
+                                        {(earningsData?.summary?.totalEarned || 0).toFixed(2)}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {!formData.commission && (
+                <div className="flex flex-col items-center justify-center py-12 text-center bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                    <div className="p-3 bg-gray-100 rounded-full mb-3">
+                        <TrendingUp className="h-6 w-6 text-gray-400" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-900">Commission is Disabled</p>
+                    <p className="text-xs text-gray-500 max-w-[250px] mt-1">
+                        Turn on the switch above to start tracking performance-based earnings for this staff member.
                     </p>
                 </div>
             )}
@@ -1088,14 +1173,15 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
                 <div>
                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                         {!hideTabs && (
-                            <TabsList className="grid w-full grid-cols-6 mb-8">
+                            <TabsList className={`grid w-full ${staff ? 'grid-cols-8' : 'grid-cols-7'} mb-8`}>
                                 <TabsTrigger value="personal">Personal</TabsTrigger>
                                 <TabsTrigger value="employment">Job</TabsTrigger>
+                                <TabsTrigger value="commission">Commission</TabsTrigger>
                                 <TabsTrigger value="bank">Bank</TabsTrigger>
                                 <TabsTrigger value="permissions">Access</TabsTrigger>
                                 <TabsTrigger value="timing">Timing</TabsTrigger>
                                 <TabsTrigger value="blockTime">Block</TabsTrigger>
-
+                                {staff && <TabsTrigger value="earnings">Earnings</TabsTrigger>}
                             </TabsList>
                         )}
                         <TabsContent value="personal" className="py-4">
@@ -1103,6 +1189,9 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
                         </TabsContent>
                         <TabsContent value="employment" className="py-4">
                             {renderEmploymentTab()}
+                        </TabsContent>
+                        <TabsContent value="commission" className="py-4">
+                            {renderCommissionTab()}
                         </TabsContent>
                         <TabsContent value="bank" className="py-4">
                             {renderBankDetailsTab()}
@@ -1129,7 +1218,7 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
                                 Previous
                             </Button>
                         )}
-                        {activeTab !== 'blockTime' ? (
+                        {((activeTab !== 'blockTime' && !staff) || (activeTab !== 'earnings' && staff)) ? (
                             <Button type="button" onClick={handleNextTab}>Next</Button>
                         ) : (
                             <Button type="button" onClick={handleSubmit} disabled={isCreating || isUpdating}>

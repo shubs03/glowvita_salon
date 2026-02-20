@@ -217,7 +217,7 @@ export const GET = withSubscriptionCheck(async (req, { params }) => {
     try {
         console.log('GET request - params:', params);
         console.log('GET request - req.user:', req.user);
-        const vendorId = req.user.userId;
+        const vendorId = req.user.vendorId || req.user.userId;
         const { searchParams } = new URL(req.url);
         const id = extractAppointmentId(req.url, params);
 
@@ -335,7 +335,7 @@ export const GET = withSubscriptionCheck(async (req, { params }) => {
 // POST a new appointment
 export const POST = withSubscriptionCheck(async (req) => {
     try {
-        const vendorId = req.user.userId.toString();
+        const vendorId = (req.user.vendorId || req.user.userId).toString();
         const body = await req.json();
 
         console.log('POST request - creating appointment:', body);
@@ -470,6 +470,17 @@ export const POST = withSubscriptionCheck(async (req) => {
         }
 
         const newAppointment = await AppointmentModel.create(appointmentData);
+
+        // CREDIT STAFF LEDGER IF CREATED AS COMPLETED
+        if (newAppointment.status === 'completed' || newAppointment.status === 'completed without payment') {
+            try {
+                const { syncStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
+                await syncStaffCommission(newAppointment._id);
+            } catch (accError) {
+                console.error("Error syncing staff on creation:", accError);
+            }
+        }
+
         const populatedAppointment = await AppointmentModel.findById(newAppointment._id)
             .populate('staff', 'fullName position')
             .populate('service', 'name duration price')
@@ -491,7 +502,7 @@ export const POST = withSubscriptionCheck(async (req) => {
 // Handle PUT /api/crm/appointments/[id] (update)
 export const PUT = withSubscriptionCheck(async (req, { params }) => {
     try {
-        const vendorId = req.user.userId;
+        const vendorId = req.user.vendorId || req.user.userId;
         const appointmentId = params?.id;
 
         if (!appointmentId) {
@@ -600,6 +611,14 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
             );
         }
 
+        // Handle cancellation specifically to capture reason and add to notes
+        if (updateData.status === 'cancelled' && existingAppointment.status !== 'cancelled') {
+            updateData.cancellationReason = updateData.cancellationReason || 'No reason provided';
+            const cancellationNote = `[${new Date().toISOString()}] Appointment cancelled: ${updateData.cancellationReason}`;
+            const existingNotes = existingAppointment.notes || '';
+            updateData.notes = existingNotes ? `${cancellationNote}\n${existingNotes}` : cancellationNote;
+        }
+
         // Apply updates
         Object.keys(updateData).forEach(key => {
             updatedAppointment[key] = updateData[key];
@@ -611,6 +630,19 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
         }
 
         await updatedAppointment.save({ validateBeforeSave: false });
+
+        // SYNC STAFF LEDGER IF RELEVANT CHANGES OCCURRED
+        const commissionRelevantFields = ['status', 'amount', 'discount', 'staff', 'serviceItems', 'totalAmount'];
+        const hasRelevantChanges = Object.keys(updateData).some(key => commissionRelevantFields.includes(key));
+
+        if (hasRelevantChanges) {
+            try {
+                const { syncStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
+                await syncStaffCommission(appointmentId);
+            } catch (accError) {
+                console.error("Error syncing staff on update:", accError);
+            }
+        }
 
         // Populate for response
         await updatedAppointment.populate([
@@ -645,7 +677,7 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
 export const DELETE = withSubscriptionCheck(async (req, { params }) => {
     try {
         console.log('=== DELETE REQUEST START ===');
-        const vendorId = req.user.userId;
+        const vendorId = req.user.vendorId || req.user.userId;
         const appointmentId = extractAppointmentId(req.url, params);
 
         console.log('DELETE Request URL:', req.url);
@@ -695,7 +727,7 @@ export const DELETE = withSubscriptionCheck(async (req, { params }) => {
 // PATCH /api/crm/appointments - Update appointment status
 export const PATCH = withSubscriptionCheck(async (req, { params }) => {
     try {
-        const vendorId = req.user.userId;
+        const vendorId = req.user.vendorId || req.user.userId;
         const body = await req.json();
         const appointmentId = extractAppointmentId(req.url, params) || body._id;
 
@@ -766,6 +798,14 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                 await sendAppointmentEmail(updatedAppointment, vendorId, 'cancelled', oldStatus, rawClientId);
             }
 
+            // Sync Commission on PATCH
+            try {
+                const { syncStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
+                await syncStaffCommission(appointmentId);
+            } catch (accError) {
+                console.error("Error syncing staff on PATCH:", accError);
+            }
+
             return NextResponse.json({
                 message: "Appointment status updated successfully",
                 appointment: updatedAppointment
@@ -799,6 +839,15 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                     if (invoice) {
                         updatedAppointment.invoiceNumber = invoice.invoiceNumber;
                         console.log(`Linked sequential invoice ${invoice.invoiceNumber} to appointment ${appointmentId}`);
+                    }
+
+                    // CREDIT STAFF COMMISSION TO LEDGER
+                    try {
+                        const { creditStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
+                        await creditStaffCommission(appointmentId);
+                        console.log(`Credited staff commission for appointment ${appointmentId}`);
+                    } catch (commError) {
+                        console.error("Error crediting staff commission:", commError);
                     }
                 } catch (invoiceError) {
                     console.error("Error in centralized invoice generation:", invoiceError);
