@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@repo/ui/card";
-import { Users, UserPlus } from 'lucide-react';
+import { Users, UserPlus, TrendingUp, IndianRupee } from 'lucide-react';
 import { Staff } from '../page';
 
 interface StaffStatsCardsProps {
@@ -23,7 +23,7 @@ const StaffStatsCards = ({ staffList }: StaffStatsCardsProps) => {
           </div>
         </CardContent>
       </Card>
-      
+
       <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
@@ -36,6 +36,38 @@ const StaffStatsCards = ({ staffList }: StaffStatsCardsProps) => {
             </div>
             <div className="p-3 bg-primary/10 rounded-full transition-colors">
               <UserPlus className="h-6 w-6 text-secondary-foreground" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-green-600 mb-1">Commission Active</p>
+              <p className="text-2xl font-bold text-green-700">
+                {staffList.filter((s: Staff) => s.commission).length}
+              </p>
+              <p className="text-xs text-green-600/70 mt-1">Staff earning commission</p>
+            </div>
+            <div className="p-3 bg-green-100/50 rounded-full transition-colors">
+              <TrendingUp className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+        <CardContent className="p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-red-600 mb-1">Pending Payouts</p>
+              <p className="text-2xl font-bold text-red-700">
+                ₹{staffList.reduce((acc, s) => acc + (s.earningsSummary?.netBalance || 0), 0).toFixed(2)}
+              </p>
+              <p className="text-xs text-red-600/70 mt-1">Total balance due to staff</p>
+            </div>
+            <div className="p-3 bg-red-100/50 rounded-full transition-colors">
+              <IndianRupee className="h-6 w-6 text-red-600" />
             </div>
           </div>
         </CardContent>

@@ -12,7 +12,7 @@ await _db();
 // GET - Fetch all clients for a vendor (both offline and online)
 export const GET = withSubscriptionCheck(async (req) => {
     try {
-        const vendorId = req.user.userId.toString();
+        const vendorId = (req.user.vendorId || req.user.userId).toString();
         const url = new URL(req.url);
         const clientId = url.searchParams.get('id');
 
@@ -175,7 +175,7 @@ export const GET = withSubscriptionCheck(async (req) => {
 // POST - Create a new client
 export const POST = withSubscriptionCheck(async (req) => {
     try {
-        const vendorId = (req.user.userId || req.user._id).toString();
+        const vendorId = (req.user.vendorId || req.user.userId).toString();
         const body = await req.json();
 
         // Validate required fields
@@ -292,7 +292,7 @@ export const POST = withSubscriptionCheck(async (req) => {
 // PUT - Update an existing client
 export const PUT = withSubscriptionCheck(async (req) => {
     try {
-        const vendorId = (req.user.userId || req.user._id).toString();
+        const vendorId = (req.user.vendorId || req.user.userId).toString();
         const body = await req.json();
         const { _id: clientId, ...updateData } = body;
 
@@ -437,7 +437,7 @@ export const PUT = withSubscriptionCheck(async (req) => {
 // DELETE - Delete a client
 export const DELETE = withSubscriptionCheck(async (req) => {
     try {
-        const vendorId = (req.user.userId || req.user._id).toString();
+        const vendorId = (req.user.vendorId || req.user.userId).toString();
         const body = await req.json();
         const { id: clientId } = body;
 

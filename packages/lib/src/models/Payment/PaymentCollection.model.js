@@ -34,7 +34,7 @@ const paymentCollectionSchema = new mongoose.Schema({
       },
       staffId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Staff'
+        ref: 'Staffs'
       },
       staffName: {
         type: String,
@@ -80,7 +80,7 @@ const paymentCollectionSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  
+
   // Coupon details
   couponCode: {
     type: String,
@@ -154,7 +154,7 @@ paymentCollectionSchema.index({ vendorId: 1, paymentDate: -1 });
 paymentCollectionSchema.index({ paymentStatus: 1 });
 
 // Pre-save middleware to update timestamps
-paymentCollectionSchema.pre('save', function(next) {
+paymentCollectionSchema.pre('save', function (next) {
   this.updatedAt = new Date();
   next();
 });
