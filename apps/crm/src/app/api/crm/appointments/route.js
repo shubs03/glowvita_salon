@@ -742,7 +742,7 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
         }
 
         // Validate status
-        const validStatuses = ['scheduled', 'confirmed', 'completed', 'cancelled', 'no-show'];
+        const validStatuses = ['scheduled', 'confirmed', 'completed', 'completed without payment', 'partially-completed', 'cancelled', 'no-show'];
         if (!validStatuses.includes(body.status)) {
             return NextResponse.json(
                 { message: "Invalid status value" },
