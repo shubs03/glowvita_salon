@@ -32,14 +32,9 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
 
         const forceRecalc = searchParams.get('recalc') === 'true';
 
-        // MIGRATION: If no ledger exists OR force recalculate is requested OR it was initialized as empty
-        // We check if netBalance, totalEarned etc are present or if forceRecalc is true
+        // MIGRATION: If no ledger exists OR force recalculate is requested
         if (forceRecalc || (staff.accumulatedEarnings === 0 && (!staff.commissionCount || staff.commissionCount === 0))) {
-            console.log(`Starting ${forceRecalc ? 'recalculation' : 'migration'} for staff ${staffId}`);
-
-            const commissionRate = staff.commissionRate || 0;
-            const isCommissionEnabled = staff.commission === true;
-            console.log(`Migration Debug: Staff ${staff.fullName} | Enabled: ${isCommissionEnabled} | Rate: ${commissionRate}%`);
+            console.log(`[Earnings] Starting ${forceRecalc ? 'forced recalculation' : 'auto-migration'} for staff ${staffId}`);
 
             // Fetch all completed appointments for this staff
             const completedAppointments = await AppointmentModel.find({
@@ -49,110 +44,47 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
                     { staff: new mongoose.Types.ObjectId(staffId) },
                     { "serviceItems.staff": new mongoose.Types.ObjectId(staffId) }
                 ]
-            }).lean();
+            }).select('_id').lean();
 
-            let totalEarned = 0;
-            let commissionCount = 0;
+            console.log(`[Earnings] Found ${completedAppointments.length} completed appointments to sync`);
 
+            // Reset the staff counters before re-syncing to avoid double-counting
+            if (forceRecalc) {
+                await StaffTransactionsModel.deleteMany({
+                    staffId: new mongoose.Types.ObjectId(staffId),
+                    type: 'CREDIT'
+                });
+                await StaffModel.findByIdAndUpdate(staffId, {
+                    $set: {
+                        accumulatedEarnings: 0,
+                        netBalance: staff.totalPaidOut ? -staff.totalPaidOut : 0,
+                        commissionCount: 0,
+                        lastTransactionDate: new Date()
+                    }
+                });
+                console.log(`[Earnings] Reset staff counters for recalculation`);
+            }
+
+            // Re-sync each appointment using the same logic as real-time
+            const { syncStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
             for (const appt of completedAppointments) {
-                let apptCommission = 0;
-                let contributed = false;
-
-                // Case 1: Legacy/Single staff appointment
-                console.log(`Processing Appointment ${appt._id} (${appt.status}) - Amount: ${appt.amount}, Final: ${appt.finalAmount}, Addons: ${appt.addOnsAmount}`);
-
-                // Case 1: Single staff appointment
-                const isSingleServiceStaff = appt.staff && appt.staff.toString() === staffId && !appt.isMultiService;
-
-                if (isSingleServiceStaff) {
-                    if (appt.staffCommission?.amount > 0) {
-                        apptCommission = appt.staffCommission.amount;
-                    } else if (isCommissionEnabled) {
-                        let base = appt.finalAmount;
-                        if (!base) {
-                            base = (appt.amount || 0) + (appt.addOnsAmount || 0);
-                        }
-
-                        const disc = appt.discountAmount || appt.discount || 0;
-                        apptCommission = (Math.max(0, base - disc) * commissionRate) / 100;
-                        console.log(`   -> Calculated Single Commission: ${apptCommission} (Base: ${base}, Rate: ${commissionRate}%)`);
-                    }
-                    if (apptCommission > 0) contributed = true;
-                }
-
-                // Case 2: Multi-service items
-                if ((appt.isMultiService || !contributed) && appt.serviceItems && appt.serviceItems.length > 0) {
-                    let multiServiceCommission = 0;
-                    let foundItems = false;
-
-                    for (const item of appt.serviceItems) {
-                        if (item.staff && item.staff.toString() === staffId) {
-                            foundItems = true;
-                            if (item.staffCommission?.amount > 0) {
-                                multiServiceCommission += item.staffCommission.amount;
-                            } else if (isCommissionEnabled) {
-                                let itemBase = item.amount || 0;
-                                multiServiceCommission += (itemBase * commissionRate) / 100;
-                            }
-                        }
-                    }
-
-                    if (foundItems && multiServiceCommission > 0) {
-                        apptCommission += multiServiceCommission;
-                        contributed = true;
-                        console.log(`   -> Calculated Multi-Service Commission: ${multiServiceCommission}`);
-                    }
-                }
-
-                if (contributed && apptCommission > 0) {
-                    totalEarned += apptCommission;
-                    commissionCount++;
-
-                    console.log(`   -> SAVING Commission: ${apptCommission}`);
-
-                    await StaffTransactionsModel.findOneAndUpdate(
-                        { staffId, appointmentId: appt._id, type: 'CREDIT' },
-                        {
-                            $setOnInsert: {
-                                vendorId,
-                                staffId,
-                                type: 'CREDIT',
-                                amount: apptCommission,
-                                appointmentId: appt._id,
-                                description: `Historical: Commission for ${appt.serviceName || 'Service'}`,
-                                transactionDate: appt.updatedAt || appt.createdAt || new Date()
-                            }
-                        },
-                        { upsert: true }
-                    );
+                try {
+                    await syncStaffCommission(appt._id.toString());
+                } catch (e) {
+                    console.error(`[Earnings] Error syncing appointment ${appt._id}:`, e.message);
                 }
             }
 
-            // In new consolidated schema, we don't have a separate StaffPayout collection to aggregate from for historical migration
-            // We'd have to look at transactions of type DEBIT if they existed
-            const payoutTransactions = await StaffTransactionsModel.aggregate([
-                { $match: { staffId: new mongoose.Types.ObjectId(staffId), type: 'DEBIT' } },
-                { $group: { _id: null, total: { $sum: "$amount" } } }
-            ]);
-
-            const totalPaid = payoutTransactions[0]?.total || 0;
-
-            // Update Staff model with consolidated values
-            await StaffModel.findByIdAndUpdate(staffId, {
-                accumulatedEarnings: totalEarned,
-                totalPaidOut: totalPaid,
-                netBalance: totalEarned - totalPaid,
-                commissionCount: commissionCount,
-                lastTransactionDate: new Date()
-            });
-
             // Refresh staff object for the response
-            staff.accumulatedEarnings = totalEarned;
-            staff.totalPaidOut = totalPaid;
-            staff.netBalance = totalEarned - totalPaid;
-            staff.commissionCount = commissionCount;
+            const updatedStaff = await StaffModel.findById(staffId);
+            if (updatedStaff) {
+                staff.accumulatedEarnings = updatedStaff.accumulatedEarnings;
+                staff.totalPaidOut = updatedStaff.totalPaidOut;
+                staff.netBalance = updatedStaff.netBalance;
+                staff.commissionCount = updatedStaff.commissionCount;
+            }
 
-            console.log(`Initialized ledger for ${staff.fullName} with ${totalEarned} accumulated earnings`);
+            console.log(`[Earnings] Recalculation done. New accumulatedEarnings: ${staff.accumulatedEarnings}`);
         }
 
         // 2. Fetch Period-Specific Summary if dates are provided
