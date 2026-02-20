@@ -3,6 +3,7 @@ import _db from '@repo/lib/db';
 import BillingModel from '@repo/lib/models/Vendor/Billing.model';
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import StaffModel from '@repo/lib/models/Vendor/Staff.model';
+import ClientModel from '@repo/lib/models/Vendor/Client.model';
 import StaffTransactionsModel from '@repo/lib/models/Vendor/StaffTransaction.model';
 import { recordStaffPayout } from '@repo/lib/modules/accounting/StaffAccounting';
 import { authMiddlewareCrm } from '@/middlewareCrm';
