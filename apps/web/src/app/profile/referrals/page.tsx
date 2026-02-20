@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@repo/ui/badge';
 import { Pagination } from '@repo/ui/pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
-import { useGetClientReferralsQuery } from '@repo/store/api';
+import { useGetClientReferralsQuery, useClaimReferralBonusMutation } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
 
 const HowItWorksStep = ({ step, title, description }: { step: number, title: string, description: string }) => (
@@ -39,6 +39,9 @@ export default function ReferralsPage() {
   const { data: referralData, isLoading, refetch } = useGetClientReferralsQuery(undefined, { 
     skip: !isAuthenticated || !user?._id 
   });
+  
+  // Claim bonus mutation
+  const [claimBonus, { isLoading: isClaiming }] = useClaimReferralBonusMutation();
 
   const referralCode = referralData?.data?.referralCode || 'LOADING';
   const isValidCode = referralCode !== 'N/A' && referralCode !== 'LOADING' && referralCode !== 'NOTAVAILABLE';
@@ -80,13 +83,29 @@ export default function ReferralsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Completed': 
       case 'Bonus Paid': 
         return 'bg-green-100 text-green-800';
+      case 'Completed': 
+        return 'bg-blue-100 text-blue-800';
       case 'Pending': 
         return 'bg-yellow-100 text-yellow-800';
       default: 
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+  
+  const handleClaimBonus = async (referralId: string) => {
+    try {
+      const result = await claimBonus({ referralId }).unwrap();
+      if (result.success) {
+        toast.success('Bonus claimed successfully! Check your wallet.');
+        refetch(); // Refresh the referral data
+      } else {
+        toast.error(result.message || 'Failed to claim bonus');
+      }
+    } catch (error: any) {
+      console.error('Error claiming bonus:', error);
+      toast.error(error?.data?.message || 'Failed to claim bonus. Please try again.');
     }
   };
 
@@ -240,9 +259,22 @@ export default function ReferralsPage() {
                       <TableCell className="font-medium">{referral.friend}</TableCell>
                       <TableCell>{new Date(referral.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(referral.status)}>
-                          {referral.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getStatusColor(referral.status)}>
+                            {referral.status}
+                          </Badge>
+                          {referral.status === 'Completed' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => handleClaimBonus(referral.id)}
+                              disabled={isClaiming}
+                              className="h-7 px-2 text-xs"
+                            >
+                              {isClaiming ? 'Claiming...' : 'Claim Bonus'}
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">{referral.reward}</TableCell>
                     </TableRow>

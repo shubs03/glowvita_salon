@@ -4,6 +4,7 @@ import { verifyJwt } from '@repo/lib/auth';
 import { cookies } from 'next/headers';
 import UserModel from '@repo/lib/models/user/User.model';
 import { ReferralModel } from '@repo/lib/models/admin/Reffer';
+import { checkAndCreditReferralBonus } from '@repo/lib/utils/referralWalletCredit';
 
 await _db();
 
@@ -118,6 +119,154 @@ export async function GET(req) {
     return NextResponse.json({ 
       success: false, 
       message: 'Failed to fetch referrals', 
+      error: error.message 
+    }, { status: 500 });
+  }
+}
+
+// POST: Claim referral bonus manually (for cases where automatic credit failed)
+export async function POST(req) {
+  try {
+    const userId = await getUserId(req);
+    
+    if (!userId) {
+      return NextResponse.json({ success: false, message: 'User not authenticated' }, { status: 401 });
+    }
+
+    const body = await req.json();
+    const { referralId } = body;
+
+    // If referralId is provided, claim bonus for that specific referral
+    if (referralId) {
+      console.log(`[Manual Claim] User ${userId} claiming bonus for referral ${referralId}`);
+      
+      // Find the referral record
+      const referral = await ReferralModel.findById(referralId);
+      
+      if (!referral) {
+        return NextResponse.json({ 
+          success: false, 
+          message: 'Referral not found' 
+        }, { status: 404 });
+      }
+      
+      // Check if user is the referrer (they should claim their bonus)
+      if (referral.referrer !== userId && referral.referrer.toString() !== userId.toString()) {
+        return NextResponse.json({ 
+          success: false, 
+          message: 'You can only claim bonuses for referrals you made' 
+        }, { status: 403 });
+      }
+      
+      // Check referral status
+      if (referral.status === 'Bonus Paid') {
+        return NextResponse.json({ 
+          success: false, 
+          message: 'Bonus already claimed for this referral' 
+        }, { status: 400 });
+      }
+      
+      if (referral.status !== 'Completed') {
+        return NextResponse.json({ 
+          success: false, 
+          message: `Referral status is '${referral.status}'. Bonus can only be claimed when status is 'Completed'.`,
+          status: referral.status
+        }, { status: 400 });
+      }
+      
+      // Call creditReferralBonus manually
+      const { creditReferralBonus } = await import('@repo/lib/utils/referralWalletCredit');
+      const result = await creditReferralBonus(
+        referral.referrer.toString(),
+        referral.referee.toString(),
+        referral._id.toString(),
+        'manual_claim'
+      );
+      
+      console.log(`[Manual Claim] Result for referral ${referralId}:`, result);
+      
+      if (result.success) {
+        return NextResponse.json({ 
+          success: true, 
+          message: 'Bonus claimed successfully',
+          data: result.data
+        });
+      } else {
+        return NextResponse.json({ 
+          success: false, 
+          message: result.message || 'Failed to claim bonus',
+          error: result.error
+        }, { status: 400 });
+      }
+    }
+    
+    // If no referralId, try to claim all eligible bonuses for this user (as referrer)
+    console.log(`[Manual Claim] User ${userId} claiming all eligible bonuses`);
+    
+    // Find all referrals where this user is the referrer and status is 'Completed'
+    const eligibleReferrals = await ReferralModel.find({
+      referrer: userId,
+      referralType: 'C2C',
+      status: 'Completed'
+    });
+    
+    console.log(`[Manual Claim] Found ${eligibleReferrals.length} eligible referrals for user ${userId}`);
+    
+    if (eligibleReferrals.length === 0) {
+      return NextResponse.json({ 
+        success: false, 
+        message: 'No eligible referrals found. Referrals must have status "Completed" to claim bonus.',
+        eligibleCount: 0
+      }, { status: 404 });
+    }
+    
+    // Claim bonus for each eligible referral
+    const results = [];
+    const { creditReferralBonus } = await import('@repo/lib/utils/referralWalletCredit');
+    
+    for (const referral of eligibleReferrals) {
+      try {
+        const result = await creditReferralBonus(
+          referral.referrer.toString(),
+          referral.referee.toString(),
+          referral._id.toString(),
+          'manual_claim'
+        );
+        
+        results.push({
+          referralId: referral._id,
+          success: result.success,
+          message: result.message,
+          data: result.data
+        });
+      } catch (error) {
+        console.error(`[Manual Claim] Error claiming bonus for referral ${referral._id}:`, error);
+        results.push({
+          referralId: referral._id,
+          success: false,
+          message: error.message
+        });
+      }
+    }
+    
+    const successfulClaims = results.filter(r => r.success).length;
+    
+    return NextResponse.json({ 
+      success: successfulClaims > 0, 
+      message: `${successfulClaims} of ${results.length} bonuses claimed successfully`,
+      data: {
+        totalEligible: eligibleReferrals.length,
+        successfulClaims,
+        failedClaims: results.length - successfulClaims,
+        results
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error claiming referral bonus:', error);
+    return NextResponse.json({ 
+      success: false, 
+      message: 'Failed to claim referral bonus', 
       error: error.message 
     }, { status: 500 });
   }

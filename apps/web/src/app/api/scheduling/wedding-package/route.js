@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@repo/lib/db';
 import WeddingPackageModel from '@repo/lib/models/Vendor/WeddingPackage.model';
+import { checkAndCreditReferralBonus } from '@repo/lib/utils/referralWalletCredit';
 
 /**
  * Lock a wedding package slot
@@ -251,6 +252,16 @@ export async function PUT(request) {
 
     await appointment.save();
     console.log("Appointment confirmed and saved:", appointment._id);
+
+    // Check and credit referral bonus if user was referred (triggers on first wedding package booking)
+    if (appointment.clientId) {
+      try {
+        await checkAndCreditReferralBonus(appointment.clientId.toString(), 'wedding_package');
+      } catch (referralError) {
+        // Don't fail the booking if referral crediting fails, just log the error
+        console.error('Error crediting referral bonus:', referralError);
+      }
+    }
 
     // Release the lock after appointment creation
     try {

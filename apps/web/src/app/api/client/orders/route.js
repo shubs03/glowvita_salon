@@ -5,6 +5,7 @@ import ProductModel from '@repo/lib/models/Vendor/Product.model';
 import UserCartModel from '@repo/lib/models/user/UserCart.model';
 import { verifyJwt } from '@repo/lib/auth';
 import { cookies } from 'next/headers';
+import { checkAndCreditReferralBonus } from '@repo/lib/utils/referralWalletCredit';
 
 // GET User's Orders
 export async function GET(req) {
@@ -209,6 +210,14 @@ export async function POST(req) {
     });
 
     await newOrder.save();
+
+    // Check and credit referral bonus if user was referred (triggers on first order)
+    try {
+      await checkAndCreditReferralBonus(payload.userId, 'order');
+    } catch (referralError) {
+      // Don't fail the order if referral crediting fails, just log the error
+      console.error('Error crediting referral bonus:', referralError);
+    }
 
     // Decrease stock for each product in the order
     for (const item of items) {

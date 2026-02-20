@@ -7,6 +7,7 @@ import { withSubscriptionCheck } from '@/middlewareCrm';
 import { sendEmail } from "../../../../../../../packages/lib/src/emailService";
 import { getConfirmationTemplate, getCompletionTemplate, getInvoiceTemplate, getCancellationTemplate } from "../../../../../../../packages/lib/src/emailTemplates";
 import VendorModelLib from "../../../../../../../packages/lib/src/models/Vendor/Vendor.model";
+import { checkAndCreditReferralBonus } from "../../../../../../../packages/lib/src/utils/referralWalletCredit";
 
 // Helper function to send appointment emails
 const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus, fallbackClientId = null) => {
@@ -801,6 +802,69 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                     }
                 } catch (invoiceError) {
                     console.error("Error in centralized invoice generation:", invoiceError);
+                }
+
+                // Check and credit referral bonus if user was referred (triggers on first completed appointment)
+                console.log(`[CRM Referral] ===== STARTING REFERRAL BONUS CHECK =====`);
+                console.log(`[CRM Referral] Appointment ID: ${appointmentId}`);
+                console.log(`[CRM Referral] Appointment status: ${updatedAppointment.status}`);
+                // LOGIC FIX: Handle both online (User ID) and offline (Client ID) modes
+                let targetUserId = null;
+
+                if (updatedAppointment.mode === 'online') {
+                    // For online appointments, client field IS the User ID
+                    // We need to check if it's an object (populated) or string/ObjectId
+                    if (updatedAppointment.client && updatedAppointment.client._id) {
+                        targetUserId = updatedAppointment.client._id.toString();
+                    } else {
+                        targetUserId = updatedAppointment.client?.toString();
+                    }
+                    console.log(`[CRM Referral] Online appointment detected. Using client field as User ID: ${targetUserId}`);
+                } else {
+                    // For offline appointments, client field is Client ID. We need to find if this Client is linked to a User.
+                    // Note: The client field might be populated or just an ID depending on the finding logic
+                    let clientIdToCheck = null;
+                    if (updatedAppointment.client && updatedAppointment.client._id) {
+                        clientIdToCheck = updatedAppointment.client._id;
+                    } else if (updatedAppointment.client) {
+                        clientIdToCheck = updatedAppointment.client;
+                    }
+
+                    if (clientIdToCheck) {
+                        try {
+                            const ClientModel = (await import('@repo/lib/models/Vendor/Client.model')).default;
+                            const clientDoc = await ClientModel.findById(clientIdToCheck).select('userId');
+                            if (clientDoc && clientDoc.userId) {
+                                targetUserId = clientDoc.userId.toString();
+                                console.log(`[CRM Referral] Offline appointment linked to User ID: ${targetUserId}`);
+                            } else {
+                                console.log(`[CRM Referral] Offline appointment client not linked to any User`);
+                            }
+                        } catch (clientErr) {
+                            console.error(`[CRM Referral] Error fetching client details:`, clientErr);
+                        }
+                    }
+                }
+
+                if (targetUserId) {
+                    try {
+                        console.log(`[CRM Referral] ===== TRIGGERING REFERRAL BONUS CHECK =====`);
+                        const referralResult = await checkAndCreditReferralBonus(targetUserId, 'appointment');
+                        console.log(`[CRM Referral] ===== REFERRAL BONUS RESULT =====`);
+                        console.log(`[CRM Referral] Success: ${referralResult.success}`);
+                        console.log(`[CRM Referral] Message: ${referralResult.message}`);
+
+                        if (referralResult.success) {
+                            console.log(`[CRM Referral] ✅ Referral bonus credited successfully!`);
+                        } else {
+                            console.warn(`[CRM Referral] ⚠️ Referral bonus not credited: ${referralResult.message}`);
+                        }
+                    } catch (referralError) {
+                        // Don't fail the appointment update if referral crediting fails, just log the error
+                        console.error('[CRM Referral] ❌ ERROR crediting referral bonus:', referralError);
+                    }
+                } else {
+                    console.log(`[CRM Referral] ❌ No valid User ID found for referral bonus check`);
                 }
             }
 
