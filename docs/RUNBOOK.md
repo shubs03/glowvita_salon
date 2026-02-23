@@ -171,5 +171,5 @@ Monitor these metrics for background job health:
 4. Review deposit requirements configuration
 
 ---
-*Last Updated: December 2025*
+*Last Updated: January 2026*
 *Version: 1.0*
