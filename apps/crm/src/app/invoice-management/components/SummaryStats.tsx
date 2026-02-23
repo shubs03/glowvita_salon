@@ -29,7 +29,7 @@ export default function SummaryStats({ billings, appointments, activeTab, isSupp
     : 0;
 
   return (
-    <div className={`grid grid-cols-1 sm:grid-cols-2 ${isSupplier ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-4 mb-6`}>
+    <div className={`grid grid-cols-1 sm:grid-cols-2 ${isSupplier || activeTab === 'appointments' ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-4 mb-6`}>
       <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
@@ -81,22 +81,24 @@ export default function SummaryStats({ billings, appointments, activeTab, isSupp
         </Card>
       )}
 
-      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
-        <CardContent className="p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-secondary-foreground mb-1">Products Sold</p>
-              <p className="text-2xl font-bold text-secondary-foreground">{productsSold}</p>
-              <p className="text-xs text-secondary-foreground/70 mt-1">
-                {activeTab === 'billing' ? 'In billing records' : 'Not applicable'}
-              </p>
+      {activeTab === 'billing' && (
+        <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-secondary-foreground mb-1">Products Sold</p>
+                <p className="text-2xl font-bold text-secondary-foreground">{productsSold}</p>
+                <p className="text-xs text-secondary-foreground/70 mt-1">
+                  In billing records
+                </p>
+              </div>
+              <div className="p-3 bg-primary/10 rounded-full transition-colors">
+                <Package className="h-6 w-6 text-secondary-foreground" />
+              </div>
             </div>
-            <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <Package className="h-6 w-6 text-secondary-foreground" />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
