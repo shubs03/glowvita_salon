@@ -71,7 +71,13 @@ const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus,
                 const completionHtml = getCompletionTemplate({
                     clientName,
                     businessName,
-                    serviceName: appointment.serviceName
+                    serviceName: appointment.serviceName,
+                    appointmentId: appointment.invoiceNumber || appointment._id.toString(),
+                    completedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
+                    orderTotal: appointment.totalAmount,
+                    location: appointment.homeServiceLocation?.address || businessName,
+                    businessAddress,
+                    businessPhone
                 });
 
                 // Fetch formal invoice
