@@ -12,10 +12,10 @@ interface AppointmentTableProps {
   onDownloadInvoice: (appointment: any) => void;
 }
 
-export default function AppointmentTable({ 
-  appointments, 
-  onViewInvoice, 
-  onDownloadInvoice 
+export default function AppointmentTable({
+  appointments,
+  onViewInvoice,
+  onDownloadInvoice
 }: AppointmentTableProps) {
   return (
     <>
@@ -40,6 +40,7 @@ export default function AppointmentTable({
                 <TableHead className="font-semibold w-32">Phone</TableHead>
                 <TableHead className="font-semibold w-64">Services</TableHead>
                 <TableHead className="font-semibold w-32">Paid By</TableHead>
+                <TableHead className="font-semibold w-24">Mode</TableHead>
                 <TableHead className="font-semibold w-32">Status</TableHead>
                 <TableHead className="text-right font-semibold w-28">Amount</TableHead>
                 <TableHead className="text-right font-semibold w-24">Actions</TableHead>
@@ -103,6 +104,11 @@ export default function AppointmentTable({
                     </TableCell>
                     <TableCell className="w-32">
                       <div className="text-sm line-clamp-1" title={app.paymentMethod}>{app.paymentMethod}</div>
+                    </TableCell>
+                    <TableCell className="w-24">
+                      <div className={`text-xs px-2 py-1 rounded-full w-fit font-medium capitalize ${app.mode === 'online' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+                        {app.mode || 'offline'}
+                      </div>
                     </TableCell>
                     <TableCell className="w-32">
                       <div className="text-sm line-clamp-1 uppercase" title={app.status}>{app.status}</div>
@@ -186,6 +192,12 @@ export default function AppointmentTable({
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Status:</span>
                     <span className="font-medium uppercase">{app.status}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Mode:</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium capitalize ${app.mode === 'online' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+                      {app.mode || 'offline'}
+                    </span>
                   </div>
                 </div>
 
