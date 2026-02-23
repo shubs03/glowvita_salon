@@ -23,7 +23,7 @@ export const GET = async (req) => {
 
         // Base query - either vendorId or userId is required
         const query = {
-            status: { $in: ['confirmed', 'pending', 'scheduled', 'cancelled', 'completed'] } // Only include active appointments
+            status: { $in: ['confirmed', 'pending', 'scheduled', 'cancelled', 'completed', 'completed without payment', 'partially-completed'] } // Include all relevant appointments
         };
 
         // If userId is provided, filter by userId/clientId and include ALL statuses
@@ -157,8 +157,12 @@ export const GET = async (req) => {
                 const lowerStatus = status.toLowerCase();
 
                 // Map common DB statuses to Frontend statuses
-                if (lowerStatus === 'completed' || lowerStatus === 'partially-completed') {
+                if (lowerStatus === 'completed') {
                     status = 'Completed';
+                } else if (lowerStatus === 'completed without payment') {
+                    status = 'Completed without payment';
+                } else if (lowerStatus === 'partially-completed') {
+                    status = 'Partially completed';
                 } else if (lowerStatus === 'cancelled' || lowerStatus === 'no-show') {
                     status = 'Cancelled';
                 } else if (lowerStatus === 'scheduled') {
@@ -402,7 +406,7 @@ export const POST = async (req) => {
 
         // Calculate total add-ons amount from all service items
         const addOnsAmount = serviceItems.reduce((sum, item) => {
-            return sum + (item.addOns?.reduce((addonSum, addon) => 
+            return sum + (item.addOns?.reduce((addonSum, addon) =>
                 addonSum + (Number(addon.price) || 0), 0) || 0);
         }, 0);
 
@@ -487,7 +491,7 @@ export const POST = async (req) => {
 
         // Check for conflicts before creating
         const { checkMultiServiceConflict } = await import('@repo/lib/modules/scheduling/ConflictChecker');
-        
+
         // Prepare verification items
         let verificationItems = appointmentData.serviceItems;
         if (!verificationItems || verificationItems.length === 0) {
@@ -507,7 +511,7 @@ export const POST = async (req) => {
         if (conflict) {
             console.warn('Conflict detected during appointment creation:', conflict);
             const response = NextResponse.json(
-                { 
+                {
                     message: "The selected time slot is no longer available. Please choose another time.",
                     conflict: {
                         startTime: conflict.startTime,

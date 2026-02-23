@@ -171,9 +171,10 @@ export function Cart({ isOpen, onOpenChange }: CartProps) {
         onOpenChange(false);
         console.log("Modals closed");
         console.log("=== Order placement process completed ===");
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to place orders:", error);
-        toast.error("Failed to place orders. Please try again.");
+        const errorMessage = error?.data?.message || error?.message || "Failed to place orders. Please try again.";
+        toast.error(errorMessage);
     }
   };
 

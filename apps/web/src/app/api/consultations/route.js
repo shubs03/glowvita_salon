@@ -3,6 +3,7 @@ import DoctorConsultation from '@repo/lib/models/Vendor/DoctorConsultation.model
 import Patient from '@repo/lib/models/Vendor/Patient.model';
 import Doctor from '@repo/lib/models/Vendor/Docters.model';
 import _db from '@repo/lib/db';
+import { checkAndCreditReferralBonus } from '@repo/lib/utils/referralWalletCredit';
 
 await _db();
 
@@ -121,6 +122,16 @@ export const POST = async (req) => {
       bookingSource: 'web',
       notes: body.notes
     });
+
+    // Check and credit referral bonus if user was referred (triggers on first consultation)
+    if (consultation.userId) {
+      try {
+        await checkAndCreditReferralBonus(consultation.userId.toString(), 'consultation');
+      } catch (referralError) {
+        // Don't fail the consultation if referral crediting fails, just log the error
+        console.error('Error crediting referral bonus:', referralError);
+      }
+    }
 
     // Update patient's consultation count
     if (patient) {

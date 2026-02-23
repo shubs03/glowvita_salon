@@ -125,7 +125,7 @@ export const glowvitaApi = createApi({
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "Regions", "PublicAllOffers", "AddOns", "PendingWeddingPackages",
-    "ReferralReport", "Inventory"
+    "ReferralReport", "ClientWallet", "ClientWithdrawals", "WalletSettings", "Inventory"
   ],
 
   endpoints: (builder) => ({
@@ -169,6 +169,25 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["Regions"],
     }),
+
+    // Wallet Settings Endpoints
+    getWalletSettings: builder.query({
+      query: () => ({
+        url: "/admin/wallet-settings",
+        method: "GET",
+      }),
+      providesTags: ["WalletSettings"],
+    }),
+
+    updateWalletSettings: builder.mutation({
+      query: (settings) => ({
+        url: "/admin/wallet-settings",
+        method: "PUT",
+        body: { settings },
+      }),
+      invalidatesTags: ["WalletSettings"],
+    }),
+
     getProfile: builder.query({
       query: () => `/crm/auth/profile`,
       providesTags: ['User'],
@@ -2144,6 +2163,50 @@ export const glowvitaApi = createApi({
       query: () => ({ url: "/client/referrals", method: "GET" }),
       providesTags: ["ClientReferrals"],
     }),
+    
+    // Claim Referral Bonus Endpoint (Web App - for customers)
+    claimReferralBonus: builder.mutation({
+      query: (data) => ({ url: "/client/referrals", method: "POST", body: data }),
+      invalidatesTags: ["ClientReferrals", "ClientWallet"],
+    }),
+
+    // Client Wallet Endpoints (Web App - for customers)
+    getClientWallet: builder.query({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append("page", params.page);
+        if (params.limit) queryParams.append("limit", params.limit);
+        if (params.type) queryParams.append("type", params.type);
+        if (params.source) queryParams.append("source", params.source);
+        if (params.status) queryParams.append("status", params.status);
+        const queryString = queryParams.toString();
+        return { url: `/client/wallet${queryString ? `?${queryString}` : ""}`, method: "GET" };
+      },
+      providesTags: ["ClientWallet"],
+    }),
+    addMoneyToWallet: builder.mutation({
+      query: (data) => ({ url: "/client/wallet/add-money", method: "POST", body: data }),
+      invalidatesTags: ["ClientWallet"],
+    }),
+    verifyWalletPayment: builder.mutation({
+      query: (data) => ({ url: "/client/wallet/verify-payment", method: "POST", body: data }),
+      invalidatesTags: ["ClientWallet"],
+    }),
+    withdrawFromWallet: builder.mutation({
+      query: (data) => ({ url: "/client/wallet/withdraw", method: "POST", body: data }),
+      invalidatesTags: ["ClientWallet", "ClientWithdrawals"],
+    }),
+    getWithdrawalHistory: builder.query({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append("page", params.page);
+        if (params.limit) queryParams.append("limit", params.limit);
+        if (params.status) queryParams.append("status", params.status);
+        const queryString = queryParams.toString();
+        return { url: `/client/wallet/withdraw${queryString ? `?${queryString}` : ""}`, method: "GET" };
+      },
+      providesTags: ["ClientWithdrawals"],
+    }),
 
     // Doctor Wishlist Endpoints (Web App)
     getDoctorWishlist: builder.query({
@@ -3094,6 +3157,13 @@ export const {
   // Client Referrals Endpoint (Web App)
   useGetClientReferralsQuery,
 
+  // Client Wallet Endpoints (Web App)
+  useGetClientWalletQuery,
+  useAddMoneyToWalletMutation,
+  useVerifyWalletPaymentMutation,
+  useWithdrawFromWalletMutation,
+  useGetWithdrawalHistoryQuery,
+
   // Doctor Wishlist Endpoints (Web App)
   useGetDoctorWishlistQuery,
   useCheckDoctorWishlistStatusQuery,
@@ -3206,6 +3276,12 @@ export const {
   useUpdateRegionMutation,
   useDeleteRegionMutation,
   useGetVendorServicesForApprovalQuery,
+
+  // Wallet Settings Hooks
+  useGetWalletSettingsQuery,
+  useUpdateWalletSettingsMutation,
+
+  useClaimReferralBonusMutation,
 
   // Product Masters Hooks
   useGetProductMastersQuery,

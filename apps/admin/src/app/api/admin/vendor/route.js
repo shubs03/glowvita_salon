@@ -447,269 +447,134 @@ export const PUT = authMiddlewareAdmin(
       address,
       description: description || null,
       gstNo,
+      updatedAt: Date.now(),
     };
 
-    if (password) {
-      if (
-        !firstName ||
-        !lastName ||
-        !businessName ||
-        !email ||
-        !phone ||
-        !state ||
-        !city ||
-        !pincode ||
-        !category ||
-        !subCategories ||
-        subCategories.length === 0 ||
-        !address
-      ) {
-        return Response.json(
-          { message: "All required fields must be provided" },
-          { status: 400 }
-        );
-      }
-
-      // Validate formats
-      if (!/^\S+@\S+\.\S+$/.test(email)) {
-        return Response.json(
-          { message: "Please enter a valid email address" },
-          { status: 400 }
-        );
-      }
-      if (!/^\d{10}$/.test(phone)) {
-        return Response.json(
-          { message: "Please enter a valid 10-digit phone number" },
-          { status: 400 }
-        );
-      }
-      if (!/^\d{6}$/.test(pincode)) {
-        return Response.json(
-          { message: "Please enter a valid 6-digit pincode" },
-          { status: 400 }
-        );
-      }
-      if (website && !/^https?:\/\/[^\s$.?#].[^\s]*$/.test(website)) {
-        return Response.json(
-          { message: "Please enter a valid URL" },
-          { status: 400 }
-        );
-      }
-      if (password && password.length < 8) {
+    // If password is provided, hash it and add to updateData
+    if (password && password.trim() !== "") {
+      if (password.length < 8) {
         return Response.json(
           { message: "Password must be at least 8 characters" },
           { status: 400 }
         );
       }
-      if (!["unisex", "men", "women"].includes(category)) {
-        return Response.json({ message: "Invalid category" }, { status: 400 });
-      }
-      if (
-        !subCategories.every((sc) =>
-          ["at-salon", "at-home", "custom-location"].includes(sc)
-        )
-      ) {
-        return Response.json(
-          { message: "Invalid subCategories" },
-          { status: 400 }
-        );
-      }
-      if (profileImage && !profileImage.startsWith("http") && !isValidBase64Image(profileImage)) {
-        return Response.json(
-          {
-            message:
-              "Invalid profile image format. Must be base64 encoded image.",
-          },
-          { status: 400 }
-        );
-      }
-      if (gallery && Array.isArray(gallery)) {
-        for (const image of gallery) {
-          if (
-            image &&
-            !image.startsWith("http") && // allow existing uploaded URLs
-            !isValidBase64Image(image)   // validate only new Base64 uploads
-          ) {
-            return Response.json(
-              { message: "Invalid gallery image format. Must be base64 encoded image." },
-              { status: 400 }
-            );
-          }
-        }
-      }
-      if (
-        bankDetails?.ifscCode &&
-        !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankDetails.ifscCode)
-      ) {
-        return Response.json(
-          { message: "Please enter a valid IFSC code" },
-          { status: 400 }
-        );
-      }
+      updateData.password = await bcrypt.hash(password, 10);
+    }
 
-      // Check for duplicate email or phone (excluding current vendor)
-      if (email || phone) {
-        const existingVendor = await VendorModel.findOne({
-          $or: [{ email }, { phone }],
-          _id: { $ne: id },
-        });
-        if (existingVendor) {
-          return Response.json(
-            { message: "Email or phone number already in use" },
-            { status: 400 }
-          );
-        }
+    // Validate required fields (optional for update, but good to have consistency)
+    if (email || phone) {
+      const existingConflict = await VendorModel.findOne({
+        $or: [
+          ...(email ? [{ email }] : []),
+          ...(phone ? [{ phone }] : [])
+        ],
+        _id: { $ne: id },
+      });
+      if (existingConflict) {
+        return Response.json(
+          { message: "Email or phone number already in use" },
+          { status: 400 }
+        );
       }
+    }
 
-      // Transform subscription fields (resolve plan ObjectId)
+    // Transform subscription fields if provided
+    if (subscription) {
       let planId = null;
-      if (subscription?.package) {
+      if (subscription.package) {
         const planDoc = await PlanModel.findOne({ name: subscription.package });
         planId = planDoc ? planDoc._id : null;
       }
-      const subscriptionData = subscription
-        ? {
-          plan: planId, // ObjectId reference
-          status: subscription.isActive ? "Active" : "Pending",
-          expires: subscription.endDate ? new Date(subscription.endDate) : null,
-        }
-        : {
-          plan: (await PlanModel.findOne({ name: "Basic" }))?._id || null,
-          status: "Pending",
-          expires: null,
-        };
-
-      // Transform bankDetails
-      const bankDetailsData = bankDetails
-        ? {
-          bankName: bankDetails.bankName || null,
-          accountNumber: bankDetails.accountNumber || null,
-          ifscCode: bankDetails.ifscCode || null,
-          accountHolder: bankDetails.accountHolder || null,
-        }
-        : {
-          bankName: null,
-          accountNumber: null,
-          ifscCode: null,
-          accountHolder: null,
-        };
-
-      // Transform documents safely
-      const documentsArray = Array.isArray(documents) ? documents : [];
-
-      const documentsData = {
-        aadharCard: documentsArray.find((d) => d.type === "aadhar")?.file || null,
-        panCard: documentsArray.find((d) => d.type === "pan")?.file || null,
-        udyogAadhar: documentsArray.find((d) => d.type === "gst")?.file || null,
-        shopLicense:
-          documentsArray.find((d) => d.type === "license")?.file || null,
-        udhayamCert:
-          documentsArray.find((d) => d.type === "udhayam")?.file || null,
-        otherDocs:
-          documentsArray.filter((d) => d.type === "other").map((d) => d.file) ||
-          [],
+      updateData.subscription = {
+        plan: planId,
+        status: subscription.isActive ? "Active" : "Pending",
+        expires: subscription.endDate ? new Date(subscription.endDate) : null,
       };
+    }
 
-      // Handle profile image upload if provided
-      let profileImageUrl = profileImage;
-      if (profileImage && !profileImage.startsWith('http')) {
-        // Get existing vendor to get old image URL for deletion
-        const existingVendor = await VendorModel.findById(id);
-        const fileName = `vendor-${id}-profile`;
-        profileImageUrl = await processBase64Image(profileImage, fileName, existingVendor?.profileImage);
+    // Transform bankDetails if provided
+    if (bankDetails) {
+      updateData.bankDetails = {
+        bankName: bankDetails.bankName || null,
+        accountNumber: bankDetails.accountNumber || null,
+        ifscCode: bankDetails.ifscCode || null,
+        accountHolder: bankDetails.accountHolder || null,
+      };
+    }
 
-        if (profileImageUrl === null && profileImage) {
-          return Response.json(
-            { message: "Failed to upload profile image" },
-            { status: 500 }
-          );
+    // Get existing vendor to handle image/doc deletions
+    const existingVendor = await VendorModel.findById(id);
+    if (!existingVendor) {
+      return Response.json({ message: "Vendor not found" }, { status: 404 });
+    }
+
+    // Handle profile image upload
+    if (profileImage && !profileImage.startsWith('http')) {
+      const fileName = `vendor-${id}-profile`;
+      const profileImageUrl = await processBase64Image(profileImage, fileName, existingVendor.profileImage);
+      if (profileImageUrl) {
+        updateData.profileImage = profileImageUrl;
+      }
+    } else if (profileImage === null) {
+      updateData.profileImage = null;
+    }
+
+    // Handle gallery images upload
+    if (gallery && Array.isArray(gallery)) {
+      const galleryUrls = [];
+      for (let i = 0; i < gallery.length; i++) {
+        const image = gallery[i];
+        if (image && !image.startsWith('http')) {
+          const fileName = `vendor-${id}-gallery-${i}`;
+          const oldImageUrl = existingVendor.gallery?.[i] || null;
+          const imageUrl = await processBase64Image(image, fileName, oldImageUrl);
+          galleryUrls.push(imageUrl || image);
+        } else {
+          galleryUrls.push(image);
         }
       }
+      updateData.gallery = galleryUrls;
+    }
 
-      // Handle gallery images upload if provided
-      let galleryUrls = gallery || [];
-      if (gallery && Array.isArray(gallery)) {
-        galleryUrls = [];
-        // Get existing vendor to get old gallery URLs for deletion
-        const existingVendor = await VendorModel.findById(id);
+    // Handle documents upload
+    if (documents && Array.isArray(documents)) {
+      const documentsData = existingVendor.documents ? { ...existingVendor.documents.toObject() } : {};
 
-        for (let i = 0; i < gallery.length; i++) {
-          const image = gallery[i];
-          if (image && !image.startsWith('http')) {
-            if (!isValidBase64Image(image)) continue;
-            const fileName = `vendor-${id}-gallery-${i}`;
-            const oldImageUrl = existingVendor?.gallery?.[i] || null;
-            const imageUrl = await processBase64Image(image, fileName, oldImageUrl);
+      for (const doc of documents) {
+        if (doc.file && !doc.file.startsWith('http')) {
+          const fileName = `vendor-${id}-${doc.type}`;
+          const docField = doc.type === 'aadhar' ? 'aadharCard' :
+            doc.type === 'pan' ? 'panCard' :
+              doc.type === 'gst' ? 'udyogAadhar' :
+                doc.type === 'license' ? 'shopLicense' :
+                  doc.type === 'udhayam' ? 'udhayamCert' : null;
 
-            if (imageUrl) {
-              galleryUrls.push(imageUrl);
-            } else {
-              galleryUrls.push(image);
-            }
-          } else {
-            galleryUrls.push(image);
-          }
-        }
-        updateData.gallery = galleryUrls;
-      }
-
-      // Handle document uploads if provided
-      const documentsDataWithUrls = { ...documentsData };
-      if (documents && Array.isArray(documents)) {
-        // Get existing vendor to get old document URLs for deletion
-        const existingVendor = await VendorModel.findById(id);
-
-        for (const doc of documents) {
-          if (doc.file && !doc.file.startsWith('http')) {
-            const fileName = `vendor-${id}-${doc.type}`;
-            // Get the old document URL if it exists
-            const docField = doc.type === 'aadhar' ? 'aadharCard' :
-              doc.type === 'pan' ? 'panCard' :
-                doc.type === 'gst' ? 'udyogAadhar' :
-                  doc.type === 'license' ? 'shopLicense' :
-                    doc.type === 'udhayam' ? 'udhayamCert' : null;
-
-            const oldDocUrl = docField && existingVendor?.documents ? existingVendor.documents[docField] : null;
+          if (docField) {
+            const oldDocUrl = existingVendor.documents ? existingVendor.documents[docField] : null;
             const docUrl = await processBase64Image(doc.file, fileName, oldDocUrl);
-
             if (docUrl) {
-              documentsDataWithUrls[docField] = docUrl;
+              documentsData[docField] = docUrl;
+              documentsData[`${docField}Status`] = "pending";
+              documentsData[`${docField}AdminRejectionReason`] = null;
             }
           }
         }
-        updateData.documents = documentsData;
       }
+      updateData.documents = documentsData;
+    }
 
-      // Check for duplicate email/phone
-      if (email || phone) {
-        const conflictQuery = { _id: { $ne: id }, $or: [] };
-        if (email) conflictQuery.$or.push({ email });
-        if (phone) conflictQuery.$or.push({ phone });
+    const updatedVendor = await VendorModel.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true }
+    ).populate("subscription.plan", "name").select("-password");
 
-        if (conflictQuery.$or.length > 0) {
-          const existingConflict = await VendorModel.findOne(conflictQuery);
-          if (existingConflict) {
-            return Response.json({ message: "Email or phone number already in use" }, { status: 400 });
-          }
-        }
-      }
-
-      const updatedVendor = await VendorModel.findByIdAndUpdate(
-        id,
-        { $set: updateData },
-        { new: true }
-      ).populate("subscription.plan", "name").select("-password");
-
-      if (!updatedVendor) {
-        return Response.json({ message: "Vendor not found" }, { status: 404 });
-      }
-
-      return Response.json({
-        message: "Vendor updated successfully",
-        vendor: updatedVendor,
-      });
-    },
-    ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+    return Response.json({
+      message: "Vendor updated successfully",
+      vendor: updatedVendor,
+    });
+  },
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
 );
 
 // Delete Vendor
