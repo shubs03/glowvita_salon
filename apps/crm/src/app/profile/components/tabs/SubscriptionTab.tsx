@@ -176,15 +176,6 @@ export const SubscriptionTab = ({ subscription, userType = 'vendor' }: Subscript
                   Your complete subscription payment history
                 </DialogDescription>
               </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setShowHistoryModal(false)}
-                className="h-10 w-10 rounded-lg border-border hover:border-primary"
-              >
-                <X className="h-4 w-4" />
-                <span className="sr-only">Close</span>
-              </Button>
             </div>
           </DialogHeader>
 
