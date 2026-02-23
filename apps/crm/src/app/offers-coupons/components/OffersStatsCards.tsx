@@ -38,67 +38,67 @@ const OffersStatsCards = ({ couponsData }: OffersStatsCardsProps) => {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:shadow-md hover:shadow-primary/10 dark:bg-secondary/10 dark:border-secondary/30 dark:hover:border-secondary/50 dark:hover:shadow-secondary/20">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-primary mb-1">Total Coupons</p>
-              <p className="text-2xl font-bold text-primary">{couponsData.length}</p>
-              <p className="text-xs text-primary/70 mt-1">Total coupons created</p>
+              <p className="text-sm font-medium text-secondary-foreground mb-1 dark:text-secondary-foreground">Total Coupons</p>
+              <p className="text-2xl font-bold text-secondary-foreground dark:text-secondary-foreground">{couponsData.length}</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">Total coupons created</p>
             </div>
-            <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <Tag className="h-6 w-6 text-primary" />
+            <div className="p-3 bg-primary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-primary/20 dark:group-hover:bg-secondary/30">
+              <Tag className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
             </div>
           </div>
         </CardContent>
       </Card>
       
-      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:shadow-md hover:shadow-primary/10 dark:bg-secondary/10 dark:border-secondary/30 dark:hover:border-secondary/50 dark:hover:shadow-secondary/20">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-secondary-foreground mb-1">Active Coupons</p>
-              <p className="text-2xl font-bold text-secondary-foreground">
+              <p className="text-sm font-medium text-secondary-foreground mb-1 dark:text-secondary-foreground">Active Coupons</p>
+              <p className="text-2xl font-bold text-secondary-foreground dark:text-secondary-foreground">
                 {couponsData.filter(c => c.status === 'Active').length}
               </p>
-              <p className="text-xs text-secondary-foreground/70 mt-1">Currently usable by customers</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">Currently usable by customers</p>
             </div>
-            <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <CheckSquare className="h-6 w-6 text-secondary-foreground" />
+            <div className="p-3 bg-primary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-primary/20 dark:group-hover:bg-secondary/30">
+              <CheckSquare className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
             </div>
           </div>
         </CardContent>
       </Card>
       
-      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:shadow-md hover:shadow-primary/10 dark:bg-secondary/10 dark:border-secondary/30 dark:hover:border-secondary/50 dark:hover:shadow-secondary/20">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-secondary-foreground mb-1">Total Redeemed</p>
-              <p className="text-2xl font-bold text-secondary-foreground">
+              <p className="text-sm font-medium text-secondary-foreground mb-1 dark:text-secondary-foreground">Total Redeemed</p>
+              <p className="text-2xl font-bold text-secondary-foreground dark:text-secondary-foreground">
                 {couponsData.reduce((acc, c) => acc + c.redeemed, 0)}
               </p>
-              <p className="text-xs text-secondary-foreground/70 mt-1">Total times coupons were applied</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">Total times coupons were applied</p>
             </div>
-            <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <Percent className="h-6 w-6 text-secondary-foreground" />
+            <div className="p-3 bg-primary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-primary/20 dark:group-hover:bg-secondary/30">
+              <Percent className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
             </div>
           </div>
         </CardContent>
       </Card>
       
-      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:shadow-md hover:shadow-primary/10 dark:bg-secondary/10 dark:border-secondary/30 dark:hover:border-secondary/50 dark:hover:shadow-secondary/20">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-secondary-foreground mb-1">Total Discount Value</p>
-              <p className="text-2xl font-bold text-secondary-foreground">
+              <p className="text-sm font-medium text-secondary-foreground mb-1 dark:text-secondary-foreground">Total Discount Value</p>
+              <p className="text-2xl font-bold text-secondary-foreground dark:text-secondary-foreground">
                 ₹{totalDiscountValue.toLocaleString()}
               </p>
-              <p className="text-xs text-secondary-foreground/70 mt-1">Estimated value of discounts</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">Estimated value of discounts</p>
             </div>
-            <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <IndianRupee className="h-6 w-6 text-secondary-foreground" />
+            <div className="p-3 bg-primary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-primary/20 dark:group-hover:bg-secondary/30">
+              <IndianRupee className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
             </div>
           </div>
         </CardContent>

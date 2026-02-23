@@ -34,47 +34,47 @@ export default function SummaryStats({ billings, appointments, activeTab, isSupp
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-primary mb-1">Total Invoices</p>
-              <p className="text-2xl font-bold text-primary">{totalInvoices}</p>
-              <p className="text-xs text-primary/70 mt-1">
+              <p className="text-sm font-medium text-secondary-foreground mb-1 dark:text-secondary-foreground">Total Invoices</p>
+              <p className="text-2xl font-bold text-secondary-foreground dark:text-secondary-foreground">{totalInvoices}</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">
                 {activeTab === 'billing' ? 'Billing records' : 'Appointment records'}
               </p>
             </div>
-            <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <FileText className="h-6 w-6 text-primary" />
+            <div className="p-3 bg-primary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-primary/20 dark:group-hover:bg-secondary/30">
+              <FileText className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:shadow-md hover:shadow-primary/10 dark:bg-secondary/10 dark:border-secondary/30 dark:hover:border-secondary/50 dark:hover:shadow-secondary/20">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-secondary-foreground mb-1">Total Revenue</p>
-              <p className="text-2xl font-bold text-secondary-foreground">₹{totalRevenue.toFixed(2)}</p>
-              <p className="text-xs text-secondary-foreground/70 mt-1">From all transactions</p>
+              <p className="text-sm font-medium text-secondary-foreground mb-1 dark:text-secondary-foreground">Total Revenue</p>
+              <p className="text-2xl font-bold text-secondary-foreground dark:text-secondary-foreground">₹{totalRevenue.toFixed(2)}</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">From all transactions</p>
             </div>
-            <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <DollarSign className="h-6 w-6 text-secondary-foreground" />
+            <div className="p-3 bg-primary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-primary/20 dark:group-hover:bg-secondary/30">
+              <DollarSign className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
             </div>
           </div>
         </CardContent>
       </Card>
 
       {!isSupplier && (
-        <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+        <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:shadow-md hover:shadow-primary/10 dark:bg-secondary/10 dark:border-secondary/30 dark:hover:border-secondary/50 dark:hover:shadow-secondary/20">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-secondary-foreground mb-1">Services Sold</p>
-                <p className="text-2xl font-bold text-secondary-foreground">{servicesSold}</p>
-                <p className="text-xs text-secondary-foreground/70 mt-1">
+                <p className="text-sm font-medium text-secondary-foreground mb-1 dark:text-secondary-foreground">Services Sold</p>
+                <p className="text-2xl font-bold text-secondary-foreground dark:text-secondary-foreground">{servicesSold}</p>
+                <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">
                   {activeTab === 'billing' ? 'In billing records' : 'In appointments'}
                 </p>
               </div>
-              <div className="p-3 bg-primary/10 rounded-full transition-colors">
-                <Scissors className="h-6 w-6 text-secondary-foreground" />
+              <div className="p-3 bg-primary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-primary/20 dark:group-hover:bg-secondary/30">
+                <Scissors className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
               </div>
             </div>
           </CardContent>

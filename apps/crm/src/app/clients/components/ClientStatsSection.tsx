@@ -42,12 +42,12 @@ export default function ClientStatsSection({
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-primary mb-1">Total Clients</p>
-              <p className="text-2xl font-bold text-primary">{totalClients}</p>
-              <p className="text-xs text-primary/70 mt-1">Total client base</p>
+              <p className="text-sm font-medium text-secondary-foreground mb-1">Total Clients</p>
+              <p className="text-2xl font-bold text-secondary-foreground">{totalClients}</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1">Total client base</p>
             </div>
             <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <Users className="h-6 w-6 text-primary" />
+              <Users className="h-6 w-6 text-secondary-foreground" />
             </div>
           </div>
         </CardContent>
