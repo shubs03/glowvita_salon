@@ -4,6 +4,8 @@ import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
 import { Edit, Trash2, Eye } from 'lucide-react';
 import StatusBadge from './StatusBadge';
+import { Switch } from '@repo/ui/switch';
+import { Label } from '@repo/ui/label';
 
 interface Product {
   _id: string;
@@ -32,9 +34,10 @@ interface ProductListItemProps {
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
   onView: (product: Product) => void;
+  onToggleActive: (product: Product) => void;
 }
 
-const ProductListItem = ({ product, onEdit, onDelete, onView }: ProductListItemProps) => {
+const ProductListItem = ({ product, onEdit, onDelete, onView, onToggleActive }: ProductListItemProps) => {
   const calculateDiscountPercentage = () => {
     if (product.price > product.salePrice) {
       return Math.round(((product.price - product.salePrice) / product.price) * 100);
@@ -47,7 +50,7 @@ const ProductListItem = ({ product, onEdit, onDelete, onView }: ProductListItemP
   return (
     <Card
       key={product._id}
-      className="border border-border bg-card rounded-lg transition-all duration-200"
+      className={`border border-border bg-card rounded-lg transition-all duration-200 ${!product.isActive ? 'opacity-75 grayscale-[0.3]' : ''}`}
     >
       <CardContent className="p-4">
         <div className="flex items-center gap-4">
@@ -85,11 +88,27 @@ const ProductListItem = ({ product, onEdit, onDelete, onView }: ProductListItemP
                   >
                     {product.stock > 0 ? `${product.stock} units` : "Out of Stock"}
                   </Badge>
+                  {!product.isActive && (
+                    <Badge variant="outline" className="text-[10px] border-dashed">
+                      Hidden
+                    </Badge>
+                  )}
                 </div>
               </div>
 
               <div className="text-right">
-                <div className="mb-2">
+                <div className="flex items-center gap-3 justify-end mb-2">
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <Switch
+                      id={`active-list-${product._id}`}
+                      checked={product.isActive}
+                      onCheckedChange={() => onToggleActive(product)}
+                      className="scale-75"
+                    />
+                    <Label htmlFor={`active-list-${product._id}`} className="text-[10px] text-muted-foreground uppercase font-bold cursor-pointer">
+                      {product.isActive ? 'Active' : 'Inactive'}
+                    </Label>
+                  </div>
                   <span className="font-semibold text-primary">
                     ₹{product.salePrice.toFixed(0)}
                   </span>
@@ -133,4 +152,5 @@ const ProductListItem = ({ product, onEdit, onDelete, onView }: ProductListItemP
 };
 
 export default ProductListItem;
+
 
