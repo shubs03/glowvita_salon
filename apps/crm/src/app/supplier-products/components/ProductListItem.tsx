@@ -27,6 +27,7 @@ interface Product {
   productForm?: string;
   brand?: string;
   vendorId?: { name: string };
+  supplierName?: string;
 }
 
 interface ProductListItemProps {
@@ -152,5 +153,6 @@ const ProductListItem = ({ product, onEdit, onDelete, onView, onToggleActive }: 
 };
 
 export default ProductListItem;
+
 
 

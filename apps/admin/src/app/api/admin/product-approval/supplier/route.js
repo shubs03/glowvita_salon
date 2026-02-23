@@ -22,13 +22,22 @@ export const GET = authMiddlewareAdmin(async (req) => {
     }
 
     const products = await ProductModel.find(query)
-      .populate('vendorId', 'name email') // Populate vendor details
+      .populate('vendorId', 'name email shopName businessRegistrationNo') // Populate supplier details
       .populate('category', 'name') // Populate category details
       .select('-__v'); // Exclude version key
 
+    // Transform products to include supplier name field
+    const transformedProducts = products.map(product => {
+      const supplierInfo = product.vendorId || {};
+      return {
+        ...product.toObject(),
+        supplierName: supplierInfo.shopName || supplierInfo.name || 'N/A',
+      };
+    });
+
     return Response.json({
       message: 'Supplier products retrieved successfully',
-      products,
+      products: transformedProducts,
     });
   } catch (error) {
     console.error('Error fetching supplier products:', error);
@@ -78,9 +87,18 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       { $set: updateData },
       { new: true, runValidators: false }
     )
-      .populate('vendorId', 'name email')
+      .populate('vendorId', 'name email shopName businessRegistrationNo')
       .populate('category', 'name')
       .select('-__v');
+    
+    // Transform the updated product to include supplier name
+    let transformedUpdatedProduct = updatedProduct;
+    if (updatedProduct && updatedProduct.vendorId) {
+      transformedUpdatedProduct = {
+        ...updatedProduct.toObject(),
+        supplierName: updatedProduct.vendorId.shopName || updatedProduct.vendorId.name || 'N/A',
+      };
+    }
 
     if (!updatedProduct) {
       return Response.json(
@@ -91,7 +109,7 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
 
     return Response.json({
       message: `Supplier product ${status} successfully`,
-      product: updatedProduct,
+      product: transformedUpdatedProduct,
     });
   } catch (error) {
     console.error('Error updating supplier product status:', error);

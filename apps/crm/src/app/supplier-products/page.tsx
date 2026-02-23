@@ -53,6 +53,7 @@ interface Product {
   productForm?: string;
   brand?: string;
   vendorId?: { name: string };
+  supplierName?: string;
 }
 
 interface Category {
