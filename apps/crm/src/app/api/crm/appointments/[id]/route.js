@@ -342,7 +342,13 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                         const completionHtml = getCompletionTemplate({
                             clientName,
                             businessName,
-                            serviceName: updatedAppointment.serviceName
+                            serviceName: updatedAppointment.serviceName,
+                            appointmentId: updatedAppointment.invoiceNumber || updatedAppointment._id.toString(),
+                            completedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
+                            orderTotal: updatedAppointment.totalAmount,
+                            location: updatedAppointment.homeServiceLocation?.address || businessName,
+                            businessAddress,
+                            businessPhone
                         });
 
                         await sendEmail({

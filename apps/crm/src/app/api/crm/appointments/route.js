@@ -72,7 +72,13 @@ const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus,
                 const completionHtml = getCompletionTemplate({
                     clientName,
                     businessName,
-                    serviceName: appointment.serviceName
+                    serviceName: appointment.serviceName,
+                    appointmentId: appointment.invoiceNumber || appointment._id.toString(),
+                    completedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
+                    orderTotal: appointment.totalAmount,
+                    location: appointment.homeServiceLocation?.address || businessName,
+                    businessAddress,
+                    businessPhone
                 });
 
                 // Fetch formal invoice
@@ -742,7 +748,7 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
         }
 
         // Validate status
-        const validStatuses = ['scheduled', 'confirmed', 'completed', 'cancelled', 'no-show'];
+        const validStatuses = ['scheduled', 'confirmed', 'completed', 'completed without payment', 'partially-completed', 'cancelled', 'no-show'];
         if (!validStatuses.includes(body.status)) {
             return NextResponse.json(
                 { message: "Invalid status value" },

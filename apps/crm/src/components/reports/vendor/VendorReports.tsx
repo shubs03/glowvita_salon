@@ -21,6 +21,7 @@ import { CategoryWiseProductTable } from './tables/CategoryWiseProductTable';
 import { SalesByProductTable } from './tables/SalesByProductTable';
 import { AllAppointmentsByStaffTable } from './tables/AllAppointmentsByStaffTable';
 import { SettlementSummaryTable } from './tables/SettlementSummaryTable';
+import { StaffCommissionTable } from './tables/StaffCommissionTable';
 
 // Import constants, hooks, and modal wrapper
 import { VENDOR_REPORTS_DATA } from './constants';
@@ -134,6 +135,18 @@ export default function VendorReports() {
           bookingType={filters.allAppointments.bookingType || undefined}
           triggerRefresh={allAppointmentsRefresh}
           onFiltersChange={(newFilters: any) => updateFilter('allAppointments', newFilters)}
+        />
+      )
+    },
+    "Staff Commission Report": {
+      title: "Staff Commission Report",
+      description: "Detailed report showing commission earned by staff members for services provided.",
+      component: (
+        <StaffCommissionTable
+          startDate={filters.staffCommission.startDate || undefined}
+          endDate={filters.staffCommission.endDate || undefined}
+          staff={filters.staffCommission.staff || undefined}
+          onFiltersChange={(newFilters: any) => updateFilter('staffCommission', newFilters)}
         />
       )
     },

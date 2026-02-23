@@ -258,6 +258,7 @@ const appointmentSchema = new mongoose.Schema(
         "scheduled",
         "confirmed",
         "completed",
+        "completed without payment",
         "partially-completed",
         "cancelled",
         "no-show",

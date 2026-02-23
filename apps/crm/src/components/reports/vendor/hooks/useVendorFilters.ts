@@ -79,6 +79,11 @@ interface FilterState {
     status: string | undefined;
     bookingType: string | undefined;
   };
+  staffCommission: {
+    startDate: string;
+    endDate: string;
+    staff: string;
+  };
 }
 
 export const useVendorFilters = () => {
@@ -160,6 +165,11 @@ export const useVendorFilters = () => {
       staff: undefined,
       status: undefined,
       bookingType: undefined
+    },
+    staffCommission: {
+      startDate: '',
+      endDate: '',
+      staff: ''
     }
   });
 
