@@ -25,6 +25,7 @@ interface Product {
   productForm?: string;
   brand?: string;
   vendorId?: { name: string };
+  supplierName?: string;
 }
 
 interface ProductListItemProps {
@@ -85,6 +86,9 @@ const ProductListItem = ({ product, onEdit, onDelete, onView }: ProductListItemP
                   >
                     {product.stock > 0 ? `${product.stock} units` : "Out of Stock"}
                   </Badge>
+                  <div className="text-xs text-muted-foreground">
+                    Supplier: {product.supplierName || product.vendorId?.name || 'Self'}
+                  </div>
                 </div>
               </div>
 

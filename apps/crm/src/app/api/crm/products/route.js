@@ -101,6 +101,7 @@ const getProducts = async (req) => {
     try {
       products = await ProductModel.find(query)
         .populate('category', 'name description')
+        .populate('vendorId', 'shopName name email') // Populate supplier/vendor details
         .sort({ createdAt: -1 })
         .lean();
     } catch (dbError) {
@@ -116,6 +117,7 @@ const getProducts = async (req) => {
       category: product.category?.name || '',
       categoryDescription: product.category?.description || product.categoryDescription || '',
       status: product.status === 'rejected' ? 'disapproved' : product.status,
+      supplierName: product.vendorId?.shopName || product.vendorId?.name || 'N/A',
     }));
 
     return NextResponse.json({

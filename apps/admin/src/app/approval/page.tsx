@@ -141,6 +141,8 @@ type Product = {
   description: string;
   stock: number;
   status: 'pending' | 'approved' | 'disapproved';
+  supplierName?: string;
+  vendorId?: string;
 };
 
 type Doctor = {
@@ -1043,6 +1045,7 @@ export default function VendorApprovalPage() {
                       <TableHead className="text-xs">Product</TableHead>
                       <TableHead className="text-xs">Price</TableHead>
                       <TableHead className="text-xs">Category</TableHead>
+                      <TableHead className="text-xs">Supplier</TableHead>
                       <TableHead className="text-xs">Status</TableHead>
                       <TableHead className="text-right text-xs">Actions</TableHead>
                     </TableRow>
@@ -1051,7 +1054,7 @@ export default function VendorApprovalPage() {
                     {supplierProductsLoading ? (
                       [...Array(3)].map((_, i) => (
                         <TableRow key={i}>
-                          {[...Array(5)].map((_, j) => (
+                          {[...Array(6)].map((_, j) => (
                             <TableCell key={j}>
                               <Skeleton className="h-5 w-full" />
                             </TableCell>
@@ -1060,11 +1063,11 @@ export default function VendorApprovalPage() {
                       ))
                     ) : supplierProductsError ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center">Error loading supplier products.</TableCell>
+                        <TableCell colSpan={6} className="text-center">Error loading supplier products.</TableCell>
                       </TableRow>
                     ) : !Array.isArray(pendingSupplierProducts) || pendingSupplierProducts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center">No pending supplier product approvals.</TableCell>
+                        <TableCell colSpan={6} className="text-center">No pending supplier product approvals.</TableCell>
                       </TableRow>
                     ) : (
                       pendingSupplierProducts.map((product) => (
@@ -1095,6 +1098,7 @@ export default function VendorApprovalPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-xs max-w-[80px] truncate">{product.category?.name || 'N/A'}</TableCell>
+                          <TableCell className="text-xs max-w-[80px] truncate">{product.supplierName || product.vendorId || 'N/A'}</TableCell>
                           <TableCell>
                             <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
                               {product.status || 'pending'}
