@@ -38,7 +38,7 @@ const Breadcrumb = ({ currentStep, setCurrentStep }: {
 };
 
 interface HomeServiceLocation {
-  address: string;
+  address?: string;
   city?: string;
   state?: string;
   pincode?: string;
@@ -175,7 +175,7 @@ export function Step3_LocationSelection({
             };
             setRegisteredAddress(addressData);
             setLocationForm(addressData);
-            
+
             // Only auto-select on initial load if no address is already selected
             // This prevents overwriting user's manual selection
             if (!hasInitiallyLoadedAddress.current && !serviceLocation) {
@@ -212,7 +212,7 @@ export function Step3_LocationSelection({
 
     autocomplete.addListener('place_changed', () => {
       const place = autocomplete.getPlace();
-      
+
       if (!place.geometry || !place.geometry.location) {
         toast.error('No location details available for this place');
         return;
@@ -220,11 +220,11 @@ export function Step3_LocationSelection({
 
       const lat = place.geometry.location.lat();
       const lng = place.geometry.location.lng();
-      
+
       // Update location form and trigger reverse geocoding
       handleMapLocationSelect(lat, lng);
       setSearchQuery(place.formatted_address || '');
-      
+
       toast.success('Location found!');
     });
 
@@ -397,13 +397,13 @@ export function Step3_LocationSelection({
     if (!serviceLocation) return false;
     // Check if coordinates match
     if (address.lat && address.lng && serviceLocation.lat && serviceLocation.lng) {
-      return Math.abs(address.lat - serviceLocation.lat) < 0.0001 && 
-             Math.abs(address.lng - serviceLocation.lng) < 0.0001;
+      return Math.abs(address.lat - serviceLocation.lat) < 0.0001 &&
+        Math.abs(address.lng - serviceLocation.lng) < 0.0001;
     }
     // Fallback to address string comparison
-    return address.address === serviceLocation.address && 
-           address.city === serviceLocation.city && 
-           address.pincode === serviceLocation.pincode;
+    return address.address === serviceLocation.address &&
+      address.city === serviceLocation.city &&
+      address.pincode === serviceLocation.pincode;
   };
 
   // Handle opening delete confirmation modal
@@ -433,7 +433,7 @@ export function Step3_LocationSelection({
         const result = await response.json();
         setSavedAddresses(result.savedAddresses || []);
         toast.success('Address removed successfully');
-        
+
         // If the removed address was selected, clear the selection
         if (serviceLocation) {
           const removedAddr = savedAddresses.find(a => (a as any)._id === deleteConfirmModal.addressId);
@@ -475,7 +475,7 @@ export function Step3_LocationSelection({
           </h2>
         </div>
         <p className="text-muted-foreground">
-          {selectedWeddingPackage 
+          {selectedWeddingPackage
             ? 'Choose where the wedding service will take place'
             : "Choose where you'd like the service to be provided"}
         </p>
@@ -609,372 +609,372 @@ export function Step3_LocationSelection({
       {(!selectedWeddingPackage || weddingVenueType === 'venue') && (
         <>
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <span className="ml-2 text-muted-foreground">Loading your address...</span>
-        </div>
-      )}
+          {/* Loading State */}
+          {isLoading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <span className="ml-2 text-muted-foreground">Loading your address...</span>
+            </div>
+          )}
 
-      {/* Show Registered Address and Saved Addresses (ONLY for non-wedding bookings) */}
-      {!isLoading && !showMapSelector && (registeredAddress || savedAddresses.length > 0) && !selectedWeddingPackage && (
-        <div className="space-y-6 mb-6">
-          {/* Registered Address */}
-          {registeredAddress && (
-            <div>
-              <h3 className="font-semibold text-lg mb-3">Your Registered Address</h3>
-              <Card className={cn(
-                "border-2 transition-all",
-                isAddressSelected(registeredAddress)
-                  ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md"
-                  : "border-gray-200 hover:border-primary/30"
-              )}>
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className={cn(
-                      "p-3 rounded-lg",
-                      isAddressSelected(registeredAddress) ? "bg-primary/10" : "bg-muted"
-                    )}>
-                      {isAddressSelected(registeredAddress) ? (
-                        <CheckCircle className="h-6 w-6 text-primary" />
-                      ) : (
-                        <Home className="h-6 w-6 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <p className="font-medium">{registeredAddress.address}</p>
-                        {isAddressSelected(registeredAddress) && (
-                          <span className="text-xs bg-primary text-primary-foreground px-2.5 py-1 rounded-full font-medium shadow-sm">
-                            Selected
-                          </span>
+          {/* Show Registered Address and Saved Addresses (ONLY for non-wedding bookings) */}
+          {!isLoading && !showMapSelector && (registeredAddress || savedAddresses.length > 0) && !selectedWeddingPackage && (
+            <div className="space-y-6 mb-6">
+              {/* Registered Address */}
+              {registeredAddress && (
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Your Registered Address</h3>
+                  <Card className={cn(
+                    "border-2 transition-all",
+                    isAddressSelected(registeredAddress)
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md"
+                      : "border-gray-200 hover:border-primary/30"
+                  )}>
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className={cn(
+                          "p-3 rounded-lg",
+                          isAddressSelected(registeredAddress) ? "bg-primary/10" : "bg-muted"
+                        )}>
+                          {isAddressSelected(registeredAddress) ? (
+                            <CheckCircle className="h-6 w-6 text-primary" />
+                          ) : (
+                            <Home className="h-6 w-6 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="font-medium">{registeredAddress.address}</p>
+                            {isAddressSelected(registeredAddress) && (
+                              <span className="text-xs bg-primary text-primary-foreground px-2.5 py-1 rounded-full font-medium shadow-sm">
+                                Selected
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {registeredAddress.city}, {registeredAddress.state} - {registeredAddress.pincode}
+                          </p>
+                          {registeredAddress.landmark && (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Landmark: {registeredAddress.landmark}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        {isAddressSelected(registeredAddress) ? (
+                          <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-center">
+                            <p className="text-sm font-medium text-primary flex items-center justify-center gap-2">
+                              <CheckCircle className="h-4 w-4" />
+                              This address is selected. Use the summary button to proceed.
+                            </p>
+                          </div>
+                        ) : (
+                          <Button
+                            size="lg"
+                            className="w-full"
+                            onClick={handleUseRegisteredAddress}
+                          >
+                            Use This Address
+                            <ChevronRight className="h-5 w-5 ml-2" />
+                          </Button>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {registeredAddress.city}, {registeredAddress.state} - {registeredAddress.pincode}
-                      </p>
-                      {registeredAddress.landmark && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Landmark: {registeredAddress.landmark}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
 
-                  <div className="mt-4">
-                    {isAddressSelected(registeredAddress) ? (
-                      <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-center">
-                        <p className="text-sm font-medium text-primary flex items-center justify-center gap-2">
-                          <CheckCircle className="h-4 w-4" />
-                          This address is selected. Use the summary button to proceed.
-                        </p>
-                      </div>
-                    ) : (
-                      <Button
-                        size="lg"
-                        className="w-full"
-                        onClick={handleUseRegisteredAddress}
-                      >
-                        Use This Address
-                        <ChevronRight className="h-5 w-5 ml-2" />
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+              {/* Saved Addresses */}
+              {savedAddresses.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Your Saved Addresses</h3>
+                  <div className="space-y-3">
+                    {savedAddresses.map((addr, index) => {
+                      const locationData: HomeServiceLocation = {
+                        address: addr.address,
+                        city: addr.city,
+                        state: addr.state,
+                        pincode: addr.pincode,
+                        landmark: addr.landmark || '',
+                        lat: addr.location?.lat,
+                        lng: addr.location?.lng,
+                        coordinates: addr.location
+                      };
+                      const isSelected = isAddressSelected(locationData);
 
-          {/* Saved Addresses */}
-          {savedAddresses.length > 0 && (
-            <div>
-              <h3 className="font-semibold text-lg mb-3">Your Saved Addresses</h3>
-              <div className="space-y-3">
-                {savedAddresses.map((addr, index) => {
-                  const locationData: HomeServiceLocation = {
-                    address: addr.address,
-                    city: addr.city,
-                    state: addr.state,
-                    pincode: addr.pincode,
-                    landmark: addr.landmark || '',
-                    lat: addr.location?.lat,
-                    lng: addr.location?.lng,
-                    coordinates: addr.location
-                  };
-                  const isSelected = isAddressSelected(locationData);
-                  
-                  return (
-                    <Card 
-                      key={index} 
-                      className={cn(
-                        "border-2 transition-all cursor-pointer",
-                        isSelected 
-                          ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md" 
-                          : "border-gray-200 hover:border-primary/30 hover:shadow-sm"
-                      )}
-                      onClick={() => !isSelected && handleUseSavedAddress(addr)}
-                    >
-                      <CardContent className="p-5">
-                        <div className="flex items-start gap-4">
-                          <div className={cn(
-                            "p-2 rounded-lg",
-                            isSelected ? "bg-primary/10" : "bg-muted"
-                          )}>
-                            {isSelected ? (
-                              <CheckCircle className="h-5 w-5 text-primary" />
-                            ) : (
-                              <MapPin className="h-5 w-5 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              {isSelected && (
-                                <span className="text-xs bg-primary text-primary-foreground px-2.5 py-1 rounded-full font-medium shadow-sm">
-                                  Selected
-                                </span>
-                              )}
+                      return (
+                        <Card
+                          key={index}
+                          className={cn(
+                            "border-2 transition-all cursor-pointer",
+                            isSelected
+                              ? "border-primary bg-primary/5 ring-2 ring-primary/20 shadow-md"
+                              : "border-gray-200 hover:border-primary/30 hover:shadow-sm"
+                          )}
+                          onClick={() => !isSelected && handleUseSavedAddress(addr)}
+                        >
+                          <CardContent className="p-5">
+                            <div className="flex items-start gap-4">
+                              <div className={cn(
+                                "p-2 rounded-lg",
+                                isSelected ? "bg-primary/10" : "bg-muted"
+                              )}>
+                                {isSelected ? (
+                                  <CheckCircle className="h-5 w-5 text-primary" />
+                                ) : (
+                                  <MapPin className="h-5 w-5 text-muted-foreground" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  {isSelected && (
+                                    <span className="text-xs bg-primary text-primary-foreground px-2.5 py-1 rounded-full font-medium shadow-sm">
+                                      Selected
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-sm font-medium mb-1">{addr.address}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {addr.city}, {addr.state} - {addr.pincode}
+                                </p>
+                                {addr.landmark && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    Landmark: {addr.landmark}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={(e) => handleRemoveAddress((addr as any)._id, addr.address, e)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
-                            <p className="text-sm font-medium mb-1">{addr.address}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {addr.city}, {addr.state} - {addr.pincode}
-                            </p>
-                            {addr.landmark && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Landmark: {addr.landmark}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={(e) => handleRemoveAddress((addr as any)._id, addr.address, e)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Add New Address Button */}
+              <Button
+                size="lg"
+                variant="outline"
+                className="w-full"
+                onClick={handleSelectNewAddress}
+              >
+                <Edit2 className="h-4 w-4 mr-2" />
+                Add New Address from Map
+              </Button>
             </div>
           )}
 
-          {/* Add New Address Button */}
-          <Button
-            size="lg"
-            variant="outline"
-            className="w-full"
-            onClick={handleSelectNewAddress}
-          >
-            <Edit2 className="h-4 w-4 mr-2" />
-            Add New Address from Map
-          </Button>
-        </div>
-      )}
-
-      {/* No Saved Addresses (Only for non-wedding bookings) */}
-      {!isLoading && !showMapSelector && !registeredAddress && savedAddresses.length === 0 && !selectedWeddingPackage && (
-        <Card className="border-2 border-dashed">
-          <CardContent className="p-8 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="p-4 bg-muted rounded-full">
-                <MapPin className="h-8 w-8 text-muted-foreground" />
-              </div>
-            </div>
-            <h3 className="font-semibold text-lg mb-2">No Saved Addresses</h3>
-            <p className="text-muted-foreground mb-6">
-              Please select your service location from the map
-            </p>
-            <Button
-              size="lg"
-              onClick={handleSelectNewAddress}
-            >
-              <MapPin className="h-4 w-4 mr-2" />
-              Select Address from Map
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* For Wedding Packages: Show map selector button when venue is selected */}
-      {selectedWeddingPackage && weddingVenueType === 'venue' && !showMapSelector && (
-        <Card className="border-2 border-primary/20">
-          <CardContent className="p-8 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="p-4 bg-primary/10 rounded-full">
-                <MapPin className="h-8 w-8 text-primary" />
-              </div>
-            </div>
-            <h3 className="font-semibold text-lg mb-2">Select Wedding Venue Location</h3>
-            <p className="text-muted-foreground mb-6">
-              Choose the exact location where the wedding service will take place
-            </p>
-            <Button
-              size="lg"
-              onClick={handleSelectNewAddress}
-              className="min-w-[250px]"
-            >
-              <MapPin className="h-4 w-4 mr-2" />
-              Select Venue from Map
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Map Selector and Form */}
-      {showMapSelector && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-lg">Select Location on Map</h3>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleGetCurrentLocation}
-            >
-              <MapPin className="h-4 w-4 mr-2" />
-              Current Location
-            </Button>
-          </div>
-
-          {/* Location Search Bar */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Search Location
-            </label>
-            <div className="relative">
-              <input
-                ref={searchInputRef}
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search for an address or place..."
-                className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              />
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            </div>
-          </div>
-
-          {/* Google Map */}
-          <div className="h-96 border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm">
-            <GoogleMapSelector
-              onLocationSelect={handleMapLocationSelect}
-              initialLat={locationForm.lat || registeredAddress?.lat || 19.0760}
-              initialLng={locationForm.lng || registeredAddress?.lng || 72.8777}
-            />
-          </div>
-
-          {locationForm.lat && locationForm.lng && (
-            <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg text-sm flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-primary" />
-              <span className="font-medium">Location pinned:</span>
-              <span className="text-muted-foreground">{locationForm.lat.toFixed(4)}, {locationForm.lng.toFixed(4)}</span>
-            </div>
+          {/* No Saved Addresses (Only for non-wedding bookings) */}
+          {!isLoading && !showMapSelector && !registeredAddress && savedAddresses.length === 0 && !selectedWeddingPackage && (
+            <Card className="border-2 border-dashed">
+              <CardContent className="p-8 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="p-4 bg-muted rounded-full">
+                    <MapPin className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                </div>
+                <h3 className="font-semibold text-lg mb-2">No Saved Addresses</h3>
+                <p className="text-muted-foreground mb-6">
+                  Please select your service location from the map
+                </p>
+                <Button
+                  size="lg"
+                  onClick={handleSelectNewAddress}
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Select Address from Map
+                </Button>
+              </CardContent>
+            </Card>
           )}
 
-          {/* Address Form */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Address Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          {/* For Wedding Packages: Show map selector button when venue is selected */}
+          {selectedWeddingPackage && weddingVenueType === 'venue' && !showMapSelector && (
+            <Card className="border-2 border-primary/20">
+              <CardContent className="p-8 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="p-4 bg-primary/10 rounded-full">
+                    <MapPin className="h-8 w-8 text-primary" />
+                  </div>
+                </div>
+                <h3 className="font-semibold text-lg mb-2">Select Wedding Venue Location</h3>
+                <p className="text-muted-foreground mb-6">
+                  Choose the exact location where the wedding service will take place
+                </p>
+                <Button
+                  size="lg"
+                  onClick={handleSelectNewAddress}
+                  className="min-w-[250px]"
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Select Venue from Map
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Map Selector and Form */}
+          {showMapSelector && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-lg">Select Location on Map</h3>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleGetCurrentLocation}
+                >
+                  <MapPin className="h-4 w-4 mr-2" />
+                  Current Location
+                </Button>
+              </div>
+
+              {/* Location Search Bar */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Address <span className="text-red-500">*</span>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Search Location
                 </label>
-                <input
-                  type="text"
-                  name="address"
-                  value={locationForm.address}
-                  onChange={handleLocationChange}
-                  placeholder="Full street address"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  required
+                <div className="relative">
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search for an address or place..."
+                    className="w-full px-4 py-3 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  />
+                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                </div>
+              </div>
+
+              {/* Google Map */}
+              <div className="h-96 border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <GoogleMapSelector
+                  onLocationSelect={handleMapLocationSelect}
+                  initialLat={locationForm.lat || registeredAddress?.lat || 19.0760}
+                  initialLng={locationForm.lng || registeredAddress?.lng || 72.8777}
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    City <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={locationForm.city}
-                    onChange={handleLocationChange}
-                    placeholder="City"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
+              {locationForm.lat && locationForm.lng && (
+                <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg text-sm flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-primary" />
+                  <span className="font-medium">Location pinned:</span>
+                  <span className="text-muted-foreground">{locationForm.lat.toFixed(4)}, {locationForm.lng.toFixed(4)}</span>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    State <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="state"
-                    value={locationForm.state}
-                    onChange={handleLocationChange}
-                    placeholder="State"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
+              {/* Address Form */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Address Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Address <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={locationForm.address}
+                      onChange={handleLocationChange}
+                      placeholder="Full street address"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        City <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="city"
+                        value={locationForm.city}
+                        onChange={handleLocationChange}
+                        placeholder="City"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        State <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="state"
+                        value={locationForm.state}
+                        onChange={handleLocationChange}
+                        placeholder="State"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Pincode <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        name="pincode"
+                        value={locationForm.pincode}
+                        onChange={handleLocationChange}
+                        placeholder="Pincode"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Landmark (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        name="landmark"
+                        value={locationForm.landmark}
+                        onChange={handleLocationChange}
+                        placeholder="Nearby landmark"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Info message about using summary button */}
+              <div className="bg-muted border rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-muted-foreground">
+                    Pin your location on the map and fill in the address details. The <span className="font-semibold text-foreground">"Select Time Slot"</span> button will be enabled once completed.
+                  </p>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Pincode <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="pincode"
-                    value={locationForm.pincode}
-                    onChange={handleLocationChange}
-                    placeholder="Pincode"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Landmark (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    name="landmark"
-                    value={locationForm.landmark}
-                    onChange={handleLocationChange}
-                    placeholder="Nearby landmark"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Info message about using summary button */}
-          <div className="bg-muted border rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-              <p className="text-sm text-muted-foreground">
-                Pin your location on the map and fill in the address details. The <span className="font-semibold text-foreground">"Select Time Slot"</span> button will be enabled once completed.
-              </p>
             </div>
-          </div>
-        </div>
-      )}
-      
-      </>
+          )}
+
+        </>
       )}
 
       {/* Delete Confirmation Modal */}
