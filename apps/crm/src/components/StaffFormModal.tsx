@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Head from 'next/head';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@repo/ui/tabs';
 import { Button } from '@repo/ui/button';
@@ -18,6 +19,17 @@ import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
 import { vendorNavItems, doctorNavItems } from '@/lib/routes';
 import { Eye, EyeOff, Plus, Trash2, Clock, Calendar, RefreshCw, IndianRupee, TrendingUp } from 'lucide-react';
+
+const scrollbarStyle = `
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+`;
 
 interface StaffFormModalProps {
     isOpen: boolean;
@@ -1159,8 +1171,9 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
+            <style>{scrollbarStyle}</style>
             <DialogContent
-                className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+                className="sm:max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar"
                 onInteractOutside={(e) => e.preventDefault()}
                 onEscapeKeyDown={(e) => e.preventDefault()} // Also prevent Escape key for consistency based on "only Cancel button closes"
             >
