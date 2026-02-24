@@ -25,6 +25,7 @@ interface Product {
   productForm?: string;
   brand?: string;
   vendorId?: { name: string };
+  showOnWebsite?: boolean;
 }
 
 interface ProductCardProps {
@@ -75,6 +76,15 @@ const ProductCard = ({ product, onEdit, onDelete, onView }: ProductCardProps) =>
           <div className="absolute top-2 right-2 z-10">
             <Badge className="bg-primary text-white px-2 py-0.5 text-[10px] font-bold shadow-sm">
               {discountPercentage}%
+            </Badge>
+          </div>
+        )}
+
+        {/* Hidden from Website Badge */}
+        {product.showOnWebsite === false && (
+          <div className="absolute top-10 left-2 z-10 text-[10px]">
+            <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 px-2 py-0.5 font-bold shadow-sm whitespace-nowrap">
+              Hidden from Web
             </Badge>
           </div>
         )}

@@ -22,7 +22,7 @@ export const OPTIONS = async (request) => {
 export const GET = async (request, { params }) => {
   try {
     const { id } = params;
-    
+
     if (!id) {
       return Response.json({
         success: false,
@@ -32,7 +32,7 @@ export const GET = async (request, { params }) => {
 
     // Get product by ID
     const product = await ProductModel.findById(id);
-    
+
     if (!product) {
       return Response.json({
         success: false,
@@ -40,8 +40,8 @@ export const GET = async (request, { params }) => {
       }, { status: 404 });
     }
 
-    // Check if product is approved
-    if (product.status !== 'approved') {
+    // Check if product is approved and allowed on website
+    if (product.status !== 'approved' || product.showOnWebsite === false) {
       return Response.json({
         success: false,
         message: "Product not available"
@@ -73,8 +73,8 @@ export const GET = async (request, { params }) => {
       description: product.description || '',
       price: product.price,
       salePrice: product.salePrice > 0 ? product.salePrice : null,
-      images: product.productImages && product.productImages.length > 0 
-        ? product.productImages 
+      images: product.productImages && product.productImages.length > 0
+        ? product.productImages
         : ['https://placehold.co/800x800/e2e8f0/64748b?text=Product'],
       vendorId: vendorData._id,
       vendorName: product.origin === 'Supplier' ? vendorData.shopName : vendorData.businessName || 'Unknown Vendor',
@@ -108,7 +108,7 @@ export const GET = async (request, { params }) => {
     });
   } catch (error) {
     console.error('Product Detail API Error:', error);
-    
+
     return Response.json({
       success: false,
       message: "Failed to fetch product details",

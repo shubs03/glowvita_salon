@@ -1,6 +1,7 @@
 import StaffModel from "../../models/Vendor/Staff.model.js";
 import StaffTransactionsModel from "../../models/Vendor/StaffTransaction.model.js";
 import AppointmentModel from "../../models/Appointment/Appointment.model.js";
+import BillingModel from "../../models/Vendor/Billing.model.js";
 
 /**
  * Syncs staff commission for a given appointment.
@@ -201,6 +202,114 @@ export const syncStaffCommission = async (appointmentId) => {
     }
 };
 
+/**
+ * Syncs staff commission for a given billing record.
+ */
+export const syncBillingCommission = async (billingId) => {
+    try {
+        console.log(`[StaffAccounting] syncBillingCommission called for billing: ${billingId}`);
+
+        const billing = await BillingModel.findById(billingId);
+        if (!billing) {
+            console.error(`[StaffAccounting] Billing record not found: ${billingId}`);
+            return { success: false, message: 'Billing record not found' };
+        }
+
+        const allowedStatuses = ['Completed'];
+        const isEligible = allowedStatuses.includes(billing.paymentStatus);
+        const vendorId = billing.vendorId;
+
+        console.log(`[StaffAccounting] Billing status: "${billing.paymentStatus}" | Eligible: ${isEligible}`);
+
+        let targetCommissions = [];
+
+        if (isEligible && billing.items && billing.items.length > 0) {
+            for (const item of billing.items) {
+                const commAmount = item.staffMember?.staffCommissionAmount || 0;
+                if (item.staffMember?.id && commAmount > 0) {
+                    targetCommissions.push({
+                        staffId: item.staffMember.id.toString(),
+                        amount: commAmount,
+                        description: `Commission for ${item.name} (Invoice: ${billing.invoiceNumber})`
+                    });
+                    console.log(`[StaffAccounting] Found billing item commission: Staff=${item.staffMember.id}, Item=${item.name}, Amount=${commAmount}`);
+                }
+            }
+        }
+
+        console.log(`[StaffAccounting] Total target commissions from billing: ${targetCommissions.length}`);
+
+        // Fetch existing CREDIT transactions for this billing
+        const existingCredits = await StaffTransactionsModel.find({
+            billingId: billing._id,
+            type: 'CREDIT'
+        });
+
+        console.log(`[StaffAccounting] Existing credit transactions for billing: ${existingCredits.length}`);
+
+        // Process reversals
+        for (const existing of existingCredits) {
+            const stillNeeded = targetCommissions.find(
+                t => t.staffId === existing.staffId.toString() && t.description === existing.description
+            );
+
+            if (!stillNeeded) {
+                console.log(`[StaffAccounting] REVERSING orphaned billing credit: ${existing.description}, Amount: ${existing.amount}`);
+                await processTransaction({
+                    vendorId,
+                    staffId: existing.staffId,
+                    amount: existing.amount,
+                    type: 'DEBIT',
+                    billingId: billing._id,
+                    description: `REVERSAL: ${existing.description}`,
+                    isAdjustment: true
+                });
+            }
+        }
+
+        // Process new or adjusted commissions
+        for (const target of targetCommissions) {
+            const existing = existingCredits.find(
+                t => t.staffId.toString() === target.staffId && t.description === target.description
+            );
+
+            if (!existing) {
+                console.log(`[StaffAccounting] CREDITING new billing commission: ${target.amount} to staff ${target.staffId}`);
+                await processTransaction({
+                    vendorId,
+                    staffId: target.staffId,
+                    amount: target.amount,
+                    type: 'CREDIT',
+                    billingId: billing._id,
+                    description: target.description,
+                    isAdjustment: true
+                });
+            } else {
+                const diff = target.amount - existing.amount;
+                if (Math.abs(diff) > 0.01) {
+                    console.log(`[StaffAccounting] ADJUSTING billing commission for ${target.description}: diff=${diff}`);
+                    await processTransaction({
+                        vendorId,
+                        staffId: target.staffId,
+                        amount: Math.abs(diff),
+                        type: diff > 0 ? 'CREDIT' : 'DEBIT',
+                        billingId: billing._id,
+                        description: `ADJUSTMENT: ${target.description}`,
+                        isAdjustment: true
+                    });
+                }
+            }
+        }
+
+        console.log(`[StaffAccounting] syncBillingCommission COMPLETED SUCCESSFULLY for billing ${billingId}`);
+        return { success: true };
+
+    } catch (error) {
+        console.error(`[StaffAccounting] ERROR in syncBillingCommission for ${billingId}:`, error);
+        return { success: false, message: error.message };
+    }
+};
+
 // Alias for backward compatibility
 export const creditStaffCommission = async (appointmentId) => syncStaffCommission(appointmentId);
 
@@ -238,7 +347,7 @@ export const debitStaffPayout = async () => {
  */
 async function processTransaction({
     vendorId, staffId, amount, type,
-    appointmentId, paymentMethod, notes,
+    appointmentId, billingId, paymentMethod, notes,
     transactionDate, description, isAdjustment = false
 }) {
     if (!amount || amount <= 0) {
@@ -255,6 +364,7 @@ async function processTransaction({
         type,
         amount: Number(Number(amount).toFixed(2)),
         appointmentId: appointmentId || null,
+        billingId: billingId || null,
         paymentMethod: paymentMethod || null,
         notes: notes || null,
         description: description || null,

@@ -29,6 +29,11 @@ const staffTransactionSchema = new mongoose.Schema({
         ref: 'Appointment',
         required: false // Only for CREDIT transactions
     },
+    billingId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Billing',
+        required: false
+    },
     description: {
         type: String,
         required: false
