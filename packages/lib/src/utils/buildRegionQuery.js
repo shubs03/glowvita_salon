@@ -1,9 +1,21 @@
+import mongoose from "mongoose";
+
 /**
  * Global Region Filter Helper
  * 
  * This helper provides a centralized way to build region queries for all admin APIs.
  * It ensures consistent region filtering across the entire admin panel.
  */
+
+/**
+ * Safely converts a string to a MongoDB ObjectId if valid.
+ */
+const toObjectId = (id) => {
+  if (id && mongoose.Types.ObjectId.isValid(id)) {
+    return new mongoose.Types.ObjectId(id);
+  }
+  return id;
+};
 
 /**
  * Builds a region query filter based on admin role and selected region
@@ -35,7 +47,7 @@ export function buildRegionQuery(admin, baseQuery = {}, selectedRegionId = null)
   }
 
   const { roleName, assignedRegions } = admin;
-  
+
   console.log('[buildRegionQuery] Input:', {
     roleName,
     assignedRegions,
@@ -49,7 +61,7 @@ export function buildRegionQuery(admin, baseQuery = {}, selectedRegionId = null)
       console.log('[buildRegionQuery] Super Admin with selected region:', selectedRegionId);
       return {
         ...baseQuery,
-        regionId: selectedRegionId
+        regionId: toObjectId(selectedRegionId)
       };
     }
     console.log('[buildRegionQuery] Super Admin viewing all regions');
@@ -59,19 +71,20 @@ export function buildRegionQuery(admin, baseQuery = {}, selectedRegionId = null)
   // Regional Admin is scoped to their assigned regions
   if (assignedRegions && assignedRegions.length > 0) {
     console.log('[buildRegionQuery] Regional Admin scoped to regions:', assignedRegions);
-    
+    const castedRegions = assignedRegions.map(toObjectId);
+
     // If a specific region is selected and it's in their assigned regions, use it
     if (selectedRegionId && assignedRegions.includes(selectedRegionId)) {
       return {
         ...baseQuery,
-        regionId: selectedRegionId
+        regionId: toObjectId(selectedRegionId)
       };
     }
-    
+
     // Otherwise, scope to all assigned regions
     return {
       ...baseQuery,
-      regionId: { $in: assignedRegions }
+      regionId: { $in: castedRegions }
     };
   }
 

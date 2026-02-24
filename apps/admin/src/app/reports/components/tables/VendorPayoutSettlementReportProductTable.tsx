@@ -29,21 +29,23 @@ export const VendorPayoutSettlementReportProductTable = () => {
     setItemsPerPage,
     setSearchTerm,
     handleFilterChange,
-    filterAndPaginateData
+    filterAndPaginateData,
+    apiFilters
   } = useReport<VendorPayoutSettlementProductData>(5);
-  
+
   // Use the API hook to fetch vendor payout settlement report for products with filters
-  const apiFilters = filters;
-  
+  // apiFilters is derived from filters + selectedRegion in useReport
+
   console.log("Vendor Payout Settlement Report - Product API filters:", apiFilters);
-  
+
   const { data, isLoading, isError, error } = useGetVendorPayoutSettlementReportProductQuery(apiFilters);
-  
+
   // Define data variables after API call
   const vendorPayoutSettlementProductData = data?.vendorPayoutSettlementReport || [];
   const cities = data?.cities || []; // Get cities from API response
   const businessNames = data?.businessNames || []; // Get business names from API response
-  
+  const aggregatedTotals = data?.aggregatedTotals;
+
   // Filter and paginate data
   const {
     paginatedData,
@@ -152,7 +154,7 @@ export const VendorPayoutSettlementReportProductTable = () => {
       </div>
     );
   }
-  
+
   if (isError) {
     console.error("Error fetching vendor payout settlement report - product:", error);
     return (
@@ -188,7 +190,7 @@ export const VendorPayoutSettlementReportProductTable = () => {
       </div>
     );
   }
-  
+
   // Show table structure even when there's no data
   if (vendorPayoutSettlementProductData.length === 0) {
     return (
@@ -254,8 +256,8 @@ export const VendorPayoutSettlementReportProductTable = () => {
             </DropdownMenu>
           </div>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -266,7 +268,7 @@ export const VendorPayoutSettlementReportProductTable = () => {
           showUserTypeFilter={true}
           showBookingTypeFilter={false}
         />
-        
+
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -291,7 +293,7 @@ export const VendorPayoutSettlementReportProductTable = () => {
       </div>
     );
   }
-  
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -345,8 +347,8 @@ export const VendorPayoutSettlementReportProductTable = () => {
           </DropdownMenu>
         </div>
       </div>
-      
-      <FilterModal 
+
+      <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         onApplyFilters={handleFilterChange}
@@ -357,18 +359,18 @@ export const VendorPayoutSettlementReportProductTable = () => {
         showUserTypeFilter={true}
         showBookingTypeFilter={false}
       />
-      
+
       <div className="mb-6">
         <Card className="w-64">
           <CardHeader className="p-4">
             <CardTitle className="text-sm font-medium">Vendor Payout Amount-Product</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="text-lg font-bold">₹{paginatedData.reduce((sum, item: any) => sum + (item["Total"] || 0), 0).toFixed(2)}</div>
+            <div className="text-lg font-bold">₹{aggregatedTotals?.total?.toFixed(2) || '0.00'}</div>
           </CardContent>
         </Card>
       </div>
-      
+
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>
@@ -392,14 +394,14 @@ export const VendorPayoutSettlementReportProductTable = () => {
                 <TableCell>₹{item["Total"]?.toFixed(2)}</TableCell>
               </TableRow>
             ))}
-            {/* Current Page Totals Row */}
-            {paginatedData.length > 0 && (
+            {/* Aggregated Totals Row */}
+            {vendorPayoutSettlementProductData.length > 0 && aggregatedTotals && (
               <TableRow className="bg-muted font-semibold">
                 <TableCell colSpan={2}>TOTAL</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Product Platform Fee"] || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Product Tax (₹)"] || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Product Total Amount"] || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Total"] || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.productPlatformFee?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.productTax?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.productTotalAmount?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.total?.toFixed(2)}</TableCell>
               </TableRow>
             )}
           </TableBody>

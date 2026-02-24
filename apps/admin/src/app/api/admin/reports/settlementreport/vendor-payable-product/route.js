@@ -18,7 +18,7 @@ const initDb = async () => {
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
     await initDb();
-    
+
     // Extract filter parameters from query
     const { searchParams } = new URL(req.url);
     const filterType = searchParams.get('filterType'); // 'day', 'month', 'year', or null
@@ -29,21 +29,21 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const businessName = searchParams.get('businessName'); // Business name filter (vendor/supplier)
     const userType = searchParams.get('userType'); // 'vendor', 'supplier', or 'all'
     const regionId = searchParams.get('regionId'); // Region filter
-    
-    console.log("Vendor Payable to Admin Report - Product Filter parameters:", { 
-      filterType, 
-      filterValue, 
-      startDateParam, 
-      endDateParam, 
-      city, 
+
+    console.log("Vendor Payable to Admin Report - Product Filter parameters:", {
+      filterType,
+      filterValue,
+      startDateParam,
+      endDateParam,
+      city,
       businessName,
-      userType 
+      userType
     });
-    
+
     // Build date filter
     const buildDateFilter = (filterType, filterValue, startDateParam, endDateParam) => {
       let startDate, endDate;
-      
+
       // Handle custom date range first
       if (startDateParam && endDateParam) {
         startDate = new Date(startDateParam);
@@ -59,7 +59,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           startDate = new Date(year, month - 1, day);
           endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
           break;
-          
+
         case 'month':
           // Specific month - format: YYYY-MM
           const [monthYear, monthNum] = filterValue.split('-').map(Number);
@@ -67,7 +67,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           endDate = new Date(monthYear, monthNum, 1);
           endDate.setTime(endDate.getTime() - 1);
           break;
-          
+
         case 'year':
           // Specific year - format: YYYY
           const trimmedYearValue = filterValue.trim();
@@ -75,7 +75,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           startDate = new Date(yearValue, 0, 1);
           endDate = new Date(yearValue, 11, 31, 23, 59, 59, 999);
           break;
-          
+
         default:
           // No filter - use all time
           startDate = new Date(0);
@@ -84,10 +84,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
       return filterType ? { createdAt: { $gte: startDate, $lte: endDate } } : {};
     };
-    
+
     const dateFilter = buildDateFilter(filterType, filterValue, startDateParam, endDateParam);
     console.log("Date filter:", dateFilter);
-    
+
     // Create the main filter for client orders
     const regionQuery = getRegionQuery(req.user, regionId);
     const mainFilter = {
@@ -159,22 +159,22 @@ export const GET = authMiddlewareAdmin(async (req) => {
         }
       },
       // Apply business name filter if provided
-      ...(businessName && businessName !== 'all' ? [{ 
-        $match: { 
-          businessName: businessName 
-        } 
+      ...(businessName && businessName !== 'all' ? [{
+        $match: {
+          businessName: businessName
+        }
       }] : []),
       // Apply city filter if provided
-      ...(city && city !== 'all' ? [{ 
-        $match: { 
-          city: city 
-        } 
+      ...(city && city !== 'all' ? [{
+        $match: {
+          city: city
+        }
       }] : []),
       // Apply user type filter if provided
-      ...(userType && userType !== 'all' ? [{ 
-        $match: { 
+      ...(userType && userType !== 'all' ? [{
+        $match: {
           ownerType: userType.charAt(0).toUpperCase() + userType.slice(1) // Capitalize first letter
-        } 
+        }
       }] : []),
       // Unwind items array to process each product separately
       { $unwind: "$items" },
@@ -327,19 +327,17 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     return NextResponse.json({
       success: true,
-      data: {
-        vendorPayableReport: results,
-        cities: cities,
-        businessNames: businessNames,
-        aggregatedTotals: aggregatedTotals,
-        filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
-      }
+      vendorPayableReport: results,
+      cities: cities,
+      businessNames: businessNames,
+      aggregatedTotals: aggregatedTotals,
+      filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
     }, { status: 200 });
 
   } catch (error) {
     console.error("Error fetching vendor payable to admin report - product:", error);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: false,
       message: "Error fetching vendor payable to admin report - product",
       error: error.message

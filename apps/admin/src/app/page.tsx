@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { FaRupeeSign, FaShoppingCart } from "react-icons/fa";
 import { FiUsers, FiActivity, FiXCircle } from "react-icons/fi";
@@ -9,15 +9,16 @@ import { CityWiseSalesTable } from '@/components/CityWiseSalesTable';
 
 import { Skeleton } from "@repo/ui/skeleton";
 import { useGetAdminDashboardStatsQuery } from '@repo/store/api';
+import { useSelector } from 'react-redux';
+import { selectSelectedRegion } from '@repo/store/slices/adminAuthSlice';
 import { Button } from "@repo/ui/button";
 import { Calendar } from "lucide-react";
-
-
 
 export default function AdminPage() {
   const [filterType, setFilterType] = useState<string>(''); // 'day', 'month', 'year', or ''
   const [filterValue, setFilterValue] = useState<string>(''); // specific date value
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const selectedRegion = useSelector(selectSelectedRegion);
 
   // Reset filter value when filter type changes
   useEffect(() => {
@@ -35,9 +36,24 @@ export default function AdminPage() {
     }, 300); // 300ms debounce
   };
 
-  // Prepare query parameters - only include them if both type and value are set
-  // If filterType is selected but no filterValue, don't send any params to avoid showing 0 values
-  const queryParams = filterType && filterValue ? { filterType, filterValue } : (!filterType ? {} : null);
+  // Prepare query parameters
+  const queryParams = useMemo(() => {
+    const params: any = {};
+
+    if (filterType && filterValue) {
+      params.filterType = filterType;
+      params.filterValue = filterValue;
+    } else if (filterType) {
+      return null; // Don't fetch if filter type is selected but no value
+    }
+
+    if (selectedRegion && selectedRegion !== 'all') {
+      params.regionId = selectedRegion;
+    }
+
+    return params;
+  }, [filterType, filterValue, selectedRegion]);
+
   const { data: dashboardData, isLoading: isDashboardLoading, isError, error, refetch } = useGetAdminDashboardStatsQuery(
     queryParams !== null ? queryParams : undefined
   );
@@ -438,6 +454,18 @@ export default function AdminPage() {
               {showPlaceholder
                 ? "₹0.00"
                 : formatCurrency(dashboardData?.serviceAmount || 0)}
+            </div>
+            <div className="flex text-xs text-muted-foreground mt-1">
+              <span className="mr-3 font-medium text-primary/80">Vendor:
+                {showPlaceholder
+                  ? "₹0.00"
+                  : formatCurrency(dashboardData?.vendorServiceAmount || 0)}
+              </span>
+              <span className="font-medium">Supplier:
+                {showPlaceholder
+                  ? "₹0.00"
+                  : formatCurrency(dashboardData?.supplierServiceAmount || 0)}
+              </span>
             </div>
           </CardContent>
         </Card>

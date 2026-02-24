@@ -60,9 +60,15 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Regional Scoping for Admin
     const { roleName, assignedRegions } = req.user;
     let allowedRegionIds = [];
+
     if (roleName === 'REGIONAL_ADMIN') {
-      allowedRegionIds = (assignedRegions || []).map(id => new mongoose.Types.ObjectId(id));
-    } else if (selectedRegionId) {
+      const castedAssigned = (assignedRegions || []).map(id => id.toString());
+      if (selectedRegionId && castedAssigned.includes(selectedRegionId)) {
+        allowedRegionIds = [new mongoose.Types.ObjectId(selectedRegionId)];
+      } else {
+        allowedRegionIds = (assignedRegions || []).map(id => new mongoose.Types.ObjectId(id));
+      }
+    } else if (selectedRegionId && selectedRegionId !== 'all') {
       allowedRegionIds = [new mongoose.Types.ObjectId(selectedRegionId)];
     }
 
@@ -77,18 +83,14 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const runEntityAggregation = async (Model, dateMatch, countField = null, sumField = null) => {
       const pipeline = [
         { $match: dateMatch },
-        {
-          $lookup: {
-            from: 'vendors',
-            localField: 'vendorId',
-            foreignField: '_id',
-            as: 'vendor'
-          }
-        },
-        { $unwind: { path: '$vendor', preserveNullAndEmptyArrays: true } },
+        { $lookup: { from: 'vendors', localField: 'vendorId', foreignField: '_id', as: 'v' } },
+        { $lookup: { from: 'suppliers', localField: 'vendorId', foreignField: '_id', as: 's' } },
+        { $unwind: { path: '$v', preserveNullAndEmptyArrays: true } },
+        { $unwind: { path: '$s', preserveNullAndEmptyArrays: true } },
         {
           $addFields: {
-            effectiveRegionId: { $ifNull: ["$regionId", "$vendor.regionId"] }
+            effectiveRegionId: { $ifNull: ["$regionId", "$v.regionId", "$s.regionId"] },
+            providerType: { $cond: [{ $ifNull: ["$s._id", false] }, "Supplier", "Vendor"] }
           }
         },
         { $match: buildRegionalMatch() }
@@ -200,48 +202,71 @@ export const GET = authMiddlewareAdmin(async (req) => {
     ]);
 
     // 3. Bookings and Revenue
-    const totalBookingsAgg = await AppointmentModel.aggregate([
-      ...(await runEntityAggregation(AppointmentModel, appointmentDateMatch)),
-      {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          online: { $sum: { $cond: [{ $eq: ["$mode", "online"] }, 1, 0] } },
-          offline: { $sum: { $cond: [{ $eq: ["$mode", "offline"] }, 1, 0] } }
+    const [totalBookingsAgg, completedBookingsAgg, cancelledBookingsAgg] = await Promise.all([
+      AppointmentModel.aggregate([
+        ...(await runEntityAggregation(AppointmentModel, appointmentDateMatch)),
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            online: { $sum: { $cond: [{ $eq: ["$mode", "online"] }, 1, 0] } },
+            offline: { $sum: { $cond: [{ $eq: ["$mode", "offline"] }, 1, 0] } }
+          }
         }
-      }
+      ]),
+      AppointmentModel.aggregate([
+        ...(await runEntityAggregation(AppointmentModel, appointmentDateMatch)),
+        { $match: { status: 'completed' } },
+        {
+          $group: {
+            _id: "$providerType",
+            total: { $sum: 1 },
+            online: { $sum: { $cond: [{ $eq: ["$mode", "online"] }, 1, 0] } },
+            offline: { $sum: { $cond: [{ $eq: ["$mode", "offline"] }, 1, 0] } },
+            fees: { $sum: "$platformFee" },
+            gross: { $sum: "$totalAmount" }
+          }
+        }
+      ]),
+      AppointmentModel.aggregate([
+        ...(await runEntityAggregation(AppointmentModel, appointmentDateMatch)),
+        { $match: { status: 'cancelled' } },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: 1 },
+            online: { $sum: { $cond: [{ $eq: ["$mode", "online"] }, 1, 0] } },
+            offline: { $sum: { $cond: [{ $eq: ["$mode", "offline"] }, 1, 0] } }
+          }
+        }
+      ])
     ]);
+
     const totalData = totalBookingsAgg[0] || { total: 0, online: 0, offline: 0 };
-
-    const completedBookingsAgg = await AppointmentModel.aggregate([
-      ...(await runEntityAggregation(AppointmentModel, appointmentDateMatch)),
-      { $match: { status: 'completed' } },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          online: { $sum: { $cond: [{ $eq: ["$mode", "online"] }, 1, 0] } },
-          offline: { $sum: { $cond: [{ $eq: ["$mode", "offline"] }, 1, 0] } },
-          fees: { $sum: "$platformFee" }
-        }
-      }
-    ]);
-    const completedData = completedBookingsAgg[0] || { total: 0, online: 0, offline: 0, fees: 0 };
-    const servicePlatformFees = completedData.fees;
-
-    const cancelledBookingsAgg = await AppointmentModel.aggregate([
-      ...(await runEntityAggregation(AppointmentModel, appointmentDateMatch)),
-      { $match: { status: 'cancelled' } },
-      {
-        $group: {
-          _id: null,
-          total: { $sum: 1 },
-          online: { $sum: { $cond: [{ $eq: ["$mode", "online"] }, 1, 0] } },
-          offline: { $sum: { $cond: [{ $eq: ["$mode", "offline"] }, 1, 0] } }
-        }
-      }
-    ]);
     const cancelledData = cancelledBookingsAgg[0] || { total: 0, online: 0, offline: 0 };
+
+    const completedData = {
+      total: 0, online: 0, offline: 0, fees: 0, gross: 0,
+      Vendor: { gross: 0, fees: 0 },
+      Supplier: { gross: 0, fees: 0 }
+    };
+
+    completedBookingsAgg.forEach(r => {
+      completedData.total += r.total;
+      completedData.online += r.online;
+      completedData.offline += r.offline;
+      completedData.fees += r.fees;
+      completedData.gross += r.gross;
+      if (completedData[r._id]) {
+        completedData[r._id].gross = r.gross;
+        completedData[r._id].fees = r.fees;
+      }
+    });
+
+    const servicePlatformFees = completedData.fees;
+    const serviceGrossAmount = completedData.gross;
+    const vendorServiceAmount = completedData.Vendor.gross;
+    const supplierServiceAmount = completedData.Supplier.gross;
 
     const ClientOrderModel = (await import('@repo/lib/models/user/ClientOrder.model')).default;
     const productData = await runProductAggregation();
@@ -265,7 +290,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
       (async () => {
         try {
           const mod = await import('../reports/booking-summary/selling-services/route');
-          const res = await mod.GET(new Request(new URL('../reports/booking-summary/selling-services/route', req.url).href, { headers: req.headers }));
+          const url = new URL(req.url);
+          url.pathname = '/api/admin/reports/booking-summary/selling-services';
+          if (selectedRegionId) {
+            url.searchParams.set('regionId', selectedRegionId);
+          }
+          const res = await mod.GET(new Request(url.href, { headers: req.headers }));
           const json = await res.json();
           return json?.data || {};
         } catch (e) { return {}; }
@@ -273,7 +303,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
       (async () => {
         try {
           const mod = await import('../reports/booking-summary/sales-by-products/route');
-          const res = await mod.GET(new Request(new URL('../reports/booking-summary/sales-by-products/route', req.url).href, { headers: req.headers }));
+          const url = new URL(req.url);
+          url.pathname = '/api/admin/reports/booking-summary/sales-by-products';
+          if (selectedRegionId) {
+            url.searchParams.set('regionId', selectedRegionId);
+          }
+          const res = await mod.GET(new Request(url.href, { headers: req.headers }));
           const json = await res.json();
           return json?.data || {};
         } catch (e) { return {}; }
@@ -311,12 +346,16 @@ export const GET = authMiddlewareAdmin(async (req) => {
         subscriptionAmount: subscriptionAmount,
         subscriptionStats: subscriptionStats,
         smsAmount: smsAmount,
-        serviceAmount: servicePlatformFees,
-        productAmount: productPlatformFees,
-        vendorProductAmount,
-        supplierProductAmount,
-        vendorProductSales: productData.Vendor.sales,
-        supplierProductSales: productData.Supplier.sales,
+        serviceAmount: serviceGrossAmount,
+        productAmount: productData.Vendor.sales + productData.Supplier.sales,
+        servicePlatformFees,
+        productPlatformFees,
+        vendorServiceAmount,
+        supplierServiceAmount,
+        vendorProductAmount: productData.Vendor.sales,
+        supplierProductAmount: productData.Supplier.sales,
+        vendorProductFees: productData.Vendor.fees,
+        supplierProductFees: productData.Supplier.fees,
         totalProductSales: productData.Vendor.sales + productData.Supplier.sales,
         currentPeriod: filterType ? `${filterType}: ${filterValue}` : 'All time'
       }
@@ -474,7 +513,12 @@ async function getRegionWiseRevenueDetailed(req, allowedRegionIds) {
 async function getSmsAmount(req, filterType, filterValue, selectedRegionId) {
   try {
     const marketingReportModule = await import('../reports/marketing-reports/campaigns/route');
-    const marketingReportRes = await marketingReportModule.GET(new Request(new URL('/api/admin/reports/marketing-reports/campaigns', req.url).href, { headers: req.headers }));
+    const url = new URL(req.url);
+    url.pathname = '/api/admin/reports/marketing-reports/campaigns';
+    if (selectedRegionId) {
+      url.searchParams.set('regionId', selectedRegionId);
+    }
+    const marketingReportRes = await marketingReportModule.GET(new Request(url.href, { headers: req.headers }));
     const data = await marketingReportRes.json();
     return data?.success ? (data.data.campaigns || []).reduce((sum, c) => sum + (c.price || 0), 0) : 0;
   } catch (e) { return 0; }

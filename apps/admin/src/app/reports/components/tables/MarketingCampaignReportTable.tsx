@@ -16,52 +16,45 @@ import { FilterModal } from '../common';
 import { useReport } from '../hooks/useReport';
 
 export const MarketingCampaignReportTable = () => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5); // 5 entries by default
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
+  const {
+    apiFilters,
+    filters,
+    handleFilterChange,
+    isFilterModalOpen,
+    setIsFilterModalOpen,
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
+    tableRef,
+    filterAndPaginateData
+  } = useReport();
+
   // Use the API hook to fetch marketing campaign report data with filters
-  const apiFilters = filters;
-  
   console.log("Marketing Campaign Report API filters:", apiFilters);
-  
+
   const { data, isLoading, isError, error } = useGetMarketingCampaignReportQuery(apiFilters);
-  
+
   // Extract data
   const campaignData = data?.campaigns || [];
   const cities = data?.cities || [];
   const apiPackageNames = data?.packageNames || [];
-  
+
   // Use business names and package names from API response
   const businessNames = data?.businessNames || [];
   const packageNames = data?.packageNames || [];
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    console.log("Marketing Campaign Report filter change:", newFilters);
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-  };
-  
+
   // Filter data based on search term
-  const filteredData = useMemo(() => {
-    if (!searchTerm) return campaignData;
-    
-    return campaignData.filter((campaign: CampaignData) => 
-      Object.values(campaign).some((value: any) => 
-        value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [campaignData, searchTerm]);
-  
-  // Pagination logic
-  const totalItems = filteredData.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedData = filteredData.slice(startIndex, endIndex);
+  const {
+    paginatedData,
+    totalItems,
+    totalPages,
+    startIndex
+  } = filterAndPaginateData(campaignData, (campaign: CampaignData) =>
+    Object.values(campaign).map(v => v?.toString() || '')
+  );
 
   if (isLoading) {
     return (
@@ -79,14 +72,14 @@ export const MarketingCampaignReportTable = () => {
             </Card>
           ))}
         </div>
-        
+
         <div className="flex justify-end mb-4">
           <Button onClick={() => setIsFilterModalOpen(true)}>
             <Filter className="mr-2 h-4 w-4" />
             Filters
           </Button>
         </div>
-        
+
         <div className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -130,7 +123,7 @@ export const MarketingCampaignReportTable = () => {
       </div>
     );
   }
-  
+
   if (isError) {
     console.error("Error fetching marketing campaign report:", error);
     return (
@@ -153,7 +146,7 @@ export const MarketingCampaignReportTable = () => {
       </div>
     );
   }
-  
+
   // Show table structure even when there's no data
   if (campaignData.length === 0) {
     return (
@@ -169,7 +162,7 @@ export const MarketingCampaignReportTable = () => {
               <div className="text-2xl font-bold">₹0.00</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
@@ -177,11 +170,11 @@ export const MarketingCampaignReportTable = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-              {packageNames.length}
-            </div>
+                {packageNames.length}
+              </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Packages</CardTitle>
@@ -191,7 +184,7 @@ export const MarketingCampaignReportTable = () => {
               <div className="text-2xl font-bold">0</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Expired Packages</CardTitle>
@@ -202,7 +195,7 @@ export const MarketingCampaignReportTable = () => {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="flex justify-between items-center mb-4 gap-2">
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -254,8 +247,8 @@ export const MarketingCampaignReportTable = () => {
             </DropdownMenu>
           </div>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -269,7 +262,7 @@ export const MarketingCampaignReportTable = () => {
           showBusinessNameFilter={true}
           showPackageNameFilter={true}
         />
-        
+
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -298,7 +291,7 @@ export const MarketingCampaignReportTable = () => {
       </div>
     );
   }
-  
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -352,8 +345,8 @@ export const MarketingCampaignReportTable = () => {
           </DropdownMenu>
         </div>
       </div>
-      
-      <FilterModal 
+
+      <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         onApplyFilters={handleFilterChange}
@@ -367,7 +360,7 @@ export const MarketingCampaignReportTable = () => {
         showBusinessNameFilter={true}
         showPackageNameFilter={true}
       />
-      
+
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
@@ -381,7 +374,7 @@ export const MarketingCampaignReportTable = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Packages</CardTitle>
@@ -393,7 +386,7 @@ export const MarketingCampaignReportTable = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Packages</CardTitle>
@@ -405,7 +398,7 @@ export const MarketingCampaignReportTable = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Expired Packages</CardTitle>
@@ -418,7 +411,7 @@ export const MarketingCampaignReportTable = () => {
           </CardContent>
         </Card>
       </div>
-      
+
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>
@@ -448,13 +441,12 @@ export const MarketingCampaignReportTable = () => {
                 <TableCell>{new Date(campaign.expiryDate).toLocaleDateString()}</TableCell>
                 <TableCell>{campaign.ticketRaised}</TableCell>
                 <TableCell>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    campaign.status === 'active' 
-                      ? 'bg-green-100 text-green-800' 
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${campaign.status === 'active'
+                      ? 'bg-green-100 text-green-800'
                       : campaign.status === 'expired'
                         ? 'bg-yellow-100 text-yellow-800'
                         : 'bg-red-100 text-red-800'
-                  }`}>
+                    }`}>
                     {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
                   </span>
                 </TableCell>

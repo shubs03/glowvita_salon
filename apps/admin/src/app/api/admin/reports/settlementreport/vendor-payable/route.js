@@ -18,7 +18,7 @@ const initDb = async () => {
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
     await initDb();
-    
+
     // Extract filter parameters from query
     const { searchParams } = new URL(req.url);
     const filterType = searchParams.get('filterType'); // 'day', 'month', 'year', or null
@@ -28,9 +28,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const city = searchParams.get('city'); // City filter
     const vendorName = searchParams.get('vendor'); // Vendor filter
     const regionId = searchParams.get('regionId'); // Region filter
-    
+
     console.log("Vendor Payable Report Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, city, vendorName });
-    
+
     // Build date filter
     const buildDateFilter = (filterType, filterValue) => {
       const now = new Date();
@@ -75,9 +75,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
     }
     // Apply custom date range if provided (takes precedence over filterType/filterValue)
     else if (startDateParam && endDateParam) {
-      dateFilter.date = { 
-        $gte: new Date(startDateParam), 
-        $lte: new Date(endDateParam) 
+      dateFilter.date = {
+        $gte: new Date(startDateParam),
+        $lte: new Date(endDateParam)
       };
     }
 
@@ -215,19 +215,17 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     return NextResponse.json({
       success: true,
-      data: {
-        vendorPayableReport: results,
-        cities: cities,
-        vendorNames: vendorNames,
-        aggregatedTotals: aggregatedTotals,
-        filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
-      }
+      vendorPayableReport: results,
+      cities: cities,
+      vendorNames: vendorNames,
+      aggregatedTotals: aggregatedTotals,
+      filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
     }, { status: 200 });
 
   } catch (error) {
     console.error("Error fetching vendor payable report:", error);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: false,
       message: "Error fetching vendor payable report",
       error: error.message

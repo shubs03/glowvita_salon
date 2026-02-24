@@ -18,7 +18,7 @@ const initDb = async () => {
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
     await initDb();
-    
+
     // Extract filter parameters from query
     const { searchParams } = new URL(req.url);
     const filterType = searchParams.get('filterType'); // 'day', 'month', 'year', or null
@@ -29,17 +29,17 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const businessName = searchParams.get('businessName'); // Business name filter (vendor/supplier)
     const userType = searchParams.get('userType'); // 'vendor', 'supplier', or 'all'
     const regionId = searchParams.get('regionId'); // Region filter
-    
-    console.log("Vendor Payout Settlement Report - Product Filter parameters:", { 
-      filterType, 
-      filterValue, 
-      startDateParam, 
-      endDateParam, 
-      city, 
+
+    console.log("Vendor Payout Settlement Report - Product Filter parameters:", {
+      filterType,
+      filterValue,
+      startDateParam,
+      endDateParam,
+      city,
       businessName,
-      userType 
+      userType
     });
-    
+
     // Build date filter
     const buildDateFilter = (filterType, filterValue) => {
       const now = new Date();
@@ -84,9 +84,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
     }
     // Apply custom date range if provided (takes precedence over filterType/filterValue)
     else if (startDateParam && endDateParam) {
-      dateFilter.createdAt = { 
-        $gte: new Date(startDateParam), 
-        $lte: new Date(endDateParam) 
+      dateFilter.createdAt = {
+        $gte: new Date(startDateParam),
+        $lte: new Date(endDateParam)
       };
     }
 
@@ -162,22 +162,22 @@ export const GET = authMiddlewareAdmin(async (req) => {
         }
       },
       // Apply business name filter if provided
-      ...(businessName && businessName !== 'all' ? [{ 
-        $match: { 
-          businessName: businessName 
-        } 
+      ...(businessName && businessName !== 'all' ? [{
+        $match: {
+          businessName: businessName
+        }
       }] : []),
       // Apply city filter if provided
-      ...(city && city !== 'all' ? [{ 
-        $match: { 
-          city: city 
-        } 
+      ...(city && city !== 'all' ? [{
+        $match: {
+          city: city
+        }
       }] : []),
       // Apply user type filter if provided
-      ...(userType && userType !== 'all' ? [{ 
-        $match: { 
+      ...(userType && userType !== 'all' ? [{
+        $match: {
           ownerType: userType.charAt(0).toUpperCase() + userType.slice(1) // Capitalize first letter
-        } 
+        }
       }] : []),
       // Unwind items array to process each product separately
       { $unwind: "$items" },
@@ -334,19 +334,17 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     return NextResponse.json({
       success: true,
-      data: {
-        vendorPayoutSettlementReport: results,
-        cities: cities,
-        businessNames: businessNames,
-        aggregatedTotals: aggregatedTotals,
-        filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
-      }
+      vendorPayoutSettlementReport: results,
+      cities: cities,
+      businessNames: businessNames,
+      aggregatedTotals: aggregatedTotals,
+      filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
     }, { status: 200 });
 
   } catch (error) {
     console.error("Error fetching vendor payout settlement report - product:", error);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: false,
       message: "Error fetching vendor payout settlement report - product",
       error: error.message
