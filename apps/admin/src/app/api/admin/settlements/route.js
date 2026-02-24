@@ -11,6 +11,7 @@ await _db();
 /**
  * GET /api/admin/settlements
  * Fetch all vendor settlements based on completed appointments
+ * Supports regionId query param for region-wise filtering (same as reports)
  */
 export const GET = authMiddlewareAdmin(async (req) => {
     try {
@@ -21,6 +22,40 @@ export const GET = authMiddlewareAdmin(async (req) => {
         const startDateParam = searchParams.get('startDate');
         const endDateParam = searchParams.get('endDate');
         const statusFilter = searchParams.get('status') || 'all';
+        const regionId = searchParams.get('regionId');
+
+        // Build region filter based on admin role (mirrors getRegionQuery logic)
+        const { roleName, assignedRegions } = req.user;
+        const toObjectId = (id) => {
+            if (id && typeof id === 'string' && mongoose.Types.ObjectId.isValid(id)) {
+                return new mongoose.Types.ObjectId(id);
+            }
+            return id;
+        };
+
+        const buildRegionFilter = () => {
+            if (roleName === 'SUPER_ADMIN' || roleName === 'superadmin') {
+                if (regionId) {
+                    return { regionId: toObjectId(regionId) };
+                }
+                return {}; // No region restriction for Super Admin by default
+            }
+
+            // Regional Admin is scoped to their assigned regions
+            if (assignedRegions && assignedRegions.length > 0) {
+                const objectIdRegions = assignedRegions.map(toObjectId);
+                if (regionId && assignedRegions.includes(regionId)) {
+                    return { regionId: toObjectId(regionId) };
+                }
+                return { regionId: { $in: objectIdRegions } };
+            }
+
+            return { regionId: 'none' }; // Security fallback - matches nothing
+        };
+
+        const regionFilter = buildRegionFilter();
+        const hasRegionFilter = Object.keys(regionFilter).length > 0;
+        console.log('[Settlements] Region filter:', JSON.stringify(regionFilter));
 
         // Calculate date range
         let startDate, endDate;
@@ -58,23 +93,49 @@ export const GET = authMiddlewareAdmin(async (req) => {
             }
         }
 
-        // Fetch completed appointments for ALL vendors
-        const appointments = await AppointmentModel.find({
+        // Build appointment query: date + region
+        const appointmentMatchFilter = {
             date: { $gte: startDate, $lte: endDate },
             paymentStatus: 'completed',
-            status: { $in: ['scheduled', 'confirmed', 'completed'] }
-        })
+            status: { $in: ['scheduled', 'confirmed', 'completed'] },
+            ...regionFilter
+        };
+
+        console.log('[Settlements] Appointment filter:', JSON.stringify(appointmentMatchFilter, null, 2));
+
+        // Fetch completed appointments scoped by region
+        const appointments = await AppointmentModel.find(appointmentMatchFilter)
             .populate({
                 path: 'vendorId',
-                select: 'businessName ownerName contactNumber email',
+                select: 'businessName ownerName contactNumber email regionId',
                 strictPopulate: false
             })
             .sort({ date: -1 });
 
-        // Fetch actual payment history for ALL vendors
-        const paymentHistory = await VendorSettlementPaymentModel.find({
+        // Collect the vendor IDs present in the region-filtered result
+        const filteredVendorIds = [...new Set(
+            appointments
+                .map(a => a.vendorId?._id?.toString() || a.vendorId?.toString())
+                .filter(Boolean)
+        )];
+
+        // Fetch payment history scoped to the same region's vendors
+        const paymentHistoryFilter = {
             paymentDate: { $gte: startDate, $lte: endDate }
-        })
+        };
+
+        if (hasRegionFilter) {
+            if (filteredVendorIds.length > 0) {
+                paymentHistoryFilter.vendorId = {
+                    $in: filteredVendorIds.map(id => new mongoose.Types.ObjectId(id))
+                };
+            } else {
+                // No vendors in region -> return empty history as well
+                paymentHistoryFilter.vendorId = { $in: [] };
+            }
+        }
+
+        const paymentHistory = await VendorSettlementPaymentModel.find(paymentHistoryFilter)
             .populate('vendorId', 'businessName ownerName contactNumber email')
             .sort({ paymentDate: -1 });
 
@@ -83,7 +144,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
         appointments.forEach(appt => {
             const vendorId = appt.vendorId?._id?.toString() || appt.vendorId?.toString();
-
             if (!vendorId) return;
 
             if (!vendorSettlementsMap.has(vendorId)) {
@@ -137,7 +197,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
             }
         });
 
-        // Add payment history and ensure all vendors with history are included
+        // Add payment history — also include vendors who have history but no appointments in period
         paymentHistory.forEach(payment => {
             const vId = payment.vendorId?._id?.toString() || payment.vendorId?.toString();
             if (!vId) return;
@@ -189,7 +249,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 settlement.amountPending = Math.max(0, vendorOwes - totalPaidToAdmin);
             }
 
-            // Status
+            // Determine status
             if (settlement.amountPending <= 0) {
                 settlement.status = 'Paid';
             } else {

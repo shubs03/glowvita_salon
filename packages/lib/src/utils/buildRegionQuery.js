@@ -1,9 +1,4 @@
-/**
- * Global Region Filter Helper
- * 
- * This helper provides a centralized way to build region queries for all admin APIs.
- * It ensures consistent region filtering across the entire admin panel.
- */
+import mongoose from 'mongoose';
 
 /**
  * Builds a region query filter based on admin role and selected region
@@ -12,21 +7,6 @@
  * @param {Object} baseQuery - The base query object to merge with region filter
  * @param {string} selectedRegionId - Optional region ID from query params (for Super Admin)
  * @returns {Object} Combined query with region filter
- * 
- * @example
- * // Super Admin viewing all regions
- * const query = buildRegionQuery(admin, { status: 'active' });
- * // Returns: { status: 'active' }
- * 
- * @example
- * // Super Admin filtering by specific region
- * const query = buildRegionQuery(admin, { status: 'active' }, 'region123');
- * // Returns: { status: 'active', regionId: 'region123' }
- * 
- * @example
- * // Regional Admin (auto-scoped to their regions)
- * const query = buildRegionQuery(admin, { status: 'active' });
- * // Returns: { status: 'active', regionId: { $in: ['region1', 'region2'] } }
  */
 export function buildRegionQuery(admin, baseQuery = {}, selectedRegionId = null) {
   if (!admin) {
@@ -35,7 +15,15 @@ export function buildRegionQuery(admin, baseQuery = {}, selectedRegionId = null)
   }
 
   const { roleName, assignedRegions } = admin;
-  
+
+  // Helper to safely convert string IDs to ObjectIds for aggregation compatibility
+  const toObjectId = (id) => {
+    if (id && typeof id === 'string' && mongoose.Types.ObjectId.isValid(id)) {
+      return new mongoose.Types.ObjectId(id);
+    }
+    return id;
+  };
+
   console.log('[buildRegionQuery] Input:', {
     roleName,
     assignedRegions,
@@ -49,7 +37,7 @@ export function buildRegionQuery(admin, baseQuery = {}, selectedRegionId = null)
       console.log('[buildRegionQuery] Super Admin with selected region:', selectedRegionId);
       return {
         ...baseQuery,
-        regionId: selectedRegionId
+        regionId: toObjectId(selectedRegionId)
       };
     }
     console.log('[buildRegionQuery] Super Admin viewing all regions');
@@ -59,19 +47,20 @@ export function buildRegionQuery(admin, baseQuery = {}, selectedRegionId = null)
   // Regional Admin is scoped to their assigned regions
   if (assignedRegions && assignedRegions.length > 0) {
     console.log('[buildRegionQuery] Regional Admin scoped to regions:', assignedRegions);
-    
+    const objectIdAssignedRegions = assignedRegions.map(toObjectId);
+
     // If a specific region is selected and it's in their assigned regions, use it
     if (selectedRegionId && assignedRegions.includes(selectedRegionId)) {
       return {
         ...baseQuery,
-        regionId: selectedRegionId
+        regionId: toObjectId(selectedRegionId)
       };
     }
-    
+
     // Otherwise, scope to all assigned regions
     return {
       ...baseQuery,
-      regionId: { $in: assignedRegions }
+      regionId: { $in: objectIdAssignedRegions }
     };
   }
 

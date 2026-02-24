@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+
 /**
  * Generates a MongoDB query fragment for region-based scoping.
  * 
@@ -8,20 +10,30 @@
 export function getRegionQuery(user, selectedRegionId = null) {
   const { roleName, assignedRegions } = user;
 
+  // Helper to safely convert string IDs to ObjectIds for aggregation compatibility
+  const toObjectId = (id) => {
+    if (id && typeof id === 'string' && mongoose.Types.ObjectId.isValid(id)) {
+      return new mongoose.Types.ObjectId(id);
+    }
+    return id;
+  };
+
   // Super Admin can see everything or filter by selected region
   if (roleName === "SUPER_ADMIN" || roleName === "superadmin") {
     if (selectedRegionId) {
-      return { regionId: selectedRegionId };
+      return { regionId: toObjectId(selectedRegionId) };
     }
     return {}; // No region filter for Super Admin by default
   }
 
   // Regional Admin is scoped to their assigned regions
   if (assignedRegions && assignedRegions.length > 0) {
+    const objectIdAssignedRegions = assignedRegions.map(toObjectId);
+
     if (selectedRegionId && assignedRegions.includes(selectedRegionId)) {
-      return { regionId: selectedRegionId };
+      return { regionId: toObjectId(selectedRegionId) };
     }
-    return { regionId: { $in: assignedRegions } };
+    return { regionId: { $in: objectIdAssignedRegions } };
   }
 
   // Fallback: If no regions assigned, return a query that matches nothing (security first)
