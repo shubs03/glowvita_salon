@@ -30,7 +30,7 @@ export const CancellationReportTable = () => {
     setItemsPerPage,
     tableRef,
     filterAndPaginateData
-  } = useReport();
+  } = useReport<VendorCancellationStat>();
 
   // Use the API hook to fetch cancellation report data with filters
   console.log("Cancellation API filters:", apiFilters);

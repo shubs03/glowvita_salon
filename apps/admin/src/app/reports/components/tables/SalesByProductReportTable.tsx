@@ -12,7 +12,7 @@ import { Skeleton } from '@repo/ui/skeleton';
 import { useGetSalesByProductsReportQuery } from '@repo/store/api';
 import { useReport } from '../hooks/useReport';
 import { FilterModal } from '../common/FilterModal';
-import type { FilterParams } from '../types';
+import { FilterParams, SalesByProductData } from '../types';
 import { exportToExcel, exportToCSV, exportToPDF, copyToClipboard, printTable } from '../utils/exportFunctions';
 
 export const SalesByProductReportTable = () => {
@@ -30,7 +30,7 @@ export const SalesByProductReportTable = () => {
     setItemsPerPage,
     tableRef,
     filterAndPaginateData
-  } = useReport();
+  } = useReport<SalesByProductData>();
 
   const { data, isLoading, isError, error } = useGetSalesByProductsReportQuery(apiFilters);
 
@@ -87,7 +87,7 @@ export const SalesByProductReportTable = () => {
     totalItems,
     totalPages,
     startIndex
-  } = filterAndPaginateData(formattedData, (product: any) =>
+  } = filterAndPaginateData(formattedData, (product: SalesByProductData) =>
     Object.values(product).map(v => v?.toString() || '')
   );
 

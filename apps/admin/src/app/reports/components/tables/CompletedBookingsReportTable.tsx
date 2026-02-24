@@ -12,7 +12,7 @@ import { Pagination } from "@repo/ui/pagination";
 import { useGetCompletedBookingsReportQuery } from '@repo/store/api';
 import { useReport } from '../hooks/useReport';
 import { FilterModal } from '../common/FilterModal';
-import { FilterParams } from '../types';
+import { FilterParams, VendorStat } from '../types';
 import { copyToClipboard, exportToExcel, exportToCSV, exportToPDF, printTable } from '../utils/exportFunctions';
 
 export const CompletedBookingsReportTable = () => {
@@ -30,7 +30,7 @@ export const CompletedBookingsReportTable = () => {
     setItemsPerPage,
     tableRef,
     filterAndPaginateData
-  } = useReport();
+  } = useReport<VendorStat>();
 
   const { data, isLoading, isError, error } = useGetCompletedBookingsReportQuery(apiFilters);
 
@@ -44,7 +44,7 @@ export const CompletedBookingsReportTable = () => {
     totalItems,
     totalPages,
     startIndex
-  } = filterAndPaginateData(vendorBookingsData, (booking: any) =>
+  } = filterAndPaginateData(vendorBookingsData, (booking: VendorStat) =>
     Object.values(booking).map(v => v?.toString() || '')
   );
 

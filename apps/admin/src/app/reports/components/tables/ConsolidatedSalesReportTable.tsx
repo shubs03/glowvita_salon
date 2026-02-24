@@ -30,7 +30,7 @@ export const ConsolidatedSalesReportTable = () => {
     setItemsPerPage,
     tableRef,
     filterAndPaginateData
-  } = useReport();
+  } = useReport<any>();
 
   const { data, isLoading, isError, error } = useGetConsolidatedSalesReportQuery(apiFilters);
 
