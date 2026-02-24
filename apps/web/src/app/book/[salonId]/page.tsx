@@ -363,6 +363,40 @@ function BookingPageContent() {
     }
   }, [selectedWeddingPackage]);
 
+  // Auto-apply offer code from URL search params
+  useEffect(() => {
+    const codeFromUrl = searchParams.get('offerCode');
+    if (codeFromUrl && !appliedOffer && !isOffersLoading) {
+      console.log('Detected offerCode in URL:', codeFromUrl);
+      setOfferCode(codeFromUrl);
+      
+      // We need to wait for salonId to be available for validation
+      if (salonId) {
+        const validateAndApply = async () => {
+          try {
+            const response = await fetch('/api/validate-offer', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                offerCode: codeFromUrl.toUpperCase().trim(),
+                vendorId: salonId
+              }),
+            });
+            const result = await response.json();
+            if (result.success) {
+              setOffer(result.data);
+              setAppliedOffer(result.data);
+              toast.success(`Offer ${result.data.code} applied automatically!`);
+            }
+          } catch (err) {
+            console.error('Error auto-applying offer:', err);
+          }
+        };
+        validateAndApply();
+      }
+    }
+  }, [searchParams, salonId, isOffersLoading, appliedOffer]);
+
   // Handle map click to select location
   const handleMapClick = () => {
     // This function is for the div click handler

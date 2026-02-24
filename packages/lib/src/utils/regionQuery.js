@@ -1,4 +1,16 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
+
+/**
+ * Safely converts a string to a MongoDB ObjectId if valid.
+ * @param {string} id 
+ * @returns {mongoose.Types.ObjectId|string}
+ */
+const toObjectId = (id) => {
+  if (id && mongoose.Types.ObjectId.isValid(id)) {
+    return new mongoose.Types.ObjectId(id);
+  }
+  return id;
+};
 
 /**
  * Generates a MongoDB query fragment for region-based scoping.

@@ -1,4 +1,21 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
+
+/**
+ * Global Region Filter Helper
+ * 
+ * This helper provides a centralized way to build region queries for all admin APIs.
+ * It ensures consistent region filtering across the entire admin panel.
+ */
+
+/**
+ * Safely converts a string to a MongoDB ObjectId if valid.
+ */
+const toObjectId = (id) => {
+  if (id && mongoose.Types.ObjectId.isValid(id)) {
+    return new mongoose.Types.ObjectId(id);
+  }
+  return id;
+};
 
 /**
  * Builds a region query filter based on admin role and selected region

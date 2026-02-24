@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@repo/ui/dropdown-menu';
@@ -29,47 +29,27 @@ export const VendorPayableReportTable = () => {
     setItemsPerPage,
     setSearchTerm,
     handleFilterChange,
-    filterAndPaginateData
+    filterAndPaginateData,
+    apiFilters
   } = useReport<any>(5);
-  
+
   // Use the API hook to fetch vendor payable report data with filters
-  const apiFilters = filters;
-  
+  // apiFilters is derived from filters + selectedRegion in useReport
+
   console.log("Vendor Payable Report API filters:", apiFilters);
-  
+
   // Import the vendor payable report API hook to use for Vendor Payable data
   const { data, isLoading, isError, error } = useGetVendorPayableReportQuery(apiFilters);
-  
+
   // Define data variables after API call
   const salesData = data?.vendorPayableReport || [];
   const cities = data?.cities || []; // Get cities from the data
+  const vendorNames = data?.vendorNames || []; // Get vendor names from API response
   const aggregatedTotals = data?.aggregatedTotals;
-  
-  // Store complete list of vendor names
-  const [allBusinessNames, setAllBusinessNames] = useState<string[]>([]);
-  
-  // Extract vendor names from data when there are no filters applied
-  // This assumes that when no filters are applied, we get the complete dataset
-  useEffect(() => {
-    // Only update the complete list if no filters are applied or if the list is empty
-    if ((Object.keys(apiFilters).length === 0 || allBusinessNames.length === 0) && salesData.length > 0) {
-      const nameMap: { [key: string]: boolean } = {};
-      const names: string[] = [];
-      
-      salesData.forEach((item: any) => {
-        const name = item.businessName;
-        if (name && name !== 'N/A' && !nameMap[name]) {
-          nameMap[name] = true;
-          names.push(name);
-        }
-      });
-      setAllBusinessNames(names);
-    }
-  }, [salesData, apiFilters, allBusinessNames.length]);
-  
-  // Use the complete list for filter options
-  const businessNames = allBusinessNames;
-  
+
+  // Use the vendor list for filter options
+  const businessNames = vendorNames;
+
   // Format the data to match Vendor Payable structure
   const VendorPayableData = salesData.map((item: any) => {
     // Use the data structure from the new vendor payable report API
@@ -77,10 +57,10 @@ export const VendorPayableReportTable = () => {
     const productPlatformFee = 0; // No product platform fee in this report
     const serviceTax = item.serviceTax || 0; // Using serviceTax from appointment data
     const productTax = 0; // No product tax in this report
-    
+
     // Calculate amount paid based on the final amount from appointments
     const amountPaid = item.finalAmount || 0;
-    
+
     return {
       date: new Date().toISOString().split('T')[0], // Use current date as placeholder since API doesn't provide specific dates
       payeeType: 'Vendor', // All entries in this report are vendors
@@ -92,7 +72,7 @@ export const VendorPayableReportTable = () => {
       amountPaid,
     };
   });
-  
+
   // Filter and paginate data using the common hook
   const {
     filteredData,
@@ -102,7 +82,7 @@ export const VendorPayableReportTable = () => {
     startIndex,
     endIndex
   } = filterAndPaginateData(
-    VendorPayableData, 
+    VendorPayableData,
     (item: any) => [
       item.payeeType || '',
       item.payeeName || '',
@@ -128,14 +108,14 @@ export const VendorPayableReportTable = () => {
             </Card>
           ))}
         </div>
-        
+
         <div className="flex justify-end mb-4">
           <Button onClick={() => setIsFilterModalOpen(true)}>
             <Filter className="mr-2 h-4 w-4" />
             Filters
           </Button>
         </div>
-        
+
         <div className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -167,7 +147,7 @@ export const VendorPayableReportTable = () => {
       </div>
     );
   }
-  
+
   if (isError) {
     console.error("Error fetching Vendor Payable report:", error);
     return (
@@ -182,7 +162,7 @@ export const VendorPayableReportTable = () => {
       </div>
     );
   }
-  
+
   // Show table structure even when there's no data
   if (VendorPayableData.length === 0) {
     return (
@@ -198,7 +178,7 @@ export const VendorPayableReportTable = () => {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="flex justify-between items-center mb-4 gap-2">
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -250,8 +230,8 @@ export const VendorPayableReportTable = () => {
             </DropdownMenu>
           </div>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -264,7 +244,7 @@ export const VendorPayableReportTable = () => {
           showBusinessNameFilter={false}
           showVendorFilter={true}
         />
-        
+
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -288,7 +268,7 @@ export const VendorPayableReportTable = () => {
       </div>
     );
   }
-  
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -342,8 +322,8 @@ export const VendorPayableReportTable = () => {
           </DropdownMenu>
         </div>
       </div>
-      
-      <FilterModal 
+
+      <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         onApplyFilters={handleFilterChange}
@@ -356,7 +336,7 @@ export const VendorPayableReportTable = () => {
         showBusinessNameFilter={false}
         showVendorFilter={true}
       />
-      
+
       {/* Summary Card for Vendor Payable */}
       <Card className="mb-6 w-64">
         <CardHeader className="p-4">
@@ -364,11 +344,11 @@ export const VendorPayableReportTable = () => {
         </CardHeader>
         <CardContent className="p-4">
           <div className="text-lg font-bold">
-            ₹{VendorPayableData.reduce((sum: number, item: any) => sum + (item.amountPaid || 0), 0).toFixed(2)}
+            ₹{aggregatedTotals?.finalAmount?.toFixed(2) || '0.00'}
           </div>
         </CardContent>
       </Card>
-      
+
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>
@@ -390,13 +370,13 @@ export const VendorPayableReportTable = () => {
                 <TableCell>₹{item.amountPaid.toFixed(2)}</TableCell>
               </TableRow>
             ))}
-            {/* Current Page Totals Row */}
-            {paginatedData.length > 0 && (
+            {/* Aggregated Totals Row */}
+            {salesData.length > 0 && aggregatedTotals && (
               <TableRow className="bg-muted font-semibold">
                 <TableCell colSpan={2}>TOTAL</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.servicePlatformFee || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.serviceTax || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum: number, item: any) => sum + (item.amountPaid || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.platformFee?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.serviceTax?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.finalAmount?.toFixed(2)}</TableCell>
               </TableRow>
             )}
           </TableBody>

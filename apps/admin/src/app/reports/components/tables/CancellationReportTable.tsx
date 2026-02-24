@@ -10,51 +10,53 @@ import { Input } from '@repo/ui/input';
 import { Skeleton } from '@repo/ui/skeleton';
 import { Pagination } from "@repo/ui/pagination";
 import { useGetCancellationReportQuery } from '@repo/store/api';
+import { useReport } from '../hooks/useReport';
 import { VendorCancellationStat, FilterParams } from '../types';
 import { FilterModal } from '../common';
 import { exportToExcel, exportToCSV, exportToPDF, copyToClipboard, printTable } from '../utils/exportFunctions';
 
 export const CancellationReportTable = () => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5); // 5 entries by default
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
+  const {
+    apiFilters,
+    filters,
+    handleFilterChange,
+    isFilterModalOpen,
+    setIsFilterModalOpen,
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
+    tableRef,
+    filterAndPaginateData
+  } = useReport<VendorCancellationStat>();
+
   // Use the API hook to fetch cancellation report data with filters
-  const apiFilters = filters;
-  
   console.log("Cancellation API filters:", apiFilters);
-  
+
   const { data, isLoading, isError, error } = useGetCancellationReportQuery(apiFilters);
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    console.log("Cancellation filter change:", newFilters);
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-  };
-  
+
   // Debug: Log the actual data structure
   console.log('Cancellation raw data:', data);
-  
+
   // Define data variables after API call
   // The API returns an object with vendorCancellations array
   const rawData = data && Array.isArray(data.vendorCancellations) ? data.vendorCancellations : [];
   const cities = data?.cities || [];
   const vendors = data?.vendors || [];
-  
+
   // Handle case where data structure is unexpected
   if (!data || !Array.isArray(data.vendorCancellations)) {
     console.warn('Cancellation data structure is unexpected:', data);
   }
-  
+
   // Transform and aggregate the raw data by vendor
   const aggregatedData: Record<string, VendorCancellationStat> = rawData.reduce((acc: Record<string, VendorCancellationStat>, item: any) => {
     const vendor = item.vendor || item.businessName || 'Unknown Vendor';
     const city = item.city || 'Unknown City';
     const key = `${vendor}-${city}`;
-    
+
     if (!acc[key]) {
       acc[key] = {
         vendorId: '',
@@ -65,35 +67,24 @@ export const CancellationReportTable = () => {
         offlineCancellations: 0
       };
     }
-    
+
     acc[key].totalCancellations += item.totalCancellations || 1;
     acc[key].onlineCancellations += item.onlineCancellations || 0;
     acc[key].offlineCancellations += item.offlineCancellations || 0;
     return acc;
   }, {});
-  
+
   const finalCancellationData: VendorCancellationStat[] = Object.values(aggregatedData);
-  
+
   // Filter data based on search term
-  const filteredData = useMemo(() => {
-    if (!searchTerm) return finalCancellationData;
-    
-    return finalCancellationData.filter((item: VendorCancellationStat) => 
-      Object.values(item).some((value: any) => 
-        value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [finalCancellationData, searchTerm]);
-  
-  // Debug: Log the processed data
-  console.log('Processed cancellation data:', finalCancellationData);
-  
-  // Pagination logic
-  const totalItems = filteredData.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedData = filteredData.slice(startIndex, endIndex);
+  const {
+    paginatedData,
+    totalItems,
+    totalPages,
+    startIndex
+  } = filterAndPaginateData(finalCancellationData, (item: VendorCancellationStat) =>
+    Object.values(item).map(v => v?.toString() || '')
+  );
 
   if (isLoading) {
     return (
@@ -172,7 +163,7 @@ export const CancellationReportTable = () => {
       </div>
     );
   }
-  
+
   if (isError) {
     console.error("Error fetching cancellation report:", error);
     return (
@@ -208,7 +199,7 @@ export const CancellationReportTable = () => {
       </div>
     );
   }
-  
+
   // Show table structure even when there's no data
   if (finalCancellationData.length === 0) {
     return (
@@ -264,8 +255,8 @@ export const CancellationReportTable = () => {
             </DropdownMenu>
           </div>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -274,7 +265,7 @@ export const CancellationReportTable = () => {
           showVendorFilter={true}
           initialFilters={filters}
         />
-        
+
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -298,7 +289,7 @@ export const CancellationReportTable = () => {
       </div>
     );
   }
-  
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -352,7 +343,7 @@ export const CancellationReportTable = () => {
           </DropdownMenu>
         </div>
       </div>
-      
+
       {/* Total Cancellations Card */}
       <div className="flex justify-start mb-6">
         <Card className="w-fit min-w-[200px]">
@@ -364,8 +355,8 @@ export const CancellationReportTable = () => {
           </CardContent>
         </Card>
       </div>
-      
-      <FilterModal 
+
+      <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         onApplyFilters={handleFilterChange}
@@ -374,7 +365,7 @@ export const CancellationReportTable = () => {
         showVendorFilter={true}
         initialFilters={filters}
       />
-      
+
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>

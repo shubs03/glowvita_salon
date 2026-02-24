@@ -20,7 +20,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
   try {
     console.log("Selling Services Report API called");
     await initDb();
-    
+
     // Extract filter parameters from query
     const { searchParams } = new URL(req.url);
     const filterType = searchParams.get('filterType'); // 'day', 'month', 'year', or null
@@ -34,13 +34,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const limit = parseInt(searchParams.get('limit')) || 100; // Limit results for performance
     const page = parseInt(searchParams.get('page')) || 1; // Pagination
     const regionId = searchParams.get('regionId'); // Region filter
-    
+
     console.log("Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, saleType, city, limit, page });
-    
+
     // Build date filter
     const buildDateFilter = (filterType, filterValue, startDateParam, endDateParam) => {
       let startDate, endDate;
-      
+
       // Handle custom date range first
       if (startDateParam && endDateParam) {
         startDate = new Date(startDateParam);
@@ -56,7 +56,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           startDate = new Date(year, month - 1, day);
           endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
           break;
-          
+
         case 'month':
           // Specific month - format: YYYY-MM
           const [monthYear, monthNum] = filterValue.split('-').map(Number);
@@ -64,7 +64,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           endDate = new Date(monthYear, monthNum, 1);
           endDate.setTime(endDate.getTime() - 1);
           break;
-          
+
         case 'year':
           // Specific year - format: YYYY
           const trimmedYearValue = filterValue.trim();
@@ -72,7 +72,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           startDate = new Date(yearValue, 0, 1);
           endDate = new Date(yearValue, 11, 31, 23, 59, 59, 999);
           break;
-          
+
         default:
           // No filter - use all time
           startDate = new Date(0);
@@ -81,10 +81,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
       return filterType ? { date: { $gte: startDate, $lte: endDate } } : {};
     };
-    
+
     const dateFilter = buildDateFilter(filterType, filterValue, startDateParam, endDateParam);
     console.log("Date filter:", dateFilter);
-    
+
     // Build mode filter
     const buildModeFilter = (saleType) => {
       if (!saleType || saleType === 'all') {
@@ -92,11 +92,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }
       return { mode: saleType };
     };
-    
+
     const modeFilter = buildModeFilter(saleType);
-    
+
     const regionQuery = getRegionQuery(req.user, regionId);
-    
+
     // Combine all filters
     const combinedFilter = {
       ...dateFilter,
@@ -105,48 +105,48 @@ export const GET = authMiddlewareAdmin(async (req) => {
       status: "completed",
       paymentStatus: "completed"
     };
-    
+
     // Add city filter to the pipeline instead of combinedFilter
     console.log("Combined filter for Selling Services:", combinedFilter);
-    
+
     // Service filter will be applied in the pipeline like city and vendor filters
-    
+
     // 1. Services usage statistics
     const servicesUsagePipeline = [
       // Match appointments within the date filter and only include completed appointments
       { $match: combinedFilter },
-      
-      // Lookup vendor information
+
+      // Lookup vendor and supplier information
+      { $lookup: { from: "vendors", localField: "vendorId", foreignField: "_id", as: "v" } },
+      { $lookup: { from: "suppliers", localField: "vendorId", foreignField: "_id", as: "s" } },
+      { $unwind: { path: "$v", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$s", preserveNullAndEmptyArrays: true } },
       {
-        $lookup: {
-          from: "vendors",
-          localField: "vendorId",
-          foreignField: "_id",
-          as: "vendorInfo"
+        $addFields: {
+          vendorInfo: { $ifNull: ["$v", "$s"] },
+          providerType: { $cond: [{ $ifNull: ["$s._id", false] }, "Supplier", "Vendor"] }
         }
       },
-      
-      // Unwind vendorInfo array
       { $unwind: "$vendorInfo" },
-      
+
       // Apply city filter if provided
       ...(city && city !== 'all' ? [{ $match: { "vendorInfo.city": city } }] : []),
       // Apply vendor filter if provided
       ...(vendor && vendor !== 'all' ? [{ $match: { "vendorInfo.businessName": vendor } }] : []),
-      
+
       // Process all appointments using the simple rule based on isMultiService field
       {
         $facet: {
           // Single-service appointments: isMultiService is false or doesn't exist
           singleService: [
-            { 
-              $match: { 
+            {
+              $match: {
                 $or: [
                   { isMultiService: { $exists: false } },
                   { isMultiService: false }
                 ],
                 serviceName: { $exists: true, $ne: null }
-              } 
+              }
             },
             // Apply service filter if provided
             ...(service && service !== 'all' ? [
@@ -172,17 +172,17 @@ export const GET = authMiddlewareAdmin(async (req) => {
           ],
           // Multi-service appointments: isMultiService is true
           multiService: [
-            { 
-              $match: { 
+            {
+              $match: {
                 isMultiService: true,
-                serviceItems: { $exists: true, $ne: [] } 
-              } 
+                serviceItems: { $exists: true, $ne: [] }
+              }
             },
             { $unwind: "$serviceItems" },
-            { 
-              $match: { 
-                "serviceItems.serviceName": { $exists: true, $ne: null } 
-              } 
+            {
+              $match: {
+                "serviceItems.serviceName": { $exists: true, $ne: null }
+              }
             },
             // Apply service filter if provided
             ...(service && service !== 'all' ? [
@@ -333,12 +333,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { $skip: (page - 1) * limit },
       { $limit: limit }
     ];
-    
+
     // Execute the optimized pipeline
     let servicesUsage = await AppointmentModel.aggregate(servicesUsagePipeline);
-    
+
     console.log("Aggregation result count:", servicesUsage.length);
-    
+
     // Format data as requested: Service, Vendor, Total Service Amount (₹), Items Sold, Platform Fee, Service Tax
     const formattedData = servicesUsage
       .filter(service => {
@@ -361,25 +361,24 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }));
 
     console.log("Formatted data count:", formattedData.length);
-    
+
     // Get all services without pagination for accurate vendor count
     const allServicesPipeline = [
       // Match appointments within the date filter and only include completed appointments
       { $match: combinedFilter },
-      
-      // Lookup vendor information
+      // Lookup vendor and supplier information
+      { $lookup: { from: "vendors", localField: "vendorId", foreignField: "_id", as: "v" } },
+      { $lookup: { from: "suppliers", localField: "vendorId", foreignField: "_id", as: "s" } },
+      { $unwind: { path: "$v", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$s", preserveNullAndEmptyArrays: true } },
       {
-        $lookup: {
-          from: "vendors",
-          localField: "vendorId",
-          foreignField: "_id",
-          as: "vendorInfo"
+        $addFields: {
+          vendorInfo: { $ifNull: ["$v", "$s"] },
+          providerType: { $cond: [{ $ifNull: ["$s._id", false] }, "Supplier", "Vendor"] }
         }
       },
-      
-      // Unwind vendorInfo array
       { $unwind: "$vendorInfo" },
-      
+
       // Apply city filter if provided
       ...(city && city !== 'all' ? [{ $match: { "vendorInfo.city": city } }] : []),
       // Apply vendor filter if provided
@@ -395,20 +394,20 @@ export const GET = authMiddlewareAdmin(async (req) => {
           }
         }
       ] : []),
-      
+
       // Process all appointments using the simple rule based on isMultiService field
       {
         $facet: {
           // Single-service appointments: isMultiService is false or doesn't exist
           singleService: [
-            { 
-              $match: { 
+            {
+              $match: {
                 $or: [
                   { isMultiService: { $exists: false } },
                   { isMultiService: false }
                 ],
                 serviceName: { $exists: true, $ne: null }
-              } 
+              }
             },
             // Apply service filter if provided
             ...(service && service !== 'all' ? [
@@ -428,23 +427,24 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 totalAmount: "$totalAmount",
                 // Include service items for multi-service handling
                 serviceItems: "$serviceItems",
-                isMultiService: "$isMultiService"
+                isMultiService: "$isMultiService",
+                providerType: "$providerType"
               }
             }
           ],
           // Multi-service appointments: isMultiService is true
           multiService: [
-            { 
-              $match: { 
+            {
+              $match: {
                 isMultiService: true,
-                serviceItems: { $exists: true, $ne: [] } 
-              } 
+                serviceItems: { $exists: true, $ne: [] }
+              }
             },
             { $unwind: "$serviceItems" },
-            { 
-              $match: { 
-                "serviceItems.serviceName": { $exists: true, $ne: null } 
-              } 
+            {
+              $match: {
+                "serviceItems.serviceName": { $exists: true, $ne: null }
+              }
             },
             // Apply service filter if provided
             ...(service && service !== 'all' ? [
@@ -464,7 +464,8 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 totalAmount: "$totalAmount",
                 // Include service items for multi-service handling
                 serviceItems: "$serviceItems",
-                isMultiService: "$isMultiService"
+                isMultiService: "$isMultiService",
+                providerType: "$providerType"
               }
             }
           ]
@@ -491,6 +492,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           totalRevenue: { $sum: { $ifNull: ["$allServices.amount", 0] } },
           totalAmount: { $sum: { $ifNull: ["$allServices.amount", 0] } },
           mode: { $first: "$allServices.mode" },
+          providerType: { $first: "$allServices.providerType" }, // Add provider type
           // Group all appointments to calculate platform fees and taxes
           appointments: { $push: "$allServices" }
         }
@@ -593,20 +595,30 @@ export const GET = authMiddlewareAdmin(async (req) => {
       },
       { $sort: { totalRevenue: -1 } }
     ];
-    
+
     // Execute the pipeline to get all services
     let allServices = await AppointmentModel.aggregate(allServicesPipeline);
-    
+
     // Calculate unique vendors count from all services
     const uniqueVendors = [...new Set(allServices.map(service => service.vendorName))].length;
-    
+
     // Calculate unique services count from all services
     const uniqueServices = [...new Set(allServices.map(service => service.name))].length;
-    
+
     // Get total count for pagination (without limit/skip)
     const totalCountPipeline = [
       { $match: combinedFilter },
-      { $lookup: { from: "vendors", localField: "vendorId", foreignField: "_id", as: "vendorInfo" } },
+      // Lookup vendor and supplier information
+      { $lookup: { from: "vendors", localField: "vendorId", foreignField: "_id", as: "v" } },
+      { $lookup: { from: "suppliers", localField: "vendorId", foreignField: "_id", as: "s" } },
+      { $unwind: { path: "$v", preserveNullAndEmptyArrays: true } },
+      { $unwind: { path: "$s", preserveNullAndEmptyArrays: true } },
+      {
+        $addFields: {
+          vendorInfo: { $ifNull: ["$v", "$s"] },
+          providerType: { $cond: [{ $ifNull: ["$s._id", false] }, "Supplier", "Vendor"] }
+        }
+      },
       { $unwind: "$vendorInfo" },
       // Apply city filter if provided for count as well
       ...(city && city !== 'all' ? [{ $match: { "vendorInfo.city": city } }] : []),
@@ -626,31 +638,31 @@ export const GET = authMiddlewareAdmin(async (req) => {
       {
         $facet: {
           singleService: [
-            { 
-              $match: { 
+            {
+              $match: {
                 $or: [
                   { isMultiService: { $exists: false } },
                   { isMultiService: false }
                 ],
                 serviceName: { $exists: true, $ne: null }
-              } 
+              }
             },
-            { $project: { serviceName: "$serviceName", vendorId: "$vendorId", isMultiService: "$isMultiService" } }
+            { $project: { serviceName: "$serviceName", vendorId: "$vendorId", isMultiService: "$isMultiService", providerType: "$providerType" } }
           ],
           multiService: [
-            { 
-              $match: { 
+            {
+              $match: {
                 isMultiService: true,
-                serviceItems: { $exists: true, $ne: [] } 
-              } 
+                serviceItems: { $exists: true, $ne: [] }
+              }
             },
             { $unwind: "$serviceItems" },
-            { 
-              $match: { 
-                "serviceItems.serviceName": { $exists: true, $ne: null } 
-              } 
+            {
+              $match: {
+                "serviceItems.serviceName": { $exists: true, $ne: null }
+              }
             },
-            { $project: { serviceName: "$serviceItems.serviceName", vendorId: "$vendorId", isMultiService: "$isMultiService" } }
+            { $project: { serviceName: "$serviceItems.serviceName", vendorId: "$vendorId", isMultiService: "$isMultiService", providerType: "$providerType" } }
           ]
         }
       },
@@ -670,10 +682,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
       },
       { $count: "total" }
     ];
-    
+
     const totalCountResult = await AppointmentModel.aggregate(totalCountPipeline);
     const totalServices = totalCountResult.length > 0 ? totalCountResult[0].total : 0;
-    
+
     // Get unique cities for the filter dropdown
     const cityPipeline = [
       { $match: { status: "completed", paymentStatus: "completed" } }, // Only completed appointments
@@ -682,10 +694,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { $group: { _id: "$vendorInfo.city" } }, // Get unique cities
       { $sort: { _id: 1 } } // Sort alphabetically
     ];
-    
+
     const citiesResult = await AppointmentModel.aggregate(cityPipeline);
     const cities = citiesResult.map(item => item._id).filter(city => city); // Filter out null/undefined cities
-    
+
     // Get unique vendors for the filter dropdown
     const vendorPipeline = [
       { $match: { status: "completed", paymentStatus: "completed" } }, // Only completed appointments
@@ -694,10 +706,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { $group: { _id: "$vendorInfo.businessName" } }, // Get unique vendor names
       { $sort: { _id: 1 } } // Sort alphabetically
     ];
-    
+
     const vendorsResult = await AppointmentModel.aggregate(vendorPipeline);
     const vendors = vendorsResult.map(item => item._id).filter(vendor => vendor); // Filter out null/undefined vendors
-    
+
     // Get unique services for the filter dropdown
     const servicePipeline = [
       { $match: { status: "completed", paymentStatus: "completed" } }, // Only completed appointments
@@ -705,29 +717,29 @@ export const GET = authMiddlewareAdmin(async (req) => {
         $facet: {
           // Single-service appointments: isMultiService is false or doesn't exist
           singleService: [
-            { 
-              $match: { 
+            {
+              $match: {
                 $or: [
                   { isMultiService: { $exists: false } },
                   { isMultiService: false }
                 ],
                 serviceName: { $exists: true, $ne: null }
-              } 
+              }
             }
           ],
           // Multi-service appointments: isMultiService is true
           multiService: [
-            { 
-              $match: { 
+            {
+              $match: {
                 isMultiService: true,
-                serviceItems: { $exists: true, $ne: [] } 
-              } 
+                serviceItems: { $exists: true, $ne: [] }
+              }
             },
             { $unwind: "$serviceItems" },
-            { 
-              $match: { 
-                "serviceItems.serviceName": { $exists: true, $ne: null } 
-              } 
+            {
+              $match: {
+                "serviceItems.serviceName": { $exists: true, $ne: null }
+              }
             }
           ]
         }
@@ -741,30 +753,36 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { $group: { _id: "$allServices.serviceName" } }, // Get unique service names
       { $sort: { _id: 1 } } // Sort alphabetically
     ];
-    
+
     const servicesResult = await AppointmentModel.aggregate(servicePipeline);
     const services = servicesResult.map(item => item._id).filter(service => service); // Filter out null/undefined services
-    
-    // Calculate aggregated totals
-    const aggregatedTotals = servicesUsage.reduce((totals, service) => {
+    // Calculate aggregated totals (Fixed: Use allServices instead of paginated servicesUsage)
+    const aggregatedTotals = allServices.reduce((totals, service) => {
       totals.totalServiceAmount += service.totalRevenue || 0;
       totals.totalItemsSold += service.totalBookings || 0;
       totals.totalPlatformFee += service.totalPlatformFee || 0;
       totals.totalServiceTax += service.totalServiceTax || 0;
 
+      if (service.providerType === 'Vendor') {
+        totals.vendorServiceAmount += service.totalRevenue || 0;
+      } else if (service.providerType === 'Supplier') {
+        totals.supplierServiceAmount += service.totalRevenue || 0;
+      }
+
       return totals;
     }, {
       totalServiceAmount: 0,
+      vendorServiceAmount: 0,
+      supplierServiceAmount: 0,
       totalItemsSold: 0,
       totalPlatformFee: 0,
       totalServiceTax: 0,
-
     });
-    
+
     // Calculate total business (Total Service Amount + Platform Fee + Service Tax)
     aggregatedTotals.totalBusiness = aggregatedTotals.totalServiceAmount + aggregatedTotals.totalPlatformFee + aggregatedTotals.totalServiceTax;
     aggregatedTotals.totalBusinessFormatted = `₹${aggregatedTotals.totalBusiness.toFixed(2)}`;
-    
+
     return NextResponse.json({
       success: true,
       data: {
@@ -778,9 +796,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
         aggregatedTotals: {
           ...aggregatedTotals,
           totalServiceAmountFormatted: `₹${aggregatedTotals.totalServiceAmount.toFixed(2)}`,
+          vendorServiceAmountFormatted: `₹${aggregatedTotals.vendorServiceAmount.toFixed(2)}`,
+          supplierServiceAmountFormatted: `₹${aggregatedTotals.supplierServiceAmount.toFixed(2)}`,
           totalPlatformFeeFormatted: aggregatedTotals.totalPlatformFee > 0 ? `₹${aggregatedTotals.totalPlatformFee.toFixed(2)}` : null,
           totalServiceTaxFormatted: aggregatedTotals.totalServiceTax > 0 ? `₹${aggregatedTotals.totalServiceTax.toFixed(2)}` : null,
-
         }, // Add aggregated totals to the response
         currentPage: page,
         totalPages: Math.ceil(totalServices / limit),
@@ -791,11 +810,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
         endDate: endDateParam
       }
     }, { status: 200 });
-    
+
   } catch (error) {
     console.error("Error fetching selling services report:", error);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: false,
       message: "Error fetching selling services report",
       error: error.message
