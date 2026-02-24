@@ -24,19 +24,20 @@ export const GET = async (request) => {
     // Extract vendorId from query parameters if provided
     const url = new URL(request.url);
     const vendorId = url.searchParams.get('vendorId');
-    
+
     // Build query with optional vendor filter
-    const query = { 
+    const query = {
       status: 'approved', // This is set by admin panel product approval
       isActive: true,
-      stock: { $gt: 0 }
+      stock: { $gt: 0 },
+      showOnWebsite: { $ne: false }
     };
-    
+
     // Add vendor filter if vendorId is provided
     if (vendorId) {
       query.vendorId = vendorId;
     }
-    
+
     // Get products that are approved via admin panel
     const approvedProducts = await ProductModel.find(query)
       .select('productName description price salePrice productImages vendorId stock createdAt origin size sizeMetric keyIngredients forBodyPart bodyPartType productForm brand')
@@ -53,17 +54,17 @@ export const GET = async (request) => {
 
     // Fetch vendors and suppliers in parallel
     const [vendors, suppliers] = await Promise.all([
-      vendorIds.length > 0 
-        ? VendorModel.find({ 
-            _id: { $in: vendorIds }, 
-            status: 'Approved' 
-          }).select('_id businessName firstName lastName status city state')
+      vendorIds.length > 0
+        ? VendorModel.find({
+          _id: { $in: vendorIds },
+          status: 'Approved'
+        }).select('_id businessName firstName lastName status city state')
         : Promise.resolve([]),
-      supplierIds.length > 0 
-        ? SupplierModel.find({ 
-            _id: { $in: supplierIds }, 
-            status: 'Approved' 
-          }).select('_id shopName firstName lastName status city state')
+      supplierIds.length > 0
+        ? SupplierModel.find({
+          _id: { $in: supplierIds },
+          status: 'Approved'
+        }).select('_id shopName firstName lastName status city state')
         : Promise.resolve([])
     ]);
 
@@ -104,12 +105,12 @@ export const GET = async (request) => {
         description: product.description || '',
         price: product.price,
         salePrice: product.salePrice > 0 ? product.salePrice : null,
-        image: product.productImages && product.productImages.length > 0 
-          ? product.productImages[0] 
+        image: product.productImages && product.productImages.length > 0
+          ? product.productImages[0]
           : 'https://placehold.co/320x224/e2e8f0/64748b?text=Product',
         vendorId: vendorData?._id || product.vendorId,
-        vendorName: product.origin === 'Vendor' 
-          ? (vendorData?.businessName || 'Unknown Vendor') 
+        vendorName: product.origin === 'Vendor'
+          ? (vendorData?.businessName || 'Unknown Vendor')
           : (vendorData?.shopName || 'Unknown Supplier'),
         category: product.category || 'Beauty Products',
         stock: product.stock,
@@ -148,9 +149,9 @@ export const GET = async (request) => {
       stack: error.stack,
       name: error.name
     });
-    
-    return new Response(JSON.stringify({ 
-      success: false, 
+
+    return new Response(JSON.stringify({
+      success: false,
       message: `Failed to fetch products: ${error.message}`,
       products: [],
       error: error.message

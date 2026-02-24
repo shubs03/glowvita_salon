@@ -91,7 +91,7 @@ const ProductFormFields = ({
   // Calculate GST and final price whenever sale price or category changes
   useEffect(() => {
     const salePrice = Number(formData.salePrice) || 0;
-    
+
     if (!selectedCategory || !selectedCategory.gstType || selectedCategory.gstType === 'none') {
       setGstAmount(0);
       setCalculatedFinalPrice(salePrice);
@@ -131,7 +131,7 @@ const ProductFormFields = ({
     if (productName === 'manual-entry') {
       return; // Don't update, let user type
     }
-    
+
     onFieldChange('productName', productName);
 
     // Find the selected product master and auto-fill fields
