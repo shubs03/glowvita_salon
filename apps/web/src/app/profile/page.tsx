@@ -28,7 +28,7 @@ import Link from "next/link";
 import { StatCard } from '../../components/profile/StatCard';
 import { Appointment, AppointmentCard } from '../../components/profile/AppointmentCard';
 import { useAuth } from '../../hooks/useAuth';
-import { useGetPublicProductsQuery, useGetPublicAppointmentsQuery, useGetAdminOffersQuery, useGetClientOrdersQuery, useGetClientCartQuery } from "@repo/store/api";
+import { useGetPublicProductsQuery, useGetPublicAppointmentsQuery, useGetClientOrdersQuery, useGetClientCartQuery, useGetPublicAllOffersQuery } from "@repo/store/api";
 
 function OverviewContent() {
   const { user, isAuthenticated } = useAuth();
@@ -42,8 +42,8 @@ function OverviewContent() {
   // Fetch products for new products section
   const { data: productsResponse, isLoading: isLoadingProducts } = useGetPublicProductsQuery(undefined);
   
-  // Fetch offers
-  const { data: offersResponse, isLoading: isLoadingOffers } = useGetAdminOffersQuery(undefined);
+  // // Fetch offers
+  const { data: offersResponse, isLoading: isLoadingOffers } = useGetPublicAllOffersQuery(undefined);
   
   // Fetch client orders
   const { data: ordersData = [] } = useGetClientOrdersQuery(undefined, { skip: !isAuthenticated || !user?._id });

@@ -124,18 +124,59 @@ export const GET = authMiddlewareAdmin(async (req) => {
         case 'C2C': Model = C2CSettingsModel; break;
         case 'C2V': Model = C2VSettingsModel; break;
         case 'V2V': Model = V2VSettingsModel; break;
+        case 'S2S': Model = S2SSettingsModel; break;
+        case 'D2D': Model = D2DSettingsModel; break;
         default: return Response.json({ message: "Invalid referral type" }, { status: 400 });
       }
-      const settings = await Model.findOne({});
-      return Response.json(settings || {
-        referrerBonus: { bonusType: 'amount', bonusValue: 0, creditTime: '7 days' },
-        refereeBonus: { enabled: false },
-        usageLimit: 'unlimited',
-        usageCount: null,
-        minOrders: null,
-        minBookings: null,
-        minPayoutCycle: null,
-      });
+
+      // If regional admin or filtering by region
+      if (req.user.roleName !== "SUPER_ADMIN" && req.user.roleName !== "superadmin") {
+        // Regional Admin: find specific or global
+        const userRegion = req.user.assignedRegions?.[0];
+        const settings = await Model.findOne({ 
+          $or: [
+            { regionId: userRegion },
+            { regionId: null }
+          ]
+        }).sort({ regionId: -1 }); // Priority to region-specific (not null)
+
+        // Check if global is disabled for this region
+        if (settings && !settings.regionId && settings.disabledRegions?.includes(userRegion)) {
+          return Response.json({
+            referrerBonus: { bonusType: 'amount', bonusValue: 0, creditTime: '7 days' },
+            refereeBonus: { enabled: false },
+            usageLimit: 'unlimited',
+            usageCount: null,
+            minOrders: null,
+            minBookings: null,
+            minPayoutCycle: null,
+            status: 'Disabled'
+          });
+        }
+
+        return Response.json(settings || {
+          referrerBonus: { bonusType: 'amount', bonusValue: 0, creditTime: '7 days' },
+          refereeBonus: { enabled: false },
+          usageLimit: 'unlimited',
+          usageCount: null,
+          minOrders: null,
+          minBookings: null,
+          minPayoutCycle: null,
+        });
+      } else {
+        // Super Admin: query by provided region or all
+        const query = regionId ? { regionId } : { regionId: null };
+        const settings = await Model.findOne(query);
+        return Response.json(settings || {
+          referrerBonus: { bonusType: 'amount', bonusValue: 0, creditTime: '7 days' },
+          refereeBonus: { enabled: false },
+          usageLimit: 'unlimited',
+          usageCount: null,
+          minOrders: null,
+          minBookings: null,
+          minPayoutCycle: null,
+        });
+      }
     } else {
       const regionQuery = getRegionQuery(req.user, regionId);
       const query = { ...regionQuery };
@@ -222,11 +263,38 @@ export const PATCH = authMiddlewareAdmin(
       case 'C2C': Model = C2CSettingsModel; break;
       case 'C2V': Model = C2VSettingsModel; break;
       case 'V2V': Model = V2VSettingsModel; break;
+      case 'S2S': Model = S2SSettingsModel; break;
+      case 'D2D': Model = D2DSettingsModel; break;
+    }
+
+    const { validateAndLockRegion } = await import("@repo/lib");
+    const finalRegionId = validateAndLockRegion(req.user, body.regionId);
+
+    // If disabling/enabling a global plan for a region
+    if (body.action === 'toggle_global' && !finalRegionId) {
+        return Response.json({ message: "Region ID required to toggle global settings" }, { status: 400 });
+    }
+
+    const updateData = { ...settings, updatedAt: Date.now() };
+    if (finalRegionId) {
+        updateData.regionId = finalRegionId;
+    }
+
+    // Check if we are updating an existing regional setting or creating new
+    const query = finalRegionId ? { regionId: finalRegionId } : { regionId: null };
+    
+    // Special case: Regional Admin disabling Super Admin setting
+    if (body.action === 'disable_global' && finalRegionId) {
+       const globalSettings = await Model.findOne({ regionId: null });
+       if (globalSettings) {
+           await Model.updateOne({ regionId: null }, { $addToSet: { disabledRegions: finalRegionId } });
+           return Response.json({ message: "Global settings disabled for your region" });
+       }
     }
 
     const updatedSettings = await Model.findOneAndUpdate(
-      {},
-      { ...settings, updatedAt: Date.now() },
+      query,
+      updateData,
       { new: true, upsert: true }
     );
 

@@ -29,13 +29,18 @@ export const POST = authMiddlewareAdmin(
       );
     }
 
-    // 2️⃣ Create notification
+    // 2️⃣ Validate and lock region
+    const { validateAndLockRegion } = await import("@repo/lib");
+    const finalRegionId = validateAndLockRegion(req.user, body.regionId);
+
+    // 3️⃣ Create notification
     const newNotification = await NotificationModel.create({
       title,
       content,
       types,
       targetType,
       specificIds: specificIds || [],
+      regionId: finalRegionId,
       date: Date.now(),
       updatedAt: Date.now(),
     });
@@ -51,7 +56,9 @@ export const POST = authMiddlewareAdmin(
 
 export const GET = authMiddlewareAdmin(
   async (req) => {
-    const notifications = await NotificationModel.find().sort({ createdAt: -1 });
+    const { buildRegionQueryFromRequest } = await import("@repo/lib");
+    const query = buildRegionQueryFromRequest(req);
+    const notifications = await NotificationModel.find(query).sort({ createdAt: -1 });
     return Response.json(notifications);
   },
   ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],

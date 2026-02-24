@@ -24,10 +24,13 @@ import {
   setC2VSettings,
   setV2VSettings,
 } from '../../../../../packages/store/src/slices/Admin/refferalSlice';
+import { setSelectedRegion, selectSelectedRegion } from '../../../../../packages/store/src/slices/Admin/adminAuthSlice';
+
 import {
   useGetReferralsQuery,
   useUpdateSettingsMutation,
   useGetSettingsQuery,
+  useGetRegionsQuery,
 } from '../../../../../packages/store/src/services/api';
 import { useAppSelector } from '@repo/store/hooks';
 import { selectRootState } from '@repo/store/store';
@@ -64,6 +67,18 @@ export default function ReferralManagementPage() {
       pagination: { currentPage: number; itemsPerPage: number };
     };
 
+  const { token, user } = useSelector((state: any) => state.adminAuth);
+  const selectedRegion = useAppSelector(selectSelectedRegion);
+  const userRole = user?.roleName || user?.role;
+  const userRegion = user?.assignedRegions?.[0];
+
+  const { data: regions = [] } = useGetRegionsQuery(undefined);
+  const handleRegionChange = (value: string) => {
+    dispatch(setSelectedRegion(value || null));
+  };
+
+
+
   // Explicitly type modal state for correct property access
   interface ReferralSettings {
     referrerBonus: {
@@ -82,6 +97,10 @@ export default function ReferralManagementPage() {
     minOrders?: number;
     minBookings?: number;
     minPayoutCycle?: number;
+    regionId?: string | null;
+    disabledRegions?: string[];
+    isSettings?: boolean;
+    _id?: string;
   }
 
   interface ModalState {
@@ -91,13 +110,13 @@ export default function ReferralManagementPage() {
   }
   const [updateSettings] = useUpdateSettingsMutation();
 
-  const { data: c2cSettingsData, isLoading: c2cSettingsLoading } = useGetSettingsQuery('C2C');
-  const { data: c2vSettingsData, isLoading: c2vSettingsLoading } = useGetSettingsQuery('C2V');
-  const { data: v2vSettingsData, isLoading: v2vSettingsLoading } = useGetSettingsQuery('V2V');
+  const { data: c2cSettingsData, isLoading: c2cSettingsLoading } = useGetSettingsQuery({ type: 'C2C', regionId: selectedRegion });
+  const { data: c2vSettingsData, isLoading: c2vSettingsLoading } = useGetSettingsQuery({ type: 'C2V', regionId: selectedRegion });
+  const { data: v2vSettingsData, isLoading: v2vSettingsLoading } = useGetSettingsQuery({ type: 'V2V', regionId: selectedRegion });
 
-  const { data: c2cReferrals, isLoading: c2cReferralsLoading } = useGetReferralsQuery('C2C');
-  const { data: c2vReferrals, isLoading: c2vReferralsLoading } = useGetReferralsQuery('C2V');
-  const { data: v2vReferrals, isLoading: v2vReferralsLoading } = useGetReferralsQuery('V2V');
+  const { data: c2cReferrals, isLoading: c2cReferralsLoading } = useGetReferralsQuery({ type: 'C2C', regionId: selectedRegion });
+  const { data: c2vReferrals, isLoading: c2vReferralsLoading } = useGetReferralsQuery({ type: 'C2V', regionId: selectedRegion });
+  const { data: v2vReferrals, isLoading: v2vReferralsLoading } = useGetReferralsQuery({ type: 'V2V', regionId: selectedRegion });
 
   // Update Redux store with fetched settings
   React.useEffect(() => {
@@ -164,7 +183,10 @@ export default function ReferralManagementPage() {
     if (modal.modalType && modal.settings) {
       const result = await updateSettings({
         referralType: modal.modalType,
-        settings: modal.settings,
+        settings: {
+          ...modal.settings,
+          regionId: selectedRegion || null
+        },
       });
       if ('data' in result && result.data) {
         switch (modal.modalType) {
@@ -319,11 +341,34 @@ export default function ReferralManagementPage() {
           <div>
             <CardTitle className="text-lg">Referral Settings</CardTitle>
             <CardDescription>{title}</CardDescription>
+            {settings.isSettings && (
+               <Badge variant="outline" className="mt-1">
+                 {settings.regionId ? "Regional Settings" : "Global Settings"}
+               </Badge>
+            )}
           </div>
-          <Button variant="outline" size="sm" onClick={onEditClick} disabled={isLoading}>
-            <Settings className="mr-2 h-4 w-4" />
-            Edit Settings
-          </Button>
+          <div className="flex gap-2">
+            {(!settings.regionId && userRegion && userRole !== 'SUPER_ADMIN' && userRole !== 'superadmin') ? (
+               <Button
+                 variant="outline"
+                 size="sm"
+                 className={settings.disabledRegions?.includes(userRegion) ? "text-green-600" : "text-amber-600"}
+                 onClick={async () => {
+                   const action = settings.disabledRegions?.includes(userRegion) ? 'enable_global' : 'disable_global';
+                   await updateSettings({
+                     referralType: title.includes('C2C') ? 'C2C' : title.includes('C2V') ? 'C2V' : 'V2V',
+                     settings: { action: action, regionId: userRegion }
+                   });
+                 }}
+               >
+                 {settings.disabledRegions?.includes(userRegion) ? "Enable Global for Region" : "Disable Global for Region"}
+               </Button>
+            ) : null}
+            <Button variant="outline" size="sm" onClick={onEditClick} disabled={isLoading}>
+              <Settings className="mr-2 h-4 w-4" />
+              Edit Settings
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -345,7 +390,25 @@ export default function ReferralManagementPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-6">Referral Management</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold font-headline">Referral Management</h1>
+        {(userRole === 'SUPER_ADMIN' || userRole === 'superadmin') && (
+          <div className="flex items-center gap-2">
+            <Label>Region:</Label>
+            <Select value={selectedRegion || "all"} onValueChange={(val) => handleRegionChange(val === "all" ? "" : val)}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Global" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Global</SelectItem>
+                {regions.map((region: any) => (
+                  <SelectItem key={region._id} value={region._id}>{region.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
       
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-3 mb-6">
         <Card>

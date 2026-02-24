@@ -14,7 +14,7 @@ export { default as doctorsDermatsReducer } from "./slices/doctorsDermatsSlice";
 export { default as supplierReducer } from "./slices/supplierSlice";
 export { default as subscriptionReducer } from "./slices/subscriptionSlice";
 export { default as notificationReducer } from "./slices/notificationSlice";
-export { default as geoFencingReducer } from "./slices/geoFencingSlice";
+
 export { default as smsTemplateReducer } from "./slices/smsTemplateSlice";
 export { default as faqReducer } from "./slices/faqSlice";
 export { default as serviceReducer } from "./slices/serviceSlice";

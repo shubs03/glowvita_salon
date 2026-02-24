@@ -106,8 +106,8 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
       )}>
         <Header toggleSidebar={toggleSidebar} />
                  
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-secondary/50">
-          <div className="w-full max-w-none overflow-hidden h-full">
+        <main className="flex-1 overflow-y-auto bg-secondary/50">
+          <div className="w-full max-w-none min-h-full">
             {hasAccess === true ? (
               children
             ) : (

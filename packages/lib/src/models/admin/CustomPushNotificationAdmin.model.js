@@ -32,6 +32,11 @@ const adminNotificationSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  regionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Region',
+    default: null, // null means global (for super admin)
+  },
   createdAt: {
     type: Date,
     default: Date.now,

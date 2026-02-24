@@ -99,10 +99,20 @@ export const POST = authMiddlewareCrm(async (req) => {
       // Always use V2V settings for all roles
       const referralType = 'V2V';
       const SettingsModel = getSettingsModel(referralType);
+      const userRegion = req.user.regionId;
       
-      const settings = await SettingsModel.findOne({ referralType });
+      // Try to find regional settings first
+      let settings = null;
+      if (userRegion) {
+        settings = await SettingsModel.findOne({ referralType, regionId: userRegion }).lean();
+      }
       
-      // Return default settings if none exist (same as admin API behavior)
+      // Fallback to global settings if no regional settings exist
+      if (!settings) {
+        settings = await SettingsModel.findOne({ referralType, regionId: null }).lean();
+      }
+      
+      // Return default settings if none exist
       if (!settings) {
         return Response.json({
           referralType: 'V2V',

@@ -11,7 +11,8 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Checkbox } from '@repo/ui/checkbox';
 import { Skeleton } from '@repo/ui/skeleton';
-import { Edit2, Eye, Trash2, Plus, Percent, Tag, CheckSquare, IndianRupee, Upload, X } from "lucide-react";
+import { Edit2, Eye, Trash2, Plus, Percent, Tag, CheckSquare, IndianRupee, Upload, X, Power } from "lucide-react";
+import { Switch } from '@repo/ui/switch';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { closeModal, openModal } from '../../../../../packages/store/src/slices/modalSlice.js';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
@@ -21,8 +22,11 @@ import {
   useCreateAdminOfferMutation, 
   useUpdateAdminOfferMutation, 
   useDeleteAdminOfferMutation,
-  useGetSuperDataQuery
+  useGetSuperDataQuery,
+  useGetRegionsQuery
 } from '@repo/store/api';
+import { setSelectedRegion, selectSelectedRegion } from '../../../../../packages/store/src/slices/Admin/adminAuthSlice';
+
 import { toast } from 'sonner';
 
 type Coupon = {
@@ -39,6 +43,9 @@ type Coupon = {
   applicableCategories: string[];
   offerImage?: string;
   isCustomCode?: boolean;
+  regionId?: string | null;
+  disabledRegions?: string[];
+
 };
 
 type CouponForm = {
@@ -51,6 +58,7 @@ type CouponForm = {
   applicableCategories: string[];
   offerImage?: string;
   isCustomCode: boolean;
+  regionId?: string | null;
 };
 
 // Predefined options for categories
@@ -67,10 +75,30 @@ export default function OffersCouponsPage() {
   const [useCustomCode, setUseCustomCode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const { token, admin } = useAppSelector((state: any) => state.adminAuth);
+  const selectedRegion = useAppSelector(selectSelectedRegion);
+  const userRole = admin?.roleName || admin?.role;
+  const userRegion = admin?.assignedRegions?.[0];
+
   const dispatch = useAppDispatch();
   const { isOpen, modalType, data } = useAppSelector(
     (state : any) => state.modal
   );
+
+  const { data: regionsResponse } = useGetRegionsQuery(undefined);
+  const regions = (regionsResponse as any)?.data || [];
+
+  // Safely find region name
+  const getRegionName = (id: string | null | undefined) => {
+    if (!id) return 'All Regions';
+    if (!Array.isArray(regions)) return 'Regional';
+    return regions.find((r: any) => r._id?.toString() === id?.toString())?.name || 'Regional';
+  };
+  const handleRegionChange = (value: string) => {
+    dispatch(setSelectedRegion(value || null));
+  };
+
+
    
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<CouponForm>({
     defaultValues: {
@@ -83,17 +111,12 @@ export default function OffersCouponsPage() {
       applicableCategories: [],
       offerImage: '',
       isCustomCode: false,
+      regionId: userRole === 'SUPER_ADMIN' || userRole === 'superadmin' ? null : userRegion || null,
     }
   });
 
   // RTK Query hooks
-  const { 
-    data: couponsData = [], 
-    isLoading, 
-    isError, 
-    refetch 
-  } = useGetAdminOffersQuery(undefined);
-  
+  const { data: couponsData = [], isLoading, isError, refetch } = useGetAdminOffersQuery(selectedRegion || undefined);
   const { data: superData = [] } = useGetSuperDataQuery(undefined);
 
   const [createOffer, { isLoading: isCreating }] = useCreateAdminOfferMutation();
@@ -184,8 +207,10 @@ export default function OffersCouponsPage() {
       setPreviewImage(coupon.offerImage || null);
       setUseCustomCode(coupon.isCustomCode || false);
       setValue('isCustomCode', coupon.isCustomCode || false);
+      setValue('regionId', coupon.regionId || null);
     } else {
       reset();
+      setValue('regionId', userRole === 'SUPER_ADMIN' || userRole === 'superadmin' ? null : userRegion || null);
       setSelectedSpecialties([]);
       setSelectedCategories([]);
       setPreviewImage(null);
@@ -351,7 +376,25 @@ export default function OffersCouponsPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-6">Offers & Coupons Management</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold font-headline">Offers & Coupons</h1>
+        {(userRole === 'SUPER_ADMIN' || userRole === 'superadmin') && (
+          <div className="flex items-center gap-2">
+            <Label>Region:</Label>
+            <Select value={selectedRegion || "all"} onValueChange={(val) => handleRegionChange(val === "all" ? "" : val)}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Global" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Global</SelectItem>
+                {regions.map((region: any) => (
+                  <SelectItem key={region._id} value={region._id}>{region.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
@@ -422,12 +465,14 @@ export default function OffersCouponsPage() {
                 <TableRow>
                   <TableHead>Coupon Code</TableHead>
                   <TableHead>Discount</TableHead>
+                  <TableHead>Toggle</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Starts On</TableHead>
                   <TableHead>Expires On</TableHead>
                   <TableHead>Specialties</TableHead>
                   <TableHead>Categories</TableHead>
                   <TableHead>Image</TableHead>
+                  <TableHead>Region</TableHead>
                   <TableHead>Redeemed</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -445,15 +490,75 @@ export default function OffersCouponsPage() {
                     </TableCell>
                     <TableCell>{formatDiscount(coupon)}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        coupon.status === "Active"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                          : coupon.status === "Scheduled"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                      }`}>
-                        {coupon.status}
-                      </span>
+                      {(() => {
+                        const isSuperAdmin = userRole?.toUpperCase() === 'SUPER_ADMIN' || userRole?.toUpperCase() === 'SUPERADMIN';
+                        const isGlobalOffer = !coupon.regionId;
+                        const currentRegionId = typeof userRegion === 'string' ? userRegion : (userRegion as any)?._id?.toString() || userRegion?.toString();
+
+                        if (!isSuperAdmin && isGlobalOffer && currentRegionId) {
+                          // Regional Admin looking at a Global Offer: Toggle for THEIR region
+                          const isRegionallyDisabled = coupon.disabledRegions?.some((r: any) => r.toString() === currentRegionId);
+                          return (
+                            <Switch 
+                              checked={!isRegionallyDisabled} 
+                              onCheckedChange={async () => {
+                                try {
+                                  const action = isRegionallyDisabled ? 'enable_global' : 'disable_global';
+                                  await updateOffer({ id: coupon._id, action }).unwrap();
+                                  toast.success(`Offer ${isRegionallyDisabled ? 'Enabled' : 'Disabled'} for your region`);
+                                  refetch();
+                                } catch (err) {
+                                  toast.error("Failed to update regional status");
+                                }
+                              }}
+                            />
+                          );
+                        } else {
+                          // Super Admin OR Regional Admin looking at their OWN regional offer: Toggle global isActive
+                          return (
+                            <Switch 
+                              checked={coupon.isActive !== false} 
+                              onCheckedChange={async () => {
+                                try {
+                                  await updateOffer({ id: coupon._id, action: 'toggle_active' }).unwrap();
+                                  toast.success(`Offer ${coupon.isActive !== false ? 'Deactivated' : 'Activated'} Successfully`);
+                                  refetch();
+                                } catch (err) {
+                                  toast.error("Failed to toggle offer status");
+                                }
+                              }}
+                            />
+                          );
+                        }
+                      })()}
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const isSuperAdmin = userRole?.toUpperCase() === 'SUPER_ADMIN' || userRole?.toUpperCase() === 'SUPERADMIN';
+                        const currentRegionId = typeof userRegion === 'string' ? userRegion : (userRegion as any)?._id?.toString() || userRegion?.toString();
+                        const isRegionallyDisabled = !isSuperAdmin && !coupon.regionId && currentRegionId && coupon.disabledRegions?.some((r: any) => r.toString() === currentRegionId);
+
+                        if (isRegionallyDisabled) {
+                          return (
+                            <span className="px-2 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 border border-gray-200">
+                              DISABLED (REGION)
+                            </span>
+                          );
+                        }
+
+                        return (
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            coupon.isActive === false ? "bg-red-50 text-red-700 border border-red-100" :
+                            coupon.status === "Active"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                              : coupon.status === "Scheduled"
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                          }`}>
+                            {coupon.isActive === false ? "Deactivated" : coupon.status}
+                          </span>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>{coupon.startDate.split('T')[0]}</TableCell>
                     <TableCell>{coupon.expires ? coupon.expires.split('T')[0] : 'N/A'}</TableCell>
@@ -470,26 +575,44 @@ export default function OffersCouponsPage() {
                         <span className="text-gray-400 text-sm">No image</span>
                       )}
                     </TableCell>
+                    <TableCell>
+                      {coupon.regionId ? (
+                        <div className="flex flex-col gap-1">
+                          <span className="inline-flex items-center w-fit px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200">
+                            📍 REGIONAL
+                          </span>
+                          <span className="text-xs font-semibold text-gray-700 ml-1">
+                            {getRegionName(coupon.regionId)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                          🌐 ALL REGIONS (GLOBAL)
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>{coupon.redeemed}</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenModal('viewCoupon', coupon)}>
-                        <Eye className="h-4 w-4" />
-                        <span className="sr-only">View</span>
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenModal('editCoupon', coupon)}>
-                        <Edit2 className="h-4 w-4" />
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-destructive hover:text-destructive" 
-                        onClick={() => handleDeleteClick(coupon)}
-                        disabled={isDeleting}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Delete</span>
-                      </Button>
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenModal('viewCoupon', coupon)}>
+                          <Eye className="h-4 w-4" />
+                          <span className="sr-only">View</span>
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenModal('editCoupon', coupon)}>
+                          <Edit2 className="h-4 w-4" />
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" 
+                          onClick={() => handleDeleteClick(coupon)}
+                          disabled={isDeleting}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -577,6 +700,14 @@ export default function OffersCouponsPage() {
                       </div>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-4">
+                      <span className="font-semibold text-muted-foreground">Region</span>
+                      <span className="col-span-2">
+                         {couponData?.regionId 
+                          ? regions.find((r: any) => r._id === couponData.regionId)?.name || 'Regional'
+                          : 'Global'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
                       <span className="font-semibold text-muted-foreground">Redeemed</span>
                       <span className="col-span-2">{couponData?.redeemed || 0}</span>
                     </div>
@@ -637,6 +768,28 @@ export default function OffersCouponsPage() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {(userRole === 'SUPER_ADMIN' || userRole === 'superadmin') && (
+                <div className="space-y-2">
+                  <Label htmlFor="regionId">Region</Label>
+                  <Select 
+                    value={watch('regionId') || "global"} 
+                    onValueChange={(value) => setValue('regionId', value === "global" ? null : value)}
+                  >
+                    <SelectTrigger id="regionId">
+                      <SelectValue placeholder="Global (Super Admin only)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="global">Global</SelectItem>
+                      {regions.map((region: any) => (
+                        <SelectItem key={region._id} value={region._id}>
+                          {region.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="value">Discount Value</Label>

@@ -36,6 +36,15 @@ export const POST = authMiddlewareCrm(async (req) => {
       }, { status: 400 });
     }
 
+    const UserModel = getUserModel(userType);
+    const user = await UserModel.findById(userId);
+    if (!user) {
+      return NextResponse.json({
+        success: false,
+        message: "User not found"
+      }, { status: 404 });
+    }
+
     const newPlan = await SubscriptionPlanModel.findById(planId);
     if (!newPlan || !newPlan.isAvailableForPurchase || newPlan.status !== 'Active') {
       return NextResponse.json({
@@ -44,13 +53,18 @@ export const POST = authMiddlewareCrm(async (req) => {
       }, { status: 400 });
     }
 
-    const UserModel = getUserModel(userType);
-    const user = await UserModel.findById(userId);
-    if (!user) {
-      return NextResponse.json({
-        success: false,
-        message: "User not found"
-      }, { status: 404 });
+    // Regional availability check
+    const userRegion = user.regionId;
+    if (!newPlan.regionId) {
+      // Global plan: check if disabled for this region
+      if (newPlan.disabledRegions?.map(r => r.toString()).includes(userRegion?.toString())) {
+        return NextResponse.json({ success: false, message: "Selected plan is not available for your region" }, { status: 400 });
+      }
+    } else {
+      // Regional plan: check if matches user's region
+      if (newPlan.regionId.toString() !== userRegion?.toString()) {
+        return NextResponse.json({ success: false, message: "Selected plan is not available for your region" }, { status: 400 });
+      }
     }
 
     // Compute new subscription period (renew from now)

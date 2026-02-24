@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { useGetSubscriptionPlansQuery, useCreateSubscriptionPlanMutation, useUpdateSubscriptionPlanMutation, useDeleteSubscriptionPlanMutation, useGetVendorsQuery, useGetSuppliersQuery, useGetDoctorsQuery, useRenewPlanMutation } from '@repo/store/api';
+import { useGetSubscriptionPlansQuery, useCreateSubscriptionPlanMutation, useUpdateSubscriptionPlanMutation, useDeleteSubscriptionPlanMutation, useGetVendorsQuery, useGetSuppliersQuery, useGetDoctorsQuery, useRenewPlanMutation, useGetRegionsQuery } from '@repo/store/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
@@ -26,10 +26,11 @@ type Plan = {
   price: number;
   discountedPrice?: number;
   isAvailableForPurchase: boolean;
-  status?: boolean;
+  status?: string;
   features: string[];
-  userType: ('vendor' | 'supplier' | 'doctor')[];
+  userTypes: ('vendor' | 'supplier' | 'doctor')[];
   isFeatured?: boolean;
+  planType?: 'trial' | 'regular';
 };
 
 type Subscription = {
@@ -62,11 +63,19 @@ type VendorItem = {
 };
 
 export default function SubscriptionManagementPage() {
-  const token = useSelector((state: any) => state.adminAuth?.token);
-  const { data: plans = [], isLoading, error, refetch } = useGetSubscriptionPlansQuery(undefined);
-  const { data: vendors = [], isLoading: vendorsLoading, refetch: refetchVendors } = useGetVendorsQuery(undefined);
-  const { data: suppliers = [], isLoading: suppliersLoading, refetch: refetchSuppliers } = useGetSuppliersQuery(undefined);
-  const { data: doctors = [], isLoading: doctorsLoading, refetch: refetchDoctors } = useGetDoctorsQuery(undefined);
+  const { token, admin: user } = useSelector((state: any) => state.adminAuth);
+  const userRole = user?.roleName || user?.role;
+  const userRegion = user?.assignedRegions?.[0];
+
+  const [selectedRegion, setSelectedRegion] = useState<string>(userRole === 'SUPER_ADMIN' || userRole === 'superadmin' ? "" : userRegion || "");
+
+
+  const { data: regionsResponse } = useGetRegionsQuery(undefined);
+  const regions: any[] = (regionsResponse as any)?.data || (Array.isArray(regionsResponse) ? regionsResponse : []);
+  const { data: plans = [], isLoading, error, refetch } = useGetSubscriptionPlansQuery(selectedRegion || undefined);
+  const { data: vendors = [], isLoading: vendorsLoading, refetch: refetchVendors } = useGetVendorsQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
+  const { data: suppliers = [], isLoading: suppliersLoading, refetch: refetchSuppliers } = useGetSuppliersQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
+  const { data: doctors = [], isLoading: doctorsLoading, refetch: refetchDoctors } = useGetDoctorsQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
   const [createNewPlan] = useCreateSubscriptionPlanMutation();
   const [updateExistingPlan] = useUpdateSubscriptionPlanMutation();
   const [deletePlan] = useDeleteSubscriptionPlanMutation();
@@ -142,7 +151,8 @@ export default function SubscriptionManagementPage() {
     userTypes: [] as ('vendor' | 'supplier' | 'doctor')[],
     isFeatured: false,
     planType: 'regular',
-    status: 'Active'
+    status: 'Active',
+    regionId: 'global'
   });
 
   // Pagination state
@@ -182,10 +192,11 @@ export default function SubscriptionManagementPage() {
         discountedPrice: plan.discountedPrice?.toString() || '',
         isAvailableForPurchase: plan.isAvailableForPurchase ?? true,
         features: plan.features || [],
-        userTypes: plan.userType || [],
+        userTypes: plan.userTypes || [],
         isFeatured: plan.isFeatured || false,
-        planType: 'regular',
-        status: 'Active'
+        planType: plan.planType || 'regular',
+        status: plan.status || 'Active',
+        regionId: (plan as any).regionId || 'global'
       });
     } else {
       setPlanForm({
@@ -199,7 +210,8 @@ export default function SubscriptionManagementPage() {
         userTypes: [],
         isFeatured: false,
         planType: 'regular',
-        status: 'Active'
+        status: 'Active',
+        regionId: userRole === 'SUPER_ADMIN' || userRole === 'superadmin' ? 'global' : userRegion || 'global'
       });
     }
 
@@ -248,7 +260,8 @@ export default function SubscriptionManagementPage() {
         features: planForm.features || [],
         userTypes: planForm.userTypes,
         planType: planForm.planType,
-        isFeatured: planForm.isFeatured
+        isFeatured: planForm.isFeatured,
+        regionId: (planForm.regionId === 'global' || !planForm.regionId) ? null : planForm.regionId
       };
 
       if (modalType === 'add') {
@@ -270,7 +283,8 @@ export default function SubscriptionManagementPage() {
         userTypes: [],
         isFeatured: false,
         planType: 'regular',
-        status: 'Active'
+        status: 'Active',
+        regionId: 'global'
       });
 
       setIsPlanModalOpen(false);
@@ -444,7 +458,25 @@ export default function SubscriptionManagementPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-6">Subscription Management</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold font-headline">Subscription Management</h1>
+        {(userRole === 'SUPER_ADMIN' || userRole === 'superadmin') && (
+          <div className="flex items-center gap-2">
+            <Label>Region:</Label>
+            <Select value={selectedRegion || "global"} onValueChange={(val) => setSelectedRegion(val === "global" ? "" : val)}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Global" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="global">Global</SelectItem>
+                {regions.map((region: any) => (
+                  <SelectItem key={region._id} value={region._id}>{region.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
         <Card>
@@ -594,15 +626,16 @@ export default function SubscriptionManagementPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto no-scrollbar">
+              <div className="overflow-x-auto overflow-y-auto max-h-[420px] rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Plan Name</TableHead>
                       <TableHead>Duration</TableHead>
                       <TableHead>Price</TableHead>
-                      <TableHead>Discounted Price</TableHead>
-                      <TableHead>Visible to Users</TableHead>
+                      <TableHead>Toggle</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Region</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -614,66 +647,126 @@ export default function SubscriptionManagementPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedPlans.map((plan: Plan) => (
+                      paginatedPlans.map((plan: Plan) => {
+                        const isSuperAdmin = userRole?.toUpperCase() === 'SUPER_ADMIN' || userRole?.toUpperCase() === 'SUPERADMIN';
+                        const isGlobalPlan = !(plan as any).regionId;
+                        const isRegionalAdminOnGlobalPlan = !isSuperAdmin && isGlobalPlan;
+                        // Use backend-computed isRegionallyDisabled (set by GET /subscription-plans for regional admins)
+                        // This is already correctly evaluated server-side from the JWT region, no frontend ID parsing needed
+                        const isRegionallyDisabled = !!(plan as any).isRegionallyDisabled;
+
+
+                        return (
                         <TableRow key={plan._id}>
                           <TableCell className="font-medium">{plan.name}</TableCell>
                           <TableCell>
                             {plan.duration} {plan.durationType}
                           </TableCell>
-                          <TableCell>₹{plan.price}</TableCell>
-                          <TableCell>{plan.discountedPrice ? `₹${plan.discountedPrice}` : '-'}</TableCell>
+                          <TableCell>₹{plan.price} {plan.discountedPrice ? <span className="text-xs text-muted-foreground line-through ml-1">₹{plan.discountedPrice}</span> : ''}</TableCell>
+
+                          {/* Toggle cell */}
                           <TableCell>
-                            <div className="flex items-center space-x-2">
+                            {isRegionalAdminOnGlobalPlan ? (
+                              // Regional Admin on a Global (Super Admin) Plan → toggle regional disable/enable
+                              // Note: backend reads region from JWT token directly, no need to send regionId
+                              <Switch
+                                checked={!isRegionallyDisabled}
+                                onCheckedChange={async () => {
+                                  try {
+                                    const action = isRegionallyDisabled ? 'enable_global' : 'disable_global';
+                                    await updateExistingPlan({ _id: plan._id, action }).unwrap();
+                                    toast.success(`Plan ${isRegionallyDisabled ? 'enabled' : 'disabled'} for your region`);
+                                    refetch();
+                                  } catch (err: any) {
+                                    const msg = err?.data?.message || 'Failed to update regional status';
+                                    toast.error(msg);
+                                  }
+                                }}
+                              />
+                            ) : (
+                              // Super Admin OR Regional Admin on their OWN regional plan
                               <Switch
                                 checked={plan.isAvailableForPurchase !== false}
                                 onCheckedChange={async (checked) => {
                                   try {
-                                    await updateExistingPlan({
-                                      _id: plan._id,
-                                      name: plan.name,
-                                      duration: plan.duration,
-                                      durationType: plan.durationType,
-                                      price: plan.price,
-                                      status: plan.status,
-                                      features: plan.features,
-                                      userTypes: plan.userType,
-                                      planType: (plan as any).planType, // Cast to handle potential type mismatch
-                                      isAvailableForPurchase: checked
-                                    }).unwrap();
+                                    await updateExistingPlan({ _id: plan._id, isAvailableForPurchase: checked }).unwrap();
                                     toast.success(`Plan is now ${checked ? 'visible' : 'hidden'} to users`);
-                                    refetch(); // Ensure UI refreshes
+                                    refetch();
                                   } catch (err) {
-                                    console.error('Failed to toggle visibility', err);
                                     toast.error('Failed to update plan visibility');
                                   }
                                 }}
                               />
-                              <span className="text-xs text-muted-foreground">
-                                {plan.isAvailableForPurchase !== false ? 'Visible' : 'Hidden'}
+                            )}
+                          </TableCell>
+
+                          {/* Status cell */}
+                          <TableCell>
+                            {isRegionallyDisabled ? (
+                              <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-200">
+                                DISABLED (REGION)
                               </span>
+                            ) : plan.isAvailableForPurchase === false ? (
+                              <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-red-50 text-red-700 border border-red-100">
+                                {(plan as any).regionId ? 'HIDDEN (REGIONAL)' : 'HIDDEN (GLOBAL)'}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                {(plan as any).status === 'Active' ? 'Active' : 'Inactive'}
+                              </span>
+                            )}
+                          </TableCell>
+
+                          {/* Region cell — styled like offers page */}
+                          <TableCell>
+                            {(plan as any).regionId ? (
+                              <div className="flex flex-col gap-1">
+                                <span className="inline-flex items-center w-fit px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700 border border-blue-200">
+                                  📍 REGIONAL
+                                </span>
+                                <span className="text-xs font-semibold text-gray-700 ml-1">
+                                  {regions.find((r: any) => r._id?.toString() === (plan as any).regionId?.toString())?.name || 'Regional'}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                                🌐 ALL REGIONS (GLOBAL)
+                              </span>
+                            )}
+                          </TableCell>
+
+                          {/* Actions — hide Edit/Delete for Regional Admin looking at global plans */}
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {!isRegionalAdminOnGlobalPlan && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleOpenPlanModal('edit', plan)}
+                                  >
+                                    <Edit2 className="h-4 w-4" />
+                                    <span className="sr-only">Edit</span>
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => handleDeleteClick(plan)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span className="sr-only">Delete</span>
+                                  </Button>
+                                </>
+                              )}
+                              {isRegionalAdminOnGlobalPlan && (
+                                <span className="text-[10px] text-muted-foreground italic px-2">Use toggle to manage</span>
+                              )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleOpenPlanModal('edit', plan)}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                              <span className="sr-only">Edit</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive"
-                              onClick={() => handleDeleteClick(plan)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
-                          </TableCell>
                         </TableRow>
-                      ))
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
@@ -684,7 +777,7 @@ export default function SubscriptionManagementPage() {
                 onPageChange={(page) => setCurrentPlanPage(page)}
                 onItemsPerPageChange={handlePlanItemsPerPageChange}
                 itemsPerPage={planItemsPerPage}
-                totalItems={plans.length} // Added for "Showing X to Y of Z"
+                totalItems={plans.length}
               />
             </CardContent>
           </Card>
@@ -797,6 +890,125 @@ export default function SubscriptionManagementPage() {
                   </div>
                 </div>
               </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right">Featured Plan</Label>
+                <div className="flex items-center space-x-2 col-span-3">
+                  <input
+                    type="checkbox"
+                    id="isFeatured"
+                    checked={planForm.isFeatured}
+                    onChange={(e) => handleInputChange('isFeatured', e.target.checked)}
+                    className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <Label htmlFor="isFeatured">Show as "Most Popular" in CRM</Label>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label className="text-right mt-2">Plan Type</Label>
+                <div className="col-span-3 flex gap-4">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="type-regular"
+                      checked={planForm.planType === 'regular'}
+                      onChange={() => handleInputChange('planType', 'regular')}
+                    />
+                    <Label htmlFor="type-regular">Regular</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="type-trial"
+                      checked={planForm.planType === 'trial'}
+                      onChange={() => handleInputChange('planType', 'trial')}
+                    />
+                    <Label htmlFor="type-trial">Trial</Label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label className="text-right mt-2">Target Roles</Label>
+                <div className="col-span-3 grid grid-cols-2 gap-2">
+                  {['vendor', 'supplier', 'doctor'].map((role) => (
+                    <div key={role} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`role-${role}`}
+                        checked={planForm.userTypes.includes(role as any)}
+                        onChange={(e) => {
+                          const newRoles = e.target.checked
+                            ? [...planForm.userTypes, role as any]
+                            : planForm.userTypes.filter(r => r !== role);
+                          setPlanForm(prev => ({ ...prev, userTypes: newRoles }));
+                        }}
+                      />
+                      <Label htmlFor={`role-${role}`} className="capitalize">{role}</Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 items-start gap-4">
+                <Label className="text-right mt-2">Features</Label>
+                <div className="col-span-3 space-y-2">
+                  <div className="flex gap-2">
+                    <Input
+                      id="new-feature"
+                      placeholder="Add a feature..."
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = (e.currentTarget as HTMLInputElement).value.trim();
+                          if (val) {
+                            setPlanForm(prev => ({ ...prev, features: [...prev.features, val] }));
+                            (e.currentTarget as HTMLInputElement).value = '';
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {planForm.features.map((f, i) => (
+                      <span key={i} className="bg-primary/10 text-primary text-[10px] px-2 py-1 rounded-full flex items-center gap-1">
+                        {f}
+                        <button
+                          type="button"
+                          onClick={() => setPlanForm(prev => ({ ...prev, features: prev.features.filter((_, idx) => idx !== i) }))}
+                          className="hover:text-red-500"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {(userRole === 'SUPER_ADMIN' || userRole === 'superadmin') && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="regionId" className="text-right">
+                    Region
+                  </Label>
+                  <Select
+                    value={planForm.regionId || 'global'}
+                    onValueChange={(value) => handleInputChange('regionId', value)}
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue placeholder="Global (Super Admin only)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="global">Global</SelectItem>
+                      {regions.map((region: any) => (
+                        <SelectItem key={region._id} value={region._id}>
+                          {region.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button type="button" variant="secondary" onClick={() => setIsPlanModalOpen(false)}>
@@ -916,7 +1128,7 @@ export default function SubscriptionManagementPage() {
                   <div className="space-y-3">
                     {/* Timeline */}
                     <div className="relative space-y-4 pl-6 border-l-2 border-muted">
-                      {selectedSubscription.history.map((historyItem, index) => (
+                      {[...selectedSubscription.history].reverse().map((historyItem, index) => (
                         <div key={index} className="relative">
                           {/* Timeline dot */}
                           <div className="absolute -left-[1.6rem] top-1 w-4 h-4 rounded-full bg-primary border-4 border-background"></div>

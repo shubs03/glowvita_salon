@@ -80,7 +80,8 @@ export const POST = authMiddlewareAdmin(async (req) => {
         const { roleName, assignedRegions } = req.user;
         if ((roleName === "REGIONAL_ADMIN") && assignedRegions && assignedRegions.length > 0) {
             const userRegionId = user.regionId ? user.regionId.toString() : null;
-            if (!userRegionId || !assignedRegions.includes(userRegionId)) {
+            const regionIdsStrings = assignedRegions.map(r => r.toString());
+            if (!userRegionId || !regionIdsStrings.includes(userRegionId)) {
                 return forbiddenResponse("You cannot renew subscriptions for users outside your assigned regions");
             }
         }
@@ -171,4 +172,4 @@ export const POST = authMiddlewareAdmin(async (req) => {
             { status: 500 }
         );
     }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"], "subscription-plans:edit");
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"], "subscription-management:edit");

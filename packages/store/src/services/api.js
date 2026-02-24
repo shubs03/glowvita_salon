@@ -58,6 +58,16 @@ const baseQuery = async (args, api, extraOptions) => {
   const method = (typeof args === 'object' && args.method) ? args.method.toUpperCase() : 'GET';
 
   if (method === 'GET' && typeof window !== 'undefined') {
+    // Append regionId for admin requests if not already present
+    if (targetService === "admin") {
+      const state = api.getState();
+      const selectedRegion = state.adminAuth?.selectedRegion;
+      if (selectedRegion && !fullUrl.includes('regionId=')) {
+        const separator = fullUrl.includes('?') ? '&' : '?';
+        fullUrl += `${separator}regionId=${selectedRegion}`;
+      }
+    }
+
     const separator = fullUrl.includes('?') ? '&' : '?';
     fullUrl += `${separator}_t=${new Date().getTime()}`;
   }
@@ -66,7 +76,18 @@ const baseQuery = async (args, api, extraOptions) => {
     baseUrl: "", // We're already building the full URL
     prepareHeaders: (headers, { getState }) => {
       const state = getState();
-      let token = state.crmAuth?.token || state.adminAuth?.token || state.userAuth?.token;
+      let token;
+
+      // Send only the token for the matching service to avoid cross-service auth pollution
+      if (targetService === "admin") {
+        token = state.adminAuth?.token;
+      } else if (targetService === "crm") {
+        token = state.crmAuth?.token;
+      } else {
+        // web service: prefer userAuth, fallback to crmAuth (for CRM users browsing web)
+        token = state.userAuth?.token || state.crmAuth?.token;
+      }
+
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
@@ -487,10 +508,13 @@ export const glowvitaApi = createApi({
 
     // Public All Offers (Admin + CRM) for landing page
     getPublicAllOffers: builder.query({
-      query: (vendorId = undefined) => ({
+      query: ({ vendorId, regionId } = {}) => ({
         url: `/all-offers`,
         method: "GET",
-        params: vendorId ? { vendorId } : {}
+        params: {
+          ...(vendorId ? { vendorId } : {}),
+          ...(regionId ? { regionId } : {}),
+        }
       }),
       providesTags: ["PublicAllOffers"],
       transformResponse: (response) => response,
@@ -607,7 +631,11 @@ export const glowvitaApi = createApi({
 
     // offfers
     getAdminOffers: builder.query({
-      query: () => ({ url: "/admin/offers", method: "GET" }),
+      query: (regionId) => ({ 
+        url: "/admin/offers", 
+        method: "GET",
+        params: regionId ? { regionId } : {}
+      }),
       providesTags: ["offers"],
     }),
 
@@ -640,11 +668,14 @@ export const glowvitaApi = createApi({
 
     // refferal endpoints
     getReferrals: builder.query({
-      query: (referralType) => ({
-        url: "/admin/referrals",
-        method: "GET",
-        params: { referralType },
-      }),
+      query: (params) => {
+        const { referralType, regionId } = typeof params === 'string' ? { referralType: params } : params;
+        return {
+          url: "/admin/referrals",
+          method: "GET",
+          params: { referralType, regionId },
+        };
+      },
       providesTags: ["Referrals"],
     }),
     createReferral: builder.mutation({
@@ -681,11 +712,14 @@ export const glowvitaApi = createApi({
     }),
 
     getSettings: builder.query({
-      query: (referralType) => ({
-        url: "/admin/referrals",
-        method: "GET",
-        params: { settings: true, referralType },
-      }),
+      query: (params) => {
+        const { referralType, regionId } = typeof params === 'string' ? { referralType: params } : params;
+        return {
+          url: "/admin/referrals",
+          method: "GET",
+          params: { settings: true, referralType, regionId },
+        };
+      },
       providesTags: ["Settings"],
     }),
 
@@ -799,7 +833,14 @@ export const glowvitaApi = createApi({
     }),
 
     getVendors: builder.query({
-      query: () => ({ url: "/admin/vendor", method: "GET" }),
+      query: (params) => {
+        const { regionId } = params || {};
+        return { 
+          url: "/admin/vendor", 
+          method: "GET",
+          params: regionId ? { regionId } : {}
+        };
+      },
       providesTags: ["Vendor"],
       transformResponse: (response) => response,
     }),
@@ -869,7 +910,14 @@ export const glowvitaApi = createApi({
 
     // Doctor Endpoints
     getDoctors: builder.query({
-      query: () => ({ url: "/admin/doctors", method: "GET" }),
+      query: (params) => {
+        const { regionId } = params || {};
+        return { 
+          url: "/admin/doctors", 
+          method: "GET",
+          params: regionId ? { regionId } : {}
+        };
+      },
       providesTags: ["doctors"],
     }),
 
@@ -902,7 +950,11 @@ export const glowvitaApi = createApi({
 
     // Subscription Plan Endpoints
     getSubscriptionPlans: builder.query({
-      query: () => ({ url: "/admin/subscription-plans", method: "GET" }),
+      query: (regionId) => ({ 
+        url: "/admin/subscription-plans", 
+        method: "GET",
+        params: regionId ? { regionId } : {}
+      }),
       providesTags: ["SubscriptionPlan"],
     }),
 
@@ -951,7 +1003,14 @@ export const glowvitaApi = createApi({
 
     // Supplier Endpoints
     getSuppliers: builder.query({
-      query: () => ({ url: "/admin/suppliers", method: "GET" }),
+      query: (params) => {
+        const { regionId } = params || {};
+        return { 
+          url: "/admin/suppliers", 
+          method: "GET",
+          params: regionId ? { regionId } : {}
+        };
+      },
       providesTags: ["Supplier"],
     }),
 
@@ -1018,7 +1077,14 @@ export const glowvitaApi = createApi({
 
     // Categories
     getCategories: builder.query({
-      query: () => ({ url: "/admin/categories", method: "GET" }),
+      query: (params) => {
+        const { regionId } = params || {};
+        return { 
+          url: "/admin/categories", 
+          method: "GET",
+          params: regionId ? { regionId } : {}
+        };
+      },
       providesTags: ["Category"],
     }),
 
@@ -1212,9 +1278,10 @@ export const glowvitaApi = createApi({
 
     // Admin Users Endpoints
     getAdminUsers: builder.query({
-      query: ({ vendorId, page = 1, limit = 100 } = {}) => {
+      query: ({ vendorId, regionId, page = 1, limit = 100 } = {}) => {
         const params = new URLSearchParams();
         if (vendorId) params.append('vendorId', vendorId);
+        if (regionId) params.append('regionId', regionId);
         params.append('page', page.toString());
         params.append('limit', limit.toString());
         return { url: `/admin/users?${params.toString()}`, method: "GET" };
