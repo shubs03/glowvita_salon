@@ -26,6 +26,7 @@ interface Product {
   bodyPartType?: string;
   keyIngredients?: string[];
   isActive?: boolean;
+  showOnWebsite?: boolean;
 }
 
 interface Category {
@@ -461,17 +462,17 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
         <p className="text-xs text-muted-foreground mt-1">Separate multiple ingredients with commas</p>
       </div>
 
-      <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-muted/10">
+      <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-muted/5">
         <div className="space-y-0.5">
-          <Label htmlFor="isActive" className="text-sm font-semibold">Enable on Web</Label>
+          <Label htmlFor="showOnWebsite" className="text-sm font-medium">Show on Website</Label>
           <p className="text-xs text-muted-foreground">
-            If disabled, this product will not be visible to customers on the website.
+            Decide whether this product should be displayed on the public website.
           </p>
         </div>
         <Switch
-          id="isActive"
-          checked={formData.isActive ?? true}
-          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
+          id="showOnWebsite"
+          checked={formData.showOnWebsite !== false}
+          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, showOnWebsite: checked }))}
         />
       </div>
     </>

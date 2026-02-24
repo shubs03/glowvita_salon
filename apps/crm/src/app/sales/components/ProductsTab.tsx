@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui/dialog";
 import { Textarea } from "@repo/ui/textarea";
-import { Search, Plus, Minus, Trash2, ShoppingCart, UserCheck, CheckCircle, X, Mail, Printer, DownloadCloud, Calendar, Paperclip } from "lucide-react";
+import { Search, Plus, Minus, Trash2, ShoppingCart, UserCheck, CheckCircle, X, Mail, Printer, DownloadCloud, Calendar, Paperclip, UserCircle } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useGetAdminProductCategoriesQuery, useGetCrmProductsQuery, useGetSupplierProductsQuery, useGetClientsQuery, useCreateClientMutation, useGetVendorProfileQuery, useCreateBillingMutation, useGetStaffQuery, useGetCurrentSupplierProfileQuery } from "@repo/store/api";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
@@ -1005,6 +1005,26 @@ export default function ProductsTab({
     toast.success('Item updated successfully');
   };
 
+  // Update item staff member
+  const updateStaffMember = (productId: string, staffId: string) => {
+    setCart(prevCart =>
+      prevCart.map(item => {
+        if (item._id === productId) {
+          if (staffId === 'none') {
+            const { staffMember, ...rest } = item;
+            return rest as CartItem;
+          }
+          const staff = staffData.find((s: any) => s._id === staffId);
+          return {
+            ...item,
+            staffMember: staff ? { id: staff._id, name: staff.fullName } : undefined
+          };
+        }
+        return item;
+      })
+    );
+  };
+
   // Calculate item total price with discount
   const calculateItemTotalPrice = (item: CartItem, quantity: number, discount: number, discountType: 'flat' | 'percentage') => {
     const basePrice = getEffectivePrice(item) * quantity;
@@ -1281,8 +1301,30 @@ export default function ProductsTab({
                     cart.map((item) => (
                       <TableRow key={item._id}>
                         <TableCell>
-                          <div className="cursor-pointer text-green-600 p-2 rounded" onClick={() => handleEditItemClick(item)}>
-                            <div className="font-medium line-clamp-2">{item.productName}</div>
+                          <div className="flex flex-col gap-1">
+                            <div className="cursor-pointer text-green-600 p-2 rounded -ml-2 hover:bg-muted/50 transition-colors" onClick={() => handleEditItemClick(item)}>
+                              <div className="font-medium line-clamp-2">{item.productName}</div>
+                            </div>
+                            {/* Per-item Staff Selector */}
+                            <div className="mt-1">
+                              <Select
+                                value={item.staffMember?.id || 'none'}
+                                onValueChange={(value) => updateStaffMember(item._id, value)}
+                              >
+                                <SelectTrigger className="h-7 text-xs w-fit min-w-[120px] px-2 bg-transparent border-gray-200 hover:bg-gray-50 focus:ring-0 focus:ring-offset-0 gap-1">
+                                  <UserCircle className="h-3 w-3 text-gray-500" />
+                                  <SelectValue placeholder="Select Staff" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none" className="text-xs">No Staff</SelectItem>
+                                  {staffData.map((staff: any) => (
+                                    <SelectItem key={staff._id} value={staff._id} className="text-xs">
+                                      {staff.fullName}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
