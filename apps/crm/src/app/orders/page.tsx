@@ -15,31 +15,7 @@ import OrdersFiltersToolbar from './components/OrdersFiltersToolbar';
 import OrdersTable from './components/OrdersTable';
 import OrdersPaginationControls from './components/OrdersPaginationControls';
 
-type OrderItem = {
-  productId: string;
-  productName: string;
-  productImage: string;
-  quantity: number;
-  price: number;
-};
-
-type Order = {
-  _id: string;
-  orderId?: string;
-  items: OrderItem[];
-  customerName?: string; 
-  customerEmail?: string;
-  vendorId?: string;
-  supplierId?: string;
-  totalAmount: number;
-  status: 'Pending' | 'Processing' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled';
-  shippingAddress: string;
-  createdAt: string;
-  trackingNumber?: string;
-  courier?: string;
-  cancellationReason?: string;
-  userId?: string;
-};
+import { Order, OrderItem } from './types';
 
 export default function OrdersPage() {
   const { user, role } = useCrmAuth();
@@ -47,7 +23,7 @@ export default function OrdersPage() {
   const [activeTab, setActiveTab] = useState(defaultTab);
   
   const { data: ordersData = [], isLoading, isError, refetch } = useGetCrmOrdersQuery(
-    user?._id, 
+    undefined, 
     { 
       skip: !user,
       refetchOnMountOrArgChange: true
@@ -74,11 +50,6 @@ export default function OrdersPage() {
   const [isShipModalOpen, setIsShipModalOpen] = useState(false);
   const [orderToShip, setOrderToShip] = useState<Order | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      refetch();
-    }
-  }, [user, refetch]);
 
   const { customerOrders, myPurchases, receivedOrders, onlineCustomerOrders } = useMemo(() => {
     if (!ordersData) return { customerOrders: [], myPurchases: [], receivedOrders: [], onlineCustomerOrders: [] };

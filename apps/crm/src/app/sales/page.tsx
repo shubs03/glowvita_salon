@@ -1,8 +1,8 @@
 "use client";
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
-import { ShoppingCart, Package, Clock } from "lucide-react";
 import { useState } from "react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@repo/ui/tabs";
 import ServicesTab from "./components/ServicesTab";
 import ProductsTab from "./components/ProductsTab";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
@@ -78,10 +78,9 @@ interface ProductCartItem extends Product {
 
 export default function SalesPage() {
   const { user, role } = useCrmAuth();
-  const userRole = role || user?.role;
+  const userRole = (role || user?.role || "").toLowerCase();
 
   // Determine initial active tab based on user role
-  // Suppliers only have products, so default to products tab
   const initialTab = userRole === 'supplier' ? 'products' : 'services';
 
   // Tab state
@@ -92,33 +91,14 @@ export default function SalesPage() {
   const [serviceCart, setServiceCart] = useState<ServiceCartItem[]>([]);
   const [productCart, setProductCart] = useState<ProductCartItem[]>([]);
 
-  // Force re-render when selectedClient changes
-  const selectedClientId = selectedClient?._id;
-
-
   // Determine which tabs to show based on user role
   const showServicesTab = userRole !== 'supplier';
-  const showProductsTab = true; // Both vendors and suppliers can have products
-
-  // If supplier, only show products tab
-  const availableTabs = [];
-  if (showServicesTab) availableTabs.push('services');
-  if (showProductsTab) availableTabs.push('products');
-
-  // If current tab is not available, switch to the first available tab
-  if (!availableTabs.includes(activeTab) && availableTabs.length > 0) {
-    setActiveTab(availableTabs[0] as any);
-  }
-
-  // Debug logging to check role
-  console.log('Sales Page - User Role:', userRole);
-  console.log('Sales Page - Show Services Tab:', showServicesTab);
-  console.log('Sales Page - Show Products Tab:', showProductsTab);
+  const showProductsTab = true;
 
   return (
     <div className="min-h-screen bg-background">
       <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Enhanced Header Section matching marketplace design */}
+        {/* Header Section */}
         <div className="mb-6">
           <div className="flex items-center gap-4 mb-6">
             <div>
@@ -132,56 +112,51 @@ export default function SalesPage() {
           </div>
         </div>
 
-        {/* Tab Navigation - Show for vendors (multiple tabs) and suppliers (single Products tab) */}
-        <div className="mb-6">
-          <div className="border-b">
-            <nav className="-mb-px flex space-x-8">
+        {/* Tab Navigation */}
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+          <div className="mb-6">
+            <TabsList className="bg-transparent border-b rounded-none w-full justify-start h-auto p-0 gap-8">
               {showServicesTab && (
-                <button
-                  onClick={() => setActiveTab('services')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'services'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
-                    }`}
+                <TabsTrigger 
+                  value="services"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-2 px-1 font-medium text-sm"
                 >
                   Services
-                </button>
+                </TabsTrigger>
               )}
               {showProductsTab && (
-                <button
-                  onClick={() => setActiveTab('products')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'products'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-gray-300'
-                    }`}
+                <TabsTrigger 
+                  value="products"
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none py-2 px-1 font-medium text-sm"
                 >
                   Products
-                </button>
+                </TabsTrigger>
               )}
-            </nav>
+            </TabsList>
           </div>
-        </div>
 
-        {/* Tab Content */}
-        <div className="flex-1 flex flex-col min-h-0">
-          {activeTab === 'services' && showServicesTab ? (
-            <ServicesTab
-              cart={serviceCart}
-              setCart={setServiceCart}
-              selectedClient={selectedClient}
-              setSelectedClient={setSelectedClient}
-            />
-          ) : activeTab === 'products' && showProductsTab ? (
+          <TabsContent value="services" className="mt-0 mt-6 focus-visible:ring-0">
+            {showServicesTab ? (
+              <ServicesTab
+                cart={serviceCart}
+                setCart={setServiceCart}
+                selectedClient={selectedClient}
+                setSelectedClient={setSelectedClient}
+              />
+            ) : (
+              <div className="py-8 text-center text-muted-foreground">This tab is not available for your role.</div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="products" className="mt-0 mt-6 focus-visible:ring-0">
             <ProductsTab
               cart={productCart}
               setCart={setProductCart}
               selectedClient={selectedClient}
               setSelectedClient={setSelectedClient}
             />
-          ) : (
-            <div>No content available</div>
-          )}
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
