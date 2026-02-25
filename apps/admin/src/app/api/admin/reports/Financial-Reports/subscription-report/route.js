@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import SubscriptionPlanModel from '@repo/lib/models/admin/SubscriptionPlan.model';
+import DoctorModel from '@repo/lib/models/Vendor/Docters.model';
 import { authMiddlewareAdmin } from "../../../../../../middlewareAdmin";
 import { buildRegionQueryFromRequest } from "@repo/lib";
 
@@ -19,24 +20,24 @@ const initDb = async () => {
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
     await initDb();
-    
+
     // Extract filter parameters from query
     const { searchParams } = new URL(req.url);
     const filterType = searchParams.get('filterType'); // 'day', 'month', 'year', or null
     const filterValue = searchParams.get('filterValue'); // specific date value
     const startDateParam = searchParams.get('startDate'); // Custom date range start
     const endDateParam = searchParams.get('endDate'); // Custom date range end
-    const userType = searchParams.get('userType'); // 'vendor', 'supplier', or 'all'
+    const userType = searchParams.get('userType'); // 'vendor', 'supplier', 'doctor', or 'all'
     const city = searchParams.get('city'); // City filter
     const businessName = searchParams.get('businessName'); // Business name filter
     const planStatus = searchParams.get('planStatus'); // Plan status filter
-    
+
     console.log("Subscription Report Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, userType, city, businessName, planStatus });
-    
+
     // Build date filter
     const buildDateFilter = (filterType, filterValue, startDateParam, endDateParam) => {
       let startDate, endDate;
-      
+
       // Handle custom date range first
       if (startDateParam && endDateParam) {
         startDate = new Date(startDateParam);
@@ -52,7 +53,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           startDate = new Date(year, month - 1, day);
           endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
           break;
-          
+
         case 'month':
           // Specific month - format: YYYY-MM
           const [monthYear, monthNum] = filterValue.split('-').map(Number);
@@ -60,7 +61,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           endDate = new Date(monthYear, monthNum, 1);
           endDate.setTime(endDate.getTime() - 1);
           break;
-          
+
         case 'year':
           // Specific year - format: YYYY
           const trimmedYearValue = filterValue.trim();
@@ -68,7 +69,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           startDate = new Date(yearValue, 0, 1);
           endDate = new Date(yearValue, 11, 31, 23, 59, 59, 999);
           break;
-          
+
         default:
           // No filter - use all time
           startDate = new Date(0);
@@ -77,24 +78,24 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
       return filterType ? { createdAt: { $gte: startDate, $lte: endDate } } : {};
     };
-    
+
     const dateFilter = buildDateFilter(filterType, filterValue, startDateParam, endDateParam);
     console.log("Date filter:", dateFilter);
-    
+
     // Build user type filter
     const buildUserTypeFilter = (userType) => {
       // This function now controls which user types we fetch data for
       // Instead of filtering at the database level, we control which collections we query
       return userType || 'all';
     };
-    
+
     const userTypeFilter = buildUserTypeFilter(userType);
-    
+
     // Get subscription data from vendors and suppliers based on filter
     // Get all vendors with subscriptions
     let vendorsWithSubscriptions = [];
     let suppliersWithSubscriptions = [];
-    
+
     if (userTypeFilter === 'all' || userTypeFilter === 'vendor') {
       const regionQuery = buildRegionQueryFromRequest(req);
       vendorsWithSubscriptions = await VendorModel.find({
@@ -105,7 +106,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
         { path: 'subscription.history.plan', model: 'SubscriptionPlan' }
       ]);
     }
-    
+
     // Get all suppliers with subscriptions
     const SupplierModel = (await import('@repo/lib/models/Vendor/Supplier.model')).default;
     if (userTypeFilter === 'all' || userTypeFilter === 'supplier') {
@@ -118,14 +119,27 @@ export const GET = authMiddlewareAdmin(async (req) => {
         { path: 'subscription.history.plan', model: 'SubscriptionPlan' }
       ]);
     }
-    
+
+    // Get all doctors with subscriptions
+    let doctorsWithSubscriptions = [];
+    if (userTypeFilter === 'all' || userTypeFilter === 'doctor') {
+      const regionQuery = buildRegionQueryFromRequest(req);
+      doctorsWithSubscriptions = await DoctorModel.find({
+        ...regionQuery,
+        "subscription.plan": { $exists: true, $ne: null }
+      }).populate([
+        { path: 'subscription.plan', model: 'SubscriptionPlan' },
+        { path: 'subscription.history.plan', model: 'SubscriptionPlan' }
+      ]);
+    }
+
     // Process subscriptions to match the required format
     const processSubscriptions = (users, userType) => {
       return users
         .filter(user => user.subscription && (user.subscription.plan || (user.subscription.history && user.subscription.history.length > 0)))
         .flatMap(user => {
           const subscriptions = [];
-          
+
           // Add current subscription if it exists
           if (user.subscription && user.subscription.plan) {
             subscriptions.push({
@@ -149,7 +163,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
               subscriptionHistory: user.subscription.history || []
             });
           }
-          
+
           // Add historical subscriptions if they exist
           if (user.subscription && user.subscription.history && user.subscription.history.length > 0) {
             user.subscription.history.forEach(historyItem => {
@@ -178,7 +192,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
               }
             });
           }
-          
+
           return subscriptions;
         })
         .filter(sub => {
@@ -218,36 +232,41 @@ export const GET = authMiddlewareAdmin(async (req) => {
           return true;
         });
     };
-    
+
     // Process subscriptions for each user type
-    const vendorSubscriptions = (userTypeFilter === 'all' || userTypeFilter === 'vendor') 
-      ? processSubscriptions(vendorsWithSubscriptions, 'vendor') 
+    const vendorSubscriptions = (userTypeFilter === 'all' || userTypeFilter === 'vendor')
+      ? processSubscriptions(vendorsWithSubscriptions, 'vendor')
       : [];
-    const supplierSubscriptions = (userTypeFilter === 'all' || userTypeFilter === 'supplier') 
-      ? processSubscriptions(suppliersWithSubscriptions, 'supplier') 
+    const supplierSubscriptions = (userTypeFilter === 'all' || userTypeFilter === 'supplier')
+      ? processSubscriptions(suppliersWithSubscriptions, 'supplier')
       : [];
-    
+
+    const doctorSubscriptions = (userTypeFilter === 'all' || userTypeFilter === 'doctor')
+      ? processSubscriptions(doctorsWithSubscriptions, 'doctor')
+      : [];
+
     // Combine all subscriptions
     const allSubscriptions = [
       ...vendorSubscriptions,
-      ...supplierSubscriptions
+      ...supplierSubscriptions,
+      ...doctorSubscriptions
     ];
-    
+
     // Sort by purchase date (newest first)
     allSubscriptions.sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate));
-    
+
     // Calculate totals
     const totalSubscriptions = allSubscriptions.length;
     const totalRevenue = allSubscriptions.reduce((sum, sub) => sum + (sub.price || 0), 0);
-    
+
     // Calculate active and inactive plan counts
     // Consider both 'Inactive' and 'Expired' as inactive plans
     const activePlans = allSubscriptions.filter(sub => sub.planStatus === 'Active').length;
     const inactivePlans = allSubscriptions.filter(sub => sub.planStatus === 'Inactive' || sub.planStatus === 'Expired').length;
-    
+
     // Get unique subscription plans
     const subscriptionPlans = [...new Set(allSubscriptions.map(sub => sub.subscription))];
-    
+
     // Count subscriptions by plan
     const subscriptionsByPlan = {};
     allSubscriptions.forEach(sub => {
@@ -256,17 +275,17 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }
       subscriptionsByPlan[sub.subscription]++;
     });
-    
+
     // Get unique cities from all users (not just subscriptions) for the filter
     let allCities = [];
     let vendorCities = [];
     let supplierCities = [];
-    
+
     // Get unique business names for the filter
     let allBusinessNames = [];
     let vendorBusinessNames = [];
     let supplierBusinessNames = [];
-    
+
     if (userTypeFilter === 'all' || userTypeFilter === 'vendor') {
       const regionQuery = buildRegionQueryFromRequest(req);
       const allVendors = await VendorModel.find(regionQuery);
@@ -274,7 +293,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       vendorBusinessNames = [...new Set(allVendors.map(vendor => vendor.businessName || vendor.shopName || vendor.name))]
         .filter(name => name && name !== 'N/A');
     }
-    
+
     if (userTypeFilter === 'all' || userTypeFilter === 'supplier') {
       const regionQuery = buildRegionQueryFromRequest(req);
       const allSuppliers = await SupplierModel.find(regionQuery);
@@ -282,22 +301,36 @@ export const GET = authMiddlewareAdmin(async (req) => {
       supplierBusinessNames = [...new Set(allSuppliers.map(supplier => supplier.businessName || supplier.shopName || supplier.name))]
         .filter(name => name && name !== 'N/A');
     }
-    
-    // Combine cities based on the filter
+
+    // Combine cities and business names based on the filter
+    let doctorCities = [];
+    let doctorBusinessNames = [];
+
+    if (userTypeFilter === 'all' || userTypeFilter === 'doctor') {
+      const regionQuery = buildRegionQueryFromRequest(req);
+      const allDoctors = await DoctorModel.find(regionQuery);
+      doctorCities = [...new Set(allDoctors.map(doctor => doctor.city))];
+      doctorBusinessNames = [...new Set(allDoctors.map(doctor => doctor.name))]
+        .filter(name => name && name !== 'N/A');
+    }
+
     if (userTypeFilter === 'vendor') {
       allCities = vendorCities;
       allBusinessNames = vendorBusinessNames;
     } else if (userTypeFilter === 'supplier') {
       allCities = supplierCities;
       allBusinessNames = supplierBusinessNames;
+    } else if (userTypeFilter === 'doctor') {
+      allCities = doctorCities;
+      allBusinessNames = doctorBusinessNames;
     } else {
-      // 'all' case - combine vendor and supplier cities only
-      allCities = [...new Set([...vendorCities, ...supplierCities])];
-      allBusinessNames = [...new Set([...vendorBusinessNames, ...supplierBusinessNames])];
+      // 'all' case - combine all cities and names
+      allCities = [...new Set([...vendorCities, ...supplierCities, ...doctorCities])];
+      allBusinessNames = [...new Set([...vendorBusinessNames, ...supplierBusinessNames, ...doctorBusinessNames])];
     }
-    
+
     allCities = allCities.filter(city => city && city !== 'N/A');
-    
+
     return NextResponse.json({
       success: true,
       data: {
@@ -312,11 +345,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
         filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
       }
     }, { status: 200 });
-    
+
   } catch (error) {
     console.error("Error fetching subscription report:", error);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: false,
       message: "Error fetching subscription report",
       error: error.message

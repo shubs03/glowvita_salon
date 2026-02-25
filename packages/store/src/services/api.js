@@ -910,16 +910,16 @@ export const glowvitaApi = createApi({
 
     // Doctor Endpoints
     getDoctors: builder.query({
-      query: (regionId) => {
-        const params = new URLSearchParams();
-        if (regionId && regionId !== 'all') params.append('regionId', regionId);
-        const queryString = params.toString();
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.regionId) queryParams.append("regionId", params.regionId);
+        const queryString = queryParams.toString();
         return {
           url: `/admin/doctors${queryString ? `?${queryString}` : ""}`,
-          method: "GET"
+          method: "GET",
         };
       },
-      providesTags: ["Doctor"],
+      providesTags: ["doctors"],
     }),
 
     createDoctor: builder.mutation({
