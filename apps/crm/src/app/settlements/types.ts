@@ -61,6 +61,7 @@ export interface SettlementData {
 export interface PaymentRecord {
     _id?: string;
     amount: number;
+    type: "Payment to Vendor" | "Payment to Admin";
     paymentDate: Date | string;
     paymentMethod: string;
     transactionId?: string;

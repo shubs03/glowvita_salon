@@ -132,7 +132,9 @@ function ReceiveAmountDialog({ open, onOpenChange, onReceive, pendingAmount, dir
               >
                 <option value="Bank Transfer">Bank Transfer</option>
                 <option value="UPI">UPI</option>
+                <option value="Online">Online</option>
                 <option value="Cash">Cash</option>
+                <option value="Agent">Agent</option>
                 <option value="Cheque">Cheque</option>
               </select>
             </div>

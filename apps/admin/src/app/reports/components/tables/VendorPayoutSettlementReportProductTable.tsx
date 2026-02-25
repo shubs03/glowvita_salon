@@ -55,10 +55,13 @@ export const VendorPayoutSettlementReportProductTable = () => {
   } = filterAndPaginateData(vendorPayoutSettlementProductData, (item) => [
     item["Source Type"],
     item["Entity Name"],
+    `${item["Product Gross Amount"]}`,
     `${item["Product Platform Fee"]}`,
     `${item["Product Tax (₹)"]}`,
     `${item["Product Total Amount"]}`,
-    `${item["Total"]}`
+    `${item["Total"]}`,
+    `${item["Actually Paid"] || 0}`,
+    `${item["Pending Amount"] || 0}`
   ]);
 
   if (isLoading) {
@@ -134,12 +137,17 @@ export const VendorPayoutSettlementReportProductTable = () => {
                 <TableHead>Product Platform Fee</TableHead>
                 <TableHead>Product Tax (₹)</TableHead>
                 <TableHead>Product Total Amount</TableHead>
-                <TableHead>Total</TableHead>
+                <TableHead>Total Payable</TableHead>
+                <TableHead>Actually Paid</TableHead>
+                <TableHead>Pending Amount</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {[...Array(5)].map((_, index) => (
                 <TableRow key={index}>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
@@ -269,21 +277,59 @@ export const VendorPayoutSettlementReportProductTable = () => {
           showBookingTypeFilter={false}
         />
 
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Card>
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium">Total Product Amount (Gross)</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold text-purple-600">₹{aggregatedTotals?.productGrossAmount?.toFixed(2) || '0.00'}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium">Total Payout Amount (Accrued)</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold">₹{aggregatedTotals?.total?.toFixed(2) || '0.00'}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium text-green-600">Actually Paid</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold text-green-600">₹{aggregatedTotals?.totalPaid?.toFixed(2) || '0.00'}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium text-red-500">Pending Payouts</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold text-red-600">₹{aggregatedTotals?.totalPending?.toFixed(2) || '0.00'}</div>
+            </CardContent>
+          </Card>
+        </div>
+
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Source Type</TableHead>
                 <TableHead>Entity Name</TableHead>
+                <TableHead>Product Gross Amount</TableHead>
                 <TableHead>Product Platform Fee</TableHead>
                 <TableHead>Product Tax (₹)</TableHead>
                 <TableHead>Product Total Amount</TableHead>
-                <TableHead>Total</TableHead>
+                <TableHead>Total Payable</TableHead>
+                <TableHead>Actually Paid</TableHead>
+                <TableHead>Pending Amount</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                   No vendor payout settlement product data available.
                 </TableCell>
               </TableRow>
@@ -360,13 +406,37 @@ export const VendorPayoutSettlementReportProductTable = () => {
         showBookingTypeFilter={false}
       />
 
-      <div className="mb-6">
-        <Card className="w-64">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card>
           <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium">Vendor Payout Amount-Product</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Product Amount (Gross)</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold text-purple-600">₹{aggregatedTotals?.productGrossAmount?.toFixed(2) || '0.00'}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium">Total Payout Amount (Accrued)</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
             <div className="text-lg font-bold">₹{aggregatedTotals?.total?.toFixed(2) || '0.00'}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium text-green-600">Actually Paid</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold text-green-600">₹{aggregatedTotals?.totalPaid?.toFixed(2) || '0.00'}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium text-red-500">Pending Payouts</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold text-red-600">₹{aggregatedTotals?.totalPending?.toFixed(2) || '0.00'}</div>
           </CardContent>
         </Card>
       </div>
@@ -377,10 +447,13 @@ export const VendorPayoutSettlementReportProductTable = () => {
             <TableRow>
               <TableHead>Source Type</TableHead>
               <TableHead>Entity Name</TableHead>
+              <TableHead>Product Gross Amount</TableHead>
               <TableHead>Product Platform Fee</TableHead>
               <TableHead>Product Tax (₹)</TableHead>
               <TableHead>Product Total Amount</TableHead>
-              <TableHead>Total</TableHead>
+              <TableHead>Total Payable</TableHead>
+              <TableHead>Actually Paid</TableHead>
+              <TableHead>Pending Amount</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -388,20 +461,28 @@ export const VendorPayoutSettlementReportProductTable = () => {
               <TableRow key={startIndex + index}>
                 <TableCell>{item["Source Type"]}</TableCell>
                 <TableCell>{item["Entity Name"]}</TableCell>
+                <TableCell>₹{item["Product Gross Amount"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Product Platform Fee"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Product Tax (₹)"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Product Total Amount"]?.toFixed(2)}</TableCell>
-                <TableCell>₹{item["Total"]?.toFixed(2)}</TableCell>
+                <TableCell className="font-bold text-blue-700">₹{item["Total"]?.toFixed(2)}</TableCell>
+                <TableCell className="text-green-600">₹{item["Actually Paid"]?.toFixed(2) || '0.00'}</TableCell>
+                <TableCell className={`font-semibold ${(item["Pending Amount"] || 0) > 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                  ₹{item["Pending Amount"]?.toFixed(2) || '0.00'}
+                </TableCell>
               </TableRow>
             ))}
             {/* Aggregated Totals Row */}
             {vendorPayoutSettlementProductData.length > 0 && aggregatedTotals && (
               <TableRow className="bg-muted font-semibold">
                 <TableCell colSpan={2}>TOTAL</TableCell>
+                <TableCell>₹{aggregatedTotals.productGrossAmount?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.productPlatformFee?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.productTax?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.productTotalAmount?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.total?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.totalPaid?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.totalPending?.toFixed(2)}</TableCell>
               </TableRow>
             )}
           </TableBody>

@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from '@repo/ui/input';
 import { Skeleton } from '@repo/ui/skeleton';
 import { useGetVendorPayableReportQuery } from '@repo/store/api';
-import { SubscriptionData, CampaignData, VendorPayoutSettlementData, VendorPayoutSettlementProductData, VendorPayableProductData, FilterParams } from '../types';
+import { SubscriptionData, CampaignData, VendorPayoutSettlementData, VendorPayoutSettlementProductData, VendorPayableProductData, VendorPayableSettlementData, FilterParams } from '../types';
 import { exportToExcel, exportToCSV, exportToPDF, copyToClipboard, printTable } from '../utils/exportFunctions';
 import { FilterModal } from '../common';
 import { useReport } from '../hooks/useReport';
@@ -31,7 +31,7 @@ export const VendorPayableReportTable = () => {
     handleFilterChange,
     filterAndPaginateData,
     apiFilters
-  } = useReport<any>(5);
+  } = useReport<VendorPayableSettlementData>(5);
 
   // Use the API hook to fetch vendor payable report data with filters
   // apiFilters is derived from filters + selectedRegion in useReport
@@ -51,27 +51,8 @@ export const VendorPayableReportTable = () => {
   const businessNames = vendorNames;
 
   // Format the data to match Vendor Payable structure
-  const VendorPayableData = salesData.map((item: any) => {
-    // Use the data structure from the new vendor payable report API
-    const servicePlatformFee = item.platformFee || 0; // Using platformFee from appointment data
-    const productPlatformFee = 0; // No product platform fee in this report
-    const serviceTax = item.serviceTax || 0; // Using serviceTax from appointment data
-    const productTax = 0; // No product tax in this report
-
-    // Calculate amount paid based on the final amount from appointments
-    const amountPaid = item.finalAmount || 0;
-
-    return {
-      date: new Date().toISOString().split('T')[0], // Use current date as placeholder since API doesn't provide specific dates
-      payeeType: 'Vendor', // All entries in this report are vendors
-      payeeName: item.businessName,
-      servicePlatformFee,
-      productPlatformFee,
-      serviceTax,
-      productTax,
-      amountPaid,
-    };
-  });
+  // No local mapping needed now as API returns matching names
+  const VendorPayableData = salesData;
 
   // Filter and paginate data using the common hook
   const {
@@ -84,11 +65,14 @@ export const VendorPayableReportTable = () => {
   } = filterAndPaginateData(
     VendorPayableData,
     (item: any) => [
-      item.payeeType || '',
-      item.payeeName || '',
-      item.servicePlatformFee?.toString() || '',
-      item.serviceTax?.toString() || '',
-      item.amountPaid?.toString() || ''
+      item["Payee Type"] || '',
+      item["Payee Name"] || '',
+      `${item["Service Gross Amount"] || 0}`,
+      `${item["Service Platform Fee"] || 0}`,
+      `${item["Service Tax (₹)"] || 0}`,
+      `${item["Total"] || 0}`,
+      `${item["Actually Collected"] || 0}`,
+      `${item["Pending Amount"] || 0}`
     ]
   );
 
@@ -96,8 +80,8 @@ export const VendorPayableReportTable = () => {
     return (
       <div>
         {/* Summary Cards Skeleton */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-6">
-          {[...Array(6)].map((_, i) => (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+          {[...Array(4)].map((_, i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <Skeleton className="h-4 w-24" />
@@ -120,19 +104,21 @@ export const VendorPayableReportTable = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
                 <TableHead>Payee Type</TableHead>
                 <TableHead>Payee Name</TableHead>
                 <TableHead>Service Gross Amount</TableHead>
-                <TableHead>Product Gross Amount</TableHead>
-                <TableHead>Platform Fee</TableHead>
-                <TableHead>GST</TableHead>
-                <TableHead>Amount Paid</TableHead>
+                <TableHead>Service Platform Fee</TableHead>
+                <TableHead>Service Tax</TableHead>
+                <TableHead>Total Payable</TableHead>
+                <TableHead>Actually Collected</TableHead>
+                <TableHead>Pending</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {[...Array(5)].map((_, index) => (
                 <TableRow key={index}>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
@@ -168,10 +154,34 @@ export const VendorPayableReportTable = () => {
     return (
       <div>
         {/* Summary Card for Vendor Payable - show with 0 values when no data */}
-        <div className="mb-6">
-          <Card className="w-64">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Card>
             <CardHeader className="p-4">
-              <CardTitle className="text-sm font-medium">Vendor Payable Amount-service</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Service Amount (Gross)</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium">Total Payable (Accrued)</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium">Actually Collected</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold">₹0.00</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium">Pending Collections</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
               <div className="text-lg font-bold">₹0.00</div>
@@ -251,14 +261,17 @@ export const VendorPayableReportTable = () => {
               <TableRow>
                 <TableHead>Payee Type</TableHead>
                 <TableHead>Payee Name</TableHead>
+                <TableHead>Service Gross Amount</TableHead>
                 <TableHead>Service Platform Fee</TableHead>
                 <TableHead>Service Tax</TableHead>
-                <TableHead>Total</TableHead>
+                <TableHead>Total Payable</TableHead>
+                <TableHead>Actually Collected</TableHead>
+                <TableHead>Pending</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   No Vendor Payable data available.
                 </TableCell>
               </TableRow>
@@ -338,16 +351,48 @@ export const VendorPayableReportTable = () => {
       />
 
       {/* Summary Card for Vendor Payable */}
-      <Card className="mb-6 w-64">
-        <CardHeader className="p-4">
-          <CardTitle className="text-sm font-medium">Vendor Payable Amount-service</CardTitle>
-        </CardHeader>
-        <CardContent className="p-4">
-          <div className="text-lg font-bold">
-            ₹{aggregatedTotals?.finalAmount?.toFixed(2) || '0.00'}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium">Total Service Amount (Gross)</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold text-purple-600">
+              ₹{aggregatedTotals?.totalAmount?.toFixed(2) || '0.00'}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium">Total Payable (Accrued)</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold">
+              ₹{aggregatedTotals?.total?.toFixed(2) || '0.00'}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium text-green-600">Actually Collected</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold text-green-700">
+              ₹{aggregatedTotals?.totalCollected?.toFixed(2) || '0.00'}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium text-red-600">Pending Collections</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold text-red-700">
+              ₹{aggregatedTotals?.totalPending?.toFixed(2) || '0.00'}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
@@ -355,28 +400,39 @@ export const VendorPayableReportTable = () => {
             <TableRow>
               <TableHead>Payee Type</TableHead>
               <TableHead>Payee Name</TableHead>
+              <TableHead>Service Gross Amount</TableHead>
               <TableHead>Service Platform Fee</TableHead>
               <TableHead>Service Tax</TableHead>
-              <TableHead>Total</TableHead>
+              <TableHead>Total Payable</TableHead>
+              <TableHead>Actually Collected</TableHead>
+              <TableHead>Pending</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedData.map((item: any, index: number) => (
               <TableRow key={startIndex + index}>
-                <TableCell className="font-medium">{item.payeeType}</TableCell>
-                <TableCell>{item.payeeName}</TableCell>
-                <TableCell>₹{item.servicePlatformFee.toFixed(2)}</TableCell>
-                <TableCell>₹{item.serviceTax.toFixed(2)}</TableCell>
-                <TableCell>₹{item.amountPaid.toFixed(2)}</TableCell>
+                <TableCell className="font-medium">{item["Payee Type"]}</TableCell>
+                <TableCell>{item["Payee Name"]}</TableCell>
+                <TableCell>₹{item["Service Gross Amount"]?.toFixed(2)}</TableCell>
+                <TableCell>₹{item["Service Platform Fee"]?.toFixed(2)}</TableCell>
+                <TableCell>₹{item["Service Tax (₹)"]?.toFixed(2)}</TableCell>
+                <TableCell className="font-bold text-blue-700">₹{item["Total"]?.toFixed(2)}</TableCell>
+                <TableCell className="text-green-700 font-medium">₹{item["Actually Collected"]?.toFixed(2) || 0}</TableCell>
+                <TableCell className={`font-semibold ${(item["Pending Amount"] || 0) > 0 ? 'text-red-700' : 'text-gray-500'}`}>
+                  ₹{item["Pending Amount"]?.toFixed(2) || 0}
+                </TableCell>
               </TableRow>
             ))}
             {/* Aggregated Totals Row */}
             {salesData.length > 0 && aggregatedTotals && (
               <TableRow className="bg-muted font-semibold">
                 <TableCell colSpan={2}>TOTAL</TableCell>
+                <TableCell>₹{aggregatedTotals.totalAmount?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.platformFee?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.serviceTax?.toFixed(2)}</TableCell>
-                <TableCell>₹{aggregatedTotals.finalAmount?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.total?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.totalCollected?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.totalPending?.toFixed(2)}</TableCell>
               </TableRow>
             )}
           </TableBody>

@@ -15,3 +15,5 @@ export { VendorPayoutSettlementReportProductTable } from './VendorPayoutSettleme
 export { VendorPayableReportTable } from './VendorPayableReportTable';
 export { VendorPayableReportProductTable } from './VendorPayableReportProductTable';
 export { ReferralReportTable } from './ReferralReportTable';
+export { SettlementHistoryReportTable } from './SettlementHistoryReportTable';
+export { PlatformCollectionsReportTable } from './PlatformCollectionsReportTable';

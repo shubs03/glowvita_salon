@@ -125,7 +125,7 @@ export const glowvitaApi = createApi({
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "Regions", "PublicAllOffers", "AddOns", "PendingWeddingPackages",
-    "ReferralReport", "ClientWallet", "ClientWithdrawals", "WalletSettings", "Inventory", "Doctor"
+    "ReferralReport", "ClientWallet", "ClientWithdrawals", "WalletSettings", "Inventory", "SettlementHistoryReport", "PlatformCollectionsReport", "Doctor"
   ],
 
   endpoints: (builder) => ({
@@ -1489,6 +1489,28 @@ export const glowvitaApi = createApi({
         params: params || {}
       }),
       providesTags: ["ReferralReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
+
+    // Settlement History Report
+    getSettlementHistoryReport: builder.query({
+      query: (params) => ({
+        url: "/admin/reports/settlementreport/history",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["SettlementHistoryReport"],
+      transformResponse: (response) => (response && response.success ? response : {}),
+    }),
+
+    // Platform Collections Report
+    getPlatformCollectionsReport: builder.query({
+      query: (params) => ({
+        url: "/admin/reports/platform-collections",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["PlatformCollectionsReport"],
       transformResponse: (response) => (response && response.success ? response.data : {}),
     }),
     // Admin Product Categories 
@@ -3297,6 +3319,8 @@ export const {
   useGetVendorPayoutSettlementReportProductQuery,
   useGetVendorPayableReportProductQuery,
   useGetReferralReportQuery,
+  useGetSettlementHistoryReportQuery,
+  useGetPlatformCollectionsReportQuery,
   // Product Report Hooks
   useGetProductSummaryReportQuery,
   useGetSalesByProductReportQuery,

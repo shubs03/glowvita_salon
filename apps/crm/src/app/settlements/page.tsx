@@ -6,7 +6,7 @@ import { Card, CardContent } from "@repo/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@repo/ui/dialog';
 import { Button } from "@repo/ui/button";
 import { toast } from 'sonner';
-import { Loader2 } from "lucide-react";
+import { Loader2, DollarSign, CheckCircle } from "lucide-react";
 
 // Import types
 import { SettlementData } from "./types";
@@ -113,23 +113,15 @@ export default function SettlementsPage() {
     setSelectedSettlement(null);
   };
 
-  // Payment handler
+  // Payment handler — vendor can only record payments TO admin (Pay at Salon fees)
   const handlePayVendor = async (amount: number, paymentMethod: string, transactionId?: string, notes?: string) => {
     if (!selectedSettlement) return;
 
-    // Determine settlement type for backend
-    const type = selectedSettlement.netSettlement > 0
-      ? 'Payment to Vendor' // Admin sending to Vendor
-      : 'Payment to Admin';  // Vendor sending to Admin
-
-    const direction = selectedSettlement.netSettlement < 0 ? 'vendor_owes' : 'admin_owes';
+    // Vendors can only record paying admin (platform fees for Pay at Salon appointments)
+    const type = 'Payment to Admin';
 
     setIsProcessingPayment(true);
-    const toastId = toast.loading(
-      type === 'Payment to Admin'
-        ? "Recording payment from vendor..."
-        : "Recording payment to vendor..."
-    );
+    const toastId = toast.loading("Recording your payment to admin...");
 
     try {
       const response = await fetch('/api/crm/settlements', {
@@ -140,7 +132,7 @@ export default function SettlementsPage() {
         body: JSON.stringify({
           vendorId: selectedSettlement.vendorId,
           amount,
-          type, // Use the specific type expected by the backend
+          type,
           paymentMethod,
           transactionId,
           notes,
@@ -150,26 +142,19 @@ export default function SettlementsPage() {
       const data = await response.json();
 
       if (data.success) {
-        toast.success(
-          direction === 'vendor_owes'
-            ? "Payment received successfully"
-            : "Payment sent successfully",
-          {
-            description: direction === 'vendor_owes'
-              ? `₹${amount.toFixed(2)} received from ${selectedSettlement.vendorName}`
-              : `₹${amount.toFixed(2)} paid to ${selectedSettlement.vendorName}`,
-          }
-        );
+        toast.success("Payment recorded successfully", {
+          description: `₹${amount.toFixed(2)} marked as paid to Admin`,
+        });
         handleClosePaymentModal();
-        fetchSettlements(); // Refresh data
+        fetchSettlements();
       } else {
-        toast.error("Failed to process settlement", {
+        toast.error("Failed to process payment", {
           description: data.message,
         });
       }
     } catch (error: any) {
-      console.error("Error processing settlement:", error);
-      toast.error("Failed to process settlement", {
+      console.error("Error processing payment:", error);
+      toast.error("Failed to process payment", {
         description: error?.message || "Please try again.",
       });
     } finally {
@@ -359,12 +344,26 @@ export default function SettlementsPage() {
                                 View Details
                               </Button>
                               {settlement.status !== 'Paid' && direction.amount > 0 && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleOpenPaymentModal(settlement)}
-                                >
-                                  {direction.type === 'vendor_owes' ? 'Collect Payment' : 'Send Payment'}
-                                </Button>
+                                direction.type === 'vendor_owes' ? (
+                                  // Vendor owes admin platform fees (Pay at Salon) — vendor records their payment
+                                  <Button
+                                    size="sm"
+                                    className="bg-red-600 hover:bg-red-700 text-white"
+                                    onClick={() => handleOpenPaymentModal(settlement)}
+                                  >
+                                    Pay Admin
+                                  </Button>
+                                ) : direction.type === 'admin_owes' ? (
+                                  // Admin owes vendor (Pay Online) — open details to see payout breakdown
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-orange-400 text-orange-600 hover:bg-orange-50"
+                                    onClick={() => handleOpenModal(settlement)}
+                                  >
+                                    Awaiting Payout ₹{direction.amount.toFixed(0)}
+                                  </Button>
+                                ) : null
                               )}
                             </div>
                           </td>
@@ -441,30 +440,148 @@ export default function SettlementsPage() {
                 </div>
 
                 {/* Financial Summary */}
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
                   <div>
-                    <div className="text-sm text-muted-foreground">Total Amount</div>
+                    <div className="text-sm text-muted-foreground">Total Volume</div>
                     <div className="text-xl font-bold">₹{selectedSettlement.totalAmount.toFixed(2)}</div>
                   </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Platform Fee</div>
-                    <div className="text-xl font-bold text-orange-600">₹{selectedSettlement.platformFeeTotal.toFixed(2)}</div>
+                  <div className="border-l pl-4">
+                    <div className="text-sm text-green-600 font-medium">From Online Bookings</div>
+                    <div className="text-xs text-muted-foreground">Service amount admin owes you</div>
+                    <div className="text-xl font-bold text-green-600">₹{selectedSettlement.adminOwesVendor.toFixed(2)}</div>
                   </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Service Tax</div>
-                    <div className="text-xl font-bold text-orange-600">₹{selectedSettlement.serviceTaxTotal.toFixed(2)}</div>
+                  <div className="border-l pl-4">
+                    <div className="text-sm text-red-600 font-medium">From Salon Bookings</div>
+                    <div className="text-xs text-muted-foreground">Fees you owe admin</div>
+                    <div className="text-xl font-bold text-red-600">₹{selectedSettlement.vendorOwesAdmin.toFixed(2)}</div>
                   </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Admin Receivable</div>
-                    <div className="text-xl font-bold text-green-600">₹{selectedSettlement.adminReceivableAmount.toFixed(2)}</div>
+                  <div className="border-l pl-4">
+                    <div className="text-sm font-medium text-blue-600">Net Pending</div>
+                    <div className="text-xl font-bold text-blue-600">₹{selectedSettlement.amountPending.toFixed(2)}</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {selectedSettlement.netSettlement > 0 ? "Receivable from Admin" : "Payable to Admin"}
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Vendor Amount</div>
-                    <div className="text-xl font-bold text-blue-600">₹{selectedSettlement.vendorAmount.toFixed(2)}</div>
+                </div>
+
+                {/* Status-specific breakdown */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 border rounded-lg bg-orange-50/50">
+                    <div className="text-xs font-bold uppercase tracking-wider text-orange-800 mb-1">Tax & Fees Breakdown</div>
+                    <div className="flex justify-between text-sm text-orange-900">
+                      <span>Platform Fees:</span>
+                      <span className="font-semibold">₹{selectedSettlement.platformFeeTotal.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-orange-900">
+                      <span>Service Tax:</span>
+                      <span className="font-semibold">₹{selectedSettlement.serviceTaxTotal.toFixed(2)}</span>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">Pending Amount</div>
-                    <div className="text-xl font-bold text-red-600">₹{selectedSettlement.amountPending.toFixed(2)}</div>
+                  <div className="p-3 border rounded-lg bg-blue-50/50">
+                    <div className="text-xs font-bold uppercase tracking-wider text-blue-800 mb-1">Settlement Summary</div>
+                    <div className="flex justify-between text-sm text-blue-900">
+                      <span>Amount Settled:</span>
+                      <span className="font-semibold">₹{(selectedSettlement.netSettlement > 0 ?
+                        selectedSettlement.paymentHistory.filter(p => p.type === "Payment to Vendor").reduce((acc, p) => acc + p.amount, 0) :
+                        selectedSettlement.paymentHistory.filter(p => p.type === "Payment to Admin").reduce((acc, p) => acc + p.amount, 0)
+                      ).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-blue-900 border-t mt-1 pt-1">
+                      <span>Current Status:</span>
+                      <span className="font-bold">{selectedSettlement.status}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment History and Actions */}
+                <div className="flex flex-col md:flex-row justify-between items-start gap-6">
+                  {/* Payment History */}
+                  <div className="flex-1 w-full">
+                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" /> Payment History
+                    </h3>
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            <th className="px-3 py-2 text-left">Date</th>
+                            <th className="px-3 py-2 text-left">Type</th>
+                            <th className="px-3 py-2 text-left">Method</th>
+                            <th className="px-3 py-2 text-left">Ref ID</th>
+                            <th className="px-3 py-2 text-right">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {selectedSettlement.paymentHistory.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground italic">
+                                No payments recorded yet for this period.
+                              </td>
+                            </tr>
+                          ) : (
+                            selectedSettlement.paymentHistory.map((payment, idx) => (
+                              <tr key={idx}>
+                                <td className="px-3 py-2">{new Date(payment.paymentDate).toLocaleDateString()}</td>
+                                <td className="px-3 py-2">
+                                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${payment.type === 'Payment to Admin' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
+                                    }`}>
+                                    {payment.type === 'Payment to Admin' ? 'Settled to Admin' : 'Received Payout'}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2">{payment.paymentMethod}</td>
+                                <td className="px-3 py-2 font-mono text-xs">{payment.transactionId || '---'}</td>
+                                <td className="px-3 py-2 text-right font-semibold">₹{payment.amount.toFixed(2)}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="w-full md:w-80 space-y-4">
+                    <Card className="bg-muted/30 border-dashed">
+                      <CardContent className="p-4">
+                        <h4 className="font-bold text-sm mb-2 uppercase tracking-wider">Quick Actions</h4>
+                        {selectedSettlement.amountPending > 0 ? (
+                          selectedSettlement.netSettlement < 0 ? (
+                            <div className="space-y-3">
+                              <p className="text-xs text-muted-foreground italic">
+                                You have a pending settlement of ₹{selectedSettlement.amountPending.toFixed(2)} to pay to Admin for Salon bookings.
+                              </p>
+                              <Button
+                                className="w-full bg-red-600 hover:bg-red-700 text-white font-bold"
+                                onClick={() => handleOpenPaymentModal(selectedSettlement)}
+                              >
+                                Record Payment to Admin
+                              </Button>
+                              <p className="text-[10px] text-center text-muted-foreground">
+                                (For Cash, Agent, or Online payments)
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              <p className="text-xs text-muted-foreground italic">
+                                Admin owes you ₹{selectedSettlement.amountPending.toFixed(2)} for Online bookings. This will be automatically disbursed to your bank account.
+                              </p>
+                              <Button
+                                variant="outline"
+                                className="w-full border-orange-400 text-orange-600 cursor-default hover:bg-transparent"
+                              >
+                                Awaiting Admin Payout
+                              </Button>
+                            </div>
+                          )
+                        ) : (
+                          <div className="text-center py-4">
+                            <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                            <p className="text-sm font-bold text-green-700">Fully Settled</p>
+                            <p className="text-xs text-muted-foreground mt-1">All dues for this period have been cleared.</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
                   </div>
                 </div>
 
@@ -478,22 +595,34 @@ export default function SettlementsPage() {
                           <th className="px-3 py-2 text-left">Date</th>
                           <th className="px-3 py-2 text-left">Client</th>
                           <th className="px-3 py-2 text-left">Service</th>
+                          <th className="px-3 py-2 text-left">Method</th>
                           <th className="px-3 py-2 text-right">Amount</th>
-                          <th className="px-3 py-2 text-right">Platform Fee</th>
-                          <th className="px-3 py-2 text-right">Tax</th>
+                          <th className="px-3 py-2 text-right">Owner Owed</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {selectedSettlement.appointments.map((appt) => (
-                          <tr key={appt._id}>
-                            <td className="px-3 py-2">{new Date(appt.date).toLocaleDateString()}</td>
-                            <td className="px-3 py-2">{appt.clientName}</td>
-                            <td className="px-3 py-2">{appt.serviceName}</td>
-                            <td className="px-3 py-2 text-right">₹{appt.finalAmount.toFixed(2)}</td>
-                            <td className="px-3 py-2 text-right text-orange-600">₹{appt.platformFee.toFixed(2)}</td>
-                            <td className="px-3 py-2 text-right text-orange-600">₹{appt.serviceTax.toFixed(2)}</td>
-                          </tr>
-                        ))}
+                        {selectedSettlement.appointments.map((appt) => {
+                          const ownerOwed = appt.paymentMethod === 'Pay Online'
+                            ? appt.totalAmount // What admin owes vendor
+                            : appt.platformFee + appt.serviceTax; // What vendor owes admin
+
+                          return (
+                            <tr key={appt._id}>
+                              <td className="px-3 py-2">{new Date(appt.date).toLocaleDateString()}</td>
+                              <td className="px-3 py-2">{appt.clientName}</td>
+                              <td className="px-3 py-2">{appt.serviceName}</td>
+                              <td className="px-3 py-2">
+                                <span className={`text-[10px] font-bold uppercase ${appt.paymentMethod === 'Pay Online' ? 'text-blue-600' : 'text-orange-600'}`}>
+                                  {appt.paymentMethod}
+                                </span>
+                              </td>
+                              <td className="px-3 py-2 text-right">₹{appt.finalAmount.toFixed(2)}</td>
+                              <td className={`px-3 py-2 text-right font-medium ${appt.paymentMethod === 'Pay Online' ? 'text-green-600' : 'text-red-600'}`}>
+                                {appt.paymentMethod === 'Pay Online' ? '+' : '-'}₹{ownerOwed.toFixed(2)}
+                              </td>
+                            </tr>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -516,13 +645,11 @@ export default function SettlementsPage() {
                 <>
                   <DialogHeader>
                     <DialogTitle>
-                      {direction.type === 'vendor_owes' ? 'Send Payment to Admin' : 'Collect Payment from Vendor'}
+                      Pay Admin — Platform Fees
                     </DialogTitle>
                     <DialogDescription>
-                      {direction.type === 'vendor_owes'
-                        ? `Record payment received from ${selectedSettlement.vendorName}`
-                        : `Record payment to be given to ${selectedSettlement.vendorName}`
-                      }
+                      Record your payment of platform fees owed to Admin for Pay at Salon appointments.
+                      Pending: ₹{direction.amount.toFixed(2)}
                     </DialogDescription>
                   </DialogHeader>
 
@@ -568,11 +695,6 @@ function PaymentForm({
       return;
     }
 
-    if (amountNum > settlement.amountPending) {
-      toast.error("Amount cannot exceed pending amount");
-      return;
-    }
-
     onSubmit(amountNum, paymentMethod, transactionId || undefined, notes || undefined);
   };
 
@@ -586,8 +708,7 @@ function PaymentForm({
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           className="w-full px-3 py-2 border rounded-md"
-          placeholder="Enter amount"
-          max={settlement.amountPending}
+          placeholder="Enter amount (e.g. amount paid to Agent)"
           required
         />
         <div className="text-xs text-muted-foreground mt-1">
@@ -605,7 +726,9 @@ function PaymentForm({
         >
           <option value="Bank Transfer">Bank Transfer</option>
           <option value="UPI">UPI</option>
+          <option value="Online">Online</option>
           <option value="Cash">Cash</option>
+          <option value="Agent">Agent</option>
           <option value="Cheque">Cheque</option>
         </select>
       </div>
