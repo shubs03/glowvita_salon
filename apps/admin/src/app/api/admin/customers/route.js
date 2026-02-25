@@ -16,44 +16,44 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Validate models are properly imported
     if (!ClientModel) {
         console.error('ClientModel is not properly imported');
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: false,
-            message: "ClientModel is not properly imported" 
+            message: "ClientModel is not properly imported"
         }, { status: 500 });
     }
     if (!UserModel) {
         console.error('UserModel is not properly imported');
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: false,
-            message: "UserModel is not properly imported" 
+            message: "UserModel is not properly imported"
         }, { status: 500 });
     }
     if (!AppointmentModel) {
         console.error('AppointmentModel is not properly imported');
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: false,
-            message: "AppointmentModel is not properly imported" 
+            message: "AppointmentModel is not properly imported"
         }, { status: 500 });
     }
     if (!VendorModel) {
         console.error('VendorModel is not properly imported');
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: false,
-            message: "VendorModel is not properly imported" 
+            message: "VendorModel is not properly imported"
         }, { status: 500 });
     }
-    
+
     try {
         await _db();
         console.log('Database connected successfully');
-        
+
         // Test database connection
         try {
             const testResult = await UserModel.findOne({}).select('_id').lean();
             console.log('Database connection test successful, sample result:', testResult);
         } catch (testError) {
             console.error('Database connection test failed:', testError);
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: false,
                 message: "Database connection test failed",
                 error: testError.message
@@ -61,17 +61,17 @@ export const GET = authMiddlewareAdmin(async (req) => {
         }
     } catch (dbError) {
         console.error('Database connection error:', dbError);
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: false,
             message: "Database connection failed",
             error: dbError.message
         }, { status: 500 });
     }
-    
+
     try {
         console.log('=== ADMIN CUSTOMERS API REQUEST ===');
         console.log('Request URL:', req.url);
-        
+
         const url = new URL(req.url);
         let page = parseInt(url.searchParams.get('page')) || 1;
         let limit = parseInt(url.searchParams.get('limit')) || 10;
@@ -79,66 +79,60 @@ export const GET = authMiddlewareAdmin(async (req) => {
         const status = url.searchParams.get('status') || '';
         let source = url.searchParams.get('source') || 'all'; // 'online', 'offline', or 'all'
         let vendorId = url.searchParams.get('vendorId') || '';
-        
-        console.log('Parsed parameters:', { page, limit, search, status, source, vendorId });
-        
+        const regionId = url.searchParams.get('regionId');
+
+        console.log('Parsed parameters:', { page, limit, search, status, source, vendorId, regionId });
+
+        // Build region query for consistency across all models
+        const { getRegionQuery } = await import("@repo/lib/utils/regionQuery");
+        const regionQuery = getRegionQuery(req.user, regionId && regionId !== 'all' ? regionId : null);
+        console.log('Applied region filter:', JSON.stringify(regionQuery));
+
         // Validate parameters
         if (page < 1) page = 1;
         if (limit < 1 || limit > 100) limit = 10;
         if (!['online', 'offline', 'all'].includes(source)) source = 'all';
-        
+
         // Validate vendorId if provided
         if (vendorId && vendorId.length !== 24) {
             console.log('Invalid vendorId provided, ignoring:', vendorId);
             vendorId = '';
         }
-        
+
         // Test if models are working
         try {
             const userModelCount = await UserModel.countDocuments({});
             console.log('User model count:', userModelCount);
-            
+
             const appointmentModelCount = await AppointmentModel.countDocuments({});
             console.log('Appointment model count:', appointmentModelCount);
-            
+
             const clientModelCount = await ClientModel.countDocuments({});
             console.log('Client model count:', clientModelCount);
-            
+
             const vendorModelCount = await VendorModel.countDocuments({});
             console.log('Vendor model count:', vendorModelCount);
-            
-            // Test fetching a sample user
-            await UserModel.findOne({}).select('_id firstName lastName').lean();
-            
-            // Test fetching a sample appointment
-            await AppointmentModel.findOne({}).select('_id client').lean();
-            
-            // Test fetching a sample client
-            await ClientModel.findOne({}).select('_id fullName').lean();
-            
-            // Test fetching a sample vendor
-            await VendorModel.findOne({}).select('_id businessName').lean();
         } catch (modelTestError) {
             console.error('Model test failed:', modelTestError);
-            return NextResponse.json({ 
+            return NextResponse.json({
                 success: false,
                 message: "Model test failed",
                 error: modelTestError.message
             }, { status: 500 });
         }
-        
+
         let allClients = [];
         let totalOffline = 0;
-        
+
         // Handle different sources
         if (source === 'offline' || source === 'all') {
             // Fetch offline clients from ClientModel
-            const query = {};
-            
+            const query = { ...regionQuery };
+
             if (status && status !== 'all') {
                 query.status = status;
             }
-            
+
             if (search) {
                 query.$or = [
                     { fullName: { $regex: search, $options: 'i' } },
@@ -146,12 +140,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
                     { phone: { $regex: search, $options: 'i' } },
                 ];
             }
-            
+
             // If vendorId is specified, filter by vendor
             if (vendorId) {
                 query.vendorId = vendorId;
             }
-            
+
             let clients = [];
             try {
                 clients = await ClientModel.find(query)
@@ -164,7 +158,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 console.error('Error fetching offline clients:', clientError);
                 clients = [];
             }
-            
+
             let total = 0;
             try {
                 total = await ClientModel.countDocuments(query);
@@ -172,17 +166,17 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 console.error('Error counting offline clients:', countError);
                 total = 0;
             }
-            
+
             // Add source field to identify offline clients
             const offlineClients = clients.map(client => ({
                 ...client,
                 source: 'offline'
             }));
-            
+
             // If we only want offline clients, return them
             if (source === 'offline') {
                 console.log('Returning offline clients only:', offlineClients.length);
-                return NextResponse.json({ 
+                return NextResponse.json({
                     success: true,
                     data: offlineClients,
                     pagination: {
@@ -193,21 +187,21 @@ export const GET = authMiddlewareAdmin(async (req) => {
                     }
                 }, { status: 200 });
             }
-            
+
             // If we want all clients, we'll combine with online clients later
             // For now, store offline clients
             allClients = offlineClients;
             totalOffline = total;
-            
+
             // Debug logging
             console.log('Offline clients found:', offlineClients.length);
         }
-        
+
         // Fetch online clients (all users from user table)
         if (source === 'online' || source === 'all') {
-            // Build query for users (online clients only)
-            let userQuery = {};
-            
+            // Build query for users (online clients only) - inherit from global region filter
+            let userQuery = { ...regionQuery };
+
             if (search) {
                 userQuery.$or = [
                     { firstName: { $regex: search, $options: 'i' } },
@@ -216,13 +210,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
                     { mobileNo: { $regex: search, $options: 'i' } }
                 ];
             }
-            
+
             // Find all unique user IDs who have appointments
             let appointmentQuery = {};
             if (vendorId) {
                 appointmentQuery.vendorId = vendorId;
             }
-            
+
             let appointments = [];
             try {
                 appointments = await AppointmentModel.find(appointmentQuery)
@@ -233,17 +227,17 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 console.error('Error fetching appointments:', appointmentError);
                 appointments = [];
             }
-            
+
             // Filter appointments by vendor if needed
             let filteredAppointments = appointments;
             if (vendorId) {
-                filteredAppointments = appointments.filter(appt => 
+                filteredAppointments = appointments.filter(appt =>
                     appt.vendorId && appt.vendorId.toString() === vendorId
                 );
             }
-            
+
             const userIds = [...new Set(filteredAppointments.map(appt => appt.client.toString()))];
-            
+
             // For 'all' source, we want to show all users from the user table
             // For 'online' source, we still filter by users with appointments
             if (source === 'online') {
@@ -257,18 +251,18 @@ export const GET = authMiddlewareAdmin(async (req) => {
             }
             // For 'all' source, we don't add any ID filter, so we get all users
             console.log('Final user query for execution:', JSON.stringify(userQuery));
-            
+
             // Debug logging
             console.log('User IDs found from appointments:', userIds.length);
             console.log('Source filter:', source);
             console.log('User query:', JSON.stringify(userQuery));
             console.log('Vendor ID filter:', vendorId);
-            
+
             const skip = (page - 1) * limit;
-            
+
             // Debug logging
             console.log('Final user query being executed:', JSON.stringify(userQuery));
-            
+
             // Fetch online clients (users who booked appointments) with booking count
             console.log('Executing user query:', JSON.stringify(userQuery));
             let onlineClients = [];
@@ -285,16 +279,23 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 // Return empty array if there's an error
                 onlineClients = [];
             }
-            
+
             let onlineTotal = 0;
             try {
                 onlineTotal = await UserModel.countDocuments(userQuery);
                 console.log('Online clients total count:', onlineTotal);
+
+                // Debugging for "empty" results when region is filtered
+                if (onlineTotal === 0 && regionQuery.regionId) {
+                    const sample = await UserModel.findOne({}).select('regionId firstName').lean();
+                    console.log('[DEBUG] No online users found for region filter:', JSON.stringify(regionQuery));
+                    console.log('[DEBUG] Sample user in DB:', sample ? { ...sample, regionId: sample.regionId?.toString() } : 'No users at all');
+                }
             } catch (countError) {
                 console.error('Error counting users:', countError);
                 onlineTotal = 0;
             }
-            
+
             // Add booking count for each online client using aggregation for better performance
             if (onlineClients.length > 0) {
                 const userIdsForCount = onlineClients.map(user => user._id);
@@ -302,7 +303,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 if (vendorId) {
                     appointmentQueryForCount.vendorId = vendorId;
                 }
-                
+
                 // Use aggregation to get booking counts for all users in one query
                 let bookingCounts = [];
                 try {
@@ -314,22 +315,22 @@ export const GET = authMiddlewareAdmin(async (req) => {
                     console.error('Error aggregating appointments:', aggregateError);
                     bookingCounts = [];
                 }
-                
+
                 // Create a map of user ID to booking count
                 const bookingCountMap = {};
                 bookingCounts.forEach(item => {
                     bookingCountMap[item._id.toString()] = item.count;
                 });
-                
+
                 // Add booking count to each user
                 onlineClients.forEach(user => {
                     user.bookingCount = bookingCountMap[user._id.toString()] || 0;
                 });
             }
-            
+
             // Debug logging
             console.log('Online clients found:', onlineClients.length);
-            
+
             // Transform online clients to match the expected structure
             const transformedOnlineClients = onlineClients.map(user => ({
                 _id: user._id,
@@ -351,7 +352,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 createdAt: user.createdAt,
                 updatedAt: user.updatedAt
             }));
-            
+
             // Get vendor information for each client
             const vendorIds = [...new Set(filteredAppointments.map(appt => appt.vendorId).filter(Boolean))];
             let vendors = [];
@@ -363,31 +364,31 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 console.error('Error fetching vendors:', vendorError);
                 vendors = [];
             }
-                
+
             const vendorMap = vendors.reduce((acc, vendor) => {
                 acc[vendor._id.toString()] = vendor.businessName;
                 return acc;
             }, {});
-            
+
             // Add vendor names and IDs to clients
             const onlineClientsWithVendors = transformedOnlineClients.map(client => {
                 // Find the appointment for this client to get the vendorId
-                const appointment = filteredAppointments.find(appt => 
+                const appointment = filteredAppointments.find(appt =>
                     appt.client.toString() === client._id.toString()
                 );
-                
+
                 return {
                     ...client,
                     vendorId: appointment ? appointment.vendorId : null,
-                    vendorName: appointment && appointment.vendorId ? 
+                    vendorName: appointment && appointment.vendorId ?
                         vendorMap[appointment.vendorId.toString()] || 'Unknown Vendor' : 'N/A'
                 };
             });
-            
+
             // If we only want online clients, return them
             if (source === 'online') {
                 console.log('Returning online clients only:', onlineClientsWithVendors.length);
-                return NextResponse.json({ 
+                return NextResponse.json({
                     success: true,
                     data: onlineClientsWithVendors,
                     pagination: {
@@ -398,29 +399,29 @@ export const GET = authMiddlewareAdmin(async (req) => {
                     }
                 }, { status: 200 });
             }
-            
+
             // If we want all clients, combine with offline clients
             if (source === 'all') {
                 // Combine offline and online clients
                 const combinedClients = [...(allClients || []), ...onlineClientsWithVendors];
-                
+
                 // Remove duplicates by _id
-                const uniqueClients = combinedClients.filter((client, index, self) => 
+                const uniqueClients = combinedClients.filter((client, index, self) =>
                     index === self.findIndex(c => c._id.toString() === client._id.toString())
                 );
-                
+
                 // Debug logging
                 console.log('Combined clients (all sources):', uniqueClients.length);
                 console.log('All clients (offline):', allClients.length);
                 console.log('Online clients with vendors:', onlineClientsWithVendors.length);
-                
+
                 // For pagination with 'all' source, we'll use a simple approach
                 // In a real application, you'd want more sophisticated pagination
                 const paginatedClients = uniqueClients.slice((page - 1) * limit, page * limit);
-                
+
                 console.log('Final response data length:', paginatedClients.length);
-                
-                const response = { 
+
+                const response = {
                     success: true,
                     data: paginatedClients,
                     pagination: {
@@ -430,24 +431,24 @@ export const GET = authMiddlewareAdmin(async (req) => {
                         totalPages: Math.ceil(uniqueClients.length / limit)
                     }
                 };
-                
+
                 console.log('=== FINAL RESPONSE ===', JSON.stringify(response, null, 2));
-                
+
                 return NextResponse.json(response, { status: 200 });
             }
         }
-        
+
         console.log('Invalid source parameter:', source);
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: false,
-            message: "Invalid source parameter" 
+            message: "Invalid source parameter"
         }, { status: 400 });
     } catch (error) {
         console.error('=== ERROR FETCHING CUSTOMERS ===', error);
-        return NextResponse.json({ 
+        return NextResponse.json({
             success: false,
-            message: "Failed to fetch customers", 
-            error: error.message 
+            message: "Failed to fetch customers",
+            error: error.message
         }, { status: 500 });
     }
 }, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
