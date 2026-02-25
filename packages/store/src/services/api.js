@@ -125,7 +125,7 @@ export const glowvitaApi = createApi({
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "Regions", "PublicAllOffers", "AddOns", "PendingWeddingPackages",
-    "ReferralReport", "ClientWallet", "ClientWithdrawals", "WalletSettings", "Inventory"
+    "ReferralReport", "ClientWallet", "ClientWithdrawals", "WalletSettings", "Inventory", "SettlementHistoryReport", "PlatformCollectionsReport"
   ],
 
   endpoints: (builder) => ({
@@ -1450,6 +1450,28 @@ export const glowvitaApi = createApi({
       providesTags: ["ReferralReport"],
       transformResponse: (response) => (response && response.success ? response.data : {}),
     }),
+
+    // Settlement History Report
+    getSettlementHistoryReport: builder.query({
+      query: (params) => ({
+        url: "/admin/reports/settlementreport/history",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["SettlementHistoryReport"],
+      transformResponse: (response) => (response && response.success ? response : {}),
+    }),
+
+    // Platform Collections Report
+    getPlatformCollectionsReport: builder.query({
+      query: (params) => ({
+        url: "/admin/reports/platform-collections",
+        method: "GET",
+        params: params || {}
+      }),
+      providesTags: ["PlatformCollectionsReport"],
+      transformResponse: (response) => (response && response.success ? response.data : {}),
+    }),
     // Admin Product Categories 
 
     getAdminProductCategories: builder.query({
@@ -2163,7 +2185,7 @@ export const glowvitaApi = createApi({
       query: () => ({ url: "/client/referrals", method: "GET" }),
       providesTags: ["ClientReferrals"],
     }),
-    
+
     // Claim Referral Bonus Endpoint (Web App - for customers)
     claimReferralBonus: builder.mutation({
       query: (data) => ({ url: "/client/referrals", method: "POST", body: data }),
@@ -3241,6 +3263,8 @@ export const {
   useGetVendorPayoutSettlementReportProductQuery,
   useGetVendorPayableReportProductQuery,
   useGetReferralReportQuery,
+  useGetSettlementHistoryReportQuery,
+  useGetPlatformCollectionsReportQuery,
   // Product Report Hooks
   useGetProductSummaryReportQuery,
   useGetSalesByProductReportQuery,

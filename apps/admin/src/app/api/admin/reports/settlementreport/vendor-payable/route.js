@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
+import VendorSettlementPaymentModel from '@repo/lib/models/Vendor/VendorSettlementPayment.model';
 import { authMiddlewareAdmin } from "../../../../../../middlewareAdmin";
 import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 
@@ -134,12 +135,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
         $project: {
           _id: 0,
           vendorId: "$_id.vendorId",
-          businessName: "$_id.businessName",
+          "Payee Type": { $literal: "Vendor" },
+          "Payee Name": "$_id.businessName",
+          "Service Gross Amount": "$totalAmount",
+          "Service Platform Fee": "$platformFee",
+          "Service Tax (₹)": "$serviceTax",
+          "Total": { $add: ["$platformFee", "$serviceTax"] },
           city: "$_id.city",
-          totalAmount: 1,
-          platformFee: 1,
-          serviceTax: 1,
-          finalAmount: 1,
           appointmentCount: 1,
           completedAppointments: 1,
           confirmedAppointments: 1,
@@ -151,7 +153,41 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Execute aggregation
     const results = await AppointmentModel.aggregate(pipeline);
 
-    console.log("Vendor payable report results:", results);
+    // Also fetch actual payments for these vendors in the same period
+    const paymentFilter = {
+      ...dateFilter,
+      ...regionQuery,
+      type: "Payment to Admin"
+    };
+
+    const actualPayments = await VendorSettlementPaymentModel.aggregate([
+      { $match: paymentFilter },
+      {
+        $group: {
+          _id: "$vendorId",
+          paidAmount: { $sum: "$amount" }
+        }
+      }
+    ]);
+
+    const paymentMap = actualPayments.reduce((acc, curr) => {
+      acc[curr._id.toString()] = curr.paidAmount;
+      return acc;
+    }, {});
+
+    // Add payment info to results
+    const resultsWithPayments = results.map(vendor => {
+      const collectedAmount = paymentMap[vendor.vendorId.toString()] || 0;
+      const totalPayable = vendor.Total || 0; // Correctly calculate what's payable to admin
+      return {
+        ...vendor,
+        "Actually Collected": collectedAmount,
+        "Total Payable to Admin": totalPayable,
+        "Pending Amount": Math.max(0, totalPayable - collectedAmount)
+      };
+    });
+
+    console.log("Vendor payable report results with payments:", resultsWithPayments);
 
     // Get unique cities for filter dropdown
     const cityPipeline = [
@@ -193,10 +229,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Calculate aggregated totals
     const aggregatedTotals = results.reduce((totals, vendor) => {
-      totals.totalAmount += vendor.totalAmount || 0;
-      totals.platformFee += vendor.platformFee || 0;
-      totals.serviceTax += vendor.serviceTax || 0;
-      totals.finalAmount += vendor.finalAmount || 0;
+      totals.totalAmount += vendor["Service Gross Amount"] || 0;
+      totals.platformFee += vendor["Service Platform Fee"] || 0;
+      totals.serviceTax += vendor["Service Tax (₹)"] || 0;
+      totals.total = vendor.Total ? (totals.total + vendor.Total) : totals.total;
+      totals.totalCollected = (totals.totalCollected || 0) + (vendor["Actually Collected"] || 0);
+      totals.totalPending = (totals.totalPending || 0) + (vendor["Pending Amount"] || 0);
       totals.appointmentCount += vendor.appointmentCount || 0;
       totals.completedAppointments += vendor.completedAppointments || 0;
       totals.confirmedAppointments += vendor.confirmedAppointments || 0;
@@ -206,7 +244,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
       totalAmount: 0,
       platformFee: 0,
       serviceTax: 0,
-      finalAmount: 0,
+      total: 0,
+      totalCollected: 0,
+      totalPending: 0,
       appointmentCount: 0,
       completedAppointments: 0,
       confirmedAppointments: 0,
@@ -215,7 +255,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     return NextResponse.json({
       success: true,
-      vendorPayableReport: results,
+      vendorPayableReport: resultsWithPayments,
       cities: cities,
       vendorNames: vendorNames,
       aggregatedTotals: aggregatedTotals,
