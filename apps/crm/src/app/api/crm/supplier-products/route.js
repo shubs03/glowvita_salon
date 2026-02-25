@@ -12,10 +12,10 @@ export const GET = authMiddlewareCrm(async (req) => {
   try {
     const userId = req.user.userId.toString();
     const userRole = req.user.role;
-    
+
     // Build query based on user role
     let query = { origin: 'Supplier' };
-    
+
     // If user is a supplier, only fetch their own products
     if (userRole === 'supplier') {
       query.vendorId = userId;
@@ -24,7 +24,7 @@ export const GET = authMiddlewareCrm(async (req) => {
       // For vendors browsing supplier products, only show approved ones
       query.status = 'approved';
     }
-    
+
     const products = await ProductModel.find(query)
       .populate({
         path: 'vendorId',
@@ -36,18 +36,18 @@ export const GET = authMiddlewareCrm(async (req) => {
       .lean();
 
     const transformedProducts = products.map(p => ({
-        ...p,
-        supplierName: p.vendorId?.shopName,
-        supplierEmail: p.vendorId?.email,
-        supplierBusinessRegistrationNo: p.vendorId?.businessRegistrationNo,
-        supplierCity: p.vendorId?.city,
-        supplierState: p.vendorId?.state,
-        supplierCountry: p.vendorId?.country,
-        // Ensure category is a string to match vendor products structure
-        category: p.category?.name || 'Uncategorized',
-        categoryDescription: p.category?.description || p.categoryDescription || '',
-        // Transform status to match vendor products format
-        status: p.status === 'rejected' ? 'disapproved' : p.status,
+      ...p,
+      supplierName: p.vendorId?.shopName,
+      supplierEmail: p.vendorId?.email,
+      supplierBusinessRegistrationNo: p.vendorId?.businessRegistrationNo,
+      supplierCity: p.vendorId?.city,
+      supplierState: p.vendorId?.state,
+      supplierCountry: p.vendorId?.country,
+      // Ensure category is a string to match vendor products structure
+      category: p.category?.name || 'Uncategorized',
+      categoryDescription: p.category?.description || p.categoryDescription || '',
+      // Transform status to match vendor products format
+      status: p.status === 'rejected' ? 'disapproved' : p.status,
     }));
 
     // Return in the same format as vendor products API
@@ -57,7 +57,7 @@ export const GET = authMiddlewareCrm(async (req) => {
     }, { status: 200 });
   } catch (error) {
     console.error("Error fetching supplier products:", error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: false,
       message: "Failed to fetch supplier products",
       error: error.message

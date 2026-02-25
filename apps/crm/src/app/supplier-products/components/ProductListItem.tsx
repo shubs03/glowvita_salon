@@ -28,6 +28,7 @@ interface Product {
   brand?: string;
   vendorId?: { name: string };
   supplierName?: string;
+  showOnWebsite?: boolean;
 }
 
 interface ProductListItemProps {
@@ -89,9 +90,9 @@ const ProductListItem = ({ product, onEdit, onDelete, onView, onToggleActive }: 
                   >
                     {product.stock > 0 ? `${product.stock} units` : "Out of Stock"}
                   </Badge>
-                  {!product.isActive && (
-                    <Badge variant="outline" className="text-[10px] border-dashed">
-                      Hidden
+                  {product.showOnWebsite === false && (
+                    <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 text-xs shadow-sm">
+                      Hidden from Web
                     </Badge>
                   )}
                 </div>

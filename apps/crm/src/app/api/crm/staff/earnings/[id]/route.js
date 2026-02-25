@@ -46,7 +46,13 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
                 ]
             }).select('_id').lean();
 
-            console.log(`[Earnings] Found ${completedAppointments.length} completed appointments to sync`);
+            const completedBillings = await BillingModel.find({
+                vendorId: new mongoose.Types.ObjectId(vendorId),
+                paymentStatus: 'Completed',
+                "items.staffMember.id": new mongoose.Types.ObjectId(staffId)
+            }).select('_id').lean();
+
+            console.log(`[Earnings] Found ${completedAppointments.length} appointments and ${completedBillings.length} billings to sync`);
 
             // Reset the staff counters before re-syncing to avoid double-counting
             if (forceRecalc) {
@@ -65,13 +71,22 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
                 console.log(`[Earnings] Reset staff counters for recalculation`);
             }
 
-            // Re-sync each appointment using the same logic as real-time
-            const { syncStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
+            // Re-sync each appointment and billing using the same logic as real-time
+            const { syncStaffCommission, syncBillingCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
+
             for (const appt of completedAppointments) {
                 try {
                     await syncStaffCommission(appt._id.toString());
                 } catch (e) {
                     console.error(`[Earnings] Error syncing appointment ${appt._id}:`, e.message);
+                }
+            }
+
+            for (const billing of completedBillings) {
+                try {
+                    await syncBillingCommission(billing._id.toString());
+                } catch (e) {
+                    console.error(`[Earnings] Error syncing billing ${billing._id}:`, e.message);
                 }
             }
 
@@ -126,25 +141,185 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
             .limit(50)
             .populate({
                 path: 'appointmentId',
-                select: 'clientName serviceName totalAmount date',
-                populate: { path: 'client', select: 'fullName' }
+                select: 'clientName serviceName totalAmount date serviceItems staffCommission',
+                populate: { path: 'client', select: 'fullName' },
+                options: { strictPopulate: false }
+            })
+            .populate({
+                path: 'billingId',
+                select: 'clientInfo clientName totalAmount invoiceNumber createdAt items',
+                options: { strictPopulate: false }
             })
             .lean();
 
-        // 4. Format for the UI
-        const commissionHistory = transactions
-            .filter(t => t.type === 'CREDIT')
-            .map(t => ({
-                id: t.appointmentId?._id || t._id,
-                date: t.transactionDate,
-                clientName: t.appointmentId?.client?.fullName || t.appointmentId?.clientName || 'Unknown',
-                serviceName: t.appointmentId?.serviceName || 'Service',
-                totalAmount: t.appointmentId?.totalAmount || 0,
-                commissionAmount: t.amount,
-                description: t.description
-            }));
+        // 4. MANUAL FALLBACK: If population failed, try to fetch missing docs in bulk
+        const missingBillingIds = transactions
+            .filter(t => t.billingId && typeof t.billingId !== 'object')
+            .map(t => t.billingId);
 
-        const payouts = transactions
+        const missingApptIds = transactions
+            .filter(t => t.appointmentId && typeof t.appointmentId !== 'object')
+            .map(t => t.appointmentId);
+
+        // Detect missing billing links by checking descriptions for Invoice numbers
+        const invoicesToFetch = transactions
+            .filter(t => !t.billingId && t.description?.includes('(Invoice:'))
+            .map(t => {
+                const match = t.description.match(/\(Invoice: ([^\)]+)\)/);
+                return match ? match[1] : null;
+            })
+            .filter(Boolean);
+
+        let extraBillings = [];
+        if (missingBillingIds.length > 0) {
+            extraBillings = await BillingModel.find({ _id: { $in: missingBillingIds } }).lean();
+        }
+
+        let extraBillingsByInvoice = [];
+        if (invoicesToFetch.length > 0) {
+            extraBillingsByInvoice = await BillingModel.find({
+                vendorId: new mongoose.Types.ObjectId(vendorId),
+                invoiceNumber: { $in: invoicesToFetch }
+            }).lean();
+        }
+
+        let extraAppts = [];
+        if (missingApptIds.length > 0) {
+            extraAppts = await AppointmentModel.find({ _id: { $in: missingApptIds } })
+                .populate({ path: 'client', select: 'fullName' })
+                .lean();
+        }
+
+        // Merge missing data back into transactions
+        const enrichedTransactions = transactions.map(t => {
+            // Restore by ID
+            if (t.billingId && typeof t.billingId !== 'object') {
+                t.billingId = extraBillings.find(b => b._id.toString() === t.billingId.toString());
+            }
+            // Restore by Invoice
+            if (!t.billingId && t.description?.includes('(Invoice:')) {
+                const match = t.description.match(/\(Invoice: ([^\)]+)\)/);
+                if (match) {
+                    const inv = match[1];
+                    t.billingId = extraBillingsByInvoice.find(b => b.invoiceNumber === inv);
+                }
+            }
+            // Restore Appt
+            if (t.appointmentId && typeof t.appointmentId !== 'object') {
+                t.appointmentId = extraAppts.find(a => a._id.toString() === t.appointmentId.toString());
+            }
+            return t;
+        });
+
+        // 5. Format for the UI
+        const commissionHistory = enrichedTransactions
+            .filter(t => t.type === 'CREDIT')
+            .map(t => {
+                // Determine if it's a Billing/Sale or an Appointment
+                // It's a billing if it has billingId OR if the description explicitly mentions an Invoice
+                const isBilling = !!t.billingId || t.description?.includes('(Invoice:');
+
+                if (isBilling) {
+                    const b = t.billingId;
+                    const isPopulated = b && typeof b === 'object' && (b.clientInfo || b.items);
+
+                    // Try to extract item name from description if not populated or item not found
+                    // Description format: "Commission for [Item Name] (Invoice: [Invoice No])"
+                    let itemName = 'Product/Service Sale';
+                    if (t.description && t.description.includes('Commission for ')) {
+                        itemName = t.description.split('Commission for ')[1].split(' (Invoice:')[0];
+                        // If there's an adjustment prefix, strip it
+                        if (itemName.startsWith('REVERSAL: ')) itemName = itemName.replace('REVERSAL: ', '');
+                        if (itemName.startsWith('ADJUSTMENT: ')) itemName = itemName.replace('ADJUSTMENT: ', '');
+                    }
+
+                    if (isPopulated) {
+                        const billingItem = b.items?.find(item => {
+                            const itemStaffId = item.staffMember?.id || item.staffMember?._id || item.staffMember;
+                            const matchesStaff = itemStaffId?.toString() === staffId.toString();
+                            const matchesName = t.description?.includes(item.name) || itemName === item.name;
+                            return matchesStaff && matchesName;
+                        });
+
+                        // Fallback to any item for this staff if name match fails
+                        const fallbackItem = !billingItem ? b.items?.find(item => {
+                            const itemStaffId = item.staffMember?.id || item.staffMember?._id || item.staffMember;
+                            return itemStaffId?.toString() === staffId.toString();
+                        }) : null;
+
+                        const finalItem = billingItem || fallbackItem;
+
+                        return {
+                            id: b._id || t._id,
+                            date: t.transactionDate,
+                            clientName: b.clientInfo?.fullName || b.clientName || 'Walk-in Client',
+                            serviceName: finalItem?.name || itemName,
+                            totalAmount: finalItem?.totalPrice || b.totalAmount || 0,
+                            commissionAmount: t.amount,
+                            commissionRate: finalItem?.staffMember?.staffCommissionRate || 0,
+                            description: t.description,
+                            type: 'SALE'
+                        };
+                    } else {
+                        // Fallback for unpopulated billingId (using data from description)
+                        return {
+                            id: b?._id || t._id,
+                            date: t.transactionDate,
+                            clientName: 'Walk-in (Sale)',
+                            serviceName: itemName,
+                            totalAmount: 0,
+                            commissionAmount: t.amount,
+                            commissionRate: 0,
+                            description: t.description,
+                            type: 'SALE'
+                        };
+                    }
+                }
+
+                // Appointment path
+                const a = t.appointmentId;
+                const isApptPopulated = a && typeof a === 'object' && (a.serviceName || a.clientName || a.totalAmount);
+
+                if (isApptPopulated) {
+                    // Try to find the specific commission rate for this staff in the appointment
+                    let rate = 0;
+                    if (a.serviceItems && Array.isArray(a.serviceItems)) {
+                        const serviceItem = a.serviceItems.find(item => {
+                            const itemStaffId = item.staff?.toString();
+                            return itemStaffId === staffId.toString();
+                        });
+                        rate = serviceItem?.staffCommission?.rate || a.staffCommission?.rate || 0;
+                    } else {
+                        rate = a.staffCommission?.rate || 0;
+                    }
+
+                    return {
+                        id: a._id,
+                        date: t.transactionDate,
+                        clientName: a.client?.fullName || a.clientName || 'Unknown',
+                        serviceName: a.serviceName || 'Service',
+                        totalAmount: a.totalAmount || 0,
+                        commissionAmount: t.amount,
+                        commissionRate: rate,
+                        description: t.description,
+                        type: 'APPOINTMENT'
+                    };
+                } else {
+                    return {
+                        id: a?._id || a || t._id,
+                        date: t.transactionDate,
+                        clientName: 'Client (Appt)',
+                        serviceName: 'Service',
+                        totalAmount: 0,
+                        commissionAmount: t.amount,
+                        commissionRate: 0,
+                        description: t.description,
+                        type: 'APPOINTMENT'
+                    };
+                }
+            });
+
+        const payouts = enrichedTransactions
             .filter(t => t.type === 'DEBIT')
             .map(t => ({
                 _id: t._id,

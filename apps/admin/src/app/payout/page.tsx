@@ -13,6 +13,9 @@ import { Label } from '@repo/ui/label';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { History, ListTodo } from 'lucide-react';
+import { useAppSelector } from '@repo/store/hooks';
+import { selectSelectedRegion } from '@repo/store/slices/adminAuthSlice';
+
 interface ReceiveAmountDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -202,10 +205,25 @@ export default function PayoutPage() {
   });
   const [expandedVendorId, setExpandedVendorId] = useState<string | null>(null);
 
+  // Read selected region from Redux (same pattern as reports)
+  const selectedRegion = useAppSelector(selectSelectedRegion);
+
+  // Build the API URL with optional regionId param
+  const buildSettlementsUrl = (extraParams: Record<string, string> = {}) => {
+    const params = new URLSearchParams(extraParams);
+    if (selectedRegion && selectedRegion !== 'all') {
+      params.set('regionId', selectedRegion);
+    }
+    const queryString = params.toString();
+    return `/api/admin/settlements${queryString ? `?${queryString}` : ''}`;
+  };
+
   const fetchPayouts = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/admin/settlements');
+      const url = buildSettlementsUrl();
+      console.log('[PayoutPage] Fetching settlements with URL:', url);
+      const response = await fetch(url);
       const data = await response.json();
       if (data.success) {
         setPayoutData(data.data);
@@ -227,9 +245,10 @@ export default function PayoutPage() {
     }
   };
 
+  // Re-fetch whenever selected region changes (same as reports pattern)
   useEffect(() => {
     fetchPayouts();
-  }, []);
+  }, [selectedRegion]);
 
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -356,6 +375,11 @@ export default function PayoutPage() {
                   <CardTitle>Upcoming Settlements</CardTitle>
                   <CardDescription>
                     Pending balances that need to be paid out or collected from vendors.
+                    {selectedRegion && selectedRegion !== 'all' && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Region Filtered
+                      </span>
+                    )}
                   </CardDescription>
                 </div>
                 <Button variant="outline" onClick={() => fetchPayouts()}>
@@ -380,15 +404,15 @@ export default function PayoutPage() {
                   <TableBody>
                     {isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-10">
+                        <TableCell colSpan={9} className="text-center py-10">
                           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
                           <p className="mt-2 text-muted-foreground">Loading settlements...</p>
                         </TableCell>
                       </TableRow>
                     ) : currentItems.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                          No settlements found.
+                        <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">
+                          No settlements found{selectedRegion && selectedRegion !== 'all' ? ' for the selected region.' : '.'}
                         </TableCell>
                       </TableRow>
                     ) : currentItems.map((payout) => (
@@ -410,7 +434,12 @@ export default function PayoutPage() {
                           </TableCell>
                           <TableCell>
                             <div className="font-medium text-base">{payout.vendorName}</div>
-                            <div className="text-xs text-muted-foreground">{payout.ownerName} ({payout.contactNo})</div>
+                            {(payout.ownerName && payout.ownerName !== 'N/A' || payout.contactNo && payout.contactNo !== 'N/A') && (
+                              <div className="text-xs text-muted-foreground">
+                                {payout.ownerName && payout.ownerName !== 'N/A' ? payout.ownerName : ''}
+                                {payout.ownerName && payout.ownerName !== 'N/A' && payout.contactNo && payout.contactNo !== 'N/A' ? ` (${payout.contactNo})` : payout.contactNo && payout.contactNo !== 'N/A' ? payout.contactNo : ''}
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell>₹{payout.totalVolume.toFixed(2)}</TableCell>
                           <TableCell>
@@ -626,6 +655,11 @@ export default function PayoutPage() {
                   <CardTitle>Global Payment History</CardTitle>
                   <CardDescription>
                     Track all historical payments received from vendors and payouts sent to vendors.
+                    {selectedRegion && selectedRegion !== 'all' && (
+                      <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        Region Filtered
+                      </span>
+                    )}
                   </CardDescription>
                 </div>
                 <Button variant="outline" onClick={() => fetchPayouts()}>
@@ -638,7 +672,7 @@ export default function PayoutPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Date & Time</TableHead>
+                      <TableHead>Date &amp; Time</TableHead>
                       <TableHead>Vendor Name</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Amount (₹)</TableHead>
@@ -657,7 +691,7 @@ export default function PayoutPage() {
                     ) : currentHistoryItems.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-10 text-muted-foreground italic">
-                          No payment history recorded for this period.
+                          No payment history recorded{selectedRegion && selectedRegion !== 'all' ? ' for the selected region.' : ' for this period.'}
                         </TableCell>
                       </TableRow>
                     ) : currentHistoryItems.map((txn) => (

@@ -22,3 +22,18 @@ export interface SalesByCategoryData {
   totalQuantitySold: number;
   totalRevenue: string;
 }
+
+export interface SalesByProductData {
+  product: string;
+  category: string;
+  brand: string;
+  vendor: string;
+  city: string;
+  sale: string;
+  productSold: number;
+  productPlatformFee: number;
+  productGST: number;
+  onlineSales: number;
+  offlineSales: number;
+  type: string;
+}

@@ -10,37 +10,40 @@ import { Input } from '@repo/ui/input';
 import { Skeleton } from '@repo/ui/skeleton';
 import { Pagination } from "@repo/ui/pagination";
 import { useGetConsolidatedSalesReportQuery } from '@repo/store/api';
+import { useReport } from '../hooks/useReport';
 import { FilterModal } from '../common/FilterModal';
 import { FilterParams } from '../types';
 import { copyToClipboard, exportToExcel, exportToCSV, exportToPDF, printTable } from '../utils/exportFunctions';
 
 export const ConsolidatedSalesReportTable = () => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
-  const apiFilters = filters;
+  const {
+    apiFilters,
+    filters,
+    handleFilterChange,
+    isFilterModalOpen,
+    setIsFilterModalOpen,
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
+    tableRef,
+    filterAndPaginateData
+  } = useReport<any>();
+
   const { data, isLoading, isError, error } = useGetConsolidatedSalesReportQuery(apiFilters);
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    setFilters(newFilters);
-    setCurrentPage(1);
-  };
-  
+
   const salesData = data?.salesReport || [];
   const cities = data?.cities || [];
-  const aggregatedTotals = data?.aggregatedTotals;
-  
+
   const [allBusinessNames, setAllBusinessNames] = useState<string[]>([]);
-  
+
   useEffect(() => {
     if ((Object.keys(apiFilters).length === 0 || allBusinessNames.length === 0) && salesData.length > 0) {
       const nameMap: { [key: string]: boolean } = {};
       const names: string[] = [];
-      
+
       salesData.forEach((item: any) => {
         const name = item['Business Name'];
         if (name && name !== 'N/A' && !nameMap[name]) {
@@ -51,24 +54,17 @@ export const ConsolidatedSalesReportTable = () => {
       setAllBusinessNames(names);
     }
   }, [salesData, apiFilters, allBusinessNames.length]);
-  
+
   const businessNames = allBusinessNames;
-  
-  const filteredData = useMemo(() => {
-    if (!searchTerm) return salesData;
-    
-    return salesData.filter((sale: any) =>
-      Object.values(sale).some((value: any) => 
-        value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [salesData, searchTerm]);
-  
-  const totalItems = filteredData.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedData = filteredData.slice(startIndex, endIndex);
+
+  const {
+    paginatedData,
+    totalItems,
+    totalPages,
+    startIndex
+  } = filterAndPaginateData(salesData, (sale: any) =>
+    Object.values(sale).map(v => v?.toString() || '')
+  );
 
   if (isLoading) {
     return (
@@ -85,7 +81,7 @@ export const ConsolidatedSalesReportTable = () => {
             </Card>
           ))}
         </div>
-        
+
         <div className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -121,7 +117,7 @@ export const ConsolidatedSalesReportTable = () => {
       </div>
     );
   }
-  
+
   if (isError) {
     return (
       <div className="p-4 text-center text-red-500">
@@ -134,7 +130,7 @@ export const ConsolidatedSalesReportTable = () => {
       </div>
     );
   }
-  
+
   if (salesData.length === 0) {
     return (
       <div>
@@ -149,7 +145,7 @@ export const ConsolidatedSalesReportTable = () => {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="flex justify-between items-center mb-4 gap-2">
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -184,8 +180,8 @@ export const ConsolidatedSalesReportTable = () => {
             </DropdownMenu>
           </div>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -196,7 +192,7 @@ export const ConsolidatedSalesReportTable = () => {
           showUserTypeFilter={true}
           showBusinessNameFilter={true}
         />
-        
+
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -224,7 +220,7 @@ export const ConsolidatedSalesReportTable = () => {
       </div>
     );
   }
-  
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -247,7 +243,7 @@ export const ConsolidatedSalesReportTable = () => {
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'consolidated_sales_report')}>
                 <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel
-                </DropdownMenuItem>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'consolidated_sales_report')}>
                 <FileText className="mr-2 h-4 w-4" /> CSV
               </DropdownMenuItem>
@@ -261,8 +257,8 @@ export const ConsolidatedSalesReportTable = () => {
           </DropdownMenu>
         </div>
       </div>
-      
-      <FilterModal 
+
+      <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         onApplyFilters={handleFilterChange}
@@ -273,7 +269,7 @@ export const ConsolidatedSalesReportTable = () => {
         showUserTypeFilter={true}
         showBusinessNameFilter={true}
       />
-      
+
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -287,7 +283,7 @@ export const ConsolidatedSalesReportTable = () => {
           </CardContent>
         </Card>
       </div>
-      
+
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>
@@ -316,24 +312,24 @@ export const ConsolidatedSalesReportTable = () => {
               const servicePlatformFees = vendor["Service Platform Fees (₹)"] !== '-' ? parseFloat(vendor["Service Platform Fees (₹)"]?.replace(/[₹,]/g, '')) || 0 : 0;
               const subscriptionAmount = parseFloat(vendor["Subscription Amount (₹)"].replace(/[₹,]/g, '')) || 0;
               const smsAmount = parseFloat(vendor["SMS Amount (₹)"].replace(/[₹,]/g, '')) || 0;
-              
+
               const totalBusiness = serviceAmount + productAmount + serviceTax + productTax + productPlatformFee + servicePlatformFees + subscriptionAmount + smsAmount;
-              
+
               return (
-              <TableRow key={startIndex + index}>
-                <TableCell className="font-medium">{vendor["Business Name"]}</TableCell>
-                <TableCell>{vendor.Type}</TableCell>
-                <TableCell>{vendor.City}</TableCell>
-                <TableCell>{vendor["Total Service Amount (₹)"]}</TableCell>
-                <TableCell>{vendor["Total Product Amount (₹)"]}</TableCell>
-                <TableCell>{vendor["Service Tax (₹)"]}</TableCell>
-                <TableCell>{vendor["Product Tax/GST (₹)"]}</TableCell>
-                <TableCell>{vendor["Product Platform Fee (₹)"]}</TableCell>
-                <TableCell>{vendor["Service Platform Fees (₹)"]}</TableCell>
-                <TableCell>{vendor["Subscription Amount (₹)"]}</TableCell>
-                <TableCell>{vendor["SMS Amount (₹)"]}</TableCell>
-                <TableCell>₹{totalBusiness.toFixed(2)}</TableCell>
-              </TableRow>
+                <TableRow key={startIndex + index}>
+                  <TableCell className="font-medium">{vendor["Business Name"]}</TableCell>
+                  <TableCell>{vendor.Type}</TableCell>
+                  <TableCell>{vendor.City}</TableCell>
+                  <TableCell>{vendor["Total Service Amount (₹)"]}</TableCell>
+                  <TableCell>{vendor["Total Product Amount (₹)"]}</TableCell>
+                  <TableCell>{vendor["Service Tax (₹)"]}</TableCell>
+                  <TableCell>{vendor["Product Tax/GST (₹)"]}</TableCell>
+                  <TableCell>{vendor["Product Platform Fee (₹)"]}</TableCell>
+                  <TableCell>{vendor["Service Platform Fees (₹)"]}</TableCell>
+                  <TableCell>{vendor["Subscription Amount (₹)"]}</TableCell>
+                  <TableCell>{vendor["SMS Amount (₹)"]}</TableCell>
+                  <TableCell>₹{totalBusiness.toFixed(2)}</TableCell>
+                </TableRow>
               )
             })}
             {paginatedData.length > 0 && (
@@ -389,7 +385,7 @@ export const ConsolidatedSalesReportTable = () => {
                   const servicePlatformFees = item["Service Platform Fees (₹)"] !== '-' ? parseFloat(item["Service Platform Fees (₹)"]?.replace(/[₹,]/g, '')) || 0 : 0;
                   const subscriptionAmount = parseFloat(item["Subscription Amount (₹)"]?.replace(/[₹,]/g, '')) || 0;
                   const smsAmount = parseFloat(item["SMS Amount (₹)"]?.replace(/[₹,]/g, '')) || 0;
-                  
+
                   const totalBusiness = serviceAmount + productAmount + serviceTax + productTax + productPlatformFee + servicePlatformFees + subscriptionAmount + smsAmount;
                   return sum + totalBusiness;
                 }, 0).toFixed(2)}</TableCell>

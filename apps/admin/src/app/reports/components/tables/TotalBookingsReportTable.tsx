@@ -24,6 +24,7 @@ interface VendorBookingData {
 export const TotalBookingsReportTable = () => {
   const {
     filters,
+    apiFilters,
     isFilterModalOpen,
     currentPage,
     itemsPerPage,
@@ -37,16 +38,15 @@ export const TotalBookingsReportTable = () => {
     handleFilterChange,
     filterAndPaginateData
   } = useReport<VendorBookingData>(5);
-  
-  const apiFilters = filters;
+
   console.log("Total Bookings API filters:", apiFilters);
-  
+
   const { data, isLoading, isError, error } = useGetTotalBookingsReportQuery(apiFilters);
-  
+
   const vendorBookingsData = data?.vendorBookings || [];
   const cities = data?.cities || [];
   const vendors = data?.vendors || [];
-  
+
   const {
     paginatedData,
     totalItems,
@@ -135,7 +135,7 @@ export const TotalBookingsReportTable = () => {
       </div>
     );
   }
-  
+
   if (isError) {
     console.error("Error fetching total bookings report:", error);
     return (
@@ -187,7 +187,7 @@ export const TotalBookingsReportTable = () => {
       </div>
     );
   }
-  
+
   if (vendorBookingsData.length === 0) {
     return (
       <div>
@@ -217,7 +217,7 @@ export const TotalBookingsReportTable = () => {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="flex justify-between items-center mb-4 gap-2">
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -269,8 +269,8 @@ export const TotalBookingsReportTable = () => {
             </DropdownMenu>
           </div>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -280,7 +280,7 @@ export const TotalBookingsReportTable = () => {
           showServiceFilter={false}
           initialFilters={filters}
         />
-        
+
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -304,7 +304,7 @@ export const TotalBookingsReportTable = () => {
       </div>
     );
   }
-  
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -358,7 +358,7 @@ export const TotalBookingsReportTable = () => {
           </DropdownMenu>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
@@ -385,8 +385,8 @@ export const TotalBookingsReportTable = () => {
           </CardContent>
         </Card>
       </div>
-      
-      <FilterModal 
+
+      <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         onApplyFilters={handleFilterChange}
@@ -396,7 +396,7 @@ export const TotalBookingsReportTable = () => {
         showServiceFilter={false}
         initialFilters={filters}
       />
-      
+
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>

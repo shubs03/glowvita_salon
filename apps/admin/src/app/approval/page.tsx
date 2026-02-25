@@ -59,6 +59,8 @@ import {
 } from '@repo/store/api';
 import { toast } from 'sonner';
 import DocumentStatusManager from '../../components/DocumentStatusManager';
+import { useAppSelector } from "@repo/store/hooks";
+import { selectSelectedRegion } from "@repo/store/slices/adminAuthSlice";
 
 // Vendor type
 type Vendor = {
@@ -214,26 +216,28 @@ type ActionType = 'approve' | 'reject' | 'delete';
 type ItemType = 'vendor' | 'service' | 'vendor-product' | 'supplier-product' | 'doctor' | 'supplier' | 'wedding-package';
 
 export default function VendorApprovalPage() {
+  const selectedRegion = useAppSelector(selectSelectedRegion);
+
   // RTK Query hooks
-  const { data: vendors = [], isLoading: vendorsLoading, error: vendorsError, refetch: refetchVendors } = useGetVendorsQuery(undefined);
+  const { data: vendors = [], isLoading: vendorsLoading, error: vendorsError, refetch: refetchVendors } = useGetVendorsQuery(selectedRegion);
   const [updateVendorStatus] = useUpdateVendorStatusMutation();
-  const { data: suppliersData = [], isLoading: suppliersLoading, refetch: refetchSuppliers } = useGetSuppliersQuery(undefined);
+  const { data: suppliersData = [], isLoading: suppliersLoading, refetch: refetchSuppliers } = useGetSuppliersQuery(selectedRegion);
   const [updateSupplierStatus] = useUpdateSupplierStatusMutation();
   const [deleteSupplier] = useDeleteSupplierMutation();
-  const { data: doctorsData = [], isLoading: doctorsLoading } = useGetDoctorsQuery(undefined);
-  const { data: pendingServices = [], isLoading: servicesLoading, refetch: refetchPendingServices } = useGetVendorServicesForApprovalQuery({ status: 'pending' });
+  const { data: doctorsData = [], isLoading: doctorsLoading } = useGetDoctorsQuery(selectedRegion);
+  const { data: pendingServices = [], isLoading: servicesLoading, refetch: refetchPendingServices } = useGetVendorServicesForApprovalQuery({ status: 'pending', regionId: selectedRegion });
   const [updateServiceStatus] = useUpdateServiceStatusMutation();
 
   // Vendor product approvals
-  const { data: vendorProductData, isLoading: vendorProductsLoading, error: vendorProductsError, refetch: refetchVendorProducts } = useGetVendorProductApprovalsQuery(undefined);
+  const { data: vendorProductData, isLoading: vendorProductsLoading, error: vendorProductsError, refetch: refetchVendorProducts } = useGetVendorProductApprovalsQuery(selectedRegion);
   const [updateVendorProductStatus] = useUpdateVendorProductStatusMutation();
 
   // Supplier product approvals
-  const { data: supplierProductData, isLoading: supplierProductsLoading, error: supplierProductsError, refetch: refetchSupplierProducts } = useGetSupplierProductApprovalsQuery(undefined);
+  const { data: supplierProductData, isLoading: supplierProductsLoading, error: supplierProductsError, refetch: refetchSupplierProducts } = useGetSupplierProductApprovalsQuery(selectedRegion);
   const [updateSupplierProductStatus] = useUpdateSupplierProductStatusMutation();
 
   // Wedding package approvals
-  const { data: pendingWeddingPackages = [], isLoading: weddingPackagesLoading, refetch: refetchPendingWeddingPackages } = useGetPendingWeddingPackagesQuery(undefined);
+  const { data: pendingWeddingPackages = [], isLoading: weddingPackagesLoading, refetch: refetchPendingWeddingPackages } = useGetPendingWeddingPackagesQuery(selectedRegion);
   const [updateWeddingPackageStatus] = useUpdateWeddingPackageStatusMutation();
 
   const [updateDoctor] = useUpdateDoctorMutation();
@@ -599,7 +603,14 @@ export default function VendorApprovalPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-6">Approvals</h1>
+      <div className="flex items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold font-headline">Approvals</h1>
+        {selectedRegion && selectedRegion !== 'all' && (
+          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+            Region Filtered
+          </Badge>
+        )}
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>

@@ -112,7 +112,7 @@ export const glowvitaApi = createApi({
     "admin", "offers", "Referrals", "Settings", "SuperData", "Supplier",
     "SubscriptionPlan", "Vendor", "doctors", "GeoFence", "Category",
     "Service", "Staff", "Client", "Offers", "Notification",
-    "TaxFeeSettings", "User", "PendingServices", "AdminProductCategory",
+    "TaxFeeSettings", "User", "PendingServices", "VendorServicesApproval", "AdminProductCategory",
     "ProductCategory", "SmsTemplate", "SmsPackage", "CrmSmsTemplate",
     "TestSmsTemplate", "SmsPackage", "CrmSmsPackage", "CrmCampaign",
     "SocialMediaTemplate", "CrmSocialMediaTemplate", "Marketing",
@@ -125,7 +125,7 @@ export const glowvitaApi = createApi({
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "Regions", "PublicAllOffers", "AddOns", "PendingWeddingPackages",
-    "ReferralReport", "ClientWallet", "ClientWithdrawals", "WalletSettings", "Inventory"
+    "ReferralReport", "ClientWallet", "ClientWithdrawals", "WalletSettings", "Inventory", "Doctor"
   ],
 
   endpoints: (builder) => ({
@@ -533,11 +533,17 @@ export const glowvitaApi = createApi({
     }),
     // Service Approval Endpoints
     getVendorServicesForApproval: builder.query({
-      query: (params) => ({
-        url: "/admin/services/service-approval",
-        method: "GET",
-        params: params // Support status filter
-      }),
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        if (params?.status) queryParams.append('status', params.status);
+        if (params?.regionId && params.regionId !== 'all') queryParams.append('regionId', params.regionId);
+
+        const queryString = queryParams.toString();
+        return {
+          url: `/admin/services/service-approval${queryString ? `?${queryString}` : ""}`,
+          method: "GET",
+        };
+      },
       providesTags: ["VendorServicesApproval"],
     }),
     updateServiceStatus: builder.mutation({
@@ -559,7 +565,15 @@ export const glowvitaApi = createApi({
 
     // Wedding Package Approval Endpoints
     getPendingWeddingPackages: builder.query({
-      query: () => ({ url: "/admin/wedding-packages/approval", method: "GET" }),
+      query: (regionId) => {
+        const params = new URLSearchParams();
+        if (regionId && regionId !== 'all') params.append('regionId', regionId);
+        const queryString = params.toString();
+        return {
+          url: `/admin/wedding-packages/approval${queryString ? `?${queryString}` : ""}`,
+          method: "GET"
+        };
+      },
       providesTags: ["PendingWeddingPackages"],
     }),
     updateWeddingPackageStatus: builder.mutation({
@@ -816,7 +830,17 @@ export const glowvitaApi = createApi({
     }),
 
     getVendors: builder.query({
-      query: () => ({ url: "/admin/vendor", method: "GET" }),
+      query: (regionId) => {
+        const params = new URLSearchParams();
+        if (regionId && regionId !== 'all') {
+          params.append('regionId', regionId);
+        }
+        const queryString = params.toString();
+        return {
+          url: `/admin/vendor${queryString ? `?${queryString}` : ""}`,
+          method: "GET"
+        };
+      },
       providesTags: ["Vendor"],
       transformResponse: (response) => response,
     }),
@@ -886,7 +910,15 @@ export const glowvitaApi = createApi({
 
     // Doctor Endpoints
     getDoctors: builder.query({
-      query: () => ({ url: "/admin/doctors", method: "GET" }),
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.regionId) queryParams.append("regionId", params.regionId);
+        const queryString = queryParams.toString();
+        return {
+          url: `/admin/doctors${queryString ? `?${queryString}` : ""}`,
+          method: "GET",
+        };
+      },
       providesTags: ["doctors"],
     }),
 
@@ -968,7 +1000,15 @@ export const glowvitaApi = createApi({
 
     // Supplier Endpoints
     getSuppliers: builder.query({
-      query: () => ({ url: "/admin/suppliers", method: "GET" }),
+      query: (regionId) => {
+        const params = new URLSearchParams();
+        if (regionId && regionId !== 'all') params.append('regionId', regionId);
+        const queryString = params.toString();
+        return {
+          url: `/admin/suppliers${queryString ? `?${queryString}` : ""}`,
+          method: "GET"
+        };
+      },
       providesTags: ["Supplier"],
     }),
 
@@ -1260,9 +1300,10 @@ export const glowvitaApi = createApi({
 
     // Admin Users Endpoints
     getAdminUsers: builder.query({
-      query: ({ vendorId, page = 1, limit = 100 } = {}) => {
+      query: ({ vendorId, regionId, page = 1, limit = 100 } = {}) => {
         const params = new URLSearchParams();
         if (vendorId) params.append('vendorId', vendorId);
+        if (regionId && regionId !== 'all') params.append('regionId', regionId);
         params.append('page', page.toString());
         params.append('limit', limit.toString());
         return { url: `/admin/users?${params.toString()}`, method: "GET" };
@@ -1475,12 +1516,28 @@ export const glowvitaApi = createApi({
 
     // Vendor Product Approval (separate from general product approval)
     getVendorProductApprovals: builder.query({
-      query: () => ({ url: "/admin/product-approval/vendor", method: "GET" }),
+      query: (regionId) => {
+        const params = new URLSearchParams();
+        if (regionId && regionId !== 'all') params.append('regionId', regionId);
+        const queryString = params.toString();
+        return {
+          url: `/admin/product-approval/vendor${queryString ? `?${queryString}` : ""}`,
+          method: "GET"
+        };
+      },
       providesTags: ["Product"],
     }),
     // Supplier Product Approval (separate from general product approval)
     getSupplierProductApprovals: builder.query({
-      query: () => ({ url: "/admin/product-approval/supplier", method: "GET" }),
+      query: (regionId) => {
+        const params = new URLSearchParams();
+        if (regionId && regionId !== 'all') params.append('regionId', regionId);
+        const queryString = params.toString();
+        return {
+          url: `/admin/product-approval/supplier${queryString ? `?${queryString}` : ""}`,
+          method: "GET"
+        };
+      },
       providesTags: ["Product"],
     }),
 
@@ -2163,7 +2220,7 @@ export const glowvitaApi = createApi({
       query: () => ({ url: "/client/referrals", method: "GET" }),
       providesTags: ["ClientReferrals"],
     }),
-    
+
     // Claim Referral Bonus Endpoint (Web App - for customers)
     claimReferralBonus: builder.mutation({
       query: (data) => ({ url: "/client/referrals", method: "POST", body: data }),
@@ -2940,7 +2997,6 @@ export const {
   useDeleteAdminMutation,
   useGetAdminsQuery,
   useGetUsersQuery,
-  useGetPendingServicesQuery,
   useUpdateServiceStatusMutation,
   useGetAdminOffersQuery,
   useCreateAdminOfferMutation,
