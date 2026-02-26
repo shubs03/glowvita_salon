@@ -768,13 +768,9 @@ export default function CalendarPage() {
         (appointment: any) => {
           // Skip if already marked as completed, cancelled, or missed
           // Also skip 'partially-completed' as it indicates a payment has started
+          // Only auto-cancel appointments that are 'scheduled' or 'confirmed'
           if (
-            [
-              "completed",
-              "cancelled",
-              "missed",
-              "partially-completed",
-            ].includes(appointment.status)
+            !["scheduled", "confirmed"].includes(appointment.status)
           ) {
             return false;
           }
@@ -782,14 +778,14 @@ export default function CalendarPage() {
           const appointmentDate = new Date(appointment.date);
           const isToday = isSameDay(appointmentDate, now);
 
-          if (isToday && appointment.startTime) {
-            const [hours, minutes] = appointment.startTime
+          if (isToday && appointment.endTime) {
+            const [hours, minutes] = appointment.endTime
               .split(":")
               .map(Number);
-            const startTimeInMinutes = hours * 60 + minutes;
+            const endTimeInMinutes = hours * 60 + minutes;
 
-            // Check if more than 30 minutes past start time
-            if (currentTimeInMinutes > startTimeInMinutes + 30) {
+            // Check if more than 15 minutes past end time
+            if (currentTimeInMinutes > endTimeInMinutes + 15) {
               return true;
             }
           }
@@ -815,7 +811,7 @@ export default function CalendarPage() {
                 id: appointment._id || appointment.id,
                 status: isToday ? "cancelled" : "missed",
                 cancellationReason: isToday
-                  ? "Automatically cancelled - 30 minutes past start time without completion"
+                  ? "Your appointment has been automatically cancelled as it was not marked as completed after the scheduled end time."
                   : "Automatically marked as missed - appointment date has passed",
               }).unwrap();
             })
