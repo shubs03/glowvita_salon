@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 import { Switch } from '@repo/ui/switch';
+import { Badge } from '@repo/ui/badge';
 import {
   openModal,
   closeModal,
