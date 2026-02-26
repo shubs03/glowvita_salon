@@ -58,6 +58,16 @@ const baseQuery = async (args, api, extraOptions) => {
   const method = (typeof args === 'object' && args.method) ? args.method.toUpperCase() : 'GET';
 
   if (method === 'GET' && typeof window !== 'undefined') {
+    // Append regionId for admin requests if not already present
+    if (targetService === "admin") {
+      const state = api.getState();
+      const selectedRegion = state.adminAuth?.selectedRegion;
+      if (selectedRegion && !fullUrl.includes('regionId=')) {
+        const separator = fullUrl.includes('?') ? '&' : '?';
+        fullUrl += `${separator}regionId=${selectedRegion}`;
+      }
+    }
+
     const separator = fullUrl.includes('?') ? '&' : '?';
     fullUrl += `${separator}_t=${new Date().getTime()}`;
   }
@@ -66,7 +76,18 @@ const baseQuery = async (args, api, extraOptions) => {
     baseUrl: "", // We're already building the full URL
     prepareHeaders: (headers, { getState }) => {
       const state = getState();
-      let token = state.crmAuth?.token || state.adminAuth?.token || state.userAuth?.token;
+      let token;
+
+      // Send only the token for the matching service to avoid cross-service auth pollution
+      if (targetService === "admin") {
+        token = state.adminAuth?.token;
+      } else if (targetService === "crm") {
+        token = state.crmAuth?.token;
+      } else {
+        // web service: prefer userAuth, fallback to crmAuth (for CRM users browsing web)
+        token = state.userAuth?.token || state.crmAuth?.token;
+      }
+
       if (token) {
         headers.set("Authorization", `Bearer ${token}`);
       }
@@ -81,20 +102,22 @@ const baseQuery = async (args, api, extraOptions) => {
       extraOptions
     );
 
-    // Handle 401 Unauthorized
-    // Handle 403 Forbidden (Subscription Expired)
+    // Handle 403 Forbidden
     if (result.error?.status === 403) {
-      api.dispatch(handleSubscriptionExpired());
-      // Force a refetch of the profile to ensure the UI updates with the latest user data
-      api.dispatch(glowvitaApi.endpoints.getProfile.initiate(undefined, { forceRefetch: true }));
+      if (targetService === "crm" || targetService === "web") {
+        api.dispatch(handleSubscriptionExpired());
+        // Force a refetch of the profile to ensure the UI updates with the latest user data
+        api.dispatch(glowvitaApi.endpoints.getProfile.initiate(undefined, { forceRefetch: true }));
+      }
+      // For targetService === "admin", we don't automatically clear or expire things
+      // as 403 in admin usually means "Missing Permission", not "Subscription Expired"
     }
 
     // Handle 401 Unauthorized
     if (result.error?.status === 401) {
-      const state = api.getState();
-      if (state.crmAuth?.token) {
+      if (targetService === "crm" || targetService === "web") {
         api.dispatch(clearCrmAuth());
-      } else if (state.adminAuth?.token) {
+      } else if (targetService === "admin") {
         api.dispatch(clearAdminAuth());
       }
     }
@@ -504,10 +527,13 @@ export const glowvitaApi = createApi({
 
     // Public All Offers (Admin + CRM) for landing page
     getPublicAllOffers: builder.query({
-      query: (vendorId = undefined) => ({
+      query: ({ vendorId, regionId } = {}) => ({
         url: `/all-offers`,
         method: "GET",
-        params: vendorId ? { vendorId } : {}
+        params: {
+          ...(vendorId ? { vendorId } : {}),
+          ...(regionId ? { regionId } : {}),
+        }
       }),
       providesTags: ["PublicAllOffers"],
       transformResponse: (response) => response,
@@ -638,7 +664,11 @@ export const glowvitaApi = createApi({
 
     // offfers
     getAdminOffers: builder.query({
-      query: () => ({ url: "/admin/offers", method: "GET" }),
+      query: (regionId) => ({ 
+        url: "/admin/offers", 
+        method: "GET",
+        params: regionId ? { regionId } : {}
+      }),
       providesTags: ["offers"],
     }),
 
@@ -671,11 +701,14 @@ export const glowvitaApi = createApi({
 
     // refferal endpoints
     getReferrals: builder.query({
-      query: (referralType) => ({
-        url: "/admin/referrals",
-        method: "GET",
-        params: { referralType },
-      }),
+      query: (params) => {
+        const { referralType, regionId } = typeof params === 'string' ? { referralType: params } : params;
+        return {
+          url: "/admin/referrals",
+          method: "GET",
+          params: { referralType, regionId },
+        };
+      },
       providesTags: ["Referrals"],
     }),
     createReferral: builder.mutation({
@@ -712,11 +745,14 @@ export const glowvitaApi = createApi({
     }),
 
     getSettings: builder.query({
-      query: (referralType) => ({
-        url: "/admin/referrals",
-        method: "GET",
-        params: { settings: true, referralType },
-      }),
+      query: (params) => {
+        const { referralType, regionId } = typeof params === 'string' ? { referralType: params } : params;
+        return {
+          url: "/admin/referrals",
+          method: "GET",
+          params: { settings: true, referralType, regionId },
+        };
+      },
       providesTags: ["Settings"],
     }),
 
@@ -951,7 +987,11 @@ export const glowvitaApi = createApi({
 
     // Subscription Plan Endpoints
     getSubscriptionPlans: builder.query({
-      query: () => ({ url: "/admin/subscription-plans", method: "GET" }),
+      query: (regionId) => ({ 
+        url: "/admin/subscription-plans", 
+        method: "GET",
+        params: regionId ? { regionId } : {}
+      }),
       providesTags: ["SubscriptionPlan"],
     }),
 
@@ -1072,41 +1112,17 @@ export const glowvitaApi = createApi({
       ],
     }),
 
-    // Geo Fence Endpoints
-    getGeoFences: builder.query({
-      query: () => ({ url: "/admin/geofence", method: "GET" }),
-      providesTags: ["GeoFence"],
-    }),
 
-    createGeoFence: builder.mutation({
-      query: (geoFence) => ({
-        url: "/admin/geofence",
-        method: "POST",
-        body: geoFence,
-      }),
-      invalidatesTags: ["GeoFence"],
-    }),
-
-    updateGeoFence: builder.mutation({
-      query: ({ _id, ...geoFence }) => ({
-        url: "/admin/geofence",
-        method: "PUT",
-        body: { _id, ...geoFence },
-      }),
-      invalidatesTags: ["GeoFence"],
-    }),
-
-    deleteGeoFence: builder.mutation({
-      query: (_id) => ({
-        url: "/admin/geofence",
-        method: "DELETE",
-        body: { _id },
-      }),
-      invalidatesTags: ["GeoFence"],
-    }),
     // Categories
     getCategories: builder.query({
-      query: () => ({ url: "/admin/categories", method: "GET" }),
+      query: (params) => {
+        const { regionId } = params || {};
+        return { 
+          url: "/admin/categories", 
+          method: "GET",
+          params: regionId ? { regionId } : {}
+        };
+      },
       providesTags: ["Category"],
     }),
 

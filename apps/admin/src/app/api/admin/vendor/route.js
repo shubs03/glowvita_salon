@@ -48,9 +48,6 @@ const processBase64Image = async (base64String, fileName, oldImageUrl = null) =>
 // Create Vendor
 export const POST = authMiddlewareAdmin(
   async (req) => {
-    if (!hasPermission(req.user, "vendors:edit")) {
-      return forbiddenResponse();
-    }
     const body = await req.json();
     const {
       firstName,
@@ -351,15 +348,14 @@ export const POST = authMiddlewareAdmin(
       { status: 201 }
     );
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "vendors:edit"
 );
 
 // Get All Vendors
-export const GET = authMiddlewareAdmin(async (req) => {
-  if (!hasPermission(req.user, "vendors:view")) {
-    return forbiddenResponse();
-  }
-  const url = new URL(req.url);
+export const GET = authMiddlewareAdmin(
+  async (req) => {
+    const url = new URL(req.url);
   const vendorIdParam = url.searchParams.get('vendorId');
 
   console.log('[Vendor GET] Request from user:', {
@@ -391,14 +387,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
   const vendors = await VendorModel.find(regionQuery).populate("subscription.plan", "name").select("-password").lean();
   console.log('[Vendor GET] Found vendors:', vendors.length);
   return Response.json(vendors);
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN","STAFF"],
+  "vendors:view"
+);
 
 // Update Vendor
 export const PUT = authMiddlewareAdmin(
   async (req) => {
-    if (!hasPermission(req.user, "vendors:edit")) {
-      return forbiddenResponse();
-    }
     const body = await req.json();
     const id = body.id || body._id;
 
@@ -423,6 +418,7 @@ export const PUT = authMiddlewareAdmin(
       password,
       website,
       address,
+      location,
       description,
       profileImage,
       subscription,
@@ -431,6 +427,12 @@ export const PUT = authMiddlewareAdmin(
       documents,
       gstNo,
     } = body;
+
+    // Get existing vendor
+    const existingVendor = await VendorModel.findById(id);
+    if (!existingVendor) {
+      return Response.json({ message: "Vendor not found" }, { status: 404 });
+    }
 
     const updateData = {
       firstName,
@@ -443,25 +445,36 @@ export const PUT = authMiddlewareAdmin(
       pincode,
       category,
       subCategories,
-      website: website || null,
       address,
+      location,
+      website: website || null,
       description: description || null,
       gstNo,
       updatedAt: Date.now(),
     };
 
-    // If password is provided, hash it and add to updateData
-    if (password && password.trim() !== "") {
-      if (password.length < 8) {
-        return Response.json(
-          { message: "Password must be at least 8 characters" },
-          { status: 400 }
-        );
-      }
-      updateData.password = await bcrypt.hash(password, 10);
+    // Validate required fields
+    if (
+      !firstName ||
+      !lastName ||
+      !businessName ||
+      !email ||
+      !phone ||
+      !state ||
+      !city ||
+      !pincode ||
+      !category ||
+      !subCategories ||
+      subCategories.length === 0 ||
+      !address
+    ) {
+      return Response.json(
+        { message: "All required fields must be provided" },
+        { status: 400 }
+      );
     }
 
-    // Validate required fields (optional for update, but good to have consistency)
+    // Check for duplicate email or phone
     if (email || phone) {
       const existingConflict = await VendorModel.findOne({
         $or: [
@@ -478,7 +491,18 @@ export const PUT = authMiddlewareAdmin(
       }
     }
 
-    // Transform subscription fields if provided
+    // Hash password if provided
+    if (password && password.trim() !== "") {
+      if (password.length < 8) {
+        return Response.json(
+          { message: "Password must be at least 8 characters" },
+          { status: 400 }
+        );
+      }
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    // Process Subscription
     if (subscription) {
       let planId = null;
       if (subscription.package) {
@@ -492,7 +516,7 @@ export const PUT = authMiddlewareAdmin(
       };
     }
 
-    // Transform bankDetails if provided
+    // Process bankDetails
     if (bankDetails) {
       updateData.bankDetails = {
         bankName: bankDetails.bankName || null,
@@ -502,24 +526,20 @@ export const PUT = authMiddlewareAdmin(
       };
     }
 
-    // Get existing vendor to handle image/doc deletions
-    const existingVendor = await VendorModel.findById(id);
-    if (!existingVendor) {
-      return Response.json({ message: "Vendor not found" }, { status: 404 });
-    }
-
-    // Handle profile image upload
-    if (profileImage && !profileImage.startsWith('http')) {
-      const fileName = `vendor-${id}-profile`;
-      const profileImageUrl = await processBase64Image(profileImage, fileName, existingVendor.profileImage);
-      if (profileImageUrl) {
-        updateData.profileImage = profileImageUrl;
+    // Process profile image
+    if (profileImage !== undefined) {
+      if (profileImage && !profileImage.startsWith('http')) {
+        const fileName = `vendor-${id}-profile`;
+        const profileImageUrl = await processBase64Image(profileImage, fileName, existingVendor.profileImage);
+        if (profileImageUrl) {
+          updateData.profileImage = profileImageUrl;
+        }
+      } else {
+        updateData.profileImage = profileImage;
       }
-    } else if (profileImage === null) {
-      updateData.profileImage = null;
     }
 
-    // Handle gallery images upload
+    // Process gallery
     if (gallery && Array.isArray(gallery)) {
       const galleryUrls = [];
       for (let i = 0; i < gallery.length; i++) {
@@ -536,10 +556,9 @@ export const PUT = authMiddlewareAdmin(
       updateData.gallery = galleryUrls;
     }
 
-    // Handle documents upload
+    // Process documents
     if (documents && Array.isArray(documents)) {
       const documentsData = existingVendor.documents ? { ...existingVendor.documents.toObject() } : {};
-
       for (const doc of documents) {
         if (doc.file && !doc.file.startsWith('http')) {
           const fileName = `vendor-${id}-${doc.type}`;
@@ -574,8 +593,10 @@ export const PUT = authMiddlewareAdmin(
       vendor: updatedVendor,
     });
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "vendors:edit"
 );
+
 
 // Delete Vendor
 export const DELETE = authMiddlewareAdmin(
@@ -589,7 +610,8 @@ export const DELETE = authMiddlewareAdmin(
 
     return Response.json({ message: "Vendor deleted successfully" });
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "vendors:delete"
 );
 
 // Update Vendor Status or Document Status
@@ -755,5 +777,6 @@ export const PATCH = authMiddlewareAdmin(
       );
     }
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "vendors:edit"
 );

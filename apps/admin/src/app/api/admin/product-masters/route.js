@@ -7,7 +7,7 @@ import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 await _db();
 
 // GET all product masters - No auth required for reading templates
-export const GET = async (req) => {
+export const GET = authMiddlewareAdmin(async (req) => {
   try {
     const productMasters = await ProductMasterModel.find({}).populate("category", "name");
     console.log('Admin: Sending product masters:', productMasters.length, 'items');
@@ -27,7 +27,7 @@ export const GET = async (req) => {
       { status: 500 }
     );
   }
-};
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "product-masters:view");
 
 // POST a new product master
 export const POST = authMiddlewareAdmin(async (req) => {
@@ -88,7 +88,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "product-masters:edit");
 
 // PUT (update) a product master by ID
 export const PUT = authMiddlewareAdmin(
@@ -178,7 +178,8 @@ export const PUT = authMiddlewareAdmin(
       );
     }
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "product-masters:edit"
 );
 
 // DELETE a product master by ID
@@ -231,5 +232,6 @@ export const DELETE = authMiddlewareAdmin(
       );
     }
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "product-masters:delete"
 );

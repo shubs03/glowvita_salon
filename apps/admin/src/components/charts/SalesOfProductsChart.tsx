@@ -2,7 +2,18 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
+const COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+  "hsl(var(--chart-6))",
+  "hsl(var(--chart-7))",
+  "hsl(var(--chart-8))",
+  "hsl(var(--chart-9))",
+  "hsl(var(--chart-10))",
+];
 
 interface ProductData {
   product: string;
@@ -65,17 +76,19 @@ export function SalesOfProductsChart({ productsData, filterType, filterValue }: 
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-background border border-border p-4 rounded-md shadow-md">
-          <p className="font-bold text-lg">{data.name}</p>
-          <p className="text-sm">
-            <span className="font-medium">Product Total Amount:</span> ₹{data.totalAmount.toLocaleString('en-IN')}
-          </p>
-          <p className="text-sm">
-            <span className="font-medium">Product Platform Fee:</span> ₹{data.platformFee?.toLocaleString('en-IN') || '0.00'}
-          </p>
-          <p className="text-sm">
-            <span className="font-medium">Product Sold:</span> {data.sales}
-          </p>
+        <div className="bg-background border border-border p-3 rounded-lg shadow-lg">
+          <p className="font-semibold text-foreground mb-1">{data.name}</p>
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Sale:</span> ₹{data.totalAmount.toLocaleString('en-IN')}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Platform Fee:</span> ₹{data.platformFee?.toLocaleString('en-IN') || '0.00'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Sold:</span> {data.sales}
+            </p>
+          </div>
         </div>
       );
     }
@@ -91,12 +104,12 @@ export function SalesOfProductsChart({ productsData, filterType, filterValue }: 
           data={chartData}
           cx="50%"
           cy="50%"
-          labelLine={true}
+          labelLine={false}
           outerRadius={100}
-          fill="#8884d8"
+          fill="hsl(var(--primary))"
           dataKey="value"
-          name="Total Product Amount"
-          label={({name}) => name}
+          nameKey="name"
+          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
         >
           {chartData.map((entry: any, index: number) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

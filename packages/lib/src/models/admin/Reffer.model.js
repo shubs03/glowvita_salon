@@ -72,6 +72,20 @@ const referralSettingsSchema = new mongoose.Schema({
     min: 0,
     default: null,
   },
+  regionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Region',
+    default: null, // null means global
+  },
+  status: {
+    type: String,
+    enum: ['Active', 'Inactive', 'Disabled'],
+    default: 'Active',
+  },
+  disabledRegions: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Region'
+  }],
   createdAt: {
     type: Date,
     default: Date.now,

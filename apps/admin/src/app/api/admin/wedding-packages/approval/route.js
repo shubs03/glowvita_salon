@@ -54,7 +54,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
             { status: 500 }
         );
     }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "wedding-approval:view");
 
 // PATCH (update status) a wedding package by ID
 export const PATCH = authMiddlewareAdmin(async (req) => {
@@ -105,4 +105,4 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
             { status: 500 }
         );
     }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "wedding-approval:edit");

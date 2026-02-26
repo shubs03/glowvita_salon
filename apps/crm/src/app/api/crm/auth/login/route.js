@@ -104,14 +104,30 @@ export async function POST(request) {
     }
 
     // Reload the user from the database to ensure all fields are included
-    if (user.referralCode) {
+    if (user.referralCode || userType === 'staff') {
       const reloadedUser = await Model.findById(user._id);
       if (reloadedUser) {
         user = reloadedUser;
+        
+        // For staff, get regionId from their vendor/doctor
+        if (userType === 'staff' && user.vendorId) {
+          const ownerModel = user.userType === 'Doctor' ? DoctorModel : VendorModel;
+          const owner = await ownerModel.findById(user.vendorId).select('regionId');
+          if (owner) {
+            user.regionId = owner.regionId;
+          }
+        }
       }
     }
 
-    const { accessToken, refreshToken } = generateTokens(user._id, userType, permissions);
+    const { accessToken, refreshToken } = generateTokens(
+      user._id, 
+      userType, 
+      permissions, 
+      user.assignedRegions || (user.regionId ? [user.regionId] : []), 
+      null, 
+      user.regionId
+    );
 
     const { password: _, ...safeUser } = user.toObject();
 

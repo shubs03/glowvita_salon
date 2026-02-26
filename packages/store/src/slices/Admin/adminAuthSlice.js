@@ -40,6 +40,11 @@ const adminAuthSlice = createSlice({
       state.admin = user;
       state.token = token;
 
+      // Set default selectedRegion for Regional Admins
+      if (user && user.roleName !== 'SUPER_ADMIN' && user.assignedRegions?.length > 0) {
+        state.selectedRegion = user.assignedRegions[0];
+      }
+
       // Persist state to localStorage only on the client-side
       if (typeof localStorage !== 'undefined') {
         try {
@@ -47,6 +52,7 @@ const adminAuthSlice = createSlice({
             isAdminAuthenticated: true,
             admin: user,
             token: token,
+            selectedRegion: state.selectedRegion,
           });
           localStorage.setItem('adminAuthState', serializedState);
         } catch (e) {

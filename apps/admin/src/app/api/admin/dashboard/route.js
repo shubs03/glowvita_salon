@@ -188,10 +188,24 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Simple count for top-level entities
     const getTopEntityCount = async (Model) => {
-      const q = (roleName === 'REGIONAL_ADMIN' || selectedRegionId)
-        ? { regionId: { $in: allowedRegionIds.length > 0 ? allowedRegionIds : [new mongoose.Types.ObjectId(selectedRegionId)] } }
-        : {};
-      return await Model.countDocuments(q);
+      let query = {};
+      const isGlobal = roleName === 'SUPER_ADMIN' || (roleName === 'STAFF' && (!assignedRegions || assignedRegions.length === 0));
+      
+      if (isGlobal) {
+        if (selectedRegionId) {
+          query = { regionId: new mongoose.Types.ObjectId(selectedRegionId) };
+        }
+      } else if (assignedRegions && assignedRegions.length > 0) {
+        if (selectedRegionId && assignedRegions.some(rid => rid.toString() === selectedRegionId)) {
+          query = { regionId: new mongoose.Types.ObjectId(selectedRegionId) };
+        } else {
+          query = { regionId: { $in: assignedRegions.map(id => new mongoose.Types.ObjectId(id)) } };
+        }
+      } else {
+        // Fallback for restricted users
+        query = { regionId: new mongoose.Types.ObjectId("000000000000000000000000") };
+      }
+      return await Model.countDocuments(query);
     };
 
     const [totalVendors, totalSuppliers, totalDoctors, totalCustomers] = await Promise.all([
@@ -365,7 +379,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     console.error("Dashboard error:", error);
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"]);
 
 async function getRegionWiseRevenueDetailed(req, allowedRegionIds) {
   const AppointmentModel = (await import('@repo/lib/models/Appointment/Appointment.model')).default;

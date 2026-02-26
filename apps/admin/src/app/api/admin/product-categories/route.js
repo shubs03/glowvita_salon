@@ -21,7 +21,7 @@ export const OPTIONS = async () => {
 };
 
 // GET all product categories
-export const GET = async (req) => {
+export const GET = authMiddlewareAdmin(async (req) => {
   try {
     const categories = await ProductCategoryModel.find({}).sort({ createdAt: -1 });
     return Response.json({
@@ -46,10 +46,10 @@ export const GET = async (req) => {
       }
     );
   }
-};
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "product-categories:view");
 
 // POST a new product category
-export const POST = async (req) => {
+export const POST = authMiddlewareAdmin(async (req) => {
   try {
     const body = await req.json();
     const { name, description, gstType, gstValue } = body;
@@ -136,10 +136,10 @@ export const POST = async (req) => {
       }
     );
   }
-};
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "product-categories:edit");
 
 // PUT update a product category
-export const PUT = async (req) => {
+export const PUT = authMiddlewareAdmin(async (req) => {
   try {
     const body = await req.json();
     const { id, name, description, gstType, gstValue } = body;
@@ -239,10 +239,10 @@ export const PUT = async (req) => {
       }
     );
   }
-};
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "product-categories:edit");
 
 // DELETE a product category
-export const DELETE = async (req) => {
+export const DELETE = authMiddlewareAdmin(async (req) => {
   try {
     const body = await req.json();
     const { id } = body;
@@ -269,16 +269,6 @@ export const DELETE = async (req) => {
       });
     }
 
-    // TODO: Check if category is being used by any products
-    // const ProductModel = require('path/to/Product.model');
-    // const productCount = await ProductModel.countDocuments({ category: id });
-    // if (productCount > 0) {
-    //   return Response.json({ 
-    //     success: false,
-    //     message: "Cannot delete category that is being used by products" 
-    //   }, { status: 409 });
-    // }
-
     // Delete category
     await ProductCategoryModel.findByIdAndDelete(id);
 
@@ -304,4 +294,4 @@ export const DELETE = async (req) => {
       }
     );
   }
-};
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "product-categories:delete");
