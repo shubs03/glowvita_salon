@@ -88,13 +88,55 @@ export const GET = authMiddlewareCrm(async (req) => {
             }
         }
 
-        // Fetch completed appointments for this specific vendor
+
+        // 1. Get Opening Balance (everything before startDate)
+        const prevAppointments = await AppointmentModel.find({
+            vendorId: vendorObjectId,
+            date: { $lt: startDate },
+            status: { $in: ['completed', 'partially-completed'] },
+            $or: [
+                { paymentMethod: 'Pay Online', paymentStatus: 'completed' },
+                { paymentMethod: 'Pay at Salon' },
+                { mode: 'online' }
+            ]
+        });
+
+        const prevPayments = await VendorSettlementPaymentModel.find({
+            vendorId: vendorObjectId,
+            paymentDate: { $lt: startDate }
+        });
+
+        let openingAdminOwesVendor = 0;
+        let openingVendorOwesAdmin = 0;
+        let openingPaidToVendor = 0;
+        let openingPaidToAdmin = 0;
+
+        prevAppointments.forEach(appt => {
+            if (appt.paymentMethod === 'Pay Online') {
+                openingAdminOwesVendor += (appt.totalAmount || 0);
+            } else {
+                openingVendorOwesAdmin += (appt.platformFee || 0) + (appt.serviceTax || 0);
+            }
+        });
+
+        prevPayments.forEach(p => {
+            if (p.type === "Payment to Vendor") openingPaidToVendor += p.amount;
+            else openingPaidToAdmin += p.amount;
+        });
+
+        // Opening Balance (Positive = Admin owes Vendor, Negative = Vendor owes Admin)
+        const openingNetBalance = (openingAdminOwesVendor - openingVendorOwesAdmin) + (openingPaidToVendor - openingPaidToAdmin);
+
+        // 2. Fetch current period appointments
         const appointments = await AppointmentModel.find({
             vendorId: vendorObjectId,
             date: { $gte: startDate, $lte: endDate },
-            paymentStatus: 'completed',
-            mode: 'online', // Only online bookings
-            status: { $in: ['scheduled', 'confirmed', 'completed'] } // Exclude cancelled
+            status: { $in: ['completed', 'partially-completed'] },
+            $or: [
+                { paymentMethod: 'Pay Online', paymentStatus: 'completed' },
+                { paymentMethod: 'Pay at Salon' },
+                { mode: 'online' }
+            ]
         })
             .populate({
                 path: 'vendorId',
@@ -103,7 +145,7 @@ export const GET = authMiddlewareCrm(async (req) => {
             })
             .sort({ date: -1 });
 
-        // Fetch actual payment history
+        // 3. Fetch current period payment history
         const paymentHistory = await VendorSettlementPaymentModel.find({
             vendorId: vendorObjectId,
             paymentDate: { $gte: startDate, $lte: endDate }
@@ -112,44 +154,49 @@ export const GET = authMiddlewareCrm(async (req) => {
         // Group appointments by vendor
         const vendorSettlementsMap = new Map();
 
+        // Initialize with default or previous balance data
+        const initialSettlement = {
+            vendorId: vendorObjectId.toString(),
+            vendorName: 'N/A', // Will be updated by appointments or fallback
+            contactNo: 'N/A',
+            ownerName: 'N/A',
+            appointments: [],
+            totalAmount: 0,
+            platformFeeTotal: 0,
+            serviceTaxTotal: 0,
+            adminOwesVendor: 0,
+            vendorOwesAdmin: 0,
+            openingBalance: openingNetBalance,
+            netSettlement: 0,
+            adminReceivableAmount: 0,
+            vendorAmount: 0,
+            amountPaid: 0,
+            amountPending: 0,
+            paymentHistory: []
+        };
+
+        // If we have appointments, we'll get vendor info from them
+        // If not, we should still try to get it from Vendor model for empty settlements
+        if (appointments.length === 0) {
+            const vendor = await VendorModel.findById(vendorObjectId);
+            if (vendor) {
+                initialSettlement.vendorName = vendor.businessName;
+                initialSettlement.contactNo = vendor.contactNumber;
+                initialSettlement.ownerName = vendor.ownerName;
+            }
+        }
+
+        vendorSettlementsMap.set(vendorObjectId.toString(), initialSettlement);
+
         appointments.forEach(appt => {
             const vendorId = appt.vendorId?._id?.toString() || appt.vendorId?.toString();
-
             if (!vendorId) return;
 
-            if (!vendorSettlementsMap.has(vendorId)) {
-                vendorSettlementsMap.set(vendorId, {
-                    vendorId: vendorId,
-                    vendorName: appt.vendorId?.businessName || 'Unknown Vendor',
-                    contactNo: appt.vendorId?.contactNumber || 'N/A',
-                    ownerName: appt.vendorId?.ownerName || 'N/A',
-                    appointments: [],
-                    totalAmount: 0,
-                    platformFeeTotal: 0,
-                    serviceTaxTotal: 0,
-                    deductionAmount: 0,
-                    receivableAmount: 0,
-
-                    // Pay Online: Admin owes vendor (service amount only)
-                    adminOwesVendor: 0,
-
-                    // Pay at Salon: Vendor owes admin (platform fee + service tax)
-                    vendorOwesAdmin: 0,
-
-                    // Net settlement (positive = admin owes vendor, negative = vendor owes admin)
-                    netSettlement: 0,
-
-                    adminReceivableAmount: 0,
-                    vendorAmount: 0,
-                    amountPaid: 0,
-                    amountPending: 0,
-                    paymentHistory: []
-                });
-            }
-
             const settlement = vendorSettlementsMap.get(vendorId);
+            settlement.vendorName = appt.vendorId?.businessName || settlement.vendorName;
+            settlement.contactNo = appt.vendorId?.contactNumber || settlement.contactNo;
+            settlement.ownerName = appt.vendorId?.ownerName || settlement.ownerName;
 
-            // Add appointment to settlement
             const appointmentData = {
                 _id: appt._id.toString(),
                 appointmentId: appt._id.toString(),
@@ -168,8 +215,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 
             settlement.appointments.push(appointmentData);
 
-            // Calculate totals based on payment method
-            const serviceAmount = (appt.totalAmount || 0); // Service amount (without fees/tax)
+            const serviceAmount = (appt.totalAmount || 0);
             const fees = (appt.platformFee || 0) + (appt.serviceTax || 0);
 
             settlement.totalAmount += appt.finalAmount || 0;
@@ -177,84 +223,55 @@ export const GET = authMiddlewareCrm(async (req) => {
             settlement.serviceTaxTotal += appt.serviceTax || 0;
 
             if (appt.paymentMethod === 'Pay Online') {
-                // Pay Online: Admin received full amount, owes vendor the service amount
                 settlement.adminOwesVendor += serviceAmount;
-            } else if (appt.paymentMethod === 'Pay at Salon') {
-                // Pay at Salon: Vendor received full amount, owes admin the fees
+            } else {
                 settlement.vendorOwesAdmin += fees;
             }
         });
 
-        // Add payment history to settlements
+        // Add payment history
         paymentHistory.forEach(payment => {
             const vId = payment.vendorId.toString();
             if (vendorSettlementsMap.has(vId)) {
                 const s = vendorSettlementsMap.get(vId);
                 s.paymentHistory.push(payment);
-
-                // Track total amount already paid/transferred
-                // Payment to Vendor means admin SENT money to vendor
-                // Payment to Admin means vendor SENT money to admin
-                if (payment.type === "Payment to Vendor") {
-                    s.amountPaid += payment.amount;
-                } else if (payment.type === "Payment to Admin") {
-                    // This reduces what the vendor owes the admin
-                    s.amountPaid -= payment.amount;
-                }
             }
         });
 
-        // Convert map to array and calculate final amounts
+        // Calculate final amounts with Ledger Logic
         const settlements = Array.from(vendorSettlementsMap.values()).map(settlement => {
-            // Calculate net settlement
-            // Positive = Admin owes vendor
-            // Negative = Vendor owes admin
-            settlement.netSettlement = settlement.adminOwesVendor - settlement.vendorOwesAdmin;
+            // Period Balance = Amount earned in period - Fees in period
+            const periodNet = settlement.adminOwesVendor - settlement.vendorOwesAdmin;
 
-            // Base pending calculation
-            if (settlement.netSettlement > 0) {
+            // Total Ledger Balance including opening balance
+            const totalNetBalance = settlement.openingBalance + periodNet;
+
+            const totalPaidToVendorInPeriod = settlement.paymentHistory
+                .filter(p => p.type === "Payment to Vendor").reduce((acc, p) => acc + p.amount, 0);
+            const totalPaidToAdminInPeriod = settlement.paymentHistory
+                .filter(p => p.type === "Payment to Admin").reduce((acc, p) => acc + p.amount, 0);
+
+            // Closing Balance (Positive = Admin owes Vendor, Negative = Vendor owes Admin)
+            const closingBalance = totalNetBalance - totalPaidToVendorInPeriod + totalPaidToAdminInPeriod;
+
+            settlement.netSettlement = totalNetBalance; // Total amount to be settled (Opening + New)
+
+            if (closingBalance > 0) {
                 // Admin owes vendor
                 settlement.adminReceivableAmount = 0;
-                settlement.vendorAmount = settlement.netSettlement;
-                settlement.amountPending = Math.max(0, settlement.netSettlement - settlement.amountPaid);
-            } else if (settlement.netSettlement < 0) {
+                settlement.vendorAmount = closingBalance;
+                settlement.amountPending = closingBalance;
+                settlement.status = closingBalance <= 0 ? 'Paid' : (totalPaidToVendorInPeriod > 0 ? 'Partially Paid' : 'Pending');
+            } else if (closingBalance < 0) {
                 // Vendor owes admin
-                const vendorOwes = Math.abs(settlement.netSettlement);
+                const vendorOwes = Math.abs(closingBalance);
                 settlement.adminReceivableAmount = vendorOwes;
                 settlement.vendorAmount = 0;
-                // If vendor paid admin, amountPaid was negative in my loop above (e.g. -= payment.amount)
-                // Let's rethink logic: 
-                // Let's use totalPaidVendor and totalPaidAdmin
-                let totalPaidToVendor = settlement.paymentHistory
-                    .filter(p => p.type === "Payment to Vendor").reduce((acc, p) => acc + p.amount, 0);
-                let totalPaidToAdmin = settlement.paymentHistory
-                    .filter(p => p.type === "Payment to Admin").reduce((acc, p) => acc + p.amount, 0);
-
-                if (settlement.netSettlement > 0) {
-                    settlement.amountPending = Math.max(0, settlement.netSettlement - totalPaidToVendor);
-                } else {
-                    settlement.amountPending = Math.max(0, Math.abs(settlement.netSettlement) - totalPaidToAdmin);
-                }
+                settlement.amountPending = vendorOwes;
+                settlement.status = vendorOwes <= 0 ? 'Paid' : (totalPaidToAdminInPeriod > 0 ? 'Partially Paid' : 'Pending');
             } else {
-                // Balanced
-                settlement.adminReceivableAmount = 0;
-                settlement.vendorAmount = 0;
                 settlement.amountPending = 0;
-            }
-
-            // Determine status
-            if (settlement.amountPending <= 0) {
                 settlement.status = 'Paid';
-            } else {
-                let paidAmt = settlement.netSettlement > 0 ?
-                    settlement.paymentHistory.filter(p => p.type === "Payment to Vendor").reduce((acc, p) => acc + p.amount, 0) :
-                    settlement.paymentHistory.filter(p => p.type === "Payment to Admin").reduce((acc, p) => acc + p.amount, 0);
-
-                if (paidAmt > 0) {
-                    settlement.status = 'Partially Paid';
-                } else {
-                    settlement.status = 'Pending';
-                }
             }
 
             return {
@@ -350,6 +367,15 @@ export const POST = authMiddlewareCrm(async (req) => {
             return NextResponse.json(
                 { success: false, message: "Missing required fields" },
                 { status: 400 }
+            );
+        }
+
+        // Vendors can only record payments TO admin (platform fees owed for Pay at Salon)
+        // Only admin can record 'Payment to Vendor' — that's done via /api/admin/settlements
+        if (type !== 'Payment to Admin') {
+            return NextResponse.json(
+                { success: false, message: "Unauthorized: Vendors can only record payments to Admin. Admin payouts are managed by the Admin panel." },
+                { status: 403 }
             );
         }
 

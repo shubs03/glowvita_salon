@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
+import VendorSettlementPaymentModel from '@repo/lib/models/Vendor/VendorSettlementPayment.model';
 import { authMiddlewareAdmin } from '../../../../../../middlewareAdmin';
 import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 
@@ -18,7 +19,7 @@ const initDb = async () => {
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
     await initDb();
-    
+
     // Extract filter parameters from query
     const { searchParams } = new URL(req.url);
     const filterType = searchParams.get('filterType'); // 'day', 'month', 'year', or null
@@ -28,9 +29,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const city = searchParams.get('city'); // City filter
     const vendorName = searchParams.get('vendor'); // Vendor filter
     const regionId = searchParams.get('regionId'); // Region filter
-    
+
     console.log("Vendor Payout Settlement Report Filter parameters:", { filterType, filterValue, startDateParam, endDateParam, city, vendorName });
-    
+
     // Build date filter
     const buildDateFilter = (filterType, filterValue) => {
       const now = new Date();
@@ -75,9 +76,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
     }
     // Apply custom date range if provided (takes precedence over filterType/filterValue)
     else if (startDateParam && endDateParam) {
-      dateFilter.date = { 
-        $gte: new Date(startDateParam), 
-        $lte: new Date(endDateParam) 
+      dateFilter.date = {
+        $gte: new Date(startDateParam),
+        $lte: new Date(endDateParam)
       };
     }
 
@@ -139,6 +140,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           vendorId: "$_id.vendorId",
           "Source Type": { $literal: "Service" }, // Fixed source type for service-based payouts
           "Entity Name": "$_id.businessName", // Business name of the vendor
+          "Service Gross Amount": "$serviceGrossAmount",
           "Service Platform Fee": "$servicePlatformFee",
           "Service Tax (₹)": "$serviceTax",
           "Service Total Amount": "$serviceTotalAmount",
@@ -153,7 +155,40 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Execute aggregation
     const results = await AppointmentModel.aggregate(pipeline);
 
-    console.log("Vendor payout settlement report results:", results);
+    // Also fetch actual payments for these vendors in the same period
+    const paymentFilter = {
+      ...dateFilter,
+      ...regionQuery,
+      type: "Payment to Vendor"
+    };
+
+    const actualPayments = await VendorSettlementPaymentModel.aggregate([
+      { $match: paymentFilter },
+      {
+        $group: {
+          _id: "$vendorId",
+          paidAmount: { $sum: "$amount" }
+        }
+      }
+    ]);
+
+    const paymentMap = actualPayments.reduce((acc, curr) => {
+      acc[curr._id.toString()] = curr.paidAmount;
+      return acc;
+    }, {});
+
+    // Add payment info to results
+    const resultsWithPayments = results.map(vendor => {
+      const paidAmount = paymentMap[vendor.vendorId.toString()] || 0;
+      const totalPayable = vendor.Total || 0;
+      return {
+        ...vendor,
+        "Actually Paid": paidAmount,
+        "Pending Amount": Math.max(0, totalPayable - paidAmount)
+      };
+    });
+
+    console.log("Vendor payout settlement report results with payments:", resultsWithPayments);
 
     // Get unique cities for filter dropdown
     const cityPipeline = [
@@ -195,18 +230,24 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Calculate aggregated totals
     const aggregatedTotals = results.reduce((totals, vendor) => {
+      totals.serviceGrossAmount += vendor["Service Gross Amount"] || 0;
       totals.servicePlatformFee += vendor["Service Platform Fee"] || 0;
       totals.serviceTax += vendor["Service Tax (₹)"] || 0;
       totals.serviceTotalAmount += vendor["Service Total Amount"] || 0;
       totals.total = vendor.Total ? (totals.total + vendor.Total) : totals.total;
+      totals.totalPaid = (totals.totalPaid || 0) + (vendor["Actually Paid"] || 0);
+      totals.totalPending = (totals.totalPending || 0) + (vendor["Pending Amount"] || 0);
       totals.appointmentCount += vendor.appointmentCount || 0;
       totals.completedAppointments += vendor.completedAppointments || 0;
       return totals;
     }, {
+      serviceGrossAmount: 0,
       servicePlatformFee: 0,
       serviceTax: 0,
       serviceTotalAmount: 0,
       total: 0, // This will be the sum of all vendor payouts
+      totalPaid: 0,
+      totalPending: 0,
       appointmentCount: 0,
       completedAppointments: 0
     });
@@ -216,19 +257,17 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     return NextResponse.json({
       success: true,
-      data: {
-        vendorPayoutSettlementReport: results,
-        cities: cities,
-        vendorNames: vendorNames,
-        aggregatedTotals: aggregatedTotals,
-        filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
-      }
+      vendorPayoutSettlementReport: resultsWithPayments,
+      cities: cities,
+      vendorNames: vendorNames,
+      aggregatedTotals: aggregatedTotals,
+      filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
     }, { status: 200 });
 
   } catch (error) {
     console.error("Error fetching vendor payout settlement report:", error);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: false,
       message: "Error fetching vendor payout settlement report",
       error: error.message

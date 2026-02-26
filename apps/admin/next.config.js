@@ -6,6 +6,11 @@ const storePackageJson = require('../../packages/store/package.json');
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: ["@repo/ui", "@repo/store", "@repo/lib", "@repo/config", "@repo/utils"],
+  staticPageGenerationTimeout: 1000,
+  experimental: {
+    workerThreads: false,
+    cpus: 1,
+  },
   output: 'standalone',
   poweredByHeader: false,
   webpack: (config, { isServer }) => {
@@ -38,7 +43,7 @@ const nextConfig = {
       test: /\.node$/,
       use: 'ignore-loader',
     });
-    
+
     // For server-side builds, provide a fallback for canvas
     if (isServer) {
       config.externals = [
@@ -48,7 +53,7 @@ const nextConfig = {
         },
       ];
     }
-    
+
     return config;
   },
   async headers() {

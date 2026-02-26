@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@repo/ui/dropdown-menu';
@@ -29,21 +29,23 @@ export const VendorPayoutSettlementReportTable = () => {
     setItemsPerPage,
     setSearchTerm,
     handleFilterChange,
-    filterAndPaginateData
+    filterAndPaginateData,
+    apiFilters
   } = useReport<VendorPayoutSettlementData>(5);
-  
+
   // Use the API hook to fetch vendor payout settlement report data with filters
-  const apiFilters = filters;
-  
+  // apiFilters is derived from filters + selectedRegion in useReport
+
   console.log("Vendor Payout Settlement API filters:", apiFilters);
-  
+
   const { data, isLoading, isError, error } = useGetVendorPayoutSettlementReportQuery(apiFilters);
-  
+
   // Define data variables after API call
   const vendorPayoutSettlementData = data?.vendorPayoutSettlementReport || [];
   const cities = data?.cities || []; // Get cities from API response
   const vendorNames = data?.vendorNames || []; // Get vendor names from API response
-  
+  const aggregatedTotals = data?.aggregatedTotals;
+
   // Filter and paginate data
   const {
     paginatedData,
@@ -53,10 +55,13 @@ export const VendorPayoutSettlementReportTable = () => {
   } = filterAndPaginateData(vendorPayoutSettlementData, (item) => [
     item["Source Type"],
     item["Entity Name"],
+    `${item["Service Gross Amount"]}`,
     `${item["Service Platform Fee"]}`,
     `${item["Service Tax (₹)"]}`,
     `${item["Service Total Amount"]}`,
-    `${item["Total"]}`
+    `${item["Total"]}`,
+    `${item["Actually Paid"]}`,
+    `${item["Pending Amount"]}`
   ]);
 
   if (isLoading) {
@@ -113,8 +118,8 @@ export const VendorPayoutSettlementReportTable = () => {
             </DropdownMenu>
           </div>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -124,7 +129,7 @@ export const VendorPayoutSettlementReportTable = () => {
           showVendorFilter={true}
           showBookingTypeFilter={false}
         />
-        
+
         <div className="mb-6">
           <Card className="w-64">
             <CardHeader className="p-4">
@@ -144,7 +149,9 @@ export const VendorPayoutSettlementReportTable = () => {
                 <TableHead>Service Platform Fee</TableHead>
                 <TableHead>Service Tax (₹)</TableHead>
                 <TableHead>Service Total Amount</TableHead>
-                <TableHead>Total</TableHead>
+                <TableHead>Total Payable</TableHead>
+                <TableHead>Actually Paid</TableHead>
+                <TableHead>Pending</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -164,7 +171,7 @@ export const VendorPayoutSettlementReportTable = () => {
       </div>
     );
   }
-  
+
   if (isError) {
     console.error("Error fetching vendor payout settlement report:", error);
     return (
@@ -200,7 +207,7 @@ export const VendorPayoutSettlementReportTable = () => {
       </div>
     );
   }
-  
+
   // Show table structure even when there's no data
   if (vendorPayoutSettlementData.length === 0) {
     return (
@@ -256,8 +263,8 @@ export const VendorPayoutSettlementReportTable = () => {
             </DropdownMenu>
           </div>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -267,7 +274,7 @@ export const VendorPayoutSettlementReportTable = () => {
           showVendorFilter={true}
           showBookingTypeFilter={false}
         />
-        
+
         <div className="mb-6">
           <Card className="w-64">
             <CardHeader className="p-4">
@@ -278,8 +285,8 @@ export const VendorPayoutSettlementReportTable = () => {
             </CardContent>
           </Card>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -289,7 +296,7 @@ export const VendorPayoutSettlementReportTable = () => {
           showVendorFilter={true}
           showBookingTypeFilter={false}
         />
-        
+
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -299,7 +306,9 @@ export const VendorPayoutSettlementReportTable = () => {
                 <TableHead>Service Platform Fee</TableHead>
                 <TableHead>Service Tax (₹)</TableHead>
                 <TableHead>Service Total Amount</TableHead>
-                <TableHead>Total</TableHead>
+                <TableHead>Total Payable</TableHead>
+                <TableHead>Actually Paid</TableHead>
+                <TableHead>Pending</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -314,7 +323,7 @@ export const VendorPayoutSettlementReportTable = () => {
       </div>
     );
   }
-  
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -368,8 +377,8 @@ export const VendorPayoutSettlementReportTable = () => {
           </DropdownMenu>
         </div>
       </div>
-            
-      <FilterModal 
+
+      <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         onApplyFilters={handleFilterChange}
@@ -379,28 +388,55 @@ export const VendorPayoutSettlementReportTable = () => {
         showVendorFilter={true}
         showBookingTypeFilter={false}
       />
-            
-      <div className="mb-6">
-        <Card className="w-64">
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card>
           <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium">Vendor Payout Amount-service</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Service Amount (Gross)</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="text-lg font-bold">₹{paginatedData.reduce((sum, item: any) => sum + (item["Total"] || 0), 0).toFixed(2)}</div>
+            <div className="text-lg font-bold text-purple-600">₹{aggregatedTotals?.serviceGrossAmount?.toFixed(2) || '0.00'}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium">Total Payable (Accrued)</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold">₹{aggregatedTotals?.total?.toFixed(2) || '0.00'}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium text-green-600">Actually Paid</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold text-green-700">₹{aggregatedTotals?.totalPaid?.toFixed(2) || '0.00'}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium text-red-600">Pending Payouts</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold text-red-700">₹{aggregatedTotals?.totalPending?.toFixed(2) || '0.00'}</div>
           </CardContent>
         </Card>
       </div>
-            
+
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Source Type</TableHead>
               <TableHead>Entity Name</TableHead>
+              <TableHead>Service Gross Amount</TableHead>
               <TableHead>Service Platform Fee</TableHead>
               <TableHead>Service Tax (₹)</TableHead>
               <TableHead>Service Total Amount</TableHead>
-              <TableHead>Total</TableHead>
+              <TableHead>Total Payable</TableHead>
+              <TableHead>Actually Paid</TableHead>
+              <TableHead>Pending</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -408,20 +444,26 @@ export const VendorPayoutSettlementReportTable = () => {
               <TableRow key={startIndex + index}>
                 <TableCell>{item["Source Type"]}</TableCell>
                 <TableCell>{item["Entity Name"]}</TableCell>
+                <TableCell>₹{item["Service Gross Amount"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Service Platform Fee"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Service Tax (₹)"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Service Total Amount"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Total"]?.toFixed(2)}</TableCell>
+                <TableCell className="text-green-700 font-medium">₹{item["Actually Paid"]?.toFixed(2)}</TableCell>
+                <TableCell className="text-red-700 font-medium">₹{item["Pending Amount"]?.toFixed(2)}</TableCell>
               </TableRow>
             ))}
-            {/* Current Page Totals Row */}
-            {paginatedData.length > 0 && (
+            {/* Aggregated Totals Row */}
+            {vendorPayoutSettlementData.length > 0 && aggregatedTotals && (
               <TableRow className="bg-muted font-semibold">
                 <TableCell colSpan={2}>TOTAL</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Service Platform Fee"] || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Service Tax (₹)"] || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Service Total Amount"] || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Total"] || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.serviceGrossAmount?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.servicePlatformFee?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.serviceTax?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.serviceTotalAmount?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.total?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.totalPaid?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.totalPending?.toFixed(2)}</TableCell>
               </TableRow>
             )}
           </TableBody>

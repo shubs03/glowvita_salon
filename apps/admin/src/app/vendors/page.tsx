@@ -55,6 +55,8 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@repo/ui/dialog";
+import { useAppSelector } from "@repo/store/hooks";
+import { selectSelectedRegion } from "@repo/store/slices/adminAuthSlice";
 
 type ActionType = "enable" | "disable" | "delete" | "approve" | "disapprove";
 
@@ -66,12 +68,14 @@ export default function VendorManagementPage() {
   const [isFormModalOpen, setFormModalOpen] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null);
 
+  const selectedRegion = useAppSelector(selectSelectedRegion);
+
   const {
     data: vendors = [],
     isLoading,
     error,
     refetch,
-  } = useGetVendorsQuery(undefined);
+  } = useGetVendorsQuery(selectedRegion);
   const [createVendor] = useCreateVendorMutation();
   const [updateVendor] = useUpdateVendorMutation();
   const [deleteVendor] = useDeleteVendorMutation();
@@ -251,9 +255,16 @@ export default function VendorManagementPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-6">
-        Vendor Management
-      </h1>
+      <div className="flex items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold font-headline">
+          Vendor Management
+        </h1>
+        {selectedRegion && selectedRegion !== 'all' && (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            Region Filtered
+          </span>
+        )}
+      </div>
 
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">

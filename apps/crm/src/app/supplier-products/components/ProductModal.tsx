@@ -101,7 +101,7 @@ const ProductModal = ({
         <DialogHeader>
           <DialogTitle>{selectedProduct ? "Edit Product" : "Add New Product"}</DialogTitle>
         </DialogHeader>
-        
+
         <div className="py-4">
           <ProductFormFields
             formData={formData}

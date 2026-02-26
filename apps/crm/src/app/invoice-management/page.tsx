@@ -51,6 +51,7 @@ export default function InvoiceManagementPage() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [selectedAppointment, setSelectedAppointment] = useState<any | null>(null);
   const [isAppointmentModalOpen, setIsAppointmentModalOpen] = useState(false);
+  const [selectedAppointmentMode, setSelectedAppointmentMode] = useState<string>("all");
 
   // Fetch billings
   const { data: billingsData, isLoading, isError, refetch } = useGetBillingRecordsQuery(
@@ -174,6 +175,10 @@ export default function InvoiceManagementPage() {
         );
       }
 
+      if (selectedAppointmentMode !== "all") {
+        filtered = filtered.filter((app: any) => (app.mode || 'offline') === selectedAppointmentMode);
+      }
+
       // Sort by invoice number descending (newest/highest invoice number first)
       filtered.sort((a: any, b: any) => {
         const invoiceA = a.invoiceNumber || '';
@@ -183,7 +188,7 @@ export default function InvoiceManagementPage() {
 
       setAppointments(filtered);
     }
-  }, [appointmentsData, searchTerm, startDate, endDate]);
+  }, [appointmentsData, searchTerm, startDate, endDate, selectedAppointmentMode]);
 
   // Get unique payment methods for the payment method filter dropdown
   const uniquePaymentMethods: string[] = billingsData?.data ?
@@ -364,11 +369,13 @@ export default function InvoiceManagementPage() {
                 searchTerm={searchTerm}
                 selectedPaymentMethod={selectedPaymentMethod}
                 selectedItemType={selectedItemType}
+                selectedAppointmentMode={selectedAppointmentMode}
                 startDate={startDate}
                 endDate={endDate}
                 onSearchChange={setSearchTerm}
                 onPaymentMethodChange={setSelectedPaymentMethod}
                 onItemTypeChange={setSelectedItemType}
+                onAppointmentModeChange={setSelectedAppointmentMode}
                 onStartDateChange={setStartDate}
                 onEndDateChange={setEndDate}
                 onClearDateFilters={clearDateFilters}

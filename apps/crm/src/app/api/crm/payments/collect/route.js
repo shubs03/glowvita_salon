@@ -603,7 +603,13 @@ export const POST = authMiddlewareCrm(async (req) => {
             const completionHtml = getCompletionTemplate({
               clientName,
               businessName,
-              serviceName: appointment.serviceName
+              serviceName: appointment.serviceName,
+              appointmentId: updatedAppointment?.invoiceNumber || appointment.invoiceNumber || appointment._id.toString(),
+              completedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
+              orderTotal: updatedAppointment?.totalAmount || appointment.totalAmount,
+              location: appointment.homeServiceLocation?.address || businessName,
+              businessAddress,
+              businessPhone
             });
 
             logToFile('Sending email via transporter...');

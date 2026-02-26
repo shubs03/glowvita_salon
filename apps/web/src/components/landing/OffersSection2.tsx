@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calendar } from 'lucide-react';
 import { useGetPublicAllOffersQuery } from '@repo/store/services/api';
 import { useSelector } from 'react-redux';
+import Link from 'next/link';
 
 const OffersSection2 = () => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -30,6 +31,8 @@ const OffersSection2 = () => {
     ? offersData.data
         .filter((offer: any) => offer.status === 'Active') // Only show active offers
         .map((offer: any) => ({
+          code: offer.code,
+          vendorId: offer.businessId || offer.vendorId, // Use businessId or vendorId
           discount: `${offer.type === 'percentage' ? offer.value + '% OFF' : '₹' + offer.value + ' OFF'}`,
           image: offer.offerImage || 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400',
           validTill: offer.expires 
@@ -89,8 +92,9 @@ const OffersSection2 = () => {
         ) : (
           <div className="flex gap-6 sm:gap-8 lg:gap-10 animate-marquee hover:[animation-play-state:paused]">
             {[...offers, ...offers].map((offer, index) => (
-              <div
+              <Link
                 key={index}
+                href={`/book/${offer.vendorId}?offerCode=${offer.code}`}
                 className="relative flex-shrink-0"
                 onMouseEnter={() => setHoveredIndex(index)}
                 onMouseLeave={() => setHoveredIndex(null)}
@@ -133,7 +137,7 @@ const OffersSection2 = () => {
                     </div>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

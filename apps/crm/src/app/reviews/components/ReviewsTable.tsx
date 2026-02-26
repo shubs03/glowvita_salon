@@ -92,7 +92,7 @@ const ReviewsTable = ({
           <TableBody>
             {filteredReviews.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                   {searchTerm ? 'No reviews found matching your criteria' : 'Reviews from customers for your products, services, salon, and doctors will appear here'}
                 </TableCell>
               </TableRow>

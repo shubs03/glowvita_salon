@@ -2101,7 +2101,9 @@ export default function NewAppointmentForm({
     setAppointmentData((prev: Appointment) => ({
       ...prev,
       client: client._id,
-      clientName: client.fullName || client.name || ''
+      clientName: client.fullName || client.name || '',
+      clientEmail: client.email || '',
+      clientPhone: client.phone || ''
     }));
     setClientSearchTerm('');
     setIsClientDropdownOpen(false);
@@ -2112,7 +2114,9 @@ export default function NewAppointmentForm({
     setAppointmentData((prev: Appointment) => ({
       ...prev,
       client: '',
-      clientName: ''
+      clientName: '',
+      clientEmail: '',
+      clientPhone: ''
     }));
     setClientSearchTerm('');
   };

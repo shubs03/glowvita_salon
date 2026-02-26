@@ -8,6 +8,7 @@ import { Button } from '@repo/ui/button';
 import { Plus, Trash2 } from 'lucide-react';
 import { useGetProductMastersQuery } from '@repo/store/api';
 import { Badge } from '@repo/ui/badge';
+import { Switch } from '@repo/ui/switch';
 
 interface Product {
   productName?: string;
@@ -24,6 +25,8 @@ interface Product {
   forBodyPart?: string;
   bodyPartType?: string;
   keyIngredients?: string[];
+  isActive?: boolean;
+  showOnWebsite?: boolean;
 }
 
 interface Category {
@@ -457,6 +460,20 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
           className="rounded-xl border-border/40 focus:border-primary/50"
         />
         <p className="text-xs text-muted-foreground mt-1">Separate multiple ingredients with commas</p>
+      </div>
+
+      <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-muted/5">
+        <div className="space-y-0.5">
+          <Label htmlFor="showOnWebsite" className="text-sm font-medium">Show on Website</Label>
+          <p className="text-xs text-muted-foreground">
+            Decide whether this product should be displayed on the public website.
+          </p>
+        </div>
+        <Switch
+          id="showOnWebsite"
+          checked={formData.showOnWebsite !== false}
+          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, showOnWebsite: checked }))}
+        />
       </div>
     </>
   );

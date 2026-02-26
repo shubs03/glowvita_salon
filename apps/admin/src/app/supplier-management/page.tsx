@@ -69,6 +69,9 @@ import { toast } from "sonner";
 import { Skeleton } from "@repo/ui/skeleton";
 import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '../../../../../packages/config/config';
 import SupplierEditForm from "../../components/SupplierEditForm";
+import { useAppSelector } from "@repo/store/hooks";
+import { selectSelectedRegion } from "@repo/store/slices/adminAuthSlice";
+import { Badge } from "@repo/ui/badge";
 
 
 // Sample data for supplier orders
@@ -264,12 +267,13 @@ const SupplierPageSkeleton = () => (
 );
 
 export default function SupplierManagementPage() {
+  const selectedRegion = useAppSelector(selectSelectedRegion);
   const {
     data: suppliers = [],
     isLoading,
     isError,
     refetch,
-  } = useGetSuppliersQuery(undefined);
+  } = useGetSuppliersQuery(selectedRegion);
   const [createSupplier] = useCreateSupplierMutation();
   const [updateSupplier] = useUpdateSupplierMutation();
   const [deleteSupplier] = useDeleteSupplierMutation();
@@ -306,7 +310,7 @@ export default function SupplierManagementPage() {
     null
   );
   const [actionType, setActionType] = useState<ActionType | null>(null);
-  
+
   // Map states
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -361,7 +365,7 @@ export default function SupplierManagementPage() {
         id: item._id,
         name: item.name,
       }));
-    }, [superData]);
+  }, [superData]);
 
   // Load Google Maps script
   useEffect(() => {
@@ -386,10 +390,10 @@ export default function SupplierManagementPage() {
 
     const scriptId = 'google-maps-native-script';
     const existingScript = document.getElementById(scriptId);
-    
+
     if (existingScript) {
       if (checkGoogleMaps()) return;
-      
+
       const checkInterval = setInterval(() => {
         if (checkGoogleMaps()) {
           clearInterval(checkInterval);
@@ -403,7 +407,7 @@ export default function SupplierManagementPage() {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,drawing,geometry&v=weekly`;
     script.async = true;
     script.defer = true;
-    
+
     (window as any).gm_authFailure = () => {
       console.error("Google Maps API Key Authentication Failure - This usually means the API Key is invalid, has no billing, or is restricted incorrectly.");
       toast.error("Google Maps Authentication Failed. Please check your API key.");
@@ -421,18 +425,18 @@ export default function SupplierManagementPage() {
   // Initialize map when modal opens
   useEffect(() => {
     if (!isMapOpen || !isGoogleMapsLoaded || !GOOGLE_MAPS_API_KEY) return;
-    
+
     const initMap = () => {
       if (!mapContainer.current || !window.google) return;
-      
+
       if (map.current) {
         google.maps.event.clearInstanceListeners(map.current);
       }
-      
-      const center = newSupplier.location 
+
+      const center = newSupplier.location
         ? { lat: newSupplier.location.lat, lng: newSupplier.location.lng }
         : { lat: 23.2599, lng: 77.4126 };
-      
+
       // Ensure container still exists and has height
       if (mapContainer.current) {
         const rect = mapContainer.current.getBoundingClientRect();
@@ -456,12 +460,12 @@ export default function SupplierManagementPage() {
       geocoder.current = new google.maps.Geocoder();
       autocompleteService.current = new google.maps.places.AutocompleteService();
       placesService.current = new google.maps.places.PlacesService(map.current);
-      
+
       // Remove existing marker
       if (marker.current) {
         marker.current.setMap(null);
       }
-      
+
       // Add marker if location exists
       if (newSupplier.location) {
         marker.current = new google.maps.Marker({
@@ -470,7 +474,7 @@ export default function SupplierManagementPage() {
           draggable: true,
           animation: google.maps.Animation.DROP,
         });
-          
+
         marker.current.addListener('dragend', () => {
           const position = marker.current!.getPosition();
           if (position) {
@@ -479,14 +483,14 @@ export default function SupplierManagementPage() {
           }
         });
       }
-      
+
       // Handle map clicks
       map.current.addListener('click', (e: google.maps.MapMouseEvent) => {
         if (!e.latLng) return;
         const lat = e.latLng.lat();
         const lng = e.latLng.lng();
         setNewSupplier(prev => ({ ...prev, location: { lat, lng } }));
-        
+
         // Remove existing marker and add new one
         if (marker.current) {
           marker.current.setMap(null);
@@ -498,7 +502,7 @@ export default function SupplierManagementPage() {
             draggable: true,
             animation: google.maps.Animation.DROP,
           });
-            
+
           marker.current.addListener('dragend', () => {
             const position = marker.current!.getPosition();
             if (position) {
@@ -507,14 +511,14 @@ export default function SupplierManagementPage() {
             }
           });
         }
-        
+
         fetchAddress({ lat, lng });
       });
     };
-    
+
     // Initialize with a larger delay to ensure DOM is ready and modal animation finished
     const timeoutId = setTimeout(initMap, 500);
-    
+
     // Cleanup function
     return () => {
       clearTimeout(timeoutId);
@@ -523,14 +527,14 @@ export default function SupplierManagementPage() {
       }
     };
   }, [isMapOpen, isGoogleMapsLoaded]);
-  
+
   // Search for locations using Google Places Autocomplete
   const handleSearch = async (query: string) => {
     if (!query || !autocompleteService.current) {
       setSearchResults([]);
       return;
     }
-    
+
     try {
       autocompleteService.current.getPlacePredictions(
         {
@@ -553,11 +557,11 @@ export default function SupplierManagementPage() {
       setSearchResults([]);
     }
   };
-  
+
   // Fetch address details based on coordinates
   const fetchAddress = async (location: { lat: number; lng: number }) => {
     if (!geocoder.current) return;
-    
+
     try {
       geocoder.current.geocode({ location }, (results, status) => {
         if (status === 'OK' && results && results.length > 0) {
@@ -566,7 +570,7 @@ export default function SupplierManagementPage() {
 
           let state = '';
           let city = '';
-          
+
           result.address_components.forEach((component) => {
             if (component.types.includes('administrative_area_level_1')) {
               state = component.long_name;
@@ -575,7 +579,7 @@ export default function SupplierManagementPage() {
               city = component.long_name;
             }
           });
-          
+
           setNewSupplier(prev => ({
             ...prev,
             address,
@@ -588,7 +592,7 @@ export default function SupplierManagementPage() {
       console.error('Error fetching address:', error);
     }
   };
-  
+
   // Handle selection of a search result
   const handleSearchResultSelect = (result: any) => {
     if (!placesService.current) return;
@@ -615,7 +619,7 @@ export default function SupplierManagementPage() {
               city = component.long_name;
             }
           });
-          
+
           setNewSupplier(prev => ({
             ...prev,
             location: newLocation,
@@ -623,18 +627,18 @@ export default function SupplierManagementPage() {
             state: state || prev.state,
             city: city || prev.city,
           }));
-          
+
           // Update map
           if (map.current) {
             map.current.setCenter({ lat, lng });
             map.current.setZoom(15);
           }
-          
+
           // Update marker
           if (marker.current) {
             marker.current.setPosition({ lat, lng });
           }
-          
+
           // Clear search
           setSearchResults([]);
           setSearchQuery('');
@@ -681,7 +685,7 @@ export default function SupplierManagementPage() {
         ...supplierData,
         licenseFiles: licenseFilesBase64,
       }).unwrap();
-      
+
       toast.success("Supplier added successfully!");
       setNewSupplier(initialNewSupplierState);
       setLicensePreviews([]);
@@ -710,13 +714,13 @@ export default function SupplierManagementPage() {
       const files = Array.from(e.target.files);
       const validFiles: File[] = [];
       const previewUrls: string[] = [];
-      
+
       files.forEach(file => {
         if (!file.type.startsWith("image/")) {
           alert("Please upload only image files (JPEG, PNG, etc.)");
           return;
         }
-        
+
         validFiles.push(file);
         previewUrls.push(URL.createObjectURL(file));
       });
@@ -912,10 +916,15 @@ export default function SupplierManagementPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold font-headline">
           Supplier Management
         </h1>
+        {selectedRegion && selectedRegion !== 'all' && (
+          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+            Region Filtered
+          </Badge>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
@@ -1063,13 +1072,12 @@ export default function SupplierManagementPage() {
                           <TableCell>{supplier.supplierType}</TableCell>
                           <TableCell>
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                supplier.status === "Approved"
-                                  ? "bg-green-100 text-green-800"
-                                  : supplier.status === "Pending"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-red-100 text-red-800"
-                              }`}
+                              className={`px-2 py-1 rounded-full text-xs font-semibold ${supplier.status === "Approved"
+                                ? "bg-green-100 text-green-800"
+                                : supplier.status === "Pending"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                                }`}
                             >
                               {supplier.status}
                             </span>
@@ -1232,17 +1240,16 @@ export default function SupplierManagementPage() {
                           </TableCell>
                           <TableCell>
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                order.status === "Completed"
-                                  ? "bg-green-100 text-green-800"
-                                  : order.status === "Processing"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : order.status === "Shipped"
-                                      ? "bg-purple-100 text-purple-800"
-                                      : order.status === "Delivered"
-                                        ? "bg-indigo-100 text-indigo-800"
-                                        : "bg-yellow-100 text-yellow-800"
-                              }`}
+                              className={`px-2 py-1 rounded-full text-xs font-semibold ${order.status === "Completed"
+                                ? "bg-green-100 text-green-800"
+                                : order.status === "Processing"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : order.status === "Shipped"
+                                    ? "bg-purple-100 text-purple-800"
+                                    : order.status === "Delivered"
+                                      ? "bg-indigo-100 text-indigo-800"
+                                      : "bg-yellow-100 text-yellow-800"
+                                }`}
                             >
                               {order.status}
                             </span>
@@ -1370,13 +1377,12 @@ export default function SupplierManagementPage() {
                 </span>
                 <span className="col-span-2">
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      selectedSupplier.status === "Approved"
-                        ? "bg-green-100 text-green-800"
-                        : selectedSupplier.status === "Pending"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
-                    }`}
+                    className={`px-2 py-1 rounded-full text-xs font-semibold ${selectedSupplier.status === "Approved"
+                      ? "bg-green-100 text-green-800"
+                      : selectedSupplier.status === "Pending"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                      }`}
                   >
                     {selectedSupplier.status}
                   </span>
@@ -1459,11 +1465,10 @@ export default function SupplierManagementPage() {
                       <TableCell>{product.name}</TableCell>
                       <TableCell>
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            product.status === "In Stock"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${product.status === "In Stock"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                            }`}
                         >
                           {product.status}
                         </span>
@@ -1735,15 +1740,15 @@ export default function SupplierManagementPage() {
                         Location
                       </Label>
                       <div className="flex items-center gap-2">
-                        <Input 
-                          value={newSupplier.location ? `${newSupplier.location.lat}, ${newSupplier.location.lng}` : ''} 
-                          placeholder="Select location from map" 
-                          readOnly 
+                        <Input
+                          value={newSupplier.location ? `${newSupplier.location.lat}, ${newSupplier.location.lng}` : ''}
+                          placeholder="Select location from map"
+                          readOnly
                           className="flex-1"
                         />
-                        <Button 
-                          type="button" 
-                          variant="outline" 
+                        <Button
+                          type="button"
+                          variant="outline"
                           onClick={() => setIsMapOpen(true)}
                         >
                           <Map className="mr-2 h-4 w-4" /> Choose from Map
@@ -1808,76 +1813,76 @@ export default function SupplierManagementPage() {
                             multiple
                             onChange={handleFileChange}
                             ref={fileInputRef}
-                            />
-                          </label>
-                        </div>
-
-                        {/* Show license file previews for new supplier */}
-                        <div className="flex flex-wrap gap-2">
-                          {licensePreviews.map((preview, index) => (
-                            <div key={`license-${preview}-${index}`} className="w-24 h-24 border rounded-lg overflow-hidden relative">
-                              <img
-                                src={preview}
-                                alt={`License preview ${index + 1}`}
-                                className="w-full h-full object-cover"
-                              />
-                              <button
-                                type="button"
-                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // Remove the preview
-                                  setLicensePreviews(prev => prev.filter((_, i) => i !== index));
-                                  // Remove the file from newSupplier
-                                  setNewSupplier(prev => ({
-                                    ...prev,
-                                    licenseFiles: prev.licenseFiles.filter((_, i) => i !== index)
-                                  }));
-                                  // Revoke the object URL
-                                  URL.revokeObjectURL(preview);
-                                }}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+                          />
+                        </label>
                       </div>
-                      {newSupplier.licenseFiles.length > 0 && (
-                        <p className="mt-1 text-sm text-gray-600">
-                          Selected {newSupplier.licenseFiles.length} file(s)
-                        </p>
-                      )}
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="supplierType"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Supplier Type <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={newSupplier.supplierType}
-                        onValueChange={handleSupplierTypeChange}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select supplier type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {supplierTypes.map((type: { id: string; name: string; description?: string }) => (
-                            <SelectItem key={type.id} value={type.name}>
-                              {type.name}
-                              {type.description && ` - ${type.description}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {isSuperDataLoading && (
-                        <p className="text-sm text-gray-500">Loading supplier types...</p>
-                      )}
+                      {/* Show license file previews for new supplier */}
+                      <div className="flex flex-wrap gap-2">
+                        {licensePreviews.map((preview, index) => (
+                          <div key={`license-${preview}-${index}`} className="w-24 h-24 border rounded-lg overflow-hidden relative">
+                            <img
+                              src={preview}
+                              alt={`License preview ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Remove the preview
+                                setLicensePreviews(prev => prev.filter((_, i) => i !== index));
+                                // Remove the file from newSupplier
+                                setNewSupplier(prev => ({
+                                  ...prev,
+                                  licenseFiles: prev.licenseFiles.filter((_, i) => i !== index)
+                                }));
+                                // Revoke the object URL
+                                URL.revokeObjectURL(preview);
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
+                    {newSupplier.licenseFiles.length > 0 && (
+                      <p className="mt-1 text-sm text-gray-600">
+                        Selected {newSupplier.licenseFiles.length} file(s)
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="supplierType"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Supplier Type <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={newSupplier.supplierType}
+                      onValueChange={handleSupplierTypeChange}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select supplier type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {supplierTypes.map((type: { id: string; name: string; description?: string }) => (
+                          <SelectItem key={type.id} value={type.name}>
+                            {type.name}
+                            {type.description && ` - ${type.description}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {isSuperDataLoading && (
+                      <p className="text-sm text-gray-500">Loading supplier types...</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -2016,17 +2021,16 @@ export default function SupplierManagementPage() {
                 </span>
                 <span className="col-span-2">
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      selectedOrder.status === "Completed"
-                        ? "bg-green-100 text-green-800"
-                        : selectedOrder.status === "Processing"
-                          ? "bg-blue-100 text-blue-800"
-                          : selectedOrder.status === "Shipped"
-                            ? "bg-purple-100 text-purple-800"
-                            : selectedOrder.status === "Delivered"
-                              ? "bg-indigo-100 text-indigo-800"
-                              : "bg-yellow-100 text-yellow-800"
-                    }`}
+                    className={`px-2 py-1 rounded-full text-xs font-semibold ${selectedOrder.status === "Completed"
+                      ? "bg-green-100 text-green-800"
+                      : selectedOrder.status === "Processing"
+                        ? "bg-blue-100 text-blue-800"
+                        : selectedOrder.status === "Shipped"
+                          ? "bg-purple-100 text-purple-800"
+                          : selectedOrder.status === "Delivered"
+                            ? "bg-indigo-100 text-indigo-800"
+                            : "bg-yellow-100 text-yellow-800"
+                      }`}
                   >
                     {selectedOrder.status}
                   </span>
@@ -2067,7 +2071,7 @@ export default function SupplierManagementPage() {
               </div>
             </div>
           </DialogHeader>
-          
+
           <div className="flex-1 flex flex-col relative overflow-hidden">
             {/* Floating Search Bar with Glassmorphism */}
             <div className="absolute top-6 left-6 right-6 z-[100] max-w-md">
@@ -2109,17 +2113,17 @@ export default function SupplierManagementPage() {
 
             {/* Map Container */}
             <div className="flex-1 relative bg-slate-100">
-              <div 
-                ref={mapContainer} 
+              <div
+                ref={mapContainer}
                 className="w-full h-full"
               />
               <div className="absolute bottom-6 left-6 z-50">
-                 <div className="bg-white/90 backdrop-blur-md px-4 py-3 rounded-2xl shadow-xl border border-white/20 flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                    <span className="text-sm font-bold text-slate-700 font-headline uppercase tracking-wider">Logistics Radar</span>
-                 </div>
+                <div className="bg-white/90 backdrop-blur-md px-4 py-3 rounded-2xl shadow-xl border border-white/20 flex items-center gap-3">
+                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  <span className="text-sm font-bold text-slate-700 font-headline uppercase tracking-wider">Logistics Radar</span>
+                </div>
               </div>
-              
+
               {authError && (
                 <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6 z-[200]">
                   <div className="bg-white rounded-3xl p-8 shadow-2xl max-w-md text-center border border-red-100">
@@ -2130,7 +2134,7 @@ export default function SupplierManagementPage() {
                     <p className="text-slate-500 text-sm mb-6">
                       Google Maps API is currently unavailable. Please verify your billing and API credentials.
                     </p>
-                    <Button 
+                    <Button
                       onClick={() => window.location.reload()}
                       className="w-full rounded-xl bg-red-600 hover:bg-red-700 h-12 text-lg font-headline"
                       type="button"
@@ -2144,40 +2148,40 @@ export default function SupplierManagementPage() {
               {!isGoogleMapsLoaded && !authError && (
                 <div className="absolute inset-0 bg-slate-50 flex flex-col items-center justify-center z-[150]">
                   <div className="relative">
-                     <div className="h-24 w-24 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
+                    <div className="h-24 w-24 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
                   </div>
                   <p className="mt-6 text-lg font-bold text-slate-800 tracking-tight font-headline">Booting Logistics System...</p>
                 </div>
               )}
             </div>
           </div>
-          
+
           <DialogFooter className="p-6 bg-slate-50 border-t flex flex-row items-center justify-between gap-4">
-             <div className="flex items-center gap-4">
-                {newSupplier.location && (
-                  <div className="hidden sm:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm transition-all hover:shadow-md">
-                     <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
-                        <CheckCircle2 className="h-4 w-4" />
-                     </div>
-                     <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Location Calibrated</div>
-                     <div className="text-xs font-mono font-bold text-slate-800">
-                       {newSupplier.location.lat.toFixed(4)}, {newSupplier.location.lng.toFixed(4)}
-                     </div>
+            <div className="flex items-center gap-4">
+              {newSupplier.location && (
+                <div className="hidden sm:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm transition-all hover:shadow-md">
+                  <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+                    <CheckCircle2 className="h-4 w-4" />
                   </div>
-                )}
-             </div>
-             <div className="flex items-center gap-3">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Location Calibrated</div>
+                  <div className="text-xs font-mono font-bold text-slate-800">
+                    {newSupplier.location.lat.toFixed(4)}, {newSupplier.location.lng.toFixed(4)}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
               <Button variant="ghost" onClick={() => setIsMapOpen(false)} className="rounded-xl h-12 px-6 font-bold text-slate-600 hover:bg-slate-200 transition-all font-headline">
                 Discard
               </Button>
-              <Button 
-                onClick={() => setIsMapOpen(false)} 
+              <Button
+                onClick={() => setIsMapOpen(false)}
                 disabled={!newSupplier.location}
                 className="rounded-xl h-12 px-8 font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-headline"
               >
                 Confirm Dispatch Point
               </Button>
-             </div>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -4,6 +4,8 @@ import { Button } from '@repo/ui/button';
 import { Edit, Trash2, Eye } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { Badge } from '@repo/ui/badge';
+import { Switch } from '@repo/ui/switch';
+import { Label } from '@repo/ui/label';
 
 interface Product {
   _id: string;
@@ -25,6 +27,7 @@ interface Product {
   productForm?: string;
   brand?: string;
   vendorId?: { name: string };
+  showOnWebsite?: boolean;
 }
 
 interface ProductCardProps {
@@ -32,9 +35,10 @@ interface ProductCardProps {
   onEdit: (product: Product) => void;
   onDelete: (product: Product) => void;
   onView: (product: Product) => void;
+  onToggleActive: (product: Product) => void;
 }
 
-const ProductCard = ({ product, onEdit, onDelete, onView }: ProductCardProps) => {
+const ProductCard = ({ product, onEdit, onDelete, onView, onToggleActive }: ProductCardProps) => {
   const calculateDiscountPercentage = () => {
     if (product.price > product.salePrice) {
       return Math.round(((product.price - product.salePrice) / product.price) * 100);
@@ -47,7 +51,7 @@ const ProductCard = ({ product, onEdit, onDelete, onView }: ProductCardProps) =>
   return (
     <Card
       key={product._id}
-      className="group overflow-hidden hover:shadow-md transition-shadow flex flex-col text-left"
+      className={`group overflow-hidden hover:shadow-md transition-shadow flex flex-col text-left ${!product.isActive ? 'opacity-75 grayscale-[0.3]' : ''}`}
     >
       <div className="relative aspect-square overflow-hidden rounded-md m-3">
         <Image
@@ -78,11 +82,30 @@ const ProductCard = ({ product, onEdit, onDelete, onView }: ProductCardProps) =>
             </Badge>
           </div>
         )}
+
+        {/* Hidden from Website Badge */}
+        {product.showOnWebsite === false && (
+          <div className="absolute top-10 left-2 z-10 text-[10px]">
+            <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200 px-2 py-0.5 font-bold shadow-sm whitespace-nowrap">
+              Hidden from Web
+            </Badge>
+          </div>
+        )}
       </div>
       <div className="p-3 flex flex-col flex-grow">
-        <p className="text-xs font-bold text-primary mb-1">
-          {product.category}
-        </p>
+        <div className="flex justify-between items-start mb-1">
+          <p className="text-xs font-bold text-primary">
+            {product.category}
+          </p>
+          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <Switch
+              id={`active-${product._id}`}
+              checked={product.isActive}
+              onCheckedChange={() => onToggleActive(product)}
+              className="scale-75 origin-right"
+            />
+          </div>
+        </div>
         <h4 className="text-sm font-semibold flex-grow mb-2">
           {product.productName}
         </h4>
@@ -99,6 +122,11 @@ const ProductCard = ({ product, onEdit, onDelete, onView }: ProductCardProps) =>
           <p className="font-bold text-primary">
             ₹{product.salePrice.toFixed(2)}
           </p>
+          {!product.isActive && (
+            <Badge variant="outline" className="text-[10px] py-0 h-4 border-dashed">
+              Hidden on Web
+            </Badge>
+          )}
         </div>
 
         <div className="flex items-center justify-between gap-2 mt-2">
@@ -148,4 +176,5 @@ const ProductCard = ({ product, onEdit, onDelete, onView }: ProductCardProps) =>
 };
 
 export default ProductCard;
+
 

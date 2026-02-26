@@ -38,6 +38,7 @@ interface Product {
     productForm?: string;
     brand?: string;
     vendorId?: { name: string };
+    showOnWebsite?: boolean;
 }
 
 interface ProductViewModalProps {
@@ -165,6 +166,14 @@ const ProductViewModal = ({
                                 >
                                     {product.isActive ? "Active in Store" : "Hidden"}
                                 </Badge>
+                                {product.showOnWebsite === false && (
+                                    <Badge
+                                        variant="outline"
+                                        className="bg-amber-100 text-amber-700 border-amber-200 px-3"
+                                    >
+                                        Hidden from Website
+                                    </Badge>
+                                )}
                             </div>
                             {product.status === "rejected" && product.rejectionReason && (
                                 <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-lg text-sm text-red-600 font-medium">

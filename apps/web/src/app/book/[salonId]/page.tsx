@@ -96,7 +96,7 @@ const useTaxFeeSettings = () => {
 
 // Add interface for home service location
 interface HomeServiceLocation {
-  address: string;
+  address?: string;
   city?: string;
   state?: string;
   pincode?: string;
@@ -162,7 +162,7 @@ function BookingPageContent() {
 
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState<string>('Pay at Salon');
-  
+
   // Booking confirmation loading state to prevent double-clicks
   const [isConfirmingBooking, setIsConfirmingBooking] = useState(false);
 
@@ -362,6 +362,40 @@ function BookingPageContent() {
       setWeddingVenueType(null);
     }
   }, [selectedWeddingPackage]);
+
+  // Auto-apply offer code from URL search params
+  useEffect(() => {
+    const codeFromUrl = searchParams.get('offerCode');
+    if (codeFromUrl && !appliedOffer && !isOffersLoading) {
+      console.log('Detected offerCode in URL:', codeFromUrl);
+      setOfferCode(codeFromUrl);
+      
+      // We need to wait for salonId to be available for validation
+      if (salonId) {
+        const validateAndApply = async () => {
+          try {
+            const response = await fetch('/api/validate-offer', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                offerCode: codeFromUrl.toUpperCase().trim(),
+                vendorId: salonId
+              }),
+            });
+            const result = await response.json();
+            if (result.success) {
+              setOffer(result.data);
+              setAppliedOffer(result.data);
+              toast.success(`Offer ${result.data.code} applied automatically!`);
+            }
+          } catch (err) {
+            console.error('Error auto-applying offer:', err);
+          }
+        };
+        validateAndApply();
+      }
+    }
+  }, [searchParams, salonId, isOffersLoading, appliedOffer]);
 
   // Handle map click to select location
   const handleMapClick = () => {
@@ -762,10 +796,10 @@ function BookingPageContent() {
 
     try {
       // Determine label based on context
-      const label = selectedWeddingPackage && weddingVenueType === 'venue' 
-        ? 'Wedding Venue' 
+      const label = selectedWeddingPackage && weddingVenueType === 'venue'
+        ? 'Wedding Venue'
         : 'Home Service';
-      
+
       await fetch('/api/client/addresses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -865,10 +899,10 @@ function BookingPageContent() {
       // We're at step 3 or higher
       // For home services: Step 3 is location, Step 4 is time slot
       // For salon services: Step 3 is time slot
-      
+
       if (currentStep === 3) {
         // At step 3
-        
+
         // WEDDING PACKAGE LOCATION VALIDATION
         if (selectedWeddingPackage) {
           // Check if venue type is selected
@@ -876,7 +910,7 @@ function BookingPageContent() {
             toast.error('Please select whether wedding will be at salon or venue');
             return;
           }
-          
+
           // If venue selected, validate address
           if (weddingVenueType === 'venue') {
             if (!serviceLocation || !serviceLocation.address || !serviceLocation.city) {
@@ -884,12 +918,12 @@ function BookingPageContent() {
               return;
             }
           }
-          
+
           // Proceed to Step 4 (time slot selection)
           setCurrentStep(4);
           return;
         }
-        
+
         if (bookingMode === 'home' && !selectedWeddingPackage) {
           // For home services (non-wedding), step 3 is location selection
           // Validate location and proceed to step 4 (time slot)
@@ -933,7 +967,7 @@ function BookingPageContent() {
           return;
         }
       }
-      
+
       if (currentStep === 4) {
         // At step 4
         if (bookingMode === 'home' && !selectedWeddingPackage) {
@@ -1673,39 +1707,39 @@ function BookingPageContent() {
     console.log("serviceLocation in data:", appointmentData.serviceLocation);
     console.log("================================");
     try {
-        // CRITICAL FIX: Recalculate price breakdown right before appointment creation
-        // This ensures we have the latest fees and taxes
-        let finalPriceBreakdown = priceBreakdown;
-        
-        if (!finalPriceBreakdown || finalPriceBreakdown.platformFee === 0) {
-          console.log('⚠️ Price breakdown missing or incomplete, recalculating...');
-          
-          // Determine services to calculate
-          let servicesToCalculate = [];
-          if (selectedWeddingPackage) {
-            servicesToCalculate = [{
-              id: selectedWeddingPackage.id || selectedWeddingPackage._id,
-              name: selectedWeddingPackage.name,
-              price: selectedWeddingPackage.totalPrice,
-              discountedPrice: selectedWeddingPackage.discountedPrice || null,
-              selectedAddons: []
-            }];
-          } else {
-            servicesToCalculate = selectedServices;
-          }
-          
-          // Recalculate with current offer and tax settings
-          finalPriceBreakdown = await calculateBookingAmount(servicesToCalculate, appliedOffer || offer, taxFeeSettings);
-          console.log('✅ Recalculated price breakdown:', finalPriceBreakdown);
+      // CRITICAL FIX: Recalculate price breakdown right before appointment creation
+      // This ensures we have the latest fees and taxes
+      let finalPriceBreakdown = priceBreakdown;
+
+      if (!finalPriceBreakdown || finalPriceBreakdown.platformFee === 0) {
+        console.log('⚠️ Price breakdown missing or incomplete, recalculating...');
+
+        // Determine services to calculate
+        let servicesToCalculate = [];
+        if (selectedWeddingPackage) {
+          servicesToCalculate = [{
+            id: selectedWeddingPackage.id || selectedWeddingPackage._id,
+            name: selectedWeddingPackage.name,
+            price: selectedWeddingPackage.totalPrice,
+            discountedPrice: selectedWeddingPackage.discountedPrice || null,
+            selectedAddons: []
+          }];
+        } else {
+          servicesToCalculate = selectedServices;
         }
-        
-        console.log('=== PRICE BREAKDOWN VALIDATION ===');
-        console.log('Platform Fee:', finalPriceBreakdown?.platformFee);
-        console.log('Service Tax (GST):', finalPriceBreakdown?.serviceTax);
-        console.log('Tax Rate:', finalPriceBreakdown?.taxFeeSettings?.serviceTax);
-        console.log('Discount Amount:', finalPriceBreakdown?.discountAmount);
-        console.log('Final Total:', finalPriceBreakdown?.finalTotal);
-        console.log('==================================');
+
+        // Recalculate with current offer and tax settings
+        finalPriceBreakdown = await calculateBookingAmount(servicesToCalculate, appliedOffer || offer, taxFeeSettings);
+        console.log('✅ Recalculated price breakdown:', finalPriceBreakdown);
+      }
+
+      console.log('=== PRICE BREAKDOWN VALIDATION ===');
+      console.log('Platform Fee:', finalPriceBreakdown?.platformFee);
+      console.log('Service Tax (GST):', finalPriceBreakdown?.serviceTax);
+      console.log('Tax Rate:', finalPriceBreakdown?.taxFeeSettings?.serviceTax);
+      console.log('Discount Amount:', finalPriceBreakdown?.discountAmount);
+      console.log('Final Total:', finalPriceBreakdown?.finalTotal);
+      console.log('==================================');
 
       // Payment method should NOT affect whether it's a home service or not
       const finalIsHomeService = isHomeService;
@@ -3393,7 +3427,7 @@ function BookingPageContent() {
       // Handle wedding package pricing with offer code support
       if (selectedWeddingPackage) {
         const packagePrice = selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice || 0;
-        
+
         // Create a service-like object for calculateBookingAmount to enable offer code support
         const packageAsService = [{
           id: selectedWeddingPackage.id || selectedWeddingPackage._id,
@@ -3402,7 +3436,7 @@ function BookingPageContent() {
           discountedPrice: selectedWeddingPackage.discountedPrice || null,
           selectedAddons: []
         }];
-        
+
         try {
           // Call calculateBookingAmount WITH offer support (pass offer and taxFeeSettings)
           const breakdown = await calculateBookingAmount(packageAsService, offer, taxFeeSettings);
@@ -3908,53 +3942,53 @@ function BookingPageContent() {
                     <span className="text-xs font-normal text-muted-foreground">({selectedServices.length})</span>
                   </CardTitle>
                 </CardHeader>
-              <CardContent className="pt-3">
-                <div className="space-y-2">
-                  {selectedServices.map((service) => (
-                    <div key={service.id} className="space-y-2">
-                      <div className="flex items-center justify-between p-2 border-b">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm flex items-center gap-2">
-                            <Scissors className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                            <span className="truncate">{service.name}</span>
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                            <Clock className="h-3 w-3 flex-shrink-0" />
-                            <span>{service.duration}</span>
-                          </div>
-                        </div>
-                        <div className="font-semibold text-sm text-primary ml-2 flex-shrink-0">₹{service.price}</div>
-                      </div>
-
-                      {/* Display Add-ons */}
-                      {service.selectedAddons && service.selectedAddons.length > 0 && (
-                        <div className="pl-4 ml-2 border-l-2 border-primary/20 space-y-1.5">
-                          {service.selectedAddons.map((addon) => (
-                            <div key={addon._id} className="flex items-center justify-between p-2 border-b">
-                              <div className="flex items-center gap-2 text-xs flex-1 min-w-0">
-                                <Plus className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                <span className="truncate">{addon.name}</span>
-                              </div>
-                              <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                                <div className="text-xs text-muted-foreground">₹{addon.price}</div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  onClick={() => handleRemoveAddon(service.id, addon._id)}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
+                <CardContent className="pt-3">
+                  <div className="space-y-2">
+                    {selectedServices.map((service) => (
+                      <div key={service.id} className="space-y-2">
+                        <div className="flex items-center justify-between p-2 border-b">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-sm flex items-center gap-2">
+                              <Scissors className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                              <span className="truncate">{service.name}</span>
                             </div>
-                          ))}
+                            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                              <Clock className="h-3 w-3 flex-shrink-0" />
+                              <span>{service.duration}</span>
+                            </div>
+                          </div>
+                          <div className="font-semibold text-sm text-primary ml-2 flex-shrink-0">₹{service.price}</div>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+
+                        {/* Display Add-ons */}
+                        {service.selectedAddons && service.selectedAddons.length > 0 && (
+                          <div className="pl-4 ml-2 border-l-2 border-primary/20 space-y-1.5">
+                            {service.selectedAddons.map((addon) => (
+                              <div key={addon._id} className="flex items-center justify-between p-2 border-b">
+                                <div className="flex items-center gap-2 text-xs flex-1 min-w-0">
+                                  <Plus className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                  <span className="truncate">{addon.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                                  <div className="text-xs text-muted-foreground">₹{addon.price}</div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => handleRemoveAddon(service.id, addon._id)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Offer Code Section - Full Width */}
               <Card className="border">
@@ -3978,7 +4012,7 @@ function BookingPageContent() {
                         onFocus={() => vendorOffers && vendorOffers.length > 0 && setShowOfferDropdown(true)}
                         className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-primary focus:border-primary"
                       />
-                      
+
                       {/* Offer Dropdown */}
                       {showOfferDropdown && vendorOffers && vendorOffers.length > 0 && (
                         <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto no-scrollbar">
@@ -4579,7 +4613,7 @@ function BookingPageContent() {
         </DialogContent>
       </Dialog>
 
-{/* Payment Method Selection Modal */}
+      {/* Payment Method Selection Modal */}
       <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader className="text-center pb-4">
@@ -4668,7 +4702,7 @@ function BookingPageContent() {
         </DialogContent>
       </Dialog>
 
-      
+
       {/* Empty placeholder - modals are already defined above */}
     </div>
   );

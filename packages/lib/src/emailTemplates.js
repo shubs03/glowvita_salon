@@ -2,6 +2,8 @@
  * Appointment Email Templates
  */
 
+const LOGO_URL = "https://glowvitasalon.com/images/GlowVitaSalonFinal_Logo.png";
+
 export const getConfirmationTemplate = ({ clientName, businessName, serviceName, date, startTime, location }) => `
 <!DOCTYPE html>
 <html>
@@ -19,7 +21,11 @@ export const getConfirmationTemplate = ({ clientName, businessName, serviceName,
 <body>
     <div class="container">
         <div class="header">
-            <h2>Appointment Confirmed!</h2>
+            <div style="text-align: center;">
+                <img src="${LOGO_URL}" alt="GlowVita Salon" style="max-width: 80px; height: auto; vertical-align: middle;">
+                <h1 style="display: inline-block; vertical-align: middle; margin: 0 0 0 10px; color: #333; font-size: 24px;">GlowVita Salon</h1>
+            </div>
+            <h2 style="margin-top: 15px;">Appointment Confirmed!</h2>
         </div>
         <div class="content">
             <p>Hi ${clientName},</p>
@@ -43,39 +49,129 @@ export const getConfirmationTemplate = ({ clientName, businessName, serviceName,
 </html>
 `;
 
-export const getCompletionTemplate = ({ clientName, businessName, serviceName }) => `
+export const getCompletionTemplate = ({
+    clientName,
+    businessName,
+    serviceName,
+    appointmentId,
+    completedDate,
+    orderTotal,
+    location,
+    businessAddress,
+    businessPhone
+}) => `
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; }
-        .header { background-color: #f8f9fa; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
-        .content { padding: 20px; }
-        .footer { font-size: 12px; color: #777; text-align: center; margin-top: 20px; }
-        .button { display: inline-block; padding: 10px 20px; background-color: #28a745; color: white; text-decoration: none; border-radius: 5px; }
+        body { font-family: 'Amazon Ember', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.5; color: #111; margin: 0; padding: 0; background-color: #f3f3f3; }
+        .wrapper { width: 100%; table-layout: fixed; background-color: #f3f3f3; padding-bottom: 40px; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; }
+        
+        /* Header */
+        .header { padding: 20px; background-color: #f8f9fa; text-align: center; border-radius: 10px 10px 0 0; }
+        .logo { color: #ffffff; font-size: 24px; font-weight: bold; text-decoration: none; letter-spacing: -0.5px; }
+        .logo span { color: #ff9900; }
+        
+        /* Content */
+        .content { padding: 40px 25px; }
+        .greeting { font-size: 22px; font-weight: 500; margin-bottom: 20px; }
+        .main-text { font-size: 14px; margin-bottom: 25px; }
+        
+        /* Order Review Box */
+        .order-summary { border-top: 1px solid #ddd; border-bottom: 1px solid #ddd; padding: 20px 0; margin-bottom: 25px; }
+        .summary-header { font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+        
+        .order-row { display: table; width: 100%; margin-bottom: 10px; }
+        .order-col-left { display: table-cell; width: 33%; font-weight: bold; font-size: 13px; color: #555; vertical-align: top; }
+        .order-col-right { display: table-cell; width: 67%; font-size: 13px; vertical-align: top; }
+        
+        .divider { border-bottom: 1px solid #eee; margin: 15px 0; }
+        
+        /* Buttons */
+        .btn-container { text-align: left; margin: 30px 0; }
+        .button { display: inline-block; padding: 12px 30px; background-color: #ffd814; color: #111; text-decoration: none; border-radius: 8px; font-size: 14px; font-weight: 500; border: 1px solid #fcd200; box-shadow: 0 2px 5px rgba(213,217,217,.5); }
+        .button:hover { background-color: #f7ca00; }
+        .link-btn { color: #007185; text-decoration: none; font-size: 14px; margin-right: 20px; }
+        .link-btn:hover { text-decoration: underline; color: #c45500; }
+        
+        /* Footer */
+        .footer { padding: 25px; border-top: 1px solid #eee; background-color: #ffffff; }
+        .footer-text { font-size: 12px; color: #565959; margin-bottom: 10px; }
+        .branding-footer { margin-top: 20px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+        .branding-name { font-weight: bold; color: #232f3e; font-size: 14px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h2>Service Completed</h2>
-        </div>
-        <div class="content">
-            <p>Hi ${clientName},</p>
-            <p>Thank you for visiting <strong>${businessName}</strong> for your <strong>${serviceName}</strong> today!</p>
-            
-            <p>We hope you had a wonderful experience. Your feedback helps us improve!</p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-                <p>How was your service?</p>
-                <a href="#" class="button">Rate Your Experience</a>
+    <div class="wrapper">
+        <div class="container">
+            <!-- GlowVita Logo Header -->
+            <!-- GlowVita Logo Header -->
+            <div class="header">
+                 <div style="text-align: center;">
+                    <img src="${LOGO_URL}" alt="GlowVita Salon" style="max-width: 200px; height: auto; vertical-align: middle;">
+                </div>
             </div>
-            
-            <p>See you again soon!</p>
-        </div>
-        <div class="footer">
-            <p>This is an automated message from GlowVita Salon.</p>
+
+            <div class="content">
+                <div class="greeting">Hi ${clientName},</div>
+                <div class="main-text">
+                    Thank you for your recent service order of <strong>${serviceName}</strong> at <strong>${businessName}</strong>. 
+                    We hope you had a professional and relaxing experience. 
+                    You can now leave a review of your experience using the "Leave Service Feedback" link below. 
+                    You can view your order history in Your Orders.
+                </div>
+
+                <div class="order-summary">
+                    <div class="summary-header">Order details</div>
+                    
+                    <div class="order-row">
+                        <div class="order-col-left">Order #:</div>
+                        <div class="order-col-right">${appointmentId}</div>
+                    </div>
+                    <div class="order-row">
+                        <div class="order-col-left">Completed on:</div>
+                        <div class="order-col-right">${completedDate}</div>
+                    </div>
+                    
+                    <div class="divider"></div>
+                    
+                    <div class="order-row">
+                        <div class="order-col-left">Order total:</div>
+                        <div class="order-col-right" style="font-weight: bold; font-size: 15px;">₹${(Number(orderTotal) || 0).toFixed(2)}</div>
+                    </div>
+                    
+                    <div class="divider"></div>
+                    
+                    <div class="order-row">
+                        <div class="order-col-left">Service location:</div>
+                        <div class="order-col-right">
+                            ${location || businessName}<br/>
+                            ${businessAddress ? `<span style="color: #555; font-size: 12px;">${businessAddress}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="btn-container">
+                    <a href="#" class="button">Leave Service Feedback</a>
+                </div>
+                
+               
+            </div>
+
+            <div class="footer">
+                <div class="footer-text">
+                    This email was sent from a notification-only address that cannot accept incoming email. Please do not reply to this message.
+                </div>
+                
+                <div class="branding-footer">
+                    <div class="branding-name">GlowVita Salon</div>
+                    <div class="footer-text" style="font-size: 11px;">Professional Salon Management Platform</div>
+                    <div class="footer-text" style="font-size: 11px; margin-top: 5px; color: #999;">&copy; 2026 GlowVita. All rights reserved.</div>
+                </div>
+            </div>
         </div>
     </div>
 </body>
@@ -306,7 +402,11 @@ export const getCancellationTemplate = ({ clientName, businessName, serviceName,
 <body>
     <div class="container">
         <div class="header">
-            <h2 style="color: #dc3545;">Appointment Cancelled</h2>
+            <div style="text-align: center;">
+                <img src="${LOGO_URL}" alt="GlowVita Salon" style="max-width: 80px; height: auto; vertical-align: middle;">
+                <h1 style="display: inline-block; vertical-align: middle; margin: 0 0 0 10px; color: #dc3545; font-size: 24px;">GlowVita Salon</h1>
+            </div>
+            <h2 style="color: #dc3545; margin-top: 15px;">Appointment Cancelled</h2>
         </div>
         <div class="content">
             <p>Hi ${clientName},</p>
@@ -346,7 +446,11 @@ export const noshowAppointmentEmail = ({ clientName, serviceName, appointmentDat
 <body>
     <div class="container">
         <div class="header">
-            <h2 style="color: #f39c12;">Appointment Marked as No-Show</h2>
+             <div style="text-align: center;">
+                <img src="${LOGO_URL}" alt="GlowVita Salon" style="max-width: 80px; height: auto; vertical-align: middle;">
+                <h1 style="display: inline-block; vertical-align: middle; margin: 0 0 0 10px; color: #f39c12; font-size: 24px;">GlowVita Salon</h1>
+            </div>
+            <h2 style="color: #f39c12; margin-top: 15px;">Appointment Marked as No-Show</h2>
         </div>
         <div class="content">
             <p>Hi ${clientName},</p>

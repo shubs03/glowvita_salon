@@ -3,9 +3,9 @@ import ServiceModel from "../admin/Service.model.js";
 import StaffModel from "../Vendor/Staff.model.js";
 import AddOnModel from "../Vendor/AddOn.model.js";
 
-// Ensure the Service and Staff models are registered
+// Ensure the Service and Staffs models are registered
 const Service = mongoose.models.Service || ServiceModel;
-const Staff = mongoose.models.Staff || StaffModel;
+const Staff = mongoose.models.Staffs || StaffModel;
 
 // Schema for individual service items in a multi-service appointment
 const serviceItemSchema = new mongoose.Schema({
@@ -20,7 +20,7 @@ const serviceItemSchema = new mongoose.Schema({
   },
   staff: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Staff",
+    ref: "Staffs",
     required: false, // Allow null for "Any Professional"
   },
   staffName: {
@@ -102,7 +102,7 @@ const appointmentSchema = new mongoose.Schema(
     // For multi-service appointments, these will represent the primary service
     staff: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Staff",
+      ref: "Staffs",
       required: false, // Changed to false to allow null values for "Any Professional"
     },
     staffName: {
@@ -258,6 +258,7 @@ const appointmentSchema = new mongoose.Schema(
         "scheduled",
         "confirmed",
         "completed",
+        "completed without payment",
         "partially-completed",
         "cancelled",
         "no-show",
@@ -353,7 +354,7 @@ const appointmentSchema = new mongoose.Schema(
           },
           staffId: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: "Staff",
+            ref: "Staffs",
           },
           duration: {
             type: Number,
@@ -529,38 +530,87 @@ appointmentSchema.pre('save', async function (next) {
     }
 
     // 3. Calculate staff commission
-    if (this.isModified('staff') || this.isModified('serviceItems') || this.isModified('amount') || this.isModified('totalAmount') || this.isModified('finalAmount')) {
+    if (this.isModified('staff') || this.isModified('serviceItems') || this.isModified('amount') || this.isModified('totalAmount') || this.isModified('finalAmount') || this.isModified('status')) {
       try {
+        const staffId = this.staff?._id || this.staff;
+        console.log(`[Commission Debug] Pre-save triggered for Appointment ${this._id}. Staff ID: ${staffId}`);
+
         // Calculate for top-level staff
-        if (this.staff) {
-          const staffMember = await Staff.findById(this.staff);
-          if (staffMember && staffMember.commission) {
-            const rate = staffMember.commissionRate || 0;
-            const baseAmount = this.finalAmount || this.totalAmount || this.amount || 0;
+        if (staffId) {
+          // Dynamic import to ensure we have the model, avoiding potential circular dependency issues
+          const StaffModelDef = mongoose.models.Staffs || (await import('../Vendor/Staff.model.js')).default;
+          const staffMember = await StaffModelDef.findById(staffId);
+
+          if (!staffMember) {
+            console.log(`[Commission Debug] Staff member not found for ID: ${staffId}`);
+            this.staffCommission = { rate: 0, amount: 0 };
+          } else if (staffMember.commission) {
+            const rate = Number(staffMember.commissionRate) || 0;
+            // Base amount for commission should include service price + add-ons
+            const servicePrice = Number(this.amount || 0);
+            const addOnsPrice = Number(this.addOnsAmount || 0);
+            const discount = Number(this.discountAmount || this.discount || 0);
+
+            // Commission is on (Service + Addons - Discount)
+            const commissionableAmount = Math.max(0, servicePrice + addOnsPrice - discount);
+
             this.staffCommission = {
               rate: rate,
-              amount: (baseAmount * rate) / 100
+              amount: Number(((commissionableAmount * rate) / 100).toFixed(2))
             };
+            console.log(`[Commission Debug] Calculated commission for staff ${staffMember.fullName}: ${this.staffCommission.amount} (Rate: ${rate}%, Commissionable: ${commissionableAmount} [${servicePrice} + ${addOnsPrice} - ${discount}])`);
+          } else {
+            console.log(`[Commission Debug] Commission disabled for staff: ${staffMember.fullName} (ID: ${staffMember._id})`);
+            this.staffCommission = { rate: 0, amount: 0 };
           }
         }
 
         // Calculate for individual service items
         if (this.serviceItems && this.serviceItems.length > 0) {
-          const staffIds = [...new Set(this.serviceItems.map(item => item.staff).filter(Boolean))];
+          const staffIds = [...new Set(this.serviceItems.map(item => {
+            const sId = item.staff?._id || item.staff;
+            return sId ? sId.toString() : null;
+          }).filter(Boolean))];
+
           if (staffIds.length > 0) {
-            const staffMembers = await Staff.find({ _id: { $in: staffIds } });
+            const StaffModelDef = mongoose.models.Staffs || (await import('../Vendor/Staff.model.js')).default;
+            const staffMembers = await StaffModelDef.find({ _id: { $in: staffIds } });
             const staffMap = new Map(staffMembers.map(s => [s._id.toString(), s]));
 
+            // Calculate total base for the whole appointment to distribute discount proportionally
+            const totalDiscount = Number(this.discountAmount || this.discount || 0);
+            const totalBaseAmount = this.serviceItems.reduce((sum, item) => {
+              const itemBase = Number(item.amount || 0);
+              const itemAddOns = (item.addOns || []).reduce((s, a) => s + (Number(a.price) || 0), 0);
+              return sum + itemBase + itemAddOns;
+            }, 0);
+
             this.serviceItems.forEach(item => {
-              if (item.staff) {
-                const staff = staffMap.get(item.staff.toString());
+              const itemStaffId = item.staff?._id || item.staff;
+              if (itemStaffId) {
+                const staff = staffMap.get(itemStaffId.toString());
                 if (staff && staff.commission) {
-                  const rate = staff.commissionRate || 0;
+                  const rate = Number(staff.commissionRate) || 0;
+                  const itemAmount = Number(item.amount || 0);
+                  const itemAddOnsAmount = (item.addOns || []).reduce((sum, addon) => sum + (Number(addon.price) || 0), 0);
+
+                  const itemBase = itemAmount + itemAddOnsAmount;
+
+                  // Proportional discount application
+                  let itemDiscount = 0;
+                  if (totalBaseAmount > 0 && totalDiscount > 0) {
+                    itemDiscount = (itemBase / totalBaseAmount) * totalDiscount;
+                  }
+
+                  const itemCommissionableAmount = Math.max(0, itemBase - itemDiscount);
+
                   item.staffCommission = {
                     rate: rate,
-                    amount: (item.amount * rate) / 100
+                    amount: Number(((itemCommissionableAmount * rate) / 100).toFixed(2))
                   };
+                  console.log(`[Commission Debug] Calculated item commission for staff ${staff.fullName}: ${item.staffCommission.amount} (Rate: ${rate}%, Commissionable: ${itemCommissionableAmount.toFixed(2)} [Base: ${itemBase}, Disc: ${itemDiscount.toFixed(2)}])`);
                 } else {
+                  console.log(`[Commission Debug] No commission for item service. Staff: ${staff?.fullName}, Commission Enabled: ${staff?.commission}`);
                   item.staffCommission = { rate: 0, amount: 0 };
                 }
               }
@@ -568,7 +618,7 @@ appointmentSchema.pre('save', async function (next) {
           }
         }
       } catch (commissionError) {
-        console.error("Error calculating commission in pre-save:", commissionError);
+        console.error("[Commission Debug] Error calculating commission in pre-save:", commissionError);
       }
     }
 

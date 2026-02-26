@@ -15,9 +15,6 @@ import {
   Grid3X3,
   List,
   Package,
-  Boxes,
-  Tag,
-  DollarSign,
   Loader2,
   Eye,
 } from "lucide-react";
@@ -31,7 +28,6 @@ import {
   useDeleteCrmProductMutation,
 } from "@repo/store/api";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
-import BulkProductAddition from "@/components/BulkProductAddition";
 
 // Import components
 import StatusBadge from "./components/StatusBadge";
@@ -87,7 +83,7 @@ export default function ProductsPage() {
     data: productsData = [],
     isLoading: isProductsLoading,
     refetch: refetchProducts,
-  } = useGetCrmProductsQuery(user?._id, { skip: !user });
+  } = useGetCrmProductsQuery({ vendorId: user?._id }, { skip: !user });
   const [createProduct, { isLoading: isCreatingProduct }] =
     useCreateCrmProductMutation();
   const [updateProduct, { isLoading: isUpdatingProduct }] =
@@ -117,7 +113,6 @@ export default function ProductsPage() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [newCategory, setNewCategory] = useState({ name: "", description: "" });
@@ -521,12 +516,6 @@ export default function ProductsPage() {
           product={selectedProduct}
         />
 
-        {/* Bulk Product Addition Modal */}
-        <BulkProductAddition
-          isOpen={isBulkModalOpen}
-          onOpenChange={setIsBulkModalOpen}
-          onProductsAdded={refetchProducts}
-        />
       </div>
     </div>
   );

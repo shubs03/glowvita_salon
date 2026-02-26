@@ -53,6 +53,8 @@ interface Product {
   productForm?: string;
   brand?: string;
   vendorId?: { name: string };
+  showOnWebsite?: boolean;
+  supplierName?: string;
 }
 
 interface Category {
@@ -207,6 +209,16 @@ export default function SupplierProductsPage() {
     }
   };
 
+  const handleToggleActive = async (product: Product) => {
+    try {
+      await updateProduct({ id: product._id, isActive: !product.isActive }).unwrap();
+      toast.success(`Product ${!product.isActive ? 'enabled' : 'disabled'} successfully!`);
+      refetchProducts();
+    } catch (error: any) {
+      toast.error(error.data?.message || `Failed to update product status.`);
+    }
+  };
+
   if (isProductsLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -321,22 +333,25 @@ export default function SupplierProductsPage() {
                     onView={handleViewProduct}
                     onEdit={(p) => handleOpenProductModal(p)}
                     onDelete={(p) => { setSelectedProduct(p); setIsDeleteModalOpen(true); }}
+                    onToggleActive={handleToggleActive}
                   />
                 ))}
               </div>
             ) : (
               <div className="space-y-4">
-                {paginatedProducts.map((product) => (
+                {paginatedProducts.map((product: Product) => (
                   <ProductListItem
                     key={product._id}
                     product={product}
                     onView={handleViewProduct}
                     onEdit={(p) => handleOpenProductModal(p)}
                     onDelete={(p) => { setSelectedProduct(p); setIsDeleteModalOpen(true); }}
+                    onToggleActive={handleToggleActive}
                   />
                 ))}
               </div>
             )}
+
 
             {paginatedProducts.length > 0 && (
               <div className="mt-8">

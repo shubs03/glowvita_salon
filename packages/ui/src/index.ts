@@ -28,3 +28,4 @@ export * from "./components/landing/ProductCard";
 export * from "./separator";
 export * from "./header";
 export * from "./footer";
+export * from "./alert";

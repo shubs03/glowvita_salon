@@ -23,6 +23,9 @@ import { Switch } from "@repo/ui/switch";
 import Image from "next/image";
 import { Pagination } from "@repo/ui/pagination";
 import { ExportButtons } from '@/components/ExportButtons';
+import { useAppSelector } from "@repo/store/hooks";
+import { selectSelectedRegion } from "@repo/store/slices/adminAuthSlice";
+import { Badge } from "@repo/ui/badge";
 
 // --- Shared Interfaces ---
 
@@ -44,12 +47,14 @@ interface Service {
 // --- Main Page Component ---
 
 export default function ServicesPage() {
+    const selectedRegion = useAppSelector(selectSelectedRegion);
+
     // RTK Query hooks - Fetch vendor services for approval
     const {
         data: servicesData = [],
         isLoading,
         refetch,
-    } = glowvitaApi.useGetVendorServicesForApprovalQuery({});
+    } = glowvitaApi.useGetVendorServicesForApprovalQuery({ regionId: selectedRegion });
 
     const [updateServiceStatus] = glowvitaApi.useUpdateServiceStatusMutation();
     const [updateVendorServiceOnlineBooking] = glowvitaApi.useUpdateVendorServiceOnlineBookingMutation();
@@ -65,7 +70,7 @@ export default function ServicesPage() {
 
     // Fetch categories and vendors
     const { data: categoriesResponse } = glowvitaApi.useGetCategoriesQuery({});
-    const { data: vendorsResponse } = glowvitaApi.useGetVendorsQuery({});
+    const { data: vendorsResponse } = glowvitaApi.useGetVendorsQuery(selectedRegion);
 
     const categories = useMemo(() => {
         if (categoriesResponse && Array.isArray(categoriesResponse)) return categoriesResponse;
@@ -184,6 +189,11 @@ export default function ServicesPage() {
                             <h1 className="text-3xl font-bold font-headline mb-1 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
                                 Vendor Services Management
                             </h1>
+                            {selectedRegion && selectedRegion !== 'all' && (
+                                <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200 ml-2">
+                                    Region Filtered
+                                </Badge>
+                            )}
                             <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl">
                                 Review and manage services from all vendors - approve or disapprove services
                             </p>

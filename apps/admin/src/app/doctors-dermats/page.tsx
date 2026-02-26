@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -65,12 +66,15 @@ export default function DoctorsDermatsPage() {
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [actionType, setActionType] = useState<ActionType | null>(null);
 
+  const searchParams = useSearchParams();
+  const regionId = searchParams.get("regionId") || "";
+
   // Fetch doctors using RTK Query
   const {
     data: doctors = [],
     isLoading,
     error,
-  } = useGetDoctorsQuery(undefined);
+  } = useGetDoctorsQuery({ regionId });
   const [createDoctor] = useCreateDoctorMutation();
   const [updateDoctor] = useUpdateDoctorMutation();
   const [deleteDoctor] = useDeleteDoctorMutation();
@@ -419,13 +423,12 @@ export default function DoctorsDermatsPage() {
                         <TableCell>{(doctor.specialties || []).join(', ')}</TableCell>
                         <TableCell>
                           <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              doctor.status === "Approved"
+                            className={`px-2 py-1 rounded-full text-xs font-semibold ${doctor.status === "Approved"
                                 ? "bg-green-100 text-green-800"
                                 : doctor.status === "Pending"
                                   ? "bg-yellow-100 text-yellow-800"
                                   : "bg-red-100 text-red-800"
-                            }`}
+                              }`}
                           >
                             {doctor.status}
                           </span>

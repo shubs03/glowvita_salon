@@ -15,3 +15,5 @@ export { VendorPayoutSettlementReportProductDialog } from './VendorPayoutSettlem
 export { VendorPayableReportDialog } from './VendorPayableReportDialog';
 export { VendorPayableReportProductDialog } from './VendorPayableReportProductDialog';
 export { ReferralReportDialog } from './ReferralReportDialog';
+export { SettlementHistoryReportDialog } from './SettlementHistoryReportDialog';
+export { PlatformCollectionsReportDialog } from './PlatformCollectionsReportDialog';

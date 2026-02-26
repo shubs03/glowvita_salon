@@ -3,7 +3,7 @@ import {
   FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaBox, FaUserMd,
   FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags,
   FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaSync,
-  FaMapMarkedAlt, FaBell
+  FaMapMarkedAlt, FaBell, FaWallet
 } from "react-icons/fa";
 import { FaListUl } from "react-icons/fa";
 import { IconType } from "react-icons";
@@ -88,6 +88,12 @@ export const sidebarNavItems: NavItem[] = [
     href: "/referral-management",
     Icon: FaUserFriends,
     permission: "referral-management",
+  },
+  {
+    title: "Wallet Management",
+    href: "/wallet-management",
+    Icon: FaWallet,
+    permission: "wallet-management",
   },
   {
     title: "Superdata",

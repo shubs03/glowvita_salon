@@ -199,7 +199,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
             'firstName', 'lastName', 'businessName', 'email', 'phone',
             'state', 'city', 'pincode', 'address', 'category', 'subCategories',
             'website', 'description', 'profileImage', 'gallery', 'bankDetails', 'documents',
-            'vendorType', 'travelRadius', 'travelSpeed', 'baseLocation', 'taxes'
+            'vendorType', 'travelRadius', 'travelSpeed', 'baseLocation', 'taxes', 'gstNo'
         ];
 
         // Keep existing subscription data unless specifically provided in the update

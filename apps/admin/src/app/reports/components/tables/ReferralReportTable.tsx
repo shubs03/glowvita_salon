@@ -18,6 +18,7 @@ import { Badge } from '@repo/ui/badge';
 export const ReferralReportTable = () => {
   const {
     filters,
+    apiFilters,
     isFilterModalOpen,
     currentPage,
     itemsPerPage,
@@ -31,12 +32,11 @@ export const ReferralReportTable = () => {
     handleFilterChange,
     filterAndPaginateData
   } = useReport<ReferralData>(10);
-  
-  const apiFilters = filters;
+
   console.log("Referral Report API filters:", apiFilters);
-  
+
   const { data, isLoading, isError, error } = useGetReferralReportQuery(apiFilters);
-  
+
   const referrals = data?.referrals || [];
   const summary = data?.summary || {
     totalReferrals: 0,
@@ -51,7 +51,7 @@ export const ReferralReportTable = () => {
   const cities = data?.cities || [];
   const vendors = data?.vendors || [];
   const statuses = data?.statuses || ['Pending', 'Active', 'Completed', 'Bonus Paid'];
-  
+
   const {
     paginatedData,
     totalItems,
@@ -171,7 +171,7 @@ export const ReferralReportTable = () => {
       </div>
     );
   }
-  
+
   if (isError) {
     console.error("Error fetching referral report:", error);
     return (
@@ -206,7 +206,7 @@ export const ReferralReportTable = () => {
       </div>
     );
   }
-  
+
   if (referrals.length === 0) {
     return (
       <div>
@@ -256,7 +256,7 @@ export const ReferralReportTable = () => {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="flex justify-between items-center mb-4 gap-2">
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -308,8 +308,8 @@ export const ReferralReportTable = () => {
             </DropdownMenu>
           </div>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -319,7 +319,7 @@ export const ReferralReportTable = () => {
           showStatusFilter={true}
           initialFilters={filters}
         />
-        
+
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -347,7 +347,7 @@ export const ReferralReportTable = () => {
       </div>
     );
   }
-  
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -401,7 +401,7 @@ export const ReferralReportTable = () => {
           </DropdownMenu>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
@@ -462,8 +462,8 @@ export const ReferralReportTable = () => {
           </CardContent>
         </Card>
       </div>
-      
-      <FilterModal 
+
+      <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         onApplyFilters={handleFilterChange}
@@ -473,7 +473,7 @@ export const ReferralReportTable = () => {
         showStatusFilter={true}
         initialFilters={filters}
       />
-      
+
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@repo/ui/dropdown-menu';
@@ -29,21 +29,23 @@ export const VendorPayableReportProductTable = () => {
     setItemsPerPage,
     setSearchTerm,
     handleFilterChange,
-    filterAndPaginateData
+    filterAndPaginateData,
+    apiFilters
   } = useReport<VendorPayableProductData>(5);
-  
+
   // Use the API hook to fetch vendor payable report for products with filters
-  const apiFilters = filters;
-  
+  // apiFilters is derived from filters + selectedRegion in useReport
+
   console.log("Vendor Payable to Admin Report - Product API filters:", apiFilters);
-  
+
   const { data, isLoading, isError, error } = useGetVendorPayableReportProductQuery(apiFilters);
-  
+
   // Define data variables after API call
   const vendorPayableProductData = data?.vendorPayableReport || [];
   const cities = data?.cities || []; // Get cities from API response
   const businessNames = data?.businessNames || []; // Get business names from API response
-  
+  const aggregatedTotals = data?.aggregatedTotals;
+
   // Filter and paginate data
   const {
     paginatedData,
@@ -53,9 +55,12 @@ export const VendorPayableReportProductTable = () => {
   } = filterAndPaginateData(vendorPayableProductData, (item) => [
     item["Payee Type"],
     item["Payee Name"],
+    `${item["product Gross Amount"]}`,
     `${item["product Platform Fee"]}`,
     `${item["product Tax/gst"]}`,
-    `${item["Total"]}`
+    `${item["Total"]}`,
+    `${item["Actually Collected"] || 0}`,
+    `${item["Pending Amount"] || 0}`
   ]);
 
   if (isLoading) {
@@ -112,8 +117,8 @@ export const VendorPayableReportProductTable = () => {
             </DropdownMenu>
           </div>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -124,7 +129,7 @@ export const VendorPayableReportProductTable = () => {
           showUserTypeFilter={true}
           showBusinessNameFilter={true}
         />
-        
+
         <div className="mb-6">
           <Card className="w-64">
             <CardHeader className="p-4">
@@ -143,12 +148,16 @@ export const VendorPayableReportProductTable = () => {
                 <TableHead>Payee Name</TableHead>
                 <TableHead>product Platform Fee</TableHead>
                 <TableHead>product Tax/gst</TableHead>
-                <TableHead>Total</TableHead>
+                <TableHead>Total Payable</TableHead>
+                <TableHead>Actually Collected</TableHead>
+                <TableHead>Pending Amount</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {[...Array(5)].map((_, index) => (
                 <TableRow key={index}>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
@@ -162,7 +171,7 @@ export const VendorPayableReportProductTable = () => {
       </div>
     );
   }
-  
+
   if (isError) {
     console.error("Error fetching vendor payable to admin report - product:", error);
     return (
@@ -198,7 +207,7 @@ export const VendorPayableReportProductTable = () => {
       </div>
     );
   }
-  
+
   // Show table structure even when there's no data
   if (vendorPayableProductData.length === 0) {
     return (
@@ -254,8 +263,8 @@ export const VendorPayableReportProductTable = () => {
             </DropdownMenu>
           </div>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -266,18 +275,42 @@ export const VendorPayableReportProductTable = () => {
           showUserTypeFilter={true}
           showBusinessNameFilter={true}
         />
-        
-        <div className="mb-6">
-          <Card className="w-64">
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <Card>
             <CardHeader className="p-4">
-              <CardTitle className="text-sm font-medium">Vendor Payable Amount-Product</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Product Amount (Gross)</CardTitle>
             </CardHeader>
             <CardContent className="p-4">
-              <div className="text-lg font-bold">₹0.00</div>
+              <div className="text-lg font-bold text-purple-600">₹{aggregatedTotals?.productGrossAmount?.toFixed(2) || '0.00'}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium">Total Payable (Accrued)</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold">₹{aggregatedTotals?.total?.toFixed(2) || '0.00'}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium text-green-600">Actually Collected</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold text-green-600">₹{aggregatedTotals?.totalCollected?.toFixed(2) || '0.00'}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="p-4">
+              <CardTitle className="text-sm font-medium text-red-500">Pending Collections</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="text-lg font-bold text-red-600">₹{aggregatedTotals?.totalPending?.toFixed(2) || '0.00'}</div>
             </CardContent>
           </Card>
         </div>
-        
+
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -286,12 +319,14 @@ export const VendorPayableReportProductTable = () => {
                 <TableHead>Payee Name</TableHead>
                 <TableHead>product Platform Fee</TableHead>
                 <TableHead>product Tax/gst</TableHead>
-                <TableHead>Total</TableHead>
-                </TableRow>
+                <TableHead>Total Payable</TableHead>
+                <TableHead>Actually Collected</TableHead>
+                <TableHead>Pending Amount</TableHead>
+              </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No vendor payable to admin product data available.
                 </TableCell>
               </TableRow>
@@ -301,7 +336,7 @@ export const VendorPayableReportProductTable = () => {
       </div>
     );
   }
-  
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -355,8 +390,8 @@ export const VendorPayableReportProductTable = () => {
           </DropdownMenu>
         </div>
       </div>
-            
-      <FilterModal 
+
+      <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         onApplyFilters={handleFilterChange}
@@ -367,27 +402,54 @@ export const VendorPayableReportProductTable = () => {
         showUserTypeFilter={true}
         showBusinessNameFilter={true}
       />
-            
-      <div className="mb-6">
-        <Card className="w-64">
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card>
           <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium">Vendor Payable Amount-Product</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Product Amount (Gross)</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
-            <div className="text-lg font-bold">₹{paginatedData.reduce((sum, item: any) => sum + (item["Total"] || 0), 0).toFixed(2)}</div>
+            <div className="text-lg font-bold text-purple-600">₹{aggregatedTotals?.productGrossAmount?.toFixed(2) || '0.00'}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium">Total Payable (Accrued)</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold">₹{aggregatedTotals?.total?.toFixed(2) || '0.00'}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium text-green-600">Actually Collected</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold text-green-600">₹{aggregatedTotals?.totalCollected?.toFixed(2) || '0.00'}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium text-red-500">Pending Collections</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold text-red-600">₹{aggregatedTotals?.totalPending?.toFixed(2) || '0.00'}</div>
           </CardContent>
         </Card>
       </div>
-            
+
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Payee Type</TableHead>
               <TableHead>Payee Name</TableHead>
+              <TableHead>Product Gross Amount</TableHead>
               <TableHead>product Platform Fee</TableHead>
               <TableHead>product Tax/gst</TableHead>
-              <TableHead>Total</TableHead>
+              <TableHead>Total Payable</TableHead>
+              <TableHead>Actually Collected</TableHead>
+              <TableHead>Pending Amount</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -395,18 +457,26 @@ export const VendorPayableReportProductTable = () => {
               <TableRow key={startIndex + index}>
                 <TableCell>{item["Payee Type"]}</TableCell>
                 <TableCell>{item["Payee Name"]}</TableCell>
+                <TableCell>₹{item["product Gross Amount"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["product Platform Fee"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["product Tax/gst"]?.toFixed(2)}</TableCell>
-                <TableCell>₹{item["Total"]?.toFixed(2)}</TableCell>
+                <TableCell className="font-bold text-blue-700">₹{item["Total"]?.toFixed(2)}</TableCell>
+                <TableCell className="text-green-600">₹{item["Actually Collected"]?.toFixed(2) || '0.00'}</TableCell>
+                <TableCell className={`font-semibold ${(item["Pending Amount"] || 0) > 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                  ₹{item["Pending Amount"]?.toFixed(2) || '0.00'}
+                </TableCell>
               </TableRow>
             ))}
-            {/* Current Page Totals Row */}
-            {paginatedData.length > 0 && (
+            {/* Aggregated Totals Row */}
+            {vendorPayableProductData.length > 0 && aggregatedTotals && (
               <TableRow className="bg-muted font-semibold">
                 <TableCell colSpan={2}>TOTAL</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["product Platform Fee"] || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["product Tax/gst"] || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedData.reduce((sum, item: any) => sum + (item["Total"] || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.productGrossAmount?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.productPlatformFee?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.productTax?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.total?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.totalCollected?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.totalPending?.toFixed(2)}</TableCell>
               </TableRow>
             )}
           </TableBody>

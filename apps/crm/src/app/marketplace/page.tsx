@@ -76,6 +76,7 @@ type ViewMode = 'suppliers' | 'products';
 export default function MarketplacePage() {
   const { data: productsData, isLoading, isError, refetch } = useGetSupplierProductsQuery(undefined);
   console.log("Products Data:", productsData);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('grid');
@@ -106,41 +107,57 @@ export default function MarketplacePage() {
     return [];
   }, [productsData]);
 
-  // Derive unique suppliers from products
+  // Derive unique suppliers from products - ensure no duplicates
   const suppliers = useMemo(() => {
-    const supplierMap = new Map<string, Supplier>();
+    console.log("Deriving suppliers from products:", productsArray.length, "products");
+    
+    // Group products by supplier identity (shopName + businessRegistrationNo)
+    const supplierIdentityMap = new Map<string, Product[]>();
+    
     productsArray.forEach((product: Product) => {
-      if (!supplierMap.has(product.vendorId)) {
-        supplierMap.set(product.vendorId, {
-          _id: product.vendorId,
-          shopName: product.supplierName || 'Unknown Supplier',
-          email: product.supplierEmail || '',
-          city: product.supplierCity,
-          state: product.supplierState,
-          country: product.supplierCountry,
-          productCount: 1,
-          totalStock: product.stock,
-          products: [product],
-          rating: 4.5,
-          businessRegistrationNo: product.supplierBusinessRegistrationNo,
-        });
-      } else {
-        const supplier = supplierMap.get(product.vendorId)!;
-        supplier.productCount++;
-        supplier.totalStock += product.stock;
-        supplier.products?.push(product);
+      console.log("Processing product:", product.productName, "vendorId:", product.vendorId, "shopName:", product.supplierName);
+      
+      // Create a unique identity key for the supplier
+      const identityKey = `${product.supplierName || 'Unknown'}_${product.supplierBusinessRegistrationNo || 'no-reg'}`;
+      
+      if (!supplierIdentityMap.has(identityKey)) {
+        supplierIdentityMap.set(identityKey, []);
       }
+      supplierIdentityMap.get(identityKey)!.push(product);
     });
     
-    // Calculate average price for each supplier
-    Array.from(supplierMap.values()).forEach(supplier => {
-      if (supplier.products && supplier.products.length > 0) {
-        const totalPrice = supplier.products.reduce((sum, p) => sum + (p.salePrice || p.price), 0);
-        supplier.averagePrice = totalPrice / supplier.products.length;
-      }
+    console.log("Grouped by identity:", Array.from(supplierIdentityMap.keys()));
+    
+    // Create supplier objects from grouped products
+    const suppliers: Supplier[] = [];
+    supplierIdentityMap.forEach((products, identityKey) => {
+      const firstProduct = products[0];
+      const totalStock = products.reduce((sum: number, p: Product) => sum + p.stock, 0);
+      const totalPrice = products.reduce((sum: number, p: Product) => sum + (p.salePrice || p.price), 0);
+      
+      // For display purposes, we'll use the first product's vendorId as the identifier
+      // This allows the supplier card to work with the existing click handler
+      suppliers.push({
+        _id: firstProduct.vendorId, // Use first product's vendorId for UI interaction
+        shopName: firstProduct.supplierName || 'Unknown Supplier',
+        email: firstProduct.supplierEmail || '',
+        city: firstProduct.supplierCity,
+        state: firstProduct.supplierState,
+        country: firstProduct.supplierCountry,
+        productCount: products.length,
+        totalStock: totalStock,
+        products: products,
+        rating: 4.5,
+        averagePrice: products.length > 0 ? totalPrice / products.length : 0,
+        businessRegistrationNo: firstProduct.supplierBusinessRegistrationNo,
+      });
     });
     
-    return Array.from(supplierMap.values());
+    console.log("Derived suppliers:", suppliers.length, "suppliers");
+    suppliers.forEach(supplier => {
+      console.log("Supplier:", supplier.shopName, "ID:", supplier._id, "Products:", supplier.products?.length);
+    });
+    return suppliers;
   }, [productsArray]);
 
   // Filter suppliers based on search
@@ -156,8 +173,12 @@ export default function MarketplacePage() {
   // Filter products when a supplier is selected
   const supplierProducts = useMemo(() => {
     if (!selectedSupplier) return [];
+    
+    // Filter by supplier identity (shopName + businessRegistrationNo) instead of just vendorId
+    // This ensures we show all products from the same supplier business
     return productsArray.filter((product: Product) => 
-      product.vendorId === selectedSupplier._id
+      product.supplierName === selectedSupplier.shopName &&
+      product.supplierBusinessRegistrationNo === selectedSupplier.businessRegistrationNo
     );
   }, [selectedSupplier, productsArray]);
 

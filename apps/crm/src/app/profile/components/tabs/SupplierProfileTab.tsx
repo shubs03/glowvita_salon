@@ -33,7 +33,9 @@ export const SupplierProfileTab = ({ supplier, setSupplier }: SupplierProfileTab
                 address: supplier.address,
                 supplierType: supplier.supplierType,
                 businessRegistrationNo: supplier.businessRegistrationNo,
+                gstNo: supplier.gstNo,
                 profileImage: supplier.profileImage,
+                minOrderValue: supplier.minOrderValue,
             }).unwrap();
 
             if (result.success) {
@@ -94,6 +96,19 @@ export const SupplierProfileTab = ({ supplier, setSupplier }: SupplierProfileTab
                     />
                 </div>
 
+                <div className="space-y-2">
+                    <Label htmlFor="minOrderValue" className="text-sm sm:text-base">Minimum Order Value (₹)</Label>
+                    <Input
+                        id="minOrderValue"
+                        type="number"
+                        value={supplier.minOrderValue || ''}
+                        onChange={(e) => setSupplier({ ...supplier, minOrderValue: Number(e.target.value) })}
+                        placeholder="Enter minimum order amount"
+                        className="h-10 sm:h-12 rounded-lg"
+                    />
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">Orders below this amount will be blocked for customers.</p>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="email" className="text-sm sm:text-base">Email</Label>
@@ -140,6 +155,17 @@ export const SupplierProfileTab = ({ supplier, setSupplier }: SupplierProfileTab
                         id="businessRegistrationNo"
                         value={supplier.businessRegistrationNo || ''}
                         onChange={(e) => setSupplier({ ...supplier, businessRegistrationNo: e.target.value })}
+                        className="h-10 sm:h-12 rounded-lg"
+                    />
+                </div>
+
+                <div className="space-y-2">
+                    <Label htmlFor="gstNo" className="text-sm sm:text-base">GST Number</Label>
+                    <Input
+                        id="gstNo"
+                        value={supplier.gstNo || ''}
+                        onChange={(e) => setSupplier({ ...supplier, gstNo: e.target.value })}
+                        placeholder="Enter GST Number (Optional)"
                         className="h-10 sm:h-12 rounded-lg"
                     />
                 </div>

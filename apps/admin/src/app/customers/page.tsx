@@ -21,6 +21,7 @@ import html2canvas from 'html2canvas';
 
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { closeModal } from '../../../../../packages/store/src/slices/modalSlice.js';
+import { selectSelectedRegion } from '@repo/store/slices/adminAuthSlice';
 import {
     clearCustomerFilters,
 } from '@repo/store/slices/customerSlice';
@@ -71,6 +72,9 @@ export default function CustomerManagementPage() {
     const dispatch = useAppDispatch();
     const tableRef = useRef<HTMLDivElement>(null);
 
+    // Read selected region from Redux (same pattern as payout/reports)
+    const selectedRegion = useAppSelector(selectSelectedRegion);
+
     // State for the "Add New Customer" modal
     const { isOpen, modalType } = useAppSelector((state: any) => state.modal);
     const isNewCustomerModalOpen = isOpen && modalType === 'newCustomer';
@@ -100,8 +104,12 @@ export default function CustomerManagementPage() {
         pagination: salonPagination
     } = useAppSelector((state: any) => state.salon);
 
-    // Fetch all online users data using the new hook
-    const { data: onlineUsers = [], isLoading: isOnlineUsersLoading, error: onlineUsersError } = useGetAdminUsersQuery({});
+    // Fetch all online users data using the new hook – re-fetches when region changes
+    const { data: onlineUsers = [], isLoading: isOnlineUsersLoading, error: onlineUsersError } = useGetAdminUsersQuery(
+        selectedRegion && selectedRegion !== 'all'
+            ? { regionId: selectedRegion }
+            : {}
+    );
 
     const filteredSalonCustomers = useMemo(() => {
         return salonCustomers.filter(customer => {
@@ -376,7 +384,14 @@ export default function CustomerManagementPage() {
                     <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                         <div>
                             <CardTitle>Online Clients</CardTitle>
-                            <CardDescription>List of all online clients who have booked appointments.</CardDescription>
+                            <CardDescription>
+                                List of all online clients who have booked appointments.
+                                {selectedRegion && selectedRegion !== 'all' && (
+                                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        Region Filtered
+                                    </span>
+                                )}
+                            </CardDescription>
                         </div>
                         <div className="flex gap-2">
                             <DropdownMenu>

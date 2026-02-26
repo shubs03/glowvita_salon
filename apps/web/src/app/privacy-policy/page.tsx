@@ -120,7 +120,7 @@ export default function PrivacyPolicyPage() {
         `}</style>
         
         <div className="privacy-content">
-        <p className="lead-text">Last updated: April 1, 2025</p>
+        <p className="lead-text">Last updated: January 01, 2026</p>
         
         <p>
           This privacy notice for <strong>glowvitasalon</strong> (&apos;<strong>Company</strong>&apos;, &apos;<strong>we</strong>&apos;, &apos;<strong>us</strong>&apos;, or &apos;<strong>our</strong>&apos;), 

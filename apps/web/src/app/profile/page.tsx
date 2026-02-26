@@ -390,7 +390,7 @@ function OverviewContent() {
               newProducts.map((product) => (
                 <div key={product.name} className="flex items-center gap-4 p-3 bg-secondary rounded-lg">
                   <img src={product.image} alt={product.name} width={48} height={48} className="rounded-md" />
-                  <div>
+                  <div className="flex-1">
                     <h4 className="font-semibold">{product.name}</h4>
                     <p className="text-sm text-muted-foreground">₹{product.price.toFixed(2)}</p>
                   </div>

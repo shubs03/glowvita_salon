@@ -29,6 +29,7 @@ const supplierSchema = new mongoose.Schema({
   },
   address: { type: String, required: true, trim: true },
   businessRegistrationNo: { type: String, trim: true },
+  gstNo: { type: String, trim: true },
   supplierType: { type: String, required: true },
   profileImage: { type: String }, // URL to the uploaded image
   gallery: [{ type: String }], // Array of gallery image URLs
@@ -148,6 +149,11 @@ const supplierSchema = new mongoose.Schema({
   taxes: {
     taxValue: { type: Number, default: 0 },
     taxType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
+  },
+  minOrderValue: {
+    type: Number,
+    default: 0,
+    min: [0, "Minimum order value cannot be negative"]
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
