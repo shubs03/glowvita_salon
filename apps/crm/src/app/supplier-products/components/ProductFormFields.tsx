@@ -83,7 +83,8 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
 
   // Calculate GST and final price whenever sale price or category changes
   useEffect(() => {
-    const salePrice = Number(formData.salePrice) || 0;
+    const price = Number(formData.price) || 0;
+    const salePrice = (Number(formData.salePrice) || 0) || price;
 
     if (!selectedCategory || !selectedCategory.gstType || selectedCategory.gstType === 'none') {
       setGstAmount(0);

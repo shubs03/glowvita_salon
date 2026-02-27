@@ -9,15 +9,15 @@ import { StaffMember, WorkingHours, Service, ServiceStaffAssignment, calculateTo
 import { useGetMultiServiceSlotsMutation } from '@repo/store/api';
 import { toast } from 'react-toastify';
 
-const Breadcrumb = ({ currentStep, setCurrentStep, isHomeService }: { 
-  currentStep: number; 
+const Breadcrumb = ({ currentStep, setCurrentStep, isHomeService }: {
+  currentStep: number;
   setCurrentStep: (step: number) => void;
   isHomeService?: boolean;
 }) => {
-  const steps = isHomeService 
+  const steps = isHomeService
     ? ['Services', 'Select Professionals', 'Select Location', 'Select Date & Time']
     : ['Services', 'Select Professionals', 'Select Date & Time'];
-  
+
   return (
     <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
       {steps.map((step, index) => (

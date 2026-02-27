@@ -1,8 +1,10 @@
 import { Input } from '@repo/ui/input';
-import { Search, ShoppingCart, Package } from 'lucide-react';
+import { Search, ShoppingCart, Package, RefreshCcw } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { ExportButtons } from '@/components/ExportButtons';
 import { Order, OrderStatus } from '../types';
+import { Button } from '@repo/ui/button';
+import { cn } from '@repo/ui/cn';
 
 interface OrdersFiltersToolbarProps {
   searchTerm: string;
@@ -14,6 +16,8 @@ interface OrdersFiltersToolbarProps {
   activeTab: string;
   onViewMode: 'orders' | 'purchases';
   onViewModeChange: (mode: 'orders' | 'purchases') => void;
+  onRefetch?: () => void;
+  isRefreshing?: boolean;
 }
 
 const OrdersFiltersToolbar = ({
@@ -25,7 +29,9 @@ const OrdersFiltersToolbar = ({
   role,
   activeTab,
   onViewMode,
-  onViewModeChange
+  onViewModeChange,
+  onRefetch,
+  isRefreshing
 }: OrdersFiltersToolbarProps) => {
   const getExportColumns = () => {
     if (activeTab === 'customer-orders') {
@@ -74,6 +80,18 @@ const OrdersFiltersToolbar = ({
           />
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          {onRefetch && (
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={onRefetch}
+              disabled={isRefreshing}
+              className="h-12 w-12 rounded-lg shrink-0"
+            >
+              <RefreshCcw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+            </Button>
+          )}
+
           {/* Tab Switcher Button - Only show for vendors, not suppliers */}
           {role !== 'supplier' && (
             <div className="">
@@ -81,7 +99,7 @@ const OrdersFiltersToolbar = ({
                 <button
                   type="button"
                   onClick={() => onViewModeChange('orders')}
-                  className={`h-12 px-4 sm:px-6 flex items-center ${onViewMode === 'orders' ? 'bg-primary hover:bg-primary/90 text-primary-foreground rounded-tl-lg rounded-bl-lg' : 'bg-background text-foreground hover:bg-muted'}`}
+                  className={`h-12 px-4 sm:px-6 flex items-center transition-colors ${onViewMode === 'orders' ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground hover:bg-muted'}`}
                 >
                   <ShoppingCart className="mr-2 h-4 w-4 flex-shrink-0" />
                   <span className="hidden sm:inline">Orders</span>
@@ -90,16 +108,16 @@ const OrdersFiltersToolbar = ({
                 <button
                   type="button"
                   onClick={() => onViewModeChange('purchases')}
-                  className={`h-12 px-4 sm:px-6 flex items-center ${onViewMode === 'purchases' ? 'bg-primary hover:bg-primary/90 text-primary-foreground rounded-tr-lg rounded-br-lg' : 'bg-background text-foreground hover:bg-muted'}`}
+                  className={`h-12 px-4 sm:px-6 flex items-center transition-colors ${onViewMode === 'purchases' ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground hover:bg-muted'}`}
                 >
                   <Package className="mr-2 h-4 w-4 flex-shrink-0" />
-                  <span className="hidden sm:inline">My Purchases</span>
-                  <span className="sm:hidden">MP</span>
+                  <span className="hidden sm:inline">Purchases</span>
+                  <span className="sm:hidden">P</span>
                 </button>
               </div>
             </div>
           )}
-          
+
           <Select value={statusFilter} onValueChange={onStatusChange}>
             <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-lg border-border hover:border-primary">
               <SelectValue placeholder="Filter by status" />

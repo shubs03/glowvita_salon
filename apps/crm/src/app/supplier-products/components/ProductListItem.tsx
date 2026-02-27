@@ -41,7 +41,7 @@ interface ProductListItemProps {
 
 const ProductListItem = ({ product, onEdit, onDelete, onView, onToggleActive }: ProductListItemProps) => {
   const calculateDiscountPercentage = () => {
-    if (product.price > product.salePrice) {
+    if (product.salePrice > 0 && product.price > product.salePrice) {
       return Math.round(((product.price - product.salePrice) / product.price) * 100);
     }
     return 0;
@@ -112,7 +112,7 @@ const ProductListItem = ({ product, onEdit, onDelete, onView, onToggleActive }: 
                     </Label>
                   </div>
                   <span className="font-semibold text-primary">
-                    ₹{product.salePrice.toFixed(0)}
+                    ₹{(product.salePrice > 0 ? product.salePrice : product.price).toFixed(0)}
                   </span>
                 </div>
 
