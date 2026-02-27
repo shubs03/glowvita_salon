@@ -91,11 +91,6 @@ export default function TaxAndFeesPage() {
       }
     } catch (error) {
       console.error('Failed to save settings:', error);
-      const errorMessage =
-        (typeof error === "object" && error !== null && "data" in error && typeof (error as any).data?.message === "string")
-          ? (error as any).data.message
-          : "Failed to update settings";
-      toast.error(errorMessage);
     }
   };
 

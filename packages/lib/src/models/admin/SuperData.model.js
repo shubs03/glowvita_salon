@@ -52,6 +52,10 @@ const superDataSchema = new mongoose.Schema({
     enum: ['Physician', 'Surgeon'],
     required: function() { return this.type === 'specialization'; }
   },
+  orderIndex: {
+    type: Number,
+    default: 0,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

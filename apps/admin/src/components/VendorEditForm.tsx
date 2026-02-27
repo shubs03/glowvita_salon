@@ -919,7 +919,6 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { f
       }
     } catch (error: any) {
       console.error("Renewal error:", error);
-      toast.error(error.message || "Failed to renew subscription");
     } finally {
       setIsRenewing(false);
     }
@@ -1892,7 +1891,6 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }:
       // Don't close modal, just keep it open as per user "each tab independent"
     } catch (err) {
       console.error("Failed to save personal info:", err);
-      toast.error("Failed to save personal information");
     } finally {
       setIsSavingTab(false);
     }
@@ -1905,7 +1903,6 @@ export function VendorEditForm({ isOpen, onClose, vendor, onSubmit, onSuccess }:
       toast.success("Bank details updated successfully");
     } catch (err) {
       console.error("Failed to save bank info:", err);
-      toast.error("Failed to save bank information");
     } finally {
       setIsSavingTab(false);
     }

@@ -6,9 +6,6 @@ import { hasPermission, forbiddenResponse } from "@repo/lib";
 
 // GET all regions
 export const GET = authMiddlewareAdmin(async (req) => {
-  if (!hasPermission(req.user, "admin-roles:view")) {
-    return forbiddenResponse();
-  }
   try {
     await _db();
     const { searchParams } = new URL(req.url);
@@ -38,13 +35,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
     console.error("GET Regions Error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
-}, ["SUPER_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "regions:view");
 
 // POST create region
 export const POST = authMiddlewareAdmin(async (req) => {
-  if (!hasPermission(req.user, "admin-roles:edit")) {
-    return forbiddenResponse();
-  }
   try {
     await _db();
     const body = await req.json();
@@ -68,13 +62,10 @@ export const POST = authMiddlewareAdmin(async (req) => {
     console.error("POST Region Error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
-}, ["SUPER_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "regions:edit");
 
 // PUT update region
 export const PUT = authMiddlewareAdmin(async (req) => {
-  if (!hasPermission(req.user, "admin-roles:edit")) {
-    return forbiddenResponse();
-  }
   try {
     await _db();
     const body = await req.json();
@@ -95,4 +86,4 @@ export const PUT = authMiddlewareAdmin(async (req) => {
     console.error("PUT Region Error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
-}, ["SUPER_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "regions:edit");

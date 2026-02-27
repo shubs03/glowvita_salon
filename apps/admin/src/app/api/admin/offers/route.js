@@ -130,21 +130,61 @@ export const POST = authMiddlewareAdmin(
       { status: 201 }
     );
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "offers-coupons:edit"
 );
 
 // Get All Offers
 export const GET = authMiddlewareAdmin(
   async (req) => {
     const { buildRegionQueryFromRequest } = await import("@repo/lib");
-    const query = buildRegionQueryFromRequest(req);
-    const offers = await OfferModel.find(query).lean(); // Use .lean() for read-only operations
-    const currentDate = new Date();
+    const baseQuery = buildRegionQueryFromRequest(req);
+    
+    let query = baseQuery;
+    const userRole = req.user.roleName || req.user.role;
 
+    if (userRole !== "SUPER_ADMIN" && userRole !== "superadmin") {
+      // Regional Admin: see global offers + their region's offers
+      const userRegion = req.user.assignedRegions?.[0];
+      query = {
+        $or: [
+          { regionId: userRegion },
+          { regionId: null }
+        ]
+      };
+      
+      const offers = await OfferModel.find(query).lean();
+      
+      // Post-process status and data
+      const processedOffers = offers.map(offer => {
+        const currentDate = new Date();
+        let newStatus = "Scheduled";
+        if (new Date(offer.startDate) <= currentDate) {
+          if (!offer.expires || new Date(offer.expires) >= currentDate) {
+            newStatus = "Active";
+          } else {
+            newStatus = "Expired";
+          }
+        }
+        return {
+          ...offer,
+          status: newStatus,
+          isActive: offer.isActive !== false,
+          applicableSpecialties: Array.isArray(offer.applicableSpecialties) ? offer.applicableSpecialties : [],
+          applicableCategories: Array.isArray(offer.applicableCategories) ? offer.applicableCategories : [],
+        };
+      });
+      
+      return Response.json(processedOffers);
+    }
+
+    // Super Admin logic
+    const offers = await OfferModel.find(query).lean();
     const sanitizedOffers = offers.map(offer => {
+      const currentDate = new Date();
       let newStatus = "Scheduled";
-      if (offer.startDate <= currentDate) {
-        if (!offer.expires || offer.expires >= currentDate) {
+      if (new Date(offer.startDate) <= currentDate) {
+        if (!offer.expires || new Date(offer.expires) >= currentDate) {
           newStatus = "Active";
         } else {
           newStatus = "Expired";
@@ -161,13 +201,45 @@ export const GET = authMiddlewareAdmin(
 
     return Response.json(sanitizedOffers);
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "offers-coupons:view"
 );
 
 // Update Offer
 export const PUT = authMiddlewareAdmin(
   async (req) => {
-    const { id, ...body } = await req.json();
+    const { id, action, ...body } = await req.json();
+    
+    // Special case: Toggle general active status
+    if (action === 'toggle_active') {
+      const offer = await OfferModel.findById(id);
+      if (!offer) return Response.json({ message: "Offer not found" }, { status: 404 });
+      
+      offer.isActive = !offer.isActive;
+      await offer.save();
+      return Response.json({ message: `Offer ${offer.isActive ? 'activated' : 'deactivated'} successfully`, isActive: offer.isActive });
+    }
+
+    // Special case: Disable global offer for a region
+    if (action === 'disable_global') {
+      const userRegion = req.user.assignedRegions?.[0];
+      if (!userRegion) return Response.json({ message: "No region assigned to user" }, { status: 400 });
+      
+      await OfferModel.findByIdAndUpdate(id, {
+        $addToSet: { disabledRegions: userRegion }
+      });
+      return Response.json({ message: "Offer disabled for your region" });
+    }
+    
+    if (action === 'enable_global') {
+        const userRegion = req.user.assignedRegions?.[0];
+        if (!userRegion) return Response.json({ message: "No region assigned to user" }, { status: 400 });
+        
+        await OfferModel.findByIdAndUpdate(id, {
+          $pull: { disabledRegions: userRegion }
+        });
+        return Response.json({ message: "Offer enabled for your region" });
+    }
 
     // Get existing offer to check for old image
     const existingOffer = await OfferModel.findById(id);
@@ -258,7 +330,8 @@ export const PUT = authMiddlewareAdmin(
 
     return Response.json(updatedOffer);
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "offers-coupons:edit"
 );
 
 
@@ -279,5 +352,6 @@ export const DELETE = authMiddlewareAdmin(
 
     return Response.json({ message: "Offer deleted successfully" });
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "offers-coupons:delete"
 );

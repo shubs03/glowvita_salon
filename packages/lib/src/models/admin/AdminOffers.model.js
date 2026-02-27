@@ -62,6 +62,21 @@ if (isServer && mongoose && mongoose.model) {
       type: Boolean,
       default: false,
     },
+    regionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Region',
+      default: null, // null means global (for super admin)
+      index: true,
+    },
+    disabledRegions: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Region'
+    }],
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
     createdAt: {
       type: Date,
       default: Date.now,

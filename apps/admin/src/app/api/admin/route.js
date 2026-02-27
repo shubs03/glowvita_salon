@@ -4,12 +4,12 @@ import AdminUserModel from "@repo/lib/models/admin/AdminUser";
 import { authMiddlewareAdmin } from "../../../middlewareAdmin.js";
 import bcrypt from "bcryptjs";
 import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
+import { forbiddenResponse } from "@repo/lib";
 
 await _db();
 
 export const POST = authMiddlewareAdmin(
   async (req) => {
-
     const body = await req.json();
     const {
       fullName,
@@ -23,6 +23,8 @@ export const POST = authMiddlewareAdmin(
       permissions,
       assignedRegions,
     } = body;
+
+    const requester = req.user;
 
     // 1️⃣ Validate required fields
     if (
@@ -40,7 +42,34 @@ export const POST = authMiddlewareAdmin(
       );
     }
 
-    // 2️⃣ Check if email or mobile already exists
+    // 2️⃣ Role-based validation
+    if (requester.roleName?.toUpperCase() === 'REGIONAL_ADMIN') {
+      // Regional Admin can ONLY create STAFF
+      if (roleName !== 'STAFF') {
+        return forbiddenResponse("Regional Admin can only create Staff members");
+      }
+      
+      // Ensure assignedRegions is a subset of requester's regions
+      if (assignedRegions && assignedRegions.length > 0) {
+        const hasInvalidRegion = assignedRegions.some(rId => !requester.assignedRegions.map(rid => rid.toString()).includes(rId.toString()));
+        if (hasInvalidRegion) {
+          return forbiddenResponse("You can only assign staff to your own regions");
+        }
+      } else if (!assignedRegions || assignedRegions.length === 0) {
+        // If no regions provided, default to all requester's regions
+        body.assignedRegions = requester.assignedRegions;
+      }
+    } else if (requester.roleName?.toUpperCase() === 'SUPER_ADMIN') {
+      // Super Admin creates staff for themselves. 
+      // User says: "super admin is not creating the staff for the regional admin he create the staff only for the super admin"
+      // So if creating STAFF, ensure assignedRegions is empty (All Access/Super Admin context) 
+      // unless they explicitly want to assign a region.
+      if (roleName === 'STAFF' && (!assignedRegions || assignedRegions.length === 0)) {
+        body.assignedRegions = []; 
+      }
+    }
+
+    // 3️⃣ Check if email or mobile already exists
     const existingAdmin = await AdminUserModel.findOne({
       $or: [{ emailAddress }, { mobileNo }],
     });
@@ -51,7 +80,7 @@ export const POST = authMiddlewareAdmin(
       );
     }
 
-    // 3️⃣ Hash password
+    // 4️⃣ Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Handle profile image upload if provided
@@ -68,7 +97,7 @@ export const POST = authMiddlewareAdmin(
       }
     }
 
-    // 4️⃣ Create admin
+    // 5️⃣ Create admin
     const newAdmin = await AdminUserModel.create({
       fullName,
       emailAddress,
@@ -79,10 +108,9 @@ export const POST = authMiddlewareAdmin(
       password: hashedPassword,
       roleName,
       permissions: permissions || [],
-      assignedRegions: assignedRegions || [],
+      assignedRegions: body.assignedRegions || assignedRegions || [],
     });
 
-    // 5️⃣ Remove password before returning
     const adminData = newAdmin.toObject();
     delete adminData.password;
 
@@ -91,70 +119,107 @@ export const POST = authMiddlewareAdmin(
       { status: 201 }
     );
   },
-  ["SUPER_ADMIN"]
-); // ✅ only superadmin can add new admins
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "admin-roles:edit"
+);
 
 
 export const GET = authMiddlewareAdmin(
   async (req) => {
-    const admins = await AdminUserModel.find().select("-password"); // Hide password
+    const requester = req.user;
+    let query = {};
+
+    if (requester.roleName?.toUpperCase() === 'REGIONAL_ADMIN') {
+      // Regional admins see staff (not super admins) assigned to their regions
+      query = {
+        roleName: { $ne: 'SUPER_ADMIN' },
+        assignedRegions: { $in: requester.assignedRegions.map(id => id.toString()) }
+      };
+    } else if (requester.roleName?.toUpperCase() === 'STAFF') {
+      // Staff see only themselves
+      query = { _id: requester.userId };
+    }
+
+    const admins = await AdminUserModel.find(query).select("-password");
     return Response.json(admins);
   },
-  ["SUPER_ADMIN"]
-); // Only superadmin can view
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "admin-roles:view"
+);
 
 export const PUT = authMiddlewareAdmin(
   async (req) => {
     const url = new URL(req.url);
     const adminId = url.searchParams.get('id');
+    const requester = req.user;
     
     let _id, body;
+    const bodyData = await req.json();
     if (adminId) {
-      // If ID is in query params, get the rest of the data from body
       _id = adminId;
-      body = await req.json();
+      body = bodyData;
     } else {
-      // If ID is in body, extract it
-      const bodyData = await req.json();
-      _id = bodyData._id;
-      const { _id: id, ...rest } = bodyData;
+      _id = bodyData._id || bodyData.id;
+      const { _id: id, id: id2, ...rest } = bodyData;
       body = rest;
     }
 
-    // Get existing admin to check for old image
-    const existingAdmin = await AdminUserModel.findById(_id);
-    if (!existingAdmin) {
+    const targetAdmin = await AdminUserModel.findById(_id);
+    if (!targetAdmin) {
       return Response.json({ message: "Admin not found" }, { status: 404 });
     }
 
-    // Handle profile image upload if provided
+    // Role-based validation
+    if (requester.roleName?.toUpperCase() === 'REGIONAL_ADMIN') {
+      if (targetAdmin.roleName?.toUpperCase() === 'SUPER_ADMIN') {
+        return forbiddenResponse("Regional Admin cannot edit Super Admin");
+      }
+
+      // If editing self
+      if (requester.userId.toString() === targetAdmin._id.toString()) {
+        // Prevent Regional Admin from upgrading themselves or changing their own regions/permissions
+        delete body.roleName;
+        delete body.permissions;
+        delete body.assignedRegions;
+      } else {
+        // Editing someone else (presumably STAFF)
+        if (targetAdmin.roleName?.toUpperCase() === 'REGIONAL_ADMIN') {
+          return forbiddenResponse("Regional Admin cannot edit other Regional Admins");
+        }
+
+        // Check if target admin is in requester's region
+        const hasOverlap = targetAdmin.assignedRegions.some(rId => requester.assignedRegions.map(rid => rid.toString()).includes(rId.toString()));
+        if (!hasOverlap && targetAdmin.assignedRegions.length > 0) {
+          return forbiddenResponse("You don't have permission to edit this admin");
+        }
+
+        // Ensure new assignedRegions are also within requester's regions
+        if (body.assignedRegions) {
+          const hasInvalidRegion = body.assignedRegions.some(rId => !requester.assignedRegions.map(rid => rid.toString()).includes(rId.toString()));
+          if (hasInvalidRegion) {
+            return forbiddenResponse("You can only assign staff to your own regions");
+          }
+        }
+      }
+    }
+
+    if (body.password) {
+      body.password = await bcrypt.hash(body.password, 10);
+    } else {
+      delete body.password;
+    }
+
     if (body.profileImage !== undefined) {
-      if (body.profileImage) {
-        // Upload new image to VPS
+      if (body.profileImage && body.profileImage.startsWith('data:image')) {
         const fileName = `admin-${Date.now()}`;
         const imageUrl = await uploadBase64(body.profileImage, fileName);
-        
-        if (!imageUrl) {
-          return Response.json(
-            { message: "Failed to upload profile image" },
-            { status: 500 }
-          );
+        if (imageUrl) {
+          if (targetAdmin.profileImage) await deleteFile(targetAdmin.profileImage);
+          body.profileImage = imageUrl;
         }
-        
-        // Delete old image from VPS if it exists
-        if (existingAdmin.profileImage) {
-          await deleteFile(existingAdmin.profileImage);
-        }
-        
-        body.profileImage = imageUrl;
-      } else {
-        // If image is null/empty, remove it
+      } else if (!body.profileImage) {
+        if (targetAdmin.profileImage) await deleteFile(targetAdmin.profileImage);
         body.profileImage = null;
-        
-        // Delete old image from VPS if it exists
-        if (existingAdmin.profileImage) {
-          await deleteFile(existingAdmin.profileImage);
-        }
       }
     }
 
@@ -164,55 +229,52 @@ export const PUT = authMiddlewareAdmin(
       { new: true }
     ).select("-password");
 
-    if (!updatedAdmin) {
-      return Response.json({ message: "Admin not found" }, { status: 404 });
-    }
-
     return Response.json(updatedAdmin);
   },
-  ["SUPER_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "admin-roles:edit"
 );
 
 export const DELETE = authMiddlewareAdmin(
   async (req) => {
     const url = new URL(req.url);
     const adminId = url.searchParams.get('id');
+    const requester = req.user;
     
-    if (!adminId) {
+    let targetId = adminId;
+    if (!targetId) {
       const body = await req.json();
-      // Fallback to body if ID not in query params
-      const bodyId = body.id || body._id;
-      if (!bodyId) {
-        return Response.json({ message: "Admin ID is required" }, { status: 400 });
-      }
-      // Use body ID if query param not available
-      const deleted = await AdminUserModel.findByIdAndDelete(bodyId);
-
-      if (!deleted) {
-        return Response.json({ message: "Admin not found" }, { status: 404 });
-      }
-
-      return Response.json({ message: "Admin deleted successfully" });
+      targetId = body.id || body._id;
     }
 
-    // Get admin to check for profile image
-    const admin = await AdminUserModel.findById(adminId);
-    if (!admin) {
+    if (!targetId) {
+      return Response.json({ message: "Admin ID is required" }, { status: 400 });
+    }
+
+    const targetAdmin = await AdminUserModel.findById(targetId);
+    if (!targetAdmin) {
       return Response.json({ message: "Admin not found" }, { status: 404 });
     }
 
-    const deleted = await AdminUserModel.findByIdAndDelete(adminId);
-
-    if (!deleted) {
-      return Response.json({ message: "Admin not found" }, { status: 404 });
+    // Role-based validation
+    if (requester.roleName?.toUpperCase() === 'REGIONAL_ADMIN') {
+      if (targetAdmin.roleName?.toUpperCase() === 'SUPER_ADMIN' || targetAdmin.roleName?.toUpperCase() === 'REGIONAL_ADMIN') {
+        return forbiddenResponse("Regional Admin cannot delete other Admins");
+      }
+      
+      const hasOverlap = targetAdmin.assignedRegions.some(rId => requester.assignedRegions.map(rid => rid.toString()).includes(rId.toString()));
+      if (!hasOverlap && targetAdmin.assignedRegions.length > 0) {
+        return forbiddenResponse("You don't have permission to delete this admin");
+      }
     }
-    
-    // Delete profile image from VPS if it exists
-    if (admin.profileImage) {
-      await deleteFile(admin.profileImage);
+
+    if (targetAdmin.profileImage) {
+      await deleteFile(targetAdmin.profileImage);
     }
 
+    await AdminUserModel.findByIdAndDelete(targetId);
     return Response.json({ message: "Admin deleted successfully" });
   },
-  ["SUPER_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "admin-roles:delete"
 );

@@ -58,12 +58,7 @@ export const sidebarNavItems: NavItem[] = [
     Icon: FaTruck,
     permission: "supplier-management",
   },
-  {
-    title: "Geo-fencing",
-    href: "/geo-fencing",
-    Icon: FaMapMarkedAlt,
-    permission: "geo-fencing",
-  },
+
   {
     title: "Admin Roles",
     href: "/admin-roles",

@@ -1,5 +1,6 @@
 'use client';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef ,useMemo} from 'react';
+import { useAppSelector } from '@repo/store/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { FaRupeeSign, FaShoppingCart } from "react-icons/fa";
 import { FiUsers, FiActivity, FiXCircle } from "react-icons/fi";

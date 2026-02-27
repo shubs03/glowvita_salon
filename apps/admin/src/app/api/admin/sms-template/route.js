@@ -17,7 +17,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "marketing:view");
 
 // POST a new SMS template
 export const POST = authMiddlewareAdmin(async (req) => {
@@ -83,7 +83,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "marketing:edit");
 
 // PUT update an SMS template
 export const PUT = authMiddlewareAdmin(async (req) => {
@@ -128,7 +128,7 @@ export const PUT = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "marketing:edit");
 
 // DELETE an SMS template
 export const DELETE = authMiddlewareAdmin(async (req) => {
@@ -162,4 +162,4 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "marketing:delete");

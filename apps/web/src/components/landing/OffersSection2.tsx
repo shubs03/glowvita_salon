@@ -1,13 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar } from 'lucide-react';
 import { useGetPublicAllOffersQuery } from '@repo/store/services/api';
+import { useSelector } from 'react-redux';
 import Link from 'next/link';
 
 const OffersSection2 = () => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  // Fetch all offers using RTK query (no vendor filter to get all offers)
-  const { data: offersData, isLoading, error } = useGetPublicAllOffersQuery(undefined);
+  // Get the user's regionId if logged in (from their vendor profile stored in auth)
+  const user = useSelector((state: any) => state.userAuth?.user);
+  const regionId = user?.regionId || null;
+
+  // Fetch all offers using RTK query, passing regionId so disabled offers are filtered out
+  const { data: offersData, isLoading, error } = useGetPublicAllOffersQuery(
+    regionId ? { regionId } : {}
+  );
 
   // Log the offers data to console
   useEffect(() => {

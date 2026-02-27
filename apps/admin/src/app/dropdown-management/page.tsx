@@ -364,7 +364,7 @@ const ServiceCategoryManager = () => {
             setCurrentItem(null);
             setImageBase64(null);
         } catch (error: any) {
-            toast.error('Error', { description: error?.data?.message || `Failed to ${action} category.` });
+            console.error(`Failed to ${action} category:`, error);
         }
     };
 
@@ -381,7 +381,7 @@ const ServiceCategoryManager = () => {
                 setIsDeleteModalOpen(false);
                 setCurrentItem(null);
             } catch (error: any) {
-                toast.error('Error', { description: error?.data?.message || 'Failed to delete category.' });
+                console.error('Failed to delete category:', error);
             }
         }
     };
@@ -611,7 +611,7 @@ const ServiceManager = () => {
             setCurrentItem(null);
             setImageBase64(null);
         } catch (error: any) {
-            toast.error('Error', { description: error?.data?.message || `Failed to ${action} service.` });
+            console.error(`Failed to ${action} service:`, error);
         }
     };
 
@@ -628,7 +628,7 @@ const ServiceManager = () => {
                 setIsDeleteModalOpen(false);
                 setCurrentItem(null);
             } catch (error: any) {
-                toast.error('Error', { description: error?.data?.message || 'Failed to delete service.' });
+                console.error('Failed to delete service:', error);
             }
         }
     };
@@ -899,7 +899,7 @@ const ProductMasterManager = () => {
             setCurrentItem(null);
             setImageBase64(null);
         } catch (error: any) {
-            toast.error('Error', { description: error?.data?.message || `Failed to ${action} product master.` });
+            console.error(`Failed to ${action} product master:`, error);
         }
     };
 
@@ -916,7 +916,7 @@ const ProductMasterManager = () => {
                 setIsDeleteModalOpen(false);
                 setCurrentItem(null);
             } catch (error: any) {
-                toast.error('Error', { description: error?.data?.message || 'Failed to delete product master.' });
+                console.error('Failed to delete product master:', error);
             }
         }
     };
@@ -1136,7 +1136,7 @@ const ProductMasterManager = () => {
     );
 };
 
-const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: { title: string; description: string; data: DropdownItem[]; onUpdate: (item: Partial<DropdownItem>, action: 'add' | 'edit' | 'delete') => void; isLoading: boolean; }) => {
+const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: { title: string; description: string; data: DropdownItem[]; onUpdate: (item: Partial<DropdownItem> & { newIndex?: number }, action: 'add' | 'edit' | 'delete' | 'move') => void; isLoading: boolean; }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState<Partial<DropdownItem> | null>(null);
@@ -1206,9 +1206,19 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
         setExpandedItems(prev => ({ ...prev, [id]: !prev[id] }));
     };
 
-    const renderItem = (item: DropdownItem, level: number) => {
+    const handleMove = (items: DropdownItem[], index: number, direction: 'up' | 'down') => {
+        const item = items[index];
+        const newIndex = direction === 'up' ? index - 1 : index + 1;
+        if (newIndex < 0 || newIndex >= items.length) return;
+        onUpdate({ ...item, newIndex }, 'move');
+    };
+
+    const renderItem = (item: DropdownItem, index: number, siblings: DropdownItem[], level: number) => {
         const children = getChildren(item._id);
         const isExpanded = expandedItems[item._id];
+
+        const isFirst = index === 0;
+        const isLast = index === siblings.length - 1;
 
         return (
             <div key={item._id} className={level === 0 ? "border-t" : "border-t border-dashed"}>
@@ -1219,6 +1229,29 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
                         </button>
                     )}
                     <span className="flex-grow font-medium">{item.name} {item.doctorType && <Badge variant="outline">{item.doctorType}</Badge>}</span>
+                    
+                    {/* Move buttons */}
+                    <div className="flex items-center gap-1 mr-2 border-r pr-2 shadow-sm">
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7" 
+                            disabled={isFirst} 
+                            onClick={() => handleMove(siblings, index, 'up')}
+                        >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-7 w-7" 
+                            disabled={isLast} 
+                            onClick={() => handleMove(siblings, index, 'down')}
+                        >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                        </Button>
+                    </div>
+
                     {item.type === 'specialization' && (
                         <Button variant="outline" size="sm" className="h-7 px-2" onClick={() => handleOpenModal('add', 'disease', undefined, item._id, item.name)}>
                             <Plus className="mr-1 h-3 w-3" /> Add Disease
@@ -1233,7 +1266,7 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
                 </div>
                 {isExpanded && item.type === 'specialization' && (
                     <div className="ml-4 pl-2">
-                        {children.length > 0 ? children.map(child => renderItem(child, level + 1)) : <div className="pl-8 text-sm text-muted-foreground py-1">No diseases added yet.</div>}
+                        {children.length > 0 ? children.map((child, idx) => renderItem(child, idx, children, level + 1)) : <div className="pl-8 text-sm text-muted-foreground py-1">No diseases added yet.</div>}
                     </div>
                 )}
             </div>
@@ -1305,7 +1338,7 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
             <CardContent className="border rounded-md">
                 {isLoading ? <div className="text-center p-4">Loading...</div> :
                     specializations.length === 0 ? <div className="text-center p-8 text-muted-foreground">No specializations found.</div> :
-                        specializations.map(item => renderItem(item, 0))}
+                        specializations.map((item, idx) => renderItem(item, idx, specializations, 0))}
             </CardContent>
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -1393,8 +1426,8 @@ export default function DropdownManagementPage() {
                 await deleteItem({ id: item._id }).unwrap();
                 toast.success('Success', { description: 'Item deleted successfully.' });
             } else if (action === 'move' && item._id) {
-                // This would require a backend endpoint to handle reordering
-                toast.info('Reordering functionality is not yet implemented on the backend.');
+                await updateItem({ id: item._id, action: 'move', newIndex: item.newIndex }).unwrap();
+                toast.success('Success', { description: 'Item reordered successfully.' });
             }
         } catch (error: any) {
             const errorMessage = error?.data?.message || `Failed to ${action} item.`;
@@ -1632,7 +1665,7 @@ const ProductCategoryManager = () => {
             setCurrentCategory(null);
             refetch();
         } catch (error: any) {
-            toast.error(error?.data?.message || 'Failed to save category');
+            console.error('Failed to save category:', error);
         }
     };
 
@@ -1651,7 +1684,7 @@ const ProductCategoryManager = () => {
             setCurrentCategory(null);
             refetch();
         } catch (error: any) {
-            toast.error(error?.data?.message || 'Failed to delete category');
+            console.error('Error deleting category:', error);
         }
     };
 

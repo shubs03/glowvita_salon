@@ -826,9 +826,7 @@ export default function SupplierManagementPage() {
           );
         }
       } catch (error) {
-        toast.error(
-          `Failed to perform action on ${selectedSupplier.shopName}.`
-        );
+        console.error("Action failed:", error);
       }
     }
     setIsActionModalOpen(false);

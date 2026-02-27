@@ -12,15 +12,16 @@ import {
   JWT_SECRET_DOCTOR,
   JWT_SECRET_SUPPLIER
 } from "@repo/config/config";
+import { hasPermission, forbiddenResponse } from "@repo/lib";
 
 
-export function authMiddlewareAdmin(handler, allowedRoles = []) {
+export function authMiddlewareAdmin(handler, allowedRoles = [], requiredPermission = null) {
   return async (req, ctx) => {
     await _db();
 
     let token = req.headers.get("authorization")?.split(" ")[1];
 
-    // If no header, try to get from cookies
+    // If no Authorization header, fall back to httpOnly cookie
     if (!token) {
       token = req.cookies?.get('admin_access_token')?.value;
     }
@@ -31,16 +32,17 @@ export function authMiddlewareAdmin(handler, allowedRoles = []) {
 
     try {
       const decoded = jwt.decode(token);
+
       if (!decoded || !decoded.role) {
-        return Response.json({ message: "Invalid token structure" }, { status: 401 });
+        return Response.json({ message: "Unauthorized: Invalid token" }, { status: 401 });
       }
 
       let secret;
       let Model;
-      const role = decoded.role;
+      const role = decoded.role || decoded.roleName;
 
       // Determine secret and model based on role
-      if (role === 'admin' || role === 'SUPER_ADMIN' || role === 'REGIONAL_ADMIN') {
+      if (role === 'admin' || role === 'SUPER_ADMIN' || role === 'REGIONAL_ADMIN' || role === 'STAFF') {
         secret = JWT_SECRET_ADMIN;
         Model = AdminUserModel;
       } else if (role === 'vendor' || role === 'staff') {
@@ -67,10 +69,15 @@ export function authMiddlewareAdmin(handler, allowedRoles = []) {
         return Response.json({ message: `Unauthorized: ${role} not found` }, { status: 401 });
       }
 
-      // Role check (allowedRoles usually contains specific admin roles or 'vendor' etc.)
+      // Role check
       const userRoleLabel = user.roleName || user.role || role;
       if (allowedRoles.length && !allowedRoles.includes(userRoleLabel)) {
         return Response.json({ message: "Forbidden: You do not have permission to access this resource" }, { status: 403 });
+      }
+
+      // Granular Permission Check
+      if (requiredPermission && !hasPermission(user, requiredPermission)) {
+        return forbiddenResponse(`You do not have permission to ${requiredPermission.split(':')[1] || 'access'} this module`);
       }
 
       req.user = user;
@@ -81,7 +88,7 @@ export function authMiddlewareAdmin(handler, allowedRoles = []) {
       return handler(req, ctx);
     } catch (err) {
       console.error("Auth Middleware Error:", err.message);
-      return Response.json({ message: `Invalid token: ${err.message}` }, { status: 401 });
+      return Response.json({ message: `Unauthorized: ${err.message}` }, { status: 401 });
     }
   };
 }
