@@ -121,15 +121,44 @@ type SupplierOrder = {
   supplierId: string;
   supplierName: string;
   productName: string;
+  quantity: number;
   customerName: string;
-  amount: number;
+  totalAmount: number;
+  platformFeeAmount?: number;
+  gstAmount?: number;
+  shippingAmount?: number;
+  taxAmount?: number;
   status: string;
   date: string;
   items?: any[];
   shippingAddress?: string;
   contactNumber?: string;
   paymentMethod?: string;
+  orderSource?: 'B2C' | 'B2B';
 };
+type GroupedSupplierOrder = {
+  id: string;
+  supplierName: string;
+  totalOrders: number;
+  pending: number;
+  processing: number;
+  packed: number;
+  shipped: number;
+  delivered: number;
+  cancelled: number;
+  orders: SupplierOrder[];
+};
+
+type InventoryProduct = {
+  id: string;
+  name: string;
+  sku: string;
+  price: number;
+  stock: number;
+  status: string;
+  category: string;
+};
+
 type ActionType = "approve" | "reject" | "delete";
 
 const SupplierPageSkeleton = () => (
@@ -264,6 +293,8 @@ export default function SupplierManagementPage() {
   const [newLicenseFiles, setNewLicenseFiles] = useState<File[]>([]);
   const [removedLicenseFiles, setRemovedLicenseFiles] = useState<string[]>([]); // Track removed files
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [isSupplierOrdersModalOpen, setIsSupplierOrdersModalOpen] = useState(false);
+  const [selectedSupplierGroup, setSelectedSupplierGroup] = useState<GroupedSupplierOrder | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
     null
   );
@@ -271,6 +302,17 @@ export default function SupplierManagementPage() {
     null
   );
   const [actionType, setActionType] = useState<ActionType | null>(null);
+
+  // Pagination and search for Supplier Specific Orders Modal
+  const [currentSupplierOrdersPage, setCurrentSupplierOrdersPage] = useState(1);
+  const [supplierOrdersPerPage, setSupplierOrdersPerPage] = useState(10);
+  const [supplierOrderSearch, setSupplierOrderSearch] = useState("");
+
+
+  // Pagination for Inventory Modal
+  const [currentInventoryPage, setCurrentInventoryPage] = useState(1);
+  const [inventoryPerPage, setInventoryPerPage] = useState(10);
+
 
   // Map states
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -294,6 +336,94 @@ export default function SupplierManagementPage() {
     regionId: selectedRegion,
     status: orderStatusFilter,
   });
+
+  // Grouped Supplier Orders logic
+  const groupedSupplierOrders = useMemo(() => {
+    const groups: Record<string, {
+      supplierName: string;
+      totalOrders: number;
+      pending: number;
+      processing: number;
+      packed: number;
+      shipped: number;
+      delivered: number;
+      cancelled: number;
+      orders: SupplierOrder[];
+    }> = {};
+
+    supplierOrders.forEach((order: SupplierOrder) => {
+      const sId = order.supplierId || "unknown";
+      if (!groups[sId]) {
+        groups[sId] = {
+          supplierName: order.supplierName,
+          totalOrders: 0,
+          pending: 0,
+          processing: 0,
+          packed: 0,
+          shipped: 0,
+          delivered: 0,
+          cancelled: 0,
+          orders: [],
+        };
+      }
+
+      groups[sId].totalOrders++;
+      groups[sId].orders.push(order);
+
+      const status = order.status.toLowerCase();
+      if (status === "pending") groups[sId].pending++;
+      else if (status === "processing") groups[sId].processing++;
+      else if (status === "packed") groups[sId].packed++;
+      else if (status === "shipped") groups[sId].shipped++;
+      else if (status === "delivered" || status === "completed") groups[sId].delivered++;
+      else if (status === "cancelled") groups[sId].cancelled++;
+    });
+
+    return Object.entries(groups).map(([id, data]) => ({
+      id,
+      ...data,
+    }));
+  }, [supplierOrders]);
+
+  const filteredGroupedOrders = useMemo(() => {
+    return groupedSupplierOrders.filter(group =>
+      group.supplierName.toLowerCase().includes(orderSearch.toLowerCase())
+    );
+  }, [groupedSupplierOrders, orderSearch]);
+
+  const currentGroupedOrders = useMemo(() => {
+    const lastIndex = currentOrdersPage * ordersPerPage;
+    const firstIndex = lastIndex - ordersPerPage;
+    return filteredGroupedOrders.slice(firstIndex, lastIndex);
+  }, [filteredGroupedOrders, currentOrdersPage, ordersPerPage]);
+
+  const totalGroupedPages = Math.ceil(filteredGroupedOrders.length / ordersPerPage);
+
+  // Paginated and Filtered Supplier Orders in Modal
+  const filteredModalOrders = useMemo(() => {
+    if (!selectedSupplierGroup) return [];
+    return (selectedSupplierGroup.orders || []).filter((order: SupplierOrder) => {
+      const search = supplierOrderSearch.toLowerCase();
+      return (
+        order.id.toLowerCase().includes(search) ||
+        order.customerName.toLowerCase().includes(search) ||
+        (order.productName && order.productName.toLowerCase().includes(search)) ||
+        (order.items && order.items.some(item => item.name?.toLowerCase().includes(search)))
+      );
+    });
+  }, [selectedSupplierGroup, supplierOrderSearch]);
+
+  const paginatedSupplierOrders = useMemo(() => {
+    const lastIndex = currentSupplierOrdersPage * supplierOrdersPerPage;
+    const firstIndex = lastIndex - supplierOrdersPerPage;
+    return filteredModalOrders.slice(firstIndex, lastIndex);
+  }, [filteredModalOrders, currentSupplierOrdersPage, supplierOrdersPerPage]);
+
+  const totalSupplierOrdersPages = useMemo(() => {
+    return Math.ceil(filteredModalOrders.length / supplierOrdersPerPage);
+  }, [filteredModalOrders, supplierOrdersPerPage]);
+
+
 
   const initialNewSupplierState: NewSupplier = {
     firstName: "",
@@ -788,6 +918,16 @@ export default function SupplierManagementPage() {
     return matchesSearch && matchesStatus;
   });
 
+  // Paginated Inventory
+  const paginatedInventory = useMemo(() => {
+    const lastIndex = currentInventoryPage * inventoryPerPage;
+    const firstIndex = lastIndex - inventoryPerPage;
+    return filteredInventory.slice(firstIndex, lastIndex);
+  }, [filteredInventory, currentInventoryPage, inventoryPerPage]);
+
+  const totalInventoryPages = Math.ceil(filteredInventory.length / inventoryPerPage);
+
+
   const handleActionClick = (supplier: Supplier, action: ActionType) => {
     setSelectedSupplier(supplier);
     setActionType(action);
@@ -801,6 +941,7 @@ export default function SupplierManagementPage() {
 
   const handleInventoryClick = (supplier: Supplier) => {
     setSelectedSupplier(supplier);
+    setCurrentInventoryPage(1);
     setIsInventoryModalOpen(true);
   };
 
@@ -1172,9 +1313,11 @@ export default function SupplierManagementPage() {
                       <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="Pending">Pending</SelectItem>
                       <SelectItem value="Processing">Processing</SelectItem>
+                      <SelectItem value="Packed">Packed</SelectItem>
                       <SelectItem value="Shipped">Shipped</SelectItem>
                       <SelectItem value="Delivered">Delivered</SelectItem>
                       <SelectItem value="Completed">Completed</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1185,12 +1328,14 @@ export default function SupplierManagementPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Order ID</TableHead>
                       <TableHead>Supplier</TableHead>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead className="text-center">Total</TableHead>
+                      <TableHead className="text-center">Pending</TableHead>
+                      <TableHead className="text-center">Processing</TableHead>
+                      <TableHead className="text-center">Packed</TableHead>
+                      <TableHead className="text-center">Shipped</TableHead>
+                      <TableHead className="text-center">Delivered</TableHead>
+                      <TableHead className="text-center">Cancelled</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1198,60 +1343,73 @@ export default function SupplierManagementPage() {
                     {isOrdersLoading ? (
                       [...Array(5)].map((_, i) => (
                         <TableRow key={i}>
-                          <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                           <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                          <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
                         </TableRow>
                       ))
-                    ) : currentOrders.length > 0 ? (
-                      currentOrders.map((order: SupplierOrder) => (
-                        <TableRow key={order._id || order.id}>
-                          <TableCell className="font-medium">
-                            {order.id}
+                    ) : currentGroupedOrders.length > 0 ? (
+                      currentGroupedOrders.map((group: GroupedSupplierOrder) => (
+                        <TableRow key={group.id}>
+                          <TableCell className="font-medium whitespace-nowrap">
+                            {group.supplierName}
                           </TableCell>
-                          <TableCell>{order.supplierName}</TableCell>
-                          <TableCell>{order.productName}</TableCell>
-                          <TableCell>{order.customerName}</TableCell>
-                          <TableCell>
-                            ₹{order.amount.toLocaleString()}
+                          <TableCell className="text-center">{group.totalOrders}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                              {group.pending}
+                            </Badge>
                           </TableCell>
-                          <TableCell>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-semibold ${order.status === "Completed" || order.status === "Delivered"
-                                ? "bg-green-100 text-green-800"
-                                : order.status === "Processing" || order.status === "Shipped"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : order.status === "Pending"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-red-100 text-red-800"
-                                }`}
-                            >
-                              {order.status}
-                            </span>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              {group.processing}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                              {group.packed}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                              {group.shipped}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              {group.delivered}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                              {group.cancelled}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleViewOrderClick(order)}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedSupplierGroup(group);
+                                setCurrentSupplierOrdersPage(1);
+                                setIsSupplierOrdersModalOpen(true);
+                              }}
                             >
-                              <Eye className="h-4 w-4" />
-                              <span className="sr-only">View Order</span>
+                              View Orders
                             </Button>
                           </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell
-                          colSpan={7}
-                          className="text-center py-10 text-muted-foreground"
-                        >
-                          No orders found.
+                        <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">
+                          No orders found for this search.
                         </TableCell>
                       </TableRow>
                     )}
@@ -1261,16 +1419,135 @@ export default function SupplierManagementPage() {
               <Pagination
                 className="mt-4"
                 currentPage={currentOrdersPage}
-                totalPages={totalOrdersPages}
+                totalPages={totalGroupedPages}
                 onPageChange={setCurrentOrdersPage}
                 itemsPerPage={ordersPerPage}
                 onItemsPerPageChange={setOrdersPerPage}
-                totalItems={filteredOrders.length}
+                totalItems={filteredGroupedOrders.length}
               />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Supplier Specific Orders Modal */}
+      <Dialog open={isSupplierOrdersModalOpen} onOpenChange={setIsSupplierOrdersModalOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Supplier: {selectedSupplierGroup?.supplierName}</DialogTitle>
+            <DialogDescription>
+              Viewing all orders for {selectedSupplierGroup?.supplierName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order ID</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead className="text-center">Qty</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Order Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedSupplierOrders.map((order: SupplierOrder) => (
+                  <TableRow key={order._id || order.id}>
+                    <TableCell className="font-medium align-top py-4 text-[12px]">{order.id}</TableCell>
+                    <TableCell className="align-top py-4 whitespace-nowrap text-[12px]">
+                      {order.customerName}
+                    </TableCell>
+                    <TableCell className="align-top py-4">
+                      <div className="space-y-2">
+                        {order.items && order.items.length > 0 ? (
+                          order.items.map((item: any, idx: number) => (
+                            <div key={idx} className="text-[12px] border-b border-gray-50 last:border-0 pb-1 last:pb-0">
+                              {item.name}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-[12px]">{order.productName}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center align-top py-4 font-semibold">
+                      <div className="space-y-2">
+                        {order.items && order.items.length > 0 ? (
+                          order.items.map((item: any, idx: number) => (
+                            <div key={idx} className="text-[12px] border-b border-gray-50 last:border-0 pb-1 last:pb-0">
+                              {item.quantity}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-[12px]">{order.quantity}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-top py-4">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-primary text-[12px]">₹{order.totalAmount.toLocaleString()}</span>
+                        {order.items && order.items.length > 1 && (
+                          <span className="text-[10px] text-muted-foreground">(Total for {order.items.length} items)</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-top py-4 whitespace-nowrap text-[12px]">
+                      {new Date(order.date).toLocaleDateString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell className="align-top py-4">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-semibold ${order.status === "Completed" || order.status === "Delivered"
+                          ? "bg-green-100 text-green-800"
+                          : order.status === "Processing" || order.status === "Shipped" || order.status === "Packed"
+                            ? "bg-blue-100 text-blue-800"
+                            : order.status === "Pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                      >
+                        {order.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right align-top py-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setSelectedOrder(order);
+                          setIsOrderViewModalOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <Pagination
+              className="mt-4"
+              currentPage={currentSupplierOrdersPage}
+              totalPages={totalSupplierOrdersPages}
+              onPageChange={setCurrentSupplierOrdersPage}
+              itemsPerPage={supplierOrdersPerPage}
+              onItemsPerPageChange={setSupplierOrdersPerPage}
+              totalItems={filteredModalOrders.length}
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsSupplierOrdersModalOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
 
       {/* Action Confirmation Modal */}
       <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
@@ -1377,14 +1654,16 @@ export default function SupplierManagementPage() {
 
       {/* Edit Supplier Modal */}
       {/* Edit Supplier Modal - Replaced with Component */}
-      {selectedSupplier && (
-        <SupplierEditForm
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          supplier={selectedSupplier}
-          refetch={refetch}
-        />
-      )}
+      {
+        selectedSupplier && (
+          <SupplierEditForm
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            supplier={selectedSupplier}
+            refetch={refetch}
+          />
+        )
+      }
 
       {/* View Inventory Modal */}
       <Dialog
@@ -1436,7 +1715,7 @@ export default function SupplierManagementPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredInventory.map((product) => (
+                  {paginatedInventory.map((product: InventoryProduct) => (
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">
                         {product.id}
@@ -1467,6 +1746,15 @@ export default function SupplierManagementPage() {
                 </TableBody>
               </Table>
             </div>
+            <Pagination
+              className="mt-4"
+              currentPage={currentInventoryPage}
+              totalPages={totalInventoryPages}
+              onPageChange={setCurrentInventoryPage}
+              itemsPerPage={inventoryPerPage}
+              onItemsPerPageChange={setInventoryPerPage}
+              totalItems={filteredInventory.length}
+            />
           </div>
           <DialogFooter>
             <Button
@@ -1954,91 +2242,168 @@ export default function SupplierManagementPage() {
         open={isOrderViewModalOpen}
         onOpenChange={setIsOrderViewModalOpen}
       >
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Order Details: {selectedOrder?.id}</DialogTitle>
+            <DialogTitle className="text-xl font-bold">
+              Order Details: <span className="text-primary">#{selectedOrder?.id}</span>
+            </DialogTitle>
+            <DialogDescription>
+              Detailed view of the order transaction and items.
+            </DialogDescription>
           </DialogHeader>
+
           {selectedOrder && (
-            <div className="grid gap-4 py-4 text-sm">
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Order ID
-                </span>
-                <span className="col-span-2">{selectedOrder.id}</span>
+            <div className="space-y-8 py-4">
+              {/* Main Info Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-sm border-b pb-2">
+                    <span className="font-bold text-slate-900 uppercase text-[12px] tracking-wider">Order Information</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="font-medium text-slate-500">Date:</span>
+                    <span className="col-span-2 text-slate-900">{new Date(selectedOrder.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="font-medium text-slate-500">Payment:</span>
+                    <span className="col-span-2 text-slate-900">{selectedOrder.paymentMethod || "COD"}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="font-medium text-slate-500">Status:</span>
+                    <span className="col-span-2">
+                      <Badge className={`px-2 py-0.5 text-[10px] font-bold ${selectedOrder.status === 'Delivered' || selectedOrder.status === 'Completed' ? 'bg-green-100 text-green-800 border-green-200' :
+                        selectedOrder.status === 'Cancelled' ? 'bg-red-100 text-red-800 border-red-200' :
+                          'bg-blue-100 text-blue-800 border-blue-200'
+                        }`}>
+                        {selectedOrder.status}
+                      </Badge>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-sm border-b pb-2">
+                    <span className="font-bold text-slate-900 uppercase text-[12px] tracking-wider">Participant Details</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="font-medium text-slate-500">Customer:</span>
+                    <span className="col-span-2 text-slate-900">{selectedOrder.customerName}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="font-medium text-slate-500">Supplier:</span>
+                    <span className="col-span-2 text-slate-900">{selectedOrder.supplierName}</span>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Supplier
-                </span>
-                <span className="col-span-2">
-                  {selectedOrder.supplierName} ({selectedOrder.supplierId})
-                </span>
+
+              {/* Shipping Address */}
+              <div className="space-y-2">
+                <span className="font-bold text-slate-900 uppercase text-[12px] tracking-wider block border-b pb-2">Shipping Address</span>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  {selectedOrder.shippingAddress || "Service-based or electronic delivery basis."}
+                </p>
               </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Product
-                </span>
-                <span className="col-span-2">{selectedOrder.productName}</span>
+
+              {/* Items Table with Full Borders */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-bold text-slate-900 uppercase text-[12px] tracking-wider">Order Items</span>
+                </div>
+                <div className="border rounded-md overflow-hidden">
+                  <Table className="border-collapse">
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead className="text-[12px] font-bold uppercase text-slate-900 pl-4 border-r">Description</TableHead>
+                        <TableHead className="text-[12px] font-bold uppercase text-slate-900 text-center border-r">Quantity</TableHead>
+                        <TableHead className="text-[12px] font-bold uppercase text-slate-900 pr-4 text-right">Price</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                        selectedOrder.items.map((item, idx) => (
+                          <TableRow key={idx} className="hover:bg-slate-50/50">
+                            <TableCell className="text-sm py-3 font-medium text-slate-600 pl-4 border-r border-b">
+                              {item.name || item.productName}
+                            </TableCell>
+                            <TableCell className="text-sm py-3 text-center text-slate-600 border-r border-b">
+                              {item.quantity}
+                            </TableCell>
+                            <TableCell className="text-sm py-3 text-right font-bold text-slate-900 pr-4 border-b">
+                              ₹{Number(item.price || 0).toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell className="text-sm py-3 font-medium text-slate-600 pl-4 border-r border-b">{selectedOrder.productName}</TableCell>
+                          <TableCell className="text-sm py-3 text-center text-slate-600 border-r border-b">{selectedOrder.quantity}</TableCell>
+                          <TableCell className="text-sm py-3 text-right font-bold text-slate-900 pr-4 border-b">₹{Number(selectedOrder.totalAmount || 0).toLocaleString()}</TableCell>
+                        </TableRow>
+                      )}
+
+                      {/* Financial Summary Rows with Borders */}
+                      {selectedOrder.orderSource === 'B2C' ? (
+                        <>
+                          <TableRow className="bg-white">
+                            <TableCell colSpan={2} className="text-right font-bold text-slate-600 py-2 border-r border-b">Subtotal</TableCell>
+                            <TableCell className="text-right font-bold text-slate-900 pr-4 py-2 border-b">
+                              ₹{(selectedOrder.items && selectedOrder.items.length > 0
+                                ? selectedOrder.items.reduce((acc, item) => acc + (Number(item.price || 0) * Number(item.quantity || 1)), 0)
+                                : Number(selectedOrder.totalAmount || 0) - Number(selectedOrder.gstAmount || 0) - Number(selectedOrder.platformFeeAmount || 0) - Number(selectedOrder.shippingAmount || 0)
+                              ).toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow className="bg-white">
+                            <TableCell colSpan={2} className="text-right font-bold text-slate-600 py-2 border-r border-b">Shipping</TableCell>
+                            <TableCell className="text-right font-bold text-slate-900 pr-4 py-2 border-b">₹{Number(selectedOrder.shippingAmount || 0).toLocaleString()}</TableCell>
+                          </TableRow>
+                          <TableRow className="bg-white">
+                            <TableCell colSpan={2} className="text-right font-bold text-slate-600 py-2 border-r border-b">GST</TableCell>
+                            <TableCell className="text-right font-bold text-slate-900 pr-4 py-2 border-b">+ ₹{Number(selectedOrder.gstAmount || 0).toLocaleString()}</TableCell>
+                          </TableRow>
+                          <TableRow className="bg-white">
+                            <TableCell colSpan={2} className="text-right font-bold text-slate-600 py-2 border-r border-b">Platform Fee</TableCell>
+                            <TableCell className="text-right font-bold text-slate-900 pr-4 py-2 border-b">+ ₹{Number(selectedOrder.platformFeeAmount || 0).toLocaleString()}</TableCell>
+                          </TableRow>
+                        </>
+                      ) : (
+                        <TableRow className="bg-white">
+                          <TableCell colSpan={2} className="text-right font-bold text-slate-600 py-2 border-r border-b">Procurement Total</TableCell>
+                          <TableCell className="text-right font-bold text-slate-900 pr-4 py-2 border-b">₹{Number(selectedOrder.totalAmount || 0).toLocaleString()}</TableCell>
+                        </TableRow>
+                      )}
+
+                      {/* Total Amount Row */}
+                      <TableRow className="bg-slate-50">
+                        <TableCell colSpan={2} className="text-right font-bold text-slate-900 text-[13px] py-4 uppercase tracking-wider border-r">Total Amount</TableCell>
+                        <TableCell className="text-right font-bold text-primary text-[18px] pr-4 py-4">
+                          ₹{Number(selectedOrder.totalAmount || 0).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Customer
-                </span>
-                <span className="col-span-2">{selectedOrder.customerName}</span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Amount
-                </span>
-                <span className="col-span-2">
-                  ₹{selectedOrder.amount.toLocaleString()}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Status
-                </span>
-                <span className="col-span-2">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${selectedOrder.status === "Completed"
-                      ? "bg-green-100 text-green-800"
-                      : selectedOrder.status === "Processing"
-                        ? "bg-blue-100 text-blue-800"
-                        : selectedOrder.status === "Shipped"
-                          ? "bg-purple-100 text-purple-800"
-                          : selectedOrder.status === "Delivered"
-                            ? "bg-indigo-100 text-indigo-800"
-                            : "bg-yellow-100 text-yellow-800"
-                      }`}
-                  >
-                    {selectedOrder.status}
-                  </span>
-                </span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Order Date
-                </span>
-                <span className="col-span-2">
-                  {new Date(selectedOrder.date).toLocaleDateString("en-IN", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </span>
-              </div>
+
             </div>
           )}
-          <DialogFooter>
-            <Button onClick={() => setIsOrderViewModalOpen(false)}>
-              Close
+
+          <DialogFooter className="pt-4 border-t flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="font-bold border-slate-300 hover:bg-slate-50 text-slate-800"
+              onClick={() => setIsOrderViewModalOpen(false)}
+            >
+              Close Details
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+
       {/* Map Modal */}
-      <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+      < Dialog open={isMapOpen} onOpenChange={setIsMapOpen} >
         <DialogContent className="sm:max-w-5xl h-[85vh] p-0 overflow-hidden flex flex-col border-none shadow-2xl rounded-3xl">
           <DialogHeader className="p-6 bg-gradient-to-r from-primary/10 to-transparent border-b">
             <div className="flex items-center justify-between">
@@ -2163,7 +2528,7 @@ export default function SupplierManagementPage() {
             </div>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
-    </div>
+      </Dialog >
+    </div >
   );
 }
