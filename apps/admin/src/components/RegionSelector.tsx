@@ -4,6 +4,14 @@ import React, { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
 import { setSelectedRegion, selectSelectedRegion, selectCurrentAdmin } from "@repo/store/slices/adminAuthSlice";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/select";
+import { Globe } from "lucide-react";
 
 export default function RegionSelector() {
   const dispatch = useAppDispatch();
@@ -18,29 +26,25 @@ export default function RegionSelector() {
 
   useEffect(() => {
     const fetchRegions = async () => {
-      if (!admin || admin.roleName !== "SUPER_ADMIN") {
+      // Only SUPER_ADMIN needs to fetch all regions for the selector
+      if (!admin || (admin.roleName !== "SUPER_ADMIN" && admin.roleName !== "superadmin")) {
         return;
       }
       
       try {
         setLoading(true);
         const res = await fetch("/api/admin/regions", {
-          credentials: 'same-origin' // Ensures cookies are sent
+          credentials: 'same-origin'
         });
 
         if (!res.ok) {
-           const text = await res.text();
-           let errData;
-           try { errData = JSON.parse(text); } catch(e) {}
-           console.error("Failed to fetch regions:", errData?.message || errData?.error || res.statusText);
+           console.error("Failed to fetch regions:", res.statusText);
            return;
         }
 
         const json = await res.json();
         if (json.success) {
           setRegions(json.data);
-        } else {
-          console.error("Failed to fetch regions:", json.message || "Unknown error");
         }
       } catch (error) {
         console.error("Failed to fetch regions:", error);
@@ -52,9 +56,9 @@ export default function RegionSelector() {
     fetchRegions();
   }, [admin]);
 
-  const handleRegionChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const regionId = e.target.value;
-    dispatch(setSelectedRegion(regionId || null));
+  const handleRegionChange = (value: string) => {
+    const regionId = value === "all" ? null : value;
+    dispatch(setSelectedRegion(regionId));
     
     // Update URL with new regionId
     const current = new URLSearchParams(Array.from(searchParams.entries()));
@@ -70,29 +74,36 @@ export default function RegionSelector() {
   };
 
   // Only show for Super Admins
-  if (!admin || admin.roleName !== "SUPER_ADMIN") {
+  if (!admin || (admin.roleName !== "SUPER_ADMIN" && admin.roleName !== "superadmin")) {
     return null;
   }
 
   return (
-    <div className="flex items-center space-x-2">
-      <label htmlFor="region-selector" className="text-sm font-medium text-gray-700 dark:text-gray-200">
-        Region:
-      </label>
-      <select
-        id="region-selector"
-        value={selectedRegion || ""}
-        onChange={handleRegionChange}
+    <div className="flex items-center gap-2">
+      <Select
+        value={selectedRegion || "all"}
+        onValueChange={handleRegionChange}
         disabled={loading}
-        className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md dark:bg-gray-800 dark:border-gray-700 dark:text-white"
       >
-        <option value="">All Regions</option>
-        {regions.map((region: any) => (
-          <option key={region._id} value={region._id}>
-            {region.name}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger className="w-[180px] h-9 bg-background border-muted hover:border-primary/50 transition-colors">
+          <div className="flex items-center gap-2 truncate">
+            <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+            <SelectValue placeholder="Select Region" />
+          </div>
+        </SelectTrigger>
+        <SelectContent align="end" className="max-h-[300px]">
+          <SelectItem value="all" className="font-medium">
+            <div className="flex items-center gap-2">
+              <span>All Regions</span>
+            </div>
+          </SelectItem>
+          {regions.map((region: any) => (
+            <SelectItem key={region._id} value={region._id}>
+              {region.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
