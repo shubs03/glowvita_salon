@@ -9,7 +9,7 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
-import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet } from 'lucide-react';
+import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet, Plus, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCreateClientOrderMutation, useCreatePaymentOrderMutation, useVerifyPaymentMutation, useGetPublicTaxFeeSettingsQuery, useGetPublicShippingConfigQuery } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,6 +22,7 @@ interface Product {
   quantity: number;
   vendorName: string;
   vendorId: string;
+  isCartOrder?: boolean;
 }
 
 export default function CheckoutPage() {
@@ -30,7 +31,7 @@ export default function CheckoutPage() {
   const [shippingAddress, setShippingAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('credit-card');
-  
+
   const { user } = useAuth();
   const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
   const { data: shippingConfig } = useGetPublicShippingConfigQuery(undefined);
@@ -80,6 +81,22 @@ export default function CheckoutPage() {
       router.push('/');
     }
   }, [router, user]);
+  const handleQuantityChange = (delta: number) => {
+    if (!product) return;
+
+    const newQuantity = Math.max(1, (product.quantity || 1) + delta);
+    if (newQuantity === product.quantity) return;
+
+    const updatedProduct = { ...product, quantity: newQuantity };
+    setProduct(updatedProduct);
+
+    // Persist to localStorage
+    try {
+      localStorage.setItem('buyNowProduct', JSON.stringify(updatedProduct));
+    } catch (e) {
+      console.error('Failed to update product in localStorage', e);
+    }
+  };
 
   const handlePlaceOrder = async () => {
     if (!shippingAddress.trim() || !contactNumber.trim()) {
@@ -95,7 +112,7 @@ export default function CheckoutPage() {
         ? (subtotal * shippingConfig.amount) / 100
         : shippingConfig.amount
       : 0;
-    
+
     // Calculate tax based on dynamic tax settings from API
     const productGST = taxSettings?.productGST || 18;
     const productGSTType = taxSettings?.productGSTType || 'percentage';
@@ -103,16 +120,17 @@ export default function CheckoutPage() {
     const productPlatformFeeType = taxSettings?.productPlatformFeeType || 'percentage';
     const productGSTEnabled = taxSettings?.productGSTEnabled ?? true;
     const productPlatformFeeEnabled = taxSettings?.productPlatformFeeEnabled ?? true;
-    
-    const gst = productGSTEnabled 
+
+    const gst = productGSTEnabled
       ? (productGSTType === 'percentage' ? subtotal * (productGST / 100) : productGST)
       : 0;
     const platformFee = productPlatformFeeEnabled
       ? (productPlatformFeeType === 'percentage' ? subtotal * (productPlatformFee / 100) : productPlatformFee)
       : 0;
     const tax = gst + platformFee;
-    
-    const totalAmount = subtotal + shipping + tax;
+
+    const discount = subtotal * 0.1; // 10% discount to match Cart page
+    const totalAmount = subtotal + shipping + tax - discount;
 
     try {
       // For cash on delivery, directly create order
@@ -126,7 +144,7 @@ export default function CheckoutPage() {
             toast.error('Cart is empty. Cannot place order.');
             return;
           }
-          
+
           orderData = {
             items: cartItems.map((item: any) => ({
               productId: item.productId || item._id,
@@ -166,7 +184,7 @@ export default function CheckoutPage() {
             paymentMethod,
           };
         }
-        
+
         await createOrder(orderData).unwrap();
         toast.success('Order placed successfully!', {
           description: 'You will be redirected to your orders page.',
@@ -179,7 +197,7 @@ export default function CheckoutPage() {
         }, 2000);
         return;
       }
-      
+
       // For UPI, Credit/Debit Card, and Net Banking payments, use Razorpay
       if (paymentMethod === 'upi' || paymentMethod === 'credit-card' || paymentMethod === 'netbanking') {
         // Create Razorpay payment order
@@ -253,7 +271,7 @@ export default function CheckoutPage() {
                     toast.error('Cart is empty. Cannot place order.');
                     return;
                   }
-                  
+
                   orderData = {
                     items: cartItems.map((item: any) => ({
                       productId: item.productId || item._id,
@@ -299,7 +317,7 @@ export default function CheckoutPage() {
                     razorpaySignature: response.razorpay_signature,
                   };
                 }
-                
+
                 await createOrder(orderData).unwrap();
                 toast.success('Payment successful! Order placed successfully!', {
                   description: 'You will be redirected to your orders page.',
@@ -327,7 +345,7 @@ export default function CheckoutPage() {
             color: '#3B82F6',
           },
           modal: {
-            ondismiss: function() {
+            ondismiss: function () {
               toast.error('Payment cancelled by user');
             }
           }
@@ -359,14 +377,14 @@ export default function CheckoutPage() {
   }
 
   const subtotal = product.price * product.quantity;
-  
+
   // Calculate dynamic shipping based on config
   const shipping = subtotal > 0 && shippingConfig?.isEnabled
     ? shippingConfig.chargeType === 'percentage'
       ? (subtotal * shippingConfig.amount) / 100
       : shippingConfig.amount
     : 0;
-  
+
   // Calculate tax based on dynamic tax settings from API
   const productGST = taxSettings?.productGST || 18;
   const productGSTType = taxSettings?.productGSTType || 'percentage';
@@ -374,23 +392,24 @@ export default function CheckoutPage() {
   const productPlatformFeeType = taxSettings?.productPlatformFeeType || 'percentage';
   const productGSTEnabled = taxSettings?.productGSTEnabled ?? true;
   const productPlatformFeeEnabled = taxSettings?.productPlatformFeeEnabled ?? true;
-  
-  const gst = productGSTEnabled 
+
+  const gst = productGSTEnabled
     ? (productGSTType === 'percentage' ? subtotal * (productGST / 100) : productGST)
     : 0;
   const platformFee = productPlatformFeeEnabled
     ? (productPlatformFeeType === 'percentage' ? subtotal * (productPlatformFee / 100) : productPlatformFee)
     : 0;
   const tax = gst + platformFee;
-  
-  const total = subtotal + shipping + tax;
+
+  const discount = subtotal * 0.1; // 10% discount to match Cart page
+  const total = subtotal + shipping + tax - discount;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto px-4 py-8">
         <Button variant="ghost" onClick={() => router.back()} className="mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Product
+          {product?.isCartOrder ? 'Back to Cart' : 'Back to Product'}
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -402,17 +421,43 @@ export default function CheckoutPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center gap-6">
-                  <Image 
-                    src={product.image} 
-                    alt={product.name} 
-                    width={100} 
-                    height={100} 
-                    className="rounded-lg object-cover" 
+                  <Image
+                    src={product.image}
+                    alt={product.name}
+                    width={100}
+                    height={100}
+                    className="rounded-lg object-cover"
                   />
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg">{product.name}</h3>
                     <p className="text-sm text-muted-foreground">Sold by: {product.vendorName}</p>
-                    <p className="text-sm text-muted-foreground">Quantity: {product.quantity}</p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-sm text-muted-foreground">Quantity:</span>
+                      {String(product.id).startsWith('cart-') ? (
+                        <span className="font-medium text-sm">{product.quantity}</span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => handleQuantityChange(-1)}
+                            disabled={product.quantity <= 1}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <span className="font-medium text-sm w-4 text-center">{product.quantity}</span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => handleQuantityChange(1)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-lg">₹{subtotal.toFixed(2)}</p>
@@ -429,19 +474,19 @@ export default function CheckoutPage() {
               <CardContent className="space-y-4">
                 <div>
                   <Label htmlFor="shippingAddress">Shipping Address</Label>
-                  <Input 
+                  <Input
                     id="shippingAddress"
-                    value={shippingAddress} 
-                    onChange={(e) => setShippingAddress(e.target.value)} 
+                    value={shippingAddress}
+                    onChange={(e) => setShippingAddress(e.target.value)}
                     placeholder="Enter your full shipping address"
                   />
                 </div>
                 <div>
                   <Label htmlFor="contactNumber">Contact Number</Label>
-                  <Input 
+                  <Input
                     id="contactNumber"
-                    value={contactNumber} 
-                    onChange={(e) => setContactNumber(e.target.value)} 
+                    value={contactNumber}
+                    onChange={(e) => setContactNumber(e.target.value)}
                     placeholder="Enter your contact number"
                   />
                 </div>
@@ -463,6 +508,10 @@ export default function CheckoutPage() {
                   <div className="flex justify-between">
                     <span>Shipping</span>
                     <span>₹{shipping.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Discount (10%)</span>
+                    <span className="text-blue-600 font-medium">-₹{discount.toFixed(2)}</span>
                   </div>
                   {productGSTEnabled && (
                     <div className="flex justify-between">
@@ -509,18 +558,18 @@ export default function CheckoutPage() {
                 </div>
               </CardContent>
               <CardFooter className="flex-col gap-4">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   className="w-full"
                   onClick={handlePlaceOrder}
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Processing...' : 
-                   paymentMethod === 'cash-on-delivery' ? 'Place Order' :
-                   paymentMethod === 'credit-card' ? 'Pay with Card' :
-                   paymentMethod === 'upi' ? 'Pay with UPI' :
-                   paymentMethod === 'netbanking' ? 'Pay with Net Banking' :
-                   'Place Order'
+                  {isLoading ? 'Processing...' :
+                    paymentMethod === 'cash-on-delivery' ? 'Place Order' :
+                      paymentMethod === 'credit-card' ? 'Pay with Card' :
+                        paymentMethod === 'upi' ? 'Pay with UPI' :
+                          paymentMethod === 'netbanking' ? 'Pay with Net Banking' :
+                            'Place Order'
                   }
                 </Button>
                 <div className="flex items-center text-xs text-muted-foreground">

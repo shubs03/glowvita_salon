@@ -1048,6 +1048,21 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Vendor"],
     }),
 
+    getSupplierOrders: builder.query({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.regionId && params.regionId !== 'all') queryParams.append('regionId', params.regionId);
+        if (params.status && params.status !== 'all') queryParams.append('status', params.status);
+        const queryString = queryParams.toString();
+        return {
+          url: `/admin/supplier-orders${queryString ? `?${queryString}` : ""}`,
+          method: "GET"
+        };
+      },
+      providesTags: ["Order"],
+      transformResponse: (response) => (response && response.success ? response.data || [] : []),
+    }),
+
     // Supplier Endpoints
     getSuppliers: builder.query({
       query: (params) => {
@@ -3077,6 +3092,7 @@ export const {
   useUpdateDoctorMutation,
   useDeleteDoctorMutation,
   useGetSuppliersQuery,
+  useGetSupplierOrdersQuery,
   useCreateSupplierMutation,
   useRegisterSupplierMutation,
   useUpdateSupplierMutation,

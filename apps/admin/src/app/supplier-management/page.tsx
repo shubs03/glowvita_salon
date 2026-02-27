@@ -59,6 +59,7 @@ import {
 } from "@repo/ui/select";
 import {
   useGetSuppliersQuery,
+  useGetSupplierOrdersQuery,
   useCreateSupplierMutation,
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
@@ -73,60 +74,6 @@ import { useAppSelector } from "@repo/store/hooks";
 import { selectSelectedRegion } from "@repo/store/slices/adminAuthSlice";
 import { Badge } from "@repo/ui/badge";
 
-
-// Sample data for supplier orders
-const supplierOrdersData = [
-  {
-    id: "ORD-1001",
-    supplierId: "SUP-001",
-    supplierName: "Global Beauty Supplies",
-    productName: "Professional Hair Dryer",
-    customerName: "Priya Sharma",
-    amount: 12500,
-    status: "Completed",
-    date: "2025-08-10",
-  },
-  {
-    id: "ORD-1002",
-    supplierId: "SUP-001",
-    supplierName: "Global Beauty Supplies",
-    productName: "Ceramic Hair Straightener",
-    customerName: "Rahul Verma",
-    amount: 8700,
-    status: "Processing",
-    date: "2025-08-12",
-  },
-  {
-    id: "ORD-1003",
-    supplierId: "SUP-002",
-    supplierName: "Organic Skincare Inc.",
-    productName: "Aloe Vera Gel",
-    customerName: "Anjali Patel",
-    amount: 4200,
-    status: "Shipped",
-    date: "2025-08-11",
-  },
-  {
-    id: "ORD-1004",
-    supplierId: "SUP-003",
-    supplierName: "Nail Art Creations",
-    productName: "Gel Nail Polish Set",
-    customerName: "Meera Gupta",
-    amount: 6500,
-    status: "Delivered",
-    date: "2025-08-09",
-  },
-  {
-    id: "ORD-1005",
-    supplierId: "SUP-004",
-    supplierName: "Modern Hair Tools",
-    productName: "Professional Hair Clipper",
-    customerName: "Vikram Singh",
-    amount: 9500,
-    status: "Pending",
-    date: "2025-08-13",
-  },
-];
 
 type Supplier = {
   _id: string;
@@ -168,7 +115,21 @@ type NewSupplier = {
   confirmPassword: string;
 };
 
-type SupplierOrder = (typeof supplierOrdersData)[0];
+type SupplierOrder = {
+  _id?: string;
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  productName: string;
+  customerName: string;
+  amount: number;
+  status: string;
+  date: string;
+  items?: any[];
+  shippingAddress?: string;
+  contactNumber?: string;
+  paymentMethod?: string;
+};
 type ActionType = "approve" | "reject" | "delete";
 
 const SupplierPageSkeleton = () => (
@@ -327,6 +288,12 @@ export default function SupplierManagementPage() {
   // Inventory modal state
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventoryStatusFilter, setInventoryStatusFilter] = useState("all");
+
+  // Fetch Supplier Orders
+  const { data: supplierOrders = [], isLoading: isOrdersLoading } = useGetSupplierOrdersQuery({
+    regionId: selectedRegion,
+    status: orderStatusFilter,
+  });
 
   const initialNewSupplierState: NewSupplier = {
     firstName: "",
@@ -760,7 +727,7 @@ export default function SupplierManagementPage() {
   const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
 
   // Filter and paginate orders
-  const filteredOrders = supplierOrdersData.filter((order) => {
+  const filteredOrders = supplierOrders.filter((order: SupplierOrder) => {
     const matchesSearch =
       order.id.toLowerCase().includes(orderSearch.toLowerCase()) ||
       order.supplierName.toLowerCase().includes(orderSearch.toLowerCase()) ||
@@ -988,8 +955,10 @@ export default function SupplierManagementPage() {
             <div className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,248</div>
-            <p className="text-xs text-muted-foreground">All-time orders</p>
+            <div className="text-2xl font-bold">
+              {isOrdersLoading ? <Skeleton className="h-8 w-16" /> : supplierOrders.length}
+            </div>
+            <p className="text-xs text-muted-foreground">Total supplier orders</p>
           </CardContent>
         </Card>
       </div>
@@ -1226,9 +1195,21 @@ export default function SupplierManagementPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {currentOrders.length > 0 ? (
-                      currentOrders.map((order) => (
-                        <TableRow key={order.id}>
+                    {isOrdersLoading ? (
+                      [...Array(5)].map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                        </TableRow>
+                      ))
+                    ) : currentOrders.length > 0 ? (
+                      currentOrders.map((order: SupplierOrder) => (
+                        <TableRow key={order._id || order.id}>
                           <TableCell className="font-medium">
                             {order.id}
                           </TableCell>
@@ -1240,15 +1221,13 @@ export default function SupplierManagementPage() {
                           </TableCell>
                           <TableCell>
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-semibold ${order.status === "Completed"
+                              className={`px-2 py-1 rounded-full text-xs font-semibold ${order.status === "Completed" || order.status === "Delivered"
                                 ? "bg-green-100 text-green-800"
-                                : order.status === "Processing"
+                                : order.status === "Processing" || order.status === "Shipped"
                                   ? "bg-blue-100 text-blue-800"
-                                  : order.status === "Shipped"
-                                    ? "bg-purple-100 text-purple-800"
-                                    : order.status === "Delivered"
-                                      ? "bg-indigo-100 text-indigo-800"
-                                      : "bg-yellow-100 text-yellow-800"
+                                  : order.status === "Pending"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-red-100 text-red-800"
                                 }`}
                             >
                               {order.status}

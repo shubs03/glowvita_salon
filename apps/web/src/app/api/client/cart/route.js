@@ -4,6 +4,7 @@ import { verifyJwt } from '@repo/lib/auth';
 import { cookies } from 'next/headers';
 import UserCartModel from '@repo/lib/models/user/UserCart.model';
 import ProductModel from '@repo/lib/models/Vendor/Product.model';
+import mongoose from 'mongoose';
 
 await _db();
 
@@ -14,7 +15,7 @@ const getUserId = async (req) => {
     if (!token) {
       return null;
     }
-    
+
     const payload = await verifyJwt(token);
     return payload?.userId;
   } catch (error) {
@@ -26,18 +27,18 @@ const getUserId = async (req) => {
 export async function GET(req) {
   try {
     const userId = await getUserId(req);
-    
+
     if (!userId) {
       return NextResponse.json({ success: false, message: 'User not authenticated' }, { status: 401 });
     }
 
     let cart = await UserCartModel.findOne({ userId }).lean();
-    
+
     if (!cart) {
       // If no cart exists, create an empty one
       cart = { userId, items: [] };
     }
-    
+
     return NextResponse.json({ success: true, data: cart });
   } catch (error) {
     return NextResponse.json({ success: false, message: 'Failed to fetch cart', error: error.message }, { status: 500 });
@@ -48,20 +49,20 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     const userId = await getUserId(req);
-    
+
     if (!userId) {
       return NextResponse.json({ success: false, message: 'User not authenticated' }, { status: 401 });
     }
 
     const item = await req.json();
 
-    if (!item.productId || !item.quantity || !item.price) {
+    if (!item.productId || item.quantity === undefined || item.price === undefined) {
       return NextResponse.json({ success: false, message: 'Product ID, quantity, and price are required' }, { status: 400 });
     }
 
     // Check product stock availability
     const product = await ProductModel.findById(item.productId);
-    
+
     if (!product) {
       return NextResponse.json({ success: false, message: 'Product not found' }, { status: 404 });
     }
@@ -71,9 +72,9 @@ export async function POST(req) {
     }
 
     // Check if user already has this product in cart
-    const existingCart = await UserCartModel.findOne({ 
-      userId, 
-      'items.productId': item.productId 
+    const existingCart = await UserCartModel.findOne({
+      userId,
+      'items.productId': item.productId
     });
 
     let totalRequestedQuantity = item.quantity;
@@ -90,8 +91,8 @@ export async function POST(req) {
 
     // Validate total quantity against stock
     if (totalRequestedQuantity > product.stock) {
-      return NextResponse.json({ 
-        success: false, 
+      return NextResponse.json({
+        success: false,
         message: `Cannot add ${item.quantity} items. Only ${product.stock} units available in stock${existingCart ? ' (you already have some in your cart)' : ''}.`,
         availableStock: product.stock
       }, { status: 400 });
@@ -99,29 +100,29 @@ export async function POST(req) {
 
     // Use a single, efficient findOneAndUpdate operation similar to vendor cart
     const updatedCart = await UserCartModel.findOneAndUpdate(
-      { 
-        userId, 
-        'items.productId': item.productId 
+      {
+        userId: new mongoose.Types.ObjectId(userId),
+        'items.productId': new mongoose.Types.ObjectId(item.productId)
       },
-      { 
+      {
         $inc: { 'items.$.quantity': item.quantity }
       },
       { new: true }
     );
-    
+
     // If the item was not found in the cart, add it
     if (!updatedCart) {
       const cartWithNewItem = await UserCartModel.findOneAndUpdate(
-        { userId },
-        { 
-          $push: { items: item },
-          $setOnInsert: { userId: userId }
+        { userId: new mongoose.Types.ObjectId(userId) },
+        {
+          $push: { items: { ...item, productId: new mongoose.Types.ObjectId(item.productId), vendorId: new mongoose.Types.ObjectId(item.vendorId) } },
+          $setOnInsert: { userId: new mongoose.Types.ObjectId(userId) }
         },
         { upsert: true, new: true }
       );
       return NextResponse.json({ success: true, data: cartWithNewItem });
     }
-    
+
     return NextResponse.json({ success: true, data: updatedCart });
   } catch (error) {
     return NextResponse.json({ success: false, message: 'Failed to add item to cart', error: error.message }, { status: 500 });
@@ -132,7 +133,7 @@ export async function POST(req) {
 export async function PUT(req) {
   try {
     const userId = await getUserId(req);
-    
+
     if (!userId) {
       return NextResponse.json({ success: false, message: 'User not authenticated' }, { status: 401 });
     }
@@ -154,14 +155,14 @@ export async function PUT(req) {
     } else {
       // Validate stock before updating quantity
       const product = await ProductModel.findById(productId);
-      
+
       if (!product) {
         return NextResponse.json({ success: false, message: 'Product not found' }, { status: 404 });
       }
 
       if (quantity > product.stock) {
-        return NextResponse.json({ 
-          success: false, 
+        return NextResponse.json({
+          success: false,
           message: `Cannot update quantity. Only ${product.stock} units available in stock.`,
           availableStock: product.stock
         }, { status: 400 });
@@ -184,7 +185,7 @@ export async function PUT(req) {
 export async function DELETE(req) {
   try {
     const userId = await getUserId(req);
-    
+
     if (!userId) {
       return NextResponse.json({ success: false, message: 'User not authenticated' }, { status: 401 });
     }
