@@ -131,7 +131,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     try {
       if (isAuthenticated && user?._id) {
         // User is authenticated - use API
@@ -146,7 +146,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         };
 
         await addToCartAPI(cartItem).unwrap();
-        
+
         // Show success toast
         toast.success(`${name} added to cart!`, {
           description: `You can view all items in your cart.`,
@@ -183,9 +183,10 @@ const ProductCard: React.FC<ProductCardProps> = ({
           },
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to add item to cart:", error);
-      toast.error("Failed to add item to cart. Please try again.");
+      const errorMessage = error.data?.message || "Failed to add item to cart. Please try again.";
+      toast.error(errorMessage);
     }
   };
 

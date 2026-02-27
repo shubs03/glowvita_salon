@@ -117,19 +117,19 @@ export default function OrdersPage() {
     return orderHistory.filter((order) => {
       const status = order?.status || "";
       // Determine the origin of items in the order
-            const getOrderOrigin = (items: OrderItem[]) => {
-              const origins = items.map(item => item.origin || 'Vendor');
-              // Use filter to get unique values instead of Set
-              const uniqueOrigins = origins.filter((value, index, self) => self.indexOf(value) === index);
-              
-              if (uniqueOrigins.length === 1) {
-                return uniqueOrigins[0] === 'Supplier' ? 'Supplier' : 'Salon';
-              } else {
-                return 'Mixed';
-              }
-            };
-            
-            const origin = getOrderOrigin(order.items);
+      const getOrderOrigin = (items: OrderItem[]) => {
+        const origins = items.map(item => item.origin || 'Vendor');
+        // Use filter to get unique values instead of Set
+        const uniqueOrigins = origins.filter((value, index, self) => self.indexOf(value) === index);
+
+        if (uniqueOrigins.length === 1) {
+          return uniqueOrigins[0] === 'Supplier' ? 'Supplier' : 'Salon';
+        } else {
+          return 'Mixed';
+        }
+      };
+
+      const origin = getOrderOrigin(order.items);
       const date = new Date(order?.createdAt);
       const itemsCount = order?.items?.length || 0;
 
@@ -178,7 +178,7 @@ export default function OrdersPage() {
 
       const result = await response.json();
       console.log('Cancellation response:', result);
-      
+
       if (result.success) {
         // Close the modal
         setIsCancelModalOpen(false);
@@ -288,6 +288,7 @@ export default function OrdersPage() {
                   <TableHead>Order ID</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Items</TableHead>
+                  <TableHead>Qty</TableHead>
                   <TableHead>Origin</TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead>Total</TableHead>
@@ -298,14 +299,14 @@ export default function OrdersPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
+                    <TableCell colSpan={9} className="text-center py-8">
                       Loading orders...
                     </TableCell>
                   </TableRow>
                 ) : isError ? (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={9}
                       className="text-center py-8 text-destructive"
                     >
                       Failed to load orders.
@@ -318,7 +319,7 @@ export default function OrdersPage() {
                       const origins = items.map(item => item.origin || 'Vendor');
                       // Use filter to get unique values instead of Set
                       const uniqueOrigins = origins.filter((value, index, self) => self.indexOf(value) === index);
-                      
+
                       if (uniqueOrigins.length === 1) {
                         return uniqueOrigins[0] === 'Supplier' ? 'Supplier' : 'Salon';
                       } else {
@@ -327,9 +328,12 @@ export default function OrdersPage() {
                     };
 
                     const orderOrigin = getOrderOrigin(order.items);
-                    
+
                     // Get product names for the order
                     const productNames = order.items.map(item => item.name).join(', ');
+
+                    // Calculate total quantity
+                    const totalQuantity = order.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
 
                     return (
                       <TableRow key={order._id}>
@@ -347,11 +351,14 @@ export default function OrdersPage() {
                             </span>
                           </div>
                         </TableCell>
+                        <TableCell className="font-medium">
+                          {totalQuantity}
+                        </TableCell>
                         <TableCell>
-                          <Badge 
+                          <Badge
                             variant={
-                              orderOrigin === 'Supplier' ? 'default' : 
-                              orderOrigin === 'Salon' ? 'secondary' : 'outline'
+                              orderOrigin === 'Supplier' ? 'default' :
+                                orderOrigin === 'Salon' ? 'secondary' : 'outline'
                             }
                           >
                             {orderOrigin}
@@ -369,8 +376,8 @@ export default function OrdersPage() {
                               order.status === "Delivered"
                                 ? "default"
                                 : order.status === "Cancelled"
-                                ? "destructive"
-                                : "secondary"
+                                  ? "destructive"
+                                  : "secondary"
                             }
                           >
                             {order.status}
@@ -400,7 +407,7 @@ export default function OrdersPage() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
+                    <TableCell colSpan={9} className="text-center py-8">
                       No orders found.
                     </TableCell>
                   </TableRow>
@@ -511,7 +518,7 @@ export default function OrdersPage() {
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Subtotal</span>
-                        <span>₹{selectedOrder.items.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}</span>
+                        <span>₹{selectedOrder.items.reduce((sum, item) => sum + ((Number(item.price) || 0) * (Number(item.quantity) || 0)), 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Shipping</span>
@@ -569,10 +576,10 @@ export default function OrdersPage() {
                           <span className="text-sm text-muted-foreground">
                             Qty: {item.quantity}
                           </span>
-                          <Badge 
+                          <Badge
                             variant={
-                              item.origin === 'Supplier' ? 'default' : 
-                              item.origin === 'Vendor' ? 'secondary' : 'outline'
+                              item.origin === 'Supplier' ? 'default' :
+                                item.origin === 'Vendor' ? 'secondary' : 'outline'
                             }
                             className="text-xs"
                           >
@@ -581,7 +588,7 @@ export default function OrdersPage() {
                         </div>
                       </div>
                       <p className="font-semibold">
-                        ₹{(item.price * item.quantity).toFixed(2)}
+                        ₹{((Number(item.price) || 0) * (Number(item.quantity) || 0)).toFixed(2)}
                       </p>
                     </div>
                   ))}
