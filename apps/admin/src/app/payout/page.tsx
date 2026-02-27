@@ -132,7 +132,9 @@ function ReceiveAmountDialog({ open, onOpenChange, onReceive, pendingAmount, dir
               >
                 <option value="Bank Transfer">Bank Transfer</option>
                 <option value="UPI">UPI</option>
+                <option value="Online">Online</option>
                 <option value="Cash">Cash</option>
+                <option value="Agent">Agent</option>
                 <option value="Cheque">Cheque</option>
               </select>
             </div>
@@ -234,12 +236,9 @@ export default function PayoutPage() {
           totalAdminOwes: 0,
           totalVendorOwes: 0,
         });
-      } else {
-        toast.error("Failed to fetch payouts");
       }
     } catch (error) {
       console.error("Error fetching payouts:", error);
-      toast.error("Error connecting to server");
     } finally {
       setIsLoading(false);
     }
@@ -291,12 +290,9 @@ export default function PayoutPage() {
       if (data.success) {
         toast.success(data.message);
         fetchPayouts();
-      } else {
-        toast.error(data.message || "Failed to record transaction");
       }
     } catch (error) {
       console.error("Error recording transaction:", error);
-      toast.error("Server error. Please try again.");
     } finally {
       toast.dismiss(toastId);
       setIsProcessing(false);

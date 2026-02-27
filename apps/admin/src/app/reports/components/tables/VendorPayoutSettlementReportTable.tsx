@@ -55,10 +55,13 @@ export const VendorPayoutSettlementReportTable = () => {
   } = filterAndPaginateData(vendorPayoutSettlementData, (item) => [
     item["Source Type"],
     item["Entity Name"],
+    `${item["Service Gross Amount"]}`,
     `${item["Service Platform Fee"]}`,
     `${item["Service Tax (₹)"]}`,
     `${item["Service Total Amount"]}`,
-    `${item["Total"]}`
+    `${item["Total"]}`,
+    `${item["Actually Paid"]}`,
+    `${item["Pending Amount"]}`
   ]);
 
   if (isLoading) {
@@ -146,7 +149,9 @@ export const VendorPayoutSettlementReportTable = () => {
                 <TableHead>Service Platform Fee</TableHead>
                 <TableHead>Service Tax (₹)</TableHead>
                 <TableHead>Service Total Amount</TableHead>
-                <TableHead>Total</TableHead>
+                <TableHead>Total Payable</TableHead>
+                <TableHead>Actually Paid</TableHead>
+                <TableHead>Pending</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -301,7 +306,9 @@ export const VendorPayoutSettlementReportTable = () => {
                 <TableHead>Service Platform Fee</TableHead>
                 <TableHead>Service Tax (₹)</TableHead>
                 <TableHead>Service Total Amount</TableHead>
-                <TableHead>Total</TableHead>
+                <TableHead>Total Payable</TableHead>
+                <TableHead>Actually Paid</TableHead>
+                <TableHead>Pending</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -382,13 +389,37 @@ export const VendorPayoutSettlementReportTable = () => {
         showBookingTypeFilter={false}
       />
 
-      <div className="mb-6">
-        <Card className="w-64">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card>
           <CardHeader className="p-4">
-            <CardTitle className="text-sm font-medium">Vendor Payout Amount-service</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Service Amount (Gross)</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold text-purple-600">₹{aggregatedTotals?.serviceGrossAmount?.toFixed(2) || '0.00'}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium">Total Payable (Accrued)</CardTitle>
           </CardHeader>
           <CardContent className="p-4">
             <div className="text-lg font-bold">₹{aggregatedTotals?.total?.toFixed(2) || '0.00'}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium text-green-600">Actually Paid</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold text-green-700">₹{aggregatedTotals?.totalPaid?.toFixed(2) || '0.00'}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="p-4">
+            <CardTitle className="text-sm font-medium text-red-600">Pending Payouts</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="text-lg font-bold text-red-700">₹{aggregatedTotals?.totalPending?.toFixed(2) || '0.00'}</div>
           </CardContent>
         </Card>
       </div>
@@ -399,10 +430,13 @@ export const VendorPayoutSettlementReportTable = () => {
             <TableRow>
               <TableHead>Source Type</TableHead>
               <TableHead>Entity Name</TableHead>
+              <TableHead>Service Gross Amount</TableHead>
               <TableHead>Service Platform Fee</TableHead>
               <TableHead>Service Tax (₹)</TableHead>
               <TableHead>Service Total Amount</TableHead>
-              <TableHead>Total</TableHead>
+              <TableHead>Total Payable</TableHead>
+              <TableHead>Actually Paid</TableHead>
+              <TableHead>Pending</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -410,20 +444,26 @@ export const VendorPayoutSettlementReportTable = () => {
               <TableRow key={startIndex + index}>
                 <TableCell>{item["Source Type"]}</TableCell>
                 <TableCell>{item["Entity Name"]}</TableCell>
+                <TableCell>₹{item["Service Gross Amount"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Service Platform Fee"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Service Tax (₹)"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Service Total Amount"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Total"]?.toFixed(2)}</TableCell>
+                <TableCell className="text-green-700 font-medium">₹{item["Actually Paid"]?.toFixed(2)}</TableCell>
+                <TableCell className="text-red-700 font-medium">₹{item["Pending Amount"]?.toFixed(2)}</TableCell>
               </TableRow>
             ))}
             {/* Aggregated Totals Row */}
             {vendorPayoutSettlementData.length > 0 && aggregatedTotals && (
               <TableRow className="bg-muted font-semibold">
                 <TableCell colSpan={2}>TOTAL</TableCell>
+                <TableCell>₹{aggregatedTotals.serviceGrossAmount?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.servicePlatformFee?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.serviceTax?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.serviceTotalAmount?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.total?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.totalPaid?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.totalPending?.toFixed(2)}</TableCell>
               </TableRow>
             )}
           </TableBody>

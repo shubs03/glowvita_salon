@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import ClientOrderModel from '@repo/lib/models/user/ClientOrder.model';
+import VendorSettlementPaymentModel from '@repo/lib/models/Vendor/VendorSettlementPayment.model';
 import { authMiddlewareAdmin } from '../../../../../../middlewareAdmin';
 import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 
@@ -95,7 +96,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const mainFilter = {
       ...dateFilter,
       ...regionQuery,
-      paymentMethod: 'cash-on-delivery', // Only cash-on-delivery orders
+      paymentMethod: { $ne: 'cash-on-delivery' }, // Everything except COD (Online payments)
       status: 'Delivered', // Only include delivered orders
     };
 
@@ -181,20 +182,40 @@ export const GET = authMiddlewareAdmin(async (req) => {
       }] : []),
       // Unwind items array to process each product separately
       { $unwind: "$items" },
-      // Group by owner (vendor/supplier) to calculate totals
+      // Group by order and owner to avoid overcounting order-level fields (fees/tax)
       {
         $group: {
           _id: {
+            orderId: "$_id",
             ownerId: "$productInfo.vendorId",
             businessName: "$businessName",
             city: "$city",
             ownerType: "$ownerType"
           },
-          totalAmount: { $sum: { $multiply: ["$items.quantity", "$items.price"] } }, // Product amount
-          platformFee: { $sum: "$platformFeeAmount" }, // Platform fee for products
-          gst: { $sum: "$gstAmount" }, // GST for products
-          orderCount: { $sum: 1 },
-          deliveredOrders: { $sum: { $cond: [{ $eq: ["$status", "Delivered"] }, 1, 0] } }
+          orderGrossAmount: { $sum: { $multiply: ["$items.quantity", "$items.price"] } },
+          orderTotalAmount: { $first: "$totalAmount" },
+          platformFeeAmount: { $first: "$platformFeeAmount" },
+          gstAmount: { $first: "$gstAmount" }
+        }
+      },
+      // Filter out online orders if they don't have a paymentId (might be failed/pending)
+      // This is optional depending on how ClientOrder status works. 
+      // But status:'Delivered' already ensures it's successful.
+
+      // Group by owner (vendor/supplier) to calculate final totals
+      {
+        $group: {
+          _id: {
+            ownerId: "$_id.ownerId",
+            businessName: "$_id.businessName",
+            city: "$_id.city",
+            ownerType: "$_id.ownerType"
+          },
+          productGrossAmount: { $sum: "$orderGrossAmount" },
+          productTotalAmount: { $sum: "$orderTotalAmount" },
+          productPlatformFee: { $sum: "$platformFeeAmount" },
+          productTax: { $sum: "$gstAmount" },
+          orderCount: { $sum: 1 }
         }
       },
       // Project the final structure with required fields
@@ -204,13 +225,14 @@ export const GET = authMiddlewareAdmin(async (req) => {
           ownerId: "$_id.ownerId",
           "Source Type": "$_id.ownerType", // Vendor or Supplier
           "Entity Name": "$_id.businessName", // Business name of the vendor/supplier
-          "Product Platform Fee": "$platformFee",
-          "Product Tax (₹)": "$gst",
-          "Product Total Amount": "$totalAmount",
-          "Total": { $add: ["$totalAmount", "$platformFee", "$gst"] }, // Total = Product Amount + Platform Fee + GST
+          "Product Gross Amount": "$productGrossAmount",
+          "Product Platform Fee": "$productPlatformFee",
+          "Product Tax (₹)": "$productTax",
+          "Product Total Amount": "$productTotalAmount",
+          "Total": { $subtract: ["$productTotalAmount", { $add: ["$productPlatformFee", "$productTax"] }] }, // Amount paid to vendor after deductions
           city: "$_id.city",
           orderCount: 1,
-          deliveredOrders: 1
+          deliveredOrders: "$orderCount"
         }
       }
     ];
@@ -218,11 +240,44 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Execute aggregation
     const results = await ClientOrderModel.aggregate(pipeline);
 
-    console.log("Vendor payout settlement report - product results:", results);
+    // Also fetch actual payments for these vendors in the same period
+    const paymentFilter = {
+      ...dateFilter,
+      ...regionQuery,
+      type: "Payment to Vendor"
+    };
+
+    const actualPayments = await VendorSettlementPaymentModel.aggregate([
+      { $match: paymentFilter },
+      {
+        $group: {
+          _id: "$vendorId",
+          paidAmount: { $sum: "$amount" }
+        }
+      }
+    ]);
+
+    const paymentMap = actualPayments.reduce((acc, curr) => {
+      acc[curr._id.toString()] = curr.paidAmount;
+      return acc;
+    }, {});
+
+    // Add payment info to results
+    const resultsWithPayments = results.map(entity => {
+      const paidAmount = paymentMap[entity.ownerId.toString()] || 0;
+      const totalPayable = entity.Total || 0;
+      return {
+        ...entity,
+        "Actually Paid": paidAmount,
+        "Pending Amount": Math.max(0, totalPayable - paidAmount)
+      };
+    });
+
+    console.log("Vendor payout settlement report - product results with payments:", resultsWithPayments);
 
     // Get unique cities for filter dropdown
     const cityPipeline = [
-      { $match: { ...regionQuery, paymentMethod: 'cash-on-delivery', status: 'Delivered' } },
+      { $match: { ...regionQuery, paymentMethod: { $ne: 'cash-on-delivery' }, status: 'Delivered' } },
       {
         $lookup: {
           from: "crm_products",
@@ -269,7 +324,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Get unique business names for filter dropdown
     const businessNamePipeline = [
-      { $match: { ...regionQuery, paymentMethod: 'cash-on-delivery', status: 'Delivered' } },
+      { $match: { ...regionQuery, paymentMethod: { $ne: 'cash-on-delivery' }, status: 'Delivered' } },
       {
         $lookup: {
           from: "crm_products",
@@ -316,25 +371,31 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Calculate aggregated totals
     const aggregatedTotals = results.reduce((totals, entity) => {
+      totals.productGrossAmount += entity["Product Gross Amount"] || 0;
       totals.productPlatformFee += entity["Product Platform Fee"] || 0;
       totals.productTax += entity["Product Tax (₹)"] || 0;
       totals.productTotalAmount += entity["Product Total Amount"] || 0;
       totals.total = entity.Total ? (totals.total + entity.Total) : totals.total;
+      totals.totalPaid = (totals.totalPaid || 0) + (entity["Actually Paid"] || 0);
+      totals.totalPending = (totals.totalPending || 0) + (entity["Pending Amount"] || 0);
       totals.orderCount += entity.orderCount || 0;
       totals.deliveredOrders += entity.deliveredOrders || 0;
       return totals;
     }, {
+      productGrossAmount: 0,
       productPlatformFee: 0,
       productTax: 0,
       productTotalAmount: 0,
       total: 0, // This will be the sum of all vendor/supplier payouts
+      totalPaid: 0,
+      totalPending: 0,
       orderCount: 0,
       deliveredOrders: 0
     });
 
     return NextResponse.json({
       success: true,
-      vendorPayoutSettlementReport: results,
+      vendorPayoutSettlementReport: resultsWithPayments,
       cities: cities,
       businessNames: businessNames,
       aggregatedTotals: aggregatedTotals,
@@ -350,4 +411,4 @@ export const GET = authMiddlewareAdmin(async (req) => {
       error: error.message
     }, { status: 500 });
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "reports:view");

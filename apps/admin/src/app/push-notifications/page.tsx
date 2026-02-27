@@ -17,7 +17,8 @@ import { Badge } from '@repo/ui/badge';
 import { Skeleton } from '@repo/ui/skeleton';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { openNotificationModal, closeNotificationModal } from '@repo/store/slices/notificationSlice';
-import { useGetNotificationsQuery, useCreateNotificationMutation, useUpdateNotificationMutation, useDeleteNotificationMutation, useGetUsersQuery, useGetVendorsQuery } from '@repo/store/api';
+import { useGetNotificationsQuery, useCreateNotificationMutation, useUpdateNotificationMutation, useDeleteNotificationMutation, useGetUsersQuery, useGetVendorsQuery, useGetRegionsQuery } from '@repo/store/api';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 
 
 interface Target {
@@ -39,10 +40,17 @@ interface Notification {
 export default function PushNotificationsPage() {
   const dispatch = useAppDispatch();
   const { isModalOpen, modalType, notificationData } = useAppSelector(state => state.notification);
+  const { user } = useAppSelector((state: any) => state.adminAuth);
+  const userRole = user?.roleName || user?.role;
+  const userRegion = user?.assignedRegions?.[0];
+
+  const { data: regions = [] } = useGetRegionsQuery(undefined);
+  const [selectedRegion, setSelectedRegion] = useState<string>(userRole === 'SUPER_ADMIN' || userRole === 'superadmin' ? "" : userRegion || "");
+
   
-  const { data: notifications = [], isLoading: isNotificationsLoading } = useGetNotificationsQuery(undefined);
-  const { data: users = [], isLoading: isUsersLoading } = useGetUsersQuery(undefined);
-  const { data: vendors = [], isLoading: isVendorsLoading } = useGetVendorsQuery(undefined);
+  const { data: notifications = [], isLoading: isNotificationsLoading } = useGetNotificationsQuery(selectedRegion || undefined);
+  const { data: users = [], isLoading: isUsersLoading } = useGetUsersQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
+  const { data: vendors = [], isLoading: isVendorsLoading } = useGetVendorsQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
   const [createNotification] = useCreateNotificationMutation();
   const [updateNotification] = useUpdateNotificationMutation();
   const [deleteNotification] = useDeleteNotificationMutation();
@@ -250,7 +258,25 @@ export default function PushNotificationsPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-6">Push Notifications</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold font-headline">Push Notifications</h1>
+        {(userRole === 'SUPER_ADMIN' || userRole === 'superadmin') && (
+          <div className="flex items-center gap-2">
+            <Label>Region:</Label>
+            <Select value={selectedRegion || "all"} onValueChange={(val) => setSelectedRegion(val === "all" ? "" : val)}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Global" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Global</SelectItem>
+                {regions.map((region: any) => (
+                  <SelectItem key={region._id} value={region._id}>{region.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>

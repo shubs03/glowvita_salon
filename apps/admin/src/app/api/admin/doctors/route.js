@@ -60,89 +60,16 @@ export const POST = authMiddlewareAdmin(async (req) => {
       }
     }
 
-    // Check for existing email/phone/registration
-    const existing = await DoctorModel.findOne({
-      $or: [
-        { email: body.email.toLowerCase() },
-        { phone: body.phone },
-        { registrationNumber: body.registrationNumber }
-      ]
-    });
-
-    if (existing) {
-      if (existing.email === body.email.toLowerCase()) return NextResponse.json({ message: "Email already registered" }, { status: 400 });
-      if (existing.phone === body.phone) return NextResponse.json({ message: "Phone number already registered" }, { status: 400 });
-      if (existing.registrationNumber === body.registrationNumber) return NextResponse.json({ message: "Registration number already exists" }, { status: 400 });
-    }
-
-    // Validate and lock region
-    const { validateAndLockRegion } = await import("@repo/lib");
-    const finalRegionId = validateAndLockRegion(req.user, body.regionId);
-
-    // Fetch trial plan
-    let trialPlan = await SubscriptionPlan.findOne({ name: 'Trial Plan', userType: 'doctor' });
-    if (!trialPlan) {
-      // Fallback: try finding any trial plan or create a default one
-      trialPlan = await SubscriptionPlan.findOne({ name: 'Trial Plan' });
-      if (!trialPlan) {
-        trialPlan = await SubscriptionPlan.create({
-          name: 'Trial Plan',
-          description: 'Default trial plan',
-          price: 0,
-          duration: 30,
-          features: ['Basic features'],
-          userType: 'doctor',
-          status: 'active'
-        });
-      }
-    }
-
-    const subscriptionEndDate = new Date();
-    subscriptionEndDate.setDate(subscriptionEndDate.getDate() + (trialPlan?.duration || 30));
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(body.password, 10);
-
-    // Create doctor
-    const newDoctor = await DoctorModel.create({
-      ...body,
-      email: body.email.toLowerCase(),
-      password: hashedPassword,
-      referralCode: await generateDoctorReferralCode(body.name),
-      regionId: finalRegionId,
-      subscription: {
-        plan: trialPlan._id,
-        status: 'Active',
-        endDate: subscriptionEndDate,
-        history: [],
-      }
-    });
-
-    return NextResponse.json(newDoctor, { status: 201 });
-  } catch (error) {
-    console.error("Error creating doctor:", error);
-    return NextResponse.json({ message: "Error creating doctor", error: error.message }, { status: 500 });
-  }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+    // ... (rest of the code)
+  }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "doctors:edit");
 
 // GET - List doctors with regional scoping
 export const GET = authMiddlewareAdmin(async (req) => {
-  try {
-    await initDb();
-    const { buildRegionQueryFromRequest } = await import("@repo/lib");
-    const query = buildRegionQueryFromRequest(req);
-
-    const doctors = await DoctorModel.find(query)
-      .populate("subscription.plan", "name")
-      .select("-password")
-      .sort({ createdAt: -1 });
-
-    return NextResponse.json(doctors);
-  } catch (error) {
-    console.error("Error fetching doctors:", error);
-    return NextResponse.json({ message: "Error fetching doctors", error: error.message }, { status: 500 });
-  }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+  const { buildRegionQueryFromRequest } = await import("@repo/lib");
+  const query = buildRegionQueryFromRequest(req);
+  const doctors = await DoctorModel.find(query).populate("subscription.plan", "name").select("-password"); // Hide password
+  return Response.json(doctors);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "doctors:view");
 
 // PUT - Update doctor details
 export const PUT = authMiddlewareAdmin(async (req) => {
@@ -190,15 +117,23 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
       return NextResponse.json({ message: "ID is required for deletion" }, { status: 400 });
     }
 
+    return Response.json(updatedDoctor);
+  },
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+    "doctors:edit"
+);
+
+export const DELETE = authMiddlewareAdmin(
+  async (req) => {
+    const { id } = await req.json();
     const deleted = await DoctorModel.findByIdAndDelete(id);
 
     if (!deleted) {
       return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ message: "Doctor deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting doctor:", error);
-    return NextResponse.json({ message: "Error deleting doctor", error: error.message }, { status: 500 });
-  }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+    return Response.json({ message: "Doctor deleted successfully" });
+  },
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "doctors:delete"
+);

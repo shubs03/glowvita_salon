@@ -111,7 +111,8 @@ export default function VendorManagementPage() {
       refetch(); // Refetch data to show updates
     } catch (err: any) {
       console.error("Failed to save vendor:", err);
-      toast.error(err?.data?.message || "Failed to save vendor");
+      // Re-throw so the child form component knows it failed
+      throw err;
     }
   };
 
@@ -160,7 +161,6 @@ export default function VendorManagementPage() {
       toast.success(`Vendor ${actionType}d successfully`);
     } catch (err: any) {
       console.error(`Failed to ${actionType} vendor:`, err);
-      toast.error(err?.data?.message || `Failed to ${actionType} vendor`);
     }
   };
 

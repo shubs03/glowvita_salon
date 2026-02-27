@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import AdminOfferModel from '@repo/lib/models/admin/AdminOffers.model.js';
 import CRMOfferModel from '@repo/lib/models/Vendor/CRMOffer.model.js';
+import VendorModel from '@repo/lib/models/Vendor/Vendor.model.js';
 import connectDB from '@repo/lib/db';
 
 export async function GET(request) {
@@ -9,22 +10,50 @@ export async function GET(request) {
     
     const { searchParams } = new URL(request.url);
     const vendorId = searchParams.get('vendorId'); // Optional vendor ID filter
+    let regionId = searchParams.get('regionId'); // Region ID filter
+
+    // If regionId not provided but vendorId is, derive regionId from vendor
+    if (!regionId && vendorId) {
+      try {
+        const vendor = await VendorModel.findById(vendorId).select('regionId').lean();
+        if (vendor?.regionId) {
+          regionId = vendor.regionId.toString();
+        }
+      } catch (e) {
+        console.warn('[all-offers] Could not look up vendor region:', e.message);
+      }
+    }
     
-    // Get all active admin offers
-    const currentDate = new Date();
-    const adminOffers = await AdminOfferModel.find({}).lean();
+    // Build query for admin offers
+    // Rule 1: Global offers (regionId: null) → show to everyone, but respect disabledRegions
+    // Rule 2: Regional offers (regionId set) → ONLY show to users of that exact region
+    // Rule 3: If NO regionId known → only return global offers
+    const adminOffersQuery = regionId
+      ? {
+          $or: [
+            { regionId: null },                     // global offers (filtered later by disabledRegions)
+            { regionId: regionId.toString() }       // exact-match regional offers only
+          ]
+        }
+      : { regionId: null }; // no region = global offers only
+
+    const adminOffers = await AdminOfferModel.find(adminOffersQuery).lean();
     
-    // Process admin offers to update status based on current date
+    // Filter offers by status and disabledRegions
     const activeAdminOffers = adminOffers.filter(offer => {
-      let newStatus = "Scheduled";
-      if (offer.startDate <= currentDate) {
-        if (!offer.expires || offer.expires >= currentDate) {
-          newStatus = "Active";
-        } else {
-          newStatus = "Expired";
+      // For global offers: skip if disabled for this specific region
+      if (!offer.regionId && regionId) {
+        const disabledList = (offer.disabledRegions || []).map(r => r.toString());
+        if (disabledList.includes(regionId.toString())) {
+          return false;
         }
       }
-      return newStatus === "Active";
+
+      // Status check
+      const now = new Date();
+      const started = offer.startDate <= now;
+      const notExpired = !offer.expires || offer.expires >= now;
+      return started && notExpired;
     }).map(offer => ({
       ...offer,
       isVendorOffer: false,
@@ -41,21 +70,20 @@ export async function GET(request) {
         businessId: vendorId 
       }).lean();
     } else {
-      // Otherwise get all CRM offers (for all vendors)
-      crmOffers = await CRMOfferModel.find({}).lean();
+      // Otherwise get CRM offers for the region
+      let crmQuery = {};
+      if (regionId) {
+        crmQuery = { regionId };
+      }
+      crmOffers = await CRMOfferModel.find(crmQuery).lean();
     }
 
     // Process CRM offers to update status based on current date
     const activeCrmOffers = crmOffers.filter(offer => {
-      let newStatus = "Scheduled";
-      if (offer.startDate <= currentDate) {
-        if (!offer.expires || offer.expires >= currentDate) {
-          newStatus = "Active";
-        } else {
-          newStatus = "Expired";
-        }
-      }
-      return newStatus === "Active";
+      const now = new Date();
+      const started = offer.startDate <= now;
+      const notExpired = !offer.expires || offer.expires >= now;
+      return started && notExpired;
     }).map(offer => ({
       ...offer,
       isVendorOffer: true,

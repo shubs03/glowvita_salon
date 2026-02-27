@@ -53,7 +53,24 @@ const getDateRanges = (period) => {
 // GET - Fetch settlement summary report
 export const GET = authMiddlewareCrm(async (req) => {
   try {
-    const vendorId = req.user.userId.toString();
+    const userId = req.user.userId.toString();
+    const userRole = req.user.role;
+
+    // Determine the actual vendorId: staff members belong to a vendor
+    let vendorId = userId;
+    if (userRole === 'staff') {
+      const StaffModel = (await import('@repo/lib/models/Vendor/Staff.model')).default;
+      const staffMember = await StaffModel.findById(userId);
+      if (staffMember && staffMember.vendorId) {
+        vendorId = staffMember.vendorId.toString();
+      } else {
+        return NextResponse.json(
+          { success: false, message: "Vendor not found for staff member" },
+          { status: 403 }
+        );
+      }
+    }
+
     const { searchParams } = new URL(req.url);
 
     // Get filter parameters
@@ -133,8 +150,23 @@ export const GET = authMiddlewareCrm(async (req) => {
       baseQuery.status = statusFilter;
     }
 
-    // For settlement summary report, only include appointments with completed payment status
-    baseQuery.paymentStatus = 'completed';
+    // For settlement summary report, only include appointments where money actually exchanged hands:
+    // - Pay Online: client paid platform via Razorpay → paymentStatus must be 'completed'
+    // - Pay at Salon: client paid vendor in cash → paymentStatus is never auto-set, use status:'completed'
+    if (!statusFilter || statusFilter === '') {
+      // No status filter from UI — default to completed appointments
+      baseQuery.status = 'completed';
+      baseQuery.$or = [
+        { paymentMethod: 'Pay Online', paymentStatus: 'completed' },
+        { paymentMethod: 'Pay at Salon' }
+      ];
+    } else {
+      // User selected a specific status — respect it, but still apply paymentMethod logic
+      baseQuery.$or = [
+        { paymentMethod: 'Pay Online', paymentStatus: 'completed' },
+        { paymentMethod: 'Pay at Salon' }
+      ];
+    }
 
     if (bookingTypeFilter && bookingTypeFilter !== '') {
       baseQuery.mode = bookingTypeFilter;
@@ -290,7 +322,8 @@ export const GET = authMiddlewareCrm(async (req) => {
       } else {
         // Handle single-service appointments
         const receivedBy = appt.paymentMethod === 'Pay Online' ? 'Platform' : 'Vendor';
-        const adminOwesVendor = appt.paymentMethod === 'Pay Online' ? (appt.amount || 0) : 0;
+        // For Pay Online: admin collected the money, owes vendor the service amount (totalAmount)
+        const adminOwesVendor = appt.paymentMethod === 'Pay Online' ? (appt.totalAmount || 0) : 0;
         const vendorOwesAdmin = appt.paymentMethod === 'Pay at Salon' ? (appt.platformFee || 0) + (appt.serviceTax || 0) : 0;
         const finalAmt = appt.finalAmount || appt.totalAmount || 0;
 

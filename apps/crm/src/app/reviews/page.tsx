@@ -132,7 +132,7 @@ export default function ReviewsPage() {
         </div>
 
         {/* Stats Cards */}
-        <ReviewsStatsCards reviews={reviews} />
+        <ReviewsStatsCards reviews={filteredReviews} />
 
         {/* Filters Toolbar */}
         <ReviewsFiltersToolbar

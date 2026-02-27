@@ -17,7 +17,7 @@ import {
 } from "../../config/config.js";
 
 
-function generateTokens(_id, role = "user", permissions = [], regions = [], roleName = null) {
+function generateTokens(_id, role = "user", permissions = [], regions = [], roleName = null, regionId = null) {
   let secretKey;
   let refreshSecret; // This seems unused in the current setup, but keeping for completeness
 
@@ -58,7 +58,9 @@ function generateTokens(_id, role = "user", permissions = [], regions = [], role
      roleName: roleName || role,
      permissions: permissions || [],
      regions: regions || [],
+     regionId: regionId || (regions && regions.length > 0 ? regions[0] : null), // Fallback to first region for admins
   };
+
 
   const accessToken = jwt.sign(payload, secretKey, {
     expiresIn: JWT_ACCESS_TOKEN_EXPIRY || '1d', // Default to 1 day

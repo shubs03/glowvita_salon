@@ -53,6 +53,15 @@ const subscriptionPlanSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  regionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Region',
+    default: null // null means Global
+  },
+  disabledRegions: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Region'
+  }],
   createdAt: {
     type: Date,
     default: Date.now

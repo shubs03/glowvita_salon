@@ -16,7 +16,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "vendor", "staff", "doctor", "supplier"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF", "vendor", "staff", "doctor", "supplier"], "categories:view");
 
 // POST a new category
 export const POST = authMiddlewareAdmin(
@@ -56,7 +56,7 @@ export const POST = authMiddlewareAdmin(
         { status: 500 }
       );
     }
-  }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "vendor", "staff", "doctor", "supplier"]);
+  }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF", "vendor", "staff", "doctor", "supplier"], "categories:edit");
 
 // PUT (update) a category by ID
 export const PUT = authMiddlewareAdmin(
@@ -126,7 +126,8 @@ export const PUT = authMiddlewareAdmin(
       );
     }
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "categories:edit"
 );
 
 // DELETE a category by ID
@@ -166,5 +167,6 @@ export const DELETE = authMiddlewareAdmin(
       );
     }
   },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "categories:delete"
 );

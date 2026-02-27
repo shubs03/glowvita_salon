@@ -21,7 +21,7 @@
 export async function autoCancelExpiredAppointments(options = {}) {
     try {
         const {
-            gracePeriodMinutes = 30, // Grace period after end time (changed to 30 minutes)
+            gracePeriodMinutes = 15, // Grace period after end time (changed to 15 minutes)
             dryRun = false,
             notifyClients = true,  // Send email to clients
             notifyVendors = true   // Send email to vendors
@@ -117,7 +117,7 @@ export async function autoCancelExpiredAppointments(options = {}) {
                     appointment._id,
                     {
                         status: 'no-show',
-                        cancellationReason: `Auto-cancelled: Appointment ended at ${appointment.endTime} and was not completed within ${gracePeriodMinutes} minutes grace period.`,
+                        cancellationReason: `Your appointment has been automatically cancelled as it was not marked as completed after the scheduled end time.`,
                         cancelledAt: now
                     },
                     { new: true }
@@ -252,7 +252,7 @@ async function sendCancellationNotifications(appointment, options = {}) {
  * Get statistics about appointments that would be auto-cancelled
  * Useful for monitoring and reporting
  */
-export async function getAutoCancellationStats(gracePeriodMinutes = 30) {
+export async function getAutoCancellationStats(gracePeriodMinutes = 15) {
     const result = await autoCancelExpiredAppointments({
         gracePeriodMinutes,
         dryRun: true,

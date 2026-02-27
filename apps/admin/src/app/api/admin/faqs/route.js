@@ -17,7 +17,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ['SUPER_ADMIN', 'REGIONAL_ADMIN']);
+}, ['SUPER_ADMIN', 'REGIONAL_ADMIN', 'STAFF'], 'faqs:view');
 
 // Create a new FAQ
 export const POST = authMiddlewareAdmin(async (req) => {
@@ -38,7 +38,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ['SUPER_ADMIN', 'REGIONAL_ADMIN']);
+}, ['SUPER_ADMIN', 'REGIONAL_ADMIN', 'STAFF'], 'faqs:edit');
 
 // Update an FAQ
 export const PATCH = authMiddlewareAdmin(async (req) => {
@@ -79,7 +79,7 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ['SUPER_ADMIN', 'REGIONAL_ADMIN']);
+}, ['SUPER_ADMIN', 'REGIONAL_ADMIN', 'STAFF'], 'faqs:edit');
 
 // Delete an FAQ
 export const DELETE = authMiddlewareAdmin(async (req) => {
@@ -103,5 +103,5 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
       { status: 500 }
     );
   }
-}, ['SUPER_ADMIN', 'REGIONAL_ADMIN']);
+}, ['SUPER_ADMIN', 'REGIONAL_ADMIN'], 'faqs:delete');
 

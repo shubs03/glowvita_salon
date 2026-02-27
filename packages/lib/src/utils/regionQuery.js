@@ -31,11 +31,20 @@ export function getRegionQuery(user, selectedRegionId = null) {
   };
 
   // Super Admin can see everything or filter by selected region
+  // Super Admin can see everything or filter by selected region
   if (roleName === "SUPER_ADMIN" || roleName === "superadmin") {
     if (selectedRegionId) {
       return { regionId: toObjectId(selectedRegionId) };
     }
     return {}; // No region filter for Super Admin by default
+  }
+
+  // STAFF typically has broad access unless assigned to specific regions
+  if (roleName === "STAFF" && (!assignedRegions || assignedRegions.length === 0)) {
+    if (selectedRegionId) {
+      return { regionId: selectedRegionId };
+    }
+    return {}; 
   }
 
   // Regional Admin is scoped to their assigned regions
@@ -49,7 +58,8 @@ export function getRegionQuery(user, selectedRegionId = null) {
   }
 
   // Fallback: If no regions assigned, return a query that matches nothing (security first)
-  return { regionId: "none" };
+  // Use a valid but non-existent ObjectId string to avoid "Argument passed in does not match the accepted types"
+  return { regionId: "000000000000000000000000" };
 }
 
 /**

@@ -94,16 +94,74 @@ export const GET = authMiddlewareAdmin(async (req) => {
         }
 
         // Build appointment query: date + region
+        // Pay Online: client paid platform (Razorpay) → needs paymentStatus:'completed'
+        // Pay at Salon: client pays vendor directly in cash → only needs status:'completed' (paymentStatus stays 'pending' by default)
         const appointmentMatchFilter = {
             date: { $gte: startDate, $lte: endDate },
-            paymentStatus: 'completed',
-            status: { $in: ['scheduled', 'confirmed', 'completed'] },
+            status: { $in: ['completed', 'partially-completed'] },
+            $or: [
+                { paymentMethod: 'Pay Online', paymentStatus: 'completed' },
+                { paymentMethod: 'Pay at Salon' },
+                { mode: 'online' }
+            ],
             ...regionFilter
         };
 
         console.log('[Settlements] Appointment filter:', JSON.stringify(appointmentMatchFilter, null, 2));
 
-        // Fetch completed appointments scoped by region
+        // 1. Get Opening Balances for all vendors up to startDate
+        const openingStatsArray = await AppointmentModel.aggregate([
+            {
+                $match: {
+                    date: { $lt: startDate },
+                    status: { $in: ['completed', 'partially-completed'] },
+                    $or: [
+                        { paymentMethod: 'Pay Online', paymentStatus: 'completed' },
+                        { paymentMethod: 'Pay at Salon' },
+                        { mode: 'online' }
+                    ],
+                    ...regionFilter
+                }
+            },
+            {
+                $group: {
+                    _id: "$vendorId",
+                    adminOwesVendor: {
+                        $sum: { $cond: [{ $eq: ["$paymentMethod", "Pay Online"] }, "$totalAmount", 0] }
+                    },
+                    vendorOwesAdmin: {
+                        $sum: { $cond: [{ $eq: ["$paymentMethod", "Pay at Salon"] }, { $add: ["$platformFee", "$serviceTax"] }, 0] }
+                    }
+                }
+            }
+        ]);
+
+        const openingPaymentsArray = await VendorSettlementPaymentModel.aggregate([
+            {
+                $match: { paymentDate: { $lt: startDate } }
+            },
+            {
+                $group: {
+                    _id: "$vendorId",
+                    paidToAdmin: { $sum: { $cond: [{ $eq: ["$type", "Payment to Admin"] }, "$amount", 0] } },
+                    paidToVendor: { $sum: { $cond: [{ $eq: ["$type", "Payment to Vendor"] }, "$amount", 0] } }
+                }
+            }
+        ]);
+
+        // Map for quick lookup
+        const openingBalancesMap = new Map();
+        openingStatsArray.forEach(s => {
+            const vId = s._id.toString();
+            openingBalancesMap.set(vId, (s.adminOwesVendor - s.vendorOwesAdmin));
+        });
+        openingPaymentsArray.forEach(p => {
+            const vId = p._id.toString();
+            const current = openingBalancesMap.get(vId) || 0;
+            openingBalancesMap.set(vId, current + (p.paidToVendor - p.paidToAdmin));
+        });
+
+        // 2. Fetch current period appointments
         const appointments = await AppointmentModel.find(appointmentMatchFilter)
             .populate({
                 path: 'vendorId',
@@ -112,14 +170,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
             })
             .sort({ date: -1 });
 
-        // Collect the vendor IDs present in the region-filtered result
+        // 3. Fetch current period payment history
         const filteredVendorIds = [...new Set(
             appointments
                 .map(a => a.vendorId?._id?.toString() || a.vendorId?.toString())
                 .filter(Boolean)
         )];
 
-        // Fetch payment history scoped to the same region's vendors
         const paymentHistoryFilter = {
             paymentDate: { $gte: startDate, $lte: endDate }
         };
@@ -130,7 +187,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
                     $in: filteredVendorIds.map(id => new mongoose.Types.ObjectId(id))
                 };
             } else {
-                // No vendors in region -> return empty history as well
                 paymentHistoryFilter.vendorId = { $in: [] };
             }
         }
@@ -139,7 +195,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
             .populate('vendorId', 'businessName ownerName contactNumber email')
             .sort({ paymentDate: -1 });
 
-        // Group appointments by vendor
+        // 4. Group appointments by vendor
         const vendorSettlementsMap = new Map();
 
         appointments.forEach(appt => {
@@ -158,6 +214,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
                     serviceTaxTotal: 0,
                     adminOwesVendor: 0,
                     vendorOwesAdmin: 0,
+                    openingBalance: openingBalancesMap.get(vendorId) || 0,
                     netSettlement: 0,
                     adminReceivableAmount: 0,
                     vendorAmount: 0,
@@ -192,12 +249,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
             if (appt.paymentMethod === 'Pay Online') {
                 settlement.adminOwesVendor += serviceAmount;
-            } else if (appt.paymentMethod === 'Pay at Salon') {
+            } else {
                 settlement.vendorOwesAdmin += fees;
             }
         });
 
-        // Add payment history — also include vendors who have history but no appointments in period
+        // Add payment history
         paymentHistory.forEach(payment => {
             const vId = payment.vendorId?._id?.toString() || payment.vendorId?.toString();
             if (!vId) return;
@@ -214,6 +271,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
                     serviceTaxTotal: 0,
                     adminOwesVendor: 0,
                     vendorOwesAdmin: 0,
+                    openingBalance: openingBalancesMap.get(vId) || 0,
                     netSettlement: 0,
                     adminReceivableAmount: 0,
                     vendorAmount: 0,
@@ -227,44 +285,44 @@ export const GET = authMiddlewareAdmin(async (req) => {
             s.paymentHistory.push(payment);
         });
 
-        // Calculate final amounts for each vendor
+        // Calculate final amounts with Ledger Logic
         const settlements = Array.from(vendorSettlementsMap.values()).map(settlement => {
-            settlement.netSettlement = settlement.adminOwesVendor - settlement.vendorOwesAdmin;
+            const periodNet = settlement.adminOwesVendor - settlement.vendorOwesAdmin;
+            const totalNetBalance = settlement.openingBalance + periodNet;
 
-            let totalPaidToVendor = settlement.paymentHistory
+            const totalPaidToVendorInPeriod = settlement.paymentHistory
                 .filter(p => p.type === "Payment to Vendor").reduce((acc, p) => acc + p.amount, 0);
-            let totalPaidToAdmin = settlement.paymentHistory
+            const totalPaidToAdminInPeriod = settlement.paymentHistory
                 .filter(p => p.type === "Payment to Admin").reduce((acc, p) => acc + p.amount, 0);
 
-            if (settlement.netSettlement > 0) {
+            const closingBalance = totalNetBalance - totalPaidToVendorInPeriod + totalPaidToAdminInPeriod;
+
+            settlement.netSettlement = totalNetBalance;
+
+            if (closingBalance > 0) {
                 // Admin owes vendor
                 settlement.adminReceivableAmount = 0;
-                settlement.vendorAmount = settlement.netSettlement;
-                settlement.amountPending = Math.max(0, settlement.netSettlement - totalPaidToVendor);
-            } else if (settlement.netSettlement < 0) {
+                settlement.vendorAmount = closingBalance;
+                settlement.amountPending = closingBalance;
+                settlement.status = closingBalance <= 0 ? 'Paid' : (totalPaidToVendorInPeriod > 0 ? 'Partially Paid' : 'Pending');
+            } else if (closingBalance < 0) {
                 // Vendor owes admin
-                const vendorOwes = Math.abs(settlement.netSettlement);
+                const vendorOwes = Math.abs(closingBalance);
                 settlement.adminReceivableAmount = vendorOwes;
                 settlement.vendorAmount = 0;
-                settlement.amountPending = Math.max(0, vendorOwes - totalPaidToAdmin);
-            }
-
-            // Determine status
-            if (settlement.amountPending <= 0) {
-                settlement.status = 'Paid';
+                settlement.amountPending = vendorOwes;
+                settlement.status = vendorOwes <= 0 ? 'Paid' : (totalPaidToAdminInPeriod > 0 ? 'Partially Paid' : 'Pending');
             } else {
-                let paidAmt = settlement.netSettlement > 0 ? totalPaidToVendor : totalPaidToAdmin;
-                settlement.status = paidAmt > 0 ? 'Partially Paid' : 'Pending';
+                settlement.amountPending = 0;
+                settlement.status = 'Paid';
             }
-
-            let amountPaid = settlement.netSettlement > 0 ? totalPaidToVendor : totalPaidToAdmin;
 
             return {
                 id: settlement.vendorId,
                 ...settlement,
                 totalVolume: settlement.totalAmount,
                 totalToSettle: Math.abs(settlement.netSettlement),
-                amountPaid: amountPaid,
+                amountPaid: Math.abs(closingBalance - totalNetBalance), // Amount paid in THIS period
                 amountRemaining: settlement.amountPending
             };
         });
@@ -293,7 +351,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
             { status: 500 }
         );
     }
-}, ['admin', 'SUPER_ADMIN', 'REGIONAL_ADMIN']);
+}, ['admin', 'SUPER_ADMIN', 'REGIONAL_ADMIN', 'STAFF'], "payout:view");
 
 /**
  * POST /api/admin/settlements
@@ -302,7 +360,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 export const POST = authMiddlewareAdmin(async (req) => {
     try {
         const body = await req.json();
-        const { vendorId, amount, type, paymentMethod, transactionId, notes } = body;
+        const { vendorId, amount, type, paymentMethod, transactionId, notes, paymentDate } = body;
 
         // Validate required fields
         if (!vendorId || !amount || !paymentMethod || !type) {
@@ -328,7 +386,7 @@ export const POST = authMiddlewareAdmin(async (req) => {
             paymentMethod,
             transactionId,
             notes,
-            paymentDate: new Date(),
+            paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
             createdBy: req.user.userId,
             createdByType: 'admin'
         });
@@ -346,4 +404,4 @@ export const POST = authMiddlewareAdmin(async (req) => {
             { status: 500 }
         );
     }
-}, ['admin', 'SUPER_ADMIN', 'REGIONAL_ADMIN']);
+}, ['admin', 'SUPER_ADMIN', 'REGIONAL_ADMIN', 'STAFF'], "payout:edit");

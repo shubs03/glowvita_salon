@@ -63,7 +63,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     console.error("Error fetching suppliers:", error);
     return NextResponse.json({ message: "Error fetching suppliers", error: error.message }, { status: 500 });
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "suppliers:view");
 
 // POST a new supplier
 export const POST = async (req) => {
@@ -221,7 +221,7 @@ export const PUT = authMiddlewareAdmin(async (req) => {
     console.error("Error updating supplier:", error);
     return NextResponse.json({ message: "Error updating supplier", error: error.message }, { status: 500 });
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "suppliers:edit");
 
 // DELETE a supplier
 export const DELETE = authMiddlewareAdmin(async (req) => {
@@ -253,7 +253,7 @@ export const DELETE = authMiddlewareAdmin(async (req) => {
     console.error("Error deleting supplier:", error);
     return NextResponse.json({ message: "Error deleting supplier", error: error.message }, { status: 500 });
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "suppliers:delete");
 
 // PATCH (update status) a supplier
 export const PATCH = authMiddlewareAdmin(async (req) => {
@@ -370,4 +370,4 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
     console.error("Error in supplier PATCH:", error);
     return NextResponse.json({ message: "Error updating supplier", error: error.message }, { status: 500 });
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"], "suppliers:edit");

@@ -1,4 +1,3 @@
-
 {
   "name": "@repo/store",
   "version": "0.0.0",
@@ -22,7 +21,6 @@
     "./slices/supplierSlice": "./src/slices/supplierSlice.js",
     "./slices/subscriptionSlice": "./src/slices/subscriptionSlice.js",
     "./slices/notificationSlice": "./src/slices/notificationSlice.js",
-    "./slices/geoFencingSlice": "./src/slices/geoFencingSlice.js",
     "./slices/marketingSlice": "./src/slices/marketingSlice.js",
     "./slices/blockTimeSlice": "./src/slices/blockTimeSlice.js",
     "./slices/faqSlice": "./src/slices/faqSlice.js",

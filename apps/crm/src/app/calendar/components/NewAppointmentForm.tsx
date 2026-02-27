@@ -640,7 +640,8 @@ export default function NewAppointmentForm({
       totalDuration: 0,
       venueAddress: ''
     },
-    addOns: defaultValues?.addOns || []
+    addOns: defaultValues?.addOns || [],
+    mode: defaultValues?.mode || (defaultValues?.payment?.bookingSource === 'web' ? 'online' : 'offline')
   });
 
   // Fetch add-ons
@@ -1932,7 +1933,7 @@ export default function NewAppointmentForm({
         finalAmount: Number(appointmentData.totalAmount) || 0,
         paymentStatus: appointmentData.paymentStatus || 'pending',
         platformFee: (appointmentData as any).platformFee || 0,
-        mode: 'offline', // CRM bookings are offline mode
+        mode: appointmentData.mode || (isRescheduling || isEditing ? defaultValues?.mode : 'offline') || 'offline',
         isHomeService: appointmentData.isHomeService,
         homeServiceLocation: appointmentData.isHomeService ? appointmentData.homeServiceLocation : undefined,
         isWeddingService: appointmentData.isWeddingService,
@@ -2233,6 +2234,7 @@ export default function NewAppointmentForm({
                 setIsClientDropdownOpen(true);
               }}
               placeholder="Search for a client..."
+              disabled={isRescheduling}
               className="pl-10 w-full bg-background text-foreground border border-border placeholder:text-muted-foreground"
               autoComplete="off"
               onBlur={() => {
@@ -2294,6 +2296,7 @@ export default function NewAppointmentForm({
             variant="outline"
             size="icon"
             className="shrink-0"
+            disabled={isRescheduling}
             title="Add client"
           >
             <PlusCircle className="h-4 w-4" />
@@ -2312,6 +2315,7 @@ export default function NewAppointmentForm({
                 value={appointmentData.clientEmail || ''}
                 onChange={(e) => setAppointmentData(prev => ({ ...prev, clientEmail: e.target.value }))}
                 placeholder="client@example.com"
+                disabled={isRescheduling}
                 className="w-full bg-background text-foreground border border-border"
               />
             </div>
@@ -2325,6 +2329,7 @@ export default function NewAppointmentForm({
                 value={appointmentData.clientPhone || ''}
                 onChange={(e) => setAppointmentData(prev => ({ ...prev, clientPhone: e.target.value }))}
                 placeholder="Phone number"
+                disabled={isRescheduling}
                 className="w-full bg-background text-foreground border border-border"
               />
             </div>
@@ -2345,6 +2350,7 @@ export default function NewAppointmentForm({
           value={appointmentData.clientName}
           onChange={(e) => handleFieldChange('clientName', e.target.value)}
           placeholder="Client name"
+          disabled={isRescheduling}
           className="w-full bg-background text-foreground border border-border appearance-none dark:[color-scheme:dark]"
           required
         />
@@ -2369,129 +2375,138 @@ export default function NewAppointmentForm({
 
 
 
-        {/* Service Type Selection */}
-        <div className="space-y-3 p-4 bg-muted/30 rounded-lg border border-border">
-          <Label className="text-sm font-medium text-foreground">Appointment Type</Label>
-          <div className="grid grid-cols-3 gap-3">
-            <button
-              type="button"
-              onClick={() => handleServiceTypeChange('regular')}
-              className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${!appointmentData.isHomeService && !appointmentData.isWeddingService
-                ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                : 'bg-background text-muted-foreground border-border hover:bg-muted/50'
-                }`}
-            >
-              <Briefcase className="h-5 w-5 mb-1" />
-              <span className="text-xs font-medium">Regular (In-Salon)</span>
-            </button>
+        {/* Service Type Selection - Only visible when editing/rescheduling existing Home/Wedding appointments */}
+        {(isEditing || isRescheduling) && (appointmentData.isHomeService || appointmentData.isWeddingService) && (
+          <div className="space-y-3 p-4 bg-muted/30 rounded-lg border border-border">
+            <Label className="text-sm font-medium text-foreground">Appointment Type</Label>
+            <div className="grid grid-cols-3 gap-3">
+              <button
+                type="button"
+                onClick={() => handleServiceTypeChange('regular')}
+                disabled={isRescheduling}
+                className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${!appointmentData.isHomeService && !appointmentData.isWeddingService
+                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                  : 'bg-background text-muted-foreground border-border hover:bg-muted/50'
+                  } ${isRescheduling ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                <Briefcase className="h-5 w-5 mb-1" />
+                <span className="text-xs font-medium">Regular (In-Salon)</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => handleServiceTypeChange('home')}
-              className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${appointmentData.isHomeService
-                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                : 'bg-background text-muted-foreground border-border hover:bg-muted/50'
-                }`}
-            >
-              <Home className="h-5 w-5 mb-1" />
-              <span className="text-xs font-medium">Home Service</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => handleServiceTypeChange('home')}
+                disabled={isRescheduling}
+                className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${appointmentData.isHomeService
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                  : 'bg-background text-muted-foreground border-border hover:bg-muted/50'
+                  } ${isRescheduling ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                <Home className="h-5 w-5 mb-1" />
+                <span className="text-xs font-medium">Home Service</span>
+              </button>
 
-            <button
-              type="button"
-              onClick={() => handleServiceTypeChange('wedding')}
-              className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${appointmentData.isWeddingService
-                ? 'bg-pink-600 text-white border-pink-600 shadow-sm'
-                : 'bg-background text-muted-foreground border-border hover:bg-muted/50'
-                }`}
-            >
-              <MapPin className="h-5 w-5 mb-1" />
-              <span className="text-xs font-medium">Wedding Service</span>
-            </button>
-          </div>
+              <button
+                type="button"
+                onClick={() => handleServiceTypeChange('wedding')}
+                disabled={isRescheduling}
+                className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${appointmentData.isWeddingService
+                  ? 'bg-pink-600 text-white border-pink-600 shadow-sm'
+                  : 'bg-background text-muted-foreground border-border hover:bg-muted/50'
+                  } ${isRescheduling ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                <MapPin className="h-5 w-5 mb-1" />
+                <span className="text-xs font-medium">Wedding Service</span>
+              </button>
+            </div>
 
-          {/* Condition Fields for Home Service */}
-          {appointmentData.isHomeService && (
-            <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="hs-address" className="text-xs">Home Address <span className="text-red-500">*</span></Label>
+            {/* Condition Fields for Home Service */}
+            {appointmentData.isHomeService && (
+              <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="hs-address" className="text-xs">Home Address <span className="text-red-500">*</span></Label>
+                    <Textarea
+                      id="hs-address"
+                      value={appointmentData.homeServiceLocation?.address || ''}
+                      onChange={(e) => handleHomeLocationChange('address', e.target.value)}
+                      placeholder="Enter full address"
+                      disabled={isRescheduling}
+                      className="resize-none h-20"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hs-city" className="text-xs">City</Label>
+                    <Input
+                      id="hs-city"
+                      value={appointmentData.homeServiceLocation?.city || ''}
+                      onChange={(e) => handleHomeLocationChange('city', e.target.value)}
+                      placeholder="City"
+                      disabled={isRescheduling}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="hs-pincode" className="text-xs">Pincode</Label>
+                    <Input
+                      id="hs-pincode"
+                      value={appointmentData.homeServiceLocation?.pincode || ''}
+                      onChange={(e) => handleHomeLocationChange('pincode', e.target.value)}
+                      placeholder="Pincode"
+                      disabled={isRescheduling}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Condition Fields for Wedding Service */}
+            {appointmentData.isWeddingService && (
+              <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="space-y-2">
+                  <Label htmlFor="wp-name" className="text-xs">Wedding Package <span className="text-red-500">*</span></Label>
+                  {isLoadingWeddingPackages ? (
+                    <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span className="text-[10px]">Loading packages...</span>
+                    </div>
+                  ) : (
+                    <Select
+                      value={weddingPackages.find((p: any) => p.name === appointmentData.weddingPackageDetails?.packageName)?.id || ""}
+                      onValueChange={handleWeddingPackageSelect}
+                      disabled={weddingPackages.length === 0 || isRescheduling}
+                    >
+                      <SelectTrigger id="wp-name" className="h-9 text-xs bg-background border-pink-100 dark:border-pink-900/30">
+                        <SelectValue placeholder={weddingPackages.length === 0 ? "No packages available" : "Select a wedding package"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {weddingPackages.map((pkg) => (
+                          <SelectItem key={pkg.id} value={pkg.id} className="text-xs">
+                            <div className="flex justify-between w-full gap-4">
+                              <span>{pkg.name}</span>
+                              <span className="text-muted-foreground">₹{pkg.price}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <p className="text-[10px] text-muted-foreground">Select a predefined package to auto-fill details</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="wp-venue" className="text-xs">Venue Address <span className="text-red-500">*</span></Label>
                   <Textarea
-                    id="hs-address"
-                    value={appointmentData.homeServiceLocation?.address || ''}
-                    onChange={(e) => handleHomeLocationChange('address', e.target.value)}
-                    placeholder="Enter full address"
+                    id="wp-venue"
+                    value={appointmentData.weddingPackageDetails?.venueAddress || ''}
+                    onChange={(e) => handleWeddingDetailsChange('venueAddress', e.target.value)}
+                    placeholder="Enter venue address"
+                    disabled={isRescheduling}
                     className="resize-none h-20"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="hs-city" className="text-xs">City</Label>
-                  <Input
-                    id="hs-city"
-                    value={appointmentData.homeServiceLocation?.city || ''}
-                    onChange={(e) => handleHomeLocationChange('city', e.target.value)}
-                    placeholder="City"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="hs-pincode" className="text-xs">Pincode</Label>
-                  <Input
-                    id="hs-pincode"
-                    value={appointmentData.homeServiceLocation?.pincode || ''}
-                    onChange={(e) => handleHomeLocationChange('pincode', e.target.value)}
-                    placeholder="Pincode"
-                  />
-                </div>
               </div>
-            </div>
-          )}
-
-          {/* Condition Fields for Wedding Service */}
-          {appointmentData.isWeddingService && (
-            <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="space-y-2">
-                <Label htmlFor="wp-name" className="text-xs">Wedding Package <span className="text-red-500">*</span></Label>
-                {isLoadingWeddingPackages ? (
-                  <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span className="text-[10px]">Loading packages...</span>
-                  </div>
-                ) : (
-                  <Select
-                    value={weddingPackages.find((p: any) => p.name === appointmentData.weddingPackageDetails?.packageName)?.id || ""}
-                    onValueChange={handleWeddingPackageSelect}
-                    disabled={weddingPackages.length === 0}
-                  >
-                    <SelectTrigger id="wp-name" className="h-9 text-xs bg-background border-pink-100 dark:border-pink-900/30">
-                      <SelectValue placeholder={weddingPackages.length === 0 ? "No packages available" : "Select a wedding package"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {weddingPackages.map((pkg) => (
-                        <SelectItem key={pkg.id} value={pkg.id} className="text-xs">
-                          <div className="flex justify-between w-full gap-4">
-                            <span>{pkg.name}</span>
-                            <span className="text-muted-foreground">₹{pkg.price}</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                <p className="text-[10px] text-muted-foreground">Select a predefined package to auto-fill details</p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="wp-venue" className="text-xs">Venue Address <span className="text-red-500">*</span></Label>
-                <Textarea
-                  id="wp-venue"
-                  value={appointmentData.weddingPackageDetails?.venueAddress || ''}
-                  onChange={(e) => handleWeddingDetailsChange('venueAddress', e.target.value)}
-                  placeholder="Enter venue address"
-                  className="resize-none h-20"
-                />
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
 
         {/* Date and Time Row */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -2624,7 +2639,7 @@ export default function NewAppointmentForm({
                   <Select
                     value={appointmentData.service}
                     onValueChange={handleServiceChange}
-                    disabled={isLoadingServices || services.length === 0}
+                    disabled={isLoadingServices || services.length === 0 || isRescheduling}
                   >
                     <SelectTrigger className="w-full bg-background text-foreground border border-border">
                       <SelectValue placeholder={
@@ -2661,6 +2676,7 @@ export default function NewAppointmentForm({
                     variant="outline"
                     size="icon"
                     className="shrink-0"
+                    disabled={isRescheduling}
                     title="Add service"
                   >
                     <PlusCircle className="h-4 w-4" />
@@ -2704,7 +2720,8 @@ export default function NewAppointmentForm({
                         <button
                           type="button"
                           onClick={() => handleRemoveService(index)}
-                          className="ml-2 text-red-500 hover:text-red-700"
+                          className={`ml-2 text-red-500 hover:text-red-700 ${isRescheduling ? 'hidden' : ''}`}
+                          disabled={isRescheduling}
                           title="Remove service"
                         >
                           <X className="h-4 w-4" />
@@ -2770,12 +2787,14 @@ export default function NewAppointmentForm({
                           type="text"
                           value={service.serviceName}
                           onChange={(e) => handleEditWeddingService(idx, e.target.value)}
-                          className="bg-transparent border-none focus:outline-none focus:ring-0 p-0 flex-1 text-xs font-semibold text-foreground/90"
+                          disabled={isRescheduling}
+                          className="bg-transparent border-none focus:outline-none focus:ring-0 p-0 flex-1 text-xs font-semibold text-foreground/90 disabled:opacity-75"
                         />
                         <button
                           type="button"
                           onClick={() => handleRemoveWeddingService(idx)}
-                          className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-600 transition-opacity p-0.5"
+                          className={`opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-600 transition-opacity p-0.5 ${isRescheduling ? 'hidden' : ''}`}
+                          disabled={isRescheduling}
                           title="Remove service and staff"
                         >
                           <X className="h-3.5 w-3.5" />
@@ -2787,6 +2806,7 @@ export default function NewAppointmentForm({
                         <Select
                           value={appointmentData.weddingPackageDetails?.teamMembers?.[idx] || ""}
                           onValueChange={(val) => handleUpdateWeddingStaff(idx, val)}
+                          disabled={isRescheduling}
                         >
                           <SelectTrigger className="h-7 text-[10px] py-0 bg-background/50 border-pink-100/50 dark:border-pink-900/20">
                             <SelectValue placeholder="Select staff member" />
@@ -2806,8 +2826,8 @@ export default function NewAppointmentForm({
                 </div>
 
                 {/* Dropdown to add more services to the package */}
-                <div className="mt-2">
-                  <Select onValueChange={handleAddWeddingPackageService}>
+                <div className={`mt-2 ${isRescheduling ? 'hidden' : ''}`}>
+                  <Select onValueChange={handleAddWeddingPackageService} disabled={isRescheduling}>
                     <SelectTrigger className="h-8 text-[10px] w-full bg-pink-50/20 border-dashed border-pink-200 dark:border-pink-900/40 text-pink-600 dark:text-pink-400">
                       <div className="flex items-center gap-1.5 justify-center w-full">
                         <PlusCircle className="h-3 w-3" />
@@ -2835,7 +2855,7 @@ export default function NewAppointmentForm({
               <Select
                 value={appointmentData.staff}
                 onValueChange={handleStaffChange}
-                disabled={isLoadingStaff || staffData.length === 0}
+                disabled={isLoadingStaff || staffData.length === 0 || isRescheduling}
               >
                 <SelectTrigger className="w-full bg-background text-foreground border border-border">
                   <SelectValue placeholder={
@@ -2913,6 +2933,7 @@ export default function NewAppointmentForm({
                   variant="outline"
                   size="sm"
                   onClick={() => handleAddAddOn(addon.id)}
+                  disabled={isRescheduling}
                   className="h-8 text-[11px] bg-background hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200 border-dashed"
                 >
                   {addon.name} (+₹{addon.price})
@@ -2929,8 +2950,8 @@ export default function NewAppointmentForm({
                   <Badge key={index} variant="secondary" className="pl-2 pr-1 py-1 gap-1 bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200 transition-colors">
                     <span className="text-[11px]">{addon.name} (+₹{addon.price})</span>
                     <X
-                      className="h-3 w-3 cursor-pointer text-purple-400 hover:text-red-500 transition-colors"
-                      onClick={() => handleRemoveAddOn(index)}
+                      className={`h-3 w-3 cursor-pointer text-purple-400 hover:text-red-500 transition-colors ${isRescheduling ? 'hidden' : ''}`}
+                      onClick={() => !isRescheduling && handleRemoveAddOn(index)}
                     />
                   </Badge>
                 ))}
@@ -2953,6 +2974,7 @@ export default function NewAppointmentForm({
               value={appointmentData.amount || ''}
               onChange={(e) => handleFieldChange('amount', e.target.value)}
               placeholder="0.00"
+              disabled={isRescheduling}
               className="w-full bg-background text-foreground border border-border"
             />
           </div>
@@ -2969,6 +2991,7 @@ export default function NewAppointmentForm({
               value={appointmentData.discount || ''}
               onChange={(e) => handleFieldChange('discount', e.target.value)}
               placeholder="0.00"
+              disabled={isRescheduling}
               className="w-full bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-neutral-700"
             />
           </div>
@@ -2985,6 +3008,7 @@ export default function NewAppointmentForm({
               value={appointmentData.tax || ''}
               onChange={(e) => handleFieldChange('tax', e.target.value)}
               placeholder="0.00"
+              disabled={isRescheduling}
               className="w-full bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-neutral-700"
             />
           </div>
@@ -3022,6 +3046,7 @@ export default function NewAppointmentForm({
               }));
             }}
             placeholder="60"
+            disabled={isRescheduling}
             className="w-full bg-background text-foreground border border-border"
           />
         </div>
@@ -3036,6 +3061,7 @@ export default function NewAppointmentForm({
             value={appointmentData.notes}
             onChange={(e) => handleFieldChange('notes', e.target.value)}
             placeholder="Add any additional notes..."
+            disabled={isRescheduling}
             rows={3}
             className="w-full bg-background text-foreground border border-border placeholder:text-muted-foreground"
           />

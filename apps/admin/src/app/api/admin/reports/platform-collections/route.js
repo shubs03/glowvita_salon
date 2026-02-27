@@ -9,57 +9,71 @@ await _db();
 // GET - Fetch platform collections report for product orders
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
+    // Extract filter parameters from query
+    const { searchParams } = new URL(req.url);
+    const startDateParam = searchParams.get('startDate');
+    const endDateParam = searchParams.get('endDate');
+
+    let dateFilter = {};
+    if (startDateParam && endDateParam) {
+      dateFilter.createdAt = {
+        $gte: new Date(startDateParam),
+        $lte: new Date(endDateParam)
+      };
+    }
+
     // Get all supplier orders (orders where supplierId exists) - scoped by region
     const regionQuery = buildRegionQueryFromRequest(req);
     const orders = await OrderModel.find({
       ...regionQuery,
+      ...dateFilter,
       supplierId: { $exists: true, $ne: null }
     })
-    .sort({ createdAt: -1 })
-    .populate({
-      path: 'vendorId',
-      select: 'shopName email'
-    })
-    .populate({
-      path: 'supplierId',
-      select: 'shopName email'
-    })
-    .populate({
-      path: 'items.productId',
-      select: 'productName price'
-    });
+      .sort({ createdAt: -1 })
+      .populate({
+        path: 'vendorId',
+        select: 'shopName email'
+      })
+      .populate({
+        path: 'supplierId',
+        select: 'shopName email'
+      })
+      .populate({
+        path: 'items.productId',
+        select: 'productName price'
+      });
 
     // Get the latest tax fee settings
     const taxSettings = await TaxFeeSettings.findOne().sort({ updatedAt: -1 });
-    
+
     // Process orders to calculate platform collections
     const processedOrders = orders.map(order => {
       // Calculate item-level details
-      const itemDetails = order.items.map(item => {
+      const itemDetails = (order.items || []).map(item => {
         const itemPrice = item.price || 0;
         const itemQuantity = item.quantity || 0;
         const itemTotal = itemPrice * itemQuantity;
-        
+
         // Calculate GST on item (if enabled)
         let itemGST = 0;
         let itemGSTAmount = 0;
         if (taxSettings && taxSettings.productGSTEnabled) {
           itemGST = taxSettings.productGST || 0;
-          itemGSTAmount = taxSettings.productGSTType === 'percentage' 
-            ? (itemTotal * itemGST) / 100 
+          itemGSTAmount = taxSettings.productGSTType === 'percentage'
+            ? (itemTotal * itemGST) / 100
             : itemGST;
         }
-        
+
         // Calculate platform fee on item (if enabled)
         let itemPlatformFee = 0;
         let itemPlatformFeeAmount = 0;
         if (taxSettings && taxSettings.productPlatformFeeEnabled) {
           itemPlatformFee = taxSettings.productPlatformFee || 0;
-          itemPlatformFeeAmount = taxSettings.productPlatformFeeType === 'percentage' 
-            ? (itemTotal * itemPlatformFee) / 100 
+          itemPlatformFeeAmount = taxSettings.productPlatformFeeType === 'percentage'
+            ? (itemTotal * itemPlatformFee) / 100
             : itemPlatformFee;
         }
-        
+
         return {
           productId: item.productId?._id || item.productId,
           productName: item.productName || item.productId?.productName || 'Unknown Product',
@@ -73,12 +87,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
           totalWithFees: itemTotal + itemGSTAmount + itemPlatformFeeAmount
         };
       });
-      
+
       // Calculate order totals
       const orderSubtotal = itemDetails.reduce((sum, item) => sum + item.itemTotal, 0);
       const orderGST = itemDetails.reduce((sum, item) => sum + item.gstAmount, 0);
       const orderPlatformFee = itemDetails.reduce((sum, item) => sum + item.platformFeeAmount, 0);
-      
+
       return {
         orderId: order.orderId,
         orderDate: order.createdAt,
@@ -93,13 +107,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
         totalCollected: orderSubtotal + orderGST + orderPlatformFee
       };
     });
-    
+
     // Calculate summary statistics
     const totalOrders = processedOrders.length;
     const totalRevenue = processedOrders.reduce((sum, order) => sum + order.orderTotal, 0);
     const totalGSTCollected = processedOrders.reduce((sum, order) => sum + order.gstTotal, 0);
     const totalPlatformFeesCollected = processedOrders.reduce((sum, order) => sum + order.platformFeeTotal, 0);
-    
+
     return Response.json({
       success: true,
       data: {
@@ -113,7 +127,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
         }
       },
       message: "Platform collections report fetched successfully"
-    }, { 
+    }, {
       status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
@@ -126,11 +140,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
       success: false,
       message: "Failed to fetch platform collections report",
       error: error.message
-    }, { 
+    }, {
       status: 500,
       headers: {
         'Access-Control-Allow-Origin': '*',
       }
     });
   }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "reports:view");

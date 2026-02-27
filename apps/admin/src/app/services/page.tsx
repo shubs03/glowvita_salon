@@ -139,7 +139,7 @@ export default function ServicesPage() {
             toast.success(`Service visibility updated - ${newOnlineBookingStatus ? 'Visible on web' : 'Hidden from web'}`);
             refetch();
         } catch (error: any) {
-            toast.error("Failed to update visibility");
+            console.error("Failed to update visibility:", error);
         }
     };
 
@@ -166,7 +166,7 @@ export default function ServicesPage() {
             toast.success(`Service "${selectedService.name}" has been ${actionType === 'approve' ? 'approved' : 'disapproved'}.`);
             refetch();
         } catch (error: any) {
-            toast.error("Failed to update status");
+            console.error("Failed to update status:", error);
         }
 
         setIsActionModalOpen(false);
