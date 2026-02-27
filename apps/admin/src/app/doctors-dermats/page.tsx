@@ -102,7 +102,7 @@ export default function DoctorsDermatsPage() {
     >
   ) => {
     try {
-      await createDoctor(newDoctor).unwrap();
+      await createDoctor({ ...newDoctor, regionId }).unwrap();
       setIsNewDoctorModalOpen(false);
     } catch (err) {
       console.error("Failed to add doctor:", err);
@@ -119,7 +119,7 @@ export default function DoctorsDermatsPage() {
         return;
       }
       const { _id, ...updateData } = updatedDoctor;
-      await updateDoctor({ id: _id, ...updateData }).unwrap();
+      await updateDoctor({ id: _id, ...updateData, regionId }).unwrap();
       setIsNewDoctorModalOpen(false);
       setSelectedDoctor(null);
     } catch (err) {
@@ -424,10 +424,10 @@ export default function DoctorsDermatsPage() {
                         <TableCell>
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-semibold ${doctor.status === "Approved"
-                                ? "bg-green-100 text-green-800"
-                                : doctor.status === "Pending"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
+                              ? "bg-green-100 text-green-800"
+                              : doctor.status === "Pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
                               }`}
                           >
                             {doctor.status}
