@@ -34,34 +34,49 @@ const generateDoctorReferralCode = async (name) => {
   }
   return referralCode;
 };
+export const POST = authMiddlewareAdmin(
+  async (req) => {
+    try {
+      await initDb();
+      const body = await req.json();
 
-// POST - Create a new doctor
-export const POST = authMiddlewareAdmin(async (req) => {
-  try {
-    await initDb();
-    const body = await req.json();
+      // Validate required fields
+      const requiredFields = [
+        "name", "email", "phone", "gender", "password",
+        "registrationNumber", "doctorType", "specialties",
+        "experience", "clinicName", "clinicAddress",
+        "state", "city", "pincode", "location",
+        "physicalConsultationStartTime", "physicalConsultationEndTime",
+        "assistantName", "assistantContact", "doctorAvailability"
+      ];
 
-    // Validate required fields
-    const requiredFields = [
-      'name', 'email', 'phone', 'gender', 'password',
-      'registrationNumber', 'doctorType', 'specialties',
-      'experience', 'clinicName', 'clinicAddress',
-      'state', 'city', 'pincode', 'location',
-      'physicalConsultationStartTime', 'physicalConsultationEndTime',
-      'assistantName', 'assistantContact', 'doctorAvailability'
-    ];
-
-    console.log("[POST /api/admin/doctors] Received body:", body);
-    for (const field of requiredFields) {
-      const value = body[field];
-      if (value === undefined || value === null || (typeof value === 'string' && value.trim() === '')) {
-        console.warn(`[POST /api/admin/doctors] Missing or empty field: ${field}`);
-        return NextResponse.json({ message: `Missing required field: ${field}` }, { status: 400 });
+      for (const field of requiredFields) {
+        const value = body[field];
+        if (
+          value === undefined ||
+          value === null ||
+          (typeof value === "string" && value.trim() === "")
+        ) {
+          return NextResponse.json(
+            { message: `Missing required field: ${field}` },
+            { status: 400 }
+          );
+        }
       }
-    }
 
-    // ... (rest of the code)
-  }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "doctors:edit");
+      return NextResponse.json({ message: "Doctor created successfully" });
+
+    } catch (error) {
+      console.error("Error creating doctor:", error);
+      return NextResponse.json(
+        { message: "Error creating doctor", error: error.message },
+        { status: 500 }
+      );
+    }
+  },
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "doctors:edit"
+);
 
 // GET - List doctors with regional scoping
 export const GET = authMiddlewareAdmin(async (req) => {
@@ -108,20 +123,6 @@ export const PUT = authMiddlewareAdmin(async (req) => {
 }, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // DELETE - Remove a doctor
-export const DELETE = authMiddlewareAdmin(async (req) => {
-  try {
-    await initDb();
-    const { id } = await req.json();
-
-    if (!id) {
-      return NextResponse.json({ message: "ID is required for deletion" }, { status: 400 });
-    }
-
-    return Response.json(updatedDoctor);
-  },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
-    "doctors:edit"
-);
 
 export const DELETE = authMiddlewareAdmin(
   async (req) => {
