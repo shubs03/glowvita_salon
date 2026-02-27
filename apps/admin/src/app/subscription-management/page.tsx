@@ -2,8 +2,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import { useGetSubscriptionPlansQuery, useCreateSubscriptionPlanMutation, useUpdateSubscriptionPlanMutation, useDeleteSubscriptionPlanMutation, useGetVendorsQuery, useGetSuppliersQuery, useGetDoctorsQuery, useRenewPlanMutation, useGetRegionsQuery } from '@repo/store/api';
+import { setSelectedRegion, selectSelectedRegion, selectCurrentAdmin } from '../../../../../packages/store/src/slices/Admin/adminAuthSlice';
+import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
@@ -63,11 +64,13 @@ type VendorItem = {
 };
 
 export default function SubscriptionManagementPage() {
-  const { token, admin: user } = useSelector((state: any) => state.adminAuth);
+  const dispatch = useAppDispatch();
+  const selectedRegion = useAppSelector(selectSelectedRegion);
+  const { token } = useAppSelector((state: any) => state.adminAuth);
+  const user = useAppSelector(selectCurrentAdmin);
   const userRole = user?.roleName || user?.role;
   const userRegion = user?.assignedRegions?.[0];
 
-  const [selectedRegion, setSelectedRegion] = useState<string>(userRole === 'SUPER_ADMIN' || userRole === 'superadmin' ? "" : userRegion || "");
 
 
   const { data: regionsResponse } = useGetRegionsQuery(undefined);
@@ -211,7 +214,7 @@ export default function SubscriptionManagementPage() {
         isFeatured: false,
         planType: 'regular',
         status: 'Active',
-        regionId: userRole === 'SUPER_ADMIN' || userRole === 'superadmin' ? 'global' : userRegion || 'global'
+        regionId: userRole === 'SUPER_ADMIN' || userRole === 'superadmin' ? 'global' : (userRegion || 'global')
       });
     }
 
@@ -460,22 +463,6 @@ export default function SubscriptionManagementPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold font-headline">Subscription Management</h1>
-        {(userRole === 'SUPER_ADMIN' || userRole === 'superadmin') && (
-          <div className="flex items-center gap-2">
-            <Label>Region:</Label>
-            <Select value={selectedRegion || "global"} onValueChange={(val) => setSelectedRegion(val === "global" ? "" : val)}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Global" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="global">Global</SelectItem>
-                {regions.map((region: any) => (
-                  <SelectItem key={region._id} value={region._id}>{region.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">

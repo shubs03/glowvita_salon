@@ -1,6 +1,6 @@
 
 import _db from "@repo/lib/db";
-import { ReferralModel, C2CSettingsModel, C2VSettingsModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer.model";
+import { ReferralModel, C2CSettingsModel, C2VSettingsModel, V2VSettingsModel, S2SSettingsModel, D2DSettingsModel } from "@repo/lib/models/admin/Reffer.model";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 import jwt from "jsonwebtoken";
@@ -76,9 +76,10 @@ const validateSettings = (settings) => {
 export const POST = authMiddlewareAdmin(
   async (req) => {
     const body = await req.json();
-    const { referralType, referrer, referee, status, bonus, regionId } = body;
+    const { referrer, referee, status, bonus, regionId } = body;
+    const referralType = body.referralType || body.type;
 
-    if (!['C2C', 'C2V', 'V2V'].includes(referralType) || !referrer || !referee || !status || !bonus) {
+    if (!['C2C', 'C2V', 'V2V', 'S2S', 'D2D'].includes(referralType) || !referrer || !referee || !status || !bonus) {
       return Response.json(
         { message: "Required fields missing" },
         { status: 400 }
@@ -111,7 +112,7 @@ export const POST = authMiddlewareAdmin(
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
     const url = new URL(req.url);
-    const referralType = url.searchParams.get('referralType');
+    const referralType = url.searchParams.get('referralType') || url.searchParams.get('type');
     const regionId = url.searchParams.get('regionId');
     const isSettings = url.searchParams.get('settings') === 'true';
 
@@ -241,9 +242,10 @@ export const DELETE = authMiddlewareAdmin(
 export const PATCH = authMiddlewareAdmin(
   async (req) => {
     const body = await req.json();
-    const { referralType, settings } = body;
+    const { settings } = body;
+    const referralType = body.referralType || body.type;
 
-    if (!['C2C', 'C2V', 'V2V'].includes(referralType)) {
+    if (!['C2C', 'C2V', 'V2V', 'S2S', 'D2D'].includes(referralType)) {
       return Response.json(
         { message: "Invalid referral type" },
         { status: 400 }

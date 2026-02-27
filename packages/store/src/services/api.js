@@ -664,11 +664,14 @@ export const glowvitaApi = createApi({
 
     // offfers
     getAdminOffers: builder.query({
-      query: (regionId) => ({ 
-        url: "/admin/offers", 
-        method: "GET",
-        params: regionId ? { regionId } : {}
-      }),
+      query: (params) => {
+        const regionId = typeof params === 'string' ? params : params?.regionId;
+        return { 
+          url: "/admin/offers", 
+          method: "GET",
+          params: regionId ? { regionId } : {}
+        };
+      },
       providesTags: ["offers"],
     }),
 
@@ -702,7 +705,8 @@ export const glowvitaApi = createApi({
     // refferal endpoints
     getReferrals: builder.query({
       query: (params) => {
-        const { referralType, regionId } = typeof params === 'string' ? { referralType: params } : params;
+        const referralType = typeof params === 'string' ? params : params?.referralType || params?.type;
+        const regionId = typeof params === 'object' ? params?.regionId : undefined;
         return {
           url: "/admin/referrals",
           method: "GET",
@@ -746,7 +750,8 @@ export const glowvitaApi = createApi({
 
     getSettings: builder.query({
       query: (params) => {
-        const { referralType, regionId } = typeof params === 'string' ? { referralType: params } : params;
+        const referralType = typeof params === 'string' ? params : params?.referralType || params?.type;
+        const regionId = typeof params === 'object' ? params?.regionId : undefined;
         return {
           url: "/admin/referrals",
           method: "GET",
@@ -866,12 +871,13 @@ export const glowvitaApi = createApi({
     }),
 
     getVendors: builder.query({
-      query: (regionId) => {
-        const params = new URLSearchParams();
+      query: (params) => {
+        const regionId = typeof params === 'string' ? params : params?.regionId;
+        const queryParams = new URLSearchParams();
         if (regionId && regionId !== 'all') {
-          params.append('regionId', regionId);
+          queryParams.append('regionId', regionId);
         }
-        const queryString = params.toString();
+        const queryString = queryParams.toString();
         return {
           url: `/admin/vendor${queryString ? `?${queryString}` : ""}`,
           method: "GET"
@@ -946,9 +952,10 @@ export const glowvitaApi = createApi({
 
     // Doctor Endpoints
     getDoctors: builder.query({
-      query: (params = {}) => {
+      query: (params) => {
+        const regionId = typeof params === 'string' ? params : params?.regionId;
         const queryParams = new URLSearchParams();
-        if (params.regionId) queryParams.append("regionId", params.regionId);
+        if (regionId && regionId !== 'all') queryParams.append("regionId", regionId);
         const queryString = queryParams.toString();
         return {
           url: `/admin/doctors${queryString ? `?${queryString}` : ""}`,
@@ -987,11 +994,14 @@ export const glowvitaApi = createApi({
 
     // Subscription Plan Endpoints
     getSubscriptionPlans: builder.query({
-      query: (regionId) => ({ 
-        url: "/admin/subscription-plans", 
-        method: "GET",
-        params: regionId ? { regionId } : {}
-      }),
+      query: (params) => {
+        const regionId = typeof params === 'string' ? params : params?.regionId;
+        return { 
+          url: "/admin/subscription-plans", 
+          method: "GET",
+          params: regionId ? { regionId } : {}
+        };
+      },
       providesTags: ["SubscriptionPlan"],
     }),
 
@@ -1038,12 +1048,28 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Vendor"],
     }),
 
+    getSupplierOrders: builder.query({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.regionId && params.regionId !== 'all') queryParams.append('regionId', params.regionId);
+        if (params.status && params.status !== 'all') queryParams.append('status', params.status);
+        const queryString = queryParams.toString();
+        return {
+          url: `/admin/supplier-orders${queryString ? `?${queryString}` : ""}`,
+          method: "GET"
+        };
+      },
+      providesTags: ["Order"],
+      transformResponse: (response) => (response && response.success ? response.data || [] : []),
+    }),
+
     // Supplier Endpoints
     getSuppliers: builder.query({
-      query: (regionId) => {
-        const params = new URLSearchParams();
-        if (regionId && regionId !== 'all') params.append('regionId', regionId);
-        const queryString = params.toString();
+      query: (params) => {
+        const regionId = typeof params === 'string' ? params : params?.regionId;
+        const queryParams = new URLSearchParams();
+        if (regionId && regionId !== 'all') queryParams.append('regionId', regionId);
+        const queryString = queryParams.toString();
         return {
           url: `/admin/suppliers${queryString ? `?${queryString}` : ""}`,
           method: "GET"
@@ -3066,6 +3092,7 @@ export const {
   useUpdateDoctorMutation,
   useDeleteDoctorMutation,
   useGetSuppliersQuery,
+  useGetSupplierOrdersQuery,
   useCreateSupplierMutation,
   useRegisterSupplierMutation,
   useUpdateSupplierMutation,

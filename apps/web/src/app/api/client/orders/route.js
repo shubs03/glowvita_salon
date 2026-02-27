@@ -22,7 +22,7 @@ export async function GET(req) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const orders = await ClientOrder.find({ userId: payload.userId }).sort({ createdAt: -1 });
+    const orders = await ClientOrder.find({ userId: payload.userId }).sort({ createdAt: -1 }).lean();
 
     // Enhance orders with product origin information
     const enhancedOrders = await Promise.all(orders.map(async (order) => {
@@ -43,7 +43,7 @@ export async function GET(req) {
       }));
 
       return {
-        ...order.toObject(),
+        ...order,
         items: enhancedItems
       };
     }));

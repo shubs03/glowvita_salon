@@ -116,7 +116,7 @@ export default function OffersCouponsPage() {
   });
 
   // RTK Query hooks
-  const { data: couponsData = [], isLoading, isError, refetch } = useGetAdminOffersQuery(selectedRegion || undefined);
+  const { data: couponsData = [], isLoading, isError, refetch } = useGetAdminOffersQuery({ regionId: selectedRegion || undefined });
   const { data: superData = [] } = useGetSuperDataQuery(undefined);
 
   const [createOffer, { isLoading: isCreating }] = useCreateAdminOfferMutation();
@@ -378,23 +378,8 @@ export default function OffersCouponsPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold font-headline">Offers & Coupons</h1>
-        {(userRole === 'SUPER_ADMIN' || userRole === 'superadmin') && (
-          <div className="flex items-center gap-2">
-            <Label>Region:</Label>
-            <Select value={selectedRegion || "all"} onValueChange={(val) => handleRegionChange(val === "all" ? "" : val)}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Global" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Global</SelectItem>
-                {regions.map((region: any) => (
-                  <SelectItem key={region._id} value={region._id}>{region.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
       </div>
+
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>

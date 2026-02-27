@@ -47,7 +47,7 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'v2winonline.com',
+        hostname: 'glowvitasalon.com',
         port: '',
         pathname: '/**',
       },
@@ -66,6 +66,12 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.logo.wine',
         port: '',
         pathname: '/**',
       },
