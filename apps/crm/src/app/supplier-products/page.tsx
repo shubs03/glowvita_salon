@@ -122,7 +122,10 @@ export default function SupplierProductsPage() {
     const uniqueCategories = [...new Set(productsData.map(p => p.category))];
     const categories = uniqueCategories.length;
 
-    const totalValue = productsData.reduce((sum, p) => sum + p.salePrice * p.stock, 0);
+    const totalValue = productsData.reduce((sum, p) => {
+      const price = p.salePrice > 0 ? p.salePrice : p.price;
+      return sum + (price * p.stock);
+    }, 0);
 
     return { totalProducts, pendingProducts, categories, totalValue };
   }, [productsData]);
@@ -131,7 +134,10 @@ export default function SupplierProductsPage() {
   const filteredProductStats = useMemo(() => {
     if (!Array.isArray(filteredProducts)) return { filteredTotalValue: 0, filteredCategories: 0 };
 
-    const filteredTotalValue = filteredProducts.reduce((sum, p) => sum + p.salePrice * p.stock, 0);
+    const filteredTotalValue = filteredProducts.reduce((sum, p) => {
+      const price = p.salePrice > 0 ? p.salePrice : p.price;
+      return sum + (price * p.stock);
+    }, 0);
     const uniqueFilteredCategories = [...new Set(filteredProducts.map(p => p.category))];
     const filteredCategories = uniqueFilteredCategories.length;
 
@@ -158,8 +164,19 @@ export default function SupplierProductsPage() {
       return;
     }
 
+    // Ensure salePrice defaults to regular price if not entered or set to 0
+    const priceValue = Number(formData.price) || 0;
+    const salePriceValue = Number(formData.salePrice);
+    const finalSalePrice = (salePriceValue === 0 || isNaN(salePriceValue)) ? priceValue : salePriceValue;
+
+    const mutationData = {
+      ...formData,
+      price: priceValue,
+      salePrice: finalSalePrice
+    };
+
     const mutation = selectedProduct ? updateProduct : createProduct;
-    let payload = selectedProduct ? { id: selectedProduct._id, ...formData } : formData;
+    let payload = selectedProduct ? { id: selectedProduct._id, ...mutationData } : mutationData;
 
     if (
       selectedProduct &&

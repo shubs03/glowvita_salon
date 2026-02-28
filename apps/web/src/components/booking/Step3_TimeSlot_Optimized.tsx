@@ -30,18 +30,18 @@ const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage, isHomeServi
       { name: 'Confirm Booking', step: 4 }
     ]
     : isHomeService
-    ? [
-      { name: 'Select Service', step: 1 },
-      { name: 'Select Professional', step: 2 },
-      { name: 'Select Location', step: 3 },
-      { name: 'Select Date & Time', step: 4 }
-    ]
-    : [
-      { name: 'Select Service', step: 1 },
-      { name: 'Select Professional', step: 2 },
-      { name: 'Select Date & Time', step: 3 },
-      { name: 'Confirm Booking', step: 4 }
-    ];
+      ? [
+        { name: 'Select Service', step: 1 },
+        { name: 'Select Professional', step: 2 },
+        { name: 'Select Location', step: 3 },
+        { name: 'Select Date & Time', step: 4 }
+      ]
+      : [
+        { name: 'Select Service', step: 1 },
+        { name: 'Select Professional', step: 2 },
+        { name: 'Select Date & Time', step: 3 },
+        { name: 'Confirm Booking', step: 4 }
+      ];
 
   return (
     <nav className="flex items-center text-sm font-medium text-muted-foreground mb-6">
@@ -232,15 +232,15 @@ export const Step3_TimeSlot = memo(({
 
       const data = await response.json();
       const newSlots = data.slots || [];
-      
+
       // Only update if slots actually changed (prevents unnecessary re-renders)
       const slotsChanged = JSON.stringify(previousSlotsRef.current) !== JSON.stringify(newSlots);
-      
+
       if (slotsChanged || !isBackgroundFetch) {
         setSlots(newSlots);
         previousSlotsRef.current = newSlots;
       }
-      
+
       setLastRefresh(new Date());
     } catch (error: any) {
       console.error('Error fetching slots:', error);

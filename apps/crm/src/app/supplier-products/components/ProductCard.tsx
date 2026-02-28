@@ -40,7 +40,7 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, onEdit, onDelete, onView, onToggleActive }: ProductCardProps) => {
   const calculateDiscountPercentage = () => {
-    if (product.price > product.salePrice) {
+    if (product.salePrice > 0 && product.price > product.salePrice) {
       return Math.round(((product.price - product.salePrice) / product.price) * 100);
     }
     return 0;
@@ -120,7 +120,7 @@ const ProductCard = ({ product, onEdit, onDelete, onView, onToggleActive }: Prod
         )}
         <div className="flex justify-between items-center mt-auto">
           <p className="font-bold text-primary">
-            ₹{product.salePrice.toFixed(2)}
+            ₹{(product.salePrice > 0 ? product.salePrice : product.price).toFixed(2)}
           </p>
           {!product.isActive && (
             <Badge variant="outline" className="text-[10px] py-0 h-4 border-dashed">

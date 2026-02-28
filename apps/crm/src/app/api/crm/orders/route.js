@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import OrderModel from '@repo/lib/models/Vendor/Order.model';
+import ProductModel from '@repo/lib/models/Vendor/Product.model';
+import InventoryTransactionModel from '@repo/lib/models/Vendor/InventoryTransaction.model';
 import { authMiddlewareCrm } from '@/middlewareCrm';
 import mongoose from 'mongoose';
 
@@ -40,15 +42,18 @@ export const GET = authMiddlewareCrm(async (req) => {
 export const POST = authMiddlewareCrm(async (req) => {
   try {
     const vendorId = req.user.userId;
-    const { items, supplierId, totalAmount, shippingAddress } = await req.json();
+    let { items, supplierId, totalAmount, shippingAddress } = await req.json();
 
     if (!items || items.length === 0 || !supplierId || !totalAmount || !shippingAddress) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
     }
 
+    // Normalize supplierId - it might be an object if populated on the frontend
+    const actualSupplierId = typeof supplierId === 'object' && supplierId._id ? supplierId._id : supplierId;
+
     // Validate minimum order value for supplier
     const SupplierModel = (await import("@repo/lib/models/Vendor/Supplier.model")).default;
-    const supplier = await SupplierModel.findById(supplierId);
+    const supplier = await SupplierModel.findById(actualSupplierId);
 
     if (supplier && supplier.minOrderValue > 0 && totalAmount < supplier.minOrderValue) {
       return NextResponse.json({
@@ -56,24 +61,78 @@ export const POST = authMiddlewareCrm(async (req) => {
       }, { status: 400 });
     }
 
+    // Normalize items productId - they might be objects if populated
+    const normalizedItems = items.map(item => ({
+      ...item,
+      productId: typeof item.productId === 'object' && item.productId._id ? item.productId._id : item.productId
+    }));
+
     const orderId = `B2B-${Date.now()}`; // Generate a unique order ID
+
+    // Check stock for all items before proceeding
+    for (const item of normalizedItems) {
+      if (item.productId) {
+        const product = await ProductModel.findById(item.productId);
+        if (!product) {
+          return NextResponse.json({ message: `Product not found: ${item.productName}` }, { status: 404 });
+        }
+        if (product.stock < item.quantity) {
+          return NextResponse.json({
+            message: `Insufficient stock for ${item.productName}. Available: ${product.stock}, requested: ${item.quantity}`
+          }, { status: 400 });
+        }
+      }
+    }
 
     const newOrder = new OrderModel({
       orderId,
       vendorId,
-      supplierId,
-      items,
+      supplierId: actualSupplierId, // Use the string ID
+      items: normalizedItems, // Use normalized items
       totalAmount,
       shippingAddress,
+      regionId: supplier?.regionId, // Inherit regionId from supplier
       status: 'Pending',
       statusHistory: [{ status: 'Pending', notes: 'Order placed by vendor.' }]
     });
 
     await newOrder.save();
+
+    // Decrement stock and create inventory transactions for each item
+    for (const item of normalizedItems) {
+      if (item.productId) {
+        const product = await ProductModel.findById(item.productId);
+        if (product) {
+          const previousStock = product.stock;
+          const newStock = previousStock - item.quantity;
+
+          // Update product stock
+          await ProductModel.findByIdAndUpdate(item.productId, {
+            $set: { stock: Math.max(0, newStock) }
+          });
+
+          // Create inventory transaction record for the supplier
+          const transaction = new InventoryTransactionModel({
+            productId: item.productId,
+            vendorId: actualSupplierId,
+            productCategory: product.category,
+            type: 'OUT',
+            quantity: item.quantity,
+            previousStock,
+            newStock: Math.max(0, newStock),
+            reason: `B2B Order ${orderId} placed by vendor ${vendorId}`,
+            reference: orderId,
+            performedBy: vendorId
+          });
+          await transaction.save();
+        }
+      }
+    }
+
     return NextResponse.json(newOrder, { status: 201 });
   } catch (error) {
     console.error("Error creating order:", error);
-    return NextResponse.json({ message: "Failed to create order" }, { status: 500 });
+    return NextResponse.json({ message: "Failed to create order", error: error.message }, { status: 500 });
   }
 }, ['vendor', 'staff']);
 
@@ -156,6 +215,39 @@ export const PATCH = authMiddlewareCrm(async (req) => {
 
     if (!isAuthorized) {
       return NextResponse.json({ message: "You are not authorized to update this order" }, { status: 403 });
+    }
+
+    // If status is being changed to Cancelled, restore stock
+    if (status === 'Cancelled' && order.status !== 'Cancelled') {
+      for (const item of order.items) {
+        if (item.productId) {
+          const product = await ProductModel.findById(item.productId);
+          if (product) {
+            const previousStock = product.stock;
+            const newStock = previousStock + item.quantity;
+
+            // Update product stock
+            await ProductModel.findByIdAndUpdate(item.productId, {
+              $set: { stock: newStock }
+            });
+
+            // Create inventory transaction record for restoration
+            const transaction = new InventoryTransactionModel({
+              productId: item.productId,
+              vendorId: order.supplierId,
+              productCategory: product.category,
+              type: 'IN',
+              quantity: item.quantity,
+              previousStock,
+              newStock,
+              reason: `B2B Order ${order.orderId} cancelled. Stock restored.`,
+              reference: order.orderId,
+              performedBy: userId
+            });
+            await transaction.save();
+          }
+        }
+      }
     }
 
     order.status = status;
