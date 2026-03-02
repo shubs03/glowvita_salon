@@ -91,25 +91,21 @@ type Vendor = {
   documents?: {
     [key: string]: any;
     aadharCard?: string | null;
-    udyogAadhar?: string | null;
     udhayamCert?: string | null;
-    shopLicense?: string | null;
+    shopAct?: string | null;
     panCard?: string | null;
     otherDocs?: string[] | null;
     aadharCardStatus?: string;
-    udyogAadharStatus?: string;
     udhayamCertStatus?: string;
-    shopLicenseStatus?: string;
+    shopActStatus?: string;
     panCardStatus?: string;
     aadharCardRejectionReason?: string | null;
-    udyogAadharRejectionReason?: string | null;
     udhayamCertRejectionReason?: string | null;
-    shopLicenseRejectionReason?: string | null;
+    shopActRejectionReason?: string | null;
     panCardRejectionReason?: string | null;
     aadharCardAdminRejectionReason?: string | null;
-    udyogAadharAdminRejectionReason?: string | null;
     udhayamCertAdminRejectionReason?: string | null;
-    shopLicenseAdminRejectionReason?: string | null;
+    shopActAdminRejectionReason?: string | null;
     panCardAdminRejectionReason?: string | null;
   };
 };
@@ -173,14 +169,12 @@ type Doctor = {
   documents?: {
     aadharCard?: string;
     panCard?: string;
-    udyogAadhar?: string;
     udhayamCert?: string;
-    shopLicense?: string;
+    shopAct?: string;
     aadharCardStatus?: string;
     panCardStatus?: string;
-    udyogAadharStatus?: string;
     udhayamCertStatus?: string;
-    shopLicenseStatus?: string;
+    shopActStatus?: string;
   };
 };
 
@@ -202,25 +196,21 @@ interface Supplier {
   documents?: {
     [key: string]: any;
     aadharCard?: string | null;
-    udyogAadhar?: string | null;
     udhayamCert?: string | null;
-    shopLicense?: string | null;
+    shopAct?: string | null;
     panCard?: string | null;
     otherDocs?: string[] | null;
     aadharCardStatus?: string;
-    udyogAadharStatus?: string;
     udhayamCertStatus?: string;
-    shopLicenseStatus?: string;
+    shopActStatus?: string;
     panCardStatus?: string;
     aadharCardRejectionReason?: string | null;
-    udyogAadharRejectionReason?: string | null;
     udhayamCertRejectionReason?: string | null;
-    shopLicenseRejectionReason?: string | null;
+    shopActRejectionReason?: string | null;
     panCardRejectionReason?: string | null;
     aadharCardAdminRejectionReason?: string | null;
-    udyogAadharAdminRejectionReason?: string | null;
     udhayamCertAdminRejectionReason?: string | null;
-    shopLicenseAdminRejectionReason?: string | null;
+    shopActAdminRejectionReason?: string | null;
     panCardAdminRejectionReason?: string | null;
   };
 }
@@ -330,9 +320,8 @@ export default function VendorApprovalPage() {
     const mandatoryDocs = [
       { key: "aadharCard", label: "Aadhar Card" },
       { key: "panCard", label: "PAN Card" },
-      { key: "udyogAadhar", label: "Udyog Aadhar" },
       { key: "udhayamCert", label: "Udhayam Certificate" },
-      { key: "shopLicense", label: "Shop License" },
+      { key: "shopAct", label: "Shop Act" },
     ];
 
     const documents = entity.documents || {};

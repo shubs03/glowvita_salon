@@ -54,9 +54,8 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ entity, r
   const documentTypes = [
     { key: 'aadharCard', label: 'Aadhar Card' },
     { key: 'panCard', label: 'PAN Card' },
-    { key: 'udyogAadhar', label: 'Udyog Aadhar' },
     { key: 'udhayamCert', label: 'Udhayam Certificate' },
-    { key: 'shopLicense', label: 'Shop License' }
+    { key: 'shopAct', label: 'Shop Act' }
   ];
 
   const getDocumentStatus = (docType: string) => {

@@ -339,8 +339,8 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
     // Check if this is a document status update
     else if (supplierId && documentType && status) {
       const validDocumentTypes = [
-        'aadharCard', 'udyogAadhar', 'udhayamCert',
-        'shopLicense', 'panCard'
+        'aadharCard', 'udhayamCert',
+        'shopAct', 'panCard'
       ];
 
       if (!validDocumentTypes.includes(documentType)) {
