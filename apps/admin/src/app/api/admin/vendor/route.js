@@ -356,38 +356,38 @@ export const POST = authMiddlewareAdmin(
 export const GET = authMiddlewareAdmin(
   async (req) => {
     const url = new URL(req.url);
-  const vendorIdParam = url.searchParams.get('vendorId');
+    const vendorIdParam = url.searchParams.get('vendorId');
 
-  console.log('[Vendor GET] Request from user:', {
-    userId: req.user._id,
-    roleName: req.user.roleName,
-    assignedRegions: req.user.assignedRegions,
-    vendorIdParam,
-    requestUrl: req.url
-  });
+    console.log('[Vendor GET] Request from user:', {
+      userId: req.user._id,
+      roleName: req.user.roleName,
+      assignedRegions: req.user.assignedRegions,
+      vendorIdParam,
+      requestUrl: req.url
+    });
 
-  // If vendorId is provided, fetch clients for that vendor
-  if (vendorIdParam) {
-    try {
-      const clients = await ClientModel.find({ vendorId: vendorIdParam })
-        .sort({ lastVisit: -1, createdAt: -1 })
-        .select('-emergencyContact -socialMediaLinks -tags -notes')
-        .lean();
+    // If vendorId is provided, fetch clients for that vendor
+    if (vendorIdParam) {
+      try {
+        const clients = await ClientModel.find({ vendorId: vendorIdParam })
+          .sort({ lastVisit: -1, createdAt: -1 })
+          .select('-emergencyContact -socialMediaLinks -tags -notes')
+          .lean();
 
-      return Response.json(clients);
-    } catch (error) {
-      console.error('Error fetching vendor clients:', error);
-      return Response.json({ error: 'Failed to fetch clients' }, { status: 500 });
+        return Response.json(clients);
+      } catch (error) {
+        console.error('Error fetching vendor clients:', error);
+        return Response.json({ error: 'Failed to fetch clients' }, { status: 500 });
+      }
     }
-  }
 
-  // Otherwise fetch all vendors with region filter
-  const regionQuery = buildRegionQueryFromRequest(req);
-  console.log('[Vendor GET] Query:', regionQuery);
-  const vendors = await VendorModel.find(regionQuery).populate("subscription.plan", "name").select("-password").lean();
-  console.log('[Vendor GET] Found vendors:', vendors.length);
-  return Response.json(vendors);
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN","STAFF"],
+    // Otherwise fetch all vendors with region filter
+    const regionQuery = buildRegionQueryFromRequest(req);
+    console.log('[Vendor GET] Query:', regionQuery);
+    const vendors = await VendorModel.find(regionQuery).populate("subscription.plan", "name").select("-password").lean();
+    console.log('[Vendor GET] Found vendors:', vendors.length);
+    return Response.json(vendors);
+  }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
   "vendors:view"
 );
 
@@ -653,15 +653,31 @@ export const PATCH = authMiddlewareAdmin(
 
         const pendingOrRejectedDocs = mandatoryDocs.filter((doc) => {
           const isUploaded = documents[doc.key] && documents[doc.key] !== "";
-          const status = documents[`${doc.key}Status`];
-          return isUploaded && status !== "approved";
+          const docStatus = documents[`${doc.key}Status`];
+
+          // Aadhaar and PAN are strictly mandatory
+          if (doc.key === "aadharCard" || doc.key === "panCard") {
+            return !isUploaded || docStatus !== "approved";
+          }
+
+          // Other docs: if uploaded, must be approved
+          return isUploaded && docStatus !== "approved";
         });
 
         if (pendingOrRejectedDocs.length > 0) {
           const docLabels = pendingOrRejectedDocs.map((doc) => doc.label).join(", ");
+          const missingMandatory = pendingOrRejectedDocs
+            .filter(d => (d.key === "aadharCard" || d.key === "panCard") && (!documents[d.key] || documents[d.key] === ""))
+            .map(d => d.label);
+
+          let errorMessage = `Cannot approve vendor. The following documents are not approved: ${docLabels}`;
+          if (missingMandatory.length > 0) {
+            errorMessage = `Cannot approve vendor. The following mandatory documents are missing or not approved: ${docLabels}`;
+          }
+
           return Response.json(
             {
-              message: `Cannot approve vendor. The following documents are not approved: ${docLabels}`,
+              message: errorMessage,
             },
             { status: 400 }
           );
