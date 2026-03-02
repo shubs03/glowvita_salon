@@ -666,8 +666,8 @@ export const glowvitaApi = createApi({
     getAdminOffers: builder.query({
       query: (params) => {
         const regionId = typeof params === 'string' ? params : params?.regionId;
-        return { 
-          url: "/admin/offers", 
+        return {
+          url: "/admin/offers",
           method: "GET",
           params: regionId ? { regionId } : {}
         };
@@ -992,12 +992,36 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["doctors"],
     }),
 
+    updateDoctorStatus: builder.mutation({
+      query: ({ id, status }) => ({
+        url: "/admin/doctors",
+        method: "PATCH",
+        body: { id, status },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "doctors", id },
+        "doctors",
+      ],
+    }),
+
+    updateDoctorDocumentStatus: builder.mutation({
+      query: ({ doctorId, documentType, status, rejectionReason }) => ({
+        url: "/admin/doctors",
+        method: "PATCH",
+        body: { doctorId, documentType, status, rejectionReason },
+      }),
+      invalidatesTags: (result, error, { doctorId }) => [
+        { type: "doctors", id: doctorId },
+        "doctors",
+      ],
+    }),
+
     // Subscription Plan Endpoints
     getSubscriptionPlans: builder.query({
       query: (params) => {
         const regionId = typeof params === 'string' ? params : params?.regionId;
-        return { 
-          url: "/admin/subscription-plans", 
+        return {
+          url: "/admin/subscription-plans",
           method: "GET",
           params: regionId ? { regionId } : {}
         };
@@ -1143,8 +1167,8 @@ export const glowvitaApi = createApi({
     getCategories: builder.query({
       query: (params) => {
         const { regionId } = params || {};
-        return { 
-          url: "/admin/categories", 
+        return {
+          url: "/admin/categories",
           method: "GET",
           params: regionId ? { regionId } : {}
         };

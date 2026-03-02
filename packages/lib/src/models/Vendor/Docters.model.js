@@ -208,6 +208,81 @@ const doctorSchema = new mongoose.Schema({
     unique: true,
     sparse: true,
   },
+  documents: {
+    aadharCard: {
+      type: String, // URL to the uploaded document
+      default: null,
+    },
+    udyogAadhar: {
+      type: String,
+      default: null,
+    },
+    udhayamCert: {
+      type: String,
+      default: null,
+    },
+    shopLicense: {
+      type: String,
+      default: null,
+    },
+    panCard: {
+      type: String,
+      default: null,
+    },
+    otherDocs: [
+      {
+        type: String,
+        default: null,
+      },
+    ],
+    // Add document status fields
+    aadharCardStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    udyogAadharStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    udhayamCertStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    shopLicenseStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    panCardStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    // Add admin rejection reason fields
+    aadharCardAdminRejectionReason: {
+      type: String,
+      default: null,
+    },
+    udyogAadharAdminRejectionReason: {
+      type: String,
+      default: null,
+    },
+    udhayamCertAdminRejectionReason: {
+      type: String,
+      default: null,
+    },
+    shopLicenseAdminRejectionReason: {
+      type: String,
+      default: null,
+    },
+    panCardAdminRejectionReason: {
+      type: String,
+      default: null,
+    },
+  },
   createdAt: {
     type: Date,
     default: Date.now,

@@ -290,14 +290,30 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
         const pendingOrRejectedDocs = mandatoryDocs.filter((doc) => {
           const isUploaded = documents[doc.key] && documents[doc.key] !== "";
           const docStatus = documents[`${doc.key}Status`];
+
+          // Aadhaar and PAN are strictly mandatory
+          if (doc.key === "aadharCard" || doc.key === "panCard") {
+            return !isUploaded || docStatus !== "approved";
+          }
+
+          // Other docs: if uploaded, must be approved
           return isUploaded && docStatus !== "approved";
         });
 
         if (pendingOrRejectedDocs.length > 0) {
           const docLabels = pendingOrRejectedDocs.map((doc) => doc.label).join(", ");
+          const missingMandatory = pendingOrRejectedDocs
+            .filter(d => (d.key === "aadharCard" || d.key === "panCard") && (!documents[d.key] || documents[d.key] === ""))
+            .map(d => d.label);
+
+          let errorMessage = `Cannot approve supplier. The following documents are not approved: ${docLabels}`;
+          if (missingMandatory.length > 0) {
+            errorMessage = `Cannot approve supplier. The following mandatory documents are missing or not approved: ${docLabels}`;
+          }
+
           return NextResponse.json(
             {
-              message: `Cannot approve supplier. The following documents are not approved: ${docLabels}`,
+              message: errorMessage,
             },
             { status: 400 }
           );

@@ -45,6 +45,7 @@ import {
   useDeleteSupplierMutation,
   useGetDoctorsQuery,
   useUpdateDoctorMutation,
+  useUpdateDoctorStatusMutation,
   useDeleteDoctorMutation,
   useGetVendorsQuery,
   useUpdateVendorStatusMutation,
@@ -169,6 +170,18 @@ type Doctor = {
   assistantName: string;
   assistantContact: string;
   doctorAvailability: string;
+  documents?: {
+    aadharCard?: string;
+    panCard?: string;
+    udyogAadhar?: string;
+    udhayamCert?: string;
+    shopLicense?: string;
+    aadharCardStatus?: string;
+    panCardStatus?: string;
+    udyogAadharStatus?: string;
+    udhayamCertStatus?: string;
+    shopLicenseStatus?: string;
+  };
 };
 
 interface Supplier {
@@ -224,7 +237,7 @@ export default function VendorApprovalPage() {
   const { data: suppliersData = [], isLoading: suppliersLoading, refetch: refetchSuppliers } = useGetSuppliersQuery(selectedRegion);
   const [updateSupplierStatus] = useUpdateSupplierStatusMutation();
   const [deleteSupplier] = useDeleteSupplierMutation();
-  const { data: doctorsData = [], isLoading: doctorsLoading } = useGetDoctorsQuery(selectedRegion);
+  const { data: doctorsData = [], isLoading: doctorsLoading, refetch: refetchDoctors } = useGetDoctorsQuery(selectedRegion);
   const { data: pendingServices = [], isLoading: servicesLoading, refetch: refetchPendingServices } = useGetVendorServicesForApprovalQuery({ status: 'pending', regionId: selectedRegion });
   const [updateServiceStatus] = useUpdateServiceStatusMutation();
 
@@ -241,6 +254,7 @@ export default function VendorApprovalPage() {
   const [updateWeddingPackageStatus] = useUpdateWeddingPackageStatusMutation();
 
   const [updateDoctor] = useUpdateDoctorMutation();
+  const [updateDoctorStatus] = useUpdateDoctorStatusMutation();
   const [deleteDoctor] = useDeleteDoctorMutation();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -312,7 +326,7 @@ export default function VendorApprovalPage() {
     return false;
   });
 
-  const getUnapprovedDocuments = (entity: Vendor | Supplier) => {
+  const getUnapprovedDocuments = (entity: Vendor | Supplier | Doctor) => {
     const mandatoryDocs = [
       { key: "aadharCard", label: "Aadhar Card" },
       { key: "panCard", label: "PAN Card" },
@@ -324,8 +338,15 @@ export default function VendorApprovalPage() {
     const documents = entity.documents || {};
     return mandatoryDocs
       .filter((doc) => {
-        const isUploaded = documents[doc.key] && documents[doc.key] !== "";
+        const isUploaded = !!((documents as any)[doc.key] && (documents as any)[doc.key] !== "");
         const status = (documents as any)[`${doc.key}Status`];
+
+        // Aadhaar and PAN are strictly mandatory
+        if (doc.key === "aadharCard" || doc.key === "panCard") {
+          return !isUploaded || status !== "approved";
+        }
+
+        // Other docs: if uploaded, must be approved
         return isUploaded && status !== "approved";
       })
       .map((doc) => doc.label);
@@ -402,7 +423,7 @@ export default function VendorApprovalPage() {
           toast.success(`Doctor "${itemName}" deleted.`);
         } else {
           const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
-          await updateDoctor({ id: doctor._id, status: newStatus }).unwrap();
+          await updateDoctorStatus({ id: doctor._id, status: newStatus }).unwrap();
           toast.success(`Doctor "${itemName}" status updated to ${newStatus}.`);
         }
       } else if (itemType === 'service') {
@@ -478,8 +499,9 @@ export default function VendorApprovalPage() {
         toast.success(`Wedding Package "${pkg.name}" has been ${newStatus}.`);
         refetchPendingWeddingPackages();
       }
-    } catch (error) {
-      // Global error handler handles network/server errors with better messages
+    } catch (error: any) {
+      const errorMessage = error?.data?.message || error?.message || 'Action failed. Please try again.';
+      toast.error(errorMessage);
       console.error('Action failed:', error);
     }
 
@@ -1210,8 +1232,16 @@ export default function VendorApprovalPage() {
                               <Eye className="h-4 w-4" />
                               <span className="sr-only">View</span>
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(doctor, 'doctor', 'approve')}>
-                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleActionClick(doctor, 'doctor', 'approve')}
+                              disabled={getUnapprovedDocuments(doctor).length > 0}
+                              title={getUnapprovedDocuments(doctor).length > 0
+                                ? `Approve documents first: ${getUnapprovedDocuments(doctor).join(', ')}`
+                                : 'Approve Doctor'}
+                            >
+                              <CheckCircle className={cn("h-4 w-4", getUnapprovedDocuments(doctor).length > 0 ? "text-gray-400" : "text-green-600")} />
                               <span className="sr-only">Approve</span>
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleActionClick(doctor, 'doctor', 'reject')}>
@@ -1656,6 +1686,29 @@ export default function VendorApprovalPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Document Management Section */}
+                    {doctor.documents ? (
+                      <div className="pt-6 border-t mt-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-sm font-semibold text-primary flex items-center gap-2 uppercase tracking-wide">
+                            <FileCheck className="h-4 w-4" /> Document Verification
+                          </h4>
+                          <Badge variant="outline" className="text-[10px] font-bold uppercase transition-colors">
+                            {getUnapprovedDocuments(doctor).length > 0
+                              ? `${getUnapprovedDocuments(doctor).length} Pending Docs`
+                              : "All Documents Approved"}
+                          </Badge>
+                        </div>
+                        <DocumentStatusManager
+                          entity={doctor}
+                          role="doctor"
+                          onUpdate={() => {
+                            refetchDoctors();
+                          }}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 );
               }
