@@ -44,7 +44,7 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep:
     <div className="w-full mb-4 mt-2">
       <div className="flex space-x-2">
         {/* Step 1 Line */}
-        <div 
+        <div
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
             currentStep >= 1 ? "bg-purple-600" : "bg-gray-200"
@@ -52,7 +52,7 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep:
           onClick={() => currentStep > 1 && setStep(1)}
         />
         {/* Step 2 Line */}
-        <div 
+        <div
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
             currentStep >= 2 ? "bg-purple-600" : "bg-gray-200"
@@ -60,7 +60,7 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep:
           onClick={() => currentStep > 2 && setStep(2)}
         />
         {/* Step 3 Line */}
-        <div 
+        <div
           className={cn(
             "h-1 flex-1 rounded-full transition-colors cursor-pointer",
             currentStep >= 3 ? "bg-purple-600" : "bg-gray-200"
@@ -74,7 +74,7 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep:
 
 export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
   const { data: dropdownData = [], isLoading: isLoadingDropdowns } = useGetSuperDataQuery(undefined);
-  
+
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -108,7 +108,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
 
   const [step, setStep] = useState(1);
   const [createDoctor, { isLoading }] = useCreateDoctorMutation();
-  
+
   const doctorTypes = [
     { name: "Physician", description: "Specializes in non-surgical medical care." },
     { name: "Surgeon", description: "Specializes in surgical procedures." }
@@ -125,7 +125,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     const diseaseMap = new Map();
     if (formData.specialties.length > 0) {
       const selectedSpecialtyIds = formData.specialties;
-      
+
       allDiseases.forEach((disease: any) => {
         if (selectedSpecialtyIds.includes(disease.parentId)) {
           const specialty = allSpecialties.find((s: any) => s._id === disease.parentId);
@@ -143,7 +143,16 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    let finalValue = value;
+
+    if (name === "name") {
+      finalValue = value.replace(/[^a-zA-Z]/g, "");
+    } else if (name === "phone") {
+      // Allow only digits and limit to 10
+      finalValue = value.replace(/\D/g, "").slice(0, 10);
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: finalValue }));
   };
 
   const handleDoctorTypeChange = (typeName: string, e: React.MouseEvent) => {
@@ -159,7 +168,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
       const newSpecialties = prev.specialties.includes(specId)
         ? prev.specialties.filter(id => id !== specId)
         : [...prev.specialties, specId];
-      
+
       const validDiseases = prev.diseases.filter(diseaseId => {
         const disease = allDiseases.find((d: any) => d._id === diseaseId);
         return newSpecialties.includes(disease?.parentId);
@@ -191,12 +200,12 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
       toast.error("Passwords do not match.");
       return;
     }
-    
+
     const specialtyNames = formData.specialties.map(id => allSpecialties.find((s: any) => s._id === id)?.name).filter(Boolean);
     const diseaseNames = formData.diseases.map(id => allDiseases.find((d: any) => d._id === id)?.name).filter(Boolean);
-    
+
     const submissionData = { ...formData, specialties: specialtyNames, diseases: diseaseNames };
-    
+
     try {
       await createDoctor(submissionData).unwrap();
       toast.success(`Dr. ${formData.name}'s registration submitted successfully!`);
@@ -255,7 +264,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.doctorType) newErrors.doctorType = 'Doctor type is required';
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;  
+    return Object.keys(newErrors).length === 0;
   };
 
   const validateStep3 = () => {
@@ -269,7 +278,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
   const navigateToNextStep = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     // Step 1 validation
     if (step === 1) {
       if (!validateStep1()) {
@@ -277,7 +286,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
         return;
       }
     }
-    
+
     // Step 2 validation
     if (step === 2) {
       if (!validateStep2()) {
@@ -285,7 +294,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
         return;
       }
     }
-    
+
     // Only navigate to next step, never submit
     if (step < 3) {
       setStep(s => s + 1);
@@ -295,7 +304,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
   const navigateToPrevStep = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (step > 1) {
       setStep(s => s - 1);
     }
@@ -305,7 +314,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
   const handleFinalSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (step === 3) {
       await handleActualSubmit();
     } else {
@@ -330,7 +339,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
   };
 
   const renderStepContent = () => {
-    switch(step) {
+    switch (step) {
       case 1:
         return (
           <div className="space-y-4 sm:space-y-6 animate-in fade-in-50 duration-500">
@@ -341,11 +350,11 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
               <div>
-                <Input 
+                <Input
                   id="name"
-                  name="name" 
-                  placeholder="Full Name" 
-                  onChange={handleChange} 
+                  name="name"
+                  placeholder="Full Name"
+                  onChange={handleChange}
                   value={formData.name}
                   onKeyDown={handleInputKeyDown}
                   className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
@@ -354,11 +363,11 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                 {renderError('name')}
               </div>
               <div>
-                <Input 
+                <Input
                   id="registrationNumber"
-                  name="registrationNumber" 
-                  placeholder="Registration Number" 
-                  onChange={handleChange} 
+                  name="registrationNumber"
+                  placeholder="Registration Number"
+                  onChange={handleChange}
                   value={formData.registrationNumber}
                   onKeyDown={handleInputKeyDown}
                   className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
@@ -369,12 +378,12 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
               <div>
-                <Input 
+                <Input
                   id="email"
-                  name="email" 
-                  type="email" 
-                  placeholder="Email Address" 
-                  onChange={handleChange} 
+                  name="email"
+                  type="email"
+                  placeholder="Email Address"
+                  onChange={handleChange}
                   value={formData.email}
                   onKeyDown={handleInputKeyDown}
                   className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
@@ -383,38 +392,39 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                 {renderError('email')}
               </div>
               <div>
-                <Input 
+                <Input
                   id="phone"
-                  name="phone" 
-                  type="tel" 
-                  placeholder="Phone Number" 
-                  onChange={handleChange} 
+                  name="phone"
+                  type="tel"
+                  placeholder="Phone Number"
+                  onChange={handleChange}
                   value={formData.phone}
                   onKeyDown={handleInputKeyDown}
                   className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                   required
+                  maxLength={10}
                 />
                 {renderError('phone')}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
               <div className="relative">
-                <Input 
+                <Input
                   id="password"
-                  name="password" 
-                  type={showPassword ? "text" : "password"} 
-                  placeholder="Password (min. 8 characters)" 
-                  onChange={handleChange} 
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password (min. 8 characters)"
+                  onChange={handleChange}
                   value={formData.password}
                   onKeyDown={handleInputKeyDown}
                   className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg w-full"
                   required
                 />
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon" 
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10" 
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10"
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
@@ -422,22 +432,22 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                 {renderError('password')}
               </div>
               <div className="relative">
-                <Input 
+                <Input
                   id="confirmPassword"
-                  name="confirmPassword" 
-                  type={showConfirmPassword ? "text" : "password"} 
-                  placeholder="Confirm Password" 
-                  onChange={handleChange} 
+                  name="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="Confirm Password"
+                  onChange={handleChange}
                   value={formData.confirmPassword}
                   onKeyDown={handleInputKeyDown}
                   className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg w-full"
                   required
                 />
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="icon" 
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10" 
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-10 sm:w-10"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" /> : <Eye className="h-4 w-4 sm:h-5 sm:w-5" />}
@@ -446,11 +456,11 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
               </div>
             </div>
             <div>
-              <Input 
+              <Input
                 id="referredByCode"
-                name="referredByCode" 
-                placeholder="Referral Code (Optional)" 
-                onChange={handleChange} 
+                name="referredByCode"
+                placeholder="Referral Code (Optional)"
+                onChange={handleChange}
                 value={formData.referredByCode}
                 onKeyDown={handleInputKeyDown}
                 className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
@@ -467,24 +477,24 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
               <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">Tell us about your practice</h1>
               <p className="text-gray-600 text-base sm:text-lg">Provide information about your medical practice.</p>
             </div>
-            
+
             <div>
               <h3 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-3">What describes you best?</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 max-w-md mx-auto">
                 {doctorTypes.map(type => (
-                  <div 
-                    key={type.name} 
-                    onClick={(e) => handleDoctorTypeChange(type.name, e)} 
+                  <div
+                    key={type.name}
+                    onClick={(e) => handleDoctorTypeChange(type.name, e)}
                     className={cn(
                       "cursor-pointer transition-all duration-200 text-center p-2 sm:p-3 h-full border rounded-lg",
-                      formData.doctorType === type.name 
-                        ? "border-purple-400 ring-2 ring-purple-100 bg-purple-50/50" 
+                      formData.doctorType === type.name
+                        ? "border-purple-400 ring-2 ring-purple-100 bg-purple-50/50"
                         : "border-gray-200 hover:border-purple-200 hover:bg-gray-50"
                     )}
                   >
                     <div className="text-purple-600 mb-1">
-                      {type.name === 'Physician' ? 
-                        <HeartPulse className="h-4 w-4 sm:h-6 sm:w-6 mx-auto" /> : 
+                      {type.name === 'Physician' ?
+                        <HeartPulse className="h-4 w-4 sm:h-6 sm:w-6 mx-auto" /> :
                         <Stethoscope className="h-4 w-4 sm:h-6 sm:w-6 mx-auto" />
                       }
                     </div>
@@ -502,26 +512,26 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                 {/* Added responsive classes for proper scrolling on mobile */}
                 <div className="overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 max-h-64 sm:max-h-48">
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 pr-2">
-                  {isLoadingDropdowns ? 
-                    [...Array(4)].map((_, i) => (
-                      <Skeleton key={i} className="h-16 sm:h-20 md:h-18 w-full" />
-                    )) : (
-                    filteredSpecialties.map((spec: any) => (
-                      <div 
-                        key={spec._id} 
-                        onClick={(e) => handleSpecialtyChange(spec._id, e)} 
-                        className={cn(
-                          "p-2 sm:p-3 border rounded-lg cursor-pointer flex flex-col items-center justify-center text-center transition-all duration-200 h-16 sm:h-20 md:h-18",
-                          formData.specialties.includes(spec._id) 
-                            ? "border-purple-400 ring-2 ring-purple-100 bg-purple-50/50" 
-                            : "border-gray-200 hover:border-purple-200 hover:bg-gray-50"
-                        )}
-                      >
-                        <Microscope className="h-5 w-5 sm:h-7 sm:w-7 text-purple-600 mb-1" />
-                        <span className="font-medium text-sm sm:text-base">{spec.name}</span>
-                      </div>
-                    ))
-                  )}
+                    {isLoadingDropdowns ?
+                      [...Array(4)].map((_, i) => (
+                        <Skeleton key={i} className="h-16 sm:h-20 md:h-18 w-full" />
+                      )) : (
+                        filteredSpecialties.map((spec: any) => (
+                          <div
+                            key={spec._id}
+                            onClick={(e) => handleSpecialtyChange(spec._id, e)}
+                            className={cn(
+                              "p-2 sm:p-3 border rounded-lg cursor-pointer flex flex-col items-center justify-center text-center transition-all duration-200 h-16 sm:h-20 md:h-18",
+                              formData.specialties.includes(spec._id)
+                                ? "border-purple-400 ring-2 ring-purple-100 bg-purple-50/50"
+                                : "border-gray-200 hover:border-purple-200 hover:bg-gray-50"
+                            )}
+                          >
+                            <Microscope className="h-5 w-5 sm:h-7 sm:w-7 text-purple-600 mb-1" />
+                            <span className="font-medium text-sm sm:text-base">{spec.name}</span>
+                          </div>
+                        ))
+                      )}
                   </div>
                 </div>
               </div>
@@ -536,7 +546,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
               <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2">Your areas of expertise</h1>
               <p className="text-gray-600 text-base sm:text-lg">Select the diseases you specialize in treating.</p>
             </div>
-            
+
             {filteredDiseases.length > 0 ? (
               filteredDiseases.map(([specialtyName, diseases]) => (
                 <div key={specialtyName} className="space-y-2 sm:space-y-3">
@@ -545,14 +555,14 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 border p-3 sm:p-4 rounded-md">
                     {diseases.map((disease: any) => (
                       <div key={disease._id} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={disease._id} 
-                          checked={formData.diseases.includes(disease._id)} 
-                          onCheckedChange={() => handleDiseaseChange(disease._id)} 
+                        <Checkbox
+                          id={disease._id}
+                          checked={formData.diseases.includes(disease._id)}
+                          onCheckedChange={() => handleDiseaseChange(disease._id)}
                           className="h-3 w-3 sm:h-4 sm:w-4"
                         />
-                        <Label 
-                          htmlFor={disease._id} 
+                        <Label
+                          htmlFor={disease._id}
                           className="text-xs sm:text-sm font-normal cursor-pointer"
                         >
                           {disease.name}
@@ -569,7 +579,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
             )}
           </div>
         );
-      default: 
+      default:
         return null;
     }
   };
@@ -579,26 +589,26 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
       {/* Added responsive container with proper scrolling for mobile */}
       <div className="w-full max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6 pt-2 overflow-y-auto max-h-[calc(100vh-20px)]">
         <div className="fixed top-4 sm:top-8 left-4 sm:left-10 right-4 sm:right-10 flex justify-between items-center z-20">
-          <Button 
-            type="button" 
-            variant="outline" 
-            onClick={step === 1 ? () => window.history.back() : navigateToPrevStep} 
+          <Button
+            type="button"
+            variant="outline"
+            onClick={step === 1 ? () => window.history.back() : navigateToPrevStep}
             className="px-3 sm:px-4 py-2 text-base sm:text-lg text-gray-600 border-gray-300 hover:bg-gray-50 h-10 sm:h-auto"
           >
             ← {step === 1 ? 'Back to Role Selection' : 'Back'}
           </Button>
           {step < 3 ? (
-            <Button 
-              type="button" 
-              onClick={navigateToNextStep} 
+            <Button
+              type="button"
+              onClick={navigateToNextStep}
               className="bg-black text-white px-4 sm:px-6 py-2 rounded-md hover:bg-gray-800 font-medium text-base sm:text-lg h-10 sm:h-auto"
             >
               Continue →
             </Button>
           ) : (
-            <Button 
-              type="submit" 
-              disabled={isLoading} 
+            <Button
+              type="submit"
+              disabled={isLoading}
               className="bg-black text-white px-4 sm:px-6 py-2 rounded-md hover:bg-gray-800 font-medium text-base sm:text-lg h-10 sm:h-auto"
               form="registration-form"
             >
@@ -606,11 +616,11 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
             </Button>
           )}
         </div>
-        
+
         <div className="mt-16 sm:mt-8">
           <StepIndicator currentStep={step} setStep={setStep} />
         </div>
-      
+
         <form id="registration-form" onSubmit={handleFinalSubmit} className="space-y-4 sm:space-y-6 pb-8 mt-4">
           {/* Added responsive container for form content */}
           <div className="flex flex-col justify-start" style={{ minHeight: 'calc(100vh - 200px)' }}>
@@ -623,7 +633,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
 }
 
 export const DoctorRegistrationFormWithSuspense = (props: { onSuccess: () => void }) => (
-    <Suspense fallback={<div>Loading...</div>}>
-        <DoctorRegistrationForm {...props} />
-    </Suspense>
+  <Suspense fallback={<div>Loading...</div>}>
+    <DoctorRegistrationForm {...props} />
+  </Suspense>
 );

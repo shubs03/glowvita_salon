@@ -123,15 +123,23 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    let finalValue = value;
+
+    if (name === 'firstName' || name === 'lastName') {
+      finalValue = value.replace(/[^a-zA-Z]/g, '');
+    } else if (name === 'mobile') {
+      finalValue = value.replace(/\D/g, '').slice(0, 10);
+    }
+
+    setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
   const validateStep1 = () => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.firstName) newErrors.firstName = 'First name is required';
-    else if (!/^[a-zA-Z\s]+$/.test(formData.firstName)) newErrors.firstName = 'First name can only contain letters and spaces';
+    else if (!/^[a-zA-Z]+$/.test(formData.firstName)) newErrors.firstName = 'First name can only contain letters';
     if (!formData.lastName) newErrors.lastName = 'Last name is required';
-    else if (!/^[a-zA-Z\s]+$/.test(formData.lastName)) newErrors.lastName = 'Last name can only contain letters and spaces';
+    else if (!/^[a-zA-Z]+$/.test(formData.lastName)) newErrors.lastName = 'Last name can only contain letters';
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -618,6 +626,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                       onChange={handleChange}
                       value={formData.mobile}
                       required
+                      maxLength={10}
                       className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
                     />
                     {renderError('mobile')}

@@ -132,7 +132,15 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    let finalValue = value;
+
+    if (name === 'firstName' || name === 'lastName') {
+      finalValue = value.replace(/[^a-zA-Z]/g, '');
+    } else if (name === 'phone') {
+      finalValue = value.replace(/\D/g, '').slice(0, 10);
+    }
+
+    setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
   const handleCheckboxChange = (id: SubCategory, checked: boolean) => {
@@ -162,9 +170,9 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
   const validateStep1 = () => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.firstName) newErrors.firstName = 'First name is required';
-    else if (!/^[a-zA-Z\s]+$/.test(formData.firstName)) newErrors.firstName = 'First name can only contain letters and spaces';
+    else if (!/^[a-zA-Z]+$/.test(formData.firstName)) newErrors.firstName = 'First name can only contain letters';
     if (!formData.lastName) newErrors.lastName = 'Last name is required';
-    else if (!/^[a-zA-Z\s]+$/.test(formData.lastName)) newErrors.lastName = 'Last name can only contain letters and spaces';
+    else if (!/^[a-zA-Z]+$/.test(formData.lastName)) newErrors.lastName = 'Last name can only contain letters';
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
@@ -621,7 +629,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                     {renderError('email')}
                   </div>
                   <div>
-                    <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleChange} value={formData.phone} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                    <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleChange} value={formData.phone} required maxLength={10} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
                     {renderError('phone')}
                   </div>
                 </div>
