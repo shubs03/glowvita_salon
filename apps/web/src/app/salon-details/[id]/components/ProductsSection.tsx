@@ -44,8 +44,8 @@ const FilterDropdown = ({
 }) => {
   return (
     <div className="relative">
-      <Button 
-        variant="outline" 
+      <Button
+        variant="outline"
         size="sm"
         className="rounded-lg filter-button"
         onClick={() => setShowDropdown(!showDropdown)}
@@ -53,10 +53,10 @@ const FilterDropdown = ({
         Filter By
         <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
       </Button>
-      
+
       {showDropdown && (
         <div className="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 min-w-max filter-dropdown">
-          <button 
+          <button
             className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${filterBy === 'all' ? 'bg-gray-100' : ''}`}
             onClick={() => {
               setFilterBy('all');
@@ -65,7 +65,7 @@ const FilterDropdown = ({
           >
             All Products
           </button>
-          <button 
+          <button
             className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${filterBy === 'category' ? 'bg-gray-100' : ''}`}
             onClick={() => {
               setFilterBy('category');
@@ -74,7 +74,7 @@ const FilterDropdown = ({
           >
             By Category
           </button>
-          <button 
+          <button
             className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${filterBy === 'price' ? 'bg-gray-100' : ''}`}
             onClick={() => {
               setFilterBy('price');
@@ -83,7 +83,7 @@ const FilterDropdown = ({
           >
             By Price
           </button>
-          <button 
+          <button
             className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${filterBy === 'rating' ? 'bg-gray-100' : ''}`}
             onClick={() => {
               setFilterBy('rating');
@@ -92,7 +92,7 @@ const FilterDropdown = ({
           >
             By Rating
           </button>
-          <button 
+          <button
             className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${filterBy === 'availability' ? 'bg-gray-100' : ''}`}
             onClick={() => {
               setFilterBy('availability');
@@ -120,8 +120,8 @@ const SortDropdown = ({
 }) => {
   return (
     <div className="relative">
-      <Button 
-        variant="outline" 
+      <Button
+        variant="outline"
         size="sm"
         className="rounded-lg sort-button"
         onClick={() => setShowDropdown(!showDropdown)}
@@ -129,10 +129,10 @@ const SortDropdown = ({
         Sort By
         <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
       </Button>
-      
+
       {showDropdown && (
         <div className="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 py-1 min-w-max sort-dropdown">
-          <button 
+          <button
             className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'name' ? 'bg-gray-100' : ''}`}
             onClick={() => {
               setSortBy('name');
@@ -141,7 +141,7 @@ const SortDropdown = ({
           >
             Name (A-Z)
           </button>
-          <button 
+          <button
             className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'price-low' ? 'bg-gray-100' : ''}`}
             onClick={() => {
               setSortBy('price-low');
@@ -150,7 +150,7 @@ const SortDropdown = ({
           >
             Price (Low to High)
           </button>
-          <button 
+          <button
             className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'price-high' ? 'bg-gray-100' : ''}`}
             onClick={() => {
               setSortBy('price-high');
@@ -159,7 +159,7 @@ const SortDropdown = ({
           >
             Price (High to Low)
           </button>
-          <button 
+          <button
             className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'rating' ? 'bg-gray-100' : ''}`}
             onClick={() => {
               setSortBy('rating');
@@ -168,7 +168,7 @@ const SortDropdown = ({
           >
             Top Rated
           </button>
-          <button 
+          <button
             className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'newest' ? 'bg-gray-100' : ''}`}
             onClick={() => {
               setSortBy('newest');
@@ -203,8 +203,8 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
     id: p.id || p._id,
     name: p.name || p.productName,
     description: p.description || "",
-    price: p.price || 0,
-    salePrice: p.salePrice || null,
+    price: Number(p.price) || 0,
+    salePrice: (p.salePrice && Number(p.salePrice) > 0) ? Number(p.salePrice) : 0,
     image:
       p.image ||
       p.productImage ||
@@ -242,10 +242,18 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
         result.sort((a, b) => a.name.localeCompare(b.name));
         break;
       case 'price-low':
-        result.sort((a, b) => a.price - b.price);
+        result.sort((a, b) => {
+          const priceA = a.salePrice > 0 ? a.salePrice : a.price;
+          const priceB = b.salePrice > 0 ? b.salePrice : b.price;
+          return priceA - priceB;
+        });
         break;
       case 'price-high':
-        result.sort((a, b) => b.price - a.price);
+        result.sort((a, b) => {
+          const priceA = a.salePrice > 0 ? a.salePrice : a.price;
+          const priceB = b.salePrice > 0 ? b.salePrice : b.price;
+          return priceB - priceA;
+        });
         break;
       case 'rating':
         result.sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
@@ -266,27 +274,27 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (showFilterDropdown || showSortDropdown) {
         const target = event.target as HTMLElement;
-        
+
         // Check if click is outside filter dropdown
         const filterButton = document.querySelector('.filter-button');
         const filterDropdown = document.querySelector('.filter-dropdown');
-        
-        if (showFilterDropdown && filterDropdown && !filterDropdown.contains(target) && 
-            (!filterButton || !filterButton.contains(target))) {
+
+        if (showFilterDropdown && filterDropdown && !filterDropdown.contains(target) &&
+          (!filterButton || !filterButton.contains(target))) {
           setShowFilterDropdown(false);
         }
-        
+
         // Check if click is outside sort dropdown
         const sortButton = document.querySelector('.sort-button');
         const sortDropdown = document.querySelector('.sort-dropdown');
-        
-        if (showSortDropdown && sortDropdown && !sortDropdown.contains(target) && 
-            (!sortButton || !sortButton.contains(target))) {
+
+        if (showSortDropdown && sortDropdown && !sortDropdown.contains(target) &&
+          (!sortButton || !sortButton.contains(target))) {
           setShowSortDropdown(false);
         }
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -296,17 +304,17 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
   return (
     <section id="products">
 
-       {/* Section Header */}
+      {/* Section Header */}
       <div className="mb-8">
         <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
           Products We Use & Sell
         </h2>
         <p className="text-muted-foreground mt-3 text-sm">
-          High-quality products available for purchase at our salon, 
+          High-quality products available for purchase at our salon,
           Don't miss out on our high-quality products!
         </p>
       </div>
-      
+
       {/* Filter and Sort Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div className="flex flex-wrap gap-2">
@@ -316,7 +324,7 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
             filterBy={filterBy}
             setFilterBy={setFilterBy}
           />
-          
+
           <SortDropdown
             showDropdown={showSortDropdown}
             setShowDropdown={setShowSortDropdown}
@@ -324,9 +332,9 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
             setSortBy={setSortBy}
           />
         </div>
-        <Button 
-          variant="outline" 
-          size="sm" 
+        <Button
+          variant="outline"
+          size="sm"
           className="rounded-lg"
           onClick={() => {
             setFilterBy('all');
@@ -336,7 +344,7 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
           View All Products
         </Button>
       </div>
-      
+
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {filteredAndSortedProducts.length > 0 ? (
           filteredAndSortedProducts.map((product: Product) => (

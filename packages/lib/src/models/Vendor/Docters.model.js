@@ -213,15 +213,11 @@ const doctorSchema = new mongoose.Schema({
       type: String, // URL to the uploaded document
       default: null,
     },
-    udyogAadhar: {
-      type: String,
-      default: null,
-    },
     udhayamCert: {
       type: String,
       default: null,
     },
-    shopLicense: {
+    shopAct: {
       type: String,
       default: null,
     },
@@ -241,17 +237,12 @@ const doctorSchema = new mongoose.Schema({
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
-    udyogAadharStatus: {
-      type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
-    },
     udhayamCertStatus: {
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
-    shopLicenseStatus: {
+    shopActStatus: {
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: "pending",
@@ -266,15 +257,11 @@ const doctorSchema = new mongoose.Schema({
       type: String,
       default: null,
     },
-    udyogAadharAdminRejectionReason: {
-      type: String,
-      default: null,
-    },
     udhayamCertAdminRejectionReason: {
       type: String,
       default: null,
     },
-    shopLicenseAdminRejectionReason: {
+    shopActAdminRejectionReason: {
       type: String,
       default: null,
     },

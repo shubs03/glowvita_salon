@@ -8,6 +8,35 @@ import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 
+// Utility function to process base64 image and upload it
+// Also deletes the old image if a new one is uploaded
+const processBase64Image = async (base64String, fileName, oldImageUrl = null) => {
+  if (!base64String) return null;
+
+  // Check if it's already a URL (not base64)
+  if (base64String.startsWith('http')) {
+    return base64String; // Already uploaded, return as is
+  }
+
+  // Upload the base64 image and return the URL
+  const imageUrl = await uploadBase64(base64String, fileName);
+
+  // If upload was successful and there's an old image, delete the old one
+  if (imageUrl && oldImageUrl && oldImageUrl.startsWith('http')) {
+    try {
+      // Attempt to delete the old file
+      // We don't await this as we don't want to fail the whole operation if deletion fails
+      deleteFile(oldImageUrl).catch(err => {
+        console.warn('Failed to delete old image:', err);
+      });
+    } catch (err) {
+      console.warn('Error deleting old image:', err);
+    }
+  }
+
+  return imageUrl;
+};
+
 // Initialize database connection (assuming _db is a promise-based connection function)
 const initDb = async () => {
   try {
@@ -158,11 +187,32 @@ export const POST = async (req) => {
 export const PUT = authMiddlewareAdmin(async (req) => {
   try {
     await initDb(); // Initialize DB connection
-    const { id, licenseFiles, removedLicenseFiles, ...updateData } = await req.json();
+    const { id, licenseFiles, removedLicenseFiles, profileImage, ...updateData } = await req.json();
 
     if (!id) {
       return NextResponse.json({ message: "ID is required for update" }, { status: 400 });
     }
+
+    const existingSupplier = await SupplierModel.findById(id);
+    if (!existingSupplier) {
+      return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
+    }
+
+    // Process profile image if provided
+    let finalProfileImage = existingSupplier.profileImage;
+    if (profileImage !== undefined) {
+      if (profileImage && !profileImage.startsWith('http')) {
+        const imageUrl = await processBase64Image(profileImage, `supplier-${id}-profile`, existingSupplier.profileImage);
+        if (imageUrl) {
+          finalProfileImage = imageUrl;
+        }
+      } else {
+        finalProfileImage = profileImage;
+      }
+    }
+
+    // Prepare final license files
+    let finalLicenseFiles = existingSupplier.licenseFiles || [];
 
     // Server-side validation for updates
     if (updateData.mobile && !/^\d{10}$/.test(updateData.mobile)) {
@@ -172,17 +222,8 @@ export const PUT = authMiddlewareAdmin(async (req) => {
       return NextResponse.json({ message: "Pincode must be 6 digits" }, { status: 400 });
     }
 
-    const existingSupplier = await SupplierModel.findById(id);
-    if (!existingSupplier) {
-      return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
-    }
-
-    let finalLicenseFiles = existingSupplier.licenseFiles || [];
-    console.log("Debug backend - Initial existing files count:", finalLicenseFiles.length);
-
     // Remove files that were marked for deletion
     if (removedLicenseFiles && Array.isArray(removedLicenseFiles)) {
-      console.log("Debug backend - Files to remove:", removedLicenseFiles.length);
       // Delete files from VPS storage
       for (const fileUrl of removedLicenseFiles) {
         if (fileUrl && fileUrl.startsWith('http')) {
@@ -190,12 +231,10 @@ export const PUT = authMiddlewareAdmin(async (req) => {
         }
       }
       finalLicenseFiles = finalLicenseFiles.filter((file) => !removedLicenseFiles.includes(file));
-      console.log("Debug backend - Files after removal:", finalLicenseFiles.length);
     }
 
     // Handle new license files
     if (licenseFiles && Array.isArray(licenseFiles)) {
-      console.log("Debug backend - New files to add:", licenseFiles.length);
       for (let i = 0; i < licenseFiles.length; i++) {
         const file = licenseFiles[i];
         if (file && file.startsWith("data:")) {
@@ -207,12 +246,11 @@ export const PUT = authMiddlewareAdmin(async (req) => {
           }
         }
       }
-      console.log("Debug backend - Final files count:", finalLicenseFiles.length);
     }
 
     const updatedSupplier = await SupplierModel.findByIdAndUpdate(
       id,
-      { ...updateData, licenseFiles: finalLicenseFiles },
+      { ...updateData, licenseFiles: finalLicenseFiles, profileImage: finalProfileImage },
       { new: true }
     ).populate("subscription.plan", "name");
 
@@ -339,8 +377,8 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
     // Check if this is a document status update
     else if (supplierId && documentType && status) {
       const validDocumentTypes = [
-        'aadharCard', 'udyogAadhar', 'udhayamCert',
-        'shopLicense', 'panCard'
+        'aadharCard', 'udhayamCert',
+        'shopAct', 'panCard'
       ];
 
       if (!validDocumentTypes.includes(documentType)) {

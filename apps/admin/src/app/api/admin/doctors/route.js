@@ -6,6 +6,36 @@ import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
+
+// Utility function to process base64 image and upload it
+// Also deletes the old image if a new one is uploaded
+const processBase64Image = async (base64String, fileName, oldImageUrl = null) => {
+  if (!base64String) return null;
+
+  // Check if it's already a URL (not base64)
+  if (base64String.startsWith('http')) {
+    return base64String; // Already uploaded, return as is
+  }
+
+  // Upload the base64 image and return the URL
+  const imageUrl = await uploadBase64(base64String, fileName);
+
+  // If upload was successful and there's an old image, delete the old one
+  if (imageUrl && oldImageUrl && oldImageUrl.startsWith('http')) {
+    try {
+      // Attempt to delete the old file
+      // We don't await this as we don't want to fail the whole operation if deletion fails
+      deleteFile(oldImageUrl).catch(err => {
+        console.warn('Failed to delete old image:', err);
+      });
+    } catch (err) {
+      console.warn('Error deleting old image:', err);
+    }
+  }
+
+  return imageUrl;
+};
 
 // Initialize database connection
 const initDb = async () => {
@@ -90,10 +120,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
 export const PUT = authMiddlewareAdmin(async (req) => {
   try {
     await initDb();
-    const { id, password, ...body } = await req.json();
+    const { id, profileImage, password, ...updateData } = await req.json();
 
     if (!id) {
-      return NextResponse.json({ message: "ID is required for update" }, { status: 400 });
+      return NextResponse.json({ message: "ID is required to update a doctor" }, { status: 400 });
     }
 
     const existingDoctor = await DoctorModel.findById(id);
@@ -101,8 +131,18 @@ export const PUT = authMiddlewareAdmin(async (req) => {
       return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
     }
 
-    // Prepare update data
-    const updateData = { ...body, updatedAt: Date.now() };
+    // Process profile image if provided
+    let finalProfileImage = existingDoctor.profileImage;
+    if (profileImage !== undefined) {
+      if (profileImage && !profileImage.startsWith('http')) {
+        const imageUrl = await processBase64Image(profileImage, `doctor-${id}-profile`, existingDoctor.profileImage);
+        if (imageUrl) {
+          finalProfileImage = imageUrl;
+        }
+      } else {
+        finalProfileImage = profileImage;
+      }
+    }
 
     // If password is provided, hash it
     if (password && password.trim() !== '') {
@@ -204,7 +244,7 @@ export const PATCH = authMiddlewareAdmin(
       // Check if this is a document status update
       else if (doctorId && documentType && status) {
         const validDocumentTypes = [
-          'aadharCard', 'panCard', 'udyogAadhar', 'udhayamCert', 'shopLicense'
+          'aadharCard', 'panCard', 'udhayamCert', 'shopAct'
         ];
 
         if (!validDocumentTypes.includes(documentType)) {

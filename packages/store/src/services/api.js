@@ -1760,6 +1760,12 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["CrmProducts"],
     }),
+    getCrmProductMasters: builder.query({
+      query: () => ({ url: "/crm/product-masters", method: "GET" }),
+      transformResponse: (response) => (response && response.success ? response.data || [] : []),
+      providesTags: ["ProductMaster"],
+    }),
+
 
     // Inventory Endpoints
     adjustInventory: builder.mutation({
@@ -3435,6 +3441,7 @@ export const {
   useCreateProductMasterMutation,
   useUpdateProductMasterMutation,
   useDeleteProductMasterMutation,
+  useGetCrmProductMastersQuery,
 
   // Inventory Hooks
   useAdjustInventoryMutation,

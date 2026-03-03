@@ -172,10 +172,10 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
 
     const scriptId = 'google-maps-native-script';
     const existingScript = document.getElementById(scriptId);
-    
+
     if (existingScript) {
       if (checkGoogleMaps()) return;
-      
+
       const checkInterval = setInterval(() => {
         if (checkGoogleMaps()) {
           clearInterval(checkInterval);
@@ -183,13 +183,13 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
       }, 500);
       return () => clearInterval(checkInterval);
     }
-    
+
     const script = document.createElement('script');
     script.id = scriptId;
     script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,drawing,geometry&v=weekly`;
     script.async = true;
     script.defer = true;
-    
+
     (window as any).gm_authFailure = () => {
       console.error("Google Maps API Key Authentication Failure - This usually means the API Key is invalid, has no billing, or is restricted incorrectly.");
       toast.error("Google Maps Authentication Failed. Please check your API key.");
@@ -216,7 +216,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
         google.maps.event.clearInstanceListeners(map.current);
       }
 
-      const center = formData.location 
+      const center = formData.location
         ? { lat: formData.location.lat, lng: formData.location.lng }
         : { lat: 23.2599, lng: 77.4126 }; // Center of India
 
@@ -262,9 +262,9 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
         marker.current.addListener('dragend', () => {
           const position = marker.current!.getPosition();
           if (position) {
-            setFormData(prev => ({ 
-              ...prev, 
-              location: { lat: position.lat(), lng: position.lng() } 
+            setFormData(prev => ({
+              ...prev,
+              location: { lat: position.lat(), lng: position.lng() }
             }));
             fetchAddress({ lat: position.lat(), lng: position.lng() });
           }
@@ -295,9 +295,9 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
           marker.current.addListener('dragend', () => {
             const position = marker.current!.getPosition();
             if (position) {
-              setFormData(prev => ({ 
-                ...prev, 
-                location: { lat: position.lat(), lng: position.lng() } 
+              setFormData(prev => ({
+                ...prev,
+                location: { lat: position.lat(), lng: position.lng() }
               }));
               fetchAddress({ lat: position.lat(), lng: position.lng() });
             }
@@ -438,9 +438,9 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
             marker.current.addListener('dragend', () => {
               const position = marker.current!.getPosition();
               if (position) {
-                setFormData(prev => ({ 
-                  ...prev, 
-                  location: { lat: position.lat(), lng: position.lng() } 
+                setFormData(prev => ({
+                  ...prev,
+                  location: { lat: position.lat(), lng: position.lng() }
                 }));
                 fetchAddress({ lat: position.lat(), lng: position.lng() });
               }
@@ -750,7 +750,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
               </div>
             </div>
           </DialogHeader>
-          
+
           <div className="flex-1 flex flex-col relative overflow-hidden">
             {/* Floating Search Bar with Glassmorphism */}
             <div className="absolute top-6 left-6 right-6 z-[100] max-w-md">
@@ -792,17 +792,17 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
 
             {/* Map Container */}
             <div className="flex-1 relative bg-slate-100">
-              <div 
-                ref={mapContainer} 
+              <div
+                ref={mapContainer}
                 className="w-full h-full"
               />
               <div className="absolute bottom-6 left-6 z-50">
-                 <div className="bg-white/90 backdrop-blur-md px-4 py-3 rounded-2xl shadow-xl border border-white/20 flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                    <span className="text-sm font-bold text-slate-700 font-headline uppercase tracking-wider">Live Mapper</span>
-                 </div>
+                <div className="bg-white/90 backdrop-blur-md px-4 py-3 rounded-2xl shadow-xl border border-white/20 flex items-center gap-3">
+                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  <span className="text-sm font-bold text-slate-700 font-headline uppercase tracking-wider">Live Mapper</span>
+                </div>
               </div>
-              
+
               {authError && (
                 <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6 z-[200]">
                   <div className="bg-white rounded-3xl p-8 shadow-2xl max-w-md text-center border border-red-100">
@@ -813,7 +813,7 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
                     <p className="text-slate-500 text-sm mb-6">
                       The API key is invalid or rejected. Please check billing and project restrictions.
                     </p>
-                    <Button 
+                    <Button
                       onClick={() => window.location.reload()}
                       className="w-full rounded-xl bg-red-600 hover:bg-red-700 h-12 text-lg font-headline"
                     >
@@ -826,43 +826,43 @@ const PersonalInformationTab = ({ formData, handleInputChange, handleCheckboxCha
               {!isGoogleMapsLoaded && !authError && (
                 <div className="absolute inset-0 bg-slate-50 flex flex-col items-center justify-center z-[150]">
                   <div className="relative">
-                     <div className="h-24 w-24 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
-                     <div className="absolute inset-0 flex items-center justify-center">
-                        <Map className="h-8 w-8 text-primary/40" />
-                     </div>
+                    <div className="h-24 w-24 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Map className="h-8 w-8 text-primary/40" />
+                    </div>
                   </div>
                   <p className="mt-6 text-lg font-bold text-slate-800 tracking-tight font-headline">Synchronizing Maps...</p>
                 </div>
               )}
             </div>
           </div>
-          
+
           <DialogFooter className="p-6 bg-slate-50 border-t flex flex-row items-center justify-between gap-4">
-             <div className="flex items-center gap-4">
-                {formData.location && (
-                  <div className="hidden sm:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm transition-all hover:shadow-md">
-                     <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
-                        <CheckCircle2 className="h-4 w-4" />
-                     </div>
-                     <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter font-headline">Coords Selected</div>
-                     <div className="text-xs font-mono font-bold text-slate-800">
-                       {formData.location.lat.toFixed(4)}, {formData.location.lng.toFixed(4)}
-                     </div>
+            <div className="flex items-center gap-4">
+              {formData.location && (
+                <div className="hidden sm:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm transition-all hover:shadow-md">
+                  <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+                    <CheckCircle2 className="h-4 w-4" />
                   </div>
-                )}
-             </div>
-             <div className="flex items-center gap-3">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter font-headline">Coords Selected</div>
+                  <div className="text-xs font-mono font-bold text-slate-800">
+                    {formData.location.lat.toFixed(4)}, {formData.location.lng.toFixed(4)}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
               <Button variant="ghost" onClick={() => setIsMapOpen(false)} className="rounded-xl h-12 px-6 font-bold text-slate-600 hover:bg-slate-200 transition-all font-headline">
                 Dismiss
               </Button>
-              <Button 
-                onClick={() => setIsMapOpen(false)} 
+              <Button
+                onClick={() => setIsMapOpen(false)}
                 disabled={!formData.location}
                 className="rounded-xl h-12 px-8 font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-headline"
               >
                 Verify & Select Position
               </Button>
-             </div>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1250,9 +1250,8 @@ const DocumentsTab = ({ vendor }: { vendor: Vendor | null }) => {
   const documentTypes = [
     { key: 'aadharCard', label: 'Aadhar Card' },
     { key: 'panCard', label: 'PAN Card' },
-    { key: 'udyogAadhar', label: 'Udyog Aadhar' },
     { key: 'udhayamCert', label: 'Udhayam Certificate' },
-    { key: 'shopLicense', label: 'Shop License' }
+    { key: 'shopAct', label: 'Shop Act' }
   ];
 
   // Get document status for a specific document type

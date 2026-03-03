@@ -231,9 +231,8 @@ export default function VendorManagementPage() {
     const mandatoryDocs = [
       { key: 'aadharCard', label: 'Aadhar Card' },
       { key: 'panCard', label: 'PAN Card' },
-      { key: 'udyogAadhar', label: 'Udyog Aadhar' },
-      { key: 'udhayamCert', label: 'Udhayam Certificate' },
-      { key: 'shopLicense', label: 'Shop License' }
+      { key: "udhayamCert", label: "Udhayam Certificate" },
+      { key: "shopAct", label: "Shop Act" },
     ] as const;
 
     return mandatoryDocs

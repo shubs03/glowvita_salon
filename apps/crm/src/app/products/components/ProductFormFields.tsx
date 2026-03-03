@@ -6,7 +6,7 @@ import { Textarea } from '@repo/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Button } from '@repo/ui/button';
 import { Trash2, Plus } from 'lucide-react';
-import { useGetProductMastersQuery } from '@repo/store/api';
+import { useGetCrmProductMastersQuery } from '@repo/store/api';
 import { Badge } from '@repo/ui/badge';
 
 interface Category {
@@ -71,7 +71,7 @@ const ProductFormFields = ({
   const [gstAmount, setGstAmount] = useState<number>(0);
 
   // Fetch product masters
-  const { data: productMastersData, isLoading: productMastersLoading, error: productMastersError } = useGetProductMastersQuery(undefined);
+  const { data: productMastersData, isLoading: productMastersLoading, error: productMastersError } = useGetCrmProductMastersQuery(undefined);
   const productMasters = productMastersData || [];
 
   // Debug logging
