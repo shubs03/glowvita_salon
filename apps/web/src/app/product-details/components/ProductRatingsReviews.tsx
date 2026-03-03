@@ -223,7 +223,7 @@ const ProductRatingsReviews: React.FC<ProductRatingsReviewsProps> = ({
                     <Star
                       key={i}
                       className={`w-5 h-5 ${i < Math.floor(ratingsData.averageRating)
-                        ? "fill-primary text-primary"
+                        ? "fill-current text-yellow-400"
                         : "fill-gray-300 text-gray-300"
                         }`}
                     />
@@ -249,7 +249,7 @@ const ProductRatingsReviews: React.FC<ProductRatingsReviewsProps> = ({
                     <div className="w-8 flex items-center">
                       <span className="text-sm font-medium">
                         {item.stars}
-                        <Star className="w-3 h-3 ml-0.5 inline fill-current" />
+                        <Star className="w-3 h-3 ml-0.5 inline fill-current text-yellow-400" />
                       </span>
                     </div>
 

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Button } from '@repo/ui/button';
+import { cn } from "@repo/ui/cn";
 import { Heart, Loader2 } from 'lucide-react';
 
 interface ProductPurchaseActionsProps {
@@ -28,20 +29,20 @@ const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
   return (
     <div className="mt-4">
       <div className="flex items-center gap-3">
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className="h-12 w-12"
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-12 w-12 text-red-500"
           onClick={handleWishlistToggle}
           disabled={isWishlistLoading}
         >
-          <Heart className={`h-5 w-5 ${isWishlisted ? "fill-current text-primary" : ""}`} />
+          <Heart className={cn("h-5 w-5", isWishlisted && "fill-red-500 text-red-500")} />
         </Button>
-        
-        <Button 
-          size="lg" 
+
+        <Button
+          size="lg"
           variant="default"
-          className="flex-1 bg-primary hover:bg-primary/95" 
+          className="flex-1 bg-primary hover:bg-primary/95"
           onClick={() => handleBuyNow()}
           disabled={isOutOfStock || isBuyingNow}
         >
@@ -56,11 +57,11 @@ const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
             'Buy Now'
           )}
         </Button>
-        
-        <Button 
-          size="lg" 
+
+        <Button
+          size="lg"
           variant="outline"
-          className="flex-1 border-2 border-primary hover:border-primary/95" 
+          className="flex-1 border-2 border-primary hover:border-primary/95"
           onClick={() => handleAddToCart()}
           disabled={isOutOfStock || isAddingToCart}
         >

@@ -57,7 +57,7 @@ export default function TopRatedDoctors({ doctors }: TopRatedDoctorsProps) {
                   </h3>
                   <p className="text-xs text-muted-foreground line-clamp-1 mb-1">{doctor.specialty}</p>
                   <div className="flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-primary text-primary" />
+                    <Star className="h-3 w-3 text-yellow-500 fill-current" />
                     <span className="text-xs font-semibold text-foreground">{doctor.rating?.toFixed(1)}</span>
                     <span className="text-xs text-muted-foreground">({doctor.totalReviews})</span>
                   </div>
