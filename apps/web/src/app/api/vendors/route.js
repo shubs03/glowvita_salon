@@ -1,5 +1,7 @@
 import _db from "@repo/lib/db";
 import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
+import ReviewModel from "@repo/lib/models/Review/Review.model";
+import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model.js";
 import mongoose from "mongoose";
 
 const setCorsHeaders = (response) => {
@@ -138,11 +140,62 @@ export const GET = async (request) => {
 
     const vendors = await VendorServicesModel.aggregate(pipeline).exec();
 
+    const vendorsWithStats = await Promise.all(
+      vendors.map(async (vendor) => {
+        // Fetch rating stats
+        const ratingStats = await ReviewModel.aggregate([
+          {
+            $match: {
+              entityId: vendor._id,
+              entityType: "salon",
+              isApproved: true
+            }
+          },
+          {
+            $group: {
+              _id: "$entityId",
+              averageRating: { $avg: "$rating" },
+              reviewCount: { $sum: 1 },
+            },
+          },
+        ]);
+
+        // Fetch client count from appointments
+        const clientCountStats = await AppointmentModel.aggregate([
+          {
+            $match: {
+              vendorId: vendor._id,
+              status: { $in: ["confirmed", "completed", "scheduled"] }
+            }
+          },
+          {
+            $group: {
+              _id: "$vendorId",
+              uniqueClients: { $addToSet: "$clientPhone" } // Using phone as unique identifier
+            }
+          },
+          {
+            $project: {
+              _id: 1,
+              clientCount: { $size: "$uniqueClients" }
+            }
+          }
+        ]);
+
+        return {
+          ...vendor,
+          rating: ratingStats.length > 0 ? ratingStats[0].averageRating.toFixed(1) : "0.0",
+          reviewCount: ratingStats.length > 0 ? ratingStats[0].reviewCount : 0,
+          clientCount: clientCountStats.length > 0 ? clientCountStats[0].clientCount : 0,
+        };
+      })
+    );
+
     return setCorsHeaders(
       Response.json({
         success: true,
-        vendors,
-        count: vendors.length,
+        vendors: vendorsWithStats,
+        count: vendorsWithStats.length,
       })
     );
   } catch (error) {
