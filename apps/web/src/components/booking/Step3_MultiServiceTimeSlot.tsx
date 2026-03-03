@@ -123,8 +123,8 @@ const SlotCard = React.memo<{
 
       {/* Duration Info */}
       <div className="text-sm text-gray-600 mb-3">
-        {slot.totalDuration} min total
-        {slot.travelTime && slot.travelTime > 0 && (
+        {slot.totalDuration} min
+        {Boolean(slot.travelTime && slot.travelTime > 0) && (
           <span className="text-blue-600 ml-2">
             (+{slot.travelTime} min travel)
           </span>

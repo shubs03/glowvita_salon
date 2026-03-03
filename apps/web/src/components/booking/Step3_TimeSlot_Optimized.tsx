@@ -799,7 +799,7 @@ export const Step3_TimeSlot = memo(({
                       <div className="text-xs text-gray-500 mt-0.5">
                         {slot.duration} min
                       </div>
-                      {slot.travelTime && slot.travelTime > 0 && (
+                      {Boolean(slot.travelTime && slot.travelTime > 0) && (
                         <div className="text-xs text-blue-600 mt-1">
                           +{slot.travelTime} min travel
                         </div>
