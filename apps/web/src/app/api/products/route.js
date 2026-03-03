@@ -2,45 +2,35 @@ import _db from "@repo/lib/db";
 import ProductModel from "@repo/lib/models/Vendor/Product.model";
 import VendorModel from "@repo/lib/models/Vendor.model";
 import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
+import ProductCategoryModel from "@repo/lib/models/admin/ProductCategory.model";
+import ReviewModel from "@repo/lib/models/Review/Review.model";
 
 await _db();
-
-// Handle CORS preflight
-export const OPTIONS = async (request) => {
-  return new Response(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-      'Access-Control-Max-Age': '86400',
-    },
-  });
-};
+// ... (OPTIONS remains the same)
 
 // Get Public Products (only products approved via admin panel)
 export const GET = async (request) => {
   try {
-    // Extract vendorId from query parameters if provided
+    // ... (vendorId extraction remains the same)
     const url = new URL(request.url);
     const vendorId = url.searchParams.get('vendorId');
 
     // Build query with optional vendor filter
     const query = {
-      status: 'approved', // This is set by admin panel product approval
+      status: 'approved',
       isActive: true,
       stock: { $gt: 0 },
       showOnWebsite: { $ne: false }
     };
 
-    // Add vendor filter if vendorId is provided
     if (vendorId) {
       query.vendorId = vendorId;
     }
 
     // Get products that are approved via admin panel
     const approvedProducts = await ProductModel.find(query)
-      .select('productName description price salePrice productImages vendorId stock createdAt origin size sizeMetric keyIngredients forBodyPart bodyPartType productForm brand')
+      .select('productName description price salePrice productImages vendorId stock createdAt origin size sizeMetric keyIngredients forBodyPart bodyPartType productForm brand category')
+      .populate('category', 'name')
       .sort({ createdAt: -1 })
       .limit(50);
 
@@ -112,11 +102,11 @@ export const GET = async (request) => {
         vendorName: product.origin === 'Vendor'
           ? (vendorData?.businessName || 'Unknown Vendor')
           : (vendorData?.shopName || 'Unknown Supplier'),
-        category: product.category || 'Beauty Products',
+        category: product.category?.name || 'Beauty Products',
         stock: product.stock,
         isNew: new Date(product.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        rating: (4.2 + Math.random() * 0.8).toFixed(1),
-        reviewCount: Math.floor(50 + Math.random() * 500),
+        rating: 0,
+        reviewCount: 0,
         hint: product.description || product.productName,
         // Additional fields from product schema
         size: product.size || null,
@@ -127,6 +117,35 @@ export const GET = async (request) => {
         productForm: product.productForm || null,
         brand: product.brand || null
       };
+    });
+
+    // Fetch real ratings and review counts in parallel
+    const productStats = await Promise.all(transformedProducts.map(async (p) => {
+      const stats = await ReviewModel.aggregate([
+        { $match: { entityId: p.id, entityType: 'product', isApproved: true } },
+        {
+          $group: {
+            _id: '$entityId',
+            averageRating: { $avg: '$rating' },
+            reviewCount: { $sum: 1 }
+          }
+        }
+      ]);
+      return {
+        id: p.id,
+        rating: stats.length > 0 ? stats[0].averageRating.toFixed(1) : "0.0",
+        reviewCount: stats.length > 0 ? stats[0].reviewCount : 0
+      };
+    }));
+
+    // Update transformed products with real stats
+    const statsMap = new Map(productStats.map(s => [s.id.toString(), s]));
+    transformedProducts.forEach(p => {
+      const stats = statsMap.get(p.id.toString());
+      if (stats) {
+        p.rating = stats.rating;
+        p.reviewCount = stats.reviewCount;
+      }
     });
 
     return new Response(JSON.stringify({
