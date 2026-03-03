@@ -20,8 +20,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  useGetAdminProductCategoriesQuery,
-  useCreateAdminProductCategoryMutation,
+  useGetProductCategoriesQuery,
+  useCreateProductCategoryMutation,
   useGetCrmProductsQuery,
   useCreateCrmProductMutation,
   useUpdateCrmProductMutation,
@@ -92,15 +92,15 @@ export default function ProductsPage() {
     useDeleteCrmProductMutation();
 
   const {
-    data: categoriesDatas = { data: [] },
+    data: categoriesDatas,
     isLoading: isCategoriesLoading,
     refetch: refetchCategories,
-  } = useGetAdminProductCategoriesQuery({});
+  } = useGetProductCategoriesQuery({});
 
   const categoriesData = categoriesDatas?.data || [];
 
   const [createCategory, { isLoading: isCreatingCategory }] =
-    useCreateAdminProductCategoryMutation();
+    useCreateProductCategoryMutation();
 
   // Component State
   const [currentPage, setCurrentPage] = useState(1);

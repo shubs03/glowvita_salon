@@ -22,6 +22,8 @@ interface Product {
   quantity: number;
   vendorName: string;
   vendorId: string;
+  originalPrice: number;
+  hasSale: boolean;
   isCartOrder?: boolean;
 }
 
@@ -129,8 +131,7 @@ export default function CheckoutPage() {
       : 0;
     const tax = gst + platformFee;
 
-    const discount = subtotal * 0.1; // 10% discount to match Cart page
-    const totalAmount = subtotal + shipping + tax - discount;
+    const totalAmount = subtotal + shipping + tax;
 
     try {
       // For cash on delivery, directly create order
@@ -401,8 +402,7 @@ export default function CheckoutPage() {
     : 0;
   const tax = gst + platformFee;
 
-  const discount = subtotal * 0.1; // 10% discount to match Cart page
-  const total = subtotal + shipping + tax - discount;
+  const total = subtotal + shipping + tax;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -461,6 +461,11 @@ export default function CheckoutPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-lg">₹{subtotal.toFixed(2)}</p>
+                    {product.hasSale && (
+                      <p className="text-muted-foreground line-through text-xs">
+                        ₹{(product.originalPrice * product.quantity).toFixed(2)}
+                      </p>
+                    )}
                   </div>
                 </div>
               </CardContent>
@@ -508,10 +513,6 @@ export default function CheckoutPage() {
                   <div className="flex justify-between">
                     <span>Shipping</span>
                     <span>₹{shipping.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Discount (10%)</span>
-                    <span className="text-blue-600 font-medium">-₹{discount.toFixed(2)}</span>
                   </div>
                   {productGSTEnabled && (
                     <div className="flex justify-between">

@@ -262,8 +262,7 @@ export default function CartPage() {
     : 0;
   const tax = gst + platformFee;
 
-  const discount = subtotal * 0.1; // 10% discount
-  const total = subtotal + shipping + tax - discount;
+  const total = subtotal + shipping + tax;
   const itemCount = cartItems.reduce(
     (acc: number, item: any) => acc + item.quantity,
     0
@@ -352,9 +351,16 @@ export default function CartPage() {
                         <h3 className="font-semibold text-base lg:text-lg mb-1">
                           {item.productName}
                         </h3>
-                        <p className="text-muted-foreground text-sm lg:text-base">
-                          Price: ₹{item.price.toFixed(2)}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-primary font-semibold text-sm lg:text-base">
+                            ₹{item.price.toFixed(2)}
+                          </p>
+                          {item.hasSale && (
+                            <p className="text-muted-foreground line-through text-xs">
+                              ₹{item.originalPrice.toFixed(2)}
+                            </p>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-3">
                           <Button
                             variant="outline"
@@ -553,12 +559,6 @@ export default function CartPage() {
                       <span className="font-medium">₹{subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm lg:text-base">
-                      <span className="text-muted-foreground">Discount</span>
-                      <span className="font-medium text-blue-600">
-                        -₹{discount.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm lg:text-base">
                       <span className="text-muted-foreground">Est. Shipping</span>
                       <span className="font-medium">₹{shipping.toFixed(2)}</span>
                     </div>
@@ -587,13 +587,6 @@ export default function CartPage() {
                     >
                       Proceed to Checkout
                     </Button>
-                    {discount > 0 && (
-                      <div className="text-center">
-                        <p className="text-sm text-blue-600 font-medium">
-                          You saved ₹{discount.toFixed(2)} on this order!
-                        </p>
-                      </div>
-                    )}
                   </CardFooter>
                 </Card>
 

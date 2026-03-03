@@ -581,8 +581,12 @@ export default function SalonDetailsPage() {
 
     // Store product details in local storage
     try {
+      const effectivePrice = (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price;
       const productWithVendor = {
         ...product,
+        price: effectivePrice,
+        originalPrice: product.price,
+        hasSale: product.salePrice > 0,
         vendorId: id, // Always use the salon ID from URL params
         vendorName: vendorData?.businessName || "Unknown Vendor",
         quantity: 1, // Add default quantity
@@ -611,12 +615,15 @@ export default function SalonDetailsPage() {
     try {
       if (isAuthenticated && user?._id) {
         // User is authenticated - use API
+        const effectivePrice = (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price;
         const cartItem = {
           productId: product.id,
           productName: product.name,
           productImage: product.image,
           quantity: 1,
-          price: product.price,
+          price: effectivePrice,
+          originalPrice: product.price, // Optional for API cart metadata
+          hasSale: product.salePrice > 0, // Optional for API cart metadata
           vendorId: id,
           supplierName: vendorData?.businessName || "Unknown Vendor",
         };
@@ -633,10 +640,13 @@ export default function SalonDetailsPage() {
         });
       } else {
         // User is not authenticated - use local storage
+        const effectivePrice = (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price;
         const cartItem = {
           _id: product.id,
           productName: product.name,
-          price: product.price,
+          price: effectivePrice,
+          originalPrice: product.price,
+          hasSale: product.salePrice > 0,
           quantity: 1,
           productImage: product.image,
           vendorId: id,
