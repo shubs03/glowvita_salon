@@ -166,9 +166,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </p>
         <div className="flex justify-between items-center mt-auto">
           <p className="font-bold text-primary">
-            ₹{product.price.toFixed(2)}
+            ₹{(product.salePrice && product.salePrice > 0 ? product.salePrice : product.price).toFixed(2)}
           </p>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 text-primary">
             <Star className="h-3 w-3 text-primary fill-current" />
             <span className="text-xs text-muted-foreground font-medium">
               {product.rating}

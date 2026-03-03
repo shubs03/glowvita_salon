@@ -18,7 +18,7 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  salePrice?: number;
+  salePrice: number;
   image: string;
   vendorId: string;
   vendorName: string;
@@ -71,8 +71,8 @@ const RelevantProducts: React.FC<RelevantProductsProps> = ({
       id: product.id || product._id,
       name: product.name,
       description: product.description || "",
-      price: product.price || 0,
-      salePrice: product.salePrice || undefined,
+      price: Number(product.price) || 0,
+      salePrice: product.salePrice && Number(product.salePrice) > 0 ? Number(product.salePrice) : 0,
       image:
         product.image ||
         product.productImage ||
@@ -98,9 +98,9 @@ const RelevantProducts: React.FC<RelevantProductsProps> = ({
           Relevant Products
         </h2>
         <p className="text-muted-foreground mt-3 text-sm">
-            These awards are a testament to our commitment to excellence and our
-            dedication to providing the best salon software solutions to our
-            customers.
+          These awards are a testament to our commitment to excellence and our
+          dedication to providing the best salon software solutions to our
+          customers.
         </p>
       </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -274,7 +274,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
           {product.description}
         </p>
         <div className="flex justify-between items-center mt-auto">
-          <p className="font-bold text-primary">₹{product.price.toFixed(2)}</p>
+          <div>
+            {product.salePrice && product.salePrice > 0 ? (
+              <div className="flex items-center gap-2">
+                <p className="font-bold text-primary">₹{product.salePrice.toFixed(2)}</p>
+                <p className="text-[10px] text-muted-foreground line-through">₹{product.price.toFixed(2)}</p>
+              </div>
+            ) : (
+              <p className="font-bold text-primary">₹{product.price.toFixed(2)}</p>
+            )}
+          </div>
           <div className="flex items-center gap-1">
             <Star className="h-3 w-3 text-primary fill-current" />
             <span className="text-xs text-muted-foreground font-medium">

@@ -666,8 +666,8 @@ export const glowvitaApi = createApi({
     getAdminOffers: builder.query({
       query: (params) => {
         const regionId = typeof params === 'string' ? params : params?.regionId;
-        return { 
-          url: "/admin/offers", 
+        return {
+          url: "/admin/offers",
           method: "GET",
           params: regionId ? { regionId } : {}
         };
@@ -996,8 +996,8 @@ export const glowvitaApi = createApi({
     getSubscriptionPlans: builder.query({
       query: (params) => {
         const regionId = typeof params === 'string' ? params : params?.regionId;
-        return { 
-          url: "/admin/subscription-plans", 
+        return {
+          url: "/admin/subscription-plans",
           method: "GET",
           params: regionId ? { regionId } : {}
         };
@@ -1143,8 +1143,8 @@ export const glowvitaApi = createApi({
     getCategories: builder.query({
       query: (params) => {
         const { regionId } = params || {};
-        return { 
-          url: "/admin/categories", 
+        return {
+          url: "/admin/categories",
           method: "GET",
           params: regionId ? { regionId } : {}
         };
@@ -1736,6 +1736,12 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["CrmProducts"],
     }),
+    getCrmProductMasters: builder.query({
+      query: () => ({ url: "/crm/product-masters", method: "GET" }),
+      transformResponse: (response) => (response && response.success ? response.data || [] : []),
+      providesTags: ["ProductMaster"],
+    }),
+
 
     // Inventory Endpoints
     adjustInventory: builder.mutation({
@@ -3411,6 +3417,7 @@ export const {
   useCreateProductMasterMutation,
   useUpdateProductMasterMutation,
   useDeleteProductMasterMutation,
+  useGetCrmProductMastersQuery,
 
   // Inventory Hooks
   useAdjustInventoryMutation,
