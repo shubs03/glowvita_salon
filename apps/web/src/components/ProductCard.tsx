@@ -238,12 +238,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <Button
           size="icon"
           variant="ghost"
-          className="absolute top-1 left-1 h-8 w-8 rounded-full bg-white/20 text-primary backdrop-blur-sm hover:bg-white/30 transition-all"
+          className="absolute top-1 right-1 h-8 w-8 rounded-full bg-white/20 text-red-500 backdrop-blur-sm hover:bg-white/30 transition-all"
           onClick={handleWishlistToggle}
           disabled={isLoading}
         >
           <Heart
-            className={`h-4 w-4 ${isLiked ? "fill-current text-primary" : ""}`}
+            className={cn("h-4 w-4", isLiked && "fill-red-500 text-red-500")}
           />
         </Button>
       </div>
@@ -262,7 +262,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             ₹{(salePrice || price).toFixed(2)}
           </p>
           <div className="flex items-center gap-1">
-            <Star className="h-3 w-3 text-primary fill-current" />
+            <Star className="h-3 w-3 text-yellow-400 fill-current" />
             <span className="text-xs text-muted-foreground font-medium">
               {rating}
             </span>

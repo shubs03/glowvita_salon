@@ -68,6 +68,10 @@ import {
   useGetSalonReviewsQuery,
   useAddToClientCartMutation,
   useGetPublicVendorByIdQuery,
+  useGetSalonWishlistQuery,
+  useAddToSalonWishlistMutation,
+  useRemoveFromSalonWishlistMutation,
+  SALON_FAVORITES_VERSION,
 } from "@repo/store/services/api";
 import { useAppDispatch } from "@repo/store/hooks";
 import { addToCart, setCurrentUser } from "@repo/store/slices/cartSlice";
@@ -371,7 +375,8 @@ export default function SalonDetailsPage() {
     skip: !id,
   });
 
-  console.log("vendorsResponse : ", vendorsResponse)
+  console.log("SALON_FAVORITES_VERSION : ", SALON_FAVORITES_VERSION);
+  console.log("vendorsResponse : ", vendorsResponse);
 
   const {
     data: servicesData,
@@ -428,6 +433,42 @@ export default function SalonDetailsPage() {
   } = useGetSalonReviewsQuery(id, {
     skip: !id,
   });
+
+  // Salon Wishlist hooks
+  const { data: wishlistData } = useGetSalonWishlistQuery(undefined, {
+    skip: !isAuthenticated
+  });
+  const [addToWishlist] = useAddToSalonWishlistMutation();
+  const [removeFromWishlist] = useRemoveFromSalonWishlistMutation();
+
+  const isFavorited = useMemo(() => {
+    if (!wishlistData?.data?.items) return false;
+    return wishlistData.data.items.some((item: any) => item.salonId === id);
+  }, [wishlistData, id]);
+
+  const toggleFavorite = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please login to add salons to your favorites", {
+        action: {
+          label: "Login",
+          onClick: () => router.push("/login"),
+        },
+      });
+      return;
+    }
+
+    try {
+      if (isFavorited) {
+        await removeFromWishlist(id).unwrap();
+        toast.success("Removed from favorites");
+      } else {
+        await addToWishlist(id).unwrap();
+        toast.success("Added to favorites");
+      }
+    } catch (err) {
+      toast.error("Failed to update favorites");
+    }
+  };
 
   // Cart mutation for authenticated users
   const [addToCartAPI] = useAddToClientCartMutation();
@@ -913,9 +954,10 @@ export default function SalonDetailsPage() {
                   size="sm"
                   variant="outline"
                   className="flex items-center gap-2"
+                  onClick={toggleFavorite}
                 >
-                  <Heart className="h-4 w-4" />
-                  Like
+                  <Heart className={cn("h-4 w-4", isFavorited && "fill-red-500 text-red-500")} />
+                  {isFavorited ? "Liked" : "Like"}
                 </Button>
                 <Button
                   size="sm"
