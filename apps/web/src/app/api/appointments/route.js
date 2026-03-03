@@ -35,12 +35,15 @@ export const GET = async (req) => {
 
             // Try to fetch user details to also search by name/phone for unlinked appointments
             try {
-                const user = await UserModel.findById(userId).select('firstName lastName mobileNo');
+                const user = await UserModel.findById(userId).select('firstName lastName mobileNo emailAddress');
                 if (user) {
                     const firstName = user.firstName || '';
                     const lastName = user.lastName || '';
                     const fullName = `${firstName} ${lastName}`.trim();
                     console.log('Found user for expanded search:', fullName, user.mobileNo);
+
+                    // Store found user for transformation fallback
+                    req.foundUser = user;
 
                     // Add name match (case-insensitive)
                     if (fullName) {
@@ -48,9 +51,6 @@ export const GET = async (req) => {
                             clientName: { $regex: new RegExp(`^${fullName}$`, 'i') }
                         });
                     }
-
-                    // Note: Appointment model doesn't strictly have phone at root level based on schema provided, 
-                    // but if it did, we would add it here.
                 }
             } catch (err) {
                 console.error('Error fetching user for appointment search:', err);
@@ -103,7 +103,7 @@ export const GET = async (req) => {
 
         // Fetch appointments with populated vendor data
         const appointments = await AppointmentModel.find(query)
-            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId amount addOnsAmount totalAmount finalAmount platformFee serviceTax discountAmount vendorId cancellationReason notes isHomeService homeServiceLocation travelTime travelDistance distanceMeters blockedTravelWindows isWeddingService weddingPackageDetails')
+            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId clientName clientEmail clientPhone amount addOnsAmount totalAmount finalAmount platformFee serviceTax discountAmount vendorId cancellationReason notes isHomeService homeServiceLocation travelTime travelDistance distanceMeters blockedTravelWindows isWeddingService weddingPackageDetails')
             .populate('vendorId', 'businessName address')
             .lean(); // Use lean() to get plain JavaScript objects with raw ObjectIds
 
@@ -123,6 +123,18 @@ export const GET = async (req) => {
                         cancellationReason = altMatch[1].trim();
                     }
                 }
+            }
+
+            // Client data fallback
+            let clientName = apt.clientName;
+            let clientEmail = apt.clientEmail;
+            let clientPhone = apt.clientPhone;
+
+            if (req.foundUser && (!clientName || !clientEmail || !clientPhone)) {
+                const fullName = `${req.foundUser.firstName || ''} ${req.foundUser.lastName || ''}`.trim();
+                if (!clientName) clientName = fullName;
+                if (!clientEmail) clientEmail = req.foundUser.emailAddress;
+                if (!clientPhone) clientPhone = req.foundUser.mobileNo;
             }
 
             // For multi-service appointments, use the first service as the main service
@@ -205,6 +217,9 @@ export const GET = async (req) => {
                 date: apt.date,
                 staff: apt.staff, // ✅ Keep the actual staff ID for comparison
                 staffName: staff, // Also include the name for display
+                clientName: clientName,
+                clientEmail: clientEmail,
+                clientPhone: clientPhone,
                 startTime: startTime, // ✅ Include startTime at top level
                 endTime: endTime, // ✅ Include endTime at top level
                 status: status,
