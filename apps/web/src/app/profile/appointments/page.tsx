@@ -169,11 +169,26 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
         const now = new Date();
         const apptDate = new Date(appointmentDate);
 
-        // If startTime is provided (e.g. "12:30"), adjust the date to reflect this time
+        // If startTime is provided (e.g. "12:30" or "12:30 PM"), adjust the date to reflect this time
         if (startTime) {
-            const [hours, minutes] = startTime.split(':').map(Number);
-            if (!isNaN(hours) && !isNaN(minutes)) {
+            const timeMatch = startTime.match(/(\d+):(\d+)(?:\s*(AM|PM))?/i);
+            if (timeMatch) {
+                let hours = parseInt(timeMatch[1], 10);
+                const minutes = parseInt(timeMatch[2], 10);
+                const period = timeMatch[3];
+
+                if (period) {
+                    if (period.toUpperCase() === 'PM' && hours < 12) hours += 12;
+                    if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+                }
+
                 apptDate.setHours(hours, minutes, 0, 0);
+            } else {
+                // Fallback for HH:mm format if match fails
+                const [hours, minutes] = startTime.split(':').map(Number);
+                if (!isNaN(hours) && !isNaN(minutes)) {
+                    apptDate.setHours(hours, minutes, 0, 0);
+                }
             }
         }
 
@@ -189,7 +204,17 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
         const dateObj = new Date(appointment.date);
         if (!isNaN(dateObj.getTime())) {
             displayDate = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            displayDateTime = `${displayDate} at ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+            // Use appointment.startTime or the first service item's startTime if available
+            const startTime = (appointment.serviceItems && appointment.serviceItems.length > 0)
+                ? appointment.serviceItems[0].startTime
+                : appointment.startTime;
+
+            if (startTime) {
+                displayDateTime = `${displayDate} at ${startTime}`;
+            } else {
+                displayDateTime = `${displayDate} at ${dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            }
         }
     } catch (e) {
         console.error('Error parsing date in AppointmentDetails:', e);
@@ -199,6 +224,25 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
     const handleAddToCalendar = () => {
         try {
             const dateObj = new Date(appointment.date);
+
+            // Adjust time based on startTime if available
+            const startTime = (appointment.serviceItems && appointment.serviceItems.length > 0)
+                ? appointment.serviceItems[0].startTime
+                : appointment.startTime;
+
+            if (startTime) {
+                const timeMatch = startTime.match(/(\d+):(\d+)(?:\s*(AM|PM))?/i);
+                if (timeMatch) {
+                    let hours = parseInt(timeMatch[1], 10);
+                    const minutes = parseInt(timeMatch[2], 10);
+                    const period = timeMatch[3];
+                    if (period) {
+                        if (period.toUpperCase() === 'PM' && hours < 12) hours += 12;
+                        if (period.toUpperCase() === 'AM' && hours === 12) hours = 0;
+                    }
+                    dateObj.setHours(hours, minutes, 0, 0);
+                }
+            }
 
             // Format date for calendar event (YYYYMMDDTHHMMSS)
             const startDateTime = dateObj.toISOString().replace(/-|:|\.\d+/g, '');
@@ -320,7 +364,7 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
                         <Button variant="outline" className="justify-start gap-2" onClick={handleGetDirections}>
                             <MapPin className="h-4 w-4" /> Get Directions
                         </Button>
-                        <Button variant="outline" className="justify-start gap-2" disabled={!isAppointmentCancellable(appointment.date, appointment.status, appointment.startTime)} onClick={() => onCancelClick(appointment)}>
+                        <Button variant="outline" className="justify-start gap-2" disabled={!isAppointmentCancellable(appointment.date, appointment.status, appointment.serviceItems && appointment.serviceItems.length > 0 ? appointment.serviceItems[0].startTime : appointment.startTime)} onClick={() => onCancelClick(appointment)}>
                             <Edit className="h-4 w-4" /> Manage Appointment
                         </Button>
                         <Button variant="outline" className="justify-start gap-2" onClick={handleSalonDetails} disabled={!appointment.vendorId}>
