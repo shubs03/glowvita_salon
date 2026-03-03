@@ -992,6 +992,30 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["doctors"],
     }),
 
+    updateDoctorStatus: builder.mutation({
+      query: ({ id, status }) => ({
+        url: "/admin/doctors",
+        method: "PATCH",
+        body: { id, status },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "doctors", id },
+        "doctors",
+      ],
+    }),
+
+    updateDoctorDocumentStatus: builder.mutation({
+      query: ({ doctorId, documentType, status, rejectionReason }) => ({
+        url: "/admin/doctors",
+        method: "PATCH",
+        body: { doctorId, documentType, status, rejectionReason },
+      }),
+      invalidatesTags: (result, error, { doctorId }) => [
+        { type: "doctors", id: doctorId },
+        "doctors",
+      ],
+    }),
+
     // Subscription Plan Endpoints
     getSubscriptionPlans: builder.query({
       query: (params) => {

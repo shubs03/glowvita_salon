@@ -208,6 +208,68 @@ const doctorSchema = new mongoose.Schema({
     unique: true,
     sparse: true,
   },
+  documents: {
+    aadharCard: {
+      type: String, // URL to the uploaded document
+      default: null,
+    },
+    udhayamCert: {
+      type: String,
+      default: null,
+    },
+    shopAct: {
+      type: String,
+      default: null,
+    },
+    panCard: {
+      type: String,
+      default: null,
+    },
+    otherDocs: [
+      {
+        type: String,
+        default: null,
+      },
+    ],
+    // Add document status fields
+    aadharCardStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    udhayamCertStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    shopActStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    panCardStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    // Add admin rejection reason fields
+    aadharCardAdminRejectionReason: {
+      type: String,
+      default: null,
+    },
+    udhayamCertAdminRejectionReason: {
+      type: String,
+      default: null,
+    },
+    shopActAdminRejectionReason: {
+      type: String,
+      default: null,
+    },
+    panCardAdminRejectionReason: {
+      type: String,
+      default: null,
+    },
+  },
   createdAt: {
     type: Date,
     default: Date.now,

@@ -183,7 +183,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
         // Handle documents
         else if (field === 'documents' && typeof body[field] === 'object') {
           if (!supplier.documents) supplier.documents = {};
-          const docTypes = ["aadharCard", "udyogAadhar", "udhayamCert", "shopLicense", "panCard"];
+          const docTypes = ["aadharCard", "udhayamCert", "shopAct", "panCard"];
 
           for (const docType of docTypes) {
             if (body[field][docType] !== undefined) {

@@ -115,9 +115,8 @@ export const DocumentsTab = ({ documents, setVendor }: DocumentsTabProps) => {
   const documentTypes = [
     { key: 'aadharCard', label: 'Aadhar Card' },
     { key: 'panCard', label: 'PAN Card' },
-    { key: 'udyogAadhar', label: 'Udyog Aadhar' },
     { key: 'udhayamCert', label: 'Udhayam Certificate' },
-    { key: 'shopLicense', label: 'Shop License' }
+    { key: 'shopAct', label: 'Shop Act' }
   ];
 
   return (

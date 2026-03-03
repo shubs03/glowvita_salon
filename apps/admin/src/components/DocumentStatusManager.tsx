@@ -8,12 +8,16 @@ import { Textarea } from "@repo/ui/textarea";
 import { Label } from "@repo/ui/label";
 import { Badge } from "@repo/ui/badge";
 import { CheckCircle2, X, Clock, Eye, FileText } from "lucide-react";
-import { useUpdateVendorDocumentStatusMutation, useUpdateSupplierDocumentStatusMutation } from '@repo/store/api';
+import {
+  useUpdateVendorDocumentStatusMutation,
+  useUpdateSupplierDocumentStatusMutation,
+  useUpdateDoctorDocumentStatusMutation
+} from '@repo/store/api';
 import { toast } from 'sonner';
 
 interface DocumentStatusManagerProps {
   entity: any;
-  role: 'vendor' | 'supplier';
+  role: 'vendor' | 'supplier' | 'doctor';
   onUpdate: () => void;
 }
 
@@ -41,6 +45,7 @@ const getAbsoluteUrl = (url: string) => {
 const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ entity, role, onUpdate }) => {
   const [updateVendorDocumentStatus] = useUpdateVendorDocumentStatusMutation();
   const [updateSupplierDocumentStatus] = useUpdateSupplierDocumentStatusMutation();
+  const [updateDoctorDocumentStatus] = useUpdateDoctorDocumentStatusMutation();
   const [previewDocument, setPreviewDocument] = useState<{ src: string; type: string } | null>(null);
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState<string | null>(null);
@@ -49,9 +54,8 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ entity, r
   const documentTypes = [
     { key: 'aadharCard', label: 'Aadhar Card' },
     { key: 'panCard', label: 'PAN Card' },
-    { key: 'udyogAadhar', label: 'Udyog Aadhar' },
     { key: 'udhayamCert', label: 'Udhayam Certificate' },
-    { key: 'shopLicense', label: 'Shop License' }
+    { key: 'shopAct', label: 'Shop Act' }
   ];
 
   const getDocumentStatus = (docType: string) => {
@@ -107,9 +111,16 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ entity, r
           status: 'approved',
           rejectionReason: ''
         }).unwrap();
-      } else {
+      } else if (role === 'supplier') {
         await updateSupplierDocumentStatus({
           supplierId: entity._id,
+          documentType: docType,
+          status: 'approved',
+          rejectionReason: ''
+        }).unwrap();
+      } else if (role === 'doctor') {
+        await updateDoctorDocumentStatus({
+          doctorId: entity._id,
           documentType: docType,
           status: 'approved',
           rejectionReason: ''
@@ -141,9 +152,16 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ entity, r
           status: 'rejected',
           rejectionReason
         }).unwrap();
-      } else {
+      } else if (role === 'supplier') {
         await updateSupplierDocumentStatus({
           supplierId: entity._id,
+          documentType: selectedDocumentType,
+          status: 'rejected',
+          rejectionReason
+        }).unwrap();
+      } else if (role === 'doctor') {
+        await updateDoctorDocumentStatus({
+          doctorId: entity._id,
           documentType: selectedDocumentType,
           status: 'rejected',
           rejectionReason

@@ -123,7 +123,6 @@ export const PUT = authMiddlewareAdmin(async (req) => {
 }, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // DELETE - Remove a doctor
-
 export const DELETE = authMiddlewareAdmin(
   async (req) => {
     const { id } = await req.json();
@@ -137,4 +136,121 @@ export const DELETE = authMiddlewareAdmin(
   },
   ["SUPER_ADMIN", "REGIONAL_ADMIN"],
   "doctors:delete"
+);
+
+// PATCH - Update doctor status or document status
+export const PATCH = authMiddlewareAdmin(
+  async (req) => {
+    try {
+      await initDb();
+      const body = await req.json();
+      const { id, status, doctorId, documentType, rejectionReason } = body;
+
+      // Check if this is a doctor status update
+      if (id && status && !documentType) {
+        if (!id || !status) {
+          return NextResponse.json(
+            { message: "Doctor ID and status are required" },
+            { status: 400 }
+          );
+        }
+
+        // If status is "Approved", check mandatory documents
+        if (status === "Approved") {
+          const doctor = await DoctorModel.findById(id);
+          if (!doctor) {
+            return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
+          }
+
+          const documents = doctor.documents || {};
+          const mandatoryDocs = [
+            { key: "aadharCard", label: "Aadhar Card" },
+            { key: "panCard", label: "PAN Card" },
+          ];
+
+          const pendingOrRejectedDocs = mandatoryDocs.filter((doc) => {
+            const isUploaded = documents[doc.key] && documents[doc.key] !== "";
+            const docStatus = documents[`${doc.key}Status`];
+            return !isUploaded || docStatus !== "approved";
+          });
+
+          if (pendingOrRejectedDocs.length > 0) {
+            const docLabels = pendingOrRejectedDocs.map((doc) => doc.label).join(", ");
+            return NextResponse.json(
+              {
+                message: `Cannot approve doctor. The following mandatory documents are missing or not approved: ${docLabels}`,
+              },
+              { status: 400 }
+            );
+          }
+        }
+
+        const updatedDoctor = await DoctorModel.findByIdAndUpdate(
+          id,
+          { $set: { status } },
+          { new: true }
+        ).populate("subscription.plan", "name").select("-password");
+
+        if (!updatedDoctor) {
+          return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({
+          message: `Doctor ${status} successfully`,
+          doctor: updatedDoctor,
+        });
+      }
+
+      // Check if this is a document status update
+      else if (doctorId && documentType && status) {
+        const validDocumentTypes = [
+          'aadharCard', 'panCard', 'udhayamCert', 'shopAct'
+        ];
+
+        if (!validDocumentTypes.includes(documentType)) {
+          return NextResponse.json({ message: "Invalid document type" }, { status: 400 });
+        }
+
+        if (!['pending', 'approved', 'rejected'].includes(status)) {
+          return NextResponse.json({ message: "Invalid status" }, { status: 400 });
+        }
+
+        if (status === 'rejected' && (!rejectionReason || rejectionReason.trim() === '')) {
+          return NextResponse.json({ message: "Rejection reason is required" }, { status: 400 });
+        }
+
+        const updateData = {
+          [`documents.${documentType}Status`]: status,
+        };
+
+        if (status === 'rejected') {
+          updateData[`documents.${documentType}AdminRejectionReason`] = rejectionReason;
+        } else {
+          updateData[`documents.${documentType}AdminRejectionReason`] = null;
+        }
+
+        const updatedDoctor = await DoctorModel.findByIdAndUpdate(
+          doctorId,
+          { $set: updateData },
+          { new: true }
+        ).select("-password");
+
+        if (!updatedDoctor) {
+          return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({
+          message: `Document ${status} successfully`,
+          doctor: updatedDoctor,
+        });
+      }
+
+      return NextResponse.json({ message: "Invalid request parameters" }, { status: 400 });
+    } catch (error) {
+      console.error("Error in doctor PATCH:", error);
+      return NextResponse.json({ message: "Error updating doctor", error: error.message }, { status: 500 });
+    }
+  },
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "doctors:edit"
 );

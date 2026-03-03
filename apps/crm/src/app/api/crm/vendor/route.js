@@ -257,7 +257,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
                 } else if (field === 'documents' && typeof body[field] === 'object') {
                     // For documents, we'll handle the specific document types
                     // Process each document field if it contains base64 data
-                    const documentFields = ['aadharCard', 'udyogAadhar', 'udhayamCert', 'shopLicense', 'panCard'];
+                    const documentFields = ['aadharCard', 'udhayamCert', 'shopAct', 'panCard'];
                     for (const docField of documentFields) {
                         if (body[field][docField] !== undefined) {
                             // If document is a base64 string, upload it and store the URL

@@ -228,15 +228,11 @@ const vendorSchema = new mongoose.Schema({
       type: String, // URL to the uploaded document
       default: null,
     },
-    udyogAadhar: {
-      type: String,
-      default: null,
-    },
     udhayamCert: {
       type: String,
       default: null,
     },
-    shopLicense: {
+    shopAct: {
       type: String,
       default: null,
     },
@@ -256,17 +252,12 @@ const vendorSchema = new mongoose.Schema({
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
-    udyogAadharStatus: {
-      type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
-    },
     udhayamCertStatus: {
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
-    shopLicenseStatus: {
+    shopActStatus: {
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: "pending",
@@ -281,15 +272,11 @@ const vendorSchema = new mongoose.Schema({
       type: String,
       default: null,
     },
-    udyogAadharRejectionReason: {
-      type: String,
-      default: null,
-    },
     udhayamCertRejectionReason: {
       type: String,
       default: null,
     },
-    shopLicenseRejectionReason: {
+    shopActRejectionReason: {
       type: String,
       default: null,
     },
@@ -302,15 +289,11 @@ const vendorSchema = new mongoose.Schema({
       type: String,
       default: null,
     },
-    udyogAadharAdminRejectionReason: {
-      type: String,
-      default: null,
-    },
     udhayamCertAdminRejectionReason: {
       type: String,
       default: null,
     },
-    shopLicenseAdminRejectionReason: {
+    shopActAdminRejectionReason: {
       type: String,
       default: null,
     },
@@ -365,19 +348,15 @@ vendorSchema.pre('validate', function (next) {
       return next(new Error('Rejection reason is required for rejected Aadhar Card'));
     }
 
-    // Check Udyog Aadhar
-    if (docs.udyogAadharStatus === 'rejected' && !docs.udyogAadharRejectionReason) {
-      return next(new Error('Rejection reason is required for rejected Udyog Aadhar'));
-    }
 
     // Check Udhayam Certificate
     if (docs.udhayamCertStatus === 'rejected' && !docs.udhayamCertRejectionReason) {
       return next(new Error('Rejection reason is required for rejected Udhayam Certificate'));
     }
 
-    // Check Shop License
-    if (docs.shopLicenseStatus === 'rejected' && !docs.shopLicenseRejectionReason) {
-      return next(new Error('Rejection reason is required for rejected Shop License'));
+    // Check Shop Act
+    if (docs.shopActStatus === 'rejected' && !docs.shopActRejectionReason) {
+      return next(new Error('Rejection reason is required for rejected Shop Act'));
     }
 
     // Check PAN Card

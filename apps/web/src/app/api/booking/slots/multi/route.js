@@ -279,6 +279,7 @@ export async function POST(request) {
       assignments = [], // [{ serviceId, staffId }]
       isHomeService = false,
       location = null,
+      address = null,
       stepMinutes = 15,
       bufferBefore = 0,
       bufferAfter = 0
@@ -326,7 +327,8 @@ export async function POST(request) {
       date: dateStr,
       assignmentsCount: assignments.length,
       isHomeService,
-      hasLocation: !!location
+      hasLocation: !!location,
+      address: address || 'Not provided'
     });
     
     // Fetch vendor services to get service details
@@ -615,6 +617,7 @@ export async function POST(request) {
         servicesCount: assignments.length,
         totalDuration,
         isHomeService,
+        address: address || null,
         ...(travelTimeInfo && { travelTime: travelTimeInfo.timeInMinutes })
       }
     });
