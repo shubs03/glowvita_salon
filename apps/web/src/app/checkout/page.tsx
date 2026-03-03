@@ -33,6 +33,8 @@ export default function CheckoutPage() {
   const [shippingAddress, setShippingAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('credit-card');
+  const [addressError, setAddressError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
   const { user } = useAuth();
   const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
@@ -101,10 +103,30 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
-    if (!shippingAddress.trim() || !contactNumber.trim()) {
-      toast.error('Please fill in all shipping details.');
+    let isValid = true;
+
+    if (!shippingAddress.trim()) {
+      setAddressError('Shipping address is required');
+      isValid = false;
+    } else {
+      setAddressError('');
+    }
+
+    if (!contactNumber.trim()) {
+      setPhoneError('Contact number is required');
+      isValid = false;
+    } else if (contactNumber.length !== 10) {
+      setPhoneError('Phone number must be exactly 10 digits');
+      isValid = false;
+    } else {
+      setPhoneError('');
+    }
+
+    if (!isValid) {
+      toast.error('Please correct the errors in the form.');
       return;
     }
+
     if (!product) return;
 
     // Use the correct calculation for totalAmount that matches the checkout page display
@@ -482,18 +504,32 @@ export default function CheckoutPage() {
                   <Input
                     id="shippingAddress"
                     value={shippingAddress}
-                    onChange={(e) => setShippingAddress(e.target.value)}
+                    onChange={(e) => {
+                      setShippingAddress(e.target.value);
+                      if (e.target.value.trim()) setAddressError('');
+                    }}
                     placeholder="Enter your full shipping address"
+                    className={addressError ? "border-red-500" : ""}
                   />
+                  {addressError && <p className="text-xs text-red-500 mt-1">{addressError}</p>}
                 </div>
                 <div>
                   <Label htmlFor="contactNumber">Contact Number</Label>
                   <Input
                     id="contactNumber"
                     value={contactNumber}
-                    onChange={(e) => setContactNumber(e.target.value)}
-                    placeholder="Enter your contact number"
+                    type="tel"
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      if (value.length <= 10) {
+                        setContactNumber(value);
+                        if (value.length === 10) setPhoneError('');
+                      }
+                    }}
+                    placeholder="Enter 10-digit contact number"
+                    className={phoneError ? "border-red-500" : ""}
                   />
+                  {phoneError && <p className="text-xs text-red-500 mt-1">{phoneError}</p>}
                 </div>
               </CardContent>
             </Card>
