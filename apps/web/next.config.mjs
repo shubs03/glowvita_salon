@@ -53,6 +53,12 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'v2winonline.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'images.unsplash.com',
         port: '',
         pathname: '/**',

@@ -369,7 +369,7 @@ function BookingPageContent() {
     if (codeFromUrl && !appliedOffer && !isOffersLoading) {
       console.log('Detected offerCode in URL:', codeFromUrl);
       setOfferCode(codeFromUrl);
-      
+
       // We need to wait for salonId to be available for validation
       if (salonId) {
         const validateAndApply = async () => {

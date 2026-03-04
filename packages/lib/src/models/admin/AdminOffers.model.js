@@ -44,12 +44,10 @@ if (isServer && mongoose && mongoose.model) {
     },
     applicableSpecialties: {
       type: [String],
-      enum: ['Hair Cut', 'Spa', 'Massage', 'Facial', 'Manicure', 'Pedicure', ''], // Allow empty string for backward compatibility
       default: [],
     },
     applicableCategories: {
       type: [String],
-      enum: ['Men', 'Women', 'Unisex', ''], // Allow empty string for backward compatibility
       default: [],
     },
     // New field for offer image
@@ -88,7 +86,7 @@ if (isServer && mongoose && mongoose.model) {
   });
 
   // Add a method to calculate discount amount
-  adminOfferSchema.methods.calculateDiscount = function(amount) {
+  adminOfferSchema.methods.calculateDiscount = function (amount) {
     if (this.type === "percentage") {
       return (amount * this.value) / 100;
     } else {
@@ -97,22 +95,22 @@ if (isServer && mongoose && mongoose.model) {
   };
 
   // Add a method to check if offer is applicable
-  adminOfferSchema.methods.isApplicable = function() {
+  adminOfferSchema.methods.isApplicable = function () {
     // Check if offer is active
     if (this.status !== "Active") {
       return false;
     }
-    
+
     // Check if offer has expired
     if (this.expires && new Date() > new Date(this.expires)) {
       return false;
     }
-    
+
     // Check if offer has started
     if (new Date() < new Date(this.startDate)) {
       return false;
     }
-    
+
     return true;
   };
 
