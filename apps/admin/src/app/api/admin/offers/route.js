@@ -30,17 +30,17 @@ const isValidBase64Image = (str) => {
 export const POST = authMiddlewareAdmin(
   async (req) => {
     const body = await req.json();
-    const { 
-      code, 
-      type, 
-      value, 
-      status, 
-      startDate, 
-      expires, 
-      applicableSpecialties, 
-      applicableCategories, 
+    const {
+      code,
+      type,
+      value,
+      status,
+      startDate,
+      expires,
+      applicableSpecialties,
+      applicableCategories,
       offerImage,
-      isCustomCode 
+      isCustomCode
     } = body;
 
     // Validate required fields
@@ -59,7 +59,7 @@ export const POST = authMiddlewareAdmin(
       // Custom code provided
       finalCode = code.toUpperCase().trim();
       isCustom = true;
-      
+
       // Check for duplicate code
       const existingOffer = await OfferModel.findOne({ code: finalCode });
       if (existingOffer) {
@@ -79,25 +79,16 @@ export const POST = authMiddlewareAdmin(
 
     // applicableSpecialties are now dynamic, no server-side validation against a static list.
     const specialties = Array.isArray(applicableSpecialties) ? applicableSpecialties : [];
-    
-    // Validate applicableCategories - now supports multiple selections
-    let categories = [];
-    if (Array.isArray(applicableCategories) && applicableCategories.length > 0) {
-      categories = applicableCategories;
-      if (!categories.every(c => validCategories.includes(c))) {
-        return Response.json(
-          { message: `Invalid categories. Must be one of: ${validCategories.join(', ')}` },
-          { status: 400 }
-        );
-      }
-    }
+
+    // Validate applicableCategories - now supports both Genders and Service Categories
+    let categories = Array.isArray(applicableCategories) ? applicableCategories : [];
 
     // Handle image upload if provided
     let imageUrl = null;
     if (offerImage && isValidBase64Image(offerImage)) {
       const fileName = `offer-${Date.now()}`;
       imageUrl = await uploadBase64(offerImage, fileName);
-      
+
       if (!imageUrl) {
         return Response.json(
           { message: "Failed to upload image" },
@@ -139,7 +130,7 @@ export const GET = authMiddlewareAdmin(
   async (req) => {
     const { buildRegionQueryFromRequest } = await import("@repo/lib");
     const baseQuery = buildRegionQueryFromRequest(req);
-    
+
     let query = baseQuery;
     const userRole = req.user.roleName || req.user.role;
 
@@ -152,9 +143,9 @@ export const GET = authMiddlewareAdmin(
           { regionId: null }
         ]
       };
-      
+
       const offers = await OfferModel.find(query).lean();
-      
+
       // Post-process status and data
       const processedOffers = offers.map(offer => {
         const currentDate = new Date();
@@ -174,7 +165,7 @@ export const GET = authMiddlewareAdmin(
           applicableCategories: Array.isArray(offer.applicableCategories) ? offer.applicableCategories : [],
         };
       });
-      
+
       return Response.json(processedOffers);
     }
 
@@ -209,12 +200,12 @@ export const GET = authMiddlewareAdmin(
 export const PUT = authMiddlewareAdmin(
   async (req) => {
     const { id, action, ...body } = await req.json();
-    
+
     // Special case: Toggle general active status
     if (action === 'toggle_active') {
       const offer = await OfferModel.findById(id);
       if (!offer) return Response.json({ message: "Offer not found" }, { status: 404 });
-      
+
       offer.isActive = !offer.isActive;
       await offer.save();
       return Response.json({ message: `Offer ${offer.isActive ? 'activated' : 'deactivated'} successfully`, isActive: offer.isActive });
@@ -224,21 +215,21 @@ export const PUT = authMiddlewareAdmin(
     if (action === 'disable_global') {
       const userRegion = req.user.assignedRegions?.[0];
       if (!userRegion) return Response.json({ message: "No region assigned to user" }, { status: 400 });
-      
+
       await OfferModel.findByIdAndUpdate(id, {
         $addToSet: { disabledRegions: userRegion }
       });
       return Response.json({ message: "Offer disabled for your region" });
     }
-    
+
     if (action === 'enable_global') {
-        const userRegion = req.user.assignedRegions?.[0];
-        if (!userRegion) return Response.json({ message: "No region assigned to user" }, { status: 400 });
-        
-        await OfferModel.findByIdAndUpdate(id, {
-          $pull: { disabledRegions: userRegion }
-        });
-        return Response.json({ message: "Offer enabled for your region" });
+      const userRegion = req.user.assignedRegions?.[0];
+      if (!userRegion) return Response.json({ message: "No region assigned to user" }, { status: 400 });
+
+      await OfferModel.findByIdAndUpdate(id, {
+        $pull: { disabledRegions: userRegion }
+      });
+      return Response.json({ message: "Offer enabled for your region" });
     }
 
     // Get existing offer to check for old image
@@ -250,17 +241,8 @@ export const PUT = authMiddlewareAdmin(
     // applicableSpecialties are now dynamic, no server-side validation against a static list.
     const specialties = Array.isArray(body.applicableSpecialties) ? body.applicableSpecialties : [];
 
-    // Validate applicableCategories - now supports multiple selections
-    let categories = [];
-    if (Array.isArray(body.applicableCategories) && body.applicableCategories.length > 0) {
-      categories = body.applicableCategories;
-      if (!categories.every(c => validCategories.includes(c))) {
-        return Response.json(
-          { message: `Invalid categories. Must be one of: ${validCategories.join(', ')}` },
-          { status: 400 }
-        );
-      }
-    }
+    // Validate applicableCategories - now supports both Genders and Service Categories
+    let categories = Array.isArray(body.applicableCategories) ? body.applicableCategories : [];
 
     // Handle image upload if provided
     if (body.offerImage !== undefined) {
@@ -268,24 +250,24 @@ export const PUT = authMiddlewareAdmin(
         // Upload new image to VPS
         const fileName = `offer-${Date.now()}`;
         const imageUrl = await uploadBase64(body.offerImage, fileName);
-        
+
         if (!imageUrl) {
           return Response.json(
             { message: "Failed to upload image" },
             { status: 500 }
           );
         }
-        
+
         // Delete old image from VPS if it exists
         if (existingOffer.offerImage) {
           await deleteFile(existingOffer.offerImage);
         }
-        
+
         body.offerImage = imageUrl;
       } else {
         // If image is null/empty, remove it
         body.offerImage = null;
-        
+
         // Delete old image from VPS if it exists
         if (existingOffer.offerImage) {
           await deleteFile(existingOffer.offerImage);
@@ -303,7 +285,7 @@ export const PUT = authMiddlewareAdmin(
     // Handle code update only if a new, non-empty code is provided.
     // This prevents overwriting existing codes with empty strings.
     if (body.code && body.code.trim()) {
-      const existingOffer = await OfferModel.findOne({ 
+      const existingOffer = await OfferModel.findOne({
         code: body.code.toUpperCase().trim(),
         _id: { $ne: id }
       });
@@ -313,9 +295,9 @@ export const PUT = authMiddlewareAdmin(
       updateData.code = body.code.toUpperCase().trim();
       updateData.isCustomCode = true;
     } else {
-        // If code is not provided or empty in the body, remove it from the updateData
-        // to prevent it from overwriting the existing code in the database.
-        delete updateData.code;
+      // If code is not provided or empty in the body, remove it from the updateData
+      // to prevent it from overwriting the existing code in the database.
+      delete updateData.code;
     }
 
     const updatedOffer = await OfferModel.findByIdAndUpdate(
@@ -344,7 +326,7 @@ export const DELETE = authMiddlewareAdmin(
     if (!deletedOffer) {
       return Response.json({ message: "Offer not found" }, { status: 404 });
     }
-    
+
     // Delete image from VPS if it exists
     if (deletedOffer.offerImage) {
       await deleteFile(deletedOffer.offerImage);

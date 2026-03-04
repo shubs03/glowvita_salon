@@ -6,9 +6,9 @@ import connectDB from '@repo/lib/db';
 export async function POST(request) {
   try {
     await connectDB();
-    
+
     const { offerCode, vendorId } = await request.json();
-    
+
     if (!offerCode) {
       return NextResponse.json(
         { success: false, message: 'Offer code is required' },
@@ -25,8 +25,8 @@ export async function POST(request) {
     }
 
     // First, check for admin-level offers
-    let offer = await AdminOfferModel.findOne({ 
-      code: offerCode.toUpperCase().trim() 
+    let offer = await AdminOfferModel.findOne({
+      code: offerCode.toUpperCase().trim()
     });
 
     if (offer) {
@@ -34,9 +34,9 @@ export async function POST(request) {
       // Check if the admin offer is applicable
       // For admin offers, we need to check if it's currently active
       const currentDate = new Date();
-      const isDateValid = (!offer.startDate || new Date(offer.startDate) <= currentDate) && 
-                         (!offer.expires || new Date(offer.expires) >= currentDate);
-      
+      const isDateValid = (!offer.startDate || new Date(offer.startDate) <= currentDate) &&
+        (!offer.expires || new Date(offer.expires) >= currentDate);
+
       if (isDateValid) {
         return NextResponse.json({
           success: true,
@@ -48,6 +48,8 @@ export async function POST(request) {
             status: offer.status,
             startDate: offer.startDate,
             expires: offer.expires,
+            applicableSpecialties: offer.applicableSpecialties || [],
+            applicableCategories: offer.applicableCategories || [],
             isVendorOffer: false
           }
         });
@@ -56,7 +58,7 @@ export async function POST(request) {
 
     // If no valid admin offer found, check for vendor-specific offers
     if (vendorId) {
-      offer = await CRMOfferModel.findOne({ 
+      offer = await CRMOfferModel.findOne({
         code: offerCode.toUpperCase().trim(),
         businessType: 'vendor',
         businessId: vendorId
@@ -67,9 +69,9 @@ export async function POST(request) {
         // Check if the vendor offer is applicable
         // For vendor offers, we need to check if it's currently active
         const currentDate = new Date();
-        const isDateValid = (!offer.startDate || new Date(offer.startDate) <= currentDate) && 
-                           (!offer.expires || new Date(offer.expires) >= currentDate);
-        
+        const isDateValid = (!offer.startDate || new Date(offer.startDate) <= currentDate) &&
+          (!offer.expires || new Date(offer.expires) >= currentDate);
+
         if (isDateValid) {
           return NextResponse.json({
             success: true,
@@ -81,6 +83,8 @@ export async function POST(request) {
               status: offer.status,
               startDate: offer.startDate,
               expires: offer.expires,
+              applicableSpecialties: offer.applicableSpecialties || [],
+              applicableCategories: offer.applicableCategories || [],
               isVendorOffer: true
             }
           });
