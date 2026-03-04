@@ -26,9 +26,8 @@ export async function GET(request) {
     }
 
     // Build query for admin offers
-    // Rule 1: Global offers (regionId: null) → show to everyone, but respect disabledRegions
-    // Rule 2: Regional offers (regionId set) → ONLY show to users of that exact region
-    // Rule 3: If NO regionId known → only return global offers
+    // If regionId is provided, show global + exact regional match
+    // If regionId is NOT provided, show all admin offers (allowing guest users to see everything)
     const adminOffersQuery = regionId
       ? {
         $or: [
@@ -36,7 +35,7 @@ export async function GET(request) {
           { regionId: regionId.toString() }       // exact-match regional offers only
         ]
       }
-      : { regionId: null }; // no region = global offers only
+      : {}; // no region = show all offers to guest
 
     const adminOffers = await AdminOfferModel.find(adminOffersQuery).lean();
 
@@ -50,13 +49,18 @@ export async function GET(request) {
         }
       }
 
-      // Status check
+      // Status/Date check
       const now = new Date();
       const started = offer.startDate <= now;
       const notExpired = !offer.expires || offer.expires >= now;
-      return started && notExpired;
+
+      // Also respect internal 'isActive' flag and 'status' if it's explicitly 'Expired'
+      const isNotManuallyDisabled = offer.isActive !== false;
+
+      return started && notExpired && isNotManuallyDisabled;
     }).map(offer => ({
       ...offer,
+      status: 'Active', // Ensure frontend sees it as active since it passed date checks
       isVendorOffer: false,
       businessType: 'admin',
       businessId: null,
@@ -87,6 +91,7 @@ export async function GET(request) {
       return started && notExpired;
     }).map(offer => ({
       ...offer,
+      status: 'Active', // Ensure frontend sees it as active
       isVendorOffer: true,
       businessType: offer.businessType,
       businessId: offer.businessId,
