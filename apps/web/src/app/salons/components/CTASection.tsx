@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
+import { NEXT_PUBLIC_CRM_URL } from "@repo/config/config";
 
 const CTASection = () => {
   return (
@@ -17,14 +18,19 @@ const CTASection = () => {
 
         {/* Primary CTA Button */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <button className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 rounded-lg font-semibold text-base transition-all duration-300 flex items-center gap-2 shadow-sm">
+          <a
+            href={`${NEXT_PUBLIC_CRM_URL || 'http://localhost:3001'}/auth/register`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-3 rounded-lg font-semibold text-base transition-all duration-300 flex items-center gap-2 shadow-sm"
+          >
             Join as a Salon
             <ArrowRight className="w-5 h-5" />
-          </button>
+          </a>
 
           {/* Secondary Link */}
-          <a 
-            href="#" 
+          <a
+            href="#"
             className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors duration-300"
           >
             Learn more about benefits
