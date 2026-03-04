@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+export const dynamic = 'force-dynamic';
 import CRMOfferModel from '@repo/lib/models/Vendor/CRMOffer.model';
 import connectDB from '@repo/lib/db';
 

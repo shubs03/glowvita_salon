@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { cookies } from 'next/headers';
 import { verifyJwt } from '@repo/lib/auth';
 import dbConnect from '@repo/lib/db';
@@ -16,7 +17,7 @@ export async function GET(req) {
   try {
     // Get token from cookies
     const token = cookies().get('token')?.value;
-    
+
     // Check if user is authenticated
     if (!token) {
       return NextResponse.json(
@@ -24,7 +25,7 @@ export async function GET(req) {
         { status: 401 }
       );
     }
-    
+
     // Verify JWT token
     let payload;
     try {
@@ -35,7 +36,7 @@ export async function GET(req) {
         { status: 401 }
       );
     }
-    
+
     // Get user from database
     const user = await User.findById(payload.userId);
     if (!user) {
@@ -44,19 +45,19 @@ export async function GET(req) {
         { status: 404 }
       );
     }
-    
+
     // Fetch user's approved reviews only
-    const reviews = await Review.find({ 
+    const reviews = await Review.find({
       userId: user._id,
       isApproved: true  // Only fetch approved reviews
     })
       .sort({ createdAt: -1 })
       .lean();
-    
+
     // Transform reviews for the frontend
     const transformedReviews = await Promise.all(reviews.map(async (review) => {
       let itemName = `Item ${review.entityId}`;
-      
+
       try {
         if (review.entityType === 'product') {
           const product = await Product.findById(review.entityId);
@@ -68,12 +69,12 @@ export async function GET(req) {
           const vendorServiceDoc = await VendorServices.findOne({
             "services._id": review.entityId
           });
-          
+
           if (vendorServiceDoc) {
             const service = vendorServiceDoc.services.find(
               s => s._id.toString() === review.entityId.toString()
             );
-            
+
             if (service) {
               itemName = service.name || itemName;
             }
@@ -87,7 +88,7 @@ export async function GET(req) {
       } catch (error) {
         console.error('Error fetching entity name:', error);
       }
-      
+
       return {
         id: review._id.toString(),
         type: review.entityType,
@@ -97,10 +98,10 @@ export async function GET(req) {
         date: review.createdAt
       };
     }));
-    
+
     return NextResponse.json(
-      { 
-        success: true, 
+      {
+        success: true,
         reviews: transformedReviews
       },
       { status: 200 }

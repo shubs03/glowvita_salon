@@ -1,4 +1,5 @@
 import _db from "@repo/lib/db";
+export const dynamic = 'force-dynamic';
 import ProductModel from "@repo/lib/models/Vendor/Product.model";
 import VendorModel from "@repo/lib/models/Vendor.model";
 import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";

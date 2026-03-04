@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
+export const dynamic = 'force-dynamic';
 import CRMOfferModel from '@repo/lib/models/Vendor/CRMOffer.model';
 import connectDB from '@repo/lib/db';
 
 export async function GET(request) {
   try {
     await connectDB();
-    
+
     const { searchParams } = new URL(request.url);
     const businessId = searchParams.get('businessId');
-    
+
     if (!businessId) {
       return NextResponse.json(
         { success: false, message: 'Business ID is required' },
@@ -17,9 +18,9 @@ export async function GET(request) {
     }
 
     // Find offers for the specific vendor
-    const offers = await CRMOfferModel.find({ 
+    const offers = await CRMOfferModel.find({
       businessType: 'vendor',
-      businessId: businessId 
+      businessId: businessId
     });
 
     const currentDate = new Date();
@@ -35,7 +36,7 @@ export async function GET(request) {
           newStatus = "Expired";
         }
       }
-      
+
       // Only include active offers for public display
       if (newStatus === "Active") {
         activeOffers.push({
