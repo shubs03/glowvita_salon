@@ -27,14 +27,6 @@ const CTASection = () => {
             Join as a Salon
             <ArrowRight className="w-5 h-5" />
           </a>
-
-          {/* Secondary Link */}
-          <a
-            href="#"
-            className="text-muted-foreground hover:text-foreground text-sm font-medium transition-colors duration-300"
-          >
-            Learn more about benefits
-          </a>
         </div>
       </div>
     </section>
