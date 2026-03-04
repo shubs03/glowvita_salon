@@ -9,7 +9,7 @@ import {
 } from "@repo/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { useGetPublicVendorServicesQuery } from "@repo/store/services/api";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Home, Heart, Plus } from "lucide-react";
 
 interface ServicesSectionProps {
   vendorId: string;
@@ -26,13 +26,17 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
   const services = useMemo(() => {
     if (servicesData?.services && servicesData.services.length > 0) {
       return servicesData.services.map((service: any) => ({
+        id: service._id || service.id,
         name: service.name || "",
         price: service.price || 0,
+        discountedPrice: service.discountedPrice,
         duration: service.duration || 60,
         category: service.category?.name || service.category || "Other",
         description: service.description || "",
         image: service.image || "https://placehold.co/200x200/png?text=" + (service.name || "Service").replace(/\s/g, '+'),
-        addOns: service.addOns || []
+        addOns: service.addOns || [],
+        homeService: service.homeService || service.serviceHomeService,
+        weddingService: service.weddingService || service.serviceWeddingService
       }));
     }
     return [];
@@ -140,36 +144,91 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
               <div
                 key={`${service.name}-${index}`}
                 className="flex items-center p-4 border rounded-md hover:bg-secondary/50 transition-colors"
+                onClick={() => {
+                  if (!isSubscriptionExpired) {
+                    // Store complete service data in sessionStorage
+                    const serviceData = {
+                      id: service.id,
+                      name: service.name,
+                      price: service.price,
+                      discountedPrice: service.discountedPrice,
+                      duration: service.duration,
+                      category: service.category,
+                      description: service.description,
+                      image: service.image
+                    };
+                    sessionStorage.setItem("selectedService", JSON.stringify(serviceData));
+                    onBookNow(service);
+                  }
+                }}
               >
                 <div className="flex-1">
                   <h3 className="font-semibold">{service.name}</h3>
                   <div className="text-sm text-muted-foreground">
-                    <span>{service.duration} min</span>
-                    {service.description && (
-                      <span className="ml-2">• {service.description}</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <span>{service.duration} min</span>
+                      {service.description && (
+                        <span className="line-clamp-1 flex-1">• {service.description}</span>
+                      )}
+                    </div>
                     {isSubscriptionExpired && (
                       <p className="text-[10px] text-red-600 font-medium mt-1">
                         This service is temporarily closed
                       </p>
                     )}
+
+                    {/* Service Badges */}
+                    <div className="flex gap-2 mt-2">
+                      {service.homeService?.available && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary text-secondary">
+                          <Home className="h-3 w-3 mr-1" />
+                          Home Service
+                        </span>
+                      )}
+                      {service.weddingService?.available && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-100 text-rose-800">
+                          <Heart className="h-3 w-3 mr-1" />
+                          Wedding Service
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
                 <div className="text-right ml-4">
-                  <p className="font-semibold">
-                    ₹{service.price.toFixed(2)}
-                  </p>
+                  <div className="mb-1">
+                    {service.discountedPrice !== null && service.discountedPrice !== undefined && service.discountedPrice !== 0 && service.discountedPrice !== service.price ? (
+                      <div>
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-muted-foreground line-through text-xs italic">
+                            ₹{service.price}
+                          </span>
+                          <span className="font-bold text-lg text-primary">
+                            ₹{service.discountedPrice}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-green-600 font-bold uppercase tracking-wider">
+                          {Math.round(((parseFloat(String(service.price)) - parseFloat(String(service.discountedPrice))) / parseFloat(String(service.price))) * 100)}% OFF
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="font-bold text-lg text-primary">
+                        ₹{service.price}
+                      </p>
+                    )}
+                  </div>
                   <Button
                     size="sm"
                     variant="outline"
-                    className={`mt-1 ${isSubscriptionExpired ? 'opacity-50' : ''}`}
+                    className={`h-8 px-4 rounded-full font-bold text-[10px] uppercase tracking-widest ${isSubscriptionExpired ? 'opacity-50' : 'hover:bg-primary hover:text-white transition-all'}`}
                     disabled={isSubscriptionExpired}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       // Store complete service data in sessionStorage
                       const serviceData = {
-                        id: service._id || service.id,
+                        id: service.id,
                         name: service.name,
                         price: service.price,
+                        discountedPrice: service.discountedPrice,
                         duration: service.duration,
                         category: service.category,
                         description: service.description,

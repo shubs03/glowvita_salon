@@ -623,7 +623,7 @@ export default function ProductDetailsPage() {
                   <Star key={i} className={`h-5 w-5 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
                 ))}
               </div>
-              <span className="text-muted-foreground">{product.rating} ({product.reviews} reviews)</span>
+              <span className="text-muted-foreground">{product.rating} ({product.reviewCount} reviews)</span>
             </div>
 
             <p className="text-lg text-muted-foreground">{product.description}</p>
@@ -675,8 +675,8 @@ export default function ProductDetailsPage() {
 
           <ProductRatingsReviews
             averageRating={product.rating || 0}
-            totalRatings={product.reviews || 0}
-            totalReviews={product.reviews || 0}
+            totalRatings={product.reviewCount || 0}
+            totalReviews={product.reviewCount || 0}
             productReviews={productReviews}
             productQuestions={productQuestions}
             productId={id}

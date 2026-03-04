@@ -22,16 +22,55 @@ const ContactSection = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (formData.phone.length !== 10) {
+      alert("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(formData.email)) {
+      alert("Please enter a valid email address.");
+      return;
+    }
+
     console.log("Form submitted:", formData);
+    // Add your API call here
+    alert("Message sent successfully!");
+    setFormData({
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      message: "",
+    });
   };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+
+    if (name === "firstName" || name === "lastName") {
+      // Only accept alphabets
+      const alphabeticValue = value.replace(/[^a-zA-Z\s]/g, "");
+      setFormData({
+        ...formData,
+        [name]: alphabeticValue,
+      });
+    } else if (name === "phone") {
+      // Only accept numbers and max 10 digits
+      const numericValue = value.replace(/\D/g, "").slice(0, 10);
+      setFormData({
+        ...formData,
+        [name]: numericValue,
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
   };
 
   return (
@@ -94,6 +133,7 @@ const ContactSection = () => {
                 value={formData.phone}
                 onChange={handleChange}
                 required
+                maxLength={10}
                 className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
               />
 

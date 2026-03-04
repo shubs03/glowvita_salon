@@ -1,4 +1,5 @@
 import _db from "@repo/lib/db";
+export const dynamic = 'force-dynamic';
 import ReviewModel from "@repo/lib/models/Review/Review.model";
 import DoctorModel from "@repo/lib/models/Vendor/Docters.model";
 
@@ -21,7 +22,7 @@ export const OPTIONS = async (request) => {
 export const GET = async (request, { params }) => {
   try {
     const { doctorId } = params;
-    
+
     if (!doctorId) {
       return Response.json({
         success: false,
@@ -52,7 +53,7 @@ export const GET = async (request, { params }) => {
       success: false,
       message: "Failed to fetch reviews",
       error: error.message
-    }, { 
+    }, {
       status: 500,
       headers: {
         'Access-Control-Allow-Origin': '*',

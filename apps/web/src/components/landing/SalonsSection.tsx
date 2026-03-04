@@ -20,6 +20,7 @@ import { useGetPublicVendorsQuery, useGetPublicCategoriesQuery, useGetPublicServ
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { useSalonFilter } from "./SalonFilterContext";
+import { SalonCard } from "./SalonCard";
 
 // Types for vendor data
 interface VendorData {
@@ -149,14 +150,14 @@ const keyFeatures = [
 export function SalonsSection() {
   const [isVisible, setIsVisible] = useState(false);
   const router = useRouter();
-  
+
   // Use shared filter context for filtering salons based on PlatformFor selections
-  const { 
-    selectedCategories, 
-    selectedServices, 
-    removeCategory, 
+  const {
+    selectedCategories,
+    selectedServices,
+    removeCategory,
     removeService,
-    clearFilters 
+    clearFilters
   } = useSalonFilter();
 
   // Fetch vendors and categories/services for filter display
@@ -166,12 +167,12 @@ export function SalonsSection() {
   });
   const { data: CategoriesData } = useGetPublicCategoriesQuery(undefined);
   const { data: ServicesData } = useGetPublicServicesQuery({});
-  
+
   // Transform vendor data to match the card structure, with fallbacks
   const transformedSalons: TransformedSalon[] = React.useMemo(() => {
     // Check for the correct API response structure
     let vendorsArray = VendorsData?.vendors;
-    
+
     // Filtering is now handled by the API itself!
     // No fallback to mock data anymore - show empty state instead
     if (!vendorsArray || !Array.isArray(vendorsArray) || vendorsArray.length === 0) {
@@ -191,9 +192,9 @@ export function SalonsSection() {
 
       // Generate specialty text based on category and subcategories
       const getSpecialty = (category: string, subCategories: string[]) => {
-        const categoryText = category === 'unisex' ? 'Full-Service Salon' : 
-                           category === 'women' ? 'Women\'s Beauty Salon' : 
-                           category === 'men' ? 'Men\'s Grooming' : 'Beauty Services';
+        const categoryText = category === 'unisex' ? 'Full-Service Salon' :
+          category === 'women' ? 'Women\'s Beauty Salon' :
+            category === 'men' ? 'Men\'s Grooming' : 'Beauty Services';
         const serviceType = subCategories?.includes('at-home') ? ' & Home Service' : '';
         return categoryText + serviceType;
       };
@@ -202,7 +203,7 @@ export function SalonsSection() {
       const location = `${vendor.city || 'Unknown City'}, ${vendor.state || 'Unknown State'}`;
 
       // Generate placeholder image URL based on business name
-      const imageUrl = vendor.profileImage || 
+      const imageUrl = vendor.profileImage ||
         `https://placehold.co/400x200/${Math.floor(Math.random() * 16777215).toString(16)}/ffffff?text=${encodeURIComponent(vendor.businessName || 'Salon')}`;
 
       return {
@@ -241,8 +242,8 @@ export function SalonsSection() {
     // Check if we have vendors data and if filtering resulted in no matches
     const vendorsArray = VendorsData?.vendors;
     const hasFilters = selectedCategories.length > 0 || selectedServices.length > 0;
-    const noMatchingVendors = hasFilters && transformedSalons && transformedSalons.length === 0 && 
-                              vendorsArray && Array.isArray(vendorsArray) && vendorsArray.length > 0;
+    const noMatchingVendors = hasFilters && transformedSalons && transformedSalons.length === 0 &&
+      vendorsArray && Array.isArray(vendorsArray) && vendorsArray.length > 0;
 
     if (isLoading) {
       // Loading skeleton cards
@@ -314,75 +315,19 @@ export function SalonsSection() {
     }
 
     return transformedSalons.map((salon: TransformedSalon, index: number) => {
-      const IconComponent = salon.icon;
-      
-      const handleSalonClick = () => {
-        router.push(`/salon-details/${salon.id}`);
-      };
-      
       return (
-        <div
+        <SalonCard
           key={`salon-${index}`}
-          className="w-full h-[420px] group rounded-md bg-background/30 hover:bg-background/50 border border-border/50 hover:border-border transition-all duration-300 hover:shadow-lg backdrop-blur-sm hover:-translate-y-1 overflow-hidden flex flex-col cursor-pointer"
-          onClick={handleSalonClick}
-        >
-        {/* Salon Image Header */}
-        <div className="relative h-52 flex-shrink-0 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
-          <Image
-            src={salon.image}
-            alt={salon.title}
-            fill
-            className="object-cover"
-            placeholder="blur"
-            blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R+Wj2he"
-          />
-          <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <Star className="h-3 w-3 fill-primary text-primary" />
-            <span className="font-semibold text-primary text-xs">
-              {salon.rating}
-            </span>
-          </div>
-        </div>
-
-        {/* Card Content */}
-        <div className="p-4 flex-1 flex flex-col">
-          {/* Specialty Badge */}
-          <div className="block px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium mb-2 w-fit">
-            {salon.specialty}
-          </div>
-
-          {/* Salon Title & Location */}
-          <h3 className="text-lg font-semibold text-foreground mb-1 group-hover:text-primary transition-colors duration-300 text-left truncate">
-            {salon.title}
-          </h3>
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-            <MapPin className="h-3 w-3 flex-shrink-0" />
-            <span className="truncate">{salon.location}</span>
-          </div>
-
-          {/* Description */}
-          <p className="text-muted-foreground leading-relaxed text-xs mb-3 text-left flex-1 overflow-hidden" style={{
-            display: '-webkit-box',
-            WebkitLineClamp: 3,
-            WebkitBoxOrient: 'vertical'
-          }}>
-            {salon.description}
-          </p>
-
-          {/* Stats Row */}
-          <div className="flex items-center justify-between text-xs mt-auto">
-            <div className="flex items-center gap-1">
-              <Users className="h-3 w-3 text-primary flex-shrink-0" />
-              <span className="text-muted-foreground">
-                {salon.clients} clients
-              </span>
-            </div>
-            <div className="text-green-600 font-medium">
-              {salon.growth}
-            </div>
-          </div>
-        </div>
-      </div>
+          id={salon.id}
+          title={salon.title}
+          location={salon.location}
+          rating={salon.rating}
+          clients={salon.clients}
+          specialty={salon.specialty}
+          description={salon.description}
+          growth={salon.growth}
+          image={salon.image}
+        />
       );
     });
   };
@@ -417,21 +362,21 @@ export function SalonsSection() {
               operations and achieved remarkable growth with GlowVita&apos;s
               comprehensive platform
             </p>
-            
+
             {/* Selected Filters Display - Moved here as requested */}
             {(selectedCategories.length > 0 || selectedServices.length > 0) && (
               <div className="mt-8 flex flex-wrap justify-center gap-2">
                 {selectedCategories.map((categoryId) => {
                   // Find category name from categories data
                   const category = CategoriesData?.categories?.find((cat: { _id: string; name: string; }) => cat._id === categoryId);
-                  
+
                   return (
-                    <div 
-                      key={`cat-${categoryId}`} 
+                    <div
+                      key={`cat-${categoryId}`}
                       className="inline-flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary border border-primary/20 text-sm rounded-md"
                     >
                       <span>{category?.name || categoryId}</span>
-                      <button 
+                      <button
                         onClick={() => removeCategory(categoryId)}
                         className="ml-1 hover:bg-primary/20 rounded-md w-5 h-5 flex items-center justify-center"
                       >
@@ -440,18 +385,18 @@ export function SalonsSection() {
                     </div>
                   );
                 })}
-                
+
                 {selectedServices.map((serviceId) => {
                   // Find service name from services data
                   const service = ServicesData?.services?.find((svc: { _id: string; name: string; }) => svc._id === serviceId);
-                  
+
                   return (
-                    <div 
-                      key={`svc-${serviceId}`} 
+                    <div
+                      key={`svc-${serviceId}`}
                       className="inline-flex items-center gap-1 px-3 py-1 bg-secondary/10 text-secondary-foreground border border-secondary/20 text-sm rounded-md"
                     >
                       <span>{service?.name || serviceId}</span>
-                      <button 
+                      <button
                         onClick={() => removeService(serviceId)}
                         className="ml-1 hover:bg-secondary/20 rounded-md w-5 h-5 flex items-center justify-center"
                       >
@@ -460,8 +405,8 @@ export function SalonsSection() {
                     </div>
                   );
                 })}
-                
-                <button 
+
+                <button
                   onClick={clearFilters}
                   className="inline-flex items-center px-3 py-1 bg-primary/10 text-primary border border-primary/20 text-sm rounded-md hover:bg-primary/20 transition-colors"
                 >
@@ -490,11 +435,11 @@ export function SalonsSection() {
                 Instant booking with real-time availability and seamless payment processing
               </p>
             </div>
-            
+
             <div className="bg-background/30 backdrop-blur-sm border border-border/50 rounded-lg p-6 hover:shadow-lg transition-shadow duration-300">
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Star className="h-6 w-6 text-primary" />
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <Star className="h-6 w-6 text-yellow-400 fill-current" />
                 </div>
                 <h3 className="text-xl font-semibold">Verified Quality</h3>
               </div>
@@ -502,7 +447,7 @@ export function SalonsSection() {
                 All partners undergo rigorous vetting to ensure exceptional service standards
               </p>
             </div>
-            
+
             <div className="bg-background/30 backdrop-blur-sm border border-border/50 rounded-lg p-6 hover:shadow-lg transition-shadow duration-300">
               <div className="flex items-center gap-3 mb-4">
                 <div className="p-2 bg-primary/10 rounded-lg">

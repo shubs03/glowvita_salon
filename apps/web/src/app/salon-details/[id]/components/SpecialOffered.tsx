@@ -7,9 +7,10 @@ import { Gift } from "lucide-react";
 interface SpecialOfferedProps {
   vendorId: string;
   isSubscriptionExpired?: boolean;
+  onBookNow?: (offer: any) => void;
 }
 
-const SpecialOffered = ({ vendorId, isSubscriptionExpired = false }: SpecialOfferedProps) => {
+const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: SpecialOfferedProps) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [startX, setStartX] = useState(0);
   const [currentX, setCurrentX] = useState(0);
@@ -31,6 +32,7 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false }: SpecialOffe
     offersData?.data
       ?.filter((offer: any) => offer.status === "Active")
       .map((offer: any) => ({
+        code: offer.code, // include offer code
         title: offer.code || "Special Offer",
         originalPrice:
           offer.type === "percentage"
@@ -257,6 +259,7 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false }: SpecialOffe
               <button
                 className={`bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs transition-opacity ${isSubscriptionExpired ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary/90'}`}
                 disabled={isSubscriptionExpired}
+                onClick={() => onBookNow?.(currentOffer)}
               >
                 {isSubscriptionExpired ? 'Unavailable' : 'Book Now'}
               </button>

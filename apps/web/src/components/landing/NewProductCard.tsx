@@ -64,7 +64,7 @@ export function NewProductCard({
               'Content-Type': 'application/json',
             },
           });
-          
+
           if (response.ok) {
             const data = await response.json();
             setIsLiked(data.isInWishlist);
@@ -109,7 +109,7 @@ export function NewProductCard({
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     try {
       if (isAuthenticated && user?._id) {
         // User is authenticated - use API
@@ -124,7 +124,7 @@ export function NewProductCard({
         };
 
         await addToCartAPI(cartItem).unwrap();
-        
+
         // Show success toast
         toast.success(`${name} added to cart!`, {
           description: `You can view all items in your cart.`,
@@ -169,7 +169,7 @@ export function NewProductCard({
 
   const handleWishlistToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!isAuthenticated) {
       toast.error("Please login to add items to wishlist");
       router.push("/client-login");
@@ -180,7 +180,7 @@ export function NewProductCard({
       setIsLoading(true);
       const url = isLiked ? `/api/client/wishlist/${id}/remove` : '/api/client/wishlist';
       const method = isLiked ? 'DELETE' : 'POST';
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -212,7 +212,7 @@ export function NewProductCard({
   };
 
   return (
-    <div 
+    <div
       className="group relative overflow-hidden rounded-md hover:shadow-md border bg-card transition-all duration-500 hover:-translate-y-2 cursor-pointer"
       onClick={handleCardClick}
     >
@@ -235,14 +235,14 @@ export function NewProductCard({
           size="icon"
           variant="ghost"
           className={cn(
-            "absolute top-3 right-3 h-8 w-8 rounded-full bg-white/20 text-blue-500 backdrop-blur-sm hover:bg-white/30 transition-all",
+            "absolute top-3 right-3 h-8 w-8 rounded-full bg-white/20 text-red-500 backdrop-blur-sm hover:bg-white/30 transition-all",
             isLiked ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           )}
           onClick={handleWishlistToggle}
           disabled={isLoading}
         >
           <Heart
-            className={cn("h-4 w-4", isLiked && "fill-current text-blue-500")}
+            className={cn("h-4 w-4", isLiked && "fill-current text-red-500")}
           />
         </Button>
       </div>
@@ -292,9 +292,9 @@ export function NewProductCard({
             </div>
           </div>
           <div className="flex justify-between gap-2">
-            <Button 
-              size="sm" 
-              variant="outline" 
+            <Button
+              size="sm"
+              variant="outline"
               className="w-fit rounded-lg group-hover:text-primary transition-colors group-hover:border-primary"
               onClick={handleBuyNow}
             >
@@ -307,7 +307,7 @@ export function NewProductCard({
               onClick={handleAddToCart}
             >
               <ShoppingCart className="h-4 w-4" />
-              
+
             </Button>
           </div>
         </div>

@@ -25,7 +25,7 @@ export const OPTIONS = async (request) => {
 export const GET = async (request, { params }) => {
   try {
     const { productId } = params;
-    
+
     if (!productId) {
       return Response.json({
         success: false,
@@ -55,7 +55,7 @@ export const GET = async (request, { params }) => {
       success: false,
       message: "Failed to fetch reviews",
       error: error.message
-    }, { 
+    }, {
       status: 500,
       headers: {
         'Access-Control-Allow-Origin': '*',
@@ -69,7 +69,7 @@ export const POST = async (request) => {
   try {
     // Get token from cookies
     const token = cookies().get('token')?.value;
-    
+
     if (!token) {
       return Response.json({
         success: false,
@@ -127,10 +127,15 @@ export const POST = async (request) => {
       }, { status: 404 });
     }
 
+    // Fetch user details to get actual name
+    const UserModel = (await import("@repo/lib/models/user/User.model")).default;
+    const user = await UserModel.findById(payload.userId).select('firstName lastName');
+    const userName = user ? `${user.firstName} ${user.lastName}`.trim() : (payload.name || payload.firstName || 'Anonymous');
+
     // Create new review (initially not approved)
     const newReview = await ReviewModel.create({
       userId: payload.userId,
-      userName: payload.name || payload.firstName || 'Anonymous',
+      userName: userName,
       entityId: productId,
       entityType: 'product',
       rating: rating,
@@ -151,13 +156,13 @@ export const POST = async (request) => {
 
   } catch (error) {
     console.error("Error submitting review:", error);
-    
+
     // Handle duplicate review error (unique index violation)
     if (error.code === 11000) {
       return Response.json({
         success: false,
         message: "You have already reviewed this product"
-      }, { 
+      }, {
         status: 400,
         headers: {
           'Access-Control-Allow-Origin': '*',
@@ -169,7 +174,7 @@ export const POST = async (request) => {
       success: false,
       message: "Failed to submit review",
       error: error.message
-    }, { 
+    }, {
       status: 500,
       headers: {
         'Access-Control-Allow-Origin': '*',

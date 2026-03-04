@@ -13,6 +13,7 @@ export * from './Integrations';
 export * from './Blog';
 export * from './Services';
 export * from './SalonsSection';
+export * from './SalonCard';
 export * from './FeaturedProducts';
 export * from './SalonFilterContext';
 export * from './FeaturedProductsSection';

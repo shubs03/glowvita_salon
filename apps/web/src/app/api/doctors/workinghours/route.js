@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import DoctorWorkingHours from '@repo/lib/models/Vendor/DoctorWorkingHours.model';
 import _db from '@repo/lib/db';
 
@@ -33,12 +34,12 @@ export const GET = async (req) => {
         // Support both authenticated user (CRM) and public access via query param
         const url = new URL(req.url);
         const queryDoctorId = url.searchParams.get('doctorId');
-        
+
         // Use query param if provided and not undefined/null, otherwise use authenticated user
-        const doctorId = (queryDoctorId && queryDoctorId !== 'undefined' && queryDoctorId !== 'null') 
-            ? queryDoctorId 
+        const doctorId = (queryDoctorId && queryDoctorId !== 'undefined' && queryDoctorId !== 'null')
+            ? queryDoctorId
             : (req.user && req.user.userId);
-        
+
         if (!doctorId) {
             return NextResponse.json({ message: "Doctor ID is required." }, { status: 400 });
         }
@@ -54,7 +55,7 @@ export const GET = async (req) => {
         const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
         const daysMap = {
             'monday': 'Monday',
-            'tuesday': 'Tuesday', 
+            'tuesday': 'Tuesday',
             'wednesday': 'Wednesday',
             'thursday': 'Thursday',
             'friday': 'Friday',
@@ -64,9 +65,9 @@ export const GET = async (req) => {
         daysOrder.forEach(dayKey => {
             const dayData = workingHours.workingHours[dayKey];
             if (dayData) {
-                const openTime = dayData.isOpen && dayData.hours && dayData.hours.length > 0 
+                const openTime = dayData.isOpen && dayData.hours && dayData.hours.length > 0
                     ? convertTo24HourFormat(dayData.hours[0].openTime) : '';
-                const closeTime = dayData.isOpen && dayData.hours && dayData.hours.length > 0 
+                const closeTime = dayData.isOpen && dayData.hours && dayData.hours.length > 0
                     ? convertTo24HourFormat(dayData.hours[0].closeTime) : '';
                 transformedData.workingHoursArray.push({
                     day: daysMap[dayKey] || dayKey,
@@ -101,7 +102,7 @@ export const PUT = async (req) => {
             const dayData = updateData.workingHours[day];
             transformedWorkingHours[day] = {
                 isOpen: dayData.isOpen,
-                hours: dayData.isOpen && dayData.hours && dayData.hours.length > 0 
+                hours: dayData.isOpen && dayData.hours && dayData.hours.length > 0
                     ? dayData.hours.map(timeSlot => ({
                         openTime: convertTo12HourFormat(timeSlot.openTime),
                         closeTime: convertTo12HourFormat(timeSlot.closeTime)
@@ -111,32 +112,32 @@ export const PUT = async (req) => {
         });
         const updatedHours = await DoctorWorkingHours.findOneAndUpdate(
             { doctor: doctorId },
-            { 
-                $set: { 
+            {
+                $set: {
                     workingHours: transformedWorkingHours,
                     timezone: updateData.timezone || 'Asia/Kolkata'
-                } 
+                }
             },
-            { 
+            {
                 new: true,
                 upsert: true,
-                runValidators: true 
+                runValidators: true
             }
         );
-        return NextResponse.json({ 
-            message: "Working hours updated successfully", 
-            data: updatedHours 
+        return NextResponse.json({
+            message: "Working hours updated successfully",
+            data: updatedHours
         }, { status: 200 });
     } catch (error) {
         if (error.name === 'ValidationError') {
-            return NextResponse.json({ 
-                message: "Validation error", 
-                error: error.message 
+            return NextResponse.json({
+                message: "Validation error",
+                error: error.message
             }, { status: 400 });
         }
-        return NextResponse.json({ 
-            message: "Error updating working hours", 
-            error: error.message 
+        return NextResponse.json({
+            message: "Error updating working hours",
+            error: error.message
         }, { status: 500 });
     }
 };
@@ -146,8 +147,8 @@ export const POST = async (req) => {
         const doctorId = req.user.userId;
         const { date, isOpen, hours, description } = await req.json();
         if (!date || !hours || !Array.isArray(hours)) {
-            return NextResponse.json({ 
-                message: "Date and hours array are required" 
+            return NextResponse.json({
+                message: "Date and hours array are required"
             }, { status: 400 });
         }
         const specialHour = {
@@ -161,24 +162,24 @@ export const POST = async (req) => {
         };
         const updatedHours = await DoctorWorkingHours.findOneAndUpdate(
             { doctor: doctorId },
-            { 
-                $push: { 
-                    specialHours: specialHour 
-                } 
+            {
+                $push: {
+                    specialHours: specialHour
+                }
             },
-            { 
+            {
                 new: true,
-                upsert: true 
+                upsert: true
             }
         );
-        return NextResponse.json({ 
-            message: "Special hours added successfully", 
-            data: updatedHours 
+        return NextResponse.json({
+            message: "Special hours added successfully",
+            data: updatedHours
         }, { status: 201 });
     } catch (error) {
-        return NextResponse.json({ 
-            message: "Error adding special hours", 
-            error: error.message 
+        return NextResponse.json({
+            message: "Error adding special hours",
+            error: error.message
         }, { status: 500 });
     }
 };
@@ -189,32 +190,32 @@ export const DELETE = async (req) => {
         const url = new URL(req.url);
         const specialHourId = url.searchParams.get('id');
         if (!specialHourId) {
-            return NextResponse.json({ 
-                message: "Special hour ID is required" 
+            return NextResponse.json({
+                message: "Special hour ID is required"
             }, { status: 400 });
         }
         const updatedHours = await DoctorWorkingHours.findOneAndUpdate(
             { doctor: doctorId },
-            { 
-                $pull: { 
-                    specialHours: { _id: specialHourId } 
-                } 
+            {
+                $pull: {
+                    specialHours: { _id: specialHourId }
+                }
             },
             { new: true }
         );
         if (!updatedHours) {
-            return NextResponse.json({ 
-                message: "Working hours not found" 
+            return NextResponse.json({
+                message: "Working hours not found"
             }, { status: 404 });
         }
-        return NextResponse.json({ 
-            message: "Special hours removed successfully", 
-            data: updatedHours 
+        return NextResponse.json({
+            message: "Special hours removed successfully",
+            data: updatedHours
         }, { status: 200 });
     } catch (error) {
-        return NextResponse.json({ 
-            message: "Error removing special hours", 
-            error: error.message 
+        return NextResponse.json({
+            message: "Error removing special hours",
+            error: error.message
         }, { status: 500 });
     }
 };
