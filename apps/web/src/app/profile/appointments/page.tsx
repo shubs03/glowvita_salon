@@ -546,7 +546,10 @@ export default function AppointmentsPage() {
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <StatCard icon={Calendar} title="Upcoming" value={appointments.filter(a => {
                             try {
-                                return new Date(a.date) > new Date() && a.status === 'Confirmed';
+                                const apptDate = new Date(a.date);
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                return apptDate >= today && ['Confirmed', 'Scheduled'].includes(a.status);
                             } catch (e) {
                                 console.error('Error parsing date for stats:', e);
                                 return false;
