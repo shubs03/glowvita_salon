@@ -38,8 +38,6 @@ import {
   Zap,
   Calendar,
   Gift,
-  Percent,
-  Share,
   Loader2,
   Pin,
   LocateIcon,
@@ -501,7 +499,7 @@ export default function SalonDetailsPage() {
         ...defaultSalon,
         id: vendorData._id || defaultSalon.id,
         name: vendorData.businessName || "No Name Available",
-        rating: reviewMetrics.averageRating || vendorData.rating || 4.8,
+        rating: reviewMetrics.averageRating || vendorData.rating || 0,
         reviewCount: reviewMetrics.totalReviews || vendorData.clientCount || 0,
         address: `${vendorData.city || ""}, ${vendorData.state || ""}`,
         email: vendorData.email || "",
@@ -938,10 +936,16 @@ export default function SalonDetailsPage() {
                   {salon.name}
                 </h1>
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                    <span className="font-semibold">{salon.rating}</span>
-                    <span>({salon.reviewCount} reviews)</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      {salon.reviewCount > 0 && (
+                        <>
+                          <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                          <span className="font-semibold">{salon.rating}</span>
+                        </>
+                      )}
+                      <span>({salon.reviewCount} reviews)</span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-5 w-5" />
@@ -958,14 +962,6 @@ export default function SalonDetailsPage() {
                 >
                   <Heart className={cn("h-4 w-4", isFavorited && "fill-red-500 text-red-500")} />
                   {isFavorited ? "Liked" : "Like"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Share className="h-4 w-4" />
-                  Share
                 </Button>
               </div>
             </div>
@@ -1194,12 +1190,16 @@ export default function SalonDetailsPage() {
 
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                        <span className="font-medium">{salon.rating}</span>
+                        {salon.reviewCount > 0 && (
+                          <>
+                            <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                            <span className="font-medium">{salon.rating}</span>
+                          </>
+                        )}
+                        <span className="text-sm text-muted-foreground ml-1">
+                          ({salon.reviewCount} reviews)
+                        </span>
                       </div>
-                      <span className="text-sm text-muted-foreground">
-                        ({salon.reviewCount} reviews)
-                      </span>
                     </div>
 
                     <div className="flex gap-2 text-sm">

@@ -10,6 +10,7 @@ import { useAppDispatch } from "@repo/store/hooks";
 import { addToCart } from "@repo/store/slices/cartSlice";
 import Image from "next/image";
 import { useAddToClientCartMutation } from "@repo/store/api";
+import { cn } from "@repo/ui/cn";
 
 interface ProductCardProps {
   id: string;
