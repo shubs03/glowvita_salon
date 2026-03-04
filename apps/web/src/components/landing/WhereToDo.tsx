@@ -53,6 +53,7 @@ interface TransformedSalon {
   clients: string;
   image: string;
   badge: string | null;
+  serviceNames: string[];
 }
 
 interface WhereToGoProps {
@@ -294,12 +295,14 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
           clients: `${vendor.clientCount || 0}+`, // Use real client count from API
           image: imageUrl,
           badge: hasOffer ? "Offer Available" : null,
+          serviceNames: vendor.services?.map(s => s.name) || [],
         };
       });
 
     // Apply filters if on salons page
     let filteredSalons = allTransformedSalons;
     if (isSalonsPage) {
+      // Category Filter
       if (categoryFilter.length > 0) {
         filteredSalons = filteredSalons.filter((salon: TransformedSalon) => {
           if (categoryFilter.includes("Unisex")) {
@@ -315,6 +318,14 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
         });
       }
 
+      // Service Filter
+      if (serviceFilter.length > 0) {
+        filteredSalons = filteredSalons.filter((salon: TransformedSalon) => {
+          return serviceFilter.some(service => salon.serviceNames.includes(service));
+        });
+      }
+
+      // Rating Filter
       if (ratingFilter !== "all") {
         if (ratingFilter === "high-to-low") {
           filteredSalons.sort((a: TransformedSalon, b: TransformedSalon) => Number(b.rating) - Number(a.rating));
@@ -323,6 +334,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
         }
       }
 
+      // Location Filter
       if (locationFilter.length > 0) {
         filteredSalons = filteredSalons.filter((salon: TransformedSalon) => locationFilter.includes(salon.location));
       }

@@ -354,7 +354,6 @@ export default function SalonDetailsPage() {
   const id = params.id as string;
   const [activeTab, setActiveTab] = useState("overview");
   const [visibleTab, setVisibleTab] = useState("overview");
-  const [selectedImage, setSelectedImage] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
   const [mainImage, setMainImage] = useState("");
@@ -580,7 +579,7 @@ export default function SalonDetailsPage() {
 
 
 
-  const handleBookNow = (service?: any) => {
+  const handleBookNow = (service?: any, offerCode?: string) => {
     // Check if subscription is expired
     if (isSubscriptionExpired) {
       toast.error('Booking Unavailable', {
@@ -595,18 +594,21 @@ export default function SalonDetailsPage() {
     } else {
       sessionStorage.removeItem("selectedService");
     }
-    router.push(`/book/${id}`);
+
+    // Build booking URL with offer code if provided
+    let bookingUrl = `/book/${id}`;
+    if (offerCode) {
+      bookingUrl += `?offerCode=${offerCode}`;
+    }
+
+    router.push(bookingUrl);
   };
 
 
 
   const openGalleryModal = (imageUrl: string) => {
-    setSelectedImage(imageUrl);
+    setMainImage(imageUrl);
     setIsGalleryModalOpen(true);
-  };
-
-  const closePreview = () => {
-    setSelectedImage("");
   };
 
   const handleBuyNow = (product: any) => {
@@ -1135,6 +1137,7 @@ export default function SalonDetailsPage() {
               <SpecialOffered
                 vendorId={id}
                 isSubscriptionExpired={isSubscriptionExpired}
+                onBookNow={(offer) => handleBookNow(null, offer.code)}
               />
 
               <ServicesOffered
