@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
-import { Copy, Gift, UserPlus, Users, Search, Share2, Mail, MessageCircle } from 'lucide-react';
+import { Copy, Gift, UserPlus, Users, Search, Mail, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { StatCard } from '../../../components/profile/StatCard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
@@ -17,15 +17,15 @@ import { useGetClientReferralsQuery, useClaimReferralBonusMutation } from '@repo
 import { useAuth } from '@/hooks/useAuth';
 
 const HowItWorksStep = ({ step, title, description }: { step: number, title: string, description: string }) => (
-    <div className="flex items-start gap-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-lg border-2 border-primary/20 flex-shrink-0">
-            {step}
-        </div>
-        <div>
-            <h4 className="font-semibold">{title}</h4>
-            <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
+  <div className="flex items-start gap-4">
+    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-lg border-2 border-primary/20 flex-shrink-0">
+      {step}
     </div>
+    <div>
+      <h4 className="font-semibold">{title}</h4>
+      <p className="text-sm text-muted-foreground">{description}</p>
+    </div>
+  </div>
 );
 
 export default function ReferralsPage() {
@@ -36,10 +36,10 @@ export default function ReferralsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
 
   // Fetch referral data
-  const { data: referralData, isLoading, refetch } = useGetClientReferralsQuery(undefined, { 
-    skip: !isAuthenticated || !user?._id 
+  const { data: referralData, isLoading, refetch } = useGetClientReferralsQuery(undefined, {
+    skip: !isAuthenticated || !user?._id
   });
-  
+
   // Claim bonus mutation
   const [claimBonus, { isLoading: isClaiming }] = useClaimReferralBonusMutation();
 
@@ -83,17 +83,17 @@ export default function ReferralsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Bonus Paid': 
+      case 'Bonus Paid':
         return 'bg-green-100 text-green-800';
-      case 'Completed': 
+      case 'Completed':
         return 'bg-blue-100 text-blue-800';
-      case 'Pending': 
+      case 'Pending':
         return 'bg-yellow-100 text-yellow-800';
-      default: 
+      default:
         return 'bg-gray-100 text-gray-800';
     }
   };
-  
+
   const handleClaimBonus = async (referralId: string) => {
     try {
       const result = await claimBonus({ referralId }).unwrap();
@@ -130,110 +130,109 @@ export default function ReferralsPage() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
-            <CardHeader>
-                <CardTitle>How It Works</CardTitle>
-                <CardDescription>Follow these simple steps to invite friends and earn rewards.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <HowItWorksStep 
-                    step={1} 
-                    title="Share Your Link" 
-                    description="Copy your unique referral link or code and share it with your friends via social media, email, or messaging apps."
-                />
-                 <HowItWorksStep 
-                    step={2} 
-                    title="Friend Signs Up" 
-                    description="Your friend signs up using your link and makes their first booking. We'll automatically track the referral."
-                />
-                 <HowItWorksStep 
-                    step={3} 
-                    title="Earn Rewards" 
-                    description="Once their first appointment is completed, you'll both receive a reward in your wallet. It's that simple!"
-                />
-            </CardContent>
+          <CardHeader>
+            <CardTitle>How It Works</CardTitle>
+            <CardDescription>Follow these simple steps to invite friends and earn rewards.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <HowItWorksStep
+              step={1}
+              title="Share Your Link"
+              description="Copy your unique referral link or code and share it with your friends via social media, email, or messaging apps."
+            />
+            <HowItWorksStep
+              step={2}
+              title="Friend Signs Up"
+              description="Your friend signs up using your link and makes their first booking. We'll automatically track the referral."
+            />
+            <HowItWorksStep
+              step={3}
+              title="Earn Rewards"
+              description="Once their first appointment is completed, you'll both receive a reward in your wallet. It's that simple!"
+            />
+          </CardContent>
         </Card>
-        
+
         <Card>
-            <CardHeader>
-                <CardTitle>Share & Earn</CardTitle>
-                <CardDescription>Share your code to start earning rewards today.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div>
-                    <Label className="text-xs font-semibold">Your Referral Code</Label>
-                    <div className="flex items-center space-x-2">
-                        <Input 
-                          value={referralCode === 'LOADING' ? 'Generating...' : referralCode === 'NOTAVAILABLE' ? 'Generating code...' : referralCode} 
-                          readOnly 
-                          className="font-mono bg-secondary" 
-                        />
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={() => handleCopy(referralCode)}
-                          disabled={!isValidCode}
-                        >
-                            <Copy className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-                <div>
-                    <Label className="text-xs font-semibold">Your Referral Link</Label>
-                     <div className="flex items-center space-x-2">
-                        <Input 
-                          value={!isValidCode ? 'Generating link...' : referralLink} 
-                          readOnly 
-                          className="text-xs bg-secondary" 
-                        />
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={() => handleCopy(referralLink)}
-                          disabled={!isValidCode}
-                        >
-                            <Copy className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
-                <div className="pt-2 flex justify-center gap-2">
-                    <Button variant="outline" size="icon"><Mail className="h-4 w-4" /></Button>
-                    <Button variant="outline" size="icon"><MessageCircle className="h-4 w-4" /></Button>
-                    <Button variant="outline" size="icon"><Share2 className="h-4 w-4" /></Button>
-                </div>
-            </CardContent>
+          <CardHeader>
+            <CardTitle>Share & Earn</CardTitle>
+            <CardDescription>Share your code to start earning rewards today.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-xs font-semibold">Your Referral Code</Label>
+              <div className="flex items-center space-x-2">
+                <Input
+                  value={referralCode === 'LOADING' ? 'Generating...' : referralCode === 'NOTAVAILABLE' ? 'Generating code...' : referralCode}
+                  readOnly
+                  className="font-mono bg-secondary"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleCopy(referralCode)}
+                  disabled={!isValidCode}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Your Referral Link</Label>
+              <div className="flex items-center space-x-2">
+                <Input
+                  value={!isValidCode ? 'Generating link...' : referralLink}
+                  readOnly
+                  className="text-xs bg-secondary"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleCopy(referralLink)}
+                  disabled={!isValidCode}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="pt-2 flex justify-center gap-2">
+              <Button variant="outline" size="icon"><Mail className="h-4 w-4" /></Button>
+              <Button variant="outline" size="icon"><MessageCircle className="h-4 w-4" /></Button>
+            </div>
+          </CardContent>
         </Card>
       </div>
-      
+
       <Card>
         <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                <div>
-                    <CardTitle>Referral History</CardTitle>
-                    <CardDescription>Track the status of your referrals.</CardDescription>
-                </div>
-                <div className="flex gap-2">
-                    <div className="relative">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="search"
-                        placeholder="Search by friend's name..."
-                        className="pl-8"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[150px]">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="Completed">Completed</SelectItem>
-                            <SelectItem value="Pending">Pending</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <div>
+              <CardTitle>Referral History</CardTitle>
+              <CardDescription>Track the status of your referrals.</CardDescription>
             </div>
+            <div className="flex gap-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search by friend's name..."
+                  className="pl-8"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  <SelectItem value="Completed">Completed</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -264,8 +263,8 @@ export default function ReferralsPage() {
                             {referral.status}
                           </Badge>
                           {referral.status === 'Completed' && (
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               variant="outline"
                               onClick={() => handleClaimBonus(referral.id)}
                               disabled={isClaiming}

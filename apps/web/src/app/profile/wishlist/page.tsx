@@ -464,7 +464,7 @@ export default function WishlistPage() {
                   </p>
                   <div className="flex flex-wrap justify-center gap-2">
                     <Button asChild>
-                      <a href="/products">Browse Products</a>
+                      <a href="/all-products">Browse Products</a>
                     </Button>
                     <Button asChild variant="outline">
                       <a href="/doctors">Browse Doctors</a>
@@ -517,7 +517,7 @@ export default function WishlistPage() {
                     Start adding products to your wishlist to save them for later
                   </p>
                   <Button asChild>
-                    <a href="/products">Browse Products</a>
+                    <a href="/all-products">Browse Products</a>
                   </Button>
                 </div>
               )
