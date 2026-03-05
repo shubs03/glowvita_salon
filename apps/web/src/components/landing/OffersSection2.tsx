@@ -4,6 +4,14 @@ import { useGetPublicAllOffersQuery } from '@repo/store/services/api';
 import { useSelector } from 'react-redux';
 import Link from 'next/link';
 
+interface SimplifiedOffer {
+  code: string;
+  vendorId: string;
+  discount: string;
+  image: string;
+  validTill: string;
+}
+
 const OffersSection2 = () => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
@@ -27,7 +35,7 @@ const OffersSection2 = () => {
   }, [offersData, error]);
 
   // Use the fetched offers data
-  const offers = offersData?.data && !isLoading && !error
+  const offers: SimplifiedOffer[] = offersData?.data && !isLoading && !error
     ? offersData.data
       .filter((offer: any) => offer.status === 'Active') // Only show active offers
       .map((offer: any) => ({
