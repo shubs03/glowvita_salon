@@ -3150,6 +3150,8 @@ export const {
   useGetDoctorsQuery,
   useCreateDoctorMutation,
   useUpdateDoctorMutation,
+  useUpdateDoctorStatusMutation,
+  useUpdateDoctorDocumentStatusMutation,
   useDeleteDoctorMutation,
   useGetSuppliersQuery,
   useGetSupplierOrdersQuery,
