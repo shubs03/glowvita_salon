@@ -504,7 +504,7 @@ export const Step3_TimeSlot = memo(({
         startTime: slot.startTime,
         endTime: slot.endTime,
         clientId: user?._id || user?.id || (effectiveService as any)?.clientId || 'temp-client-id',
-        clientName: user ? `${user.firstName} ${user.lastName}` : 'Customer',
+        clientName: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : 'Customer',
         clientEmail: user?.emailAddress || user?.email || '',
         clientPhone: user?.mobileNo || user?.phone || '',
         staffName: selectedStaff?.name || 'Any Professional',

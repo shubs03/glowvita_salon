@@ -45,7 +45,7 @@ export default function AppointmentListSection({
         </div>
 
         <p className="text-sm text-muted-foreground font-medium mt-2">
-          {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+          {currentDate.toLocaleDateString('default', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
         </p>
       </CardHeader>
       <CardContent className="p-0 flex-1 flex flex-col min-h-0">

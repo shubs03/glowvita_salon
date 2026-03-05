@@ -41,12 +41,13 @@ interface Step2StaffProps {
     onStaffSelect?: (staff: StaffMember | null) => void;
     isWeddingPackage?: boolean;
     weddingPackage?: any;
+    onNext?: () => void;
 }
 
-export function Step2_Staff({ 
-    selectedStaff, 
-    onSelectStaff, 
-    currentStep, 
+export function Step2_Staff({
+    selectedStaff,
+    onSelectStaff,
+    currentStep,
     setCurrentStep,
     staff,
     isLoading,
@@ -54,7 +55,8 @@ export function Step2_Staff({
     selectedService,
     onStaffSelect,
     isWeddingPackage = false,
-    weddingPackage
+    weddingPackage,
+    onNext
 }: Step2StaffProps): JSX.Element {
 
     // Log what we receive as props
@@ -64,25 +66,25 @@ export function Step2_Staff({
     const filteredStaff = useMemo(() => {
         console.log('Step2_Staff - Selected Service:', selectedService);
         console.log('Step2_Staff - All Staff:', staff);
-        
+
         // If no staff data, return empty array
         if (!staff || staff.length === 0) {
             console.log('Step2_Staff - No staff data available');
             return [];
         }
-        
+
         // If no service is selected, show all staff
         if (!selectedService) {
             console.log('Step2_Staff - No service selected, returning all staff');
             return staff;
         }
-        
+
         // If the service doesn't have a staff array, show all staff
         if (!selectedService.staff || selectedService.staff.length === 0) {
             console.log('Step2_Staff - Service has no staff array, returning all staff');
             return staff;
         }
-        
+
         // Filter staff based on the service's staff array
         // The staff array in the service can contain either staff IDs or staff names
         const serviceStaff = staff.filter((staffMember: StaffMember) => {
@@ -94,7 +96,7 @@ export function Step2_Staff({
             console.log(`Step2_Staff - Checking staff ${staffMember.name} (${staffMember.id}): ID match: ${isIdMatch}, Name match: ${isNameMatch}, Result: ${result}`);
             return result;
         });
-        
+
         console.log('Step2_Staff - Filtered staff based on service:', serviceStaff);
         return serviceStaff;
     }, [staff, selectedService]);
@@ -108,10 +110,14 @@ export function Step2_Staff({
             console.log('Step2_Staff - Calling onStaffSelect callback with:', staff);
             onStaffSelect(staff);
         }
-        
+
         // Automatically navigate to Step 3 (Time Selection) after staff is selected
         setTimeout(() => {
-            setCurrentStep(3);
+            if (onNext) {
+                onNext();
+            } else {
+                setCurrentStep(3);
+            }
         }, 100);
     };
 
@@ -129,7 +135,7 @@ export function Step2_Staff({
                     </div>
                     <p className="text-muted-foreground">Choose your preferred stylist or select any professional.</p>
                 </div>
-                
+
                 <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-4">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -154,7 +160,7 @@ export function Step2_Staff({
                     </div>
                     <p className="text-muted-foreground">Choose your preferred stylist or select any professional.</p>
                 </div>
-                
+
                 <div className="flex items-center justify-center py-12">
                     <div className="flex flex-col items-center gap-4">
                         <AlertCircle className="h-8 w-8 text-destructive" />
@@ -165,106 +171,106 @@ export function Step2_Staff({
         );
     }
 
-  return (
-    <div className="w-full">
-        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
-        <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-                <div className="p-3 bg-primary/10 rounded-full text-primary">
-                    <Users className="h-6 w-6" />
+    return (
+        <div className="w-full">
+            <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+            <div className="mb-8">
+                <div className="flex items-center gap-3 mb-2">
+                    <div className="p-3 bg-primary/10 rounded-full text-primary">
+                        <Users className="h-6 w-6" />
+                    </div>
+                    <h2 className="text-3xl font-bold font-headline">Select a Professional</h2>
                 </div>
-                <h2 className="text-3xl font-bold font-headline">Select a Professional</h2>
-            </div>
-            <p className="text-muted-foreground">Choose your preferred stylist or select any professional.</p>
-            
-            {/* Wedding Package Information */}
-            {isWeddingPackage && weddingPackage && (
-              <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="flex items-start gap-2">
-                  <div className="mt-0.5 p-1 bg-purple-100 rounded-full">
-                    <Info className="h-4 w-4 text-purple-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-purple-800">Wedding Package Selected</h4>
-                    <p className="text-sm text-purple-700 mt-1">
-                      You've selected the <span className="font-medium">{weddingPackage.name}</span> package.
-                      For wedding packages, you can select a specific professional or let us assign the best team.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {/* Any Professional Card */}
-            <div 
-                className={cn(
-                    'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2',
-                    !selectedStaff ? 'border-primary bg-primary/5 shadow-lg' : 'border-dashed border-border hover:border-primary/50 hover:bg-secondary/50'
-                )}
-                onClick={() => handleSelectStaff(null)}
-            >
-                <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-4 border-2 border-dashed border-border group-hover:border-primary/50 transition-colors">
-                    <Users className="h-10 w-10 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
-                <h3 className="font-semibold text-foreground">Any Professional</h3>
-                <p className="text-sm text-muted-foreground">We'll assign an available expert.</p>
-                {!selectedStaff && (
-                    <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
-                        <CheckCircle className="h-4 w-4" />
+                <p className="text-muted-foreground">Choose your preferred stylist or select any professional.</p>
+
+                {/* Wedding Package Information */}
+                {isWeddingPackage && weddingPackage && (
+                    <div className="mt-4 p-4 bg-purple-50 rounded-lg border border-purple-200">
+                        <div className="flex items-start gap-2">
+                            <div className="mt-0.5 p-1 bg-purple-100 rounded-full">
+                                <Info className="h-4 w-4 text-purple-600" />
+                            </div>
+                            <div>
+                                <h4 className="font-semibold text-purple-800">Wedding Package Selected</h4>
+                                <p className="text-sm text-purple-700 mt-1">
+                                    You've selected the <span className="font-medium">{weddingPackage.name}</span> package.
+                                    For wedding packages, you can select a specific professional or let us assign the best team.
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>
-            {/* Staff Member Cards */}
-            {filteredStaff && filteredStaff.length > 0 ? filteredStaff.map((staffMember: StaffMember) => (
-                <div 
-                    key={staffMember.id}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {/* Any Professional Card */}
+                <div
                     className={cn(
-                        'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2 overflow-hidden',
-                        selectedStaff?.id === staffMember.id ? 'border-primary bg-primary/5 shadow-lg' : 'border-border/50 hover:border-primary/50 hover:bg-secondary/50'
+                        'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2',
+                        !selectedStaff ? 'border-primary bg-primary/5 shadow-lg' : 'border-dashed border-border hover:border-primary/50 hover:bg-secondary/50'
                     )}
-                    onClick={() => handleSelectStaff(staffMember)}
+                    onClick={() => handleSelectStaff(null)}
                 >
-                    <div className="relative w-24 h-24 rounded-full mb-4 overflow-hidden shadow-md">
-                        <Image 
-                            src={staffMember.image || `https://picsum.photos/seed/${staffMember.name}/400/400`} 
-                            alt={staffMember.name} 
-                            width={120} 
-                            height={120} 
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            data-ai-hint="professional staff portrait"
-                        />
+                    <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-4 border-2 border-dashed border-border group-hover:border-primary/50 transition-colors">
+                        <Users className="h-10 w-10 text-muted-foreground group-hover:text-primary transition-colors" />
                     </div>
-                    <h3 className="font-semibold text-foreground text-sm">{staffMember.name}</h3>
-                    <p className="text-xs text-muted-foreground">{staffMember.role}</p>
-                    {staffMember.rating && (
-                        <div className="flex items-center gap-1 mt-1">
-                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                            <span className="text-xs text-muted-foreground">{staffMember.rating}</span>
-                        </div>
-                    )}
-                    {staffMember.specialties && staffMember.specialties.length > 0 && (
-                        <div className="mt-1">
-                            <p className="text-xs text-muted-foreground truncate">
-                                {staffMember.specialties.slice(0, 2).join(', ')}
-                            </p>
-                        </div>
-                    )}
-                    {selectedStaff?.id === staffMember.id && (
-                         <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
+                    <h3 className="font-semibold text-foreground">Any Professional</h3>
+                    <p className="text-sm text-muted-foreground">We'll assign an available expert.</p>
+                    {!selectedStaff && (
+                        <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
                             <CheckCircle className="h-4 w-4" />
                         </div>
                     )}
                 </div>
-            )) : (
-                <div className="col-span-full flex items-center justify-center py-12">
-                    <div className="flex flex-col items-center gap-4">
-                        <Users className="h-8 w-8 text-muted-foreground" />
-                        <p className="text-muted-foreground">No staff members available for this service. You can still book with any professional.</p>
+                {/* Staff Member Cards */}
+                {filteredStaff && filteredStaff.length > 0 ? filteredStaff.map((staffMember: StaffMember) => (
+                    <div
+                        key={staffMember.id}
+                        className={cn(
+                            'group relative aspect-square p-4 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-300 rounded-2xl border-2 overflow-hidden',
+                            selectedStaff?.id === staffMember.id ? 'border-primary bg-primary/5 shadow-lg' : 'border-border/50 hover:border-primary/50 hover:bg-secondary/50'
+                        )}
+                        onClick={() => handleSelectStaff(staffMember)}
+                    >
+                        <div className="relative w-24 h-24 rounded-full mb-4 overflow-hidden shadow-md">
+                            <Image
+                                src={staffMember.image || `https://picsum.photos/seed/${staffMember.name}/400/400`}
+                                alt={staffMember.name}
+                                width={120}
+                                height={120}
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                data-ai-hint="professional staff portrait"
+                            />
+                        </div>
+                        <h3 className="font-semibold text-foreground text-sm">{staffMember.name}</h3>
+                        <p className="text-xs text-muted-foreground">{staffMember.role}</p>
+                        {staffMember.rating && (
+                            <div className="flex items-center gap-1 mt-1">
+                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                <span className="text-xs text-muted-foreground">{staffMember.rating}</span>
+                            </div>
+                        )}
+                        {staffMember.specialties && staffMember.specialties.length > 0 && (
+                            <div className="mt-1">
+                                <p className="text-xs text-muted-foreground truncate">
+                                    {staffMember.specialties.slice(0, 2).join(', ')}
+                                </p>
+                            </div>
+                        )}
+                        {selectedStaff?.id === staffMember.id && (
+                            <div className="absolute top-3 right-3 w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center">
+                                <CheckCircle className="h-4 w-4" />
+                            </div>
+                        )}
                     </div>
-                </div>
-            )}
+                )) : (
+                    <div className="col-span-full flex items-center justify-center py-12">
+                        <div className="flex flex-col items-center gap-4">
+                            <Users className="h-8 w-8 text-muted-foreground" />
+                            <p className="text-muted-foreground">No staff members available for this service. You can still book with any professional.</p>
+                        </div>
+                    </div>
+                )}
+            </div>
         </div>
-    </div>
-  );
+    );
 }

@@ -442,7 +442,7 @@ export function Step3_MultiServiceTimeSlot({
         isWeddingService,
         // Client Info
         clientId: user?._id || user?.id || 'temp-client-id',
-        clientName: user ? `${user.firstName} ${user.lastName}` : 'Customer',
+        clientName: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : 'Customer',
         clientEmail: user?.emailAddress || user?.email || '',
         clientPhone: user?.mobileNo || user?.phone || '',
         // Financials (if provided)
