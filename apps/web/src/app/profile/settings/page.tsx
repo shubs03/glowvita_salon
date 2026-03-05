@@ -31,6 +31,14 @@ export default function SettingsPage() {
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [errors, setErrors] = useState({
+        firstName: '',
+        lastName: '',
+        phone: '',
+        pincode: '',
+        state: '',
+        city: '',
+    });
     const [isProfileLoading, setIsProfileLoading] = useState(false);
     const [isPasswordLoading, setIsPasswordLoading] = useState(false);
 
@@ -47,9 +55,59 @@ export default function SettingsPage() {
             });
         }
     }, [user]);
-    
+
+    const validateField = (name: string, value: string) => {
+        let error = '';
+        if (name === 'firstName' || name === 'lastName' || name === 'state' || name === 'city') {
+            if (!/^[a-zA-Z\s]*$/.test(value)) {
+                error = 'Only letters are allowed';
+            }
+        } else if (name === 'phone') {
+            if (!/^\d*$/.test(value)) {
+                error = 'Only numbers are allowed';
+            } else if (value.length > 0 && value.length !== 10) {
+                error = 'Phone number must be exactly 10 digits';
+            }
+        } else if (name === 'pincode') {
+            if (!/^\d*$/.test(value)) {
+                error = 'Only numbers are allowed';
+            } else if (value.length > 0 && value.length !== 6) {
+                error = 'Pincode must be exactly 6 digits';
+            }
+        }
+        return error;
+    };
+
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
+
+        // Prevent typing invalid characters
+        if (name === 'firstName' || name === 'lastName') {
+            const filteredValue = value.replace(/[^a-zA-Z]/g, '');
+            setFormData(prev => ({ ...prev, [name]: filteredValue }));
+            return;
+        }
+
+        if (name === 'phone') {
+            const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 10);
+            setFormData(prev => ({ ...prev, [name]: filteredValue }));
+            setErrors(prev => ({ ...prev, phone: filteredValue.length === 10 || filteredValue.length === 0 ? '' : 'Phone number must be 10 digits' }));
+            return;
+        }
+
+        if (name === 'pincode') {
+            const filteredValue = value.replace(/[^0-9]/g, '').slice(0, 6);
+            setFormData(prev => ({ ...prev, [name]: filteredValue }));
+            setErrors(prev => ({ ...prev, pincode: filteredValue.length === 6 || filteredValue.length === 0 ? '' : 'Pincode must be 6 digits' }));
+            return;
+        }
+
+        if (name === 'state' || name === 'city') {
+            const filteredValue = value.replace(/[^a-zA-Z\s]/g, '');
+            setFormData(prev => ({ ...prev, [name]: filteredValue }));
+            return;
+        }
+
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
@@ -57,11 +115,22 @@ export default function SettingsPage() {
         const { name, value } = e.target;
         setPasswords(prev => ({ ...prev, [name]: value }));
     };
-    
+
     const handleProfileUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Final validation
+        const phoneError = formData.phone.length !== 10 ? 'Phone number must be 10 digits' : '';
+        const pincodeError = formData.pincode && formData.pincode.length !== 6 ? 'Pincode must be 6 digits' : '';
+
+        if (phoneError || pincodeError) {
+            setErrors(prev => ({ ...prev, phone: phoneError, pincode: pincodeError }));
+            toast.error("Please correct the errors before saving");
+            return;
+        }
+
         setIsProfileLoading(true);
-        
+
         try {
             const response = await fetch('/api/profile', {
                 method: 'PUT',
@@ -77,9 +146,9 @@ export default function SettingsPage() {
                     pincode: formData.pincode,
                 }),
             });
-            
+
             const data = await response.json();
-            
+
             if (response.ok) {
                 // Update the user in context with the full user data from the response
                 if (data.user) {
@@ -96,7 +165,7 @@ export default function SettingsPage() {
             setIsProfileLoading(false);
         }
     };
-    
+
     const handlePasswordUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (passwords.newPassword !== passwords.confirmPassword) {
@@ -107,9 +176,9 @@ export default function SettingsPage() {
             toast.error("New password must be at least 6 characters long.");
             return;
         }
-        
+
         setIsPasswordLoading(true);
-        
+
         try {
             const response = await fetch('/api/profile', {
                 method: 'PUT',
@@ -122,9 +191,9 @@ export default function SettingsPage() {
                     confirmPassword: passwords.confirmPassword,
                 }),
             });
-            
+
             const data = await response.json();
-            
+
             if (response.ok) {
                 toast.success("Password updated successfully!");
                 setPasswords({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -150,73 +219,79 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="firstName">First Name</Label>
-                            <Input 
-                                id="firstName" 
-                                name="firstName" 
-                                value={formData.firstName} 
-                                onChange={handleInputChange} 
-                                required 
+                            <Input
+                                id="firstName"
+                                name="firstName"
+                                value={formData.firstName}
+                                onChange={handleInputChange}
+                                required
                             />
+                            {errors.firstName && <p className="text-xs text-destructive">{errors.firstName}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="lastName">Last Name</Label>
-                            <Input 
-                                id="lastName" 
-                                name="lastName" 
-                                value={formData.lastName} 
-                                onChange={handleInputChange} 
-                                required 
+                            <Input
+                                id="lastName"
+                                name="lastName"
+                                value={formData.lastName}
+                                onChange={handleInputChange}
+                                required
                             />
+                            {errors.lastName && <p className="text-xs text-destructive">{errors.lastName}</p>}
                         </div>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
-                        <Input 
-                            id="email" 
-                            name="email" 
-                            type="email" 
-                            value={formData.email} 
-                            onChange={handleInputChange} 
-                            disabled 
+                        <Input
+                            id="email"
+                            name="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={handleInputChange}
+                            disabled
                         />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="phone">Phone</Label>
-                        <Input 
-                            id="phone" 
-                            name="phone" 
-                            value={formData.phone} 
-                            onChange={handleInputChange} 
-                            required 
+                        <Input
+                            id="phone"
+                            name="phone"
+                            value={formData.phone}
+                            onChange={handleInputChange}
+                            required
                         />
+                        {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="state">State</Label>
-                            <Input 
-                                id="state" 
-                                name="state" 
-                                value={formData.state} 
-                                onChange={handleInputChange} 
+                            <Input
+                                id="state"
+                                name="state"
+                                value={formData.state}
+                                onChange={handleInputChange}
                             />
+                            {errors.state && <p className="text-xs text-destructive">{errors.state}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="city">City</Label>
-                            <Input 
-                                id="city" 
-                                name="city" 
-                                value={formData.city} 
-                                onChange={handleInputChange} 
+                            <Input
+                                id="city"
+                                name="city"
+                                value={formData.city}
+                                onChange={handleInputChange}
                             />
+                            {errors.city && <p className="text-xs text-destructive">{errors.city}</p>}
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="pincode">Pincode</Label>
-                            <Input 
-                                id="pincode" 
-                                name="pincode" 
-                                value={formData.pincode} 
-                                onChange={handleInputChange} 
+                            <Input
+                                id="pincode"
+                                name="pincode"
+                                value={formData.pincode}
+                                onChange={handleInputChange}
                             />
+                            {errors.pincode && <p className="text-xs text-destructive">{errors.pincode}</p>}
                         </div>
                     </div>
                     <Button type="submit" disabled={isProfileLoading}>
@@ -228,13 +303,13 @@ export default function SettingsPage() {
                     <h3 className="font-semibold">Change Password</h3>
                     <div className="space-y-2 relative">
                         <Label htmlFor="currentPassword">Current Password</Label>
-                        <Input 
+                        <Input
                             id="currentPassword"
-                            name="currentPassword" 
-                            type={showCurrentPassword ? "text" : "password"} 
-                            value={passwords.currentPassword} 
-                            onChange={handlePasswordChange} 
-                            required 
+                            name="currentPassword"
+                            type={showCurrentPassword ? "text" : "password"}
+                            value={passwords.currentPassword}
+                            onChange={handlePasswordChange}
+                            required
                         />
                         <Button
                             type="button"
@@ -249,15 +324,15 @@ export default function SettingsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2 relative">
                             <Label htmlFor="newPassword">New Password</Label>
-                            <Input 
+                            <Input
                                 id="newPassword"
-                                name="newPassword" 
-                                type={showNewPassword ? "text" : "password"} 
-                                value={passwords.newPassword} 
-                                onChange={handlePasswordChange} 
-                                required 
+                                name="newPassword"
+                                type={showNewPassword ? "text" : "password"}
+                                value={passwords.newPassword}
+                                onChange={handlePasswordChange}
+                                required
                             />
-                             <Button
+                            <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
@@ -269,15 +344,15 @@ export default function SettingsPage() {
                         </div>
                         <div className="space-y-2 relative">
                             <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                            <Input 
+                            <Input
                                 id="confirmPassword"
-                                name="confirmPassword" 
-                                type={showConfirmPassword ? "text" : "password"} 
-                                value={passwords.confirmPassword} 
-                                onChange={handlePasswordChange} 
-                                required 
+                                name="confirmPassword"
+                                type={showConfirmPassword ? "text" : "password"}
+                                value={passwords.confirmPassword}
+                                onChange={handlePasswordChange}
+                                required
                             />
-                             <Button
+                            <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
