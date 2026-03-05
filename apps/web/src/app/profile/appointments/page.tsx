@@ -473,21 +473,60 @@ export default function AppointmentsPage() {
         if (userAppointments) {
             console.log("Raw user appointments data:", userAppointments);
             setAppointments(userAppointments);
-            // Set the first appointment as selected if none is selected and there are appointments
-            // Only do this once to prevent infinite loops
-            if (!hasSetInitialSelection.current && !selectedAppointment && userAppointments.length > 0) {
-                setSelectedAppointment(userAppointments[0]);
+
+            if (!hasSetInitialSelection.current && userAppointments.length > 0) {
+                // Check if we just came from a booking — auto-select that appointment
+                const newlyBookedId = typeof window !== 'undefined'
+                    ? sessionStorage.getItem('newlyBookedAppointmentId')
+                    : null;
+
+                if (newlyBookedId) {
+                    const newlyBooked = userAppointments.find((apt: any) => apt.id === newlyBookedId);
+                    if (newlyBooked) {
+                        setSelectedAppointment(newlyBooked);
+                        sessionStorage.removeItem('newlyBookedAppointmentId');
+                        hasSetInitialSelection.current = true;
+                        return;
+                    }
+                }
+
+                // Default: select first appointment
+                if (!selectedAppointment) {
+                    setSelectedAppointment(userAppointments[0]);
+                }
                 hasSetInitialSelection.current = true;
             }
         }
     }, [userAppointments]); // Remove selectedAppointment from dependencies
 
     const filteredAppointments = useMemo(() => {
-        return appointments.filter(appointment =>
-            (appointment.service.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                appointment.staff.toLowerCase().includes(searchTerm.toLowerCase())) &&
-            (statusFilter === 'all' || appointment.status === statusFilter)
-        );
+        const statusGroupOrder: Record<string, number> = {
+            Scheduled: 0,
+            Confirmed: 0,
+            Pending: 1,
+            Completed: 2,
+            Cancelled: 3,
+        };
+
+        const getDateTime = (apt: Appointment) => {
+            const date = new Date(apt.date).getTime();
+            const timeStr = apt.startTime || apt.serviceItems?.[0]?.startTime || '00:00';
+            const [h, m] = timeStr.split(':').map(Number);
+            return date + (h || 0) * 60 * 60 * 1000 + (m || 0) * 60 * 1000;
+        };
+
+        return appointments
+            .filter(appointment =>
+                (appointment.service.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    appointment.staff.toLowerCase().includes(searchTerm.toLowerCase())) &&
+                (statusFilter === 'all' || appointment.status === statusFilter)
+            )
+            .sort((a, b) => {
+                const groupA = statusGroupOrder[a.status] ?? 99;
+                const groupB = statusGroupOrder[b.status] ?? 99;
+                if (groupA !== groupB) return groupA - groupB;
+                return getDateTime(a) - getDateTime(b);
+            });
     }, [appointments, searchTerm, statusFilter]);
 
     const handleCancelClick = (appointment: Appointment) => {

@@ -1933,6 +1933,9 @@ function BookingPageContent() {
           setIsConfirmationModalOpen(false);
           setIsPaymentModalOpen(false);
           await persistServiceLocation(finalIsHomeService ? serviceLocation : null);
+          if (typeof window !== 'undefined' && appointmentIdToConfirm) {
+            sessionStorage.setItem('newlyBookedAppointmentId', appointmentIdToConfirm);
+          }
           router.push('/profile/appointments');
         } else {
           throw new Error("Failed to acquire slot lock or session expired.");

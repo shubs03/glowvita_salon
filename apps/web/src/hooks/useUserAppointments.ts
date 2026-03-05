@@ -132,6 +132,7 @@ export const useUserAppointments = () => {
         duration: duration,
         amount: appointment.amount || 0,
         totalAmount: appointment.totalAmount || 0,
+        amountPaid: appointment.amountPaid || 0,
         platformFee: appointment.platformFee || 0,
         serviceTax: appointment.serviceTax || 0,
         discountAmount: appointment.discountAmount || 0,
