@@ -32,29 +32,29 @@ import { useGetPublicProductsQuery, useGetPublicAppointmentsQuery, useGetClientO
 
 function OverviewContent() {
   const { user, isAuthenticated } = useAuth();
-  
+
   // Fetch user appointments
   const { data: appointmentsData = [], isLoading: isLoadingAppointments } = useGetPublicAppointmentsQuery(
     { userId: user?._id },
     { skip: !isAuthenticated || !user?._id }
   );
-  
+
   // Fetch products for new products section
   const { data: productsResponse, isLoading: isLoadingProducts } = useGetPublicProductsQuery(undefined);
-  
+
   // // Fetch offers
   const { data: offersResponse, isLoading: isLoadingOffers } = useGetPublicAllOffersQuery(undefined);
-  
+
   // Fetch client orders
   const { data: ordersData = [] } = useGetClientOrdersQuery(undefined, { skip: !isAuthenticated || !user?._id });
-  
+
   // Fetch client cart
   const { data: cartData } = useGetClientCartQuery(undefined, { skip: !isAuthenticated || !user?._id });
-  
+
   // Transform and filter appointments to get only upcoming appointments
   const upcomingAppointments: Appointment[] = useMemo(() => {
     if (!appointmentsData || appointmentsData.length === 0) return [];
-    
+
     const now = new Date();
     return appointmentsData
       .filter((apt: any) => {
@@ -65,7 +65,7 @@ function OverviewContent() {
       .map((apt: any) => {
         // Calculate total price from all services
         let totalPrice = 0;
-        
+
         // If there are multiple service items, sum up all their amounts
         if (apt.serviceItems && Array.isArray(apt.serviceItems) && apt.serviceItems.length > 0) {
           totalPrice = apt.serviceItems.reduce((sum: number, item: any) => {
@@ -75,7 +75,7 @@ function OverviewContent() {
           // Fallback to single amount fields
           totalPrice = apt.totalAmount || apt.amount || 0;
         }
-        
+
         return {
           id: apt._id || apt.id,
           service: apt.serviceName || apt.service || 'Service',
@@ -86,89 +86,89 @@ function OverviewContent() {
         };
       });
   }, [appointmentsData]);
-  
+
   // Get new products (recently added products)
   const newProducts = useMemo(() => {
     if (!productsResponse) return [];
-    
+
     // Handle different response structures
-    const productsArray = Array.isArray(productsResponse) 
-      ? productsResponse 
+    const productsArray = Array.isArray(productsResponse)
+      ? productsResponse
       : productsResponse?.products || productsResponse?.data || [];
-    
+
     if (!Array.isArray(productsArray) || productsArray.length === 0) return [];
-    
+
     // Sort by creation date and get the newest 2 products
     const sortedProducts = [...productsArray].sort((a: any, b: any) => {
       const dateA = new Date(a.createdAt || 0).getTime();
       const dateB = new Date(b.createdAt || 0).getTime();
       return dateB - dateA;
     });
-    
+
     return sortedProducts.slice(0, 2).map((product: any) => ({
       name: product.productName || product.name,
       price: product.salePrice || product.price || 0,
       image: product.productImage || product.image || "https://picsum.photos/id/1027/200/200",
     }));
   }, [productsResponse]);
-  
+
   // Get current offers (newest offers from database)
   const currentOffers = useMemo(() => {
     if (!offersResponse) return [];
-    
+
     // Handle different response structures
-    const offersArray = Array.isArray(offersResponse) 
-      ? offersResponse 
+    const offersArray = Array.isArray(offersResponse)
+      ? offersResponse
       : offersResponse?.offers || offersResponse?.data || [];
-    
+
     if (!Array.isArray(offersArray) || offersArray.length === 0) return [];
-    
+
     // Filter only active offers
     const now = new Date();
     const activeOffers = offersArray.filter((offer: any) => {
       const startDate = new Date(offer.startDate);
       const expiryDate = offer.expires ? new Date(offer.expires) : null;
-      
-      return offer.status === 'Active' && 
-             startDate <= now && 
-             (!expiryDate || expiryDate >= now);
+
+      return offer.status === 'Active' &&
+        startDate <= now &&
+        (!expiryDate || expiryDate >= now);
     });
-    
+
     // Sort by creation date (newest first) and get the top 2
     const sortedOffers = [...activeOffers].sort((a: any, b: any) => {
       const dateA = new Date(a.createdAt || 0).getTime();
       const dateB = new Date(b.createdAt || 0).getTime();
       return dateB - dateA;
     });
-    
+
     return sortedOffers.slice(0, 2).map((offer: any) => ({
       title: offer.code || 'Special Offer',
-      description: offer.type === 'percentage' 
-        ? `Get ${offer.value}% off` 
+      description: offer.type === 'percentage'
+        ? `Get ${offer.value}% off`
         : `Get ₹${offer.value} off`,
       icon: offer.type === 'percentage' ? Tag : Gift,
       code: offer.code,
     }));
   }, [offersResponse]);
-  
+
   // Calculate dynamic stats
   const stats = useMemo(() => {
     // Total appointments count
     const totalAppointments = appointmentsData?.length || 0;
-    
+
     // Cart items count (matching cart page structure)
     const cartItems = cartData?.data?.items || [];
     const cartItemsCount = Array.isArray(cartItems) ? cartItems.length : 0;
-    
+
     // Total product orders count
     const ordersArray = Array.isArray(ordersData) ? ordersData : ordersData?.orders || ordersData?.data || [];
     const totalOrders = ordersArray.length;
-    
+
     // Calculate total spent (product orders + appointments)
     const totalProductSpent = ordersArray.reduce((sum: number, order: any) => {
       return sum + (order.totalAmount || order.total || 0);
     }, 0);
-    
+
     const totalAppointmentSpent = (appointmentsData || []).reduce((sum: number, apt: any) => {
       // Calculate appointment total from service items or fallback to amount fields
       let aptTotal = 0;
@@ -179,16 +179,16 @@ function OverviewContent() {
       }
       return sum + aptTotal;
     }, 0);
-    
+
     const totalSpent = totalProductSpent + totalAppointmentSpent;
-    
+
     // Calculate average monthly spend
-    const oldestOrderDate = ordersArray.length > 0 
+    const oldestOrderDate = ordersArray.length > 0
       ? Math.min(...ordersArray.map((order: any) => new Date(order.createdAt || order.date || Date.now()).getTime()))
       : Date.now();
     const monthsSinceFirstOrder = Math.max(1, Math.ceil((Date.now() - oldestOrderDate) / (1000 * 60 * 60 * 24 * 30)));
     const avgMonthlySpend = Math.round(totalSpent / monthsSinceFirstOrder);
-    
+
     // Find most purchased product category
     const categoryCount: { [key: string]: number } = {};
     ordersArray.forEach((order: any) => {
@@ -198,11 +198,11 @@ function OverviewContent() {
         categoryCount[category] = (categoryCount[category] || 0) + (item.quantity || 1);
       });
     });
-    
+
     const mostPurchasedCategory = Object.keys(categoryCount).length > 0
       ? Object.entries(categoryCount).reduce((max, [cat, count]) => count > max[1] ? [cat, count] : max, ['', 0])[0]
       : 'None';
-    
+
     return {
       totalAppointments,
       cartItemsCount,
@@ -213,7 +213,7 @@ function OverviewContent() {
       wishlistItems: 8, // Keep static for now
     };
   }, [appointmentsData, ordersData, cartData]);
-  
+
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -394,7 +394,7 @@ function OverviewContent() {
                     <h4 className="font-semibold">{product.name}</h4>
                     <p className="text-sm text-muted-foreground">₹{product.price.toFixed(2)}</p>
                   </div>
-                  <Link href="/products">
+                  <Link href="/all-products">
                     <Button variant="outline" size="sm" className="ml-auto">View</Button>
                   </Link>
                 </div>
