@@ -319,7 +319,7 @@ export default function CartPage() {
                 </p>
               </div>
               <Button asChild size="lg" className="mt-8">
-                <Link href="/">
+                <Link href="/all-products">
                   <ArrowLeft className="mr-2 h-4 w-4" /> Continue Shopping
                 </Link>
               </Button>

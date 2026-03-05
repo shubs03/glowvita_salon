@@ -90,6 +90,7 @@ export const GET = async (request, { params }) => {
       vendorName: product.origin === 'Supplier' ? vendorData.shopName : vendorData.businessName || 'Unknown Vendor',
       vendorLocation: `${vendorData.city || ''}, ${vendorData.state || ''}`.trim(),
       category: product.category?.name || 'Beauty Products',
+      categoryId: product.category?._id || product.category || null,
       stock: product.stock,
       isActive: product.isActive,
       rating: reviewStats.averageRating,

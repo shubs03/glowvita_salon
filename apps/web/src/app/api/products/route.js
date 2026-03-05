@@ -15,8 +15,9 @@ export const GET = async (request) => {
     // ... (vendorId extraction remains the same)
     const url = new URL(request.url);
     const vendorId = url.searchParams.get('vendorId');
+    const categoryId = url.searchParams.get('categoryId');
 
-    // Build query with optional vendor filter
+    // Build query with optional filters
     const query = {
       status: 'approved',
       isActive: true,
@@ -26,6 +27,10 @@ export const GET = async (request) => {
 
     if (vendorId) {
       query.vendorId = vendorId;
+    }
+
+    if (categoryId) {
+      query.category = categoryId;
     }
 
     // Get products that are approved via admin panel
@@ -116,7 +121,8 @@ export const GET = async (request) => {
         forBodyPart: product.forBodyPart || null,
         bodyPartType: product.bodyPartType || null,
         productForm: product.productForm || null,
-        brand: product.brand || null
+        brand: product.brand || null,
+        categoryId: product.category?._id || product.category || null
       };
     });
 

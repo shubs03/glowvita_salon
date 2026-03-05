@@ -17,7 +17,7 @@ export const StatCard = ({ icon: Icon, title, value, change }: StatCardProps) =>
         <div className="p-3 bg-primary/10 rounded-full text-primary group-hover:bg-primary group-hover:text-white transition-all duration-300 group-hover:scale-110">
           <Icon className="h-5 w-5" />
         </div>
-        <p className="text-sm font-semibold text-green-600">{change}</p>
+        <p className="text-sm font-semibold text-blue-600">{change}</p>
       </div>
       <div className="mt-4">
         <p className="text-3xl font-bold">{value}</p>

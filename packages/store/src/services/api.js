@@ -384,7 +384,11 @@ export const glowvitaApi = createApi({
 
     // Public Products for landing page
     getPublicProducts: builder.query({
-      query: () => ({ url: "/products", method: "GET" }),
+      query: (params) => ({
+        url: "/products",
+        method: "GET",
+        params: params
+      }),
       providesTags: ["PublicProducts"],
       transformResponse: (response) => response,
     }),

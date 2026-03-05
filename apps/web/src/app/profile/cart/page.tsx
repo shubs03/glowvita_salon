@@ -26,7 +26,7 @@ import { cn } from '@repo/ui/cn';
 
 interface CartItem {
   _id: string;
-  productId: string; 
+  productId: string;
   productName: string;
   price: number;
   quantity: number;
@@ -43,11 +43,11 @@ export default function CartPage() {
   useCartSync();
 
   const { data: cartData, isLoading } = useGetClientCartQuery(undefined, { skip: !isAuthenticated || !user?._id });
-    const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
-    const { data: shippingConfig } = useGetPublicShippingConfigQuery(undefined);
+  const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
+  const { data: shippingConfig } = useGetPublicShippingConfigQuery(undefined);
   const [updateCartItem] = useUpdateClientCartItemMutation();
   const [removeFromCartAPI] = useRemoveFromClientCartMutation();
-  
+
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [itemToRemove, setItemToRemove] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -85,7 +85,7 @@ export default function CartPage() {
       // Handle stock validation errors from the API
       const errorMessage = error?.data?.message || 'Failed to update quantity.';
       toast.error(errorMessage);
-      
+
       // If there's an available stock value, show it
       if (error?.data?.availableStock !== undefined) {
         toast.warning(`Only ${error.data.availableStock} units available in stock.`);
@@ -126,14 +126,14 @@ export default function CartPage() {
     (acc: number, item: any) => acc + item.price * item.quantity,
     0
   );
-  
+
   // Calculate dynamic shipping based on config (same as checkout page)
   const shipping = subtotal > 0 && shippingConfig?.isEnabled
     ? shippingConfig.chargeType === 'percentage'
       ? (subtotal * shippingConfig.amount) / 100
       : shippingConfig.amount
     : 0;
-  
+
   // Calculate tax based on dynamic tax settings from API (same as checkout page)
   const productGST = taxSettings?.productGST || 18;
   const productGSTType = taxSettings?.productGSTType || 'percentage';
@@ -141,15 +141,15 @@ export default function CartPage() {
   const productPlatformFeeType = taxSettings?.productPlatformFeeType || 'percentage';
   const productGSTEnabled = taxSettings?.productGSTEnabled ?? true;
   const productPlatformFeeEnabled = taxSettings?.productPlatformFeeEnabled ?? true;
-  
-  const gst = productGSTEnabled 
+
+  const gst = productGSTEnabled
     ? (productGSTType === 'percentage' ? subtotal * (productGST / 100) : productGST)
     : 0;
   const platformFee = productPlatformFeeEnabled
     ? (productPlatformFeeType === 'percentage' ? subtotal * (productPlatformFee / 100) : productPlatformFee)
     : 0;
   const tax = gst + platformFee;
-  
+
   // No discount in checkout page, so removing discount calculation to match
   const total = subtotal + shipping + tax;
   const itemCount = cartItems.reduce(
@@ -161,7 +161,7 @@ export default function CartPage() {
     if (cartItems.length > 0) {
       // Store the actual cart items for checkout
       localStorage.setItem('cartItems', JSON.stringify(cartItems));
-      
+
       // Create a virtual product that represents the entire cart
       // This ensures the subtotal calculation matches between cart and checkout pages
       const checkoutProduct = {
@@ -173,16 +173,16 @@ export default function CartPage() {
         vendorId: (cartItems[0] as any).vendorId || (cartItems[0] as any).supplierId || (cartItems[0] as any).vendor_id || null,
         vendorName: (cartItems[0] as any).supplierName || (cartItems[0] as any).vendorName || "Multiple Vendors",
       };
-      
+
       // Ensure vendorId is valid
       if (!checkoutProduct.vendorId) {
         toast.error("Vendor information is missing. Cannot proceed to checkout.");
         return;
       }
-      
+
       // Log for debugging
       console.log('Checkout product data:', checkoutProduct);
-      
+
       localStorage.setItem('buyNowProduct', JSON.stringify(checkoutProduct));
       router.push('/checkout');
     }
@@ -306,8 +306,8 @@ export default function CartPage() {
                         <ShoppingCart className="h-12 w-12 text-muted-foreground" />
                         <p className="text-muted-foreground">Your cart is empty</p>
                         <Button asChild size="sm">
-                          <Link href="/profile">
-                            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Profile
+                          <Link href="/all-products">
+                            <ArrowLeft className="mr-2 h-4 w-4" /> Browse Products
                           </Link>
                         </Button>
                       </div>
@@ -317,7 +317,7 @@ export default function CartPage() {
               </TableBody>
             </Table>
           </div>
-          
+
           {/* Cart Summary and Checkout */}
           {cartItems.length > 0 && (
             <div className="mt-6 border-t pt-6">
@@ -326,7 +326,7 @@ export default function CartPage() {
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                   <div className="flex items-center gap-4">
                     <Button variant="outline" asChild className="shrink-0">
-                      <Link href="/profile">
+                      <Link href="/all-products">
                         <ArrowLeft className="mr-2 h-4 w-4" /> Continue Shopping
                       </Link>
                     </Button>
@@ -335,7 +335,7 @@ export default function CartPage() {
                       <span>Secure checkout with SSL encryption</span>
                     </div>
                   </div>
-                  
+
                   {/* Free shipping info - compact version */}
                   <div className="text-sm text-green-600 font-medium flex items-center gap-2">
                     <Tag className="h-4 w-4" />
@@ -388,9 +388,9 @@ export default function CartPage() {
                           <div className="text-sm text-muted-foreground mb-2">Total Amount</div>
                           <div className="text-4xl font-bold text-primary mb-2">₹{total.toFixed(2)}</div>
                         </div>
-                        
-                        <Button 
-                          size="lg" 
+
+                        <Button
+                          size="lg"
                           className="w-full h-12 text-base font-semibold shadow-md hover:shadow-lg transition-all duration-200 mb-4"
                           onClick={handleCheckout}
                           disabled={cartItems.length === 0}
@@ -398,7 +398,7 @@ export default function CartPage() {
                           <ShoppingCart className="mr-2 h-5 w-5" />
                           Proceed to Checkout
                         </Button>
-                        
+
                         <p className="text-xs text-muted-foreground">
                           By proceeding, you agree to our Terms of Service and Privacy Policy
                         </p>
