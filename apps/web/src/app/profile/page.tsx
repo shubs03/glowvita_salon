@@ -37,10 +37,7 @@ function OverviewContent() {
   const { user, isAuthenticated } = useAuth();
 
   // Fetch user appointments
-  const { data: appointmentsData = [], isLoading: isLoadingAppointments } = useGetPublicAppointmentsQuery(
-    { userId: user?._id },
-    { skip: !isAuthenticated || !user?._id }
-  );
+  const { appointments: appointmentsData = [], isLoading: isLoadingAppointments } = useUserAppointments();
 
   // Fetch products for new products section
   const { data: productsResponse, isLoading: isLoadingProducts } = useGetPublicProductsQuery(undefined);
@@ -54,41 +51,93 @@ function OverviewContent() {
   // Fetch client cart
   const { data: cartData } = useGetClientCartQuery(undefined, { skip: !isAuthenticated || !user?._id });
 
+  // Fetch wishlists
+  const { data: doctorWishlistData } = useGetDoctorWishlistQuery(undefined, { skip: !isAuthenticated || !user?._id });
+  const { data: salonWishlistData } = useGetSalonWishlistQuery(undefined, { skip: !isAuthenticated || !user?._id });
+  const [productWishlistCount, setProductWishlistCount] = useState(0);
+  const [showAllAppointments, setShowAllAppointments] = useState(false);
+  const [showAllOrders, setShowAllOrders] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && user?._id) {
+      fetch('/api/client/wishlist')
+        .then(res => res.json())
+        .then(data => {
+          if (data?.success && data?.data?.items) {
+            setProductWishlistCount(data.data.items.length);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [isAuthenticated, user?._id]);
+
   // Transform and filter appointments to get only upcoming appointments
   const upcomingAppointments = useMemo(() => {
     if (!appointmentsData || appointmentsData.length === 0) return [];
 
-    const now = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const seen = new Set();
+
     return appointmentsData
       .filter((apt: any) => {
-        const appointmentDate = new Date(apt.date);
-        return appointmentDate >= now && (apt.status === 'Confirmed' || apt.status === 'confirmed' || apt.status === 'scheduled');
-      })
-      .slice(0, 2) // Get only first 2 upcoming appointments
-      .map((apt: any) => {
-        // Calculate total price from all services
-        let totalPrice = 0;
-
-        // If there are multiple service items, sum up all their amounts
-        if (apt.serviceItems && Array.isArray(apt.serviceItems) && apt.serviceItems.length > 0) {
-          totalPrice = apt.serviceItems.reduce((sum: number, item: any) => {
-            return sum + (item.amount || 0);
-          }, 0);
-        } else {
-          // Fallback to single amount fields
-          totalPrice = apt.totalAmount || apt.amount || 0;
+        const id = apt.id;
+        if (seen.has(id)) return false;
+        try {
+          const appointmentDate = new Date(apt.date);
+          const isUpcoming = appointmentDate >= today && ['Confirmed', 'Scheduled'].includes(apt.status);
+          if (isUpcoming) seen.add(id);
+          return isUpcoming;
+        } catch (e) {
+          return false;
         }
+      })
+      .map((apt: any) => ({
+        ...apt,
+      }))
+      .sort((a: any, b: any) => {
+        // Sort by date first
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (dateA !== dateB) return dateA - dateB;
 
-        return {
-          id: apt._id || apt.id,
-          service: apt.serviceName || apt.service || 'Service',
-          date: apt.date,
-          staff: apt.staffName || apt.staff || 'Staff Member',
-          status: apt.status === 'confirmed' || apt.status === 'scheduled' ? 'Confirmed' : apt.status,
-          price: totalPrice,
-        };
+        // Then sort by startTime within same date
+        const timeA = a.startTime || (a.serviceItems?.[0]?.startTime) || '00:00';
+        const timeB = b.startTime || (b.serviceItems?.[0]?.startTime) || '00:00';
+        return timeA.localeCompare(timeB);
       });
   }, [appointmentsData]);
+
+  // Get upcoming (non-delivered) orders sorted by date
+  const upcomingOrders = useMemo(() => {
+    const ordersArray = Array.isArray(ordersData) ? ordersData : (ordersData as any)?.orders || (ordersData as any)?.data || [];
+    if (!ordersArray.length) return [];
+
+    const excludedStatuses = ['delivered', 'cancelled', 'rejected'];
+    const seen = new Set();
+
+    return ordersArray
+      .filter((order: any) => {
+        const id = order._id || order.id;
+        if (seen.has(id)) return false;
+        const status = (order.orderStatus || order.status || '').toLowerCase();
+        const isUpcoming = !excludedStatuses.includes(status);
+        if (isUpcoming) seen.add(id);
+        return isUpcoming;
+      })
+      .sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || a.date || 0).getTime();
+        const dateB = new Date(b.createdAt || b.date || 0).getTime();
+        return dateB - dateA; // latest first
+      });
+  }, [ordersData]);
+
+  const displayUpcomingOrders = showAllOrders ? upcomingOrders : upcomingOrders.slice(0, 3);
+
+  // Sliced version for display
+  const displayUpcomingAppointments = showAllAppointments
+    ? upcomingAppointments
+    : upcomingAppointments.slice(0, 3);
 
   // Get new products (recently added products)
   const newProducts = useMemo(() => {
@@ -160,6 +209,9 @@ function OverviewContent() {
     // Total appointments count
     const totalAppointments = appointmentsData?.length || 0;
 
+    // Completed appointments count
+    const completedAppointments = appointmentsData?.filter((apt: any) => apt.status?.toLowerCase() === 'completed')?.length || 0;
+
     // Cart items count (matching cart page structure)
     const cartItems = cartData?.data?.items || [];
     const cartItemsCount = Array.isArray(cartItems) ? cartItems.length : 0;
@@ -167,8 +219,9 @@ function OverviewContent() {
     // Total product orders count
     const ordersArray = Array.isArray(ordersData) ? ordersData : ordersData?.orders || ordersData?.data || [];
     const totalOrders = ordersArray.length;
+    const deliveredOrders = ordersArray.filter((order: any) => order.orderStatus?.toLowerCase() === 'delivered' || order.status?.toLowerCase() === 'delivered').length;
 
-    // Calculate total spent (product orders + appointments)
+    // Calculate total spent (delivered orders using totalAmount + completed appointments using amountPaid)
     const totalProductSpent = ordersArray.reduce((sum: number, order: any) => {
       const isDelivered = order.orderStatus?.toLowerCase() === 'delivered' || order.status?.toLowerCase() === 'delivered';
       if (!isDelivered) return sum;
@@ -182,13 +235,6 @@ function OverviewContent() {
     }, 0);
 
     const totalSpent = totalProductSpent + totalAppointmentSpent;
-
-    // Calculate average monthly spend
-    const oldestOrderDate = ordersArray.length > 0
-      ? Math.min(...ordersArray.map((order: any) => new Date(order.createdAt || order.date || Date.now()).getTime()))
-      : Date.now();
-    const monthsSinceFirstOrder = Math.max(1, Math.ceil((Date.now() - oldestOrderDate) / (1000 * 60 * 60 * 24 * 30)));
-    const avgMonthlySpend = Math.round(totalSpent / monthsSinceFirstOrder);
 
     // Find most purchased product category
     const categoryCount: { [key: string]: number } = {};
@@ -204,6 +250,61 @@ function OverviewContent() {
       ? Object.entries(categoryCount).reduce((max, [cat, count]) => count > max[1] ? [cat, count] : max, ['', 0])[0]
       : 'None';
 
+    // Calculate total wishlist items
+    const doctorItemsCount = doctorWishlistData?.data?.items?.length || 0;
+    const salonItemsCount = salonWishlistData?.data?.items?.length || 0;
+    const totalWishlistItems = productWishlistCount + doctorItemsCount + salonItemsCount;
+
+    // Calculate historical monthly spend for bar chart
+    const monthlySpends = [0, 0, 0, 0, 0];
+    const currentDate = new Date();
+
+    ordersArray.forEach((order: any) => {
+      const isDelivered = order.orderStatus?.toLowerCase() === 'delivered' || order.status?.toLowerCase() === 'delivered';
+      if (!isDelivered) return;
+
+      const orderDate = new Date(order.createdAt || order.date);
+      const diffMonths = (currentDate.getFullYear() - orderDate.getFullYear()) * 12 + (currentDate.getMonth() - orderDate.getMonth());
+      if (diffMonths >= 0 && diffMonths < 5) {
+        monthlySpends[4 - diffMonths] += (order.totalAmount || order.total || 0);
+      }
+    });
+
+    (appointmentsData || []).forEach((apt: any) => {
+      if (apt.status?.toLowerCase() !== 'completed') return;
+
+      const aptDate = new Date(apt.date);
+      const diffMonths = (currentDate.getFullYear() - aptDate.getFullYear()) * 12 + (currentDate.getMonth() - aptDate.getMonth());
+      if (diffMonths >= 0 && diffMonths < 5) {
+        monthlySpends[4 - diffMonths] += (apt.amountPaid || apt.finalAmount || apt.price || 0);
+      }
+    });
+
+    const currentMonthSpend = monthlySpends[4];
+
+    const maxSpend = Math.max(...monthlySpends, 1); // Avoid division by zero
+    const monthlySpendPercentages = monthlySpends.map(spend => Math.max(10, Math.round((spend / maxSpend) * 100)));
+
+    // Service Mix percentages
+    const topCategories = Object.entries(categoryCount)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+
+    const totalCategoryCount = topCategories.reduce((sum, [, count]) => sum + count, 0);
+
+    const serviceMix = topCategories.map(([, count]) =>
+      totalCategoryCount > 0 ? Math.round((count / totalCategoryCount) * 100) : 0
+    );
+
+    // Ensure we always have 3 values for the donuts
+    while (serviceMix.length < 3) serviceMix.push(0);
+
+    // Calculate Pro Tier based on total spent
+    let tier = "BASIC";
+    if (totalSpent >= 10000) tier = "PRO";
+    else if (totalSpent >= 5000) tier = "GOLD";
+    else if (totalSpent >= 1000) tier = "SILVER";
+
     return {
       totalAppointments,
       completedAppointments,
@@ -218,7 +319,7 @@ function OverviewContent() {
       tier,
       deliveredOrders,
     };
-  }, [appointmentsData, ordersData, cartData]);
+  }, [appointmentsData, ordersData, cartData, productWishlistCount, doctorWishlistData, salonWishlistData]);
 
   return (
     <div className="space-y-6">
@@ -383,7 +484,7 @@ function OverviewContent() {
                     <h4 className="font-semibold">{product.name}</h4>
                     <p className="text-sm text-muted-foreground">₹{product.price.toFixed(2)}</p>
                   </div>
-                  <Link href="/products">
+                  <Link href={`/product-details/${product.id}`}>
                     <Button variant="outline" size="sm" className="ml-auto">View</Button>
                   </Link>
                 </div>
