@@ -698,6 +698,7 @@ export default function ProductDetailsPage() {
         vendorId={product.vendorId || ''}
         vendorName={product.vendorName || ''}
         category={product.category || ''}
+        categoryId={product.categoryId || ''}
         onBuyNow={handleBuyNow}
         onAddToCart={handleAddToCart}
         isSubscriptionExpired={false}
