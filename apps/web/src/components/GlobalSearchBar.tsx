@@ -10,9 +10,9 @@ import {
   Calendar,
   ChevronDown,
 } from "lucide-react";
-import { 
+import {
   useGetPublicCategoriesQuery,
-  useGetPublicServicesQuery 
+  useGetPublicServicesQuery
 } from "@repo/store/services/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@repo/ui/cn";
@@ -29,15 +29,15 @@ interface GlobalSearchBarProps {
 export const GlobalSearchBar = ({ variant = "hero", className }: GlobalSearchBarProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [serviceInput, setServiceInput] = useState(searchParams.get("serviceName") || "");
   const [locationInput, setLocationInput] = useState(searchParams.get("city") || "");
   const [dateInput, setDateInput] = useState(searchParams.get("date") || "");
   const [selectedCategoryId, setSelectedCategoryId] = useState(searchParams.get("categoryIds") || "");
-  
+
   const [isServiceFocused, setIsServiceFocused] = useState(false);
   const [isLocationFocused, setIsLocationFocused] = useState(false);
-  
+
   const { data: categoriesData } = useGetPublicCategoriesQuery(undefined);
   const { data: servicesData } = useGetPublicServicesQuery({});
 
@@ -51,10 +51,10 @@ export const GlobalSearchBar = ({ variant = "hero", className }: GlobalSearchBar
 
   const autocompleteResults = useMemo(() => {
     if (!serviceInput) return { categories: categoriesData?.categories?.slice(0, 3) || [], services: servicesData?.services?.slice(0, 5) || [] };
-    
+
     const term = serviceInput.toLowerCase();
-    
-    const categories = categoriesData?.categories?.filter((c: any) => 
+
+    const categories = categoriesData?.categories?.filter((c: any) =>
       c.name.toLowerCase().includes(term)
     ).slice(0, 3) || [];
 
@@ -185,7 +185,7 @@ export const GlobalSearchBar = ({ variant = "hero", className }: GlobalSearchBar
                   <div className="p-3 text-[10px] font-black text-gray-400 uppercase tracking-widest px-4 mb-1">Categories</div>
                   <div className="grid grid-cols-1 gap-1">
                     {autocompleteResults.categories.map((cat: any) => (
-                       <button
+                      <button
                         key={cat._id}
                         onClick={() => {
                           setServiceInput(cat.name);
@@ -209,7 +209,7 @@ export const GlobalSearchBar = ({ variant = "hero", className }: GlobalSearchBar
                   <div className="p-3 text-[10px] font-black text-gray-400 uppercase tracking-widest px-4 mb-1">Services</div>
                   <div className="grid grid-cols-1 gap-1">
                     {autocompleteResults.services.map((svc: any) => (
-                       <button
+                      <button
                         key={svc._id}
                         onClick={() => {
                           setServiceInput(svc.name);
@@ -262,7 +262,7 @@ export const GlobalSearchBar = ({ variant = "hero", className }: GlobalSearchBar
             onBlur={() => setTimeout(() => setIsLocationFocused(false), 200)}
             className="w-full bg-transparent outline-none text-gray-900 font-bold text-sm placeholder:text-gray-400 placeholder:font-medium"
           />
-          <button 
+          <button
             onClick={handleCurrentLocation}
             className={cn(
               "p-1.5 hover:bg-primary/10 rounded-full transition-colors group",
@@ -277,7 +277,7 @@ export const GlobalSearchBar = ({ variant = "hero", className }: GlobalSearchBar
           {isLocationFocused && (locationPredictions.length > 0 || !locationInput) && (
             <div className="absolute top-[calc(100%+10px)] left-0 w-full md:w-[350px] bg-white rounded-3xl shadow-[0_20px_70px_rgba(0,0,0,0.15)] border border-gray-100 p-3 z-[1000] overflow-y-auto max-h-64 no-scrollbar backdrop-blur-xl">
               <div className="p-3 text-[10px] font-black text-gray-400 uppercase tracking-widest px-4 mb-1">Locations</div>
-              
+
               {!locationInput && (
                 <button
                   onMouseDown={(e) => {
@@ -315,24 +315,10 @@ export const GlobalSearchBar = ({ variant = "hero", className }: GlobalSearchBar
           )}
         </div>
 
-        <div className="hidden md:block w-px h-8 bg-gray-100 mx-1"></div>
 
-        {/* Date Field */}
-        <div className="flex-1 flex items-center gap-3 px-5 py-3 rounded-2xl hover:bg-gray-50 transition-colors">
-          <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-          <input
-            type="text"
-            placeholder="When"
-            value={dateInput}
-            onChange={(e) => setDateInput(e.target.value)}
-            onFocus={(e) => e.target.type = 'date'}
-            onBlur={(e) => e.target.type = 'text'}
-            className="w-full bg-transparent outline-none text-gray-900 font-bold text-sm placeholder:text-gray-400 placeholder:font-medium"
-          />
-        </div>
 
         {/* Search Button */}
-        <button 
+        <button
           onClick={handleSearch}
           className={cn(
             "bg-primary hover:bg-primary/90 text-white font-black text-sm uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 group",
