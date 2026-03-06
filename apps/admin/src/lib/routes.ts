@@ -3,7 +3,7 @@ import {
   FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaBox, FaUserMd,
   FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags,
   FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaSync,
-  FaMapMarkedAlt, FaBell, FaWallet
+  FaMapMarkedAlt, FaBell, FaWallet, FaEnvelopeOpen
 } from "react-icons/fa";
 import { FaListUl } from "react-icons/fa";
 import { IconType } from "react-icons";
@@ -136,5 +136,11 @@ export const sidebarNavItems: NavItem[] = [
     href: "/faq-management",
     Icon: FaQuestionCircle,
     permission: "faq-management",
+  },
+  {
+    title: "Contact Messages",
+    href: "/contact-messages",
+    Icon: FaEnvelopeOpen,
+    permission: "contact-messages",
   },
 ];
