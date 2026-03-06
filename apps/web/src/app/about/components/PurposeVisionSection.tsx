@@ -49,7 +49,8 @@ const PurposeVisionSection = () => {
             </div>
             <h3 className="font-bold text-card-foreground text-lg sm:text-xl items-center leading-tight">
               Our Vision
-            </h3>
+            </h3>Ready to Grow Your Salon Business?
+
           </div>
 
           <p className="text-muted-foreground text-sm sm:text-base leading-relaxed pl-0 sm:pl-10 md:pl-16 mb-4 md:mb-6">
