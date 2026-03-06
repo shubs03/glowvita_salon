@@ -49,7 +49,7 @@ const PurposeVisionSection = () => {
             </div>
             <h3 className="font-bold text-card-foreground text-lg sm:text-xl items-center leading-tight">
               Our Vision
-            </h3>Ready to Grow Your Salon Business?
+            </h3>
 
           </div>
 
