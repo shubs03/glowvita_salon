@@ -6,6 +6,7 @@ import Razorpay from 'razorpay';
 import WalletTransactionModel from '@repo/lib/models/Payment/WalletTransaction.model';
 import WalletSettingsModel from '@repo/lib/models/admin/WalletSettings.model';
 import UserModel from '@repo/lib/models/user/User.model';
+import { RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET } from '@repo/config/config';
 
 await _db();
 
@@ -74,7 +75,7 @@ export async function POST(req) {
     }
 
     // Check Razorpay configuration
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
       console.error('Razorpay credentials missing');
       return NextResponse.json({
         success: false,
@@ -84,8 +85,8 @@ export async function POST(req) {
 
     // Create Razorpay instance
     const razorpay = new Razorpay({
-      key_id: process.env.RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
+      key_id: RAZORPAY_KEY_ID,
+      key_secret: RAZORPAY_KEY_SECRET,
     });
 
     // Create pending wallet transaction
@@ -129,7 +130,7 @@ export async function POST(req) {
           id: order.id,
           amount: order.amount,
           currency: order.currency,
-          razorpayKeyId: process.env.RAZORPAY_KEY_ID
+          razorpayKeyId: RAZORPAY_KEY_ID
         },
         transactionId: transaction.transactionId,
         walletTransactionId: transaction._id.toString()

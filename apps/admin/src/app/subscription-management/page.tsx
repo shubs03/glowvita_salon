@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useGetSubscriptionPlansQuery, useCreateSubscriptionPlanMutation, useUpdateSubscriptionPlanMutation, useDeleteSubscriptionPlanMutation, useGetVendorsQuery, useGetSuppliersQuery, useGetDoctorsQuery, useRenewPlanMutation, useGetRegionsQuery } from '@repo/store/api';
-import { setSelectedRegion, selectSelectedRegion, selectCurrentAdmin } from '../../../../../packages/store/src/slices/Admin/adminAuthSlice';
+import { setSelectedRegion, selectSelectedRegion, selectCurrentAdmin } from '@repo/store/slices/adminAuthSlice';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';

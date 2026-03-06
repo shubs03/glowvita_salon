@@ -64,6 +64,20 @@ import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
 import { GoogleMapSelector } from '@/components/GoogleMapSelector';
 import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from "@repo/config/config";
 
+// Load Razorpay checkout.js dynamically
+const loadRazorpayScript = (): Promise<boolean> =>
+  new Promise((resolve) => {
+    if (typeof window !== 'undefined' && (window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+
 // Add a custom hook to fetch tax fee settings
 const useTaxFeeSettings = () => {
   const [taxFeeSettings, setTaxFeeSettings] = useState<null | any>(null);
@@ -1915,18 +1929,131 @@ function BookingPageContent() {
         }
 
         if (appointmentIdToConfirm) {
-          // Confirm the booking
-          const confirmResult = await confirmBooking({
+          // --- For 'Pay Online': collect payment via Razorpay BEFORE confirming ---
+          let razorpayPaymentId: string | undefined;
+          let razorpayOrderId_: string | undefined;
+
+          if (paymentMethod === 'Pay Online' && (finalPriceBreakdown?.finalTotal ?? 0) > 0) {
+            const paymentAmount = finalPriceBreakdown!.finalTotal;
+            const loaded = await loadRazorpayScript();
+            if (!loaded) {
+              toast.error('Payment gateway failed to load. Please try again.');
+              setIsConfirmingBooking(false);
+              return;
+            }
+
+            // Create Razorpay order
+            const orderRes = await fetch('/api/payments/create-order', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                amount: paymentAmount,
+                currency: 'INR',
+                receipt: `salon_${appointmentIdToConfirm}_${Date.now()}`,
+              }),
+            });
+
+            if (!orderRes.ok) {
+              const err = await orderRes.json().catch(() => ({}));
+              throw new Error(err.message || 'Failed to create payment order');
+            }
+
+            const rzpOrder = await orderRes.json();
+            const rzpOrderId = rzpOrder.id || rzpOrder.order?.id;
+            if (!rzpOrderId) throw new Error('Invalid payment order response');
+
+            // **CRITICAL FIX: Close parent modals to escape focus trap**
+            // Store current states to restore on cancellation
+            const wasPaymentOpen = isPaymentModalOpen;
+            const wasConfirmationOpen = isConfirmationModalOpen;
+            setIsPaymentModalOpen(false);
+            setIsConfirmationModalOpen(false);
+
+            // Open Razorpay checkout — wait for success before confirming booking
+            try {
+              await new Promise<void>((resolve, reject) => {
+                const rzp = new (window as any).Razorpay({
+                  key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+                  amount: Math.round(paymentAmount * 100),
+                  currency: 'INR',
+                  order_id: rzpOrderId,
+                  name: 'GlowVita Salon',
+                  description: `Booking – ${appointmentData.serviceName || 'Service'}`,
+                  image: 'https://glowvita.com/logo.png', // Fallback logo
+                  theme: { color: '#7c3aed' },
+                  prefill: {
+                    name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
+                    email: user?.emailAddress || '',
+                    contact: user?.mobileNo || user?.phone || '',
+                  },
+                  retry: { enabled: true, max_count: 3 },
+                  // Simplified config to prevent interaction lag
+                  config: {
+                    display: {
+                      blocks: {
+                        upi: {
+                          name: 'UPI / QR',
+                          instruments: [
+                            { method: 'upi', vpa: true }, // UPI ID entry
+                            { method: 'upi', qr: true }   // QR Code
+                          ],
+                        },
+                      },
+                      sequence: ['block.upi', 'block.card', 'block.netbanking'],
+                    },
+                  },
+                  modal: { 
+                    ondismiss: () => {
+                      // Restore modals if user cancels
+                      if (wasPaymentOpen) setIsPaymentModalOpen(true);
+                      if (wasConfirmationOpen) setIsConfirmationModalOpen(true);
+                      reject(new Error('Payment cancelled by user'));
+                    },
+                    escape: true,
+                    backdropClose: false, // Prevent accidental exit
+                  },
+                  handler: async (response: any) => {
+                    try {
+                      const verifyRes = await fetch('/api/payments/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(response),
+                      });
+                      const verifyData = await verifyRes.json();
+                      if (!verifyData.success) throw new Error('Payment verification failed. Contact support.');
+                      razorpayPaymentId = response.razorpay_payment_id;
+                      razorpayOrderId_ = response.razorpay_order_id;
+                      resolve();
+                    } catch (err: any) { reject(err); }
+                  },
+                });
+                rzp.open();
+              });
+            } catch (payErr: any) {
+              if (payErr?.message === 'Payment cancelled by user') {
+                toast.info('Payment cancelled.');
+              } else {
+                toast.error(payErr?.message || 'Payment failed. Please try again.');
+              }
+              setIsConfirmingBooking(false);
+              return;
+            }
+          }
+
+          // Confirm the booking (payment already collected, or pay-at-salon)
+          await confirmBooking({
             appointmentId: appointmentIdToConfirm,
             lockId: currentLockId,
             paymentMethod: paymentMethod,
-            paymentStatus: paymentMethod === 'Pay at Salon' ? 'pending' : 'paid',
+            paymentStatus: paymentMethod === 'Pay at Salon' ? 'pending' : 'completed',
             couponCode: appliedOffer?.code || offerCode,
             discountAmount: finalPriceBreakdown?.discountAmount || 0,
             finalAmount: finalPriceBreakdown?.finalTotal || 0,
             platformFee: finalPriceBreakdown?.platformFee || 0,
             serviceTax: finalPriceBreakdown?.serviceTax || 0,
-            taxRate: finalPriceBreakdown?.taxFeeSettings?.serviceTax || 0
+            taxRate: finalPriceBreakdown?.taxFeeSettings?.serviceTax || 0,
+            ...(razorpayPaymentId && { razorpayPaymentId }),
+            ...(razorpayOrderId_ && { razorpayOrderId: razorpayOrderId_ }),
           }).unwrap();
 
           toast.success("Booking confirmed!");
@@ -2043,24 +2170,78 @@ function BookingPageContent() {
             finalAmount: priceBreakdown?.finalTotal || 0
           }).unwrap();
 
-          // Handle online payment if selected
-          if (method === 'Pay Online' && confirmResult.appointment.finalAmount > 0) {
+          // Handle online payment via Razorpay
+          if (method === 'Pay Online' && (confirmResult.appointment?.finalAmount ?? 0) > 0) {
+            const paymentAmount = confirmResult.appointment.finalAmount;
             try {
-              // In a real implementation, you would integrate with Razorpay or another payment gateway here
-              // For now, we'll simulate this
-              console.log("Processing online payment...");
+              const loaded = await loadRazorpayScript();
+              if (!loaded) {
+                toast.error('Payment gateway failed to load. Please try again.');
+                return;
+              }
 
-              // Simulate payment processing
-              await new Promise(resolve => setTimeout(resolve, 2000));
+              // Create Razorpay order on the server
+              const orderRes = await fetch('/api/payments/create-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  amount: paymentAmount,
+                  currency: 'INR',
+                  receipt: `booking_${confirmResult.appointment._id || Date.now()}`,
+                }),
+              });
 
-              // Update payment status to completed
-              // In a real implementation, you would call an API to update the appointment
-              console.log("Payment processed successfully");
-            } catch (paymentError) {
-              console.error("Payment processing error:", paymentError);
-              // Update payment status to failed
-              // In a real implementation, you would call an API to update the appointment
-              toast.error("Payment failed. Please try again or pay at the salon.");
+              if (!orderRes.ok) {
+                const err = await orderRes.json().catch(() => ({}));
+                throw new Error(err.message || 'Failed to create payment order');
+              }
+
+              const razorpayOrder = await orderRes.json();
+              // Support both { id } and { order: { id } } response shapes
+              const razorpayOrderId = razorpayOrder.id || razorpayOrder.order?.id;
+              if (!razorpayOrderId) throw new Error('Invalid payment order response');
+
+              // Open Razorpay checkout
+              await new Promise<void>((resolve, reject) => {
+                const rzp = new (window as any).Razorpay({
+                  key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                  amount: Math.round(paymentAmount * 100),
+                  currency: 'INR',
+                  order_id: razorpayOrderId,
+                  name: 'GlowVita Salon',
+                  description: `Booking - ${primaryService.name}`,
+                  theme: { color: '#7c3aed' },
+                  modal: {
+                    ondismiss: () => reject(new Error('Payment cancelled by user')),
+                  },
+                  handler: async (response: any) => {
+                    try {
+                      // Verify payment signature
+                      const verifyRes = await fetch('/api/payments/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(response),
+                      });
+                      const verifyData = await verifyRes.json();
+                      if (!verifyData.success) {
+                        throw new Error('Payment verification failed. Please contact support.');
+                      }
+                      console.log('Booking payment verified:', response.razorpay_payment_id);
+                      resolve();
+                    } catch (err: any) {
+                      reject(err);
+                    }
+                  },
+                });
+                rzp.open();
+              });
+            } catch (paymentError: any) {
+              if (paymentError?.message === 'Payment cancelled by user') {
+                toast.info('Payment cancelled. Your booking is saved but unpaid.');
+              } else {
+                console.error('Payment processing error:', paymentError);
+                toast.error(paymentError?.message || 'Payment failed. Please try again or pay at the salon.');
+              }
               return;
             }
           }

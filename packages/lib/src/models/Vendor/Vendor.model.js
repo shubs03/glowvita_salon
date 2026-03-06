@@ -353,6 +353,14 @@ const vendorSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  wallet: {
+    type: Number,
+    default: 0,
+  },
+  razorpayContactId: {
+    type: String,
+    default: null,
+  },
 });
 
 // Add validation to ensure rejection reasons are provided when status is rejected

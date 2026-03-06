@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import mongoose from 'mongoose';
 import WalletTransactionModel from '@repo/lib/models/Payment/WalletTransaction.model';
 import UserModel from '@repo/lib/models/user/User.model';
+import { RAZORPAY_KEY_SECRET } from '@repo/config/config';
 
 await _db();
 
@@ -59,7 +60,7 @@ export async function POST(req) {
 
     // Verify Razorpay signature
     const generatedSignature = crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .createHmac('sha256', RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest('hex');
 

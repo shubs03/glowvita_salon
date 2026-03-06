@@ -25,6 +25,13 @@ const walletSettingsSchema = new mongoose.Schema({
     default: 3,
     min: 1
   },
+
+  maxWithdrawablePercentage: {
+    type: Number,
+    default: 50, // 50% limit as seen in the code
+    min: 1,
+    max: 100
+  },
   
   // Add money limits
   minAddMoneyAmount: {
@@ -55,7 +62,7 @@ const walletSettingsSchema = new mongoose.Schema({
   // Balance requirements
   minWalletBalanceForWithdrawal: {
     type: Number,
-    default: 0,
+    default: 50,
     min: 0
   },
   

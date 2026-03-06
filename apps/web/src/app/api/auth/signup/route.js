@@ -122,16 +122,37 @@ export async function POST(req) {
 
     // Handle referral code - check if it refers to an existing user
     let referringUser = null;
+    let referringUserType = 'User';
+    
     if (referralCode) {
       try {
+        // First check User model
         referringUser = await User.findOne({ refferalCode: referralCode });
         if (referringUser) {
           userData.referredBy = referringUser._id;
+          referringUserType = 'User';
+        } else {
+          // Check Vendor model (C2V referral)
+          const Vendor = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
+          const referringVendor = await Vendor.findOne({ referralCode: referralCode });
+          if (referringVendor) {
+            userData.referredBy = referringVendor._id;
+            referringUser = referringVendor;
+            referringUserType = 'Vendor';
+          }
         }
       } catch (dbError) {
         console.error('Database error checking referral code:', dbError);
-        // Continue without referral code if there's a database error
       }
+    }
+
+    // Assign Region
+    try {
+      const { assignRegion } = await import("@repo/lib/utils/assignRegion.js");
+      const regionId = await assignRegion(city, state, userData.location || { lat: 0, lng: 0 });
+      userData.regionId = regionId;
+    } catch (regError) {
+      console.error('Region assignment error:', regError);
     }
 
     let user;
@@ -140,8 +161,7 @@ export async function POST(req) {
       await user.save();
     } catch (saveError) {
       console.error('User save error:', saveError);
-
-      // Handle MongoDB duplicate key errors
+      // ... handling errors ...
       if (saveError.code === 11000) {
         const errorMessage = saveError.message;
         if (errorMessage.includes('emailAddress')) {
@@ -149,44 +169,43 @@ export async function POST(req) {
         } else if (errorMessage.includes('mobileNo')) {
           return NextResponse.json({ message: 'User already registered with this mobile number' }, { status: 409 });
         } else {
-          return NextResponse.json({
-            message: 'User already registered with this information'
-          }, { status: 409 });
+          return NextResponse.json({ message: 'User already registered with this information' }, { status: 409 });
         }
       }
-
-      return NextResponse.json({
-        message: 'Internal server error. Please try again later.'
-      }, { status: 500 });
+      return NextResponse.json({ message: 'Internal server error. Please try again later.' }, { status: 500 });
     }
 
-    // Create referral entry if user was referred by someone
+    // Create referral entry
     if (referringUser && referralCode) {
       try {
-        // Get C2C settings to determine bonus amount
-        const c2cSettings = await C2CSettingsModel.findOne();
-        const bonusAmount = c2cSettings?.referrerBonus?.bonusValue || 100;
-        const bonusType = c2cSettings?.referrerBonus?.bonusType || 'amount';
+        // Get correct settings based on region
+        const settings = await C2CSettingsModel.findOne({
+          $or: [
+            { regionId: user.regionId },
+            { regionId: null }
+          ]
+        }).sort({ regionId: -1 });
+
+        const bonusAmount = settings?.referrerBonus?.bonusValue || 100;
+        const bonusType = settings?.referrerBonus?.bonusType || 'amount';
         const bonusString = bonusType === 'amount' ? `₹${bonusAmount}` : `${bonusAmount}%`;
 
-        // Generate unique referral ID
-        const referralId = `REF${Date.now()}${Math.floor(Math.random() * 1000)}`;
-
-        // Create referral record
         await ReferralModel.create({
-          referralType: 'C2C',
-          referralId: referralId,
+          referralType: referringUserType === 'Vendor' ? 'C2V' : 'C2C',
+          referralId: `REF${Date.now()}${Math.floor(Math.random() * 1000)}`,
           referrer: referringUser._id.toString(),
+          referrerType: referringUserType,
           referee: user._id.toString(),
+          refereeType: 'User',
+          regionId: user.regionId,
           date: new Date(),
           status: 'Pending',
           bonus: bonusString,
         });
 
-        console.log('Referral entry created successfully');
+        console.log(`Referral entry created: ${referringUserType} refers User`);
       } catch (referralError) {
         console.error('Error creating referral entry:', referralError);
-        // Don't fail the signup if referral creation fails
       }
     }
 

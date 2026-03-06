@@ -24,15 +24,15 @@ import {
   setC2CSettings,
   setC2VSettings,
   setV2VSettings,
-} from '../../../../../packages/store/src/slices/Admin/refferalSlice';
-import { setSelectedRegion, selectSelectedRegion } from '../../../../../packages/store/src/slices/Admin/adminAuthSlice';
+} from '@repo/store/slices/refferalSlice';
+import { setSelectedRegion, selectSelectedRegion } from '@repo/store/slices/adminAuthSlice';
 
 import {
   useGetReferralsQuery,
   useUpdateSettingsMutation,
   useGetSettingsQuery,
   useGetRegionsQuery,
-} from '../../../../../packages/store/src/services/api';
+} from '@repo/store/services/api';
 import { useAppSelector } from '@repo/store/hooks';
 import { selectRootState } from '@repo/store/store';
 

@@ -148,7 +148,7 @@ export const glowvitaApi = createApi({
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "Regions", "PublicAllOffers", "AddOns", "PendingWeddingPackages",
-    "ReferralReport", "ClientWallet", "ClientWithdrawals", "WalletSettings", "Inventory", "SettlementHistoryReport", "PlatformCollectionsReport", "Doctor"
+    "ReferralReport", "ClientWallet", "ClientWithdrawals", "WalletSettings", "Inventory", "SettlementHistoryReport", "PlatformCollectionsReport", "Doctor", "CrmWallet"
   ],
 
   endpoints: (builder) => ({
@@ -209,6 +209,44 @@ export const glowvitaApi = createApi({
         body: { settings },
       }),
       invalidatesTags: ["WalletSettings"],
+    }),
+
+    getAdminWithdrawals: builder.query({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append("page", params.page);
+        if (params.limit) queryParams.append("limit", params.limit);
+        if (params.status) queryParams.append("status", params.status);
+        if (params.regionId) queryParams.append("regionId", params.regionId);
+        if (params.search) queryParams.append("search", params.search);
+        if (params.userType) queryParams.append("userType", params.userType);
+        
+        return {
+          url: `/admin/wallet-withdrawals?${queryParams.toString()}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["ClientWithdrawals"],
+    }),
+
+    getAdminTransactions: builder.query({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append("page", params.page);
+        if (params.limit) queryParams.append("limit", params.limit);
+        if (params.type) queryParams.append("type", params.type);
+        if (params.status) queryParams.append("status", params.status);
+        if (params.regionId) queryParams.append("regionId", params.regionId);
+        if (params.search) queryParams.append("search", params.search);
+        if (params.userType) queryParams.append("userType", params.userType);
+        if (params.source) queryParams.append("source", params.source);
+
+        return {
+          url: `/admin/wallet-transactions?${queryParams.toString()}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["ClientWallet"],
     }),
 
     getProfile: builder.query({
@@ -1625,6 +1663,23 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["Product", "CrmProducts"],
     }),
     //======================================================== CRM Endpoints ====================================================//
+    // Wallet Endpoints (CRM)
+    getCrmWallet: builder.query({
+      query: (params) => ({
+        url: `/crm/wallet?page=${params?.page || 1}&limit=${params?.limit || 10}`,
+        method: "GET"
+      }),
+      providesTags: ["CrmWallet"],
+    }),
+    withdrawFromCrmWallet: builder.mutation({
+      query: (body) => ({
+        url: "/crm/wallet/withdraw",
+        method: "POST",
+        body
+      }),
+      invalidatesTags: ["CrmWallet"],
+    }),
+
     // Vendor Endpoints
     vendorLogin: builder.mutation({
       query: (credentials) => ({ url: "/crm/auth/login", method: "POST", body: credentials }),
@@ -3416,4 +3471,12 @@ export const {
   useAdjustInventoryMutation,
   useGetInventoryTransactionsQuery,
   useGetLowStockProductsQuery,
+
+  // CRM Wallet Hooks
+  useGetCrmWalletQuery,
+  useWithdrawFromCrmWalletMutation,
+
+  // Admin Wallet Monitoring Hooks
+  useGetAdminWithdrawalsQuery,
+  useGetAdminTransactionsQuery,
 } = glowvitaApi;

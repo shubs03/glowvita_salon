@@ -4,8 +4,23 @@ const walletTransactionSchema = new mongoose.Schema({
   // User reference
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    refPath: 'userType',
     required: true,
+    index: true
+  },
+
+  userType: {
+    type: String,
+    required: true,
+    enum: ['User', 'Vendor', 'Supplier', 'Doctor'],
+    default: 'User',
+    index: true
+  },
+  
+  regionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Region',
+    required: false,
     index: true
   },
   
@@ -28,7 +43,7 @@ const walletTransactionSchema = new mongoose.Schema({
   amount: {
     type: Number,
     required: true,
-    min: 0
+    // Note: Positive values for credits, negative values for debits
   },
   
   // Balance tracking
@@ -149,6 +164,8 @@ walletTransactionSchema.index({ userId: 1, createdAt: -1 });
 walletTransactionSchema.index({ userId: 1, transactionType: 1, createdAt: -1 });
 walletTransactionSchema.index({ userId: 1, source: 1, createdAt: -1 });
 walletTransactionSchema.index({ userId: 1, status: 1, createdAt: -1 });
+walletTransactionSchema.index({ regionId: 1, createdAt: -1 });
+walletTransactionSchema.index({ regionId: 1, transactionType: 1, createdAt: -1 });
 
 // Pre-save middleware to generate transactionId
 walletTransactionSchema.pre('save', function(next) {

@@ -116,12 +116,28 @@ export default function WalletPage() {
                 
                 // Initialize Razorpay
                 const options = {
-                    key: order.razorpayKeyId,
+                    key: order.razorpayKeyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
                     amount: order.amount,
                     currency: order.currency,
                     name: 'GlowVita',
                     description: 'Add Money to Wallet',
                     order_id: order.id,
+                    retry: { enabled: true, max_count: 3 },
+                    // Simplified config to prevent interaction lag
+                    config: {
+                        display: {
+                            blocks: {
+                                upi: {
+                                    name: 'UPI / QR',
+                                    instruments: [
+                                        { method: 'upi', vpa: true }, // UPI ID entry
+                                        { method: 'upi', qr: true }   // QR Code
+                                    ],
+                                },
+                            },
+                            sequence: ['block.upi', 'block.card', 'block.netbanking'],
+                        },
+                    },
                     handler: async function (response: any) {
                         try {
                             // Verify payment
@@ -147,16 +163,20 @@ export default function WalletPage() {
                         }
                     },
                     prefill: {
-                        name: walletData?.data?.userName || '',
+                        name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
+                        email: user?.emailAddress || '',
+                        contact: user?.mobileNo || '',
                     },
                     theme: {
-                        color: '#8B5CF6'
+                        color: '#7c3aed'
                     },
                     modal: {
                         ondismiss: function() {
                             setIsAddingMoney(false);
                             toast.info('Payment cancelled');
-                        }
+                        },
+                        escape: true,
+                        backdropClose: false,
                     }
                 };
 
@@ -178,11 +198,24 @@ export default function WalletPage() {
             toast.error('Please enter a valid amount');
             return;
         }
+
+        const minBalance = withdrawalLimits.minWalletBalanceForWithdrawal || 50;
+        if (balance < minBalance) {
+            toast.error(`Minimum wallet balance of ₹${minBalance} is required to withdraw`);
+            return;
+        }
+
+        const maxPercentage = withdrawalLimits.maxWithdrawablePercentage || 50;
+        const maxAllowed = (balance * maxPercentage) / 100;
+        if (amount > maxAllowed) {
+            toast.error(`You can only withdraw up to ${maxPercentage}% of your wallet balance (₹${maxAllowed.toFixed(2)})`);
+            return;
+        }
         
         if (!bankDetails.accountHolderName) {
             toast.error('Account holder name is required');
             return;
-        }
+        }   
 
         if (method === 'upi') {
             if (!(bankDetails as any).upiId) {
@@ -368,8 +401,20 @@ export default function WalletPage() {
                                 <Alert>
                                     <AlertCircle className="h-4 w-4" />
                                     <AlertDescription className="text-sm">
-                                        Min: ₹{withdrawalLimits.minWithdrawal} | Max: ₹{withdrawalLimits.maxWithdrawal}
-                                        {withdrawalLimits.canWithdrawToday === false && (
+                                        <div className="font-medium mb-1 text-primary">Withdrawal Rules:</div>
+                                        <ul className="list-disc pl-4 space-y-0.5 opacity-90 text-[12px]">
+                                            <li>Minimum wallet balance to withdraw: <strong>₹{withdrawalLimits.minWalletBalanceForWithdrawal || 50}</strong></li>
+                                            <li>Maximum withdrawal: <strong>{withdrawalLimits.maxWithdrawablePercentage || 50}% of your balance</strong></li>
+                                            {withdrawalLimits && (
+                                                <li>Min request: ₹{withdrawalLimits.minWithdrawal} | Max: ₹{withdrawalLimits.maxWithdrawal}</li>
+                                            )}
+                                        </ul>
+                                        {balance < (withdrawalLimits.minWalletBalanceForWithdrawal || 50) && (
+                                            <span className="block text-red-600 mt-2 font-medium">
+                                                Minimum ₹{withdrawalLimits.minWalletBalanceForWithdrawal || 50} balance required to withdraw.
+                                            </span>
+                                        )}
+                                        {withdrawalLimits?.canWithdrawToday === false && (
                                             <span className="block text-red-600 mt-1">
                                                 Daily limit reached. Try again tomorrow.
                                             </span>
@@ -381,7 +426,7 @@ export default function WalletPage() {
                                 onClick={() => setShowWithdrawalDialog(true)} 
                                 variant="outline" 
                                 className="w-full"
-                                disabled={balance <= 0 || withdrawalLimits.canWithdrawToday === false}
+                                disabled={balance < (withdrawalLimits.minWalletBalanceForWithdrawal || 50) || (withdrawalLimits && withdrawalLimits.canWithdrawToday === false)}
                             >
                                 <Send className="mr-2 h-4 w-4" /> 
                                 Request Withdrawal
@@ -530,10 +575,10 @@ export default function WalletPage() {
                                 value={withdrawalAmount}
                                 onChange={(e) => setWithdrawalAmount(e.target.value)}
                                 min={withdrawalLimits.minWithdrawal || 100}
-                                max={Math.min(balance, withdrawalLimits.maxWithdrawal || 50000)}
+                                max={Math.min(balance * 0.5, withdrawalLimits.maxWithdrawal || 50000)}
                             />
                             <p className="text-xs text-muted-foreground mt-1">
-                                Available balance: ₹{balance.toFixed(2)}
+                                Available balance: ₹{balance.toFixed(2)} (Max withdrawable: ₹{(balance * 0.5).toFixed(2)})
                             </p>
                         </div>
 

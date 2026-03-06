@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@repo/ui/tabs";
+import { useRouter } from 'next/navigation';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { useGetVendorProfileQuery, useGetWorkingHoursQuery, useGetCurrentSupplierProfileQuery, useGetDoctorProfileQuery } from '@repo/store/api';
 import { toast } from 'sonner';
@@ -162,6 +163,7 @@ interface DoctorProfile {
 }
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { user, role } = useCrmAuth();
 
   // Vendor profile data
@@ -412,6 +414,13 @@ export default function ProfilePage() {
                   className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
                 >
                   Profile
+                </TabsTrigger>
+                <TabsTrigger
+                  value="wallet"
+                  className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                  onClick={() => router.push('/profile/wallet')}
+                >
+                  Wallet
                 </TabsTrigger>
                 {role === 'vendor' && (
                   <>

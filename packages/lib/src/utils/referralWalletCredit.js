@@ -2,354 +2,263 @@ import mongoose from 'mongoose';
 import WalletTransactionModel from '../models/Payment/WalletTransaction.model.js';
 import WalletSettingsModel from '../models/admin/WalletSettings.model.js';
 import UserModel from '../models/user/User.model.js';
-import { ReferralModel, C2CSettingsModel } from '../models/admin/Reffer.model.js';
+import VendorModel from '../models/Vendor/Vendor.model.js';
+import DoctorModel from '../models/Vendor/Docters.model.js';
+import SupplierModel from '../models/Vendor/Supplier.model.js';
+import { ReferralModel, C2CSettingsModel, V2VSettingsModel, C2VSettingsModel } from '../models/admin/Reffer.model.js';
 
 /**
  * Credit referral bonus to user's wallet
- * @param {String} referrerId - ID of the referrer (who will receive bonus)
- * @param {String} refereeId - ID of the referee (new user)
- * @param {String} referralId - ID of the referral record
- * @param {String} triggerEvent - What triggered the bonus (signup, first_booking, first_order)
+ * @param {String|Object} referralData - Referral object or ID
+ * @param {String} triggerEvent - What triggered the bonus (signup, appointment, order)
  * @returns {Object} - Result of the operation
  */
-export async function creditReferralBonus(referrerId, refereeId, referralId, triggerEvent = 'first_booking') {
-  console.log(`[Referral Bonus] Starting creditReferralBonus - referrer: ${referrerId}, referee: ${refereeId}, referral: ${referralId}`);
+export async function creditReferralBonus(referralData, triggerEvent = 'appointment') {
+  // Use a transaction if available but don't strictly require it for dev environments without replica sets
+  let session = null;
+  try {
+    session = await mongoose.startSession();
+  } catch (e) {
+    console.log("[Referral Bonus] Transactions not supported, proceeding without session");
+  }
 
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  if (session) session.startTransaction();
 
   try {
-    // 1. Get C2C referral settings
-    const settings = await C2CSettingsModel.findOne().session(session);
+    // 1. Get referral record
+    let referral;
+    if (typeof referralData === 'string' || referralData instanceof mongoose.Types.ObjectId) {
+        referral = await ReferralModel.findById(referralData).session(session);
+    } else {
+        referral = referralData;
+    }
+
+    if (!referral) {
+        await session.abortTransaction();
+        return { success: false, message: 'Referral record not found' };
+    }
+
+    console.log(`[Referral Bonus] Processing bonus for ${referral.referralId} (${referral.referralType})`);
+
+    if (referral.status === 'Bonus Paid') {
+      await session.abortTransaction();
+      return { success: false, message: 'Bonus already paid' };
+    }
+
+    // 2. Get correct settings based on type and region
+    let Model;
+    switch (referral.referralType) {
+        case 'C2C': Model = C2CSettingsModel; break;
+        case 'C2V': Model = C2VSettingsModel; break;
+        case 'V2V': 
+        case 'D2D': 
+        case 'S2S': 
+            Model = V2VSettingsModel; 
+            break;
+        default: Model = C2CSettingsModel;
+    }
+
+    // Find settings: specific region first, then global
+    const settings = await Model.findOne({
+        $or: [
+            { regionId: referral.regionId },
+            { regionId: null }
+        ]
+    }).sort({ regionId: -1 }).session(session);
 
     if (!settings) {
       await session.abortTransaction();
-      console.error('[Referral Bonus] C2C referral settings not found');
-      // Debug: list all settings
-      const allSettings = await C2CSettingsModel.find({});
-      console.log(`[Referral Bonus] Debug: Total settings docs found: ${allSettings.length}`);
-      return { success: false, message: 'Referral settings not configured' };
+      return { success: false, message: `${referral.referralType} referral settings not found` };
     }
 
-    console.log(`[Referral Bonus] C2C Settings found - Referrer bonus: ${settings.referrerBonus?.bonusValue}, Referee bonus enabled: ${settings.refereeBonus?.enabled}`);
+    // 3. Get referrer and referee models
+    const getModel = (type) => {
+        switch (type) {
+            case 'Vendor': return VendorModel;
+            case 'Doctor': return DoctorModel;
+            case 'Supplier': return SupplierModel;
+            default: return UserModel;
+        }
+    };
 
-    // 2. Get referral record
-    const referral = await ReferralModel.findById(referralId).session(session);
+    const ReferrerModel = getModel(referral.referrerType || 'User');
+    const RefereeModel = getModel(referral.refereeType || 'User');
 
-    if (!referral) {
-      await session.abortTransaction();
-      console.log(`[Referral Bonus] Referral record not found inside transaction with ID: ${referralId}`);
-      // Debug: Check if it exists outside transaction
-      try {
-        const testRef = await ReferralModel.findById(referralId);
-        console.log(`[Referral Bonus] Debug: Referral exists outside transaction? ${!!testRef}`);
-      } catch (e) { console.error(e); }
-      return { success: false, message: 'Referral record not found' };
+    const referrerId = referral.referrer;
+    const refereeId = referral.referee;
+
+    let referrer = null;
+    let referee = null;
+
+    if (mongoose.Types.ObjectId.isValid(referrerId)) {
+        referrer = await ReferrerModel.findById(referrerId).session(session);
+    }
+    
+    if (mongoose.Types.ObjectId.isValid(refereeId)) {
+        referee = await RefereeModel.findById(refereeId).session(session);
     }
 
-    console.log(`[Referral Bonus] Found referral in transaction: ${referral._id}, status: ${referral.status}`);
-
-    // Check if bonus already paid
-    if (referral.status === 'Bonus Paid') {
-      await session.abortTransaction();
-      console.log(`[Referral Bonus] Bonus already paid for referral ${referralId}`);
-      return { success: false, message: 'Bonus already paid for this referral' };
+    // If still null and professional, try other professional models (robustness)
+    if (!referrer && mongoose.Types.ObjectId.isValid(referrerId) && ['Vendor', 'Doctor', 'Supplier'].includes(referral.referrerType)) {
+        const others = [VendorModel, DoctorModel, SupplierModel].filter(m => m !== ReferrerModel);
+        for (const M of others) {
+            referrer = await M.findById(referrerId).session(session);
+            if (referrer) break;
+        }
     }
-
-    // Allow processing if status is 'Pending' or 'Completed'
-    if (!['Pending', 'Completed'].includes(referral.status)) {
-      await session.abortTransaction();
-      console.log(`[Referral Bonus] Invalid referral status: ${referral.status}`);
-      return { success: false, message: `Invalid referral status: ${referral.status}` };
+    
+    if (!referee && mongoose.Types.ObjectId.isValid(refereeId) && ['Vendor', 'Doctor', 'Supplier'].includes(referral.refereeType)) {
+        const others = [VendorModel, DoctorModel, SupplierModel].filter(m => m !== RefereeModel);
+        for (const M of others) {
+            referee = await M.findById(refereeId).session(session);
+            if (referee) break;
+        }
     }
-
-    // 3. Get referrer and referee details
-    console.log(`[Referral Bonus] Fetching users - referrerId: ${referrerId}, refereeId: ${refereeId}`);
-    const [referrer, referee] = await Promise.all([
-      UserModel.findById(referrerId).session(session),
-      UserModel.findById(refereeId).session(session)
-    ]);
 
     if (!referrer) {
       await session.abortTransaction();
-      console.log(`[Referral Bonus] Referrer not found: ${referrerId}`);
-      return { success: false, message: 'Referrer not found' };
+      return { success: false, message: `Referrer (${referral.referrerType}) not found` };
     }
 
-    if (!referee) {
-      await session.abortTransaction();
-      console.log(`[Referral Bonus] Referee not found: ${refereeId}`);
-      return { success: false, message: 'Referee not found' };
-    }
+    const referrerName = referrer?.businessName || referrer?.shopName || referrer?.name || `${referrer?.firstName || ''} ${referrer?.lastName || ''}`.trim() || referral.referrer || 'Referrer';
+    const refereeName = referee?.businessName || referee?.shopName || referee?.name || `${referee?.firstName || ''} ${referee?.lastName || ''}`.trim() || referral.referee || 'New User';
 
-    console.log(`[Referral Bonus] Found users - referrer: ${referrer._id}, referee: ${referee._id}`);
+    // 4. Calculate amount
+    // Use settings value as source of truth
+    const bonusValue = settings.referrerBonus?.bonusValue || 0;
+    const bonusType = settings.referrerBonus?.bonusType || 'amount';
+    
+    // For now, only 'amount' is supported for direct wallet credit
+    const creditAmount = parseFloat(bonusValue);
 
-    const results = {
-      referrerCredited: false,
-      refereeCredited: false,
-      referrerAmount: 0,
-      refereeAmount: 0
-    };
+    if (creditAmount > 0) {
+      const balanceBefore = referrer.wallet || 0;
+      const balanceAfter = balanceBefore + creditAmount;
 
-    // 4. Credit referrer's wallet
-    const referrerBonusAmount = parseFloat(settings.referrerBonus.bonusValue) || 0;
-    console.log(`[Referral Bonus] Referrer bonus amount: ${referrerBonusAmount}, Referrer current wallet: ${referrer.wallet}`);
+      const txId = `WTX_REF_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
 
-    if (referrerBonusAmount > 0) {
-      const newReferrerBalance = (referrer.wallet || 0) + referrerBonusAmount;
-      console.log(`[Referral Bonus] Crediting referrer ${referrerId}: ${referrer.wallet} -> ${newReferrerBalance}`);
-
-      // Generate transaction ID
-      const referrerTxId = `WTX_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-
-      // Create wallet transaction for referrer
-      const referrerTransaction = await WalletTransactionModel.create([{
+      await WalletTransactionModel.create([{
         userId: referrer._id,
-        transactionId: referrerTxId,
+        userType: referral.referrerType || 'User',
+        transactionId: txId,
         transactionType: 'credit',
-        amount: referrerBonusAmount,
-        balanceBefore: referrer.wallet || 0,
-        balanceAfter: newReferrerBalance,
+        amount: creditAmount,
+        balanceBefore,
+        balanceAfter,
         source: 'referral_bonus',
         status: 'completed',
-        description: `Referral bonus for referring ${referee.firstName} ${referee.lastName}`,
+        description: `Referral bonus for referring ${refereeName}`,
         metadata: {
-          referralId: referral._id.toString(),
-          refereeId: referee._id.toString(),
-          refereeName: `${referee.firstName} ${referee.lastName}`,
-          triggerEvent,
-          bonusType: settings.referrerBonus.bonusType
+          referralId: referral._id,
+          referralCode: referral.referralId,
+          refereeId: referral.referee,
+          refereeType: referral.refereeType,
+          triggerEvent
         }
       }], { session });
 
-      console.log(`[Referral Bonus] Created wallet transaction: ${referrerTxId}`);
-
-      // Update referrer's wallet balance
-      referrer.wallet = newReferrerBalance;
-      await referrer.save({ session });
-
-      results.referrerCredited = true;
-      results.referrerAmount = referrerBonusAmount;
-
-      console.log(`[Referral Bonus] Referrer wallet updated: User ${referrerId}, New Balance: ₹${referrer.wallet}`);
-    } else {
-      console.log(`[Referral Bonus] Skipping referrer credit - bonus amount is 0 or invalid`);
+      // Use atomic update to avoid validation issues with old profiles
+      await ReferrerModel.updateOne(
+        { _id: referrer._id },
+        { 
+          $inc: { wallet: creditAmount },
+          $set: { updatedAt: new Date() }
+        },
+        { session }
+      );
+      
+      console.log(`[Referral Bonus] Successfully credited ₹${creditAmount} to ${referrerName}`);
     }
 
-    // 5. Credit referee's wallet (if enabled)
-    console.log(`[Referral Bonus] Referee bonus enabled: ${settings.refereeBonus?.enabled}`);
-    if (settings.refereeBonus?.enabled) {
-      const refereeBonusAmount = parseFloat(settings.refereeBonus.bonusValue) || 0;
-      console.log(`[Referral Bonus] Referee bonus amount: ${refereeBonusAmount}, Referee current wallet: ${referee.wallet}`);
-
-      if (refereeBonusAmount > 0) {
-        const newRefereeBalance = (referee.wallet || 0) + refereeBonusAmount;
-        console.log(`[Referral Bonus] Crediting referee ${refereeId}: ${referee.wallet} -> ${newRefereeBalance}`);
-
-        // Generate transaction ID
-        const refereeTxId = `WTX_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-
-        // Create wallet transaction for referee
-        const refereeTransaction = await WalletTransactionModel.create([{
-          userId: referee._id,
-          transactionId: refereeTxId,
-          transactionType: 'credit',
-          amount: refereeBonusAmount,
-          balanceBefore: referee.wallet || 0,
-          balanceAfter: newRefereeBalance,
-          source: 'referral_bonus',
-          status: 'completed',
-          description: `Welcome bonus for joining via referral`,
-          metadata: {
-            referralId: referral._id.toString(),
-            referrerId: referrer._id.toString(),
-            referrerName: `${referrer.firstName} ${referee.lastName}`,
-            triggerEvent,
-            bonusType: settings.refereeBonus.bonusType
-          }
-        }], { session });
-
-        console.log(`[Referral Bonus] Created wallet transaction for referee: ${refereeTxId}`);
-
-        // Update referee's wallet balance
-        referee.wallet = newRefereeBalance;
-        await referee.save({ session });
-
-        results.refereeCredited = true;
-        results.refereeAmount = refereeBonusAmount;
-
-        console.log(`[Referral Bonus] Referee wallet updated: User ${refereeId}, New Balance: ₹${referee.wallet}`);
-      } else {
-        console.log(`[Referral Bonus] Skipping referee credit - bonus amount is 0 or invalid`);
-      }
-    } else {
-      console.log(`[Referral Bonus] Referee bonus is not enabled in settings`);
-    }
-
-    // 6. Update referral status to 'Bonus Paid'
+    // 5. Update referral status
     referral.status = 'Bonus Paid';
-    referral.bonus = `₹${referrerBonusAmount}`;
+    referral.bonus = `₹${creditAmount}`;
     await referral.save({ session });
-    console.log(`[Referral Bonus] Updated referral ${referralId} status to 'Bonus Paid'`);
 
-    // Commit transaction
-    await session.commitTransaction();
-    console.log(`[Referral Bonus] Transaction committed successfully for referral ${referralId}`);
+    if (session) {
+        await session.commitTransaction();
+        session.endSession();
+    }
 
-    return {
-      success: true,
-      message: 'Referral bonus credited successfully',
-      data: results
-    };
+    return { success: true, message: 'Bonus credited successfully', amount: creditAmount };
 
   } catch (error) {
-    await session.abortTransaction();
-    console.error('[Referral Bonus] Error crediting referral bonus:', error);
-    return {
-      success: false,
-      message: 'Failed to credit referral bonus',
-      error: error.message
-    };
-  } finally {
-    session.endSession();
+    if (session && session.inTransaction()) await session.abortTransaction();
+    if (session) session.endSession();
+    console.error('[Referral Bonus] Error:', error);
+    return { success: false, message: 'Server error', error: error.message };
   }
 }
 
 /**
  * Check if user's first booking/order is completed and credit referral bonus
- * @param {String} userId - ID of the user who made the booking/order
- * @param {String} eventType - Type of event ('booking' or 'order')
- * @returns {Object} - Result of the operation
+ * @param {String} userId - ID of the referee
+ * @param {String} eventType - Type of event ('appointment' or 'signup')
+ * @returns {Object} - Result
  */
-export async function checkAndCreditReferralBonus(userId, eventType = 'booking') {
+export async function checkAndCreditReferralBonus(userId, eventType = 'appointment') {
   try {
-    console.log(`[Referral Bonus] ===== STARTING CHECK AND CREDIT FLOW =====`);
-    console.log(`[Referral Bonus] Input userId: ${userId}, eventType: ${eventType}`);
+    console.log(`[Referral Bonus] Checking bonus for user: ${userId}, event: ${eventType}`);
 
-    // Find if this user was referred by someone
-    const user = await UserModel.findById(userId);
-
-    if (!user || !user.referredBy) {
-      console.log(`[Referral Bonus] User ${userId} was not referred by anyone`);
-      return { success: false, message: 'User not referred by anyone' };
-    }
-
-    console.log(`[Referral Bonus] User ${userId} was referred by: ${user.referredBy}`);
-
-    // Find the referral record - also check for 'Bonus Paid' to avoid double crediting
-    // Note: referrer and referee are stored as STRINGS in the Referral model
-    const userIdString = userId.toString();
-    console.log(`[Referral Bonus] Searching for referral with referee (string): ${userIdString}, type: C2C`);
-
-    // Try finding with string comparison (referrer/referee are stored as strings)
-    let referral = await ReferralModel.findOne({
-      referee: userIdString,
-      referralType: 'C2C',
+    // Find a pending referral where this user is the referee
+    // We search across all types (C2C, V2V, etc.)
+    const referral = await ReferralModel.findOne({
+      referee: userId.toString(),
       status: { $in: ['Pending', 'Completed'] }
     });
 
-    console.log(`[Referral Bonus] Referral found with status filter:`, referral ? { id: referral._id, status: referral.status, referee: referral.referee } : 'None');
-
-    // Debugging: Log what we are looking for vs what might be there
     if (!referral) {
-      console.log(`[Referral Bonus] DEBUG SEARCH: Looking for referee "${userIdString}" (Type: ${typeof userIdString})`);
-      const allRefs = await ReferralModel.find({ referee: userIdString }).select('status referralType referee');
-      console.log(`[Referral Bonus] DEBUG SEARCH: Found ${allRefs.length} referrals for this user ignoring status/type:`, allRefs);
+      console.log(`[Referral Bonus] No pending/completed C2C referral found for referee: ${userId}`);
+      return { success: false, message: 'No eligible referral record found' };
     }
 
-    // Also check if referral exists with any status for debugging
-    const anyReferral = await ReferralModel.findOne({
-      referee: userIdString,
-      referralType: 'C2C'
+    // Trigger the actual credit
+    return await creditReferralBonus(referral, eventType);
+
+  } catch (error) {
+    console.error('[Referral Bonus] checkAndCreditReferralBonus error:', error);
+    return { success: false, message: 'Error processing referral', error: error.message };
+  }
+}
+
+/**
+ * Check and credit referral bonus for subscription purchase
+ * @param {String} userId - ID of the referee (Vendor, Doctor, Supplier)
+ * @param {Object} plan - The purchased plan object
+ * @returns {Object} - Result
+ */
+export async function checkAndCreditSubscriptionReferral(userId, plan) {
+  try {
+    console.log(`[Referral Bonus] Subscription check triggered for user: ${userId}, planType: ${plan.planType}, price: ${plan.price}`);
+
+    // Only credit for regular (paid) plans
+    if (plan.planType !== 'regular') {
+      console.log(`[Referral Bonus] Skipping bonus for non-regular plan: ${plan.planType}`);
+      return { success: false, message: 'Bonus not eligible for non-regular plans' };
+    }
+
+    // Find a pending referral where this user is the referee
+    const referral = await ReferralModel.findOne({
+      referee: userId.toString(),
+      status: 'Pending',
+      referralType: { $in: ['V2V', 'S2S', 'D2D', 'C2V'] }
     });
-    console.log(`[Referral Bonus] Any referral found for user ${userIdString}:`, anyReferral ? { id: anyReferral._id, status: anyReferral.status, referee: anyReferral.referee, referrer: anyReferral.referrer } : 'None');
-
-    // If no referral found with status filter, try with ObjectId format (in case of data inconsistency)
-    if (!referral && anyReferral) {
-      console.log(`[Referral Bonus] Found referral but status was not in ['Pending', 'Completed']: ${anyReferral.status}`);
-      if (anyReferral.status === 'Bonus Paid') {
-        console.log(`[Referral Bonus] Referral already paid, returning early`);
-        return { success: false, message: 'Bonus already paid' };
-      }
-      // If status is 'Pending' or 'Completed', use the anyReferral
-      if (anyReferral.status === 'Pending' || anyReferral.status === 'Completed') {
-        referral = anyReferral;
-        console.log(`[Referral Bonus] Using referral from any status query`);
-      }
-    }
-
-    // If still no referral found, try with ObjectId format
-    if (!referral && !anyReferral) {
-      console.log(`[Referral Bonus] Trying alternative lookup methods for user ${userIdString}`);
-
-      // Try finding with the raw userId (in case it's stored differently)
-      referral = await ReferralModel.findOne({
-        referee: userId,
-        referralType: 'C2C',
-        status: { $in: ['Pending', 'Completed'] }
-      });
-
-      if (referral) {
-        console.log(`[Referral Bonus] Found referral using raw userId: ${referral._id}`);
-      }
-    }
 
     if (!referral) {
-      console.log(`[Referral Bonus] No eligible referral record found for user ${userId}`);
-      return { success: false, message: 'Referral record not found or bonus already paid' };
+      console.log(`[Referral Bonus] No pending subscription-based referral record found for referee: ${userId}`);
+      return { success: false, message: 'No eligible referral record found' };
     }
 
-    console.log(`[Referral Bonus] ===== FOUND REFERRAL RECORD =====`);
-    console.log(`[Referral Bonus] Referral ID: ${referral._id}`);
-    console.log(`[Referral Bonus] Referral Type: ${referral.referralType}`);
-    console.log(`[Referral Bonus] Referral Status: ${referral.status}`);
-    console.log(`[Referral Bonus] Referrer: ${referral.referrer}`);
-    console.log(`[Referral Bonus] Referee: ${referral.referee}`);
-    console.log(`[Referral Bonus] User referredBy: ${user.referredBy.toString()}`);
-
-    // Check if bonus already paid
-    if (referral.status === 'Bonus Paid') {
-      console.log(`[Referral Bonus] Bonus already paid for referral ${referral._id}`);
-      return { success: false, message: 'Bonus already paid' };
-    }
-
-    // For the direct flow, immediately credit the bonus and update status to Bonus Paid
-    console.log(`[Referral Bonus] ===== CALLING CREDIT FUNCTION =====`);
-    console.log(`[Referral Bonus] Calling creditReferralBonus for referral ${referral._id}`);
-    console.log(`[Referral Bonus] referrerId: ${user.referredBy.toString()}, refereeId: ${userId}, triggerEvent: ${eventType}`);
-
-    const result = await creditReferralBonus(
-      user.referredBy.toString(),
-      userId,
-      referral._id.toString(),
-      eventType
-    );
-
-    console.log(`[Referral Bonus] ===== CREDIT RESULT =====`);
-    console.log(`[Referral Bonus] creditReferralBonus result:`, result);
-
-    if (result.success) {
-      // Verify the referral status was updated
-      const updatedReferral = await ReferralModel.findById(referral._id);
-      console.log(`[Referral Bonus] After credit, referral status is: ${updatedReferral.status}`);
-
-      if (updatedReferral.status === 'Bonus Paid') {
-        console.log(`[Referral Bonus] ✅ SUCCESS: Referral status updated to Bonus Paid`);
-      } else {
-        console.warn(`[Referral Bonus] ⚠️ WARNING: Expected status 'Bonus Paid' but got '${updatedReferral.status}'`);
-      }
-    }
-
-    console.log(`[Referral Bonus] ===== ENDING CHECK AND CREDIT FLOW =====`);
+    console.log(`[Referral Bonus] Found matching referral ${referral.referralId}, starting credit process...`);
+    
+    // Trigger the actual credit
+    const result = await creditReferralBonus(referral, 'subscription_purchase');
+    console.log(`[Referral Bonus] Final result:`, result);
     return result;
 
   } catch (error) {
-    console.error('[Referral Bonus] Error checking and crediting referral bonus:', error);
-    return {
-      success: false,
-      message: 'Failed to process referral bonus',
-      error: error.message
-    };
+    console.error('[Referral Bonus] checkAndCreditSubscriptionReferral error:', error);
+    return { success: false, message: 'Error processing subscription referral', error: error.message };
   }
 }
 

@@ -534,7 +534,7 @@ export const POST = authMiddlewareCrm(async (req) => {
                   platformFee: appointment.platformFee || 0,
                   discount: appointment.discountAmount || appointment.discount || 0,
                   totalAmount: totalAmount,
-                  paymentStatus: 'paid',
+                  paymentStatus: 'completed',
                   invoiceNumber: updatedAppointment.invoiceNumber || appointment._id.toString(),
                   paymentMethod: paymentMethod
                 });

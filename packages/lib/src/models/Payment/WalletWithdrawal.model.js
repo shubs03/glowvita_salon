@@ -4,8 +4,23 @@ const walletWithdrawalSchema = new mongoose.Schema({
   // User reference
   userId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    refPath: 'userType',
     required: true,
+    index: true
+  },
+
+  userType: {
+    type: String,
+    required: true,
+    enum: ['User', 'Vendor', 'Supplier', 'Doctor'],
+    default: 'User',
+    index: true
+  },
+
+  regionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Region',
+    required: false, // Optional for legacy or direct user withdrawals if not tied to a region
     index: true
   },
 
@@ -198,9 +213,11 @@ const walletWithdrawalSchema = new mongoose.Schema({
 walletWithdrawalSchema.index({ userId: 1, requestedAt: -1 });
 walletWithdrawalSchema.index({ userId: 1, status: 1, requestedAt: -1 });
 walletWithdrawalSchema.index({ status: 1, requestedAt: -1 });
+walletWithdrawalSchema.index({ regionId: 1, requestedAt: -1 });
+walletWithdrawalSchema.index({ regionId: 1, status: 1, requestedAt: -1 });
 
-// Pre-save middleware to generate withdrawalId
-walletWithdrawalSchema.pre('save', function (next) {
+// Pre-validate middleware to generate withdrawalId and calculate netAmount
+walletWithdrawalSchema.pre('validate', function (next) {
   if (!this.withdrawalId) {
     const timestamp = Date.now();
     const random = Math.floor(Math.random() * 10000);
@@ -208,11 +225,10 @@ walletWithdrawalSchema.pre('save', function (next) {
   }
 
   // Calculate netAmount
-  if (this.isModified('amount') || this.isModified('withdrawalFee')) {
+  if (this.amount !== undefined) {
     this.netAmount = this.amount - (this.withdrawalFee || 0);
   }
 
-  this.updatedAt = new Date();
   next();
 });
 

@@ -125,6 +125,10 @@ const userSchema = new mongoose.Schema({
     type: Date,
     required: false,
   },
+  razorpayContactId: {
+    type: String,
+    default: null,
+  },
 });
 
 // Pre-save middleware to auto-assign regionId

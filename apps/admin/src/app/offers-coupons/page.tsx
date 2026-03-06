@@ -14,7 +14,7 @@ import { Skeleton } from '@repo/ui/skeleton';
 import { Edit2, Eye, Trash2, Plus, Percent, Tag, CheckSquare, IndianRupee, Upload, X, Power } from "lucide-react";
 import { Switch } from '@repo/ui/switch';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
-import { closeModal, openModal } from '../../../../../packages/store/src/slices/modalSlice.js';
+import { closeModal, openModal } from '@repo/store/slices/modalSlice';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { useForm } from 'react-hook-form';
 import { 
@@ -25,7 +25,7 @@ import {
   useGetSuperDataQuery,
   useGetRegionsQuery
 } from '@repo/store/api';
-import { setSelectedRegion, selectSelectedRegion } from '../../../../../packages/store/src/slices/Admin/adminAuthSlice';
+import { setSelectedRegion, selectSelectedRegion } from '@repo/store/slices/adminAuthSlice';
 
 import { toast } from 'sonner';
 

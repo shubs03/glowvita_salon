@@ -244,14 +244,29 @@ export default function CheckoutPage() {
 
         // Initialize Razorpay payment
         const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
           amount: razorpayOrder.amount,
           currency: razorpayOrder.currency,
           name: 'GlowVita Salon',
           description: `Order for ${product.name}`,
           image: '/images/logo.png', // Add your logo here
           order_id: razorpayOrder.id,
-          method: paymentMethods,
+          retry: { enabled: true, max_count: 3 },
+          // Simplified config to prevent interaction lag
+          config: {
+            display: {
+              blocks: {
+                upi: {
+                  name: 'UPI / QR',
+                  instruments: [
+                    { method: 'upi', vpa: true }, // UPI ID entry
+                    { method: 'upi', qr: true }   // QR Code
+                  ],
+                },
+              },
+              sequence: ['block.upi', 'block.card', 'block.netbanking'],
+            },
+          },
           handler: async function (response: any) {
             try {
               // Verify payment
@@ -337,17 +352,19 @@ export default function CheckoutPage() {
             }
           },
           prefill: {
-            name: user?.firstName + ' ' + user?.lastName || '',
+            name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
             email: user?.emailAddress || '',
-            contact: contactNumber,
+            contact: contactNumber || user?.mobileNo || '',
           },
           theme: {
-            color: '#3B82F6',
+            color: '#7c3aed',
           },
           modal: {
             ondismiss: function () {
               toast.error('Payment cancelled by user');
-            }
+            },
+            escape: true,
+            backdropClose: false,
           }
         };
 

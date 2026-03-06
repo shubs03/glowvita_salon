@@ -114,10 +114,20 @@ const referralSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
+  referrerType: {
+    type: String,
+    enum: ['User', 'Vendor', 'Doctor', 'Supplier'],
+    default: 'User',
+  },
   referee: {
     type: String,
     required: true,
     trim: true,
+  },
+  refereeType: {
+    type: String,
+    enum: ['User', 'Vendor', 'Doctor', 'Supplier'],
+    default: 'User',
   },
   date: {
     type: Date,
@@ -153,7 +163,5 @@ const ReferralModel = mongoose.models.Referral || mongoose.model("Referral", ref
 const C2CSettingsModel = mongoose.models.C2CSettings || mongoose.model("C2CSettings", referralSettingsSchema);
 const C2VSettingsModel = mongoose.models.C2VSettings || mongoose.model("C2VSettings", referralSettingsSchema);
 const V2VSettingsModel = mongoose.models.V2VSettings || mongoose.model("V2VSettings", referralSettingsSchema);
-const D2DSettingsModel = mongoose.models.D2DSettings || mongoose.model("D2DSettings", referralSettingsSchema);
-const S2SSettingsModel = mongoose.models.S2SSettings || mongoose.model("S2SSettings", referralSettingsSchema);
 
-export { ReferralModel, C2CSettingsModel, C2VSettingsModel, V2VSettingsModel, D2DSettingsModel, S2SSettingsModel };
+export { ReferralModel, C2CSettingsModel, C2VSettingsModel, V2VSettingsModel };

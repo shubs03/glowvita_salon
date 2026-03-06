@@ -38,6 +38,6 @@ export { default as patientReducer } from "./slices/patientSlice";
 // Export specific actions that are commonly used (namespaced)
 export * from "./slices/modalSlice";
 // Avoid star exports for slices with conflicting action names (rehydrateAuth, updateUser)
-export { setCrmAuth, clearCrmAuth, rehydrateAuth as rehydrateCrmAuth, updateUser as updateCrmUser, setSubscriptionExpired } from "./slices/crmAuthSlice";
+export { setCrmAuth, clearCrmAuth, rehydrateAuth as rehydrateCrmAuth, updateUser as updateCrmUser, setSubscriptionExpired, selectCrmAuth } from "./slices/crmAuthSlice";
 export { setUserAuth, clearUserAuth, rehydrateAuth as rehydrateUserAuth, updateUser as updateWebUser } from "./slices/Web/userAuthSlice";
 export { setAdminAuth, clearAdminAuth, rehydrateAuth as rehydrateAdminAuth, setSelectedRegion, selectSelectedRegion } from "./slices/Admin/adminAuthSlice";
