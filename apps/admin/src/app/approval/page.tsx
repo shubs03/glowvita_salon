@@ -28,7 +28,8 @@ import {
   Tags,
   Map as MapIcon,
   CreditCard,
-  FileText
+  FileText,
+  FileCheck
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
