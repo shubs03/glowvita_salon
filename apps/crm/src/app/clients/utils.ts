@@ -1,10 +1,10 @@
 // Helper function to format dates for display
 export const formatDateForDisplay = (dateString: string | null | undefined): string => {
-    if (!dateString) return 'Not provided';
+    if (!dateString) return 'Not Visited';
 
     try {
         const date = new Date(dateString);
-        if (isNaN(date.getTime())) return 'Invalid date';
+        if (isNaN(date.getTime())) return 'Not Visited';
 
         return date.toLocaleDateString('en-US', {
             year: 'numeric',
@@ -13,7 +13,7 @@ export const formatDateForDisplay = (dateString: string | null | undefined): str
         });
     } catch (error) {
         console.error('Error formatting date:', error);
-        return 'Invalid date';
+        return 'Not Visited';
     }
 };
 
