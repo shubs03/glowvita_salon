@@ -19,6 +19,8 @@ type ContactMessage = {
     phone: string;
     message: string;
     status: "new" | "read" | "replied";
+    source?: string;
+    salonName?: string;
     createdAt: string;
     updatedAt: string;
 };
@@ -241,6 +243,7 @@ export default function ContactMessagesPage() {
                                         <TableRow>
                                             <TableHead>Name</TableHead>
                                             <TableHead>Contact</TableHead>
+                                            <TableHead>Source</TableHead>
                                             <TableHead>Message</TableHead>
                                             <TableHead>Date</TableHead>
                                             <TableHead>Status</TableHead>
@@ -250,7 +253,7 @@ export default function ContactMessagesPage() {
                                     <TableBody>
                                         {messages.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-12 text-muted-foreground">
+                                                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
                                                     <MessageSquare className="w-8 h-8 mx-auto mb-2 opacity-30" />
                                                     No contact messages found.
                                                 </TableCell>
@@ -267,6 +270,11 @@ export default function ContactMessagesPage() {
                                                                 <div className="font-semibold text-sm">
                                                                     {msg.firstName} {msg.lastName}
                                                                 </div>
+                                                                {msg.salonName && (
+                                                                    <div className="text-[10px] text-primary font-medium mt-0.5 uppercase tracking-wider">
+                                                                        Salon: {msg.salonName}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </TableCell>
@@ -281,6 +289,11 @@ export default function ContactMessagesPage() {
                                                                 {msg.phone}
                                                             </div>
                                                         </div>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <span className="px-2 py-1 rounded-full text-[10px] font-bold uppercase bg-slate-100 text-slate-600 border border-slate-200">
+                                                            {msg.source || "Website"}
+                                                        </span>
                                                     </TableCell>
                                                     <TableCell className="max-w-xs">
                                                         <p className="text-sm text-muted-foreground line-clamp-2">{msg.message}</p>
@@ -338,10 +351,10 @@ export default function ContactMessagesPage() {
                         </>
                     )}
                 </CardContent>
-            </Card>
+            </Card >
 
             {/* View Modal */}
-            <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+            < Dialog open={isViewOpen} onOpenChange={setIsViewOpen} >
                 <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>Contact Message</DialogTitle>
@@ -379,6 +392,24 @@ export default function ContactMessagesPage() {
                                         <p className="text-sm font-medium">{viewMessage.phone}</p>
                                     </div>
                                 </div>
+                                <div className="flex items-start gap-2">
+                                    <MessageSquare className="w-4 h-4 text-muted-foreground mt-0.5" />
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Source</p>
+                                        <p className="text-sm font-medium uppercase">{viewMessage.source || "Website"}</p>
+                                    </div>
+                                </div>
+                                {viewMessage.salonName && (
+                                    <div className="flex items-start gap-2">
+                                        <div className="w-4 h-4 text-muted-foreground mt-0.5 flex items-center justify-center">
+                                            <span className="text-[10px] font-bold">SN</span>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-muted-foreground">Salon Name</p>
+                                            <p className="text-sm font-medium">{viewMessage.salonName}</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <div>
@@ -410,10 +441,10 @@ export default function ContactMessagesPage() {
                         <Button onClick={() => setIsViewOpen(false)}>Close</Button>
                     </DialogFooter>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
             {/* Delete Confirm Modal */}
-            <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+            < Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen} >
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Delete Message?</DialogTitle>
@@ -435,7 +466,7 @@ export default function ContactMessagesPage() {
                         </Button>
                     </DialogFooter>
                 </DialogContent>
-            </Dialog>
-        </div>
+            </Dialog >
+        </div >
     );
 }

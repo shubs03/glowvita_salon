@@ -1,18 +1,20 @@
 
 "use client";
 
+import { useState } from "react";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
+import { Textarea } from "@repo/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@repo/ui/card";
-import { 
-  Check, 
-  Search, 
-  HelpCircle, 
-  BookOpen, 
-  Video, 
-  MessageSquare, 
-  Phone, 
-  LifeBuoy, 
+import {
+  Check,
+  Search,
+  HelpCircle,
+  BookOpen,
+  Video,
+  MessageSquare,
+  Phone,
+  LifeBuoy,
   Mail,
   Clock,
   Zap,
@@ -37,12 +39,152 @@ const HelpTopic = ({ icon, title, description, link }: { icon: React.ReactNode, 
       <p className="text-muted-foreground text-sm">{description}</p>
     </CardContent>
     <CardFooter>
-        <Button variant="link" asChild className="p-0 h-auto">
-            <Link href={link}>Learn More &rarr;</Link>
-        </Button>
+      <Button variant="link" asChild className="p-0 h-auto">
+        <Link href={link}>Learn More &rarr;</Link>
+      </Button>
     </CardFooter>
   </Card>
 );
+
+const SupportContactForm = () => {
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    salonName: "",
+    message: ""
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [error, setError] = useState("");
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setStatus("idle");
+    setError("");
+
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...formData, source: "website" }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Something went wrong. Please try again.");
+      }
+
+      setStatus("success");
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        salonName: "",
+        message: ""
+      });
+    } catch (err: any) {
+      setStatus("error");
+      setError(err.message || "Failed to send message. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">First Name</label>
+          <Input
+            name="firstName"
+            placeholder="John"
+            value={formData.firstName}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Last Name</label>
+          <Input
+            name="lastName"
+            placeholder="Doe"
+            value={formData.lastName}
+            onChange={handleChange}
+            required
+          />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Email</label>
+        <Input
+          type="email"
+          name="email"
+          placeholder="john@example.com"
+          value={formData.email}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Phone</label>
+        <Input
+          type="tel"
+          name="phone"
+          placeholder="10-digit phone number"
+          value={formData.phone}
+          onChange={handleChange}
+          required
+          maxLength={10}
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Salon Name (Optional)</label>
+        <Input
+          name="salonName"
+          placeholder="Your Salon Name"
+          value={formData.salonName}
+          onChange={handleChange}
+        />
+      </div>
+      <div className="space-y-2">
+        <label className="text-sm font-medium">Message</label>
+        <Textarea
+          name="message"
+          placeholder="How can we help you?"
+          value={formData.message}
+          onChange={handleChange}
+          required
+          rows={4}
+        />
+      </div>
+
+      {status === "success" && (
+        <div className="p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
+          Message sent successfully! We'll get back to you soon.
+        </div>
+      )}
+      {status === "error" && (
+        <div className="p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
+          {error}
+        </div>
+      )}
+
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
+        {isSubmitting ? "Sending..." : "Send Message"}
+      </Button>
+    </form>
+  );
+};
 
 export default function SupportPage() {
   return (
@@ -61,24 +203,24 @@ export default function SupportPage() {
           </p>
           <div className="relative max-w-2xl mx-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input 
-              placeholder="Search for help... (e.g., 'how to add a client')" 
+            <Input
+              placeholder="Search for help... (e.g., 'how to add a client')"
               className="w-full h-14 text-lg pl-12 rounded-full shadow-lg border border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all duration-300"
             />
           </div>
           <div className="mt-8 flex flex-wrap justify-center gap-4">
-              <Button variant="outline" size="sm" asChild className="hover:bg-primary hover:text-primary-foreground transition-colors duration-300">
-                <Link href="#">Getting Started</Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild className="hover:bg-primary hover:text-primary-foreground transition-colors duration-300">
-                <Link href="#">Billing</Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild className="hover:bg-primary hover:text-primary-foreground transition-colors duration-300">
-                <Link href="#">Calendar Management</Link>
-              </Button>
-              <Button variant="outline" size="sm" asChild className="hover:bg-primary hover:text-primary-foreground transition-colors duration-300">
-                <Link href="#">Client Profiles</Link>
-              </Button>
+            <Button variant="outline" size="sm" asChild className="hover:bg-primary hover:text-primary-foreground transition-colors duration-300">
+              <Link href="#">Getting Started</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild className="hover:bg-primary hover:text-primary-foreground transition-colors duration-300">
+              <Link href="#">Billing</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild className="hover:bg-primary hover:text-primary-foreground transition-colors duration-300">
+              <Link href="#">Calendar Management</Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild className="hover:bg-primary hover:text-primary-foreground transition-colors duration-300">
+              <Link href="#">Client Profiles</Link>
+            </Button>
           </div>
         </div>
       </section>
@@ -136,38 +278,54 @@ export default function SupportPage() {
           </div>
         </div>
       </section>
-      
+
       {/* Section 3: Contact Support */}
-      <section className="py-20 bg-secondary/50">
-        <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl font-bold mb-4">Can't find what you're looking for?</h2>
-            <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">Our dedicated support team is available around the clock to help you with any questions or issues you might have.</p>
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                <Card className="text-left flex flex-col items-start hover:shadow-xl transition-shadow duration-300">
-                    <CardHeader className="flex-row items-center gap-4">
-                        <div className="bg-blue-100 text-blue-600 p-3 rounded-lg"><Mail /></div>
-                        <CardTitle className="text-xl">Email Support</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex-grow">
-                        <p className="text-muted-foreground mb-4">Best for non-urgent inquiries. We typically respond within a few hours.</p>
-                    </CardContent>
-                    <CardFooter>
-                        <Button asChild><Link href="mailto:support@example.com">Send us an Email</Link></Button>
-                    </CardFooter>
-                </Card>
-                <Card className="text-left flex flex-col items-start hover:shadow-xl transition-shadow duration-300">
-                    <CardHeader className="flex-row items-center gap-4">
-                        <div className="bg-blue-100 text-blue-600 p-3 rounded-lg"><Phone /></div>
-                        <CardTitle className="text-xl">Phone Support</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex-grow">
-                        <p className="text-muted-foreground mb-4">Get immediate assistance for urgent issues. Available for Pro plan users.</p>
-                    </CardContent>
-                     <CardFooter>
-                        <Button asChild><Link href="tel:+1234567890">Call Us Now</Link></Button>
-                    </CardFooter>
-                </Card>
+      <section className="py-20 bg-secondary/30">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl font-bold mb-4">Can't find what you're looking for?</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">Our dedicated support team is available around the clock to help you with any questions or issues you might have.</p>
             </div>
+
+            <div className="grid md:grid-cols-3 gap-8">
+              <div className="md:col-span-1 space-y-6">
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <div className="bg-blue-100 text-blue-600 p-3 rounded-lg w-fit"><Mail className="h-5 w-5" /></div>
+                    <CardTitle className="text-lg mt-4">Email Us</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">Response usually within 2-4 hours</p>
+                    <Link href="mailto:support@glowvita.com" className="text-sm font-medium text-primary hover:underline">support@glowvita.com</Link>
+                  </CardContent>
+                </Card>
+
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <div className="bg-blue-100 text-blue-600 p-3 rounded-lg w-fit"><Phone className="h-5 w-5" /></div>
+                    <CardTitle className="text-lg mt-4">Call Us</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">Mon-Fri from 9am to 6pm</p>
+                    <Link href="tel:+919075201035" className="text-sm font-medium text-primary hover:underline">+91 9075201035</Link>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="md:col-span-2">
+                <Card className="shadow-lg border-none">
+                  <CardHeader>
+                    <CardTitle>Send us a message</CardTitle>
+                    <CardDescription>Fill out the form below and we'll get back to you shortly.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <SupportContactForm />
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -397,7 +555,7 @@ export default function SupportPage() {
           <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
             Monitor our system performance in real-time
           </p>
-          
+
           <div className="inline-flex items-center gap-3 bg-gradient-to-r from-blue-100 to-blue-50 dark:from-blue-900/20 dark:to-blue-800/20 text-blue-600 dark:text-blue-400 px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-300 mb-12">
             <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
             <span className="font-medium">All Systems Operational</span>
@@ -470,11 +628,11 @@ export default function SupportPage() {
             </Card>
           </div>
 
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="mt-12 group border-2 hover:border-primary/50 hover:shadow-lg transition-all duration-300"
           >
-            View Detailed Status 
+            View Detailed Status
             <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
           </Button>
         </div>

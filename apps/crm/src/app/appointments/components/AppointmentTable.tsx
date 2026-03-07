@@ -159,10 +159,10 @@ const AppointmentTable = ({
                     </TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${((appointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'completed'
-                          ? 'bg-green-100 text-green-800' :
-                          ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
+                        ? 'bg-green-100 text-green-800' :
+                        ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
                         }`}>
                         {(() => {
                           // Map the backend payment status to more user-friendly terms
@@ -185,12 +185,12 @@ const AppointmentTable = ({
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
-                            appointment.status === 'completed without payment' ? 'bg-orange-100 text-orange-800' :
-                              appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                appointment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                  appointment.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
-                                    appointment.status === 'no_show' ? 'bg-orange-100 text-orange-800' :
-                                      'bg-yellow-100 text-yellow-800'
+                          appointment.status === 'completed without payment' ? 'bg-orange-100 text-orange-800' :
+                            appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                              appointment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                appointment.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
+                                  appointment.status === 'no_show' ? 'bg-orange-100 text-orange-800' :
+                                    'bg-yellow-100 text-yellow-800'
                           }`}>
                           {formatStatus(appointment.status)}
                         </span>
@@ -229,14 +229,16 @@ const AppointmentTable = ({
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onOpenModal('edit', appointment)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        {(appointment.status !== 'completed' && appointment.status !== 'completed without payment') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onOpenModal('edit', appointment)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"

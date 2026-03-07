@@ -33,6 +33,14 @@ const ContactMessageSchema = new mongoose.Schema(
             enum: ['new', 'read', 'replied'],
             default: 'new',
         },
+        salonName: {
+            type: String,
+            trim: true,
+        },
+        source: {
+            type: String,
+            default: 'website',
+        },
     },
     {
         timestamps: true,
