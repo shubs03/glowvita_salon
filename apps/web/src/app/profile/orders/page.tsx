@@ -563,13 +563,14 @@ export default function OrdersPage() {
                       key={index}
                       className="flex items-center gap-4 p-3 bg-secondary rounded-lg"
                     >
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        width={64}
-                        height={64}
-                        className="rounded-md object-cover"
-                      />
+                      <div className="relative w-16 h-16 flex-shrink-0 overflow-hidden rounded-md border">
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
                       <div className="flex-grow">
                         <p className="font-medium">{item.name}</p>
                         <div className="flex items-center gap-2 mt-1">

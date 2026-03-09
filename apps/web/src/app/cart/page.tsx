@@ -4,6 +4,7 @@ import { useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@repo/ui/button";
+import { Badge } from "@repo/ui/badge";
 import { Input } from "@repo/ui/input";
 import {
   Card,
@@ -204,6 +205,8 @@ export default function CartPage() {
         id: item.productId || item._id,
         name: item.productName,
         price: item.price, // Passing unit price
+        originalPrice: item.originalPrice,
+        hasSale: item.hasSale,
         image: item.productImage || "https://placehold.co/100x100.png",
         quantity: item.quantity,
         vendorId: item.vendorId || "unknown",
@@ -351,14 +354,19 @@ export default function CartPage() {
                         <h3 className="font-semibold text-base lg:text-lg mb-1">
                           {item.productName}
                         </h3>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-primary font-semibold text-sm lg:text-base">
                             ₹{item.price.toFixed(2)}
                           </p>
                           {item.hasSale && (
-                            <p className="text-muted-foreground line-through text-xs">
-                              ₹{item.originalPrice.toFixed(2)}
-                            </p>
+                            <>
+                              <p className="text-muted-foreground line-through text-xs">
+                                ₹{item.originalPrice.toFixed(2)}
+                              </p>
+                              <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 h-4 hover:bg-green-100">
+                                {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% OFF
+                              </Badge>
+                            </>
                           )}
                         </div>
                         <div className="flex items-center gap-2 mt-3">
