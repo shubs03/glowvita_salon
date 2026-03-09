@@ -135,26 +135,26 @@ export const GET = authMiddlewareCrm(async (req) => {
             } else {
                 // Default working hours if none found
                 vendor.openingHours = [
-                    { day: 'Monday', open: '09:00', close: '18:00', isOpen: true },
-                    { day: 'Tuesday', open: '09:00', close: '18:00', isOpen: true },
-                    { day: 'Wednesday', open: '09:00', close: '18:00', isOpen: true },
-                    { day: 'Thursday', open: '09:00', close: '18:00', isOpen: true },
-                    { day: 'Friday', open: '09:00', close: '18:00', isOpen: true },
-                    { day: 'Saturday', open: '10:00', close: '15:00', isOpen: true },
-                    { day: 'Sunday', open: '', close: '', isOpen: false }
+                    { day: 'Monday', open: '09:00', close: '20:00', isOpen: true },
+                    { day: 'Tuesday', open: '09:00', close: '20:00', isOpen: true },
+                    { day: 'Wednesday', open: '09:00', close: '20:00', isOpen: true },
+                    { day: 'Thursday', open: '09:00', close: '20:00', isOpen: true },
+                    { day: 'Friday', open: '09:00', close: '20:00', isOpen: true },
+                    { day: 'Saturday', open: '09:00', close: '20:00', isOpen: true },
+                    { day: 'Sunday', open: '09:00', close: '20:00', isOpen: true }
                 ];
             }
         } catch (workingHoursError) {
             console.error('Error fetching working hours:', workingHoursError);
             // Set default working hours if there's an error
             vendor.openingHours = [
-                { day: 'Monday', open: '09:00', close: '18:00', isOpen: true },
-                { day: 'Tuesday', open: '09:00', close: '18:00', isOpen: true },
-                { day: 'Wednesday', open: '09:00', close: '18:00', isOpen: true },
-                { day: 'Thursday', open: '09:00', close: '18:00', isOpen: true },
-                { day: 'Friday', open: '09:00', close: '18:00', isOpen: true },
-                { day: 'Saturday', open: '10:00', close: '15:00', isOpen: true },
-                { day: 'Sunday', open: '', close: '', isOpen: false }
+                { day: 'Monday', open: '09:00', close: '20:00', isOpen: true },
+                { day: 'Tuesday', open: '09:00', close: '20:00', isOpen: true },
+                { day: 'Wednesday', open: '09:00', close: '20:00', isOpen: true },
+                { day: 'Thursday', open: '09:00', close: '20:00', isOpen: true },
+                { day: 'Friday', open: '09:00', close: '20:00', isOpen: true },
+                { day: 'Saturday', open: '09:00', close: '20:00', isOpen: true },
+                { day: 'Sunday', open: '09:00', close: '20:00', isOpen: true }
             ];
         }
 
