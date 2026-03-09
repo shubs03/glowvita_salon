@@ -18,6 +18,7 @@ type Referral = {
     referee: string;
     date: string;
     status: 'Pending' | 'Completed';
+    bonus?: number | string;
 };
 
 const SkeletonLoader = () => (
