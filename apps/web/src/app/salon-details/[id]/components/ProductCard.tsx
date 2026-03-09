@@ -165,10 +165,24 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <p className="text-xs text-muted-foreground line-clamp-2">
           {product.description}
         </p>
-        <div className="flex justify-between items-center mt-auto">
-          <p className="font-bold text-primary">
-            ₹{(product.salePrice && product.salePrice > 0 ? product.salePrice : product.price).toFixed(2)}
-          </p>
+        <div className="flex flex-col gap-0.5 mt-auto">
+          {product.salePrice > 0 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-bold text-primary">
+                ₹{product.salePrice.toFixed(2)}
+              </p>
+              <p className="text-xs text-muted-foreground line-through">
+                ₹{product.price.toFixed(2)}
+              </p>
+              <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 h-4 hover:bg-green-100">
+                {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
+              </Badge>
+            </div>
+          ) : (
+            <p className="font-bold text-primary">
+              ₹{product.price.toFixed(2)}
+            </p>
+          )}
           <div className="flex items-center gap-1 text-primary">
             <Star className="h-3 w-3 text-yellow-400 fill-current" />
             <span className="text-xs text-muted-foreground font-medium">

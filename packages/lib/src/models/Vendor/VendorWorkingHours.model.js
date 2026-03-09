@@ -16,7 +16,7 @@ const workingDaySchema = new mongoose.Schema(
         closeTime: {
           type: String,
           trim: true,
-          default: '06:00PM'
+          default: '08:00PM'
         }
       }
     ]
@@ -51,8 +51,8 @@ const vendorWorkingHoursSchema = new mongoose.Schema(
       wednesday: workingDaySchema,
       thursday: workingDaySchema,
       friday: workingDaySchema,
-      saturday: { ...workingDaySchema.obj, isOpen: { type: Boolean, default: false } },
-      sunday: { ...workingDaySchema.obj, isOpen: { type: Boolean, default: false }, hours: { type: [], default: [] } }
+      saturday: workingDaySchema,
+      sunday: workingDaySchema
     },
     // Special working hours for specific dates
     specialHours: [
@@ -83,40 +83,40 @@ vendorWorkingHoursSchema.statics.updateStaffBasedOnVendorHours = async function 
   try {
     // Dynamically import Staff model to avoid circular dependency
     const { default: Staff } = await import('./Staff.model.js');
-    
+
     // Days of the week
     const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-    
+
     // Prepare bulk operations for better performance
     const bulkOps = [];
-    
+
     // For each day, check if there are changes
     for (const day of dayNames) {
       const currentDayHours = updatedWorkingHours[day];
       const previousDayHours = previousWorkingHours ? previousWorkingHours[day] : null;
-      
+
       // Handle case where currentDayHours might be undefined
       if (!currentDayHours) {
         continue;
       }
-      
+
       // Check if the day's availability has changed (isOpen status or hours)
-      const dayAvailabilityChanged = 
-        !previousDayHours || 
+      const dayAvailabilityChanged =
+        !previousDayHours ||
         previousDayHours.isOpen !== currentDayHours.isOpen ||
         JSON.stringify(previousDayHours.hours || []) !== JSON.stringify(currentDayHours.hours || []);
-      
+
       if (dayAvailabilityChanged) {
         const dayAvailableField = `${day}Available`;
         const daySlotsField = `${day}Slots`;
-        
+
         if (!currentDayHours.isOpen) {
           // If vendor is now closed on this day, update all staff to be unavailable
           bulkOps.push({
             updateMany: {
               filter: { vendorId: vendorId },
-              update: { 
-                $set: { 
+              update: {
+                $set: {
                   [dayAvailableField]: false,
                   [daySlotsField]: []
                 }
@@ -128,7 +128,7 @@ vendorWorkingHoursSchema.statics.updateStaffBasedOnVendorHours = async function 
           if (currentDayHours.hours && currentDayHours.hours.length > 0) {
             const vendorOpenMinutes = this.timeToMinutes(currentDayHours.hours[0].openTime);
             const vendorCloseMinutes = this.timeToMinutes(currentDayHours.hours[0].closeTime);
-            
+
             // Create staff slots based on vendor hours
             const vendorSlots = [{
               startMinutes: vendorOpenMinutes,
@@ -136,12 +136,12 @@ vendorWorkingHoursSchema.statics.updateStaffBasedOnVendorHours = async function 
               startTime: this.convertToDisplayTime(currentDayHours.hours[0].openTime),
               endTime: this.convertToDisplayTime(currentDayHours.hours[0].closeTime)
             }];
-            
+
             bulkOps.push({
               updateMany: {
                 filter: { vendorId: vendorId },
-                update: { 
-                  $set: { 
+                update: {
+                  $set: {
                     [dayAvailableField]: true,
                     [daySlotsField]: vendorSlots
                   }
@@ -153,8 +153,8 @@ vendorWorkingHoursSchema.statics.updateStaffBasedOnVendorHours = async function 
             bulkOps.push({
               updateMany: {
                 filter: { vendorId: vendorId },
-                update: { 
-                  $set: { 
+                update: {
+                  $set: {
                     [dayAvailableField]: true
                   }
                 }
@@ -164,7 +164,7 @@ vendorWorkingHoursSchema.statics.updateStaffBasedOnVendorHours = async function 
         }
       }
     }
-    
+
     // Execute all updates in a single bulk operation for better performance
     if (bulkOps.length > 0) {
       await Staff.bulkWrite(bulkOps);
@@ -181,13 +181,13 @@ vendorWorkingHoursSchema.statics.timeToMinutes = function (timeStr) {
   if (!timeStr) {
     return 0;
   }
-  
+
   const [timePart, modifier] = timeStr.split(/([AP]M)/);
   let [hours, minutes] = timePart.split(':').map(Number);
-  
+
   if (modifier === 'PM' && hours < 12) hours += 12;
   if (modifier === 'AM' && hours === 12) hours = 0;
-  
+
   return hours * 60 + minutes;
 };
 
@@ -197,13 +197,13 @@ vendorWorkingHoursSchema.statics.convertToDisplayTime = function (timeStr) {
   if (!timeStr) {
     return '00:00';
   }
-  
+
   const [timePart, modifier] = timeStr.split(/([AP]M)/);
   let [hours, minutes] = timePart.split(':').map(Number);
-  
+
   if (modifier === 'PM' && hours < 12) hours += 12;
   if (modifier === 'AM' && hours === 12) hours = 0;
-  
+
   // Format as HH:MM
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 };
@@ -255,10 +255,10 @@ vendorWorkingHoursSchema.post("save", async function (doc) {
     if (this.isNew) {
       return;
     }
-    
+
     // Use the original working hours captured in the pre-save hook
     const originalWorkingHours = this.$locals.originalWorkingHours;
-    
+
     if (originalWorkingHours) {
       // Compare with current working hours and update staff if needed
       await this.constructor.updateStaffBasedOnVendorHours(
@@ -275,7 +275,7 @@ vendorWorkingHoursSchema.post("save", async function (doc) {
 // Static method for retrieving working hours by vendor
 vendorWorkingHoursSchema.statics.getWorkingHoursByVendor = async function (vendorId, date = null) {
   const matchStage = { vendor: new mongoose.Types.ObjectId(vendorId) };
-  
+
   const pipeline = [
     { $match: matchStage },
     {
@@ -288,7 +288,7 @@ vendorWorkingHoursSchema.statics.getWorkingHoursByVendor = async function (vendo
           $filter: {
             input: "$specialHours",
             as: "specialHour",
-            cond: date 
+            cond: date
               ? { $eq: [{ $dateToString: { date: "$$specialHour.date", format: "%Y-%m-%d" } }, date] }
               : { $gte: ["$$specialHour.date", new Date()] }
           }
@@ -306,10 +306,10 @@ vendorWorkingHoursSchema.statics.getWorkingHoursByVendor = async function (vendo
 vendorWorkingHoursSchema.methods.isVendorOpen = function (dateTime) {
   const targetDate = new Date(dateTime);
   const dayOfWeek = targetDate.toLocaleString('en-US', { weekday: 'lowercase' });
-  const targetTime = targetDate.toLocaleTimeString('en-US', { 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    hour12: true 
+  const targetTime = targetDate.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
   });
 
   // Check special hours first
@@ -320,7 +320,7 @@ vendorWorkingHoursSchema.methods.isVendorOpen = function (dateTime) {
 
   if (specialDay) {
     if (!specialDay.isOpen) return false;
-    return specialDay.hours.some(hour => 
+    return specialDay.hours.some(hour =>
       this.isTimeInRange(targetTime, hour.openTime, hour.closeTime)
     );
   }
@@ -329,7 +329,7 @@ vendorWorkingHoursSchema.methods.isVendorOpen = function (dateTime) {
   const workingDay = this.workingHours[dayOfWeek];
   if (!workingDay || !workingDay.isOpen || !workingDay.hours.length) return false;
 
-  return workingDay.hours.some(hour => 
+  return workingDay.hours.some(hour =>
     this.isTimeInRange(targetTime, hour.openTime, hour.closeTime)
   );
 };
@@ -354,17 +354,17 @@ vendorWorkingHoursSchema.methods.isTimeInRange = function (time, start, end) {
 // Method to get vendor working hours for a specific day
 vendorWorkingHoursSchema.statics.getVendorHoursForDay = async function (vendorId, day) {
   const vendorHours = await this.findOne({ vendor: vendorId });
-  
+
   if (!vendorHours) {
     return null;
   }
-  
+
   const dayHours = vendorHours.workingHours[day.toLowerCase()];
-  
+
   if (!dayHours || !dayHours.isOpen || !dayHours.hours.length) {
     return null;
   }
-  
+
   // Return the first time slot (assuming single time slot per day)
   return {
     openTime: dayHours.hours[0].openTime,
@@ -378,11 +378,11 @@ vendorWorkingHoursSchema.statics.getVendorHoursForDay = async function (vendorId
 vendorWorkingHoursSchema.statics.syncStaffWithVendorHours = async function (vendorId) {
   try {
     const vendorHours = await this.findOne({ vendor: vendorId });
-    
+
     if (!vendorHours) {
       throw new Error('Vendor working hours not found');
     }
-    
+
     // For manual sync, we pass null as previousWorkingHours to force update all days
     await this.updateStaffBasedOnVendorHours(vendorId, vendorHours.workingHours, null);
   } catch (error) {
@@ -396,21 +396,21 @@ vendorWorkingHoursSchema.statics.updateVendorHoursAndSyncStaff = async function 
   try {
     // Find the existing vendor working hours document
     const vendorHoursDoc = await this.findOne({ vendor: vendorId });
-    
+
     if (!vendorHoursDoc) {
       throw new Error('Vendor working hours not found');
     }
-    
+
     // Save the original working hours for comparison
     const originalWorkingHours = { ...vendorHoursDoc.workingHours };
-    
+
     // Update the vendor working hours
     vendorHoursDoc.workingHours = newWorkingHours;
     await vendorHoursDoc.save();
-    
+
     // The post-save hook will automatically sync staff, but we can also do it explicitly
     await this.updateStaffBasedOnVendorHours(vendorId, newWorkingHours, originalWorkingHours);
-    
+
     return vendorHoursDoc;
   } catch (error) {
     console.error('Error updating vendor hours and syncing staff:', error);

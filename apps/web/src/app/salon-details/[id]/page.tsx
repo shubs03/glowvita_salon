@@ -500,7 +500,7 @@ export default function SalonDetailsPage() {
         name: vendorData.businessName || "No Name Available",
         rating: reviewMetrics.averageRating || vendorData.rating || 0,
         reviewCount: reviewMetrics.totalReviews || vendorData.clientCount || 0,
-        address: `${vendorData.city || ""}, ${vendorData.state || ""}`,
+        address: vendorData.address || `${vendorData.city || ""}, ${vendorData.state || ""}`,
         email: vendorData.email || "",
         website: vendorData.website || "",
         phone: vendorData.phone || "",
@@ -1064,23 +1064,7 @@ export default function SalonDetailsPage() {
                     {salon.mission || salon.description}
                   </p>
                   {/* Stats section - always show structure with values or defaults */}
-                  <div className="grid sm:grid-cols-4 gap-6 text-center">
-                    <div className="bg-secondary/50 p-4 rounded-lg">
-                      <p className="text-4xl font-bold text-primary">
-                        {isLoading ? (
-                          <Skeleton className="h-8 w-12 mx-auto" />
-                        ) : (
-                          vendorData?.stats?.find(
-                            (s: any) => s.label === "Years Experience"
-                          )?.value ||
-                          vendorData?.yearsExperience ||
-                          0
-                        )}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Years Experience
-                      </p>
-                    </div>
+                  <div className="grid sm:grid-cols-3 gap-4 text-center">
                     <div className="bg-secondary/50 p-4 rounded-lg">
                       <p className="text-4xl font-bold text-primary">
                         {isLoading ? (
@@ -1120,14 +1104,14 @@ export default function SalonDetailsPage() {
                           <Skeleton className="h-8 w-12 mx-auto" />
                         ) : (
                           vendorData?.stats?.find(
-                            (s: any) => s.label === "Awards"
+                            (s: any) => s.label === "Products Sold"
                           )?.value ||
-                          vendorData?.awards?.length ||
+                          productsData?.products?.length ||
                           0
                         )}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Awards
+                        Products
                       </p>
                     </div>
                   </div>
@@ -1205,18 +1189,18 @@ export default function SalonDetailsPage() {
                       </div>
                     </div>
 
-                    <div className="flex gap-2 text-sm">
+                    <div className="flex flex-wrap gap-2 text-sm">
                       <Badge
                         variant="secondary"
                         className="bg-primary/10 text-primary border-primary/20"
                       >
-                        {vendorData?.services?.length || 15}+ Services
+                        {servicesData?.services?.length || 15}+ Services
                       </Badge>
                       <Badge
                         variant="secondary"
                         className="bg-primary/10 text-primary border-primary/20"
                       >
-                        {vendorData?.yearsExperience || 5}+ Years
+                        {productsData?.products?.length || 0}+ Products
                       </Badge>
                     </div>
                   </div>

@@ -7,7 +7,7 @@ import {
   useCreateWeddingPackageMutation,
   useUpdateWeddingPackageMutation,
   useDeleteWeddingPackageMutation,
-  useGetPublicVendorStaffQuery,
+  useGetStaffQuery,
 } from "@repo/store/services/api";
 import { toast } from 'sonner';
 import { useCrmAuth } from "@/hooks/useCrmAuth";
@@ -98,7 +98,7 @@ export default function WeddingPackagesPage() {
 
   // API hooks
   const { data: servicesData, isLoading: servicesLoading, error: servicesError } = useGetVendorServicesQuery({ vendorId }, { skip: !vendorId });
-  const { data: staffData, isLoading: staffLoading, error: staffError } = useGetPublicVendorStaffQuery(vendorId, { skip: !vendorId });
+  const { data: staffData, isLoading: staffLoading, error: staffError } = useGetStaffQuery(undefined, { skip: !vendorId });
   const { data: packagesData, isLoading: packagesLoading, refetch } = useGetVendorWeddingPackagesQuery(vendorId, { skip: !vendorId });
   const [createPackage, { isLoading: isCreating }] = useCreateWeddingPackageMutation();
   const [updatePackage, { isLoading: isUpdating }] = useUpdateWeddingPackageMutation();
@@ -121,7 +121,7 @@ export default function WeddingPackagesPage() {
   }, [servicesData, servicesError, staffData, staffError]);
 
   const services = servicesData?.services || [];
-  const staff = staffData?.staff || staffData?.data || [];
+  const staff = Array.isArray(staffData) ? staffData : staffData?.staff || staffData?.data || [];
   const packages = packagesData?.weddingPackages || [];
 
   // Log staff for debugging

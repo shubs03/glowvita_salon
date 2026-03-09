@@ -150,6 +150,8 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     } else if (name === "phone") {
       // Allow only digits and limit to 10
       finalValue = value.replace(/\D/g, "").slice(0, 10);
+    } else if (name === "email") {
+      finalValue = value.replace(/[^a-zA-Z0-9@.]/g, "");
     }
 
     setFormData((prev) => ({ ...prev, [name]: finalValue }));
