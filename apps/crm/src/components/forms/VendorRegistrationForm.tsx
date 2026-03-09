@@ -138,6 +138,8 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
       finalValue = value.replace(/[^a-zA-Z]/g, '');
     } else if (name === 'phone') {
       finalValue = value.replace(/\D/g, '').slice(0, 10);
+    } else if (name === 'email') {
+      finalValue = value.replace(/[^a-zA-Z0-9@.]/g, '');
     }
 
     setFormData(prev => ({ ...prev, [name]: finalValue }));
