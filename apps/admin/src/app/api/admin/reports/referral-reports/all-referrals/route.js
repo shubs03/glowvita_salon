@@ -199,7 +199,6 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const summary = {
       totalReferrals: formattedReferrals.length,
       totalBonusAmount: formattedReferrals.reduce((sum, ref) => sum + ref.bonusAmount, 0),
-      activeReferrals: formattedReferrals.filter(ref => ref.status === 'Active').length,
       completedReferrals: formattedReferrals.filter(ref => ref.status === 'Completed' || ref.status === 'Bonus Paid').length,
       pendingReferrals: formattedReferrals.filter(ref => ref.status === 'Pending').length,
       c2cCount: formattedReferrals.filter(ref => ref.referralType === 'C2C').length,
@@ -210,7 +209,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Get unique values for filters (optional)
     const cities = [];
     const vendors = [];
-    const statuses = ['Pending', 'Active', 'Completed', 'Bonus Paid'];
+    const statuses = ['Pending', 'Completed', 'Bonus Paid'];
     
     console.log("Summary:", summary);
     

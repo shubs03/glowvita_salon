@@ -91,10 +91,25 @@ export const POST = authMiddlewareAdmin(
     const { validateAndLockRegion } = await import("@repo/lib");
     const finalRegionId = validateAndLockRegion(req.user, regionId);
 
+    const getTypesFromReferralType = (type) => {
+      switch (type) {
+        case 'C2C': return { referrerType: 'User', refereeType: 'User' };
+        case 'C2V': return { referrerType: 'User', refereeType: 'Vendor' };
+        case 'V2V': return { referrerType: 'Vendor', refereeType: 'Vendor' };
+        case 'S2S': return { referrerType: 'Supplier', refereeType: 'Supplier' };
+        case 'D2D': return { referrerType: 'Doctor', refereeType: 'Doctor' };
+        default: return { referrerType: 'User', refereeType: 'User' };
+      }
+    };
+
+    const { referrerType, refereeType } = getTypesFromReferralType(referralType);
+
     const newReferral = await ReferralModel.create({
       referralType,
       referrer,
+      referrerType,
       referee,
+      refereeType,
       status,
       bonus,
       regionId: finalRegionId
@@ -205,38 +220,40 @@ export const GET = authMiddlewareAdmin(async (req) => {
         }
       };
 
+      const getTypesFromReferralType = (type) => {
+        switch (type) {
+          case 'C2C': return { referrerType: 'User', refereeType: 'User' };
+          case 'C2V': return { referrerType: 'User', refereeType: 'Vendor' };
+          case 'V2V': return { referrerType: 'Vendor', refereeType: 'Vendor' };
+          case 'S2S': return { referrerType: 'Supplier', refereeType: 'Supplier' };
+          case 'D2D': return { referrerType: 'Doctor', refereeType: 'Doctor' };
+          default: return { referrerType: 'User', refereeType: 'User' };
+        }
+      };
+
       const populatedReferrals = await Promise.all(referrals.map(async (ref) => {
         try {
-            const RefModel = getModel(ref.referrerType || 'User');
-            const ReeModel = getModel(ref.refereeType || 'User');
+            const inferred = getTypesFromReferralType(ref.referralType);
+            const RefModel = getModel(ref.referrerType || inferred.referrerType);
+            const ReeModel = getModel(ref.refereeType || inferred.refereeType);
 
             let referrerName = ref.referrer || 'Unknown';
             let refereeName = ref.referee || 'Unknown';
 
             // Referrer lookup
             if (mongoose.Types.ObjectId.isValid(ref.referrer)) {
-                const doc = await RefModel.findById(ref.referrer).select('firstName lastName businessName shopName name').lean();
+                const doc = await RefModel.findById(ref.referrer).select('firstName lastName businessName shopName clinicName name').lean();
                 if (doc) {
-                    if (doc.businessName) referrerName = doc.businessName;
-                    else if (doc.shopName) referrerName = doc.shopName;
-                    else if (doc.name) referrerName = doc.name;
-                    else if (doc.firstName || doc.lastName) referrerName = `${doc.firstName || ''} ${doc.lastName || ''}`.trim();
+                    referrerName = doc.businessName || doc.shopName || doc.clinicName || doc.name || `${doc.firstName || ''} ${doc.lastName || ''}`.trim() || ref.referrer;
                 }
-            } else {
-                referrerName = ref.referrer;
             }
 
             // Referee lookup
             if (mongoose.Types.ObjectId.isValid(ref.referee)) {
-                const doc = await ReeModel.findById(ref.referee).select('firstName lastName businessName shopName name').lean();
+                const doc = await ReeModel.findById(ref.referee).select('firstName lastName businessName shopName clinicName name').lean();
                 if (doc) {
-                    if (doc.businessName) refereeName = doc.businessName;
-                    else if (doc.shopName) refereeName = doc.shopName;
-                    else if (doc.name) refereeName = doc.name;
-                    else if (doc.firstName || doc.lastName) refereeName = `${doc.firstName || ''} ${doc.lastName || ''}`.trim();
+                    refereeName = doc.businessName || doc.shopName || doc.clinicName || doc.name || `${doc.firstName || ''} ${doc.lastName || ''}`.trim() || ref.referee;
                 }
-            } else {
-                refereeName = ref.referee;
             }
 
             return {
@@ -268,7 +285,7 @@ export const PUT = authMiddlewareAdmin(
     const body = await req.json();
     const { id, ...updateData } = body;
 
-    if (updateData.status && !['Pending', 'Completed', 'Approved', 'Paid'].includes(updateData.status)) {
+    if (updateData.status && !['Pending', 'Completed'].includes(updateData.status)) {
       return Response.json(
         { message: "Invalid status" },
         { status: 400 }

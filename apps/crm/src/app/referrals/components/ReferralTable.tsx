@@ -47,7 +47,9 @@ const ReferralTable = ({ currentItems, getStatusColor }: ReferralTableProps) => 
                       {referral.status}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right">₹{referral.bonus}</TableCell>
+                  <TableCell className="text-right">
+                    {referral.bonus?.startsWith('₹') ? referral.bonus : `₹${referral.bonus}`}
+                  </TableCell>
                 </TableRow>
               ))
             )}

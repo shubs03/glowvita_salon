@@ -234,8 +234,8 @@ export default function ReferralManagementPage() {
               data.map((item, index) => (
                 <TableRow key={item?.referralId || index}>
                   <TableCell>{item?.referralId || 'N/A'}</TableCell>
-                  <TableCell>{item?.referrer || 'N/A'}</TableCell>
-                  <TableCell>{item?.referee || 'N/A'}</TableCell>
+                  <TableCell>{item?.referrerName || item?.referrer || 'N/A'}</TableCell>
+                  <TableCell>{item?.refereeName || item?.referee || 'N/A'}</TableCell>
                   <TableCell>{item?.date ? new Date(item.date).toLocaleDateString() : 'N/A'}</TableCell>
                   <TableCell>{item?.status || 'N/A'}</TableCell>
                   <TableCell>{item?.bonus || 'N/A'}</TableCell>

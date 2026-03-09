@@ -34,14 +34,16 @@ export async function creditReferralBonus(referralData, triggerEvent = 'appointm
     }
 
     if (!referral) {
-        await session.abortTransaction();
+        if (session) await session.abortTransaction();
+        if (session) session.endSession();
         return { success: false, message: 'Referral record not found' };
     }
 
     console.log(`[Referral Bonus] Processing bonus for ${referral.referralId} (${referral.referralType})`);
 
-    if (referral.status === 'Bonus Paid') {
-      await session.abortTransaction();
+    if (referral.status === 'Completed' || referral.status === 'Bonus Paid') {
+      if (session) await session.abortTransaction();
+      if (session) session.endSession();
       return { success: false, message: 'Bonus already paid' };
     }
 
@@ -67,7 +69,8 @@ export async function creditReferralBonus(referralData, triggerEvent = 'appointm
     }).sort({ regionId: -1 }).session(session);
 
     if (!settings) {
-      await session.abortTransaction();
+      if (session) await session.abortTransaction();
+      if (session) session.endSession();
       return { success: false, message: `${referral.referralType} referral settings not found` };
     }
 
@@ -116,7 +119,8 @@ export async function creditReferralBonus(referralData, triggerEvent = 'appointm
     }
 
     if (!referrer) {
-      await session.abortTransaction();
+      if (session) await session.abortTransaction();
+      if (session) session.endSession();
       return { success: false, message: `Referrer (${referral.referrerType}) not found` };
     }
 
@@ -167,20 +171,74 @@ export async function creditReferralBonus(referralData, triggerEvent = 'appointm
         { session }
       );
       
-      console.log(`[Referral Bonus] Successfully credited ₹${creditAmount} to ${referrerName}`);
+      console.log(`[Referral Bonus] Successfully credited ₹${creditAmount} to referrer: ${referrerName}`);
     }
 
-    // 5. Update referral status
-    referral.status = 'Bonus Paid';
+    // 5. Credit referee bonus (if enabled in settings)
+    const refereeBonusEnabled = settings.refereeBonus?.enabled;
+    const refereeBonusValue = parseFloat(settings.refereeBonus?.bonusValue || 0);
+
+    if (refereeBonusEnabled && refereeBonusValue > 0 && referee) {
+      const ReeModel = getModel(referral.refereeType || 'User');
+      const refereeBalanceBefore = referee.wallet || 0;
+      const refereeBalanceAfter = refereeBalanceBefore + refereeBonusValue;
+
+      const refereeTxId = `WTX_REFEEBONUS_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+      await WalletTransactionModel.create([{
+        userId: referee._id,
+        userType: referral.refereeType || 'User',
+        transactionId: refereeTxId,
+        transactionType: 'credit',
+        amount: refereeBonusValue,
+        balanceBefore: refereeBalanceBefore,
+        balanceAfter: refereeBalanceAfter,
+        source: 'referral_bonus',
+        status: 'completed',
+        description: `Welcome bonus for joining via referral from ${referrerName}`,
+        metadata: {
+          referralId: referral._id,
+          referralCode: referral.referralId,
+          referrerId: referral.referrer,
+          referrerType: referral.referrerType,
+          triggerEvent,
+          bonusType: 'referee_bonus'
+        }
+      }], { session });
+
+      await ReeModel.updateOne(
+        { _id: referee._id },
+        { 
+          $inc: { wallet: refereeBonusValue },
+          $set: { updatedAt: new Date() }
+        },
+        { session }
+      );
+
+      console.log(`[Referral Bonus] Successfully credited referee bonus ₹${refereeBonusValue} to referee: ${refereeName}`);
+    } else if (refereeBonusEnabled && refereeBonusValue > 0 && !referee) {
+      console.warn(`[Referral Bonus] Referee bonus enabled but referee record not found for referral ${referral.referralId}`);
+    }
+
+    // 6. Update referral status
+    referral.status = 'Completed';
+    // Store the actual credit amount in the bonus field for history
     referral.bonus = `₹${creditAmount}`;
     await referral.save({ session });
+
+    console.log(`[Referral Bonus] Referral ${referral.referralId} marked as Completed. Referrer bonus: ₹${creditAmount}`);
 
     if (session) {
         await session.commitTransaction();
         session.endSession();
     }
 
-    return { success: true, message: 'Bonus credited successfully', amount: creditAmount };
+    return { 
+      success: true, 
+      message: 'Bonus credited successfully', 
+      referrerAmount: creditAmount,
+      refereeAmount: (refereeBonusEnabled && refereeBonusValue > 0 && referee) ? refereeBonusValue : 0
+    };
 
   } catch (error) {
     if (session && session.inTransaction()) await session.abortTransaction();
@@ -204,7 +262,7 @@ export async function checkAndCreditReferralBonus(userId, eventType = 'appointme
     // We search across all types (C2C, V2V, etc.)
     const referral = await ReferralModel.findOne({
       referee: userId.toString(),
-      status: { $in: ['Pending', 'Completed'] }
+      status: 'Pending'
     });
 
     if (!referral) {

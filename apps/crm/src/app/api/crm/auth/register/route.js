@@ -336,6 +336,7 @@ export async function POST(req) {
     // 8️⃣ Handle referral if a code was provided
     if (referredByCode) {
       try {
+        const { checkAndCreditReferralBonus } = await import("@repo/lib/utils/referralWalletCredit");
         const referredCode = referredByCode.trim().toUpperCase();
         let referringEntity = null;
         let referralType = 'V2V';
@@ -365,9 +366,11 @@ export async function POST(req) {
           }).sort({ regionId: -1 });
 
           const bonusValue = settings?.referrerBonus?.bonusValue || 0;
+          const bonusType = settings?.referrerBonus?.bonusType || 'amount';
+          const bonusString = bonusType === 'amount' ? `₹${bonusValue}` : `${bonusValue}%`;
           const referralId = `REF_${referralType.charAt(0)}_${Date.now()}`;
 
-          const referral = await ReferralModel.create({
+          await ReferralModel.create({
             referralId,
             referralType,
             referrer: referringEntity._id.toString(),
@@ -377,10 +380,19 @@ export async function POST(req) {
             regionId: newVendor.regionId,
             date: new Date(),
             status: 'Pending',
-            bonus: `₹${bonusValue}`,
+            bonus: bonusString,
           });
 
           console.log(`${referralType} Referral created (Pending): ${referringEntity.businessName || referringEntity.firstName} refers ${newVendor.businessName}`);
+
+          // Check if bonus should be credited on signup
+          const creditTime = settings?.referrerBonus?.creditTime;
+          const refereeCreditTime = settings?.refereeBonus?.creditTime;
+
+          if (creditTime === 'signup' || (settings?.refereeBonus?.enabled && refereeCreditTime === 'signup')) {
+              console.log("Triggering referral bonus credit for vendor signup...");
+              await checkAndCreditReferralBonus(newVendor._id.toString(), 'signup');
+          }
         }
       } catch (refErr) {
         console.error("Error processing registration referral:", refErr);

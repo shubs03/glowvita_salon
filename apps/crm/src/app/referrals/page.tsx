@@ -112,8 +112,7 @@ export default function ReferralsPage() {
     
     const getStatusColor = (status: Referral['status']) => {
         switch (status) {
-          case 'Completed': return 'bg-blue-100 text-blue-800';
-          case 'Bonus Paid': return 'bg-green-100 text-green-800';
+          case 'Completed': return 'bg-green-100 text-green-800';
           case 'Pending': return 'bg-yellow-100 text-yellow-800';
           default: return 'bg-gray-100 text-gray-800';
         }
@@ -129,8 +128,16 @@ export default function ReferralsPage() {
         return <div className="p-8 text-center text-destructive">Failed to load referral data. Please try again.</div>
     }
 
-    const totalBonusEarned = referrals.filter((r: Referral) => r.status === 'Bonus Paid').reduce((acc, r) => acc + (Number(r.bonus) || 0), 0);
-    const successfulReferrals = referrals.filter(r => r.status !== 'Pending').length;
+    const totalBonusEarned = referrals
+        .filter((r: Referral) => r.status === 'Completed' || r.status === 'Bonus Paid')
+        .reduce((acc, r) => {
+            // Extract numeric value from bonus string (e.g., "₹100" -> 100)
+            const numericValue = typeof r.bonus === 'string' 
+                ? parseFloat(r.bonus.replace(/[^\d.]/g, '')) 
+                : Number(r.bonus);
+            return acc + (isNaN(numericValue) ? 0 : numericValue);
+        }, 0);
+    const successfulReferrals = referrals.filter(r => r.status === 'Completed' || r.status === 'Bonus Paid').length;
     
     const referrerBonus = settingsData?.referrerBonus?.bonusValue || 0;
     const refereeBonusEnabled = settingsData?.refereeBonus?.enabled;

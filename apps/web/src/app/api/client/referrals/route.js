@@ -94,7 +94,10 @@ export async function GET(req) {
     const totalEarnings = referrals
       .filter(r => r.status === 'Completed' || r.status === 'Bonus Paid')
       .reduce((sum, r) => {
-        const bonusValue = parseFloat(r.bonus.replace('₹', '').replace(',', ''));
+        // Handle both numeric and string bonuses (e.g., "₹100")
+        const bonusValue = typeof r.bonus === 'string' 
+          ? parseFloat(r.bonus.replace(/[^\d.]/g, '')) 
+          : Number(r.bonus);
         return sum + (isNaN(bonusValue) ? 0 : bonusValue);
       }, 0);
 
@@ -159,17 +162,17 @@ export async function POST(req) {
       }
       
       // Check referral status
-      if (referral.status === 'Bonus Paid') {
+      if (referral.status === 'Completed') {
         return NextResponse.json({ 
           success: false, 
           message: 'Bonus already claimed for this referral' 
         }, { status: 400 });
       }
-      
-      if (referral.status !== 'Completed') {
+
+      if (referral.status !== 'Joined') {
         return NextResponse.json({ 
           success: false, 
-          message: `Referral status is '${referral.status}'. Bonus can only be claimed when status is 'Completed'.`,
+          message: `Referral status is '${referral.status}'. Bonus can only be claimed when status is 'Joined'.`,
           status: referral.status
         }, { status: 400 });
       }
@@ -207,7 +210,7 @@ export async function POST(req) {
     const eligibleReferrals = await ReferralModel.find({
       referrer: userId,
       referralType: 'C2C',
-      status: 'Completed'
+      status: 'Joined'
     });
     
     console.log(`[Manual Claim] Found ${eligibleReferrals.length} eligible referrals for user ${userId}`);
@@ -215,7 +218,7 @@ export async function POST(req) {
     if (eligibleReferrals.length === 0) {
       return NextResponse.json({ 
         success: false, 
-        message: 'No eligible referrals found. Referrals must have status "Completed" to claim bonus.',
+        message: 'No eligible referrals found. Referrals must have status "Joined" to claim bonus.',
         eligibleCount: 0
       }, { status: 404 });
     }

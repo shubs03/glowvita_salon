@@ -72,7 +72,8 @@ export default function ReferralsPage() {
   const filteredHistory = useMemo(() => {
     return referralHistory.filter((referral: any) =>
       (referral.friend.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (statusFilter === 'all' || referral.status === statusFilter)
+      (statusFilter === 'all' || 
+       (statusFilter === 'Completed' ? (referral.status === 'Completed' || referral.status === 'Bonus Paid') : referral.status === statusFilter))
     );
   }, [referralHistory, searchTerm, statusFilter]);
 
@@ -83,10 +84,9 @@ export default function ReferralsPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Bonus Paid': 
-        return 'bg-green-100 text-green-800';
       case 'Completed': 
-        return 'bg-blue-100 text-blue-800';
+      case 'Bonus Paid':
+        return 'bg-green-100 text-green-800';
       case 'Pending': 
         return 'bg-yellow-100 text-yellow-800';
       default: 
@@ -120,12 +120,22 @@ export default function ReferralsPage() {
     );
   }
 
+  const totalEarnings = referralHistory
+    .filter((r: any) => r.status === 'Completed' || r.status === 'Bonus Paid')
+    .reduce((acc: number, r: any) => {
+      const numericValue = typeof r.reward === 'string' 
+        ? parseFloat(r.reward.replace(/[^\d.]/g, '')) 
+        : Number(r.reward);
+      return acc + (isNaN(numericValue) ? 0 : numericValue);
+    }, 0);
+  const successfulReferralsCount = referralHistory.filter((r: any) => r.status === 'Completed' || r.status === 'Bonus Paid').length;
+
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <StatCard icon={Gift} title="Total Earnings" value={`₹${stats.totalEarnings}`} change="from referrals" />
-        <StatCard icon={UserPlus} title="Successful Referrals" value={stats.successfulReferrals} change="friends joined" />
-        <StatCard icon={Users} title="Total Referrals" value={stats.totalReferrals} change="invites sent" />
+        <StatCard icon={Gift} title="Total Earnings" value={`₹${totalEarnings}`} change="from referrals" />
+        <StatCard icon={UserPlus} title="Successful Referrals" value={successfulReferralsCount} change="friends joined" />
+        <StatCard icon={Users} title="Total Referrals" value={referralHistory.length} change="invites sent" />
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -228,8 +238,8 @@ export default function ReferralsPage() {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="Completed">Completed</SelectItem>
-                            <SelectItem value="Pending">Pending</SelectItem>
+                             <SelectItem value="Completed">Completed</SelectItem>
+                             <SelectItem value="Pending">Pending</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -263,7 +273,7 @@ export default function ReferralsPage() {
                           <Badge className={getStatusColor(referral.status)}>
                             {referral.status}
                           </Badge>
-                          {referral.status === 'Completed' && (
+                          {referral.status === 'Joined' && (
                             <Button 
                               size="sm" 
                               variant="outline"
@@ -276,7 +286,9 @@ export default function ReferralsPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">{referral.reward}</TableCell>
+                      <TableCell className="text-right">
+                        {referral.reward?.startsWith('₹') ? referral.reward : `₹${referral.reward}`}
+                      </TableCell>
                     </TableRow>
                   ))
                 )}

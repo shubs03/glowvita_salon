@@ -3,6 +3,6 @@ export type Referral = {
     referee: string;
     refereeName?: string;
     date: string;
-    status: 'Pending' | 'Completed' | 'Bonus Paid';
+    status: 'Pending' | 'Completed';
     bonus: string;
 };

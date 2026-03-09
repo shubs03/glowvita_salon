@@ -39,7 +39,7 @@ import {
 } from "@repo/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
-import Cookies from "js-cookie";
+
 
 interface User {
   firstName?: string;
@@ -133,50 +133,25 @@ export function MarketingHeader({
   const router = useRouter();
   const pathname = usePathname();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      // Remove all possible auth tokens from cookies
-      Cookies.remove("token", { path: "/" });
-      Cookies.remove("token", { path: "/", domain: window.location.hostname });
-      Cookies.remove("access_token", { path: "/" });
-      Cookies.remove("access_token", {
-        path: "/",
-        domain: window.location.hostname,
-      });
-      Cookies.remove("crm_access_token", { path: "/" });
-      Cookies.remove("crm_access_token", {
-        path: "/",
-        domain: window.location.hostname,
-      });
+      // Call server-side logout to clear the httpOnly cookie (js-cookie cannot do this)
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
 
       // Clear all auth-related data from localStorage
       localStorage.removeItem("userAuthState");
       localStorage.removeItem("crmAuthState");
       localStorage.removeItem("adminAuthState");
 
-      // Clear any other possible tokens
-      Object.keys(localStorage).forEach((key) => {
-        if (key.includes("token") || key.includes("auth")) {
-          try {
-            localStorage.removeItem(key);
-          } catch (e) {
-            console.warn(`Failed to remove localStorage item: ${key}`, e);
-          }
-        }
-      });
-
-      // Dispatch the client-side action to clear all auth state
+      // Clear Redux auth state and reset cart to guest mode
       dispatch(clearUserAuth());
-      // Reset cart to guest mode
       dispatch(resetToGuest());
       toast.success("You have been logged out.");
-      // Redirect to login page
       router.push("/client-login");
     } catch (error) {
       console.error("Logout error:", error);
       toast.error("Error during logout. Please try again.");
-      // Still redirect to login even if there was an error
       router.push("/client-login");
     } finally {
       setIsLoggingOut(false);

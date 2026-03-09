@@ -50,7 +50,7 @@ export const ReferralReportTable = () => {
   };
   const cities = data?.cities || [];
   const vendors = data?.vendors || [];
-  const statuses = data?.statuses || ['Pending', 'Active', 'Completed', 'Bonus Paid'];
+  const statuses = data?.statuses || ['Pending', 'Completed'];
 
   const {
     paginatedData,
@@ -62,10 +62,7 @@ export const ReferralReportTable = () => {
   const getStatusBadge = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed':
-      case 'bonus paid':
         return <Badge variant="default" className="bg-green-500">{status}</Badge>;
-      case 'active':
-        return <Badge variant="default" className="bg-blue-500">{status}</Badge>;
       case 'pending':
         return <Badge variant="secondary">{status}</Badge>;
       default:
@@ -402,7 +399,7 @@ export const ReferralReportTable = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -437,17 +434,6 @@ export const ReferralReportTable = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{summary.completedReferrals}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-blue-500" />
-              Active
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary.activeReferrals}</div>
           </CardContent>
         </Card>
         <Card>

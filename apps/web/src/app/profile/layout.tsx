@@ -25,9 +25,8 @@ import {
 import { cn } from '@repo/ui/cn';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppDispatch } from "@repo/store/hooks";
-import { clearUserAuth } from "@repo/store/slices/userAuthSlice";
+import { clearUserAuth } from "@repo/store/slices/Web/userAuthSlice";
 import { toast } from 'sonner';
-import Cookies from 'js-cookie';
 
 const navItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard, href: '/profile' },
@@ -60,33 +59,18 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   }, [isLoading, isAuthenticated, router]);
 
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      // Remove all possible auth tokens from cookies
-      Cookies.remove('token', { path: '/' });
-      Cookies.remove('token', { path: '/', domain: window.location.hostname });
-      Cookies.remove('access_token', { path: '/' });
-      Cookies.remove('access_token', { path: '/', domain: window.location.hostname });
-      Cookies.remove('crm_access_token', { path: '/' });
-      Cookies.remove('crm_access_token', { path: '/', domain: window.location.hostname });
-      
+      // Call server-side logout to clear the httpOnly cookie (js-cookie cannot do this)
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+
       // Clear all auth-related data from localStorage
       localStorage.removeItem('userAuthState');
       localStorage.removeItem('crmAuthState');
       localStorage.removeItem('adminAuthState');
-      
-      // Clear any other possible tokens
-      Object.keys(localStorage).forEach(key => {
-        if (key.includes('token') || key.includes('auth')) {
-          try {
-            localStorage.removeItem(key);
-          } catch (e) {
-            console.warn(`Failed to remove localStorage item: ${key}`, e);
-          }
-        }
-      });
 
+      // Clear Redux auth state
       dispatch(clearUserAuth());
       toast.success("You have been logged out.");
       router.push('/client-login');

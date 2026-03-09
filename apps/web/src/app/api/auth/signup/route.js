@@ -178,20 +178,26 @@ export async function POST(req) {
     // Create referral entry
     if (referringUser && referralCode) {
       try {
+        const { C2VSettingsModel, ReferralModel } = await import('@repo/lib/models/admin/Reffer');
+        const { checkAndCreditReferralBonus } = await import('@repo/lib/utils/referralWalletCredit');
+
+        const referralType = referringUserType === 'Vendor' ? 'C2V' : 'C2C';
+        const SettingsModel = referralType === 'C2V' ? C2VSettingsModel : C2CSettingsModel;
+
         // Get correct settings based on region
-        const settings = await C2CSettingsModel.findOne({
+        const settings = await SettingsModel.findOne({
           $or: [
             { regionId: user.regionId },
             { regionId: null }
           ]
         }).sort({ regionId: -1 });
 
-        const bonusAmount = settings?.referrerBonus?.bonusValue || 100;
+        const bonusAmount = settings?.referrerBonus?.bonusValue || 0;
         const bonusType = settings?.referrerBonus?.bonusType || 'amount';
         const bonusString = bonusType === 'amount' ? `₹${bonusAmount}` : `${bonusAmount}%`;
 
-        await ReferralModel.create({
-          referralType: referringUserType === 'Vendor' ? 'C2V' : 'C2C',
+        const newReferral = await ReferralModel.create({
+          referralType: referralType,
           referralId: `REF${Date.now()}${Math.floor(Math.random() * 1000)}`,
           referrer: referringUser._id.toString(),
           referrerType: referringUserType,
@@ -203,7 +209,16 @@ export async function POST(req) {
           bonus: bonusString,
         });
 
-        console.log(`Referral entry created: ${referringUserType} refers User`);
+        console.log(`Referral entry created: ${referringUserType} refers User (${referralType})`);
+
+        // Check if bonus should be credited on signup
+        const creditTime = settings?.referrerBonus?.creditTime;
+        const refereeCreditTime = settings?.refereeBonus?.creditTime;
+
+        if (creditTime === 'signup' || (settings?.refereeBonus?.enabled && refereeCreditTime === 'signup')) {
+            console.log("Triggering referral bonus credit for signup event...");
+            await checkAndCreditReferralBonus(user._id.toString(), 'signup');
+        }
       } catch (referralError) {
         console.error('Error creating referral entry:', referralError);
       }
