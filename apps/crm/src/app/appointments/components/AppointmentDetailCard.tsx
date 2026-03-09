@@ -251,9 +251,11 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
               Invoice
             </Button>
           )}
-          <Button variant="outline" size="icon" onClick={onEdit}>
-            <Edit className="h-4 w-4" />
-          </Button>
+          {appointment.status !== 'completed' && appointment.status !== 'completed without payment' && (
+            <Button variant="outline" size="icon" onClick={onEdit}>
+              <Edit className="h-4 w-4" />
+            </Button>
+          )}
           <Button variant="outline" size="icon" onClick={onDelete}>
             <Trash2 className="h-4 w-4 text-red-500" />
           </Button>
