@@ -43,7 +43,7 @@ type Transaction = {
 };
 
 export default function WalletPage() {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [filter, setFilter] = useState<'all' | 'credit' | 'debit'>('all');

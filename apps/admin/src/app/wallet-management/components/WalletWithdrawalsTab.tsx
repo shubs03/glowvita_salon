@@ -311,7 +311,7 @@ export function WalletWithdrawalsTab() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedWithdrawals.map((withdrawal) => (
+                      paginatedWithdrawals.map((withdrawal: WalletWithdrawal) => (
                         <TableRow key={withdrawal._id}>
                           <TableCell className="font-mono text-xs">
                             {withdrawal.withdrawalId}

@@ -291,7 +291,7 @@ export function WalletTransactionsTab() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedTransactions.map((transaction) => (
+                      paginatedTransactions.map((transaction: WalletTransaction) => (
                         <TableRow key={transaction._id}>
                           <TableCell className="font-mono text-xs">
                             {transaction.transactionId}

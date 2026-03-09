@@ -215,33 +215,10 @@ export default function ReferralsPage() {
 
       <Card>
         <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                <div>
-                    <CardTitle>Referral History</CardTitle>
-                    <CardDescription>Track the status of your referrals.</CardDescription>
-                </div>
-                <div className="flex gap-2">
-                    <div className="relative">
-                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        type="search"
-                        placeholder="Search by friend's name..."
-                        className="pl-8"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[150px]">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                             <SelectItem value="Completed">Completed</SelectItem>
-                             <SelectItem value="Pending">Pending</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <div>
+              <CardTitle>Referral History</CardTitle>
+              <CardDescription>Track the status of your referrals.</CardDescription>
             </div>
             <div className="flex gap-2">
               <div className="relative">
