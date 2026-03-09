@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@repo/ui/tabs";
 import { useCrmAuth } from '@/hooks/useCrmAuth';
-import { useGetVendorProfileQuery, useGetWorkingHoursQuery, useGetCurrentSupplierProfileQuery, useGetDoctorProfileQuery } from '@repo/store/api';
+import { useGetVendorProfileQuery, useGetWorkingHoursQuery, useGetCurrentSupplierProfileQuery, useGetDoctorProfileQuery, useUpdateVendorProfileMutation, useUpdateSupplierProfileMutation, useUpdateDoctorProfileMutation } from '@repo/store/api';
 import { toast } from 'sonner';
 import { ProfileTab } from './tabs/ProfileTab';
 import { SupplierProfileTab } from './tabs/SupplierProfileTab';
@@ -185,6 +185,11 @@ export default function ProfilePage() {
     skip: !user?._id || role !== 'vendor'
   });
 
+  // Update mutations for auto-saving the profile image
+  const [updateVendorProfile] = useUpdateVendorProfileMutation();
+  const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
+  const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
+
   const [localVendor, setLocalVendor] = useState<VendorProfile | null>(null);
   const [localSupplier, setLocalSupplier] = useState<SupplierProfile | null>(null);
   const [localDoctor, setLocalDoctor] = useState<DoctorProfile | null>(null);
@@ -296,13 +301,13 @@ export default function ProfilePage() {
     } else {
       // Initialize with default opening hours if none exist
       setOpeningHours([
-        { day: 'Monday', open: '09:00', close: '18:00', isOpen: true },
-        { day: 'Tuesday', open: '09:00', close: '18:00', isOpen: true },
-        { day: 'Wednesday', open: '09:00', close: '18:00', isOpen: true },
-        { day: 'Thursday', open: '09:00', close: '18:00', isOpen: true },
-        { day: 'Friday', open: '09:00', close: '18:00', isOpen: true },
-        { day: 'Saturday', open: '10:00', close: '15:00', isOpen: true },
-        { day: 'Sunday', open: '', close: '', isOpen: false },
+        { day: 'Monday', open: '09:00', close: '20:00', isOpen: true },
+        { day: 'Tuesday', open: '09:00', close: '20:00', isOpen: true },
+        { day: 'Wednesday', open: '09:00', close: '20:00', isOpen: true },
+        { day: 'Thursday', open: '09:00', close: '20:00', isOpen: true },
+        { day: 'Friday', open: '09:00', close: '20:00', isOpen: true },
+        { day: 'Saturday', open: '09:00', close: '20:00', isOpen: true },
+        { day: 'Sunday', open: '09:00', close: '20:00', isOpen: true },
       ]);
     }
   }, [workingHoursData]);
@@ -356,13 +361,19 @@ export default function ProfilePage() {
         reader.onerror = (error) => reject(error);
       });
 
-      // This would be handled by the ProfileHeader component, but we need to update the state here
+      // Update state and call the API mutation immediately to auto-save
       if (role === 'vendor' && localVendor) {
-        setLocalVendor({ ...localVendor, profileImage: base64 });
+        const updatedVendor = { ...localVendor, profileImage: base64 };
+        setLocalVendor(updatedVendor);
+        await updateVendorProfile(updatedVendor).unwrap();
       } else if (role === 'supplier' && localSupplier) {
-        setLocalSupplier({ ...localSupplier, profileImage: base64 });
+        const updatedSupplier = { ...localSupplier, profileImage: base64 };
+        setLocalSupplier(updatedSupplier);
+        await updateSupplierProfile(updatedSupplier).unwrap();
       } else if (role === 'doctor' && localDoctor) {
-        setLocalDoctor({ ...localDoctor, profileImage: base64 });
+        const updatedDoctor = { ...localDoctor, profileImage: base64 };
+        setLocalDoctor(updatedDoctor);
+        await updateDoctorProfile(updatedDoctor).unwrap();
       }
 
       toast.success('Profile image updated successfully');
