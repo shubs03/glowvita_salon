@@ -376,13 +376,16 @@ export default function AppointmentCard({
 
               {appointment.status !== 'completed' && appointment.status !== 'completed without payment' && appointment.status !== 'cancelled' && (
                 <>
-                  <DropdownMenuItem
-                    onClick={(e) => handleAction(e, onEdit)}
-                    className="py-3 font-bold text-base"
-                  >
-                    <Clock className="w-5 h-5 mr-3" />
-                    Edit
-                  </DropdownMenuItem>
+                  {/* Only hide Edit for online appointments, keep Cancel visible as per "deleted tab" requirement */}
+                  {appointment.mode !== 'online' && (
+                    <DropdownMenuItem
+                      onClick={(e) => handleAction(e, onEdit)}
+                      className="py-3 font-bold text-base"
+                    >
+                      <Clock className="w-5 h-5 mr-3" />
+                      Edit
+                    </DropdownMenuItem>
+                  )}
 
                   <DropdownMenuItem
                     className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 py-3 font-bold text-base"

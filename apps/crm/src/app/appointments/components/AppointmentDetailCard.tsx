@@ -251,11 +251,14 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
               Invoice
             </Button>
           )}
-          {appointment.status !== 'completed' && appointment.status !== 'completed without payment' && (
-            <Button variant="outline" size="icon" onClick={onEdit}>
-              <Edit className="h-4 w-4" />
-            </Button>
-          )}
+          {appointment.status !== 'completed' && appointment.status !== 'completed without payment' && !(
+            ((appointment as any).mode === 'online' || (appointment as any).payment?.bookingSource === 'web' || (appointment as any).bookingSource === 'web' || String((appointment as any).paymentMethod).toLowerCase() === 'pay online' || String((appointment as any).payment?.paymentMethod).toLowerCase() === 'pay online') &&
+            (String((appointment as any).paymentStatus).toLowerCase() === 'completed' || String((appointment as any).paymentStatus).toLowerCase() === 'paid' || String((appointment as any).payment?.paymentStatus).toLowerCase() === 'completed' || String((appointment as any).payment?.paymentStatus).toLowerCase() === 'paid')
+          ) && (
+              <Button variant="outline" size="icon" onClick={onEdit}>
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
           <Button variant="outline" size="icon" onClick={onDelete}>
             <Trash2 className="h-4 w-4 text-red-500" />
           </Button>

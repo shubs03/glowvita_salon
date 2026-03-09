@@ -734,7 +734,29 @@ export function AppointmentDetailView({
     }
   };
 
+  const isOnlineBooking = liveAppointment.mode === 'online' ||
+    liveAppointment.bookingSource === 'web' ||
+    liveAppointment.payment?.bookingSource === 'web' ||
+    liveAppointment.paymentMethod?.toLowerCase() === 'pay online' ||
+    liveAppointment.payment?.paymentMethod?.toLowerCase() === 'pay online';
+
+  const isFullyPaid = liveAppointment.paymentStatus?.toLowerCase() === 'completed' ||
+    liveAppointment.paymentStatus?.toLowerCase() === 'paid' ||
+    liveAppointment.payment?.paymentStatus?.toLowerCase() === 'completed' ||
+    liveAppointment.payment?.paymentStatus?.toLowerCase() === 'paid';
+
+  const isPaidOnline = isOnlineBooking && isFullyPaid;
+
   const getStatusOptions = (currentStatus: string) => {
+    if (isPaidOnline) {
+      // For online paid appointments, show "Confirmed", "Completed" and "Cancelled" (restored as per user request)
+      return [
+        { value: 'confirmed', label: 'Confirm Appointment' },
+        { value: 'completed', label: 'Mark as Completed' },
+        { value: 'cancelled', label: 'Cancel Appointment' }
+      ];
+    }
+
     const commonOptions = [
       { value: 'cancelled', label: 'Cancel Appointment' }
     ];
@@ -1374,7 +1396,7 @@ export function AppointmentDetailView({
                       {isCollectingPayment ? 'Hide Payment' : 'Collect Payment'}
                     </Button>
                   )}
-                  {liveAppointment.status !== 'completed' && (
+                  {liveAppointment.status !== 'completed' && !isPaidOnline && (
                     <Button
                       variant="outline"
                       className="w-full sm:w-auto"

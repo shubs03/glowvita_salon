@@ -208,19 +208,23 @@ const AppointmentTable = ({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {remainingAmount > 0 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onOpenPaymentModal(appointment)}
-                            className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
-                            title="Collect Payment"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
-                          </Button>
-                        )}
+                        {remainingAmount > 0 &&
+                          appointment.status !== 'cancelled' &&
+                          appointment.status !== 'completed' &&
+                          appointment.status !== 'completed without payment' &&
+                          ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) !== 'completed' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onOpenPaymentModal(appointment)}
+                              className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                              title="Collect Payment"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                              </svg>
+                            </Button>
+                          )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -229,16 +233,19 @@ const AppointmentTable = ({
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {(appointment.status !== 'completed' && appointment.status !== 'completed without payment') && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onOpenModal('edit', appointment)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        )}
+                        {(appointment.status !== 'completed' && appointment.status !== 'completed without payment') && !(
+                          ((appointment as any).mode === 'online' || (appointment as any).payment?.bookingSource === 'web') &&
+                          ((appointment as any).paymentStatus === 'completed' || (appointment as any).paymentStatus === 'paid' || (appointment as any).payment?.paymentStatus === 'completed' || (appointment as any).payment?.paymentStatus === 'paid')
+                        ) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onOpenModal('edit', appointment)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
                         <Button
                           variant="ghost"
                           size="sm"
