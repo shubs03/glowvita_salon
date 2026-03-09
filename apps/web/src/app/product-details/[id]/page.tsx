@@ -61,7 +61,7 @@ export default function ProductDetailsPage() {
   const { id } = params;
   const dispatch = useAppDispatch();
   const { user, isAuthenticated } = useAuth();
-  
+
   const [quantity, setQuantity] = useState(1);
   const [mainImage, setMainImage] = useState('');
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -70,17 +70,17 @@ export default function ProductDetailsPage() {
   const [isSubmittingQuestion, setIsSubmittingQuestion] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isWishlistLoading, setIsWishlistLoading] = useState(true);
-  
+
   // Review states
   const [reviewRating, setReviewRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  
+
   // Fetch product data
   const { data: productResponse, isLoading, error } = useGetPublicProductByIdQuery(id as string);
   const [addToCartAPI] = useAddToClientCartMutation();
-  
+
   // Fetch product questions
   const { data: questionsResponse, refetch: refetchQuestions } = useGetProductQuestionsQuery(id as string);
   const [submitQuestion] = useSubmitProductQuestionMutation();
@@ -93,10 +93,10 @@ export default function ProductDetailsPage() {
   const productReviews = reviewsResponse?.reviews || [];
 
   console.log("Product Response:", productResponse);
-  
+
   // Initialize cart sync
   useCartSync();
-  
+
   const product = productResponse?.product;
   const availableStock = product?.stock || 0;
   const isOutOfStock = availableStock === 0;
@@ -112,7 +112,7 @@ export default function ProductDetailsPage() {
               'Content-Type': 'application/json',
             },
           });
-          
+
           if (response.ok) {
             const data = await response.json();
             setIsWishlisted(data.isInWishlist);
@@ -139,7 +139,7 @@ export default function ProductDetailsPage() {
       setIsWishlistLoading(true);
       const url = isWishlisted ? `/api/client/wishlist/${id}/remove` : '/api/client/wishlist';
       const method = isWishlisted ? 'DELETE' : 'POST';
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -195,7 +195,7 @@ export default function ProductDetailsPage() {
   const handleAddToCart = async (selectedProduct?: any) => {
     const prod = selectedProduct || product;
     const qty = selectedProduct ? 1 : quantity; // Use 1 for related products
-    
+
     // Validate product data is available
     if (!prod) {
       toast.error("Product data not available. Please try again.");
@@ -205,7 +205,7 @@ export default function ProductDetailsPage() {
     // Validate required fields
     const productId = prod.id || prod._id || id;
     const productPrice = prod.salePrice || prod.price;
-    
+
     if (!productId) {
       toast.error("Product ID is missing. Please refresh the page.");
       return;
@@ -233,20 +233,23 @@ export default function ProductDetailsPage() {
     }
 
     const isAddingToCartState = selectedProduct ? false : isAddingToCart;
-    const setIsAddingToCartState = selectedProduct ? () => {} : setIsAddingToCart;
+    const setIsAddingToCartState = selectedProduct ? () => { } : setIsAddingToCart;
 
     setIsAddingToCartState(true as any);
     try {
       if (isAuthenticated && user?._id) {
         // User is authenticated - use API
+        const effectivePrice = (prod.salePrice && prod.salePrice > 0) ? prod.salePrice : prod.price;
         const cartItem = {
           productId: productId,
           productName: prod.name || "Product",
-          productImage: Array.isArray(prod.images) && prod.images.length > 0 
-            ? prod.images[0] 
+          productImage: Array.isArray(prod.images) && prod.images.length > 0
+            ? prod.images[0]
             : "",
           quantity: qty,
-          price: productPrice,
+          price: effectivePrice,
+          originalPrice: prod.price, // original price for display
+          hasSale: prod.salePrice > 0, // sale flag
           vendorId: prod.vendorId || "",
           supplierName: prod.vendorName || "Unknown Vendor",
         };
@@ -254,7 +257,7 @@ export default function ProductDetailsPage() {
         console.log("Adding to cart (API):", cartItem); // Debug log
 
         await addToCartAPI(cartItem).unwrap();
-        
+
         // Show success toast
         toast.success(`${prod.name} added to cart!`, {
           description: `${qty} ${qty > 1 ? 'items' : 'item'} added to your cart.`,
@@ -265,14 +268,17 @@ export default function ProductDetailsPage() {
         });
       } else {
         // User is not authenticated - use local storage
+        const effectivePrice = (prod.salePrice && prod.salePrice > 0) ? prod.salePrice : prod.price;
         const cartItem = {
           _id: productId,
           productId: productId,
           productName: prod.name || "Product",
-          price: productPrice,
+          price: effectivePrice,
+          originalPrice: prod.price,
+          hasSale: prod.salePrice > 0,
           quantity: qty,
-          productImage: Array.isArray(prod.images) && prod.images.length > 0 
-            ? prod.images[0] 
+          productImage: Array.isArray(prod.images) && prod.images.length > 0
+            ? prod.images[0]
             : "",
           vendorId: prod.vendorId || "",
           supplierName: prod.vendorName || "Unknown Vendor",
@@ -329,12 +335,15 @@ export default function ProductDetailsPage() {
     try {
       // Store product details in local storage for checkout
       // Match the structure used in salon-details page
+      const effectivePrice = (prod.salePrice && prod.salePrice > 0) ? prod.salePrice : prod.price;
       const productForCheckout = {
         id: prod.id || id, // Product ID (MongoDB ObjectId)
         name: prod.name,
-        price: prod.salePrice || prod.price, // Use sale price if available
-        image: Array.isArray(prod.images) && prod.images.length > 0 
-          ? prod.images[0] 
+        price: effectivePrice, // Use sale price if available
+        originalPrice: prod.price,
+        hasSale: prod.salePrice > 0,
+        image: Array.isArray(prod.images) && prod.images.length > 0
+          ? prod.images[0]
           : "https://placehold.co/320x224/e2e8f0/64748b?text=Product",
         vendorId: prod.vendorId,
         vendorName: prod.vendorName || "Unknown Vendor",
@@ -344,11 +353,11 @@ export default function ProductDetailsPage() {
         category: prod.category || "Beauty Products",
         stock: prod.stock,
       };
-      
+
       console.log("Buy Now - Product for checkout:", productForCheckout); // Debug log
-      
+
       localStorage.setItem("buyNowProduct", JSON.stringify(productForCheckout));
-      
+
       // Redirect to checkout page
       router.push("/checkout");
     } catch (error) {
@@ -392,7 +401,7 @@ export default function ProductDetailsPage() {
       toast.success("Question submitted successfully!", {
         description: "The vendor will answer your question soon.",
       });
-      
+
       setQuestionText('');
       refetchQuestions();
     } catch (error: any) {
@@ -444,7 +453,7 @@ export default function ProductDetailsPage() {
       toast.success("Review submitted successfully!", {
         description: "Your review will be visible in your profile after approval by the product owner.",
       });
-      
+
       // Reset form
       setReviewRating(0);
       setHoveredRating(0);
@@ -508,8 +517,8 @@ export default function ProductDetailsPage() {
   const specifications = {
     ...(product.productForm ? { 'Form': product.productForm } : {}),
     ...(product.brand ? { 'Brand': product.brand } : {}),
-    ...(product.forBodyPart ? { 'Body Part' : product.forBodyPart } : {}),
-    ...(product.bodyPartType ? { 'Body Part Type' : product.bodyPartType } : {}),
+    ...(product.forBodyPart ? { 'Body Part': product.forBodyPart } : {}),
+    ...(product.bodyPartType ? { 'Body Part Type': product.bodyPartType } : {}),
     // ...(product.category ? { 'Category': product.category } : {}),
     // ...(product.size && product.sizeMetric ? { 'Volume': `${product.size} ${product.sizeMetric}` } : {}),
   };
@@ -517,8 +526,8 @@ export default function ProductDetailsPage() {
   return (
     <PageContainer className='max-w-7xl'>
 
-      <DiscountBanner/>
-      
+      <DiscountBanner />
+
       <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-start py-12">
         {/* Left Column: Image Gallery (Sticky) */}
         <div className="lg:sticky top-24">
@@ -527,35 +536,35 @@ export default function ProductDetailsPage() {
             <div className="flex flex-col gap-4">
               {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
               {product.images?.map((img: any, index: any) => (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className={`relative w-20 h-20 rounded-md overflow-hidden cursor-pointer border-2 transition-all ${mainImage === img ? 'border-primary shadow-md' : 'border-transparent hover:border-primary/50'}`}
                   onClick={() => setMainImage(img)}
                 >
-                  <Image 
-                    src={img} 
-                    alt={`${product.name} thumbnail ${index + 1}`} 
-                    layout="fill" 
+                  <Image
+                    src={img}
+                    alt={`${product.name} thumbnail ${index + 1}`}
+                    layout="fill"
                     objectFit="cover"
                     data-ai-hint="product photo"
                   />
                 </div>
               ))}
             </div>
-            
+
             {/* Main Image */}
             <div className="flex w-full h-96 relative rounded-lg overflow-hidden shadow-lg">
-              <Image 
-                src={mainImage} 
-                alt={product.name} 
-                layout="fill" 
+              <Image
+                src={mainImage}
+                alt={product.name}
+                layout="fill"
                 objectFit="cover"
                 className="w-full h-full"
                 data-ai-hint="skincare product"
               />
             </div>
           </div>
-          
+
           {/* Product Purchase Actions - Below Main Image */}
           <ProductPurchaseActions
             handleWishlistToggle={handleWishlistToggle}
@@ -567,30 +576,30 @@ export default function ProductDetailsPage() {
             isBuyingNow={isBuyingNow}
             isAddingToCart={isAddingToCart}
           />
-          
+
           {/* Other Products from Same Vendor Section */}
           {vendorProducts.length > 0 && (
             <div className="mt-8">
               <h3 className="text-lg text-right font-semibold mb-4">More from {product.vendorName}</h3>
               <div className="flex justify-end gap-4">
                 {(vendorProducts as any[]).slice(0, 4).map((prod: any) => (
-                  <div 
-                    key={prod.id} 
+                  <div
+                    key={prod.id}
                     className="relative group cursor-pointer"
                     onClick={() => router.push(`/product-details/${prod.id}`)}
                   >
                     <div className="w-20 h-20 overflow-hidden rounded-md shadow-sm">
-                      <Image 
-                        src={Array.isArray(prod.images) && prod.images.length > 0 
-                          ? prod.images[0] 
+                      <Image
+                        src={Array.isArray(prod.images) && prod.images.length > 0
+                          ? prod.images[0]
                           : prod.image || "https://placehold.co/80x80/e2e8f0/64748b?text=Product"}
-                        alt={prod.name} 
+                        alt={prod.name}
                         width={80}
                         height={80}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     </div>
-                    
+
                     {/* Tooltip */}
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-gray-900 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-20">
                       {prod.name}
@@ -602,23 +611,23 @@ export default function ProductDetailsPage() {
             </div>
           )}
         </div>
-        
+
         {/* Right Column: Product Details (Scrollable) */}
         <div className="mt-8 lg:mt-0 space-y-12">
           <div className="space-y-6">
             <h1 className="text-4xl font-bold font-headline text-primary">{product.name}</h1>
-            
+
             <div className="flex items-center gap-2">
               <div className="flex">
                 {[...Array(5)].map((_, i) => (
                   <Star key={i} className={`h-5 w-5 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
                 ))}
               </div>
-              <span className="text-muted-foreground">{product.rating} ({product.reviews} reviews)</span>
+              <span className="text-muted-foreground">{product.rating} ({product.reviewCount} reviews)</span>
             </div>
 
             <p className="text-lg text-muted-foreground">{product.description}</p>
-            
+
             {/* Price Display */}
             <div className="flex items-center gap-4">
               {product.salePrice && product.salePrice < product.price ? (
@@ -644,7 +653,7 @@ export default function ProductDetailsPage() {
               ))}
             </div>
           </div>
-          
+
           {/* Section: Specifications */}
           {Object.keys(specifications).length > 0 && (
             <div>
@@ -664,10 +673,10 @@ export default function ProductDetailsPage() {
             </div>
           )}
 
-          <ProductRatingsReviews 
-            averageRating={product.rating || 0} 
-            totalRatings={product.reviews || 0} 
-            totalReviews={product.reviews || 0}
+          <ProductRatingsReviews
+            averageRating={product.rating || 0}
+            totalRatings={product.reviewCount || 0}
+            totalReviews={product.reviewCount || 0}
             productReviews={productReviews}
             productQuestions={productQuestions}
             productId={id}
@@ -684,11 +693,12 @@ export default function ProductDetailsPage() {
       </div>
 
       {/* Relevant Products Section */}
-      <RelevantProducts 
+      <RelevantProducts
         currentProductId={product.id || id}
         vendorId={product.vendorId || ''}
         vendorName={product.vendorName || ''}
         category={product.category || ''}
+        categoryId={product.categoryId || ''}
         onBuyNow={handleBuyNow}
         onAddToCart={handleAddToCart}
         isSubscriptionExpired={false}

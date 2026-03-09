@@ -24,6 +24,7 @@ interface ClientListSectionProps {
   handleDeleteClick: (client: Client) => void;
   bookingsById: Map<string, number>;
   totalsById: Map<string, number>;
+  lastVisitDateById: Map<string, string>;
   offlineClients: Client[];
   onlineClients: Client[];
   appointments: any[];
@@ -39,6 +40,7 @@ export default function ClientListSection({
   handleDeleteClick,
   bookingsById,
   totalsById,
+  lastVisitDateById,
   offlineClients,
   onlineClients,
   appointments,
@@ -190,7 +192,9 @@ export default function ClientListSection({
                         <TableCell className="min-w-[150px] max-w-[180px] truncate">{client.email}</TableCell>
                         <TableCell className="min-w-[120px] max-w-[150px] truncate">{client.phone}</TableCell>
                         <TableCell className="min-w-[100px] truncate">{formatDateForDisplay(client.birthdayDate)}</TableCell>
-                        <TableCell className="min-w-[100px] truncate">{formatDateForDisplay(client.lastVisit)}</TableCell>
+                        <TableCell className="min-w-[100px] truncate">
+                          {formatDateForDisplay(lastVisitDateById.get(String(client._id)))}
+                        </TableCell>
                         <TableCell className="min-w-[100px]">
                           <span className="inline-flex items-center text-sm font-medium">
                             {bookingsById.get(String(client._id)) || 0}
@@ -246,7 +250,7 @@ export default function ClientListSection({
           </CardContent>
         </Card>
       </div>
-    
+
       <div className="p-6 border-t border-border bg-muted/30">
         <Pagination
           className=""

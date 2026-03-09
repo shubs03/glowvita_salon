@@ -262,8 +262,7 @@ export const POST = authMiddlewareAdmin(
     const documentsData = {
       aadharCard: documentsArray.find((d) => d.type === "aadhar")?.file || null,
       panCard: documentsArray.find((d) => d.type === "pan")?.file || null,
-      udyogAadhar: documentsArray.find((d) => d.type === "gst")?.file || null,
-      shopLicense:
+      shopAct:
         documentsArray.find((d) => d.type === "license")?.file || null,
       udhayamCert:
         documentsArray.find((d) => d.type === "udhayam")?.file || null,
@@ -273,8 +272,7 @@ export const POST = authMiddlewareAdmin(
       // Initialize document status fields for new documents
       aadharCardStatus: documentsArray.find((d) => d.type === "aadhar")?.file ? "pending" : undefined,
       panCardStatus: documentsArray.find((d) => d.type === "pan")?.file ? "pending" : undefined,
-      udyogAadharStatus: documentsArray.find((d) => d.type === "gst")?.file ? "pending" : undefined,
-      shopLicenseStatus: documentsArray.find((d) => d.type === "license")?.file ? "pending" : undefined,
+      shopActStatus: documentsArray.find((d) => d.type === "license")?.file ? "pending" : undefined,
       udhayamCertStatus: documentsArray.find((d) => d.type === "udhayam")?.file ? "pending" : undefined,
     };
 
@@ -289,9 +287,8 @@ export const POST = authMiddlewareAdmin(
             // Update the document field with the uploaded URL
             const docField = doc.type === 'aadhar' ? 'aadharCard' :
               doc.type === 'pan' ? 'panCard' :
-                doc.type === 'gst' ? 'udyogAadhar' :
-                  doc.type === 'license' ? 'shopLicense' :
-                    doc.type === 'udhayam' ? 'udhayamCert' : null;
+                doc.type === 'license' ? 'shopAct' :
+                  doc.type === 'udhayam' ? 'udhayamCert' : null;
 
             if (docField) {
               documentsData[docField] = docUrl;
@@ -356,38 +353,38 @@ export const POST = authMiddlewareAdmin(
 export const GET = authMiddlewareAdmin(
   async (req) => {
     const url = new URL(req.url);
-  const vendorIdParam = url.searchParams.get('vendorId');
+    const vendorIdParam = url.searchParams.get('vendorId');
 
-  console.log('[Vendor GET] Request from user:', {
-    userId: req.user._id,
-    roleName: req.user.roleName,
-    assignedRegions: req.user.assignedRegions,
-    vendorIdParam,
-    requestUrl: req.url
-  });
+    console.log('[Vendor GET] Request from user:', {
+      userId: req.user._id,
+      roleName: req.user.roleName,
+      assignedRegions: req.user.assignedRegions,
+      vendorIdParam,
+      requestUrl: req.url
+    });
 
-  // If vendorId is provided, fetch clients for that vendor
-  if (vendorIdParam) {
-    try {
-      const clients = await ClientModel.find({ vendorId: vendorIdParam })
-        .sort({ lastVisit: -1, createdAt: -1 })
-        .select('-emergencyContact -socialMediaLinks -tags -notes')
-        .lean();
+    // If vendorId is provided, fetch clients for that vendor
+    if (vendorIdParam) {
+      try {
+        const clients = await ClientModel.find({ vendorId: vendorIdParam })
+          .sort({ lastVisit: -1, createdAt: -1 })
+          .select('-emergencyContact -socialMediaLinks -tags -notes')
+          .lean();
 
-      return Response.json(clients);
-    } catch (error) {
-      console.error('Error fetching vendor clients:', error);
-      return Response.json({ error: 'Failed to fetch clients' }, { status: 500 });
+        return Response.json(clients);
+      } catch (error) {
+        console.error('Error fetching vendor clients:', error);
+        return Response.json({ error: 'Failed to fetch clients' }, { status: 500 });
+      }
     }
-  }
 
-  // Otherwise fetch all vendors with region filter
-  const regionQuery = buildRegionQueryFromRequest(req);
-  console.log('[Vendor GET] Query:', regionQuery);
-  const vendors = await VendorModel.find(regionQuery).populate("subscription.plan", "name").select("-password").lean();
-  console.log('[Vendor GET] Found vendors:', vendors.length);
-  return Response.json(vendors);
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN","STAFF"],
+    // Otherwise fetch all vendors with region filter
+    const regionQuery = buildRegionQueryFromRequest(req);
+    console.log('[Vendor GET] Query:', regionQuery);
+    const vendors = await VendorModel.find(regionQuery).populate("subscription.plan", "name").select("-password").lean();
+    console.log('[Vendor GET] Found vendors:', vendors.length);
+    return Response.json(vendors);
+  }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
   "vendors:view"
 );
 
@@ -564,9 +561,8 @@ export const PUT = authMiddlewareAdmin(
           const fileName = `vendor-${id}-${doc.type}`;
           const docField = doc.type === 'aadhar' ? 'aadharCard' :
             doc.type === 'pan' ? 'panCard' :
-              doc.type === 'gst' ? 'udyogAadhar' :
-                doc.type === 'license' ? 'shopLicense' :
-                  doc.type === 'udhayam' ? 'udhayamCert' : null;
+              doc.type === 'license' ? 'shopAct' :
+                doc.type === 'udhayam' ? 'udhayamCert' : null;
 
           if (docField) {
             const oldDocUrl = existingVendor.documents ? existingVendor.documents[docField] : null;
@@ -596,7 +592,6 @@ export const PUT = authMiddlewareAdmin(
   ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
   "vendors:edit"
 );
-
 
 // Delete Vendor
 export const DELETE = authMiddlewareAdmin(
@@ -631,7 +626,7 @@ export const PATCH = authMiddlewareAdmin(
       }
 
       // Prepare update data
-      const updateData = {
+      const updateDataForStatus = {
         status: status,
       };
 
@@ -642,26 +637,41 @@ export const PATCH = authMiddlewareAdmin(
           return Response.json({ message: "Vendor not found" }, { status: 404 });
         }
 
-        const documents = vendor.documents || {};
+        const vendorDocs = vendor.documents || {};
         const mandatoryDocs = [
           { key: "aadharCard", label: "Aadhar Card" },
           { key: "panCard", label: "PAN Card" },
-          { key: "udyogAadhar", label: "Udyog Aadhar" },
           { key: "udhayamCert", label: "Udhayam Certificate" },
-          { key: "shopLicense", label: "Shop License" },
+          { key: "shopAct", label: "Shop Act" },
         ];
 
         const pendingOrRejectedDocs = mandatoryDocs.filter((doc) => {
-          const isUploaded = documents[doc.key] && documents[doc.key] !== "";
-          const status = documents[`${doc.key}Status`];
-          return isUploaded && status !== "approved";
+          const isUploaded = vendorDocs[doc.key] && vendorDocs[doc.key] !== "";
+          const docStatus = vendorDocs[`${doc.key}Status`];
+
+          // Aadhaar and PAN are strictly mandatory
+          if (doc.key === "aadharCard" || doc.key === "panCard") {
+            return !isUploaded || docStatus !== "approved";
+          }
+
+          // Other docs: if uploaded, must be approved
+          return isUploaded && docStatus !== "approved";
         });
 
         if (pendingOrRejectedDocs.length > 0) {
           const docLabels = pendingOrRejectedDocs.map((doc) => doc.label).join(", ");
+          const missingMandatory = pendingOrRejectedDocs
+            .filter(d => (d.key === "aadharCard" || d.key === "panCard") && (!vendorDocs[d.key] || vendorDocs[d.key] === ""))
+            .map(d => d.label);
+
+          let errorMessage = `Cannot approve vendor. The following documents are not approved: ${docLabels}`;
+          if (missingMandatory.length > 0) {
+            errorMessage = `Cannot approve vendor. The following mandatory documents are missing or not approved: ${docLabels}`;
+          }
+
           return Response.json(
             {
-              message: `Cannot approve vendor. The following documents are not approved: ${docLabels}`,
+              message: errorMessage,
             },
             { status: 400 }
           );
@@ -670,7 +680,7 @@ export const PATCH = authMiddlewareAdmin(
 
       const updatedVendor = await VendorModel.findByIdAndUpdate(
         id,
-        { $set: updateData },
+        { $set: updateDataForStatus },
         { new: true }
       ).populate("subscription.plan", "name").select("-password");
 
@@ -713,8 +723,8 @@ export const PATCH = authMiddlewareAdmin(
 
       // Validate document type
       const validDocumentTypes = [
-        'aadharCard', 'udyogAadhar', 'udhayamCert',
-        'shopLicense', 'panCard'
+        'aadharCard', 'panCard', 'udhayamCert',
+        'shopAct'
       ];
 
       if (!validDocumentTypes.includes(documentType)) {
@@ -741,21 +751,21 @@ export const PATCH = authMiddlewareAdmin(
       }
 
       // Prepare update data
-      const updateData = {
+      const updateDataForDocStatus = {
         [`documents.${documentType}Status`]: status,
       };
 
       // Add rejection reason if status is rejected
       if (status === 'rejected') {
-        updateData[`documents.${documentType}AdminRejectionReason`] = rejectionReason;
+        updateDataForDocStatus[`documents.${documentType}AdminRejectionReason`] = rejectionReason;
       } else {
         // Clear rejection reason if status is not rejected
-        updateData[`documents.${documentType}AdminRejectionReason`] = null;
+        updateDataForDocStatus[`documents.${documentType}AdminRejectionReason`] = null;
       }
 
       const updatedVendor = await VendorModel.findByIdAndUpdate(
         vendorId,
-        { $set: updateData },
+        { $set: updateDataForDocStatus },
         { new: true }
       ).select("-password");
 

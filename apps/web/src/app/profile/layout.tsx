@@ -88,8 +88,8 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex h-[calc(100vh-80px)] items-center justify-center bg-background">
         <div className="flex flex-col items-center">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <p className="mt-4 text-muted-foreground">Loading Profile...</p>
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-muted-foreground">Loading Profile...</p>
         </div>
       </div>
     );
@@ -100,13 +100,13 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
   if (!isAuthenticated) {
     return null;
   }
-  
+
   return (
     <PageContainer>
       <div className="lg:grid lg:grid-cols-12 lg:gap-8">
         {/* Left Sidebar */}
         <aside className="lg:col-span-3 xl:col-span-2 mb-8 lg:mb-0">
-           <div className="lg:sticky lg:top-24">
+          <div className="lg:sticky lg:top-24">
             <Card className="bg-gradient-to-b from-card to-card/90 backdrop-blur-lg border">
               <CardHeader className="text-center p-6 border-b border-border/20">
                 <Avatar className="w-24 h-24 mx-auto mb-4 border-4 border-primary/20 shadow-xl">
@@ -121,7 +121,7 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
                 <CardTitle className="text-xl font-bold">
                   {user?.firstName} {user?.lastName}
                 </CardTitle>
-                <CardDescription className="text-sm">
+                <CardDescription className="text-sm break-all truncate" title={user?.emailAddress}>
                   {user?.emailAddress}
                 </CardDescription>
               </CardHeader>
@@ -154,7 +154,7 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
                 </nav>
               </CardContent>
             </Card>
-           </div>
+          </div>
         </aside>
 
         {/* Main Content */}
@@ -167,11 +167,11 @@ function ProfileLayoutContent({ children }: { children: React.ReactNode }) {
 }
 
 export default function ProfileLayout({ children }: { children: React.ReactNode }) {
-    return (
-        <Suspense fallback={<div>Loading profile...</div>}>
-            <ProfileLayoutContent>
-                {children}
-            </ProfileLayoutContent>
-        </Suspense>
-    )
+  return (
+    <Suspense fallback={<div>Loading profile...</div>}>
+      <ProfileLayoutContent>
+        {children}
+      </ProfileLayoutContent>
+    </Suspense>
+  )
 }

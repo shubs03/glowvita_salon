@@ -38,8 +38,6 @@ import {
   Zap,
   Calendar,
   Gift,
-  Percent,
-  Share,
   Loader2,
   Pin,
   LocateIcon,
@@ -68,6 +66,10 @@ import {
   useGetSalonReviewsQuery,
   useAddToClientCartMutation,
   useGetPublicVendorByIdQuery,
+  useGetSalonWishlistQuery,
+  useAddToSalonWishlistMutation,
+  useRemoveFromSalonWishlistMutation,
+  SALON_FAVORITES_VERSION,
 } from "@repo/store/services/api";
 import { useAppDispatch } from "@repo/store/hooks";
 import { addToCart, setCurrentUser } from "@repo/store/slices/cartSlice";
@@ -352,7 +354,6 @@ export default function SalonDetailsPage() {
   const id = params.id as string;
   const [activeTab, setActiveTab] = useState("overview");
   const [visibleTab, setVisibleTab] = useState("overview");
-  const [selectedImage, setSelectedImage] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
   const [mainImage, setMainImage] = useState("");
@@ -371,7 +372,8 @@ export default function SalonDetailsPage() {
     skip: !id,
   });
 
-  console.log("vendorsResponse : ", vendorsResponse)
+  console.log("SALON_FAVORITES_VERSION : ", SALON_FAVORITES_VERSION);
+  console.log("vendorsResponse : ", vendorsResponse);
 
   const {
     data: servicesData,
@@ -429,6 +431,42 @@ export default function SalonDetailsPage() {
     skip: !id,
   });
 
+  // Salon Wishlist hooks
+  const { data: wishlistData } = useGetSalonWishlistQuery(undefined, {
+    skip: !isAuthenticated
+  });
+  const [addToWishlist] = useAddToSalonWishlistMutation();
+  const [removeFromWishlist] = useRemoveFromSalonWishlistMutation();
+
+  const isFavorited = useMemo(() => {
+    if (!wishlistData?.data?.items) return false;
+    return wishlistData.data.items.some((item: any) => item.salonId === id);
+  }, [wishlistData, id]);
+
+  const toggleFavorite = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please login to add salons to your favorites", {
+        action: {
+          label: "Login",
+          onClick: () => router.push("/login"),
+        },
+      });
+      return;
+    }
+
+    try {
+      if (isFavorited) {
+        await removeFromWishlist(id).unwrap();
+        toast.success("Removed from favorites");
+      } else {
+        await addToWishlist(id).unwrap();
+        toast.success("Added to favorites");
+      }
+    } catch (err) {
+      toast.error("Failed to update favorites");
+    }
+  };
+
   // Cart mutation for authenticated users
   const [addToCartAPI] = useAddToClientCartMutation();
 
@@ -460,9 +498,9 @@ export default function SalonDetailsPage() {
         ...defaultSalon,
         id: vendorData._id || defaultSalon.id,
         name: vendorData.businessName || "No Name Available",
-        rating: reviewMetrics.averageRating || vendorData.rating || 4.8,
+        rating: reviewMetrics.averageRating || vendorData.rating || 0,
         reviewCount: reviewMetrics.totalReviews || vendorData.clientCount || 0,
-        address: `${vendorData.city || ""}, ${vendorData.state || ""}`,
+        address: vendorData.address || `${vendorData.city || ""}, ${vendorData.state || ""}`,
         email: vendorData.email || "",
         website: vendorData.website || "",
         phone: vendorData.phone || "",
@@ -541,7 +579,7 @@ export default function SalonDetailsPage() {
 
 
 
-  const handleBookNow = (service?: any) => {
+  const handleBookNow = (service?: any, offerCode?: string) => {
     // Check if subscription is expired
     if (isSubscriptionExpired) {
       toast.error('Booking Unavailable', {
@@ -556,18 +594,21 @@ export default function SalonDetailsPage() {
     } else {
       sessionStorage.removeItem("selectedService");
     }
-    router.push(`/book/${id}`);
+
+    // Build booking URL with offer code if provided
+    let bookingUrl = `/book/${id}`;
+    if (offerCode) {
+      bookingUrl += `?offerCode=${offerCode}`;
+    }
+
+    router.push(bookingUrl);
   };
 
 
 
   const openGalleryModal = (imageUrl: string) => {
-    setSelectedImage(imageUrl);
+    setMainImage(imageUrl);
     setIsGalleryModalOpen(true);
-  };
-
-  const closePreview = () => {
-    setSelectedImage("");
   };
 
   const handleBuyNow = (product: any) => {
@@ -581,8 +622,12 @@ export default function SalonDetailsPage() {
 
     // Store product details in local storage
     try {
+      const effectivePrice = (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price;
       const productWithVendor = {
         ...product,
+        price: effectivePrice,
+        originalPrice: product.price,
+        hasSale: product.salePrice > 0,
         vendorId: id, // Always use the salon ID from URL params
         vendorName: vendorData?.businessName || "Unknown Vendor",
         quantity: 1, // Add default quantity
@@ -611,12 +656,15 @@ export default function SalonDetailsPage() {
     try {
       if (isAuthenticated && user?._id) {
         // User is authenticated - use API
+        const effectivePrice = (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price;
         const cartItem = {
           productId: product.id,
           productName: product.name,
           productImage: product.image,
           quantity: 1,
-          price: product.price,
+          price: effectivePrice,
+          originalPrice: product.price, // Optional for API cart metadata
+          hasSale: product.salePrice > 0, // Optional for API cart metadata
           vendorId: id,
           supplierName: vendorData?.businessName || "Unknown Vendor",
         };
@@ -633,10 +681,13 @@ export default function SalonDetailsPage() {
         });
       } else {
         // User is not authenticated - use local storage
+        const effectivePrice = (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price;
         const cartItem = {
           _id: product.id,
           productName: product.name,
-          price: product.price,
+          price: effectivePrice,
+          originalPrice: product.price,
+          hasSale: product.salePrice > 0,
           quantity: 1,
           productImage: product.image,
           vendorId: id,
@@ -887,10 +938,16 @@ export default function SalonDetailsPage() {
                   {salon.name}
                 </h1>
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Star className="h-5 w-5 text-yellow-400 fill-current" />
-                    <span className="font-semibold">{salon.rating}</span>
-                    <span>({salon.reviewCount} reviews)</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      {salon.reviewCount > 0 && (
+                        <>
+                          <Star className="h-5 w-5 text-yellow-400 fill-current" />
+                          <span className="font-semibold">{salon.rating}</span>
+                        </>
+                      )}
+                      <span>({salon.reviewCount} reviews)</span>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-5 w-5" />
@@ -903,17 +960,10 @@ export default function SalonDetailsPage() {
                   size="sm"
                   variant="outline"
                   className="flex items-center gap-2"
+                  onClick={toggleFavorite}
                 >
-                  <Heart className="h-4 w-4" />
-                  Like
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex items-center gap-2"
-                >
-                  <Share className="h-4 w-4" />
-                  Share
+                  <Heart className={cn("h-4 w-4", isFavorited && "fill-red-500 text-red-500")} />
+                  {isFavorited ? "Liked" : "Like"}
                 </Button>
               </div>
             </div>
@@ -1014,23 +1064,7 @@ export default function SalonDetailsPage() {
                     {salon.mission || salon.description}
                   </p>
                   {/* Stats section - always show structure with values or defaults */}
-                  <div className="grid sm:grid-cols-4 gap-6 text-center">
-                    <div className="bg-secondary/50 p-4 rounded-lg">
-                      <p className="text-4xl font-bold text-primary">
-                        {isLoading ? (
-                          <Skeleton className="h-8 w-12 mx-auto" />
-                        ) : (
-                          vendorData?.stats?.find(
-                            (s: any) => s.label === "Years Experience"
-                          )?.value ||
-                          vendorData?.yearsExperience ||
-                          0
-                        )}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Years Experience
-                      </p>
-                    </div>
+                  <div className="grid sm:grid-cols-3 gap-4 text-center">
                     <div className="bg-secondary/50 p-4 rounded-lg">
                       <p className="text-4xl font-bold text-primary">
                         {isLoading ? (
@@ -1070,14 +1104,14 @@ export default function SalonDetailsPage() {
                           <Skeleton className="h-8 w-12 mx-auto" />
                         ) : (
                           vendorData?.stats?.find(
-                            (s: any) => s.label === "Awards"
+                            (s: any) => s.label === "Products Sold"
                           )?.value ||
-                          vendorData?.awards?.length ||
+                          productsData?.products?.length ||
                           0
                         )}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Awards
+                        Products
                       </p>
                     </div>
                   </div>
@@ -1087,6 +1121,7 @@ export default function SalonDetailsPage() {
               <SpecialOffered
                 vendorId={id}
                 isSubscriptionExpired={isSubscriptionExpired}
+                onBookNow={(offer) => handleBookNow(null, offer.code)}
               />
 
               <ServicesOffered
@@ -1142,26 +1177,30 @@ export default function SalonDetailsPage() {
 
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1">
-                        <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                        <span className="font-medium">{salon.rating}</span>
+                        {salon.reviewCount > 0 && (
+                          <>
+                            <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                            <span className="font-medium">{salon.rating}</span>
+                          </>
+                        )}
+                        <span className="text-sm text-muted-foreground ml-1">
+                          ({salon.reviewCount} reviews)
+                        </span>
                       </div>
-                      <span className="text-sm text-muted-foreground">
-                        ({salon.reviewCount} reviews)
-                      </span>
                     </div>
 
-                    <div className="flex gap-2 text-sm">
+                    <div className="flex flex-wrap gap-2 text-sm">
                       <Badge
                         variant="secondary"
                         className="bg-primary/10 text-primary border-primary/20"
                       >
-                        {vendorData?.services?.length || 15}+ Services
+                        {servicesData?.services?.length || 15}+ Services
                       </Badge>
                       <Badge
                         variant="secondary"
                         className="bg-primary/10 text-primary border-primary/20"
                       >
-                        {vendorData?.yearsExperience || 5}+ Years
+                        {productsData?.products?.length || 0}+ Products
                       </Badge>
                     </div>
                   </div>

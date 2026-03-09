@@ -4,6 +4,8 @@ import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { clearCrmAuth, handleSubscriptionExpired } from "@repo/store/slices/crmAuthSlice";
 import { NEXT_PUBLIC_ADMIN_URL, NEXT_PUBLIC_CRM_URL, NEXT_PUBLIC_WEB_URL } from "@repo/config/config";
 
+export const SALON_FAVORITES_VERSION = '1.0.1';
+
 // Function to get base URLs with intelligent fallbacks for production
 const getBaseUrls = () => {
   // If explicit env vars exist, use them
@@ -148,7 +150,7 @@ export const glowvitaApi = createApi({
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "Regions", "PublicAllOffers", "AddOns", "PendingWeddingPackages",
-    "ReferralReport", "ClientWallet", "ClientWithdrawals", "WalletSettings", "Inventory", "SettlementHistoryReport", "PlatformCollectionsReport", "Doctor", "CrmWallet"
+    "ReferralReport", "ClientWallet", "ClientWithdrawals", "WalletSettings", "Inventory", "SettlementHistoryReport", "PlatformCollectionsReport", "Doctor", "CrmWallet","SalonWishlist"
   ],
 
   endpoints: (builder) => ({
@@ -420,7 +422,11 @@ export const glowvitaApi = createApi({
 
     // Public Products for landing page
     getPublicProducts: builder.query({
-      query: () => ({ url: "/products", method: "GET" }),
+      query: (params) => ({
+        url: "/products",
+        method: "GET",
+        params: params
+      }),
       providesTags: ["PublicProducts"],
       transformResponse: (response) => response,
     }),
@@ -520,6 +526,30 @@ export const glowvitaApi = createApi({
       query: (doctorId) => ({ url: `/doctors/reviews/${doctorId}`, method: "GET" }),
       providesTags: (result, error, doctorId) => [{ type: "DoctorReviews", id: doctorId }],
       transformResponse: (response) => response,
+    }),
+
+    // Salon Wishlist Endpoints
+    getSalonWishlist: builder.query({
+      query: () => ({ url: "/client/salon-wishlist", method: "GET" }),
+      providesTags: ["SalonWishlist"],
+    }),
+
+    addToSalonWishlist: builder.mutation({
+      query: (salonId) => ({
+        url: "/client/salon-wishlist",
+        method: "POST",
+        body: { salonId },
+      }),
+      invalidatesTags: ["SalonWishlist"],
+    }),
+
+    removeFromSalonWishlist: builder.mutation({
+      query: (salonId) => ({
+        url: "/client/salon-wishlist",
+        method: "DELETE",
+        body: { salonId },
+      }),
+      invalidatesTags: ["SalonWishlist"],
     }),
 
     // Public Doctors endpoint (Web App - no authentication required)
@@ -704,8 +734,8 @@ export const glowvitaApi = createApi({
     getAdminOffers: builder.query({
       query: (params) => {
         const regionId = typeof params === 'string' ? params : params?.regionId;
-        return { 
-          url: "/admin/offers", 
+        return {
+          url: "/admin/offers",
           method: "GET",
           params: regionId ? { regionId } : {}
         };
@@ -1030,12 +1060,36 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["doctors"],
     }),
 
+    updateDoctorStatus: builder.mutation({
+      query: ({ id, status }) => ({
+        url: "/admin/doctors",
+        method: "PATCH",
+        body: { id, status },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: "doctors", id },
+        "doctors",
+      ],
+    }),
+
+    updateDoctorDocumentStatus: builder.mutation({
+      query: ({ doctorId, documentType, status, rejectionReason }) => ({
+        url: "/admin/doctors",
+        method: "PATCH",
+        body: { doctorId, documentType, status, rejectionReason },
+      }),
+      invalidatesTags: (result, error, { doctorId }) => [
+        { type: "doctors", id: doctorId },
+        "doctors",
+      ],
+    }),
+
     // Subscription Plan Endpoints
     getSubscriptionPlans: builder.query({
       query: (params) => {
         const regionId = typeof params === 'string' ? params : params?.regionId;
-        return { 
-          url: "/admin/subscription-plans", 
+        return {
+          url: "/admin/subscription-plans",
           method: "GET",
           params: regionId ? { regionId } : {}
         };
@@ -1181,8 +1235,8 @@ export const glowvitaApi = createApi({
     getCategories: builder.query({
       query: (params) => {
         const { regionId } = params || {};
-        return { 
-          url: "/admin/categories", 
+        return {
+          url: "/admin/categories",
           method: "GET",
           params: regionId ? { regionId } : {}
         };
@@ -1791,6 +1845,12 @@ export const glowvitaApi = createApi({
       }),
       invalidatesTags: ["CrmProducts"],
     }),
+    getCrmProductMasters: builder.query({
+      query: () => ({ url: "/crm/product-masters", method: "GET" }),
+      transformResponse: (response) => (response && response.success ? response.data || [] : []),
+      providesTags: ["ProductMaster"],
+    }),
+
 
     // Inventory Endpoints
     adjustInventory: builder.mutation({
@@ -3145,6 +3205,8 @@ export const {
   useGetDoctorsQuery,
   useCreateDoctorMutation,
   useUpdateDoctorMutation,
+  useUpdateDoctorStatusMutation,
+  useUpdateDoctorDocumentStatusMutation,
   useDeleteDoctorMutation,
   useGetSuppliersQuery,
   useGetSupplierOrdersQuery,
@@ -3346,6 +3408,11 @@ export const {
   useAddDoctorToWishlistMutation,
   useRemoveDoctorFromWishlistMutation,
 
+  // Salon Wishlist Endpoints (Web App)
+  useGetSalonWishlistQuery,
+  useAddToSalonWishlistMutation,
+  useRemoveFromSalonWishlistMutation,
+
   // Public Doctors Endpoint (Web App - no auth required)
   useGetPublicDoctorsQuery,
 
@@ -3466,6 +3533,7 @@ export const {
   useCreateProductMasterMutation,
   useUpdateProductMasterMutation,
   useDeleteProductMasterMutation,
+  useGetCrmProductMastersQuery,
 
   // Inventory Hooks
   useAdjustInventoryMutation,

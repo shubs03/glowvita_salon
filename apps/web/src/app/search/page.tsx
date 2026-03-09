@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { 
-  useGetPublicVendorsQuery, 
+import {
+  useGetPublicVendorsQuery,
   useGetPublicCategoriesQuery,
 } from "@repo/store/services/api";
-import { 
-  Star, 
+import {
+  Star,
   MapPin,
   Clock,
   Scissors,
@@ -51,11 +51,11 @@ const SearchResults = () => {
 
       {/* Main Content: Split View */}
       <main className="flex-1 flex overflow-hidden">
-        
+
         {/* Left Side: Results List */}
         <section className="w-full lg:w-[55%] xl:w-[60%] h-full overflow-y-auto custom-scrollbar bg-[#FBFCFF]">
           <div className="p-4 md:p-8 max-w-4xl mx-auto">
-            
+
             {/* Sort & Quick Filters */}
             <div className="flex items-center justify-between mb-8">
               <h1 className="text-xl md:text-2xl font-headline font-black text-gray-900 tracking-tight">
@@ -85,14 +85,14 @@ const SearchResults = () => {
                 ))
               ) : vendors.length > 0 ? (
                 vendors.map((vendor: any) => (
-                  <div 
-                    key={vendor._id} 
+                  <div
+                    key={vendor._id}
                     className="bg-white rounded-[30px] p-2 flex flex-col sm:flex-row gap-6 border border-gray-100 shadow-[0_4px_20px_rgb(0,0,0,0.02)] hover:shadow-[0_12px_40px_rgb(0,0,0,0.06)] transition-all duration-500 group cursor-pointer overflow-hidden"
                     onClick={() => window.location.href = `/salon-details/${vendor._id}`}
                   >
                     {/* Salon Image Section */}
                     <div className="relative w-full sm:w-60 h-60 shrink-0">
-                      <Image 
+                      <Image
                         src={vendor.profileImage || `https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600`}
                         alt={vendor.businessName}
                         fill
@@ -108,17 +108,17 @@ const SearchResults = () => {
                     {/* Content Section */}
                     <div className="flex-1 py-4 pr-6 pl-2">
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="flex items-center gap-1 bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">
-                          <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                        <div className="flex items-center gap-1 bg-yellow-50 text-yellow-600 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider">
+                          <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                           4.9
                         </div>
                         <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">(200+ reviews)</span>
                       </div>
-                      
+
                       <h3 className="text-xl md:text-2xl font-headline font-black text-gray-900 group-hover:text-primary transition-colors leading-tight mb-1">
                         {vendor.businessName}
                       </h3>
-                      
+
                       <div className="flex items-center gap-1 text-gray-500 text-xs font-bold mb-6">
                         <MapPin className="w-3.5 h-3.5 text-gray-300" />
                         <span>{vendor.city}, {vendor.state}</span>
@@ -127,8 +127,8 @@ const SearchResults = () => {
                       {/* Service Highlights */}
                       <div className="space-y-2">
                         {vendor.services.slice(0, 2).map((svc: any) => (
-                          <div 
-                            key={svc._id} 
+                          <div
+                            key={svc._id}
                             className="flex justify-between items-center p-3 sm:px-4 sm:py-3 rounded-2xl bg-gray-50 border border-transparent hover:border-primary/10 hover:bg-white group/svc transition-all"
                           >
                             <div className="flex-1">

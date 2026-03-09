@@ -1,17 +1,19 @@
 "use client"
 
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 
 const ContactForm = () => {
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
+    salonName: '',
     subject: '',
     message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -24,27 +26,47 @@ const ContactForm = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setSubmitMessage('');
 
-    // Simulate form submission
     try {
-      // In a real application, you would send the form data to your backend here
-      console.log('Form data:', formData);
-      
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Success message
-      setSubmitMessage('Your message has been sent successfully! Our support team will get back to you soon.');
+      const apiBody = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        salonName: formData.salonName,
+        message: `Subject: ${formData.subject}\n\n${formData.message}`,
+        source: "crm"
+      };
+
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(apiBody),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Something went wrong');
+      }
+
+      toast.success('Thank you for reaching out! ✨ Your message has been received, and our dedicated support team will get back to you shortly. We value your feedback!', {
+        duration: 5000,
+      });
+
       setFormData({
-        name: '',
+        firstName: '',
+        lastName: '',
         email: '',
         phone: '',
+        salonName: '',
         subject: '',
         message: ''
       });
-    } catch (error) {
-      setSubmitMessage('There was an error sending your message. Please try again.');
+    } catch (error: any) {
+      toast.error(error.message || 'Oops! We encountered a small issue sending your message. Please try again or reach out to us at support@glowvita.com.', {
+        duration: 5000,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -64,20 +86,38 @@ const ContactForm = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
         <div className="bg-card border border-border rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 group hover:border-primary/50">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">
-                Full Name
-              </label>
-              <input
-                type="text"
-                id="name"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-3 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
-                placeholder="Enter your full name"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-foreground mb-2">
+                  First Name
+                </label>
+                <input
+                  type="text"
+                  id="firstName"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
+                  placeholder="Enter first name"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-foreground mb-2">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  id="lastName"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
+                  placeholder="Enter last name"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -111,6 +151,21 @@ const ContactForm = () => {
                   placeholder="Enter your phone number (optional)"
                 />
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="salonName" className="block text-sm font-medium text-foreground mb-2">
+                Salon Name (Optional)
+              </label>
+              <input
+                type="text"
+                id="salonName"
+                name="salonName"
+                value={formData.salonName}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
+                placeholder="Enter your salon name (optional)"
+              />
             </div>
 
             <div>
@@ -148,18 +203,11 @@ const ContactForm = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`w-full bg-primary text-primary-foreground py-4 px-6 rounded-xl font-semibold text-base transition-all duration-300 shadow-sm hover:shadow-md ${
-                isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-primary/90'
-              }`}
+              className={`w-full bg-primary text-primary-foreground py-4 px-6 rounded-xl font-semibold text-base transition-all duration-300 shadow-sm hover:shadow-md ${isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-primary/90'
+                }`}
             >
               {isSubmitting ? 'Sending...' : 'Send Message'}
             </button>
-
-            {submitMessage && (
-              <div className={`p-4 rounded-xl text-center ${submitMessage.includes('error') ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
-                {submitMessage}
-              </div>
-            )}
           </form>
         </div>
 
@@ -176,15 +224,15 @@ const ContactForm = () => {
               <div>
                 <h3 className="font-bold text-card-foreground text-xl mb-2">Before You Contact Us</h3>
                 <p className="text-muted-foreground text-base leading-relaxed">
-                  Check out our knowledge base and FAQ section for quick answers to common questions. 
+                  Check out our knowledge base and FAQ section for quick answers to common questions.
                   Many issues can be resolved instantly without waiting for a response.
                 </p>
               </div>
             </div>
-            
+
             <div className="space-y-3">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => {
                   const element = document.getElementById('faq-section');
                   if (element) {
@@ -195,8 +243,8 @@ const ContactForm = () => {
               >
                 View Frequently Asked Questions
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => {
                   // Navigate to the home page and scroll to the overview section
                   window.location.href = '/#overview-preview';
@@ -224,7 +272,7 @@ const ContactForm = () => {
                 </p>
               </div>
             </div>
-            
+
             <div className="space-y-3">
               <p className="text-muted-foreground">
                 <span className="font-medium">Phone:</span> <a href="tel:+18001234567" className="text-primary hover:underline">+1 (800) 123-4567</a>

@@ -128,19 +128,19 @@ const createOwnerAsStaff = async (vendor, plainTextPassword) => {
       status: 'Active',
       // Default availability (can be updated later)
       mondayAvailable: true,
-      mondaySlots: [{ startTime: '09:00', endTime: '18:00', startMinutes: 540, endMinutes: 1080 }],
+      mondaySlots: [{ startTime: '09:00', endTime: '20:00', startMinutes: 540, endMinutes: 1200 }],
       tuesdayAvailable: true,
-      tuesdaySlots: [{ startTime: '09:00', endTime: '18:00', startMinutes: 540, endMinutes: 1080 }],
+      tuesdaySlots: [{ startTime: '09:00', endTime: '20:00', startMinutes: 540, endMinutes: 1200 }],
       wednesdayAvailable: true,
-      wednesdaySlots: [{ startTime: '09:00', endTime: '18:00', startMinutes: 540, endMinutes: 1080 }],
+      wednesdaySlots: [{ startTime: '09:00', endTime: '20:00', startMinutes: 540, endMinutes: 1200 }],
       thursdayAvailable: true,
-      thursdaySlots: [{ startTime: '09:00', endTime: '18:00', startMinutes: 540, endMinutes: 1080 }],
+      thursdaySlots: [{ startTime: '09:00', endTime: '20:00', startMinutes: 540, endMinutes: 1200 }],
       fridayAvailable: true,
-      fridaySlots: [{ startTime: '09:00', endTime: '18:00', startMinutes: 540, endMinutes: 1080 }],
+      fridaySlots: [{ startTime: '09:00', endTime: '20:00', startMinutes: 540, endMinutes: 1200 }],
       saturdayAvailable: true,
-      saturdaySlots: [{ startTime: '09:00', endTime: '18:00', startMinutes: 540, endMinutes: 1080 }],
-      sundayAvailable: false,
-      sundaySlots: [],
+      saturdaySlots: [{ startTime: '09:00', endTime: '20:00', startMinutes: 540, endMinutes: 1200 }],
+      sundayAvailable: true,
+      sundaySlots: [{ startTime: '09:00', endTime: '20:00', startMinutes: 540, endMinutes: 1200 }],
       timezone: 'UTC'
     };
 

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
+import { Badge } from '@repo/ui/badge';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
@@ -22,15 +23,20 @@ interface Product {
   quantity: number;
   vendorName: string;
   vendorId: string;
+  originalPrice: number;
+  hasSale: boolean;
   isCartOrder?: boolean;
 }
 
 export default function CheckoutPage() {
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
+  const [cartItems, setCartItems] = useState<any[]>([]);
   const [shippingAddress, setShippingAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('credit-card');
+  const [addressError, setAddressError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
 
   const { user } = useAuth();
   const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
@@ -58,6 +64,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     try {
       const storedProduct = localStorage.getItem('buyNowProduct');
+      const storedCartItems = localStorage.getItem('cartItems');
       console.log('Stored product from localStorage:', storedProduct);
       if (storedProduct) {
         const parsedProduct = JSON.parse(storedProduct);
@@ -70,6 +77,11 @@ export default function CheckoutPage() {
           parsedProduct.vendorId = 'unknown-vendor';
         }
         setProduct(parsedProduct);
+
+        if (storedCartItems) {
+          setCartItems(JSON.parse(storedCartItems));
+        }
+
         setShippingAddress(user?.address || '');
         setContactNumber(user?.mobileNo || '');
       } else {
@@ -99,10 +111,30 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
-    if (!shippingAddress.trim() || !contactNumber.trim()) {
-      toast.error('Please fill in all shipping details.');
+    let isValid = true;
+
+    if (!shippingAddress.trim()) {
+      setAddressError('Shipping address is required');
+      isValid = false;
+    } else {
+      setAddressError('');
+    }
+
+    if (!contactNumber.trim()) {
+      setPhoneError('Contact number is required');
+      isValid = false;
+    } else if (contactNumber.length !== 10) {
+      setPhoneError('Phone number must be exactly 10 digits');
+      isValid = false;
+    } else {
+      setPhoneError('');
+    }
+
+    if (!isValid) {
+      toast.error('Please correct the errors in the form.');
       return;
     }
+
     if (!product) return;
 
     // Use the correct calculation for totalAmount that matches the checkout page display
@@ -129,8 +161,7 @@ export default function CheckoutPage() {
       : 0;
     const tax = gst + platformFee;
 
-    const discount = subtotal * 0.1; // 10% discount to match Cart page
-    const totalAmount = subtotal + shipping + tax - discount;
+    const totalAmount = subtotal + shipping + tax;
 
     try {
       // For cash on delivery, directly create order
@@ -418,8 +449,7 @@ export default function CheckoutPage() {
     : 0;
   const tax = gst + platformFee;
 
-  const discount = subtotal * 0.1; // 10% discount to match Cart page
-  const total = subtotal + shipping + tax - discount;
+  const total = subtotal + shipping + tax;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -437,49 +467,124 @@ export default function CheckoutPage() {
                 <CardDescription>Review your order details and costs.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center gap-6">
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    width={100}
-                    height={100}
-                    className="rounded-lg object-cover"
-                  />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{product.name}</h3>
-                    <p className="text-sm text-muted-foreground">Sold by: {product.vendorName}</p>
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="text-sm text-muted-foreground">Quantity:</span>
-                      {String(product.id).startsWith('cart-') ? (
-                        <span className="font-medium text-sm">{product.quantity}</span>
-                      ) : (
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => handleQuantityChange(-1)}
-                            disabled={product.quantity <= 1}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <span className="font-medium text-sm w-4 text-center">{product.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => handleQuantityChange(1)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
+                {product.id.startsWith('cart-') && cartItems.length > 0 ? (
+                  <div className="space-y-6">
+                    {cartItems.map((item, index) => (
+                      <div key={item.productId || item._id || index} className={`flex items-center gap-6 ${index !== 0 ? 'pt-6 border-t border-gray-100' : ''}`}>
+                        <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border">
+                          <Image
+                            src={item.productImage || item.image || "/images/placeholder.jpg"}
+                            alt={item.productName || item.name}
+                            fill
+                            className="object-cover"
+                          />
                         </div>
-                      )}
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-base">{item.productName || item.name}</h3>
+                          <p className="text-sm text-muted-foreground">Sold by: {item.vendorName || product.vendorName}</p>
+                          <div className="flex flex-col gap-1 mt-1">
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-muted-foreground">Quantity: {item.quantity}</span>
+                              <span className="text-xs text-muted-foreground">Price: ₹{item.price.toFixed(2)}</span>
+                            </div>
+                            {item.hasSale && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground line-through">₹{item.originalPrice.toFixed(2)}</span>
+                                <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 h-4 hover:bg-green-100">
+                                  {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% OFF
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex flex-wrap items-center justify-end gap-2 text-right">
+                            {(item.hasSale || (item.originalPrice && item.originalPrice > item.price)) ? (
+                              <>
+                                <span className="text-muted-foreground line-through text-xs sm:text-sm">
+                                  ₹{(item.originalPrice * item.quantity).toFixed(2)}
+                                </span>
+                                <span className="font-semibold text-foreground">
+                                  ₹{(item.price * item.quantity).toFixed(2)}
+                                </span>
+                                <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 h-4 hover:bg-green-100 flex-shrink-0">
+                                  {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% OFF
+                                </Badge>
+                              </>
+                            ) : (
+                              <p className="font-semibold text-foreground text-right">
+                                ₹{(item.price * item.quantity).toFixed(2)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-6">
+                    <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border">
+                      <Image
+                        src={product.image}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg">{product.name}</h3>
+                      <p className="text-sm text-muted-foreground">Sold by: {product.vendorName}</p>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-sm text-muted-foreground">Quantity:</span>
+                        {product.isCartOrder ? (
+                          <span className="font-medium text-sm">{product.quantity}</span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => handleQuantityChange(-1)}
+                              disabled={product.quantity <= 1}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="font-medium text-sm w-4 text-center">{product.quantity}</span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => handleQuantityChange(1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex flex-wrap items-center justify-end gap-2 text-right">
+                        {(product.hasSale || (product.originalPrice && product.originalPrice > product.price)) ? (
+                          <>
+                            <span className="text-muted-foreground line-through text-sm sm:text-base">
+                              ₹{(product.originalPrice * product.quantity).toFixed(2)}
+                            </span>
+                            <span className="font-semibold text-lg text-foreground">
+                              ₹{subtotal.toFixed(2)}
+                            </span>
+                            <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 h-4 hover:bg-green-100 flex-shrink-0">
+                              {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+                            </Badge>
+                          </>
+                        ) : (
+                          <p className="font-semibold text-lg text-foreground text-right w-full">
+                            ₹{subtotal.toFixed(2)}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-lg">₹{subtotal.toFixed(2)}</p>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 
@@ -494,18 +599,32 @@ export default function CheckoutPage() {
                   <Input
                     id="shippingAddress"
                     value={shippingAddress}
-                    onChange={(e) => setShippingAddress(e.target.value)}
+                    onChange={(e) => {
+                      setShippingAddress(e.target.value);
+                      if (e.target.value.trim()) setAddressError('');
+                    }}
                     placeholder="Enter your full shipping address"
+                    className={addressError ? "border-red-500" : ""}
                   />
+                  {addressError && <p className="text-xs text-red-500 mt-1">{addressError}</p>}
                 </div>
                 <div>
                   <Label htmlFor="contactNumber">Contact Number</Label>
                   <Input
                     id="contactNumber"
                     value={contactNumber}
-                    onChange={(e) => setContactNumber(e.target.value)}
-                    placeholder="Enter your contact number"
+                    type="tel"
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      if (value.length <= 10) {
+                        setContactNumber(value);
+                        if (value.length === 10) setPhoneError('');
+                      }
+                    }}
+                    placeholder="Enter 10-digit contact number"
+                    className={phoneError ? "border-red-500" : ""}
                   />
+                  {phoneError && <p className="text-xs text-red-500 mt-1">{phoneError}</p>}
                 </div>
               </CardContent>
             </Card>
@@ -525,10 +644,6 @@ export default function CheckoutPage() {
                   <div className="flex justify-between">
                     <span>Shipping</span>
                     <span>₹{shipping.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Discount (10%)</span>
-                    <span className="text-blue-600 font-medium">-₹{discount.toFixed(2)}</span>
                   </div>
                   {productGSTEnabled && (
                     <div className="flex justify-between">

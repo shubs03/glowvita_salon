@@ -198,9 +198,8 @@ const ProductHighlightCard = ({
             {products.map((_, index) => (
               <div
                 key={index}
-                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
-                  index === currentIndex ? "bg-white" : "bg-white/40"
-                }`}
+                className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${index === currentIndex ? "bg-white" : "bg-white/40"
+                  }`}
               />
             ))}
           </div>
@@ -342,9 +341,9 @@ export default function AllProductsPage() {
   const averageRating =
     filteblueProducts.length > 0
       ? (
-          filteblueProducts.reduce((acc, p) => acc + p.rating, 0) /
-          filteblueProducts.length
-        ).toFixed(1)
+        filteblueProducts.reduce((acc, p) => acc + p.rating, 0) /
+        filteblueProducts.length
+      ).toFixed(1)
       : "0.0";
 
   const bentoGridProducts = {
@@ -362,7 +361,7 @@ export default function AllProductsPage() {
 
   return (
     <PageContainer padding="none">
-      <HeroSection />
+      <HeroSection onSearch={setSearchTerm} />
       <RecentlyAddedProducts />
 
 

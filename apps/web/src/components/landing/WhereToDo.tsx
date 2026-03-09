@@ -53,6 +53,7 @@ interface TransformedSalon {
   clients: string;
   image: string;
   badge: string | null;
+  serviceNames: string[];
 }
 
 interface WhereToGoProps {
@@ -69,17 +70,17 @@ interface MultiSelectProps {
   label: string;
 }
 
-const MultiSelect: React.FC<MultiSelectProps> = ({ 
-  options, 
-  selectedOptions, 
-  onSelectionChange, 
-  placeholder, 
-  label 
+const MultiSelect: React.FC<MultiSelectProps> = ({
+  options,
+  selectedOptions,
+  onSelectionChange,
+  placeholder,
+  label
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredOptions = options.filter(option => 
+  const filteredOptions = options.filter(option =>
     option.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -98,7 +99,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   return (
     <div className="relative w-full">
       <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{label}</label>
-      <div 
+      <div
         className={`mt-1 w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${isOpen ? 'ring-1 ring-primary' : ''}`}
         onClick={() => setIsOpen(!isOpen)}
       >
@@ -108,8 +109,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
               selectedOptions.map(option => (
                 <div key={option} className="flex items-center bg-primary/10 text-primary text-xs px-2 py-0.5 rounded">
                   {option}
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     className="ml-1 text-primary/70 hover:text-primary"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -126,8 +127,8 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
           </div>
           <div className="flex items-center gap-1">
             {selectedOptions.length > 0 && (
-              <button 
-                type="button" 
+              <button
+                type="button"
                 className="text-muted-foreground hover:text-foreground"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -139,7 +140,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
             )}
             <div className={`ml-2 transition-transform ${isOpen ? 'rotate-180' : ''}`}>
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m6 9 6 6 6-6"/>
+                <path d="m6 9 6 6 6-6" />
               </svg>
             </div>
           </div>
@@ -147,7 +148,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
       </div>
 
       {isOpen && (
-        <div 
+        <div
           className="absolute z-50 mt-1 w-full bg-card border border-border rounded-md shadow-lg max-h-60 overflow-auto"
           style={{
             scrollbarWidth: 'none',
@@ -165,7 +166,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
               autoFocus
             />
           </div>
-          <div 
+          <div
             className="max-h-40 overflow-auto"
             style={{
               scrollbarWidth: 'none',
@@ -174,7 +175,7 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
           >
             {filteredOptions.length > 0 ? (
               filteredOptions.map(option => (
-                <div 
+                <div
                   key={option}
                   className={`px-3 py-2 text-sm cursor-pointer hover:bg-accent ${selectedOptions.includes(option) ? 'bg-accent' : ''}`}
                   onClick={() => toggleOption(option)}
@@ -200,9 +201,9 @@ const MultiSelect: React.FC<MultiSelectProps> = ({
   );
 };
 
-const WhereToGo: React.FC<WhereToGoProps> = ({ 
-  maxSalons = Infinity, 
-  showViewAllButton = true 
+const WhereToGo: React.FC<WhereToGoProps> = ({
+  maxSalons = Infinity,
+  showViewAllButton = true
 }) => {
   const router = useRouter();
   const {
@@ -227,14 +228,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
   console.log("Vendors Data :", vendorsData);
 
   // Extract unique categories, services, and locations from vendors data
-  const categories = React.useMemo(() => {
-    if (!vendorsData?.vendors) return [];
-    const uniqueCategories = new Set<string>();
-    vendorsData.vendors.forEach((vendor: VendorData) => {
-      uniqueCategories.add(vendor.category);
-    });
-    return Array.from(uniqueCategories);
-  }, [vendorsData]);
+  const categories = ["Unisex", "Women", "Men"];
 
   const services = React.useMemo(() => {
     if (!vendorsData?.vendors) return [];
@@ -297,31 +291,41 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
                   ? "Men's Grooming"
                   : "Beauty Services",
           location: `${vendor.city || "Unknown City"}, ${vendor.state || "Unknown State"}`,
-          rating: vendor.rating || (4.7 + Math.random() * 0.3).toFixed(1), // Generate realistic ratings between 4.7-5.0
-          clients: `${vendor.clientCount || Math.floor(200 + Math.random() * 600)}+`, // Generate client count
+          rating: vendor.rating || "0.0", // Use real rating from API
+          clients: `${vendor.clientCount || 0}+`, // Use real client count from API
           image: imageUrl,
           badge: hasOffer ? "Offer Available" : null,
+          serviceNames: vendor.services?.map(s => s.name) || [],
         };
       });
 
     // Apply filters if on salons page
     let filteredSalons = allTransformedSalons;
     if (isSalonsPage) {
+      // Category Filter
       if (categoryFilter.length > 0) {
         filteredSalons = filteredSalons.filter((salon: TransformedSalon) => {
-          if (categoryFilter.includes("unisex")) {
+          if (categoryFilter.includes("Unisex")) {
             if (salon.type.includes("Full-Service")) return true;
           }
-          if (categoryFilter.includes("women")) {
+          if (categoryFilter.includes("Women")) {
             if (salon.type.includes("Women's")) return true;
           }
-          if (categoryFilter.includes("men")) {
+          if (categoryFilter.includes("Men")) {
             if (salon.type.includes("Men's")) return true;
           }
           return false;
         });
       }
-      
+
+      // Service Filter
+      if (serviceFilter.length > 0) {
+        filteredSalons = filteredSalons.filter((salon: TransformedSalon) => {
+          return serviceFilter.some(service => salon.serviceNames.includes(service));
+        });
+      }
+
+      // Rating Filter
       if (ratingFilter !== "all") {
         if (ratingFilter === "high-to-low") {
           filteredSalons.sort((a: TransformedSalon, b: TransformedSalon) => Number(b.rating) - Number(a.rating));
@@ -329,7 +333,8 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
           filteredSalons.sort((a: TransformedSalon, b: TransformedSalon) => Number(a.rating) - Number(b.rating));
         }
       }
-      
+
+      // Location Filter
       if (locationFilter.length > 0) {
         filteredSalons = filteredSalons.filter((salon: TransformedSalon) => locationFilter.includes(salon.location));
       }
@@ -351,7 +356,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
                 <Filter className="h-5 w-5 text-primary" />
                 <h3 className="font-bold text-foreground text-lg">Filter Salons:</h3>
               </div>
-              
+
               <button
                 onClick={resetFilters}
                 className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
@@ -360,11 +365,11 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
                 Reset Filters
               </button>
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               {/* Category Filter */}
               <div className="flex flex-col gap-2">
-                <MultiSelect 
+                <MultiSelect
                   options={categories}
                   selectedOptions={categoryFilter}
                   onSelectionChange={setCategoryFilter}
@@ -372,10 +377,10 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
                   label="Category"
                 />
               </div>
-              
+
               {/* Service Filter */}
               <div className="flex flex-col gap-2">
-                <MultiSelect 
+                <MultiSelect
                   options={services}
                   selectedOptions={serviceFilter}
                   onSelectionChange={setServiceFilter}
@@ -383,7 +388,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
                   label="Service"
                 />
               </div>
-              
+
               {/* Rating Filter - Single Select */}
               <div className="flex flex-col gap-2">
                 <label className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Rating</label>
@@ -397,10 +402,10 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
                   <option value="low-to-high">Lowest Rated First</option>
                 </select>
               </div>
-              
+
               {/* Location Filter */}
               <div className="flex flex-col gap-2">
-                <MultiSelect 
+                <MultiSelect
                   options={locations}
                   selectedOptions={locationFilter}
                   onSelectionChange={setLocationFilter}
@@ -542,7 +547,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
                       </p>
                     </div>
                     <div className="flex items-center gap-1 bg-accent/50 px-2 py-1 rounded-lg ml-2">
-                      <Star className="w-3.5 h-3.5 fill-primary text-primary" />
+                      <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
                       <span className="text-xs font-bold text-accent-foreground">
                         {salon.rating}
                       </span>

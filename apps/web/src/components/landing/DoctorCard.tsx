@@ -52,7 +52,7 @@ export function DoctorCard({
 
   const handleWishlistToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
+
     if (!isAuthenticated) {
       toast.error("Please login to add doctors to your wishlist");
       router.push("/client-login");
@@ -84,7 +84,7 @@ export function DoctorCard({
   };
 
   return (
-    <div 
+    <div
       className="group relative overflow-hidden rounded-md hover:shadow-md border bg-card transition-all duration-500 hover:-translate-y-2 cursor-pointer"
       onClick={handleCardClick}
     >
@@ -104,19 +104,19 @@ export function DoctorCard({
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity"></div>
-        
+
         <Button
           size="icon"
           variant="ghost"
           className={cn(
-            "absolute top-3 right-3 h-8 w-8 rounded-full bg-white/20 text-blue-500 backdrop-blur-sm hover:bg-white/30 transition-all",
+            "absolute top-3 right-3 h-8 w-8 rounded-full bg-white/20 text-red-500 backdrop-blur-sm hover:bg-white/30 transition-all",
             isFavorite ? "opacity-100" : "opacity-0 group-hover:opacity-100"
           )}
           onClick={handleWishlistToggle}
           disabled={isLoading}
         >
           <Heart
-            className={cn("h-4 w-4", isFavorite && "fill-current text-blue-500")}
+            className={cn("h-4 w-4", isFavorite && "fill-current text-red-500")}
           />
         </Button>
       </div>
@@ -150,9 +150,9 @@ export function DoctorCard({
             </div>
           </div>
           <div className="flex justify-between gap-2">
-            <Button 
-              size="sm" 
-              variant="outline" 
+            <Button
+              size="sm"
+              variant="outline"
               className="w-fit rounded-lg group-hover:text-primary transition-colors group-hover:border-primary"
               onClick={(e) => {
                 e.stopPropagation();

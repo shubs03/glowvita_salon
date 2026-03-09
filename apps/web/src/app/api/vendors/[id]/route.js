@@ -42,7 +42,7 @@ export const GET = async (req, { params }) => {
       _id: id,
       status: 'Approved'
     }).select(
-      'businessName firstName lastName city state category subCategories profileImage gallery description rating clientCount revenue createdAt subscription'
+      'businessName firstName lastName city state address website email phone pincode category subCategories profileImage gallery description rating clientCount revenue createdAt subscription'
     ).lean();
 
     if (!vendor) {

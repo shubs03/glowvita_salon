@@ -383,7 +383,7 @@ function BookingPageContent() {
     if (codeFromUrl && !appliedOffer && !isOffersLoading) {
       console.log('Detected offerCode in URL:', codeFromUrl);
       setOfferCode(codeFromUrl);
-      
+
       // We need to wait for salonId to be available for validation
       if (salonId) {
         const validateAndApply = async () => {
@@ -575,7 +575,16 @@ function BookingPageContent() {
           selectedDate: selectedDate.toISOString(),
           selectedTime,
           salonId,
-          serviceLocation: locationData
+          serviceLocation: locationData,
+          bookingMode,
+          currentStep,
+          appliedOffer,
+          slotLockToken,
+          pendingAppointmentId,
+          weddingVenueType,
+          weddingPackageMode,
+          customizedPackageServices,
+          selectedWeddingPackage
         };
         sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
         router.push(`/client-login?redirect=/book/${salonId}`);
@@ -618,7 +627,16 @@ function BookingPageContent() {
           selectedDate: selectedDate.toISOString(),
           selectedTime,
           salonId,
-          serviceLocation: finalLocation
+          serviceLocation: finalLocation,
+          bookingMode,
+          currentStep,
+          appliedOffer,
+          slotLockToken,
+          pendingAppointmentId,
+          weddingVenueType,
+          weddingPackageMode,
+          customizedPackageServices,
+          selectedWeddingPackage
         };
         sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
         router.push(`/client-login?redirect=/book/${salonId}`);
@@ -705,7 +723,16 @@ function BookingPageContent() {
                 selectedDate: selectedDate.toISOString(),
                 selectedTime,
                 salonId,
-                serviceLocation: locationData
+                serviceLocation: locationData,
+                bookingMode,
+                currentStep,
+                appliedOffer,
+                slotLockToken,
+                pendingAppointmentId,
+                weddingVenueType,
+                weddingPackageMode,
+                customizedPackageServices,
+                selectedWeddingPackage
               };
               sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
               router.push(`/client-login?redirect=/book/${salonId}`);
@@ -857,6 +884,34 @@ function BookingPageContent() {
         if (!weddingPackageMode) {
           setWeddingPackageMode('default');
         }
+
+        // Logic check: Require login BEFORE selecting time slot
+        if (!isAuthenticated) {
+          console.log("Wedding Package: Redirecting to login before Step 3");
+          toast.info("Please login to choose a date and time");
+          const bookingData = {
+            selectedServices,
+            serviceStaffAssignments,
+            selectedStaff,
+            selectedDate: selectedDate.toISOString(),
+            selectedTime,
+            salonId,
+            serviceLocation,
+            bookingMode,
+            currentStep: 3, // Set to 3 so they return to time selection
+            appliedOffer,
+            slotLockToken,
+            pendingAppointmentId,
+            weddingVenueType,
+            weddingPackageMode,
+            customizedPackageServices,
+            selectedWeddingPackage
+          };
+          sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+          router.push(`/client-login?redirect=/book/${salonId}`);
+          return;
+        }
+
         setCurrentStep(3); // Skip staff selection, go directly to time/date
         return;
       }
@@ -894,21 +949,47 @@ function BookingPageContent() {
 
     console.log("hasHomeService", hasHomeService)
     if (currentStep < 3) {
-      // For step 2 in multi-service flow, validate assignments
-      if (currentStep === 2 && isMultiService) {
-        // Check if all services have staff assigned (or "Any Professional" is acceptable)
-        const allAssigned = serviceStaffAssignments.every(assignment => assignment.staff !== undefined);
-        if (allAssigned) {
-          setCurrentStep(currentStep + 1);
-        } else {
-          toast.error('Please assign staff to all services or select "Any Professional".');
+      // For step 2, we validate and check for authentication before going to Step 3
+      if (currentStep === 2) {
+        if (isMultiService) {
+          // Check if all services have staff assigned
+          const allAssigned = serviceStaffAssignments.every(assignment => assignment.staff !== undefined);
+          if (!allAssigned) {
+            toast.error('Please assign staff to all services or select "Any Professional".');
+            return;
+          }
+        }
+
+        // AUTH CHECK: Before moving from Step 2 (Professional) to Step 3 (Date/Time)
+        if (!isAuthenticated) {
+          console.log("Step 2: Redirecting to login before Step 3");
+          toast.info("Please login to choose a date and time");
+          const bookingData = {
+            selectedServices,
+            serviceStaffAssignments,
+            selectedStaff,
+            selectedDate: selectedDate.toISOString(),
+            selectedTime,
+            salonId,
+            serviceLocation,
+            bookingMode,
+            currentStep: 3, // Set to 3 so they return to time selection
+            appliedOffer,
+            slotLockToken,
+            pendingAppointmentId,
+            weddingVenueType,
+            weddingPackageMode,
+            customizedPackageServices,
+            selectedWeddingPackage
+          };
+          sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+          router.push(`/client-login?redirect=/book/${salonId}`);
           return;
         }
-      } else {
-        // For single service or non-multi-service flow, just proceed to next step
-        // Home service location collection will be handled in the useEffect when we reach step 3
-        setCurrentStep(currentStep + 1);
       }
+
+      // Proceed to next step
+      setCurrentStep(currentStep + 1);
     } else {
       // We're at step 3 or higher
       // For home services: Step 3 is location, Step 4 is time slot
@@ -973,7 +1054,16 @@ function BookingPageContent() {
               selectedDate: selectedDate.toISOString(),
               selectedTime,
               salonId,
-              serviceLocation
+              serviceLocation,
+              bookingMode,
+              currentStep,
+              appliedOffer,
+              slotLockToken,
+              pendingAppointmentId,
+              weddingVenueType,
+              weddingPackageMode,
+              customizedPackageServices,
+              selectedWeddingPackage
             };
             sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
             router.push(`/client-login?redirect=/book/${salonId}`);
@@ -1007,7 +1097,16 @@ function BookingPageContent() {
               selectedDate: selectedDate.toISOString(),
               selectedTime,
               salonId,
-              serviceLocation
+              serviceLocation,
+              bookingMode,
+              currentStep,
+              appliedOffer,
+              slotLockToken,
+              pendingAppointmentId,
+              weddingVenueType,
+              weddingPackageMode,
+              customizedPackageServices,
+              selectedWeddingPackage
             };
             sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
             router.push(`/client-login?redirect=/book/${salonId}`);
@@ -1045,7 +1144,16 @@ function BookingPageContent() {
           selectedDate: selectedDate.toISOString(),
           selectedTime,
           salonId,
-          serviceLocation
+          serviceLocation,
+          bookingMode,
+          currentStep,
+          appliedOffer,
+          slotLockToken,
+          pendingAppointmentId,
+          weddingVenueType,
+          weddingPackageMode,
+          customizedPackageServices,
+          selectedWeddingPackage
         };
         sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
         router.push(`/client-login?redirect=/book/${salonId}`);
@@ -1087,16 +1195,36 @@ function BookingPageContent() {
           const bookingData = JSON.parse(pendingBooking);
           // Only restore if it's for the current salon
           if (bookingData.salonId === salonId) {
-            setSelectedServices(bookingData.selectedServices);
-            setServiceStaffAssignments(bookingData.serviceStaffAssignments);
-            setSelectedStaff(bookingData.selectedStaff);
+            setSelectedServices(bookingData.selectedServices || []);
+            setServiceStaffAssignments(bookingData.serviceStaffAssignments || []);
+            setSelectedStaff(bookingData.selectedStaff || null);
             setSelectedDate(new Date(bookingData.selectedDate));
-            setSelectedTime(bookingData.selectedTime);
+            setSelectedTime(bookingData.selectedTime || null);
             setServiceLocation(bookingData.serviceLocation || null);
+
+            // Restore missing state fields
+            if (bookingData.bookingMode) setBookingMode(bookingData.bookingMode);
+            if (bookingData.currentStep) setCurrentStep(bookingData.currentStep);
+            if (bookingData.appliedOffer) {
+              setAppliedOffer(bookingData.appliedOffer);
+              setOffer(bookingData.appliedOffer);
+              if (bookingData.appliedOffer.code) setOfferCode(bookingData.appliedOffer.code);
+            }
+            if (bookingData.slotLockToken) setSlotLockToken(bookingData.slotLockToken);
+            if (bookingData.pendingAppointmentId) setPendingAppointmentId(bookingData.pendingAppointmentId);
+            if (bookingData.weddingVenueType) setWeddingVenueType(bookingData.weddingVenueType);
+            if (bookingData.weddingPackageMode) setWeddingPackageMode(bookingData.weddingPackageMode);
+            if (bookingData.customizedPackageServices) setCustomizedPackageServices(bookingData.customizedPackageServices);
+            if (bookingData.selectedWeddingPackage) setSelectedWeddingPackage(bookingData.selectedWeddingPackage);
+            if (bookingData.paymentMethod) setPaymentMethod(bookingData.paymentMethod);
+
             // Clear the pending booking data
             sessionStorage.removeItem('pendingBooking');
-            // Set current step to confirmation
-            setIsConfirmationModalOpen(true);
+
+            // Re-open confirmation modal only if we already have a time slot selected
+            if (bookingData.currentStep >= 3 && bookingData.selectedTime) {
+              setIsConfirmationModalOpen(true);
+            }
           }
         } catch (error) {
           console.error('Failed to restore pending booking data:', error);
@@ -1307,11 +1435,18 @@ function BookingPageContent() {
         weddingPackageMode,
         customizedPackageServices,
         selectedStaff,
-        selectedDate,
+        selectedDate: selectedDate.toISOString(),
         selectedTime,
         bookingMode,
         serviceLocation,
-        paymentMethod
+        paymentMethod,
+        currentStep,
+        appliedOffer,
+        slotLockToken,
+        pendingAppointmentId,
+        weddingVenueType,
+        selectedServices,
+        serviceStaffAssignments
       };
       sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
 
@@ -1335,7 +1470,9 @@ function BookingPageContent() {
       const appointmentData = {
         vendorId: salonId,
         client: user?._id || user?.id,
-        clientName: `${user?.firstName} ${user?.lastName}`,
+        clientName: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : 'Customer',
+        clientEmail: user?.emailAddress || user?.email || '',
+        clientPhone: user?.mobileNo || user?.phone || '',
         // For wedding package, use the first service as primary
         service: firstServiceId,
         serviceName: selectedWeddingPackage.name,
@@ -1451,14 +1588,23 @@ function BookingPageContent() {
         selectedServices,
         serviceStaffAssignments,
         selectedStaff,
-        selectedDate,
+        selectedDate: selectedDate.toISOString(),
         selectedTime,
-        serviceLocation
+        serviceLocation,
+        bookingMode,
+        currentStep,
+        appliedOffer,
+        slotLockToken,
+        pendingAppointmentId,
+        weddingVenueType,
+        weddingPackageMode,
+        customizedPackageServices,
+        selectedWeddingPackage
       };
       sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
 
       // Redirect to login
-      router.push(`/login?redirect=/book/${salonId}`);
+      router.push(`/client-login?redirect=/book/${salonId}`);
       return;
     }
 
@@ -1566,7 +1712,9 @@ function BookingPageContent() {
     const appointmentData = {
       vendorId: salonId,
       client: user?._id || user?.id, // Try both _id and id
-      clientName: `${user?.firstName} ${user?.lastName}`,
+      clientName: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : (customerInfo?.name || 'Customer'),
+      clientEmail: user?.emailAddress || user?.email || customerInfo?.email || '',
+      clientPhone: user?.mobileNo || user?.phone || customerInfo?.phone || '',
       service: primaryService.id,
       serviceName: primaryService.name,
       staff: staffId, // Use the properly determined staffId
@@ -2060,6 +2208,9 @@ function BookingPageContent() {
           setIsConfirmationModalOpen(false);
           setIsPaymentModalOpen(false);
           await persistServiceLocation(finalIsHomeService ? serviceLocation : null);
+          if (typeof window !== 'undefined' && appointmentIdToConfirm) {
+            sessionStorage.setItem('newlyBookedAppointmentId', appointmentIdToConfirm);
+          }
           router.push('/profile/appointments');
         } else {
           throw new Error("Failed to acquire slot lock or session expired.");
@@ -2903,6 +3054,34 @@ function BookingPageContent() {
     if (selectedWeddingPackage) {
       setWeddingPackageMode('default');
       setIsCustomizingPackage(false);
+
+      // Skip staff selection and enforce login before time slot
+      if (!isAuthenticated) {
+        console.log("Wedding Package Default: Redirecting to login before Step 3");
+        toast.info("Please login to choose a date and time");
+        const bookingData = {
+          selectedServices,
+          serviceStaffAssignments,
+          selectedStaff,
+          selectedDate: selectedDate.toISOString(),
+          selectedTime,
+          salonId,
+          serviceLocation,
+          bookingMode,
+          currentStep: 3, // Set to 3 so they return to time selection
+          appliedOffer,
+          slotLockToken,
+          pendingAppointmentId,
+          weddingVenueType,
+          weddingPackageMode: 'default',
+          customizedPackageServices,
+          selectedWeddingPackage
+        };
+        sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+        router.push(`/client-login?redirect=/book/${salonId}`);
+        return;
+      }
+
       // Skip staff selection for wedding packages - go directly to time slots
       setCurrentStep(3);
     }
@@ -2912,6 +3091,34 @@ function BookingPageContent() {
   const handleCustomizationComplete = (customServices: Service[]) => {
     setCustomizedPackageServices(customServices);
     setIsCustomizingPackage(false);
+
+    // Skip staff selection and enforce login before time slot
+    if (!isAuthenticated) {
+      console.log("Wedding Package Customized: Redirecting to login before Step 3");
+      toast.info("Please login to choose a date and time");
+      const bookingData = {
+        selectedServices,
+        serviceStaffAssignments,
+        selectedStaff,
+        selectedDate: selectedDate.toISOString(),
+        selectedTime,
+        salonId,
+        serviceLocation,
+        bookingMode,
+        currentStep: 3, // Set to 3 so they return to time selection
+        appliedOffer,
+        slotLockToken,
+        pendingAppointmentId,
+        weddingVenueType,
+        weddingPackageMode: 'customized',
+        customizedPackageServices: customServices,
+        selectedWeddingPackage
+      };
+      sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+      router.push(`/client-login?redirect=/book/${salonId}`);
+      return;
+    }
+
     // Skip staff selection for wedding packages - go directly to time slots
     setCurrentStep(3);
   };
@@ -3138,7 +3345,7 @@ function BookingPageContent() {
                 staff={staff}
                 isLoading={false}
                 error={null}
-                onNext={() => setCurrentStep(3)}
+                onNext={handleNextStep}
               />
             );
           } else {
@@ -3210,6 +3417,7 @@ function BookingPageContent() {
                 error={serviceStaffData.error}
                 selectedService={selectedService}
                 onStaffSelect={setSelectedStaff}
+                onNext={handleNextStep}
               />
             );
           }
@@ -4049,14 +4257,18 @@ function BookingPageContent() {
                     <div className="flex items-center gap-2 p-2 border-b">
                       <UserCircle className="h-4 w-4 text-primary flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-xs truncate">{customerInfo?.name || 'Guest'}</div>
+                        <div className="font-semibold text-xs truncate">
+                          {user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : (customerInfo?.name || 'Guest')}
+                        </div>
                         <div className="text-[10px] text-muted-foreground">Name</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 p-2 border-b">
                       <Phone className="h-4 w-4 text-primary flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-xs truncate">{customerInfo?.phone || 'N/A'}</div>
+                        <div className="font-semibold text-xs truncate">
+                          {user?.mobileNo || user?.phone || customerInfo?.phone || 'N/A'}
+                        </div>
                         <div className="text-[10px] text-muted-foreground">Phone</div>
                       </div>
                     </div>

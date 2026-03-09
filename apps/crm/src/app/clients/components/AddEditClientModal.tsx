@@ -92,10 +92,16 @@ export default function AddEditClientModal({
       setFormData((prev) => ({ ...prev, phone: digitsOnly }));
       return;
     }
-    if (name === "fullName") {
+    if (name === "fullName" || name === "country" || name === "occupation") {
       // Allow only letters and spaces
       const lettersAndSpaces = value.replace(/[^a-zA-Z\s]/g, "");
-      setFormData((prev) => ({ ...prev, fullName: lettersAndSpaces }));
+      setFormData((prev) => ({ ...prev, [name]: lettersAndSpaces }));
+      return;
+    }
+    if (name === "email") {
+      // Allow only alphanumeric, @ and .
+      const allowedChars = value.replace(/[^a-zA-Z0-9@.]/g, "");
+      setFormData((prev) => ({ ...prev, email: allowedChars }));
       return;
     }
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -122,13 +128,31 @@ export default function AddEditClientModal({
         toast.error("Email address is required.");
         return;
       }
-      if (!formData.email.includes("@")) {
-        toast.error("Email must contain @ symbol.");
+
+      // Check for forbidden special characters
+      const allowedCharsRegex = /^[a-zA-Z0-9@.]*$/;
+      if (!allowedCharsRegex.test(formData.email)) {
+        toast.error("Email can only contain @ and . as special characters.");
         return;
       }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email.trim())) {
-        toast.error("Please enter a valid email address.");
+
+      // Strict email format check
+      const emailFormatRegex = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.]+\.[a-zA-Z]{2,}$/;
+      if (!emailFormatRegex.test(formData.email.trim())) {
+        toast.error(
+          "Please enter a valid email format (e.g., example@gmail.com)."
+        );
+        return;
+      }
+
+      // Validate country and occupation: only letters and spaces
+      const alphaRegex = /^[a-zA-Z\s]*$/;
+      if (formData.country && !alphaRegex.test(formData.country)) {
+        toast.error("Country should only contain alphabets.");
+        return;
+      }
+      if (formData.occupation && !alphaRegex.test(formData.occupation)) {
+        toast.error("Occupation should only contain alphabets.");
         return;
       }
 

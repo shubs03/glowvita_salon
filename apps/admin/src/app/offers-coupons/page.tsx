@@ -17,13 +17,14 @@ import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { closeModal, openModal } from '@repo/store/slices/modalSlice';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { useForm } from 'react-hook-form';
-import { 
-  useGetAdminOffersQuery, 
-  useCreateAdminOfferMutation, 
-  useUpdateAdminOfferMutation, 
+import {
+  useGetAdminOffersQuery,
+  useCreateAdminOfferMutation,
+  useUpdateAdminOfferMutation,
   useDeleteAdminOfferMutation,
-  useGetSuperDataQuery,
-  useGetRegionsQuery
+  useGetServicesQuery,
+  useGetRegionsQuery,
+  useGetCategoriesQuery
 } from '@repo/store/api';
 import { setSelectedRegion, selectSelectedRegion } from '@repo/store/slices/adminAuthSlice';
 
@@ -61,8 +62,8 @@ type CouponForm = {
   regionId?: string | null;
 };
 
-// Predefined options for categories
-const categoryOptions = ['Men', 'Women', 'Unisex'];
+// Predefined options for target audience
+const genderOptions = ['Men', 'Women', 'Unisex'];
 
 export default function OffersCouponsPage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -82,7 +83,7 @@ export default function OffersCouponsPage() {
 
   const dispatch = useAppDispatch();
   const { isOpen, modalType, data } = useAppSelector(
-    (state : any) => state.modal
+    (state: any) => state.modal
   );
 
   const { data: regionsResponse } = useGetRegionsQuery(undefined);
@@ -99,7 +100,7 @@ export default function OffersCouponsPage() {
   };
 
 
-   
+
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<CouponForm>({
     defaultValues: {
       code: '',
@@ -115,17 +116,21 @@ export default function OffersCouponsPage() {
     }
   });
 
-  // RTK Query hooks
   const { data: couponsData = [], isLoading, isError, refetch } = useGetAdminOffersQuery({ regionId: selectedRegion || undefined });
-  const { data: superData = [] } = useGetSuperDataQuery(undefined);
+  const { data: servicesResponse = [] } = useGetServicesQuery(undefined);
+  const { data: categoriesResponse = [] } = useGetCategoriesQuery(undefined);
 
   const [createOffer, { isLoading: isCreating }] = useCreateAdminOfferMutation();
   const [updateOffer, { isLoading: isUpdating }] = useUpdateAdminOfferMutation();
   const [deleteOffer, { isLoading: isDeleting }] = useDeleteAdminOfferMutation();
 
+  const categoryOptions = useMemo(() => {
+    return Array.isArray(categoriesResponse) ? categoriesResponse.map((cat: any) => cat.name) : [];
+  }, [categoriesResponse]);
+
   const specialtyOptions = useMemo(() => {
-    return superData.filter((item: any) => item.type === 'service').map((item: any) => item.name);
-  }, [superData]);
+    return Array.isArray(servicesResponse) ? servicesResponse.map((item: any) => item.name) : [];
+  }, [servicesResponse]);
 
   // Convert file to base64
   const convertToBase64 = (file: File): Promise<string> => {
@@ -170,7 +175,7 @@ export default function OffersCouponsPage() {
 
   // Handle specialty selection
   const handleSpecialtyChange = (specialty: string, checked: boolean) => {
-    const updated = checked 
+    const updated = checked
       ? [...selectedSpecialties, specialty]
       : selectedSpecialties.filter(s => s !== specialty);
     setSelectedSpecialties(updated);
@@ -179,11 +184,37 @@ export default function OffersCouponsPage() {
 
   // Handle category selection
   const handleCategoryChange = (category: string, checked: boolean) => {
-    const updated = checked 
+    const updated = checked
       ? [...selectedCategories, category]
       : selectedCategories.filter(c => c !== category);
     setSelectedCategories(updated);
     setValue('applicableCategories', updated);
+
+    // Auto-select/deselect services that belong to this category
+    if (Array.isArray(servicesResponse)) {
+      const servicesInCategory = servicesResponse
+        .filter((s: any) => {
+          const serviceCatName = s.category?.name || s.category;
+          return serviceCatName === category;
+        })
+        .map((s: any) => s.name);
+
+      let updatedSpecialties = [...selectedSpecialties];
+      if (checked) {
+        // When category is checked, add all its services
+        servicesInCategory.forEach(sName => {
+          if (!updatedSpecialties.includes(sName)) {
+            updatedSpecialties.push(sName);
+          }
+        });
+      } else {
+        // When category is unchecked, remove all its services
+        updatedSpecialties = updatedSpecialties.filter(sName => !servicesInCategory.includes(sName));
+      }
+
+      setSelectedSpecialties(updatedSpecialties);
+      setValue('applicableSpecialties', updatedSpecialties);
+    }
   };
 
   // Update form values when editing
@@ -195,10 +226,10 @@ export default function OffersCouponsPage() {
       setValue('value', coupon.value || 0);
       setValue('startDate', coupon.startDate ? coupon.startDate.split('T')[0] : '');
       setValue('expires', coupon.expires ? coupon.expires.split('T')[0] : '');
-      
+
       const specialties = Array.isArray(coupon.applicableSpecialties) ? coupon.applicableSpecialties : [];
       const categories = Array.isArray(coupon.applicableCategories) ? coupon.applicableCategories : [];
-      
+
       setSelectedSpecialties(specialties);
       setSelectedCategories(categories);
       setValue('applicableSpecialties', specialties);
@@ -484,8 +515,8 @@ export default function OffersCouponsPage() {
                           // Regional Admin looking at a Global Offer: Toggle for THEIR region
                           const isRegionallyDisabled = coupon.disabledRegions?.some((r: any) => r.toString() === currentRegionId);
                           return (
-                            <Switch 
-                              checked={!isRegionallyDisabled} 
+                            <Switch
+                              checked={!isRegionallyDisabled}
                               onCheckedChange={async () => {
                                 try {
                                   const action = isRegionallyDisabled ? 'enable_global' : 'disable_global';
@@ -501,8 +532,8 @@ export default function OffersCouponsPage() {
                         } else {
                           // Super Admin OR Regional Admin looking at their OWN regional offer: Toggle global isActive
                           return (
-                            <Switch 
-                              checked={coupon.isActive !== false} 
+                            <Switch
+                              checked={coupon.isActive !== false}
                               onCheckedChange={async () => {
                                 try {
                                   await updateOffer({ id: coupon._id, action: 'toggle_active' }).unwrap();
@@ -532,14 +563,13 @@ export default function OffersCouponsPage() {
                         }
 
                         return (
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            coupon.isActive === false ? "bg-red-50 text-red-700 border border-red-100" :
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${coupon.isActive === false ? "bg-red-50 text-red-700 border border-red-100" :
                             coupon.status === "Active"
                               ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
                               : coupon.status === "Scheduled"
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                          }`}>
+                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                                : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                            }`}>
                             {coupon.isActive === false ? "Deactivated" : coupon.status}
                           </span>
                         );
@@ -551,9 +581,9 @@ export default function OffersCouponsPage() {
                     <TableCell>{formatList(coupon.applicableCategories)}</TableCell>
                     <TableCell>
                       {coupon.offerImage ? (
-                        <img 
-                          src={coupon.offerImage} 
-                          alt="Offer" 
+                        <img
+                          src={coupon.offerImage}
+                          alt="Offer"
                           className="w-10 h-10 object-cover rounded"
                         />
                       ) : (
@@ -587,10 +617,10 @@ export default function OffersCouponsPage() {
                           <Edit2 className="h-4 w-4" />
                           <span className="sr-only">Edit</span>
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={() => handleDeleteClick(coupon)}
                           disabled={isDeleting}
                         >
@@ -630,7 +660,7 @@ export default function OffersCouponsPage() {
               {modalType === 'viewCoupon' && "Viewing details for this coupon."}
             </DialogDescription>
           </DialogHeader>
-          
+
           {modalType === 'viewCoupon' ? (
             <div className="grid gap-4 py-4 text-sm">
               {(() => {
@@ -674,9 +704,9 @@ export default function OffersCouponsPage() {
                       <span className="font-semibold text-muted-foreground">Image</span>
                       <div className="col-span-2">
                         {couponData?.offerImage ? (
-                          <img 
-                            src={couponData.offerImage} 
-                            alt="Offer" 
+                          <img
+                            src={couponData.offerImage}
+                            alt="Offer"
                             className="w-20 h-20 object-cover rounded border"
                           />
                         ) : (
@@ -687,7 +717,7 @@ export default function OffersCouponsPage() {
                     <div className="grid grid-cols-3 items-center gap-4">
                       <span className="font-semibold text-muted-foreground">Region</span>
                       <span className="col-span-2">
-                         {couponData?.regionId 
+                        {couponData?.regionId
                           ? regions.find((r: any) => r._id === couponData.regionId)?.name || 'Regional'
                           : 'Global'}
                       </span>
@@ -703,8 +733,8 @@ export default function OffersCouponsPage() {
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
               <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="useCustomCode" 
+                <Checkbox
+                  id="useCustomCode"
                   checked={useCustomCode}
                   onCheckedChange={(checked) => {
                     setUseCustomCode(!!checked);
@@ -720,16 +750,16 @@ export default function OffersCouponsPage() {
               {useCustomCode && (
                 <div className="space-y-2">
                   <Label htmlFor="code">Custom Coupon Code</Label>
-                  <Input 
-                    id="code" 
+                  <Input
+                    id="code"
                     placeholder="Enter custom code (e.g., SAVE20)"
-                    {...register('code', { 
+                    {...register('code', {
                       required: useCustomCode ? 'Custom coupon code is required' : false,
                       pattern: {
                         value: /^[A-Z0-9]+$/,
                         message: 'Code must contain only uppercase letters and numbers'
                       }
-                    })} 
+                    })}
                   />
                   {errors.code && <p className="text-red-500 text-sm">{errors.code.message}</p>}
                   <p className="text-sm text-muted-foreground">
@@ -740,8 +770,8 @@ export default function OffersCouponsPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="type">Discount Type</Label>
-                <Select 
-                  defaultValue={data ? (data as Coupon).type || 'percentage' : 'percentage'} 
+                <Select
+                  defaultValue={data ? (data as Coupon).type || 'percentage' : 'percentage'}
                   onValueChange={(value) => setValue('type', value as 'percentage' | 'fixed')}
                 >
                   <SelectTrigger id="type">
@@ -757,8 +787,8 @@ export default function OffersCouponsPage() {
               {(userRole === 'SUPER_ADMIN' || userRole === 'superadmin') && (
                 <div className="space-y-2">
                   <Label htmlFor="regionId">Region</Label>
-                  <Select 
-                    value={watch('regionId') || "global"} 
+                  <Select
+                    value={watch('regionId') || "global"}
                     onValueChange={(value) => setValue('regionId', value === "global" ? null : value)}
                   >
                     <SelectTrigger id="regionId">
@@ -778,13 +808,13 @@ export default function OffersCouponsPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="value">Discount Value</Label>
-                <Input 
-                  id="value" 
-                  type="number" 
-                  {...register('value', { 
+                <Input
+                  id="value"
+                  type="number"
+                  {...register('value', {
                     required: 'Discount value is required',
                     min: { value: 1, message: 'Value must be greater than 0' }
-                  })} 
+                  })}
                 />
                 {errors.value && <p className="text-red-500 text-sm">{errors.value.message}</p>}
               </div>
@@ -792,25 +822,64 @@ export default function OffersCouponsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Starts On</Label>
-                  <Input 
-                    id="startDate" 
-                    type="date" 
-                    {...register('startDate', { required: 'Start date is required' })} 
+                  <Input
+                    id="startDate"
+                    type="date"
+                    {...register('startDate', { required: 'Start date is required' })}
                   />
                   {errors.startDate && <p className="text-red-500 text-sm">{errors.startDate.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="expires">Expires On</Label>
-                  <Input 
-                    id="expires" 
-                    type="date" 
-                    {...register('expires')} 
+                  <Input
+                    id="expires"
+                    type="date"
+                    {...register('expires')}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Applicable Services (Select multiple or none for all)</Label>
+                <Label>1. Category (Target Audience - select multiple or none for all)</Label>
+                <div className="grid grid-cols-3 gap-2 p-3 border rounded-md">
+                  {genderOptions.map((gender) => (
+                    <div key={gender} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`gender-${gender}`}
+                        checked={selectedCategories.includes(gender)}
+                        onCheckedChange={(checked) => handleCategoryChange(gender, !!checked)}
+                      />
+                      <Label htmlFor={`gender-${gender}`} className="text-sm">
+                        {gender}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>2. Sub-Category (Service Groups - Auto-selects services)</Label>
+                <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-40 overflow-y-auto">
+                  {categoryOptions.map((category) => (
+                    <div key={category} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`category-${category}`}
+                        checked={selectedCategories.includes(category)}
+                        onCheckedChange={(checked) => handleCategoryChange(category, !!checked)}
+                      />
+                      <Label htmlFor={`category-${category}`} className="text-sm">
+                        {category}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {selectedCategories.filter(c => !genderOptions.includes(c)).length === 0 ? 'No sub-categories selected' : `Selected categories: ${selectedCategories.filter(c => !genderOptions.includes(c)).length}`}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>3. Individual Services (Select specific services if needed)</Label>
                 <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-40 overflow-y-auto">
                   {specialtyOptions.map((specialty: any) => (
                     <div key={specialty} className="flex items-center space-x-2">
@@ -826,28 +895,7 @@ export default function OffersCouponsPage() {
                   ))}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {selectedSpecialties.length === 0 ? 'Will apply to all services' : `Selected: ${selectedSpecialties.length}`}
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Applicable Categories (Select multiple or none for all)</Label>
-                <div className="grid grid-cols-3 gap-2 p-3 border rounded-md">
-                  {categoryOptions.map((category) => (
-                    <div key={category} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`category-${category}`}
-                        checked={selectedCategories.includes(category)}
-                        onCheckedChange={(checked) => handleCategoryChange(category, !!checked)}
-                      />
-                      <Label htmlFor={`category-${category}`} className="text-sm">
-                        {category}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {selectedCategories.length === 0 ? 'Will apply to all categories' : `Selected: ${selectedCategories.length}`}
+                  {selectedSpecialties.length === 0 ? 'Will apply to all services' : `Selected services: ${selectedSpecialties.length}`}
                 </p>
               </div>
 
@@ -861,12 +909,12 @@ export default function OffersCouponsPage() {
                     onChange={handleImageUpload}
                     className="hidden"
                   />
-                  
+
                   {previewImage ? (
                     <div className="relative">
-                      <img 
-                        src={previewImage} 
-                        alt="Preview" 
+                      <img
+                        src={previewImage}
+                        alt="Preview"
                         className="w-32 h-32 object-cover rounded border"
                       />
                       <Button
@@ -892,7 +940,7 @@ export default function OffersCouponsPage() {
                       </div>
                     </Button>
                   )}
-                  
+
                   <p className="text-sm text-muted-foreground">
                     Supports JPG, PNG, GIF, WebP. Max size: 5MB
                   </p>

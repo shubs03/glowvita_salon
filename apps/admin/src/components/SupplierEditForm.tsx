@@ -30,6 +30,7 @@ interface Supplier {
     coordinates: number[];
   };
   licenseFiles?: string[];
+  profileImage?: string;
   subscription?: {
     plan?: any;
     status: string;
@@ -71,10 +72,22 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch }:
         pincode: supplier.pincode,
         supplierType: supplier.supplierType,
         businessRegistrationNo: supplier.businessRegistrationNo,
-        location: supplier.location
+        location: supplier.location,
+        profileImage: supplier.profileImage
       });
     }
   }, [supplier]);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, profileImage: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -174,6 +187,32 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch }:
 
           {/* PROFILE TAB */}
           <TabsContent value="profile" className="space-y-4 py-4">
+            <div className="flex flex-col items-center mb-6">
+              <div className="relative group w-32 h-32 rounded-full overflow-hidden border-2 border-primary/20 bg-muted">
+                {formData.profileImage ? (
+                  <img
+                    src={formData.profileImage}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Upload className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                )}
+                <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                  <Upload className="h-6 w-6 text-white" />
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                  />
+                </label>
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">Click to upload profile image</p>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>First Name</Label>

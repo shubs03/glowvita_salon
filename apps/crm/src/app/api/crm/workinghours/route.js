@@ -8,33 +8,33 @@ await _db();
 // Utility function to convert 24-hour time to 12-hour format
 const convertTo12HourFormat = (time24) => {
     if (!time24) return '';
-    
+
     const [hours, minutes] = time24.split(':');
     const hour12 = parseInt(hours);
     const ampm = hour12 >= 12 ? 'PM' : 'AM';
     const displayHour = hour12 === 0 ? 12 : hour12 > 12 ? hour12 - 12 : hour12;
-    
+
     return `${displayHour.toString().padStart(2, '0')}:${minutes}${ampm}`;
 };
 
 // Utility function to convert 12-hour time to 24-hour format
 const convertTo24HourFormat = (time12) => {
     if (!time12) return '';
-    
+
     const timePattern = /^(\d{1,2}):(\d{2})(AM|PM)$/i;
     const match = time12.match(timePattern);
-    
+
     if (!match) return time12; // Return as-is if it doesn't match expected format
-    
+
     let [, hours, minutes, ampm] = match;
     hours = parseInt(hours);
-    
+
     if (ampm.toUpperCase() === 'AM') {
         if (hours === 12) hours = 0;
     } else {
         if (hours !== 12) hours += 12;
     }
-    
+
     return `${hours.toString().padStart(2, '0')}:${minutes}`;
 };
 
@@ -64,7 +64,7 @@ export const GET = authMiddlewareCrm(async (req) => {
         const daysOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
         const daysMap = {
             'monday': 'Monday',
-            'tuesday': 'Tuesday', 
+            'tuesday': 'Tuesday',
             'wednesday': 'Wednesday',
             'thursday': 'Thursday',
             'friday': 'Friday',
@@ -73,26 +73,30 @@ export const GET = authMiddlewareCrm(async (req) => {
         };
 
         daysOrder.forEach(dayKey => {
-            const dayData = workingHours.workingHours[dayKey];
+            const dayData = workingHours.workingHours?.[dayKey];
             if (dayData) {
-                const openTime = dayData.isOpen && dayData.hours && dayData.hours.length > 0 
-                    ? convertTo24HourFormat(dayData.hours[0].openTime) : '';
-                const closeTime = dayData.isOpen && dayData.hours && dayData.hours.length > 0 
-                    ? convertTo24HourFormat(dayData.hours[0].closeTime) : '';
-                
+                // If it's open but no hours are specified, use the new defaults
+                let openTime = dayData.isOpen ? '09:00' : '';
+                let closeTime = dayData.isOpen ? '20:00' : '';
+
+                if (dayData.hours && dayData.hours.length > 0) {
+                    openTime = convertTo24HourFormat(dayData.hours[0].openTime);
+                    closeTime = convertTo24HourFormat(dayData.hours[0].closeTime);
+                }
+
                 transformedData.workingHoursArray.push({
                     day: daysMap[dayKey] || dayKey,
                     open: openTime,
                     close: closeTime,
-                    isOpen: dayData.isOpen || false
+                    isOpen: dayData.isOpen
                 });
             } else {
                 // Add default entry if day data doesn't exist
                 transformedData.workingHoursArray.push({
                     day: daysMap[dayKey] || dayKey,
-                    open: '',
-                    close: '',
-                    isOpen: false
+                    open: '09:00',
+                    close: '20:00',
+                    isOpen: true
                 });
             }
         });
@@ -116,12 +120,12 @@ export const PUT = authMiddlewareCrm(async (req) => {
 
         // Transform working hours - convert 24-hour format to 12-hour format for storage
         const transformedWorkingHours = {};
-        
+
         Object.keys(updateData.workingHours).forEach(day => {
             const dayData = updateData.workingHours[day];
             transformedWorkingHours[day] = {
                 isOpen: dayData.isOpen,
-                hours: dayData.isOpen && dayData.hours && dayData.hours.length > 0 
+                hours: dayData.isOpen && dayData.hours && dayData.hours.length > 0
                     ? dayData.hours.map(timeSlot => ({
                         openTime: convertTo12HourFormat(timeSlot.openTime),
                         closeTime: convertTo12HourFormat(timeSlot.closeTime)
@@ -132,7 +136,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
 
         // Find the existing working hours document
         let vendorWorkingHours = await VendorWorkingHours.findOne({ vendor: vendorId });
-        
+
         // If it doesn't exist, create a new one
         if (!vendorWorkingHours) {
             vendorWorkingHours = new VendorWorkingHours({
@@ -149,21 +153,21 @@ export const PUT = authMiddlewareCrm(async (req) => {
         // Save the document to trigger the post-save hook for staff synchronization
         const updatedHours = await vendorWorkingHours.save();
 
-        return NextResponse.json({ 
-            message: "Working hours updated successfully", 
-            data: updatedHours 
+        return NextResponse.json({
+            message: "Working hours updated successfully",
+            data: updatedHours
         }, { status: 200 });
 
     } catch (error) {
         if (error.name === 'ValidationError') {
-            return NextResponse.json({ 
-                message: "Validation error", 
-                error: error.message 
+            return NextResponse.json({
+                message: "Validation error",
+                error: error.message
             }, { status: 400 });
         }
-        return NextResponse.json({ 
-            message: "Error updating working hours", 
-            error: error.message 
+        return NextResponse.json({
+            message: "Error updating working hours",
+            error: error.message
         }, { status: 500 });
     }
 }, ['vendor']);
@@ -171,14 +175,14 @@ export const PUT = authMiddlewareCrm(async (req) => {
 // Add special hours
 export const POST = authMiddlewareCrm(async (req) => {
     try {
-        
+
         const vendorId = req.user.userId;
         const { date, isOpen, hours, description } = await req.json();
 
         // Validate the special hours data
         if (!date || !hours || !Array.isArray(hours)) {
-            return NextResponse.json({ 
-                message: "Date and hours array are required" 
+            return NextResponse.json({
+                message: "Date and hours array are required"
             }, { status: 400 });
         }
 
@@ -194,7 +198,7 @@ export const POST = authMiddlewareCrm(async (req) => {
 
         // Find the existing working hours document
         let vendorWorkingHours = await VendorWorkingHours.findOne({ vendor: vendorId });
-        
+
         // If it doesn't exist, create a new one
         if (!vendorWorkingHours) {
             vendorWorkingHours = new VendorWorkingHours({
@@ -209,15 +213,15 @@ export const POST = authMiddlewareCrm(async (req) => {
         // Save the document to trigger the post-save hook for staff synchronization
         const updatedHours = await vendorWorkingHours.save();
 
-        return NextResponse.json({ 
-            message: "Special hours added successfully", 
-            data: updatedHours 
+        return NextResponse.json({
+            message: "Special hours added successfully",
+            data: updatedHours
         }, { status: 201 });
 
     } catch (error) {
-        return NextResponse.json({ 
-            message: "Error adding special hours", 
-            error: error.message 
+        return NextResponse.json({
+            message: "Error adding special hours",
+            error: error.message
         }, { status: 500 });
     }
 }, ['vendor']);
@@ -230,17 +234,17 @@ export const DELETE = authMiddlewareCrm(async (req) => {
         const specialHourId = url.searchParams.get('id');
 
         if (!specialHourId) {
-            return NextResponse.json({ 
-                message: "Special hour ID is required" 
+            return NextResponse.json({
+                message: "Special hour ID is required"
             }, { status: 400 });
         }
 
         // Find the existing working hours document
         const vendorWorkingHours = await VendorWorkingHours.findOne({ vendor: vendorId });
-        
+
         if (!vendorWorkingHours) {
-            return NextResponse.json({ 
-                message: "Working hours not found" 
+            return NextResponse.json({
+                message: "Working hours not found"
             }, { status: 404 });
         }
 
@@ -252,15 +256,15 @@ export const DELETE = authMiddlewareCrm(async (req) => {
         // Save the document to trigger the post-save hook for staff synchronization
         const updatedHours = await vendorWorkingHours.save();
 
-        return NextResponse.json({ 
-            message: "Special hours removed successfully", 
-            data: updatedHours 
+        return NextResponse.json({
+            message: "Special hours removed successfully",
+            data: updatedHours
         }, { status: 200 });
 
     } catch (error) {
-        return NextResponse.json({ 
-            message: "Error removing special hours", 
-            error: error.message 
+        return NextResponse.json({
+            message: "Error removing special hours",
+            error: error.message
         }, { status: 500 });
     }
 }, ['vendor']);

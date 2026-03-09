@@ -6,6 +6,36 @@ import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan.model";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
+
+// Utility function to process base64 image and upload it
+// Also deletes the old image if a new one is uploaded
+const processBase64Image = async (base64String, fileName, oldImageUrl = null) => {
+  if (!base64String) return null;
+
+  // Check if it's already a URL (not base64)
+  if (base64String.startsWith('http')) {
+    return base64String; // Already uploaded, return as is
+  }
+
+  // Upload the base64 image and return the URL
+  const imageUrl = await uploadBase64(base64String, fileName);
+
+  // If upload was successful and there's an old image, delete the old one
+  if (imageUrl && oldImageUrl && oldImageUrl.startsWith('http')) {
+    try {
+      // Attempt to delete the old file
+      // We don't await this as we don't want to fail the whole operation if deletion fails
+      deleteFile(oldImageUrl).catch(err => {
+        console.warn('Failed to delete old image:', err);
+      });
+    } catch (err) {
+      console.warn('Error deleting old image:', err);
+    }
+  }
+
+  return imageUrl;
+};
 
 // Initialize database connection
 const initDb = async () => {
@@ -141,10 +171,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
 export const PUT = authMiddlewareAdmin(async (req) => {
   try {
     await initDb();
-    const { id, password, ...body } = await req.json();
+    const { id, profileImage, password, ...updateData } = await req.json();
 
     if (!id) {
-      return NextResponse.json({ message: "ID is required for update" }, { status: 400 });
+      return NextResponse.json({ message: "ID is required to update a doctor" }, { status: 400 });
     }
 
     const existingDoctor = await DoctorModel.findById(id);
@@ -152,8 +182,18 @@ export const PUT = authMiddlewareAdmin(async (req) => {
       return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
     }
 
-    // Prepare update data
-    const updateData = { ...body, updatedAt: Date.now() };
+    // Process profile image if provided
+    let finalProfileImage = existingDoctor.profileImage;
+    if (profileImage !== undefined) {
+      if (profileImage && !profileImage.startsWith('http')) {
+        const imageUrl = await processBase64Image(profileImage, `doctor-${id}-profile`, existingDoctor.profileImage);
+        if (imageUrl) {
+          finalProfileImage = imageUrl;
+        }
+      } else {
+        finalProfileImage = profileImage;
+      }
+    }
 
     // If password is provided, hash it
     if (password && password.trim() !== '') {
@@ -174,7 +214,6 @@ export const PUT = authMiddlewareAdmin(async (req) => {
 }, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
 // DELETE - Remove a doctor
-
 export const DELETE = authMiddlewareAdmin(
   async (req) => {
     const { id } = await req.json();
@@ -188,4 +227,121 @@ export const DELETE = authMiddlewareAdmin(
   },
   ["SUPER_ADMIN", "REGIONAL_ADMIN"],
   "doctors:delete"
+);
+
+// PATCH - Update doctor status or document status
+export const PATCH = authMiddlewareAdmin(
+  async (req) => {
+    try {
+      await initDb();
+      const body = await req.json();
+      const { id, status, doctorId, documentType, rejectionReason } = body;
+
+      // Check if this is a doctor status update
+      if (id && status && !documentType) {
+        if (!id || !status) {
+          return NextResponse.json(
+            { message: "Doctor ID and status are required" },
+            { status: 400 }
+          );
+        }
+
+        // If status is "Approved", check mandatory documents
+        if (status === "Approved") {
+          const doctor = await DoctorModel.findById(id);
+          if (!doctor) {
+            return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
+          }
+
+          const documents = doctor.documents || {};
+          const mandatoryDocs = [
+            { key: "aadharCard", label: "Aadhar Card" },
+            { key: "panCard", label: "PAN Card" },
+          ];
+
+          const pendingOrRejectedDocs = mandatoryDocs.filter((doc) => {
+            const isUploaded = documents[doc.key] && documents[doc.key] !== "";
+            const docStatus = documents[`${doc.key}Status`];
+            return !isUploaded || docStatus !== "approved";
+          });
+
+          if (pendingOrRejectedDocs.length > 0) {
+            const docLabels = pendingOrRejectedDocs.map((doc) => doc.label).join(", ");
+            return NextResponse.json(
+              {
+                message: `Cannot approve doctor. The following mandatory documents are missing or not approved: ${docLabels}`,
+              },
+              { status: 400 }
+            );
+          }
+        }
+
+        const updatedDoctor = await DoctorModel.findByIdAndUpdate(
+          id,
+          { $set: { status } },
+          { new: true }
+        ).populate("subscription.plan", "name").select("-password");
+
+        if (!updatedDoctor) {
+          return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({
+          message: `Doctor ${status} successfully`,
+          doctor: updatedDoctor,
+        });
+      }
+
+      // Check if this is a document status update
+      else if (doctorId && documentType && status) {
+        const validDocumentTypes = [
+          'aadharCard', 'panCard', 'udhayamCert', 'shopAct'
+        ];
+
+        if (!validDocumentTypes.includes(documentType)) {
+          return NextResponse.json({ message: "Invalid document type" }, { status: 400 });
+        }
+
+        if (!['pending', 'approved', 'rejected'].includes(status)) {
+          return NextResponse.json({ message: "Invalid status" }, { status: 400 });
+        }
+
+        if (status === 'rejected' && (!rejectionReason || rejectionReason.trim() === '')) {
+          return NextResponse.json({ message: "Rejection reason is required" }, { status: 400 });
+        }
+
+        const updateData = {
+          [`documents.${documentType}Status`]: status,
+        };
+
+        if (status === 'rejected') {
+          updateData[`documents.${documentType}AdminRejectionReason`] = rejectionReason;
+        } else {
+          updateData[`documents.${documentType}AdminRejectionReason`] = null;
+        }
+
+        const updatedDoctor = await DoctorModel.findByIdAndUpdate(
+          doctorId,
+          { $set: updateData },
+          { new: true }
+        ).select("-password");
+
+        if (!updatedDoctor) {
+          return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({
+          message: `Document ${status} successfully`,
+          doctor: updatedDoctor,
+        });
+      }
+
+      return NextResponse.json({ message: "Invalid request parameters" }, { status: 400 });
+    } catch (error) {
+      console.error("Error in doctor PATCH:", error);
+      return NextResponse.json({ message: "Error updating doctor", error: error.message }, { status: 500 });
+    }
+  },
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "doctors:edit"
 );

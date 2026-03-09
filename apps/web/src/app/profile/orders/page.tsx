@@ -109,7 +109,6 @@ export default function OrdersPage() {
   const [originFilter, setOriginFilter] = useState("all"); // Origin filter
   const [dateFromFilter, setDateFromFilter] = useState(""); // Date from filter
   const [dateToFilter, setDateToFilter] = useState(""); // Date to filter
-  const [itemsCountFilter, setItemsCountFilter] = useState(""); // Items count filter
 
   const orderHistory: Order[] = ordersData?.data || [];
 
@@ -137,17 +136,15 @@ export default function OrdersPage() {
       const isOriginMatch = originFilter === "all" || origin === originFilter;
       const isDateFromMatch = !dateFromFilter || date >= new Date(dateFromFilter);
       const isDateToMatch = !dateToFilter || date <= new Date(dateToFilter);
-      const isItemsCountMatch = !itemsCountFilter || itemsCount === parseInt(itemsCountFilter);
 
       return (
         isStatusMatch &&
         isOriginMatch &&
         isDateFromMatch &&
-        isDateToMatch &&
-        isItemsCountMatch
+        isDateToMatch
       );
     });
-  }, [orderHistory, statusFilter, originFilter, dateFromFilter, dateToFilter, itemsCountFilter]);
+  }, [orderHistory, statusFilter, originFilter, dateFromFilter, dateToFilter]);
 
   const handleCancelClick = (order: Order) => {
     setOrderToCancel(order);
@@ -213,16 +210,16 @@ export default function OrdersPage() {
           change="All time"
         />
         <StatCard
-          icon={TrendingUp}
-          title="Total Spent"
-          value={`₹${orderHistory.reduce((acc, o) => acc + o.totalAmount, 0).toFixed(2)}`}
-          change="On products"
-        />
-        <StatCard
           icon={Package}
           title="Delivered"
           value={orderHistory.filter((o) => o.status === "Delivered").length}
           change="All time"
+        />
+        <StatCard
+          icon={TrendingUp}
+          title="Total Spent"
+          value={`₹${orderHistory.filter(o => o.status === "Delivered").reduce((acc, o) => acc + (o.totalAmount || 0), 0).toFixed(2)}`}
+          change="Delivered orders only"
         />
       </div>
       <Card>
@@ -232,51 +229,54 @@ export default function OrdersPage() {
               <CardTitle>My Orders</CardTitle>
               <CardDescription>Your product order history.</CardDescription>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="Delivered">Delivered</SelectItem>
-                  <SelectItem value="Processing">Processing</SelectItem>
-                  <SelectItem value="Cancelled">Cancelled</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={originFilter} onValueChange={setOriginFilter}>
-                <SelectTrigger className="w-[150px]">
-                  <SelectValue placeholder="Origin" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Origins</SelectItem>
-                  <SelectItem value="Salon">Salon</SelectItem>
-                  <SelectItem value="Supplier">Supplier</SelectItem>
-                  <SelectItem value="Mixed">Mixed</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                type="date"
-                placeholder="From date"
-                className="w-[150px]"
-                value={dateFromFilter}
-                onChange={(e) => setDateFromFilter(e.target.value)}
-              />
-              <Input
-                type="date"
-                placeholder="To date"
-                className="w-[150px]"
-                value={dateToFilter}
-                onChange={(e) => setDateToFilter(e.target.value)}
-              />
-              <Input
-                type="number"
-                placeholder="Items count"
-                className="w-[120px]"
-                value={itemsCountFilter}
-                onChange={(e) => setItemsCountFilter(e.target.value)}
-              />
+            <div className="flex flex-wrap gap-2 items-end">
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground font-medium">Status</label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="Delivered">Delivered</SelectItem>
+                    <SelectItem value="Processing">Processing</SelectItem>
+                    <SelectItem value="Cancelled">Cancelled</SelectItem>
+                    <SelectItem value="Pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground font-medium">Origin</label>
+                <Select value={originFilter} onValueChange={setOriginFilter}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Origin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Origins</SelectItem>
+                    <SelectItem value="Salon">Salon</SelectItem>
+                    <SelectItem value="Supplier">Supplier</SelectItem>
+                    <SelectItem value="Mixed">Mixed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground font-medium">Start Date</label>
+                <Input
+                  type="date"
+                  className="w-[150px]"
+                  value={dateFromFilter}
+                  onChange={(e) => setDateFromFilter(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-xs text-muted-foreground font-medium">End Date</label>
+                <Input
+                  type="date"
+                  className="w-[150px]"
+                  value={dateToFilter}
+                  onChange={(e) => setDateToFilter(e.target.value)}
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -563,13 +563,14 @@ export default function OrdersPage() {
                       key={index}
                       className="flex items-center gap-4 p-3 bg-secondary rounded-lg"
                     >
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        width={64}
-                        height={64}
-                        className="rounded-md object-cover"
-                      />
+                      <div className="relative w-16 h-16 flex-shrink-0 overflow-hidden rounded-md border">
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
                       <div className="flex-grow">
                         <p className="font-medium">{item.name}</p>
                         <div className="flex items-center gap-2 mt-1">

@@ -2,21 +2,11 @@ import _db from "@repo/lib/db";
 import ProductModel from "@repo/lib/models/Vendor/Product.model";
 import VendorModel from "@repo/lib/models/Vendor.model";
 import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
+import ProductCategoryModel from "@repo/lib/models/admin/ProductCategory.model";
+import ReviewModel from "@repo/lib/models/Review/Review.model";
 
 await _db();
-
-// Handle CORS preflight
-export const OPTIONS = async (request) => {
-  return new Response(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-      'Access-Control-Max-Age': '86400',
-    },
-  });
-};
+// ... (OPTIONS remains same)
 
 // Get Single Product by ID
 export const GET = async (request, { params }) => {
@@ -30,8 +20,8 @@ export const GET = async (request, { params }) => {
       }, { status: 400 });
     }
 
-    // Get product by ID
-    const product = await ProductModel.findById(id);
+    // Get product by ID and populate category
+    const product = await ProductModel.findById(id).populate('category', 'name');
 
     if (!product) {
       return Response.json({
@@ -66,6 +56,26 @@ export const GET = async (request, { params }) => {
       }, { status: 404 });
     }
 
+    // Fetch real rating stats
+    const stats = await ReviewModel.aggregate([
+      { $match: { entityId: product._id, entityType: 'product', isApproved: true } },
+      {
+        $group: {
+          _id: '$entityId',
+          averageRating: { $avg: '$rating' },
+          reviewCount: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const reviewStats = stats.length > 0 ? {
+      averageRating: stats[0].averageRating.toFixed(1),
+      reviewCount: stats[0].reviewCount
+    } : {
+      averageRating: "0.0",
+      reviewCount: 0
+    };
+
     // Transform the data for the frontend
     const transformedProduct = {
       id: product._id,
@@ -79,11 +89,12 @@ export const GET = async (request, { params }) => {
       vendorId: vendorData._id,
       vendorName: product.origin === 'Supplier' ? vendorData.shopName : vendorData.businessName || 'Unknown Vendor',
       vendorLocation: `${vendorData.city || ''}, ${vendorData.state || ''}`.trim(),
-      category: product.category || 'Beauty Products',
+      category: product.category?.name || 'Beauty Products',
+      categoryId: product.category?._id || product.category || null,
       stock: product.stock,
       isActive: product.isActive,
-      rating: (4.2 + Math.random() * 0.8).toFixed(1),
-      reviewCount: Math.floor(50 + Math.random() * 500),
+      rating: reviewStats.averageRating,
+      reviewCount: reviewStats.reviewCount,
       // New fields from product schema
       size: product.size || null,
       sizeMetric: product.sizeMetric || null,

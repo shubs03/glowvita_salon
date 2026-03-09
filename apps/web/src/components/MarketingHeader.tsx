@@ -20,7 +20,6 @@ import {
   ChevronDown,
   Gift,
 } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle";
 import { cn } from "@repo/ui/cn";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppDispatch } from "@repo/store/hooks";
@@ -245,9 +244,7 @@ export function MarketingHeader({
                 )}
               </>
             )}
-            <div className="mx-2">
-              <ThemeToggle />
-            </div>
+
             {!isLoading && (
               <>
                 {isAuthenticated && user ? (
@@ -339,7 +336,7 @@ export function MarketingHeader({
 
           {/* Mobile Nav Toggle */}
           <div className="lg:hidden flex items-center gap-2">
-            <ThemeToggle />
+
             <Button
               variant="ghost"
               size="icon"

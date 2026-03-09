@@ -274,11 +274,23 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
             if (!regex.test(value)) return;
         }
 
+        // Position validation: only words and spaces allowed
+        if (name === 'position') {
+            const regex = /^[a-zA-Z\s]*$/;
+            if (!regex.test(value)) return;
+        }
+
         // Mobile Number validation: only 10 digits allowed
         if (name === 'mobileNo') {
             const regex = /^[0-9]*$/;
             if (!regex.test(value)) return;
             if (value.length > 10) return;
+        }
+
+        // Email validation: only alphanumeric, @ and .
+        if (name === 'emailAddress') {
+            const regex = /^[a-zA-Z0-9@.]*$/;
+            if (!regex.test(value)) return;
         }
 
         setFormData((prev: any) => ({ ...prev, [name]: value }));
@@ -710,6 +722,24 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
         if (formData.mobileNo.length !== 10) {
             toast.error("Mobile number must be exactly 10 digits.");
             return;
+        }
+
+        // Email validation: restrict special characters and check format
+        const emailValue = formData.emailAddress;
+        if (emailValue) {
+            // Regex to allow only alphanumeric, @ and .
+            const allowedCharsRegex = /^[a-zA-Z0-9@.]*$/;
+            if (!allowedCharsRegex.test(emailValue)) {
+                toast.error("Email can only contain @ and . as special characters.");
+                return;
+            }
+
+            // Standard email format check
+            const emailFormatRegex = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.]+\.[a-zA-Z]{2,}$/;
+            if (!emailFormatRegex.test(emailValue)) {
+                toast.error("Please enter a valid email format (e.g., example@gmail.com).");
+                return;
+            }
         }
 
         const payload: any = {

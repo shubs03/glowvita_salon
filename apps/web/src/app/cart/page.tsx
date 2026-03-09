@@ -4,6 +4,7 @@ import { useCallback, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@repo/ui/button";
+import { Badge } from "@repo/ui/badge";
 import { Input } from "@repo/ui/input";
 import {
   Card,
@@ -204,6 +205,8 @@ export default function CartPage() {
         id: item.productId || item._id,
         name: item.productName,
         price: item.price, // Passing unit price
+        originalPrice: item.originalPrice,
+        hasSale: item.hasSale,
         image: item.productImage || "https://placehold.co/100x100.png",
         quantity: item.quantity,
         vendorId: item.vendorId || "unknown",
@@ -262,8 +265,7 @@ export default function CartPage() {
     : 0;
   const tax = gst + platformFee;
 
-  const discount = subtotal * 0.1; // 10% discount
-  const total = subtotal + shipping + tax - discount;
+  const total = subtotal + shipping + tax;
   const itemCount = cartItems.reduce(
     (acc: number, item: any) => acc + item.quantity,
     0
@@ -320,7 +322,7 @@ export default function CartPage() {
                 </p>
               </div>
               <Button asChild size="lg" className="mt-8">
-                <Link href="/">
+                <Link href="/all-products">
                   <ArrowLeft className="mr-2 h-4 w-4" /> Continue Shopping
                 </Link>
               </Button>
@@ -352,9 +354,21 @@ export default function CartPage() {
                         <h3 className="font-semibold text-base lg:text-lg mb-1">
                           {item.productName}
                         </h3>
-                        <p className="text-muted-foreground text-sm lg:text-base">
-                          Price: ₹{item.price.toFixed(2)}
-                        </p>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-primary font-semibold text-sm lg:text-base">
+                            ₹{item.price.toFixed(2)}
+                          </p>
+                          {item.hasSale && (
+                            <>
+                              <p className="text-muted-foreground line-through text-xs">
+                                ₹{item.originalPrice.toFixed(2)}
+                              </p>
+                              <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 h-4 hover:bg-green-100">
+                                {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% OFF
+                              </Badge>
+                            </>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-3">
                           <Button
                             variant="outline"
@@ -553,12 +567,6 @@ export default function CartPage() {
                       <span className="font-medium">₹{subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm lg:text-base">
-                      <span className="text-muted-foreground">Discount</span>
-                      <span className="font-medium text-blue-600">
-                        -₹{discount.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm lg:text-base">
                       <span className="text-muted-foreground">Est. Shipping</span>
                       <span className="font-medium">₹{shipping.toFixed(2)}</span>
                     </div>
@@ -587,13 +595,6 @@ export default function CartPage() {
                     >
                       Proceed to Checkout
                     </Button>
-                    {discount > 0 && (
-                      <div className="text-center">
-                        <p className="text-sm text-blue-600 font-medium">
-                          You saved ₹{discount.toFixed(2)} on this order!
-                        </p>
-                      </div>
-                    )}
                   </CardFooter>
                 </Card>
 

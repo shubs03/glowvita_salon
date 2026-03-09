@@ -9,16 +9,17 @@ import { useAppDispatch } from "@repo/store/hooks";
 import { addToCart as addToLocalCart } from "@repo/store/slices/cartSlice";
 import { useAddToClientCartMutation } from "@repo/store/services/api";
 import Image from "next/image";
+import { cn } from "@repo/ui/cn";
 import { Heart, ShoppingCart, Star } from "lucide-react";
 import { Badge } from "@repo/ui/badge";
-import { useGetPublicVendorProductsQuery } from "@repo/store/api";
+import { useGetPublicVendorProductsQuery, useGetPublicProductsQuery } from "@repo/store/api";
 
 interface Product {
   id: string;
   name: string;
   description: string;
   price: number;
-  salePrice?: number;
+  salePrice: number;
   image: string;
   vendorId: string;
   vendorName: string;
@@ -33,6 +34,7 @@ interface RelevantProductsProps {
   vendorId: string;
   vendorName: string;
   category: string;
+  categoryId: string;
   onBuyNow: (product: Product) => void;
   onAddToCart: (product: Product) => void;
   isSubscriptionExpired?: boolean;
@@ -43,6 +45,7 @@ const RelevantProducts: React.FC<RelevantProductsProps> = ({
   vendorId,
   vendorName,
   category,
+  categoryId,
   onBuyNow,
   onAddToCart,
   isSubscriptionExpired = false,
@@ -52,39 +55,78 @@ const RelevantProducts: React.FC<RelevantProductsProps> = ({
   const dispatch = useAppDispatch();
   const [addToCartAPI] = useAddToClientCartMutation();
 
-  // Fetch products by vendor to show as relevant products
+  // 1. Fetch products by vendor
   const {
     data: vendorProductsResponse,
     isLoading: vendorProductsLoading,
-    error: vendorProductsError,
   } = useGetPublicVendorProductsQuery(vendorId, {
     skip: !vendorId,
   });
 
-  // Use vendor products as relevant products
-  const vendorProducts: any[] = vendorProductsResponse?.products || [];
+  // 2. Fetch products by category (as fallback/supplement)
+  const {
+    data: categoryProductsResponse,
+    isLoading: categoryProductsLoading,
+  } = useGetPublicProductsQuery({ categoryId }, {
+    skip: !categoryId,
+  });
 
-  // Filter out the current product and format the data
-  const relevantProducts: Product[] = vendorProducts
-    .filter((product: any) => product.id !== currentProductId)
-    .map((product: any) => ({
-      id: product.id || product._id,
-      name: product.name,
-      description: product.description || "",
-      price: product.price || 0,
-      salePrice: product.salePrice || undefined,
-      image:
-        product.image ||
-        product.productImage ||
-        "https://placehold.co/320x224/e2e8f0/64748b?text=Product",
-      vendorId: product.vendorId || vendorId,
-      vendorName: product.vendorName || vendorName,
-      category: product.category || category,
-      stock: product.stock || 0,
-      rating: product.rating || 0,
-      hint: product.hint || product.description || product.name,
-    }))
-    .slice(0, 8); // Limit to 8 products
+  const vendorProducts: any[] = vendorProductsResponse?.products || [];
+  const categoryProducts: any[] = categoryProductsResponse?.products || [];
+
+  // Merge and deduplicate products
+  const combinedProductsMap = new Map();
+
+  // Helper to format product
+  const formatProduct = (product: any) => ({
+    id: product.id || product._id,
+    name: product.name,
+    description: product.description || "",
+    price: Number(product.price) || 0,
+    salePrice: product.salePrice && Number(product.salePrice) > 0 ? Number(product.salePrice) : 0,
+    image:
+      product.image ||
+      (Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : null) ||
+      product.productImage ||
+      "https://placehold.co/320x224/e2e8f0/64748b?text=Product",
+    vendorId: product.vendorId || vendorId,
+    vendorName: product.vendorName || vendorName,
+    category: product.category || category,
+    stock: product.stock || 0,
+    rating: product.rating || 0,
+    hint: product.hint || product.description || product.name,
+  });
+
+  // Add vendor products first
+  vendorProducts.forEach(p => {
+    const formatted = formatProduct(p);
+    if (formatted.id !== currentProductId) {
+      combinedProductsMap.set(formatted.id, formatted);
+    }
+  });
+
+  // Supplement with category products if needed
+  categoryProducts.forEach(p => {
+    const formatted = formatProduct(p);
+    if (formatted.id !== currentProductId && !combinedProductsMap.has(formatted.id)) {
+      combinedProductsMap.set(formatted.id, formatted);
+    }
+  });
+
+  const relevantProducts: Product[] = Array.from(combinedProductsMap.values()).slice(0, 8);
+
+  if (vendorProductsLoading || categoryProductsLoading) {
+    return (
+      <section className="py-12">
+        <div className="h-8 w-48 bg-gray-200 animate-pulse mb-8" />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-80 bg-gray-100 animate-pulse rounded-lg" />
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   if (relevantProducts.length === 0) {
     return null;
@@ -98,9 +140,9 @@ const RelevantProducts: React.FC<RelevantProductsProps> = ({
           Relevant Products
         </h2>
         <p className="text-muted-foreground mt-3 text-sm">
-            These awards are a testament to our commitment to excellence and our
-            dedication to providing the best salon software solutions to our
-            customers.
+          These awards are a testament to our commitment to excellence and our
+          dedication to providing the best salon software solutions to our
+          customers.
         </p>
       </div>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -256,12 +298,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <Button
           size="icon"
           variant="ghost"
-          className="absolute top-1 left-1 h-8 w-8 rounded-full bg-white/20 text-primary backdrop-blur-sm hover:bg-white/30 transition-all"
+          className="absolute top-1 left-1 h-8 w-8 rounded-full bg-white/20 text-red-500 backdrop-blur-sm hover:bg-white/30 transition-all"
           onClick={handleWishlistToggle}
           disabled={isLoading}
         >
           <Heart
-            className={`h-4 w-4 ${isLiked ? "fill-current text-primary" : ""}`}
+            className={cn("h-4 w-4", isLiked && "fill-red-500 text-red-500")}
           />
         </Button>
       </div>
@@ -274,9 +316,18 @@ const ProductCard: React.FC<ProductCardProps> = ({
           {product.description}
         </p>
         <div className="flex justify-between items-center mt-auto">
-          <p className="font-bold text-primary">₹{product.price.toFixed(2)}</p>
+          <div>
+            {product.salePrice && product.salePrice > 0 ? (
+              <div className="flex items-center gap-2">
+                <p className="font-bold text-primary">₹{product.salePrice.toFixed(2)}</p>
+                <p className="text-[10px] text-muted-foreground line-through">₹{product.price.toFixed(2)}</p>
+              </div>
+            ) : (
+              <p className="font-bold text-primary">₹{product.price.toFixed(2)}</p>
+            )}
+          </div>
           <div className="flex items-center gap-1">
-            <Star className="h-3 w-3 text-primary fill-current" />
+            <Star className="h-3 w-3 text-yellow-400 fill-current" />
             <span className="text-xs text-muted-foreground font-medium">
               {typeof product.rating === "number"
                 ? product.rating.toFixed(1)

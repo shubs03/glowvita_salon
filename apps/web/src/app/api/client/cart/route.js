@@ -35,8 +35,36 @@ export async function GET(req) {
     let cart = await UserCartModel.findOne({ userId }).lean();
 
     if (!cart) {
-      // If no cart exists, create an empty one
       cart = { userId, items: [] };
+    } else {
+      // Enrich items with current product data (real-time price/stock check)
+      const enrichedItems = await Promise.all(cart.items.map(async (item) => {
+        try {
+          const product = await ProductModel.findById(item.productId).select('productName price salePrice productImages stock description brand size sizeMetric productForm categoryDescription').lean();
+          if (product) {
+            const effectivePrice = (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price;
+            return {
+              ...item,
+              price: effectivePrice, // Always use latest price
+              originalPrice: product.price,
+              hasSale: product.salePrice > 0,
+              productName: product.productName,
+              productImage: product.productImages && product.productImages.length > 0 ? product.productImages[0] : item.productImage,
+              stock: product.stock,
+              description: product.description,
+              brand: product.brand,
+              size: product.size,
+              sizeMetric: product.sizeMetric,
+              productForm: product.productForm,
+              categoryDescription: product.categoryDescription
+            };
+          }
+          return item;
+        } catch (err) {
+          return item;
+        }
+      }));
+      cart.items = enrichedItems;
     }
 
     return NextResponse.json({ success: true, data: cart });

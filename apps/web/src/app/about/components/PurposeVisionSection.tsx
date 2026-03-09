@@ -1,5 +1,6 @@
 import React from "react";
 import { ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { NEXT_PUBLIC_CRM_URL } from "@repo/config/config";
 
 const PurposeVisionSection = () => {
@@ -49,6 +50,7 @@ const PurposeVisionSection = () => {
             <h3 className="font-bold text-card-foreground text-lg sm:text-xl items-center leading-tight">
               Our Vision
             </h3>
+
           </div>
 
           <p className="text-muted-foreground text-sm sm:text-base leading-relaxed pl-0 sm:pl-10 md:pl-16 mb-4 md:mb-6">
@@ -63,13 +65,13 @@ const PurposeVisionSection = () => {
           </p>
 
           <div className="pl-0 sm:pl-10 md:pl-16">
-            <a
-              href={`${NEXT_PUBLIC_CRM_URL}/login`} target="_blank"
+            <Link
+              href="/client-register"
               className="inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-5 py-3 sm:px-6 sm:py-3.5 md:px-8 md:py-4 rounded-lg md:rounded-xl font-semibold text-sm sm:text-base md:text-lg transition-all duration-300 shadow-sm hover:shadow-md group w-full sm:w-auto"
             >
               Get Started Today
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition-transform duration-300" />
-            </a>
+            </Link>
           </div>
         </div>
       </div>
