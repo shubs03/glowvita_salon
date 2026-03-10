@@ -32,6 +32,11 @@ const validateWalletSettings = (settings) => {
     return "Maximum withdrawals per day must be at least 1";
   }
 
+  // Validate withdrawable percentage
+  if (typeof settings.maxWithdrawablePercentage !== 'number' || settings.maxWithdrawablePercentage < 1 || settings.maxWithdrawablePercentage > 100) {
+    return "Maximum withdrawable percentage must be between 1 and 100";
+  }
+
   // Validate add money amounts
   if (typeof settings.minAddMoneyAmount !== 'number' || settings.minAddMoneyAmount < 0) {
     return "Minimum add money amount must be a positive number";
@@ -86,6 +91,7 @@ export const GET = authMiddlewareAdmin(
           maxWithdrawalAmount: settings.maxWithdrawalAmount,
           maxDailyWithdrawalAmount: settings.maxDailyWithdrawalAmount,
           maxWithdrawalsPerDay: settings.maxWithdrawalsPerDay,
+          maxWithdrawablePercentage: settings.maxWithdrawablePercentage || 50,
           minAddMoneyAmount: settings.minAddMoneyAmount,
           maxAddMoneyAmount: settings.maxAddMoneyAmount,
           withdrawalFeeType: settings.withdrawalFeeType,
@@ -137,6 +143,7 @@ export const PUT = authMiddlewareAdmin(
       currentSettings.maxWithdrawalAmount = settings.maxWithdrawalAmount;
       currentSettings.maxDailyWithdrawalAmount = settings.maxDailyWithdrawalAmount;
       currentSettings.maxWithdrawalsPerDay = settings.maxWithdrawalsPerDay;
+      currentSettings.maxWithdrawablePercentage = settings.maxWithdrawablePercentage;
       currentSettings.minAddMoneyAmount = settings.minAddMoneyAmount;
       currentSettings.maxAddMoneyAmount = settings.maxAddMoneyAmount;
       currentSettings.withdrawalFeeType = settings.withdrawalFeeType;
@@ -157,6 +164,7 @@ export const PUT = authMiddlewareAdmin(
           maxWithdrawalAmount: currentSettings.maxWithdrawalAmount,
           maxDailyWithdrawalAmount: currentSettings.maxDailyWithdrawalAmount,
           maxWithdrawalsPerDay: currentSettings.maxWithdrawalsPerDay,
+          maxWithdrawablePercentage: currentSettings.maxWithdrawablePercentage,
           minAddMoneyAmount: currentSettings.minAddMoneyAmount,
           maxAddMoneyAmount: currentSettings.maxAddMoneyAmount,
           withdrawalFeeType: currentSettings.withdrawalFeeType,

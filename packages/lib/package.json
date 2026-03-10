@@ -79,7 +79,10 @@
     "./modules/scheduling/ConflictChecker": "./src/modules/scheduling/ConflictChecker.js",
     "./modules/accounting/StaffAccounting": "./src/modules/accounting/StaffAccounting.js",
     "./utils/regionQuery": "./src/utils/regionQuery.js",
+    "./utils/assignRegion": "./src/utils/assignRegion.js",
     "./utils/assignRegion.js": "./src/utils/assignRegion.js",
+    "./utils/referralWalletCredit": "./src/utils/referralWalletCredit.js",
+    "./utils/razorpayPayout": "./src/utils/razorpayPayout.js",
     "./VPSUpload": "./VPSUpload.js",
     "./modules/scheduling/AutoCancellation": "./src/modules/scheduling/AutoCancellation.js",
     "./modules/scheduling/scheduledJobs": "./src/modules/scheduling/scheduledJobs.js"

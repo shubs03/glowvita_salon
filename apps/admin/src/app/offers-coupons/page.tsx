@@ -14,7 +14,7 @@ import { Skeleton } from '@repo/ui/skeleton';
 import { Edit2, Eye, Trash2, Plus, Percent, Tag, CheckSquare, IndianRupee, Upload, X, Power } from "lucide-react";
 import { Switch } from '@repo/ui/switch';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
-import { closeModal, openModal } from '../../../../../packages/store/src/slices/modalSlice.js';
+import { closeModal, openModal } from '@repo/store/slices/modalSlice';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { useForm } from 'react-hook-form';
 import {
@@ -26,7 +26,7 @@ import {
   useGetRegionsQuery,
   useGetCategoriesQuery
 } from '@repo/store/api';
-import { setSelectedRegion, selectSelectedRegion } from '../../../../../packages/store/src/slices/Admin/adminAuthSlice';
+import { setSelectedRegion, selectSelectedRegion } from '@repo/store/slices/adminAuthSlice';
 
 import { toast } from 'sonner';
 
@@ -68,6 +68,7 @@ const genderOptions = ['Men', 'Women', 'Unisex'];
 export default function OffersCouponsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
@@ -249,11 +250,17 @@ export default function OffersCouponsPage() {
     }
   }, [modalType, data, setValue, reset]);
 
+  const filteredCoupons = useMemo(() => {
+    if (!Array.isArray(couponsData)) return [];
+    if (statusFilter === 'all') return couponsData;
+    return couponsData.filter((coupon) => coupon.status === statusFilter);
+  }, [couponsData, statusFilter]);
+
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
-  const currentItems = Array.isArray(couponsData) ? couponsData.slice(firstItemIndex, lastItemIndex) : [];
+  const currentItems = [...filteredCoupons].reverse().slice(firstItemIndex, lastItemIndex);
 
-  const totalPages = Array.isArray(couponsData) ? Math.ceil(couponsData.length / itemsPerPage) : 1;
+  const totalPages = Math.ceil(filteredCoupons.length / itemsPerPage) || 1;
 
   const handleOpenModal = (type: 'addCoupon' | 'editCoupon' | 'viewCoupon', coupon?: Coupon) => {
     dispatch(openModal({ modalType: type, data: coupon }));
@@ -463,15 +470,27 @@ export default function OffersCouponsPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
             <div>
               <CardTitle>Manage Coupons</CardTitle>
               <CardDescription>Manage and create new promotional coupons.</CardDescription>
             </div>
-            <Button onClick={() => handleOpenModal('addCoupon')} disabled={isCreating}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create New Coupon
-            </Button>
+            <div className="flex flex-col sm:flex-row items-center gap-2">
+              <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}>
+                <SelectTrigger className="w-[150px] lg:w-[180px]">
+                  <SelectValue placeholder="Filter by Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Expired">Expired</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button onClick={() => handleOpenModal('addCoupon')} disabled={isCreating} className="w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                Create New Coupon
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -641,7 +660,7 @@ export default function OffersCouponsPage() {
             onPageChange={setCurrentPage}
             itemsPerPage={itemsPerPage}
             onItemsPerPageChange={setItemsPerPage}
-            totalItems={Array.isArray(couponsData) ? couponsData.length : 0}
+            totalItems={filteredCoupons.length}
           />
         </CardContent>
       </Card>

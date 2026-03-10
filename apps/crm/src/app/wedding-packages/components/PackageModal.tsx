@@ -263,7 +263,7 @@ export function PackageModal({
                         const staffMember = staff.find((s: any) => (s.id || s._id) === staffId);
                         return staffMember ? (
                           <Badge key={staffId} variant="secondary">
-                            {staffMember.name}
+                            {staffMember.fullName || staffMember.name}
                           </Badge>
                         ) : null;
                       })
@@ -308,7 +308,7 @@ export function PackageModal({
                               value={staffMember.id || staffMember._id}
                               disabled={formData.assignedStaff.includes(staffMember.id || staffMember._id)}
                             >
-                              {staffMember.name} {formData.assignedStaff.includes(staffMember.id || staffMember._id) ? '(Selected)' : ''}
+                              {staffMember.fullName || staffMember.name} {formData.assignedStaff.includes(staffMember.id || staffMember._id) ? '(Selected)' : ''}
                             </SelectItem>
                           ))
                         ) : (
@@ -323,7 +323,7 @@ export function PackageModal({
                         const staffMember = staff.find((s: any) => (s.id || s._id) === staffId);
                         return staffMember ? (
                           <Badge key={staffId} variant="secondary" className="flex items-center gap-1">
-                            {staffMember.name}
+                            {staffMember.fullName || staffMember.name}
                             <button
                               type="button"
                               onClick={() => {

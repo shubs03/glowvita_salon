@@ -11,6 +11,7 @@
     "./api": "./src/services/api.js",
     "./services/api": "./src/services/api.js",
     "./slices/adminAuthSlice": "./src/slices/Admin/adminAuthSlice.js",
+    "./slices/refferalSlice": "./src/slices/Admin/refferalSlice.js",
     "./slices/crmAuthSlice": "./src/slices/crmAuthSlice.js",
     "./slices/serviceSlice": "./src/slices/CRM/serviceSlice.js",
     "./slices/staffSlice": "./src/slices/CRM/staffSlice.js",

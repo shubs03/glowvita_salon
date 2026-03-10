@@ -79,6 +79,12 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: 'v2winonline.com',
+        port: '',
+        pathname: '/**',
+      },  
+      {
+        protocol: 'https',
         hostname: 'glowvitasalon.com',
         port: '',
         pathname: '/**',

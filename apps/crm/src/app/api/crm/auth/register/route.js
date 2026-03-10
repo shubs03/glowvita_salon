@@ -4,7 +4,8 @@ import bcrypt from "bcryptjs";
 import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import StaffModel from "@repo/lib/models/Vendor/Staff.model";
 import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan.model";
-import { ReferralModel, V2VSettingsModel } from "../../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
+import { ReferralModel, V2VSettingsModel, C2VSettingsModel } from "../../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
+import UserModel from "@repo/lib/models/user/User.model";
 import _db from "@repo/lib/db";
 import mongoose from "mongoose";
 
@@ -334,27 +335,67 @@ export async function POST(req) {
 
     // 8️⃣ Handle referral if a code was provided
     if (referredByCode) {
-      const referringVendor = await VendorModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
-      if (referringVendor) {
+      try {
+        const { checkAndCreditReferralBonus } = await import("@repo/lib/utils/referralWalletCredit");
+        const referredCode = referredByCode.trim().toUpperCase();
+        let referringEntity = null;
+        let referralType = 'V2V';
+        let entityType = 'Vendor';
+        let SettingsModel = V2VSettingsModel;
 
-        // Fetch V2V referral settings to get dynamic bonus
-        const v2vSettings = await V2VSettingsModel.findOne({});
-        const bonusValue = v2vSettings?.referrerBonus?.bonusValue || 0; // Default to 0 if not set
+        // Try Vendor model first
+        referringEntity = await VendorModel.findOne({ referralCode: referredCode });
+        
+        // If not found, try User model (C2V)
+        if (!referringEntity) {
+          referringEntity = await UserModel.findOne({ refferalCode: referredCode });
+          if (referringEntity) {
+            referralType = 'C2V';
+            entityType = 'User';
+            SettingsModel = C2VSettingsModel;
+          }
+        }
 
-        // Explicitly generate the referralId here
-        const referralType = 'V2V';
-        const count = await ReferralModel.countDocuments({ referralType });
-        const referralId = `${referralType}-${String(count + 1).padStart(3, '0')}`;
+        if (referringEntity) {
+          // Fetch settings for correct region
+          const settings = await SettingsModel.findOne({
+            $or: [
+              { regionId: newVendor.regionId },
+              { regionId: null }
+            ]
+          }).sort({ regionId: -1 });
 
-        await ReferralModel.create({
-          referralId,
-          referralType,
-          referrer: referringVendor.businessName,
-          referee: newVendor.businessName,
-          date: new Date(),
-          status: 'Completed',
-          bonus: String(bonusValue), // Use the dynamic bonus value
-        });
+          const bonusValue = settings?.referrerBonus?.bonusValue || 0;
+          const bonusType = settings?.referrerBonus?.bonusType || 'amount';
+          const bonusString = bonusType === 'amount' ? `₹${bonusValue}` : `${bonusValue}%`;
+          const referralId = `REF_${referralType.charAt(0)}_${Date.now()}`;
+
+          await ReferralModel.create({
+            referralId,
+            referralType,
+            referrer: referringEntity._id.toString(),
+            referrerType: entityType,
+            referee: newVendor._id.toString(),
+            refereeType: 'Vendor',
+            regionId: newVendor.regionId,
+            date: new Date(),
+            status: 'Pending',
+            bonus: bonusString,
+          });
+
+          console.log(`${referralType} Referral created (Pending): ${referringEntity.businessName || referringEntity.firstName} refers ${newVendor.businessName}`);
+
+          // Check if bonus should be credited on signup
+          const creditTime = settings?.referrerBonus?.creditTime;
+          const refereeCreditTime = settings?.refereeBonus?.creditTime;
+
+          if (creditTime === 'signup' || (settings?.refereeBonus?.enabled && refereeCreditTime === 'signup')) {
+              console.log("Triggering referral bonus credit for vendor signup...");
+              await checkAndCreditReferralBonus(newVendor._id.toString(), 'signup');
+          }
+        }
+      } catch (refErr) {
+        console.error("Error processing registration referral:", refErr);
       }
     }
 

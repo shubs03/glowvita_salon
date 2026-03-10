@@ -1,5 +1,5 @@
 const path = require('path');
-require('dotenv').config({ path: '../../.env' });
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const libPackageJson = require('../../packages/lib/package.json');
 const storePackageJson = require('../../packages/store/package.json');
 
@@ -65,6 +65,12 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+        {
+        protocol: 'https',
+        hostname: 'v2winonline.com',
+        port: '',
+        pathname: '/**',
+      },
       {
         protocol: 'http',
         hostname: 'localhost',
@@ -78,6 +84,11 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  env: {
+    RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
+    RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
+    NEXT_PUBLIC_RAZORPAY_KEY_ID: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
   },
 };
 

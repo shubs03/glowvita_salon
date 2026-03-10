@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Input } from '@repo/ui/input';
@@ -15,6 +15,20 @@ import { Label } from '@repo/ui/label';
 import { Badge } from '@repo/ui/badge';
 import { useAddToCartMutation } from '@repo/store/api';
 import { ProductCard } from '@/components/marketplace/ProductCard';
+
+// Load Razorpay script dynamically
+const loadRazorpayScript = (): Promise<boolean> =>
+  new Promise((resolve) => {
+    if (typeof window !== 'undefined' && (window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
 
 // Import new components
 import { MarketplaceHeader } from './components/MarketplaceHeader';
@@ -45,6 +59,7 @@ type Product = {
   description: string;
   discount?: number;
   rating?: number;
+  minOrderValue?: number;
 };
 
 interface MarketplaceStats {
@@ -97,7 +112,8 @@ export default function MarketplacePage() {
   const { data: supplierData, isLoading: isSupplierLoading } = useGetSupplierProfileQuery(selectedSupplierId, { skip: !selectedSupplierId });
 
   const [addToCart, { isLoading: isAddingToCart }] = useAddToCartMutation();
-  const [createOrder, { isLoading: isCreatingOrder }] = useCreateCrmOrderMutation();
+  const [createOrder] = useCreateCrmOrderMutation();
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // Extract the products array from the API response
   const productsArray = useMemo(() => {
@@ -280,6 +296,7 @@ export default function MarketplacePage() {
         productImage: product.productImage,
         vendorId: product.vendorId, // This is the supplier's ID
         supplierName: product.supplierName,
+        minOrderValue: product.minOrderValue || 0,
       }).unwrap();
       toast.success(`${qty} x ${product.productName} added to cart.`);
       setIsDetailModalOpen(false);
@@ -306,6 +323,7 @@ export default function MarketplacePage() {
         productImage: product.productImage,
         vendorId: product.vendorId,
         supplierName: product.supplierName,
+        minOrderValue: product.minOrderValue || 0,
       }).unwrap();
       toast.success(`${product.productName} added to cart!`);
     } catch (error) {
@@ -318,33 +336,138 @@ export default function MarketplacePage() {
       toast.error("Shipping address is required.");
       return;
     }
-
     if (!selectedProduct) return;
+
+    const finalPrice = selectedProduct.salePrice || selectedProduct.price;
+    const totalAmount = finalPrice * buyNowQuantity;
+
+    const minOrder = selectedProduct.minOrderValue || 1000;
+    // Minimum order validation (from supplier)
+    if (totalAmount < minOrder) {
+      toast.error(`Minimum order amount for this supplier is ₹${minOrder.toLocaleString()}.`, {
+        description: `Current total: ₹${totalAmount.toLocaleString()}. Please increase the quantity to proceed.`,
+      });
+      return;
+    }
 
     const supplierId = typeof selectedProduct.vendorId === 'object' && (selectedProduct.vendorId as any)._id
       ? (selectedProduct.vendorId as any)._id
       : selectedProduct.vendorId;
 
-    const orderData = {
-      items: [{
-        productId: selectedProduct._id,
-        productName: selectedProduct.productName,
-        quantity: buyNowQuantity,
-        price: selectedProduct.salePrice || selectedProduct.price,
-      }],
-      supplierId: supplierId,
-      totalAmount: (selectedProduct.salePrice || selectedProduct.price) * buyNowQuantity,
-      shippingAddress
-    };
-
+    setIsProcessingPayment(true);
     try {
-      await createOrder(orderData).unwrap();
-      toast.success("Order placed successfully!");
+      // Step 1: Load Razorpay script
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error('Payment gateway failed to load. Please refresh and try again.');
+        return;
+      }
+
+      // Step 2: Create Razorpay order on the CRM server
+      const orderRes = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: totalAmount,
+          currency: 'INR',
+          receipt: `mrkt_${selectedProduct._id}_${Date.now()}`,
+        }),
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok || !orderData.id) {
+        throw new Error(orderData.message || 'Failed to initiate payment');
+      }
+
+      // **CRITICAL FIX: Close BuyNowModal to escape focus trap**
       setIsBuyNowModalOpen(false);
+
+      // Step 3: Open Razorpay checkout
+      await new Promise<void>((resolve, reject) => {
+        const rzp = new (window as any).Razorpay({
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+          amount: Math.round(totalAmount * 100),
+          currency: 'INR',
+          order_id: orderData.id,
+          name: 'GlowVita Marketplace',
+          description: `${selectedProduct.productName} × ${buyNowQuantity}`,
+          image: 'https://glowvita.com/logo.png',
+          theme: { color: '#7c3aed' },
+          prefill: {
+            name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
+            email: user?.emailAddress || '',
+            contact: user?.mobileNo || '',
+          },
+          retry: { enabled: true, max_count: 3 },
+          config: {
+            display: {
+              blocks: {
+                upi: {
+                  name: 'UPI / QR',
+                  instruments: [
+                    { method: 'upi', vpa: true }, // UPI ID entry
+                    { method: 'upi', qr: true }   // QR Code
+                  ],
+                },
+              },
+              sequence: ['block.upi', 'block.card', 'block.netbanking'],
+            },
+          },
+          modal: { 
+            ondismiss: () => {
+              setIsBuyNowModalOpen(true);
+              reject(new Error('Payment cancelled by user'));
+            },
+            escape: true,
+            backdropClose: false,
+          },
+          handler: async (response: any) => {
+            try {
+              // Step 4: Verify payment signature
+              const verifyRes = await fetch('/api/payments/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(response),
+              });
+              const verifyData = await verifyRes.json();
+              if (!verifyData.success) throw new Error('Payment verification failed. Please contact support.');
+
+              // Step 5: Create the CRM order with payment proof
+              await createOrder({
+                items: [{
+                  productId: selectedProduct._id,
+                  productName: selectedProduct.productName,
+                  quantity: buyNowQuantity,
+                  price: finalPrice,
+                }],
+                supplierId,
+                totalAmount,
+                shippingAddress,
+                paymentId: response.razorpay_payment_id,
+                paymentOrderId: response.razorpay_order_id,
+                paymentMethod: 'online',
+                paymentStatus: 'completed',
+              }).unwrap();
+
+              toast.success('Order placed successfully! Payment received.');
+              setIsBuyNowModalOpen(false);
+              resolve();
+            } catch (err: any) {
+              reject(err);
+            }
+          },
+        });
+        rzp.open();
+      });
     } catch (error: any) {
-      const errorMessage = error?.data?.message || "Failed to place order. Please try again.";
-      toast.error(errorMessage);
-      console.error("Order creation error:", error);
+      if (error?.message !== 'Payment cancelled by user') {
+        console.error('Order payment error:', error);
+        toast.error(error?.data?.message || error?.message || 'Failed to place order. Please try again.');
+      } else {
+        toast.info('Payment cancelled.');
+      }
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
@@ -520,7 +643,7 @@ export default function MarketplacePage() {
         shippingAddress={shippingAddress}
         onShippingAddressChange={setShippingAddress}
         onPlaceOrder={handlePlaceOrder}
-        isCreatingOrder={isCreatingOrder}
+        isCreatingOrder={isProcessingPayment}
       />
 
       <SupplierModal

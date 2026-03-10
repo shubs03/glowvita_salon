@@ -19,11 +19,18 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { 
+  useGetAdminTransactionsQuery 
+} from "@repo/store/services/api";
+import { useSelector } from "react-redux";
+import { selectSelectedRegion } from "@repo/store/slices/adminAuthSlice";
+
 interface WalletTransaction {
   _id: string;
   transactionId: string;
-  userId: string;
+  userId: any;
   userName: string;
+  userType: string;
   transactionType: "credit" | "debit";
   amount: number;
   source: string;
@@ -34,129 +41,46 @@ interface WalletTransaction {
   balanceAfter: number;
 }
 
-const mockTransactions: WalletTransaction[] = [
-  {
-    _id: "1",
-    transactionId: "WTX_1234567890_1234",
-    userId: "user_1",
-    userName: "John Doe",
-    transactionType: "credit",
-    amount: 1000,
-    source: "add_money",
-    status: "completed",
-    description: "Add money to wallet - ₹1000",
-    createdAt: "2024-01-15T10:30:00Z",
-    balanceBefore: 500,
-    balanceAfter: 1500,
-  },
-  {
-    _id: "2",
-    transactionId: "WTX_1234567891_5678",
-    userId: "user_2",
-    userName: "Jane Smith",
-    transactionType: "debit",
-    amount: -500,
-    source: "withdrawal",
-    status: "completed",
-    description: "Withdrawal to bank account - ₹500",
-    createdAt: "2024-01-15T09:15:00Z",
-    balanceBefore: 2000,
-    balanceAfter: 1500,
-  },
-  {
-    _id: "3",
-    transactionId: "WTX_1234567892_9012",
-    userId: "user_3",
-    userName: "Alice Johnson",
-    transactionType: "credit",
-    amount: 100,
-    source: "referral_bonus",
-    status: "completed",
-    description: "Referral bonus for referring Bob",
-    createdAt: "2024-01-14T16:45:00Z",
-    balanceBefore: 0,
-    balanceAfter: 100,
-  },
-  {
-    _id: "4",
-    transactionId: "WTX_1234567893_3456",
-    userId: "user_1",
-    userName: "John Doe",
-    transactionType: "debit",
-    amount: -200,
-    source: "booking_payment",
-    status: "completed",
-    description: "Payment for salon booking",
-    createdAt: "2024-01-14T14:20:00Z",
-    balanceBefore: 700,
-    balanceAfter: 500,
-  },
-  {
-    _id: "5",
-    transactionId: "WTX_1234567894_7890",
-    userId: "user_4",
-    userName: "Bob Williams",
-    transactionType: "credit",
-    amount: 50,
-    source: "referral_bonus",
-    status: "completed",
-    description: "Welcome bonus for joining via referral",
-    createdAt: "2024-01-14T11:00:00Z",
-    balanceBefore: 0,
-    balanceAfter: 50,
-  },
-];
-
 export function WalletTransactionsTab() {
-  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const selectedRegionId = useSelector(selectSelectedRegion);
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [filterType, setFilterType] = useState<"all" | "credit" | "debit">("all");
-  const [filterStatus, setFilterStatus] = useState<"all" | "completed" | "pending" | "failed">("all");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterUserType, setFilterUserType] = useState<string>("all");
+  const [filterSource, setFilterSource] = useState<string>("all");
 
-  const fetchTransactions = async () => {
-    setIsLoading(true);
-    try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/admin/wallet/transactions');
-      // const data = await response.json();
-      
-      // Simulating API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setTransactions(mockTransactions);
-    } catch (error) {
-      toast.error("Failed to load transactions");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchTransactions();
-  }, []);
-
-  // Filter transactions
-  const filteredTransactions = transactions.filter((transaction) => {
-    const matchesSearch = 
-      transaction.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.transactionId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      transaction.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesType = filterType === "all" || transaction.transactionType === filterType;
-    const matchesStatus = filterStatus === "all" || transaction.status === filterStatus;
-    
-    return matchesSearch && matchesType && matchesStatus;
+  // RTK Query hook
+  const { data: transactionResp, isLoading, refetch } = useGetAdminTransactionsQuery({
+    page: currentPage,
+    limit: itemsPerPage,
+    type: filterType !== "all" ? filterType : undefined,
+    status: filterStatus !== "all" ? filterStatus : undefined,
+    userType: filterUserType !== "all" ? filterUserType : undefined,
+    source: filterSource !== "all" ? filterSource : undefined,
+    search: searchQuery || undefined,
+    regionId: selectedRegionId || undefined,
   });
 
-  // Pagination
-  const totalItems = filteredTransactions.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const paginatedTransactions = filteredTransactions.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const transactions = transactionResp?.data || [];
+  const stats = transactionResp?.stats || {
+    totalTransactions: 0,
+    totalCredits: 0,
+    totalDebits: 0,
+    netFlow: 0,
+  };
+  const pagination = transactionResp?.pagination || { totalPages: 1, total: 0 };
+
+  const fetchTransactions = () => {
+    refetch();
+  };
+
+  // No longer need local filtering or pagination
+  const paginatedTransactions = transactions;
+  const totalPages = pagination.totalPages;
+  const totalItems = pagination.total;
 
   const getSourceBadge = (source: string) => {
     const sourceMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
@@ -225,7 +149,7 @@ export function WalletTransactionsTab() {
             <Wallet className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{transactions.length}</div>
+            <div className="text-2xl font-bold">{stats.totalTransactions}</div>
           </CardContent>
         </Card>
         <Card>
@@ -235,10 +159,7 @@ export function WalletTransactionsTab() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              ₹{transactions
-                .filter((t) => t.transactionType === "credit")
-                .reduce((sum, t) => sum + t.amount, 0)
-                .toLocaleString()}
+              ₹{stats.totalCredits.toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -249,10 +170,7 @@ export function WalletTransactionsTab() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              ₹{Math.abs(transactions
-                .filter((t) => t.transactionType === "debit")
-                .reduce((sum, t) => sum + t.amount, 0))
-                .toLocaleString()}
+              ₹{stats.totalDebits.toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -263,9 +181,7 @@ export function WalletTransactionsTab() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">
-              ₹{transactions
-                .reduce((sum, t) => sum + t.amount, 0)
-                .toLocaleString()}
+              ₹{stats.netFlow.toLocaleString()}
             </div>
           </CardContent>
         </Card>
@@ -284,10 +200,34 @@ export function WalletTransactionsTab() {
                 className="pl-10"
               />
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={filterUserType}
+                onChange={(e) => { setFilterUserType(e.target.value); setCurrentPage(1); }}
+                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="all">All Roles</option>
+                <option value="User">User</option>
+                <option value="Vendor">Vendor</option>
+                <option value="Doctor">Doctor</option>
+                <option value="Supplier">Supplier</option>
+              </select>
+              <select
+                value={filterSource}
+                onChange={(e) => { setFilterSource(e.target.value); setCurrentPage(1); }}
+                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="all">All Sources</option>
+                <option value="add_money">Add Money</option>
+                <option value="withdrawal">Withdrawal</option>
+                <option value="referral_bonus">Referral</option>
+                <option value="booking_payment">Booking</option>
+                <option value="product_payment">Product</option>
+                <option value="refund">Refund</option>
+              </select>
               <select
                 value={filterType}
-                onChange={(e) => setFilterType(e.target.value as any)}
+                onChange={(e) => { setFilterType(e.target.value); setCurrentPage(1); }}
                 className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="all">All Types</option>
@@ -296,7 +236,7 @@ export function WalletTransactionsTab() {
               </select>
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
+                onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
                 className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="all">All Status</option>
@@ -338,17 +278,30 @@ export function WalletTransactionsTab() {
                   <TableBody>
                     {paginatedTransactions.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                          No transactions found
+                        <TableCell colSpan={8} className="text-center py-12">
+                          <p className="text-muted-foreground font-medium text-lg">No transactions found</p>
+                          {selectedRegionId ? (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Legacy records may only appear in "Global View".
+                              Use the <span className="font-semibold text-primary">Sync Legacy Data</span> tool above to assign them.
+                            </p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground mt-1">Try adjusting your filters or search query.</p>
+                          )}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedTransactions.map((transaction) => (
+                      paginatedTransactions.map((transaction: WalletTransaction) => (
                         <TableRow key={transaction._id}>
                           <TableCell className="font-mono text-xs">
                             {transaction.transactionId}
                           </TableCell>
-                          <TableCell>{transaction.userName}</TableCell>
+                          <TableCell>
+                            <div className="font-medium">{transaction.userName}</div>
+                            <Badge variant="outline" className="text-[10px] h-4 mt-0.5">
+                              {transaction.userType}
+                            </Badge>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               {transaction.transactionType === "credit" ? (

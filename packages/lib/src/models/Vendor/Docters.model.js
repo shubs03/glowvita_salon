@@ -278,6 +278,14 @@ const doctorSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  wallet: {
+    type: Number,
+    default: 0,
+  },
+  razorpayContactId: {
+    type: String,
+    default: null,
+  },
 });
 
 // Pre-save middleware to auto-update subscription status based on endDate

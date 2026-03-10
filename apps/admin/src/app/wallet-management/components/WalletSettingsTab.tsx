@@ -19,6 +19,8 @@ interface WalletSettings {
   withdrawalFeeType: "fixed" | "percentage" | "none";
   withdrawalFeeValue: number;
   cooldownPeriodHours: number;
+  minWalletBalanceForWithdrawal: number;
+  maxWithdrawablePercentage: number;
 }
 
 const defaultSettings: WalletSettings = {
@@ -31,6 +33,8 @@ const defaultSettings: WalletSettings = {
   withdrawalFeeType: "none",
   withdrawalFeeValue: 0,
   cooldownPeriodHours: 0,
+  minWalletBalanceForWithdrawal: 50,
+  maxWithdrawablePercentage: 50,
 };
 
 export function WalletSettingsTab() {
@@ -54,6 +58,8 @@ export function WalletSettingsTab() {
         withdrawalFeeType: walletSettingsData.data.withdrawalFeeType,
         withdrawalFeeValue: walletSettingsData.data.withdrawalFeeValue,
         cooldownPeriodHours: walletSettingsData.data.cooldownPeriodHours,
+        minWalletBalanceForWithdrawal: walletSettingsData.data.minWalletBalanceForWithdrawal,
+        maxWithdrawablePercentage: walletSettingsData.data.maxWithdrawablePercentage,
       });
       setHasChanges(false);
     }
@@ -186,6 +192,31 @@ export function WalletSettingsTab() {
               min={1}
             />
             <p className="text-xs text-muted-foreground">Number of withdrawals allowed per day</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="maxWithdrawablePercentage">Max Withdrawable %</Label>
+            <Input
+              id="maxWithdrawablePercentage"
+              type="number"
+              value={settings.maxWithdrawablePercentage}
+              onChange={(e) => handleSettingChange("maxWithdrawablePercentage", Number(e.target.value))}
+              min={1}
+              max={100}
+            />
+            <p className="text-xs text-muted-foreground">Max % of balance allowed per withdrawal</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="minWalletBalance">Min Wallet Balance (₹)</Label>
+            <Input
+              id="minWalletBalance"
+              type="number"
+              value={settings.minWalletBalanceForWithdrawal}
+              onChange={(e) => handleSettingChange("minWalletBalanceForWithdrawal", Number(e.target.value))}
+              min={0}
+            />
+            <p className="text-xs text-muted-foreground">Min balance required to enable withdrawal</p>
           </div>
 
           <div className="space-y-2">

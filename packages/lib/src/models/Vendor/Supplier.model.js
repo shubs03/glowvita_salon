@@ -153,6 +153,14 @@ const supplierSchema = new mongoose.Schema({
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
+  wallet: {
+    type: Number,
+    default: 0,
+  },
+  razorpayContactId: {
+    type: String,
+    default: null,
+  },
 });
 
 

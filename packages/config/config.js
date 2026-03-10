@@ -24,3 +24,4 @@ export const NEXT_PUBLIC_GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MA
 
 export const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID;
 export const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+export const RAZORPAY_ACCOUNT_NUMBER = process.env.RAZORPAY_ACCOUNT_NUMBER;

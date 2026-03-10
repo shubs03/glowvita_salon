@@ -37,7 +37,7 @@ export async function GET(req) {
     }
 
     // Get user wallet balance
-    const user = await UserModel.findById(userId).select('wallet firstName lastName');
+    const user = await UserModel.findById(userId).select('wallet firstName lastName regionId');
     
     if (!user) {
       return NextResponse.json({ 
@@ -170,6 +170,8 @@ export async function GET(req) {
           maxWithdrawalsPerDay: settings.maxWithdrawalsPerDay,
           withdrawalFeeType: settings.withdrawalFeeType,
           withdrawalFeeValue: settings.withdrawalFeeValue,
+          maxWithdrawablePercentage: settings.maxWithdrawablePercentage || 50,
+          minWalletBalanceForWithdrawal: settings.minWalletBalanceForWithdrawal || 50,
           todayWithdrawalsCount: todayStats.count,
           todayWithdrawalsAmount: todayStats.totalAmount,
           canWithdrawToday: todayStats.count < settings.maxWithdrawalsPerDay &&

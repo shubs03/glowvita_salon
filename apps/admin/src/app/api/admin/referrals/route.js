@@ -1,6 +1,7 @@
 
+import mongoose from "mongoose";
 import _db from "@repo/lib/db";
-import { ReferralModel, C2CSettingsModel, C2VSettingsModel, V2VSettingsModel, S2SSettingsModel, D2DSettingsModel } from "@repo/lib/models/admin/Reffer.model";
+import { ReferralModel, C2CSettingsModel, C2VSettingsModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer.model";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 import jwt from "jsonwebtoken";
@@ -90,10 +91,25 @@ export const POST = authMiddlewareAdmin(
     const { validateAndLockRegion } = await import("@repo/lib");
     const finalRegionId = validateAndLockRegion(req.user, regionId);
 
+    const getTypesFromReferralType = (type) => {
+      switch (type) {
+        case 'C2C': return { referrerType: 'User', refereeType: 'User' };
+        case 'C2V': return { referrerType: 'User', refereeType: 'Vendor' };
+        case 'V2V': return { referrerType: 'Vendor', refereeType: 'Vendor' };
+        case 'S2S': return { referrerType: 'Supplier', refereeType: 'Supplier' };
+        case 'D2D': return { referrerType: 'Doctor', refereeType: 'Doctor' };
+        default: return { referrerType: 'User', refereeType: 'User' };
+      }
+    };
+
+    const { referrerType, refereeType } = getTypesFromReferralType(referralType);
+
     const newReferral = await ReferralModel.create({
       referralType,
       referrer,
+      referrerType,
       referee,
+      refereeType,
       status,
       bonus,
       regionId: finalRegionId
@@ -124,9 +140,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
       switch (referralType) {
         case 'C2C': Model = C2CSettingsModel; break;
         case 'C2V': Model = C2VSettingsModel; break;
-        case 'V2V': Model = V2VSettingsModel; break;
-        case 'S2S': Model = S2SSettingsModel; break;
-        case 'D2D': Model = D2DSettingsModel; break;
+        case 'V2V': 
+        case 'S2S': 
+        case 'D2D': 
+            Model = V2VSettingsModel; 
+            break;
         default: return Response.json({ message: "Invalid referral type" }, { status: 400 });
       }
 
@@ -166,7 +184,8 @@ export const GET = authMiddlewareAdmin(async (req) => {
         });
       } else {
         // Super Admin: query by provided region or all
-        const query = regionId ? { regionId } : { regionId: null };
+        const actualRegionId = (regionId === 'null' || regionId === 'undefined' || !regionId) ? null : regionId;
+        const query = { regionId: actualRegionId };
         const settings = await Model.findOne(query);
         return Response.json(settings || {
           referrerBonus: { bonusType: 'amount', bonusValue: 0, creditTime: '7 days' },
@@ -184,8 +203,75 @@ export const GET = authMiddlewareAdmin(async (req) => {
       if (referralType) {
         query.referralType = referralType;
       }
-      const referrals = await ReferralModel.find(query);
-      return Response.json(referrals);
+      const referrals = await ReferralModel.find(query).lean();
+      
+      // Populate names based on types
+      const { default: User } = await import("@repo/lib/models/user/User.model");
+      const { default: Vendor } = await import("@repo/lib/models/Vendor/Vendor.model");
+      const { default: Doctor } = await import("@repo/lib/models/Vendor/Docters.model");
+      const { default: Supplier } = await import("@repo/lib/models/Vendor/Supplier.model");
+
+      const getModel = (type) => {
+        switch (type) {
+            case 'Vendor': return Vendor;
+            case 'Doctor': return Doctor;
+            case 'Supplier': return Supplier;
+            default: return User;
+        }
+      };
+
+      const getTypesFromReferralType = (type) => {
+        switch (type) {
+          case 'C2C': return { referrerType: 'User', refereeType: 'User' };
+          case 'C2V': return { referrerType: 'User', refereeType: 'Vendor' };
+          case 'V2V': return { referrerType: 'Vendor', refereeType: 'Vendor' };
+          case 'S2S': return { referrerType: 'Supplier', refereeType: 'Supplier' };
+          case 'D2D': return { referrerType: 'Doctor', refereeType: 'Doctor' };
+          default: return { referrerType: 'User', refereeType: 'User' };
+        }
+      };
+
+      const populatedReferrals = await Promise.all(referrals.map(async (ref) => {
+        try {
+            const inferred = getTypesFromReferralType(ref.referralType);
+            const RefModel = getModel(ref.referrerType || inferred.referrerType);
+            const ReeModel = getModel(ref.refereeType || inferred.refereeType);
+
+            let referrerName = ref.referrer || 'Unknown';
+            let refereeName = ref.referee || 'Unknown';
+
+            // Referrer lookup
+            if (mongoose.Types.ObjectId.isValid(ref.referrer)) {
+                const doc = await RefModel.findById(ref.referrer).select('firstName lastName businessName shopName clinicName name').lean();
+                if (doc) {
+                    referrerName = doc.businessName || doc.shopName || doc.clinicName || doc.name || `${doc.firstName || ''} ${doc.lastName || ''}`.trim() || ref.referrer;
+                }
+            }
+
+            // Referee lookup
+            if (mongoose.Types.ObjectId.isValid(ref.referee)) {
+                const doc = await ReeModel.findById(ref.referee).select('firstName lastName businessName shopName clinicName name').lean();
+                if (doc) {
+                    refereeName = doc.businessName || doc.shopName || doc.clinicName || doc.name || `${doc.firstName || ''} ${doc.lastName || ''}`.trim() || ref.referee;
+                }
+            }
+
+            return {
+                ...ref,
+                referrerName,
+                refereeName
+            };
+        } catch (err) {
+            console.error("Error populating referral names:", err);
+            return {
+                ...ref,
+                referrerName: ref.referrer,
+                refereeName: ref.referee
+            };
+        }
+      }));
+
+      return Response.json(populatedReferrals);
     }
   } catch (error) {
     console.error("Referral GET error:", error);
@@ -199,7 +285,7 @@ export const PUT = authMiddlewareAdmin(
     const body = await req.json();
     const { id, ...updateData } = body;
 
-    if (updateData.status && !['Pending', 'Completed', 'Approved', 'Paid'].includes(updateData.status)) {
+    if (updateData.status && !['Pending', 'Completed'].includes(updateData.status)) {
       return Response.json(
         { message: "Invalid status" },
         { status: 400 }
@@ -264,9 +350,11 @@ export const PATCH = authMiddlewareAdmin(
     switch (referralType) {
       case 'C2C': Model = C2CSettingsModel; break;
       case 'C2V': Model = C2VSettingsModel; break;
-      case 'V2V': Model = V2VSettingsModel; break;
-      case 'S2S': Model = S2SSettingsModel; break;
-      case 'D2D': Model = D2DSettingsModel; break;
+      case 'V2V': 
+      case 'S2S': 
+      case 'D2D': 
+          Model = V2VSettingsModel; 
+          break;
     }
 
     const { validateAndLockRegion } = await import("@repo/lib");

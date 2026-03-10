@@ -22,11 +22,19 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { 
+  useGetAdminWithdrawalsQuery,
+  useGetRegionsQuery
+} from "@repo/store/services/api";
+import { useSelector } from "react-redux";
+import { selectSelectedRegion, selectCurrentAdmin } from "@repo/store/slices/adminAuthSlice";
+
 interface WalletWithdrawal {
   _id: string;
   withdrawalId: string;
-  userId: string;
+  userId: any;
   userName: string;
+  userType: string;
   amount: number;
   withdrawalFee: number;
   netAmount: number;
@@ -47,160 +55,48 @@ interface WalletWithdrawal {
   failureReason?: string;
 }
 
-const mockWithdrawals: WalletWithdrawal[] = [
-  {
-    _id: "1",
-    withdrawalId: "WD_1234567890_1234",
-    userId: "user_1",
-    userName: "John Doe",
-    amount: 5000,
-    withdrawalFee: 0,
-    netAmount: 5000,
-    bankDetails: {
-      accountNumber: "****1234",
-      ifsc: "SBIN0001234",
-      accountHolderName: "John Doe",
-      bankName: "State Bank of India",
-    },
-    status: "completed",
-    riskScore: 15,
-    riskFlags: [],
-    requestedAt: "2024-01-15T10:30:00Z",
-    processedAt: "2024-01-15T10:35:00Z",
-    completedAt: "2024-01-15T11:00:00Z",
-  },
-  {
-    _id: "2",
-    withdrawalId: "WD_1234567891_5678",
-    userId: "user_2",
-    userName: "Jane Smith",
-    amount: 10000,
-    withdrawalFee: 50,
-    netAmount: 9950,
-    bankDetails: {
-      accountNumber: "****5678",
-      ifsc: "HDFC0005678",
-      accountHolderName: "Jane Smith",
-      bankName: "HDFC Bank",
-    },
-    status: "processing",
-    riskScore: 25,
-    riskFlags: ["large_amount"],
-    requestedAt: "2024-01-15T09:15:00Z",
-    processedAt: "2024-01-15T09:20:00Z",
-  },
-  {
-    _id: "3",
-    withdrawalId: "WD_1234567892_9012",
-    userId: "user_3",
-    userName: "Alice Johnson",
-    amount: 2500,
-    withdrawalFee: 0,
-    netAmount: 2500,
-    bankDetails: {
-      accountNumber: "****9012",
-      ifsc: "ICIC0009012",
-      accountHolderName: "Alice Johnson",
-      bankName: "ICICI Bank",
-    },
-    status: "rejected_by_system",
-    riskScore: 85,
-    riskFlags: ["new_account", "rapid_withdrawal", "first_transaction_withdrawal"],
-    requestedAt: "2024-01-14T16:45:00Z",
-    rejectionReason: "High risk transaction detected: new_account, rapid_withdrawal",
-  },
-  {
-    _id: "4",
-    withdrawalId: "WD_1234567893_3456",
-    userId: "user_4",
-    userName: "Bob Williams",
-    amount: 15000,
-    withdrawalFee: 0,
-    netAmount: 15000,
-    bankDetails: {
-      accountNumber: "****3456",
-      ifsc: "AXIS0003456",
-      accountHolderName: "Bob Williams",
-      bankName: "Axis Bank",
-    },
-    status: "pending",
-    riskScore: 45,
-    riskFlags: ["large_percentage_withdrawal"],
-    requestedAt: "2024-01-14T14:20:00Z",
-  },
-  {
-    _id: "5",
-    withdrawalId: "WD_1234567894_7890",
-    userId: "user_5",
-    userName: "Charlie Brown",
-    amount: 3000,
-    withdrawalFee: 0,
-    netAmount: 3000,
-    bankDetails: {
-      accountNumber: "****7890",
-      ifsc: "PNB0007890",
-      accountHolderName: "Charlie Brown",
-      bankName: "Punjab National Bank",
-    },
-    status: "failed",
-    riskScore: 20,
-    riskFlags: [],
-    requestedAt: "2024-01-14T11:00:00Z",
-    processedAt: "2024-01-14T11:05:00Z",
-    failureReason: "Bank account validation failed",
-  },
-];
-
 export function WalletWithdrawalsTab() {
-  const [withdrawals, setWithdrawals] = useState<WalletWithdrawal[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const selectedRegionId = useSelector(selectSelectedRegion);
+  const currentAdmin = useSelector(selectCurrentAdmin);
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "processing" | "completed" | "failed" | "rejected">("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterUserType, setFilterUserType] = useState<string>("all");
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<WalletWithdrawal | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
-  const fetchWithdrawals = async () => {
-    setIsLoading(true);
-    try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/admin/wallet/withdrawals');
-      // const data = await response.json();
-      
-      // Simulating API delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      setWithdrawals(mockWithdrawals);
-    } catch (error) {
-      toast.error("Failed to load withdrawals");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchWithdrawals();
-  }, []);
-
-  // Filter withdrawals
-  const filteredWithdrawals = withdrawals.filter((withdrawal) => {
-    const matchesSearch = 
-      withdrawal.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      withdrawal.withdrawalId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      withdrawal.bankDetails.accountHolderName.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = filterStatus === "all" || withdrawal.status === filterStatus;
-    
-    return matchesSearch && matchesStatus;
+  // RTK Query hook
+  const { data: withdrawalResp, isLoading, isError, refetch } = useGetAdminWithdrawalsQuery({
+    page: currentPage,
+    limit: itemsPerPage,
+    status: filterStatus !== "all" ? filterStatus : undefined,
+    userType: filterUserType !== "all" ? filterUserType : undefined,
+    search: searchQuery || undefined,
+    regionId: selectedRegionId || undefined,
   });
 
-  // Pagination
-  const totalItems = filteredWithdrawals.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const paginatedWithdrawals = filteredWithdrawals.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const withdrawals = withdrawalResp?.data || [];
+  const stats = withdrawalResp?.stats || {
+    total: 0,
+    pending: 0,
+    processing: 0,
+    completed: 0,
+    failed: 0,
+    totalPaid: 0,
+    highRisk: 0,
+  };
+  const pagination = withdrawalResp?.pagination || { totalPages: 1, total: 0 };
+
+  const fetchWithdrawals = () => {
+    refetch();
+  };
+
+  // No longer need local filtering or pagination as it's done on backend
+  const paginatedWithdrawals = withdrawals;
+  const totalPages = pagination.totalPages;
+  const totalItems = pagination.total;
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive"; icon: React.ReactNode }> = {
@@ -246,18 +142,7 @@ export function WalletWithdrawalsTab() {
     setShowDetailModal(true);
   };
 
-  // Calculate stats
-  const stats = {
-    total: withdrawals.length,
-    pending: withdrawals.filter((w) => w.status === "pending").length,
-    processing: withdrawals.filter((w) => w.status === "processing").length,
-    completed: withdrawals.filter((w) => w.status === "completed").length,
-    failed: withdrawals.filter((w) => w.status === "failed" || w.status === "rejected_by_system").length,
-    totalAmount: withdrawals
-      .filter((w) => w.status === "completed")
-      .reduce((sum, w) => sum + w.amount, 0),
-    highRisk: withdrawals.filter((w) => w.riskScore >= 70).length,
-  };
+  // No need to recalculate stats as they come from the API response
 
   return (
     <div className="space-y-6">
@@ -327,7 +212,7 @@ export function WalletWithdrawalsTab() {
             <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-xl font-bold text-primary">₹{stats.totalAmount.toLocaleString()}</div>
+            <div className="text-xl font-bold text-primary">₹{stats.totalPaid.toLocaleString()}</div>
           </CardContent>
         </Card>
         <Card>
@@ -356,8 +241,19 @@ export function WalletWithdrawalsTab() {
             </div>
             <div className="flex gap-2">
               <select
+                value={filterUserType}
+                onChange={(e) => { setFilterUserType(e.target.value); setCurrentPage(1); }}
+                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="all">All Roles</option>
+                <option value="User">User</option>
+                <option value="Vendor">Vendor</option>
+                <option value="Doctor">Doctor</option>
+                <option value="Supplier">Supplier</option>
+              </select>
+              <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
+                onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}
                 className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="all">All Status</option>
@@ -402,17 +298,30 @@ export function WalletWithdrawalsTab() {
                   <TableBody>
                     {paginatedWithdrawals.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                          No withdrawals found
+                        <TableCell colSpan={9} className="text-center py-12">
+                          <p className="text-muted-foreground font-medium text-lg">No withdrawals found</p>
+                          {selectedRegionId ? (
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Legacy records may only appear in "Global View".
+                              Use the <span className="font-semibold text-primary">Sync Legacy Data</span> tool above to assign them.
+                            </p>
+                          ) : (
+                            <p className="text-sm text-muted-foreground mt-1">Try adjusting your filters or search query.</p>
+                          )}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedWithdrawals.map((withdrawal) => (
+                      paginatedWithdrawals.map((withdrawal: WalletWithdrawal) => (
                         <TableRow key={withdrawal._id}>
                           <TableCell className="font-mono text-xs">
                             {withdrawal.withdrawalId}
                           </TableCell>
-                          <TableCell>{withdrawal.userName}</TableCell>
+                          <TableCell>
+                            <div className="font-medium">{withdrawal.userName}</div>
+                            <Badge variant="outline" className="text-[10px] h-4 mt-0.5">
+                              {withdrawal.userType}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="font-semibold">
                             ₹{withdrawal.amount.toLocaleString()}
                           </TableCell>
