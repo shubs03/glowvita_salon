@@ -142,6 +142,7 @@ type Product = {
   stock: number;
   status: 'pending' | 'approved' | 'disapproved';
   supplierName?: string;
+  vendorName?: string;
   vendorId?: string;
 };
 
@@ -346,22 +347,30 @@ export default function VendorApprovalPage() {
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
   const filteredPendingServices = useMemo(() => {
-    return pendingServices.filter((service: any) =>
-      vendorFilter === "all" || service.vendorId === vendorFilter || service.vendorName === vendorFilter
-    );
+    return pendingServices
+      .filter((service: any) =>
+        vendorFilter === "all" || service.vendorId === vendorFilter || service.vendorName === vendorFilter
+      )
+      .slice()
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [pendingServices, vendorFilter]);
 
-  const currentVendors = pendingVendors.slice(firstItemIndex, lastItemIndex);
-  const currentServices = filteredPendingServices.slice(firstItemIndex, lastItemIndex);
-  const currentWeddingPackages = pendingWeddingPackages.slice(firstItemIndex, lastItemIndex);
-  const currentDoctors = pendingDoctors.slice(firstItemIndex, lastItemIndex);
-  const currentSuppliers = pendingSuppliers.slice(firstItemIndex, lastItemIndex);
+  const sortedPendingVendors = [...pendingVendors].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const sortedPendingDoctors = [...pendingDoctors].sort((a: Doctor, b: Doctor) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
+  const sortedPendingSuppliers = [...pendingSuppliers].sort((a: Supplier, b: Supplier) => new Date((b as any).createdAt ?? 0).getTime() - new Date((a as any).createdAt ?? 0).getTime());
+  const sortedPendingWeddingPackages = [...pendingWeddingPackages].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  const totalVendorPages = Math.ceil(pendingVendors.length / itemsPerPage);
+  const currentVendors = sortedPendingVendors.slice(firstItemIndex, lastItemIndex);
+  const currentServices = filteredPendingServices.slice(firstItemIndex, lastItemIndex);
+  const currentWeddingPackages = sortedPendingWeddingPackages.slice(firstItemIndex, lastItemIndex);
+  const currentDoctors = sortedPendingDoctors.slice(firstItemIndex, lastItemIndex);
+  const currentSuppliers = sortedPendingSuppliers.slice(firstItemIndex, lastItemIndex);
+
+  const totalVendorPages = Math.ceil(sortedPendingVendors.length / itemsPerPage);
   const totalServicePages = Math.ceil(filteredPendingServices.length / itemsPerPage);
-  const totalWeddingPackagePages = Math.ceil(pendingWeddingPackages.length / itemsPerPage);
-  const totalDoctorPages = Math.ceil(pendingDoctors.length / itemsPerPage);
-  const totalSupplierPages = Math.ceil(pendingSuppliers.length / itemsPerPage);
+  const totalWeddingPackagePages = Math.ceil(sortedPendingWeddingPackages.length / itemsPerPage);
+  const totalDoctorPages = Math.ceil(sortedPendingDoctors.length / itemsPerPage);
+  const totalSupplierPages = Math.ceil(sortedPendingSuppliers.length / itemsPerPage);
 
   const handleActionClick = (item: Vendor | Service | Product | Doctor | Supplier | WeddingPackage, type: ItemType, action: ActionType) => {
     setSelectedItem(item);
@@ -546,8 +555,14 @@ export default function VendorApprovalPage() {
   console.log("Vendor Products Data:", vendorProducts);
   console.log("Supplier Products Data:", supplierProducts);
 
-  const pendingVendorProducts = vendorProducts.filter((p: Product) => p.status === 'pending');
-  const pendingSupplierProducts = supplierProducts.filter((p: Product) => p.status === 'pending');
+  const pendingVendorProducts = vendorProducts
+    .filter((p: Product) => p.status === 'pending')
+    .slice()
+    .sort((a: Product, b: Product) => new Date((b as any).createdAt ?? 0).getTime() - new Date((a as any).createdAt ?? 0).getTime());
+  const pendingSupplierProducts = supplierProducts
+    .filter((p: Product) => p.status === 'pending')
+    .slice()
+    .sort((a: Product, b: Product) => new Date((b as any).createdAt ?? 0).getTime() - new Date((a as any).createdAt ?? 0).getTime());
 
   const totalVendorProductPages = Math.ceil(pendingVendorProducts.length / itemsPerPage);
   const totalSupplierProductPages = Math.ceil(pendingSupplierProducts.length / itemsPerPage);
@@ -966,6 +981,7 @@ export default function VendorApprovalPage() {
                       <TableHead className="text-xs">Product</TableHead>
                       <TableHead className="text-xs">Price</TableHead>
                       <TableHead className="text-xs">Category</TableHead>
+                      <TableHead className="text-xs">Vendor</TableHead>
                       <TableHead className="text-xs">Status</TableHead>
                       <TableHead className="text-right text-xs">Actions</TableHead>
                     </TableRow>
@@ -974,7 +990,7 @@ export default function VendorApprovalPage() {
                     {vendorProductsLoading ? (
                       [...Array(3)].map((_, i) => (
                         <TableRow key={i}>
-                          {[...Array(5)].map((_, j) => (
+                          {[...Array(6)].map((_, j) => (
                             <TableCell key={j}>
                               <Skeleton className="h-5 w-full" />
                             </TableCell>
@@ -983,11 +999,11 @@ export default function VendorApprovalPage() {
                       ))
                     ) : vendorProductsError ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center">Error loading vendor products.</TableCell>
+                        <TableCell colSpan={6} className="text-center">Error loading vendor products.</TableCell>
                       </TableRow>
                     ) : !Array.isArray(pendingVendorProducts) || pendingVendorProducts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center">No pending vendor product approvals.</TableCell>
+                        <TableCell colSpan={6} className="text-center">No pending vendor product approvals.</TableCell>
                       </TableRow>
                     ) : (
                       pendingVendorProducts.map((product) => (
@@ -1018,6 +1034,12 @@ export default function VendorApprovalPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-xs max-w-[80px] truncate">{product.category?.name || 'N/A'}</TableCell>
+                          <TableCell className="text-xs max-w-[100px] truncate">
+                            {(product.vendorId as any)?.businessName ||
+                              ((product.vendorId as any)?.firstName
+                                ? `${(product.vendorId as any).firstName} ${(product.vendorId as any).lastName || ''}`.trim()
+                                : product.vendorName || 'N/A')}
+                          </TableCell>
                           <TableCell>
                             <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
                               {product.status || 'pending'}

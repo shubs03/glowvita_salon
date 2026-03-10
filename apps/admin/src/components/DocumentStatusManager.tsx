@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Textarea } from "@repo/ui/textarea";
 import { Label } from "@repo/ui/label";
 import { Badge } from "@repo/ui/badge";
-import { CheckCircle2, X, Clock, Eye, FileText } from "lucide-react";
+import { CheckCircle2, X, Clock, Eye, FileText, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
 import {
   useUpdateVendorDocumentStatusMutation,
   useUpdateSupplierDocumentStatusMutation,
@@ -50,6 +50,8 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ entity, r
   const [isRejectionModalOpen, setIsRejectionModalOpen] = useState(false);
   const [selectedDocumentType, setSelectedDocumentType] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
 
   const documentTypes = [
     { key: 'aadharCard', label: 'Aadhar Card' },
@@ -88,6 +90,8 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ entity, r
     const absoluteUrl = getAbsoluteUrl(src);
     console.log('  Absolute URL:', absoluteUrl);
     setPreviewDocument({ src: absoluteUrl, type });
+    setZoom(1);
+    setRotation(0);
   };
 
   const getStatusBadge = (status: string) => {
@@ -304,7 +308,7 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ entity, r
             Preview of uploaded document
           </DialogDescription>
           <div className="relative w-full h-full flex flex-col items-center justify-center bg-black/5 backdrop-blur-sm rounded-xl overflow-hidden border border-white/10">
-            <div className="w-full h-full flex items-center justify-center p-2">
+            <div className="w-full h-full flex flex-col items-center justify-center p-2">
               {previewDocument?.src?.toLowerCase().includes('.pdf') || previewDocument?.src?.startsWith('data:application/pdf') ? (
                 <iframe
                   src={previewDocument?.src}
@@ -312,11 +316,27 @@ const DocumentStatusManager: React.FC<DocumentStatusManagerProps> = ({ entity, r
                   title="Document Preview"
                 />
               ) : (
-                <img
-                  src={previewDocument?.src}
-                  alt="Document Preview"
-                  className="object-contain max-h-full max-w-full mx-auto rounded-lg shadow-2xl"
-                />
+                <div className="relative w-full h-full flex flex-col items-center justify-center overflow-auto">
+                  <div className="absolute top-4 right-4 flex gap-2 z-10 bg-black/50 p-2 rounded-lg backdrop-blur-md">
+                    <Button variant="secondary" size="icon" onClick={() => setZoom(z => Math.min(z + 0.25, 3))}>
+                      <ZoomIn className="h-4 w-4" />
+                    </Button>
+                    <Button variant="secondary" size="icon" onClick={() => setZoom(z => Math.max(z - 0.25, 0.5))}>
+                      <ZoomOut className="h-4 w-4" />
+                    </Button>
+                    <Button variant="secondary" size="icon" onClick={() => setRotation(r => r + 90)}>
+                      <RotateCw className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-center flex-1 w-full h-full overflow-auto">
+                    <img
+                      src={previewDocument?.src}
+                      alt="Document Preview"
+                      style={{ transform: `scale(${zoom}) rotate(${rotation}deg)`, transition: 'transform 0.2s ease-in-out' }}
+                      className="object-contain h-full w-full m-auto rounded-lg shadow-2xl"
+                    />
+                  </div>
+                </div>
               )}
             </div>
           </div>

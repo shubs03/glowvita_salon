@@ -522,12 +522,20 @@ export default function ProfilePage() {
                   </>
                 )}
                 {role === 'doctor' && (
-                  <TabsTrigger
-                    value="subscription"
-                    className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
-                  >
-                    Subscription
-                  </TabsTrigger>
+                  <>
+                    <TabsTrigger
+                      value="subscription"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Subscription
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="documents"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Documents
+                    </TabsTrigger>
+                  </>
                 )}
               </TabsList>
             </div>
@@ -617,9 +625,14 @@ export default function ProfilePage() {
           )}
 
           {role === 'doctor' && (
-            <TabsContent value="subscription">
-              <SubscriptionTab subscription={localDoctor?.subscription} userType="doctor" />
-            </TabsContent>
+            <>
+              <TabsContent value="subscription">
+                <SubscriptionTab subscription={localDoctor?.subscription} userType="doctor" />
+              </TabsContent>
+              <TabsContent value="documents">
+                <DocumentsTab documents={localDoctor?.documents} setVendor={setLocalDoctor} />
+              </TabsContent>
+            </>
           )}
         </Tabs>
 

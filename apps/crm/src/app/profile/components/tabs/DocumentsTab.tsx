@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { FileText, Eye, Trash2, Clock, Check, X } from "lucide-react";
-import { useUpdateVendorProfileMutation, useUpdateSupplierProfileMutation } from '@repo/store/api';
+import { FileText, Eye, Trash2, Clock, Check, X, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
+import { useUpdateVendorProfileMutation, useUpdateSupplierProfileMutation, useUpdateDoctorProfileMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
 
@@ -11,15 +11,34 @@ interface DocumentsTabProps {
   setVendor: any;
 }
 
+const documentTypes = [
+  { key: 'aadharCard', label: 'Aadhar Card', required: true },
+  { key: 'panCard', label: 'PAN Card', required: true },
+  { key: 'udhayamCert', label: 'Udhayam Certificate', required: false },
+  { key: 'shopAct', label: 'Shop Act', required: false }
+];
+
 export const DocumentsTab = ({ documents, setVendor }: DocumentsTabProps) => {
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
   const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
+  const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
   const { role } = useCrmAuth();
   const [previewDocument, setPreviewDocument] = useState<{ src: string; type: string } | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
 
   const handleSave = async () => {
+    const missingDocs = documentTypes
+      .filter(doc => doc.required && !documents?.[doc.key])
+      .map(doc => doc.label);
+
+    if (missingDocs.length > 0) {
+      toast.error(`Please upload mandatory documents: ${missingDocs.join(', ')}`);
+      return;
+    }
+
     try {
-      const updateFn = role === 'vendor' ? updateVendorProfile : updateSupplierProfile;
+      const updateFn = role === 'vendor' ? updateVendorProfile : role === 'supplier' ? updateSupplierProfile : updateDoctorProfile;
       const result: any = await updateFn({
         _id: typeof window !== 'undefined' ? (JSON.parse(localStorage.getItem('user') || '{}')._id) : undefined,
         documents: documents
@@ -94,6 +113,8 @@ export const DocumentsTab = ({ documents, setVendor }: DocumentsTabProps) => {
 
   const openDocumentPreview = (src: string, type: string) => {
     setPreviewDocument({ src, type });
+    setZoom(1);
+    setRotation(0);
   };
 
   const closeDocumentPreview = () => {
@@ -112,13 +133,6 @@ export const DocumentsTab = ({ documents, setVendor }: DocumentsTabProps) => {
     }
   };
 
-  const documentTypes = [
-    { key: 'aadharCard', label: 'Aadhar Card' },
-    { key: 'panCard', label: 'PAN Card' },
-    { key: 'udhayamCert', label: 'Udhayam Certificate' },
-    { key: 'shopAct', label: 'Shop Act' }
-  ];
-
   return (
     <Card>
       <CardHeader>
@@ -136,7 +150,7 @@ export const DocumentsTab = ({ documents, setVendor }: DocumentsTabProps) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {documentTypes.map(({ key, label }) => (
+          {documentTypes.map(({ key, label, required }) => (
             <div key={key} className="border rounded-lg p-4">
               {/* Hidden file input for each document type */}
               <input
@@ -155,7 +169,10 @@ export const DocumentsTab = ({ documents, setVendor }: DocumentsTabProps) => {
                 <div className="flex items-center gap-3">
                   <FileText className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="font-medium">{label}</p>
+                    <p className="font-medium">
+                      {label}
+                      {required && <span className="text-red-500 ml-1">*</span>}
+                    </p>
                     {documents?.[key] ? (
                       <p className="text-sm text-green-600">Uploaded</p>
                     ) : (
@@ -225,16 +242,32 @@ export const DocumentsTab = ({ documents, setVendor }: DocumentsTabProps) => {
                 />
               ) : (
                 previewDocument.src?.startsWith('data:') || previewDocument.src?.startsWith('http') ? (
-                  <img
-                    src={previewDocument.src || ''}
-                    alt="Document Preview"
-                    className="object-contain max-h-[80vh] mx-auto max-w-full"
-                    onError={(e) => {
-                      console.log('Document image failed to load:', previewDocument.src);
-                      // Set a fallback image on error
-                      (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
-                    }}
-                  />
+                  <div className="relative w-full h-[80vh] flex flex-col items-center justify-center overflow-auto bg-black/40 rounded-xl">
+                    <div className="absolute top-4 right-4 flex gap-2 z-10 bg-black/50 p-2 rounded-lg backdrop-blur-md">
+                      <Button variant="secondary" size="icon" onClick={() => setZoom(z => Math.min(z + 0.25, 3))}>
+                        <ZoomIn className="h-4 w-4" />
+                      </Button>
+                      <Button variant="secondary" size="icon" onClick={() => setZoom(z => Math.max(z - 0.25, 0.5))}>
+                        <ZoomOut className="h-4 w-4" />
+                      </Button>
+                      <Button variant="secondary" size="icon" onClick={() => setRotation(r => r + 90)}>
+                        <RotateCw className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex items-center justify-center flex-1 w-full h-full overflow-auto">
+                      <img
+                        src={previewDocument.src || ''}
+                        alt="Document Preview"
+                        style={{ transform: `scale(${zoom}) rotate(${rotation}deg)`, transition: 'transform 0.2s ease-in-out' }}
+                        className="object-contain h-full w-full m-auto rounded-lg shadow-2xl"
+                        onError={(e) => {
+                          console.log('Document image failed to load:', previewDocument.src);
+                          // Set a fallback image on error
+                          (e.target as HTMLImageElement).src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2RkZCIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2Ij5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+';
+                        }}
+                      />
+                    </div>
+                  </div>
                 ) : (
                   <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-full flex items-center justify-center">
                     <FileText className="h-8 w-8 text-gray-400" />
