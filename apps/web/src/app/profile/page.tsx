@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, Suspense, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import {
   Card,
@@ -35,6 +36,7 @@ import { useUserAppointments } from '../../hooks/useUserAppointments';
 
 function OverviewContent() {
   const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
 
   // Fetch user appointments
   const { appointments: appointmentsData = [], isLoading: isLoadingAppointments } = useUserAppointments();
@@ -484,9 +486,12 @@ function OverviewContent() {
                     <h4 className="font-semibold">{product.name}</h4>
                     <p className="text-sm text-muted-foreground">₹{product.price.toFixed(2)}</p>
                   </div>
-                  <Link href={`/product-details/${product.id}`}>
+                  <div
+                    onClick={() => router.push(`/product-details/${product.id}`)}
+                    className="cursor-pointer"
+                  >
                     <Button variant="outline" size="sm" className="ml-auto">View</Button>
-                  </Link>
+                  </div>
                 </div>
               ))
             ) : (
@@ -500,7 +505,10 @@ function OverviewContent() {
         {/* UPCOMING APPOINTMENTS */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
+            <div
+              onClick={() => router.push("/profile/appointments")}
+              className="hover:opacity-70 transition-opacity cursor-pointer"
+            >
               <CardTitle>Upcoming Appointments ({upcomingAppointments.length})</CardTitle>
               <CardDescription>Your next scheduled appointments.</CardDescription>
             </div>
@@ -520,7 +528,13 @@ function OverviewContent() {
             ) : displayUpcomingAppointments.length > 0 ? (
               <div className="space-y-4 pt-4">
                 {displayUpcomingAppointments.map(appt => (
-                  <AppointmentCard key={appt.id} appointment={appt} />
+                  <div
+                    key={appt.id}
+                    onClick={() => router.push("/profile/appointments")}
+                    className="block cursor-pointer hover:shadow-md transition-shadow rounded-lg"
+                  >
+                    <AppointmentCard appointment={appt} />
+                  </div>
                 ))}
               </div>
             ) : (
@@ -532,7 +546,10 @@ function OverviewContent() {
         {/* UPCOMING ORDERS */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div>
+            <div
+              onClick={() => router.push("/profile/orders")}
+              className="hover:opacity-70 transition-opacity cursor-pointer"
+            >
               <CardTitle>Upcoming Orders ({upcomingOrders.length})</CardTitle>
               <CardDescription>Your active and pending orders.</CardDescription>
             </div>
@@ -556,7 +573,11 @@ function OverviewContent() {
                   const total = order.totalAmount || 0;
                   const itemCount = (order.items || order.products || []).length;
                   return (
-                    <div key={orderId} className="p-4 border rounded-lg">
+                    <div
+                      key={orderId}
+                      onClick={() => router.push("/profile/orders")}
+                      className="block p-4 border rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+                    >
                       <div className="flex justify-between items-start">
                         <div>
                           <h4 className="font-semibold">{itemCount} item{itemCount !== 1 ? 's' : ''}</h4>
