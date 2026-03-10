@@ -11,15 +11,15 @@ await _db();
 export const GET = authMiddlewareAdmin(
   async (req) => {
     try {
-    const services = await ServiceModel.find({}).populate("category", "name");
-    return Response.json(services, { status: 200 });
-  } catch (error) {
-    return Response.json(
-      { message: "Error fetching services", error: error.message },
-      { status: 500 }
-    );
-  }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF", "vendor", "staff", "doctor", "supplier"],
+      const services = await ServiceModel.find({}).populate("category", "name");
+      return Response.json(services, { status: 200 });
+    } catch (error) {
+      return Response.json(
+        { message: "Error fetching services", error: error.message },
+        { status: 500 }
+      );
+    }
+  }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF", "vendor", "staff", "doctor", "supplier"],
   "services:view"
 );
 
@@ -27,45 +27,45 @@ export const GET = authMiddlewareAdmin(
 export const POST = authMiddlewareAdmin(
   async (req) => {
     const body = await req.json();
-  const { name, description, category, image } = body;
+    const { name, description, category, image } = body;
 
-  if (!name || !category) {
-    return Response.json(
-      { message: "Name and category are required" },
-      { status: 400 }
-    );
-  }
-
-  try {
-    let imageUrl = null;
-
-    // Upload image to VPS if provided
-    if (image) {
-      const fileName = `service-${Date.now()}`;
-      imageUrl = await uploadBase64(image, fileName);
-
-      if (!imageUrl) {
-        return Response.json(
-          { message: "Failed to upload image" },
-          { status: 500 }
-        );
-      }
+    if (!name || !category) {
+      return Response.json(
+        { message: "Name and category are required" },
+        { status: 400 }
+      );
     }
 
-    const newService = await ServiceModel.create({
-      name,
-      description,
-      category,
-      serviceImage: imageUrl
-    });
-    return Response.json(newService, { status: 201 });
-  } catch (error) {
-    return Response.json(
-      { message: "Error creating service", error: error.message },
-      { status: 500 }
-    );
-  }
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF", "vendor", "staff", "doctor", "supplier"],
+    try {
+      let imageUrl = null;
+
+      // Upload image to VPS if provided
+      if (image) {
+        const fileName = `service-${Date.now()}`;
+        imageUrl = await uploadBase64(image, fileName);
+
+        if (!imageUrl) {
+          return Response.json(
+            { message: "Failed to upload image" },
+            { status: 500 }
+          );
+        }
+      }
+
+      const newService = await ServiceModel.create({
+        name,
+        description,
+        category,
+        serviceImage: imageUrl
+      });
+      return Response.json(newService, { status: 201 });
+    } catch (error) {
+      return Response.json(
+        { message: "Error creating service", error: error.message },
+        { status: 500 }
+      );
+    }
+  }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF", "vendor", "staff", "doctor", "supplier"],
   "services:edit"
 );
 
@@ -92,23 +92,27 @@ export const PUT = authMiddlewareAdmin(
       // Handle image upload if new image is provided
       if (updateData.image !== undefined) {
         if (updateData.image) {
-          // Upload new image to VPS
-          const fileName = `service-${Date.now()}`;
-          const imageUrl = await uploadBase64(updateData.image, fileName);
+          if (typeof updateData.image === 'string' && (updateData.image.startsWith('http') || updateData.image.startsWith('/uploads/'))) {
+            updateData.serviceImage = updateData.image;
+          } else {
+            // Upload new image to VPS
+            const fileName = `service-${Date.now()}`;
+            const imageUrl = await uploadBase64(updateData.image, fileName);
 
-          if (!imageUrl) {
-            return Response.json(
-              { message: "Failed to upload image" },
-              { status: 500 }
-            );
+            if (!imageUrl) {
+              return Response.json(
+                { message: "Failed to upload image" },
+                { status: 500 }
+              );
+            }
+
+            // Delete old image from VPS if it exists
+            if (existingService.serviceImage) {
+              await deleteFile(existingService.serviceImage);
+            }
+
+            updateData.serviceImage = imageUrl;
           }
-
-          // Delete old image from VPS if it exists
-          if (existingService.serviceImage) {
-            await deleteFile(existingService.serviceImage);
-          }
-
-          updateData.serviceImage = imageUrl;
         } else {
           // If image is null/empty, remove it
           updateData.serviceImage = null;

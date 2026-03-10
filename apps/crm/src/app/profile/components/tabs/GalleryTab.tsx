@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
-import { UploadCloud, Eye, Trash2, FileText, X } from "lucide-react";
+import { UploadCloud, Eye, Trash2, FileText, X, ZoomIn, ZoomOut, RotateCw } from "lucide-react";
 import { useUpdateVendorProfileMutation, useUpdateSupplierProfileMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
@@ -17,6 +17,8 @@ export const GalleryTab = ({ gallery, setVendor }: GalleryTabProps) => {
   const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
   const { role } = useCrmAuth();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
 
   const handleSave = async () => {
     try {
@@ -90,6 +92,8 @@ export const GalleryTab = ({ gallery, setVendor }: GalleryTabProps) => {
 
   const openPreview = (src: string) => {
     setPreviewImage(src);
+    setZoom(1);
+    setRotation(0);
   };
 
   const closePreview = () => {
@@ -138,7 +142,7 @@ export const GalleryTab = ({ gallery, setVendor }: GalleryTabProps) => {
                   <img
                     src={src}
                     alt={`Salon image ${index + 1}`}
-                    className="object-cover rounded-lg cursor-pointer w-full h-full"
+                    className="object-cover rounded-lg w-full h-full cursor-pointer hover:opacity-90 transition-opacity"
                     onClick={() => openPreview(src)}
                     onError={(e) => {
                       console.log('Gallery image failed to load:', src);
@@ -147,36 +151,23 @@ export const GalleryTab = ({ gallery, setVendor }: GalleryTabProps) => {
                     }}
                   />
                 ) : (
-                  <div className="bg-gray-200 border-2 border-dashed rounded-lg w-full h-full flex items-center justify-center">
+                  <div className="bg-gray-200 border-2 border-dashed rounded-lg w-full h-full flex items-center justify-center cursor-pointer" onClick={() => openPreview(src)}>
                     <FileText className="h-8 w-8 text-gray-400" />
                   </div>
                 )}
-                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10 rounded-lg"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openPreview(src);
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10 rounded-lg"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveImage(index);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+
+                {/* Top-Right Delete Button */}
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2 h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-700 hover:text-white bg-red-600 text-white z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveImage(index);
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             ))}
           </div>
@@ -197,11 +188,27 @@ export const GalleryTab = ({ gallery, setVendor }: GalleryTabProps) => {
                 <X className="h-4 w-4" />
               </Button>
               {previewImage?.startsWith('data:') || previewImage?.startsWith('http') ? (
-                <img
-                  src={previewImage}
-                  alt="Preview"
-                  className="object-contain max-h-[80vh] mx-auto max-w-full"
-                />
+                <div className="relative w-full h-[80vh] flex flex-col items-center justify-center overflow-auto bg-black/40 rounded-xl">
+                  <div className="absolute top-4 right-4 flex gap-2 z-10 bg-black/50 p-2 rounded-lg backdrop-blur-md">
+                    <Button variant="secondary" size="icon" onClick={() => setZoom(z => Math.min(z + 0.25, 3))}>
+                      <ZoomIn className="h-4 w-4" />
+                    </Button>
+                    <Button variant="secondary" size="icon" onClick={() => setZoom(z => Math.max(z - 0.25, 0.5))}>
+                      <ZoomOut className="h-4 w-4" />
+                    </Button>
+                    <Button variant="secondary" size="icon" onClick={() => setRotation(r => r + 90)}>
+                      <RotateCw className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-center flex-1 w-full h-full overflow-auto">
+                    <img
+                      src={previewImage}
+                      alt="Preview"
+                      style={{ transform: `scale(${zoom}) rotate(${rotation}deg)`, transition: 'transform 0.2s ease-in-out' }}
+                      className="object-contain h-full w-full m-auto rounded-lg shadow-2xl"
+                    />
+                  </div>
+                </div>
               ) : (
                 <div className="bg-gray-200 border-2 border-dashed rounded-xl w-full h-full flex items-center justify-center">
                   <FileText className="h-8 w-8 text-gray-400" />

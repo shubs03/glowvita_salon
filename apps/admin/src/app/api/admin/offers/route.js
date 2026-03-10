@@ -264,6 +264,8 @@ export const PUT = authMiddlewareAdmin(
         }
 
         body.offerImage = imageUrl;
+      } else if (body.offerImage && typeof body.offerImage === 'string' && (body.offerImage.startsWith('http') || body.offerImage.startsWith('/uploads/'))) {
+        // Retain existing image
       } else {
         // If image is null/empty, remove it
         body.offerImage = null;

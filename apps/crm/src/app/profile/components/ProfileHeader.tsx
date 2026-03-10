@@ -55,19 +55,6 @@ export const ProfileHeader = ({
                   <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-white"></div>
                 ) : (
                   <>
-                    {profileData?.profileImage && (
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg border-border hover:border-primary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openProfileImagePreview();
-                        }}
-                      >
-                        <Eye className="h-3 w-3 sm:h-4 sm:w-4 text-foreground" />
-                      </Button>
-                    )}
                     <Button
                       variant="secondary"
                       size="icon"
@@ -128,9 +115,9 @@ export const ProfileHeader = ({
                     Download App
                   </a>
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="h-9 sm:h-10 px-3 sm:px-4 text-xs sm:text-sm rounded-lg border-border hover:border-primary"
                   onClick={() => setQrModalOpen(true)}
                 >
