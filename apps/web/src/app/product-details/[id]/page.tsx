@@ -11,9 +11,9 @@ import { PageContainer } from '@repo/ui/page-container';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
-import { useGetPublicProductByIdQuery, useAddToClientCartMutation, useGetProductQuestionsQuery, useSubmitProductQuestionMutation, useGetProductReviewsQuery, useSubmitProductReviewMutation, useGetPublicVendorProductsQuery } from '@repo/store/api';
+import { useGetPublicProductByIdQuery, useAddToClientCartMutation, useGetProductQuestionsQuery, useSubmitProductQuestionMutation, useGetProductReviewsQuery, useSubmitProductReviewMutation, useGetPublicVendorProductsQuery, useGetClientCartQuery } from '@repo/store/api';
 import { Skeleton } from '@repo/ui/skeleton';
-import { useAppDispatch } from "@repo/store/hooks";
+import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
 import { addToCart as addToLocalCart } from "@repo/store/slices/cartSlice";
 import { useAuth } from '@/hooks/useAuth';
 import { useCartSync } from "@/hooks/useCartSync";
@@ -80,6 +80,13 @@ export default function ProductDetailsPage() {
   // Fetch product data
   const { data: productResponse, isLoading, error } = useGetPublicProductByIdQuery(id as string);
   const [addToCartAPI] = useAddToClientCartMutation();
+
+  const localCartItems = useAppSelector((state) => state.cart.items);
+  const { data: cartData } = useGetClientCartQuery(undefined, {
+    skip: !isAuthenticated || !user?._id,
+  });
+
+  const cartItems = isAuthenticated && user?._id ? (cartData?.data?.items || []) : localCartItems;
 
   // Fetch product questions
   const { data: questionsResponse, refetch: refetchQuestions } = useGetProductQuestionsQuery(id as string);
@@ -195,6 +202,21 @@ export default function ProductDetailsPage() {
   const handleAddToCart = async (selectedProduct?: any) => {
     const prod = selectedProduct || product;
     const qty = selectedProduct ? 1 : quantity; // Use 1 for related products
+
+    // Check if cart already has items from a different vendor
+    if (cartItems.length > 0) {
+      const firstItem = cartItems[0];
+      const currentVendorId = firstItem.vendorId;
+      const currentVendorName = firstItem.vendorName || firstItem.supplierName || "another vendor";
+
+      if (prod.vendorId && currentVendorId && prod.vendorId !== currentVendorId) {
+        toast.error("Cannot add products from different vendors", {
+          description: `Your cart already contains products from ${currentVendorName}. Please checkout or remove existing items first.`,
+          duration: 5000,
+        });
+        return;
+      }
+    }
 
     // Validate product data is available
     if (!prod) {
@@ -318,6 +340,21 @@ export default function ProductDetailsPage() {
     if (!prod) {
       toast.error("Product data not available. Please try again.");
       return;
+    }
+
+    // Check if cart already has items from a different vendor
+    if (cartItems.length > 0) {
+      const firstItem = cartItems[0];
+      const currentVendorId = firstItem.vendorId;
+      const currentVendorName = firstItem.vendorName || firstItem.supplierName || "another vendor";
+
+      if (prod.vendorId && currentVendorId && prod.vendorId !== currentVendorId) {
+        toast.error("Cannot proceed with mixed vendors", {
+          description: `Your cart already contains products from ${currentVendorName}. Please checkout or remove existing items first.`,
+          duration: 5000,
+        });
+        return;
+      }
     }
 
     if (isOutOfStock && !selectedProduct) {
@@ -630,7 +667,7 @@ export default function ProductDetailsPage() {
 
             {/* Price Display */}
             <div className="flex items-center gap-4">
-              {product.salePrice && product.salePrice < product.price ? (
+              {product.salePrice && product.salePrice > 0 && product.salePrice < product.price ? (
                 <>
                   <p className="text-4xl font-bold text-primary">₹{product.salePrice.toFixed(2)}</p>
                   <p className="text-2xl text-muted-foreground line-through">₹{product.price.toFixed(2)}</p>

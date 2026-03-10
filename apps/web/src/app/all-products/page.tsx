@@ -151,11 +151,25 @@ const ProductHighlightCard = ({
               {products[currentIndex]?.vendorName}
             </p>
             <div className="flex justify-between items-center mt-1 md:mt-2">
-              <p
-                className={`font-bold ${isLarge ? "text-sm md:text-base lg:text-lg" : "text-xs md:text-sm"}`}
-              >
-                ₹{products[currentIndex]?.price.toFixed(2)}
-              </p>
+              <div className="flex items-center gap-2">
+                {products[currentIndex]?.salePrice && products[currentIndex]?.salePrice > 0 ? (
+                  <>
+                    <p className={`font-bold ${isLarge ? "text-sm md:text-base lg:text-lg" : "text-xs md:text-sm"}`}>
+                      ₹{products[currentIndex]?.salePrice.toFixed(2)}
+                    </p>
+                    <p className="text-[10px] md:text-xs text-white/70 line-through">
+                      ₹{products[currentIndex]?.price.toFixed(2)}
+                    </p>
+                    <span className="text-[9px] md:text-[10px] font-bold text-green-400 bg-green-400/10 px-1 py-0.5 rounded">
+                      {Math.round(((products[currentIndex]?.price - products[currentIndex]?.salePrice) / products[currentIndex]?.price) * 100)}% OFF
+                    </span>
+                  </>
+                ) : (
+                  <p className={`font-bold ${isLarge ? "text-sm md:text-base lg:text-lg" : "text-xs md:text-sm"}`}>
+                    ₹{products[currentIndex]?.price.toFixed(2)}
+                  </p>
+                )}
+              </div>
               {isLarge && (
                 <Button
                   size="sm"
@@ -300,8 +314,10 @@ export default function AllProductsPage() {
 
     // Apply price range filter
     result = result.filter(
-      (product) =>
-        product.price >= priceRange[0] && product.price <= priceRange[1]
+      (product) => {
+        const effectivePrice = (product.salePrice && product.salePrice > 0) ? product.salePrice : product.price;
+        return effectivePrice >= priceRange[0] && effectivePrice <= priceRange[1];
+      }
     );
 
     // Apply sorting
@@ -310,10 +326,18 @@ export default function AllProductsPage() {
         result = result.sort((a, b) => (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0));
         break;
       case "price-low":
-        result = result.sort((a, b) => a.price - b.price);
+        result = result.sort((a, b) => {
+          const priceA = (a.salePrice && a.salePrice > 0) ? a.salePrice : a.price;
+          const priceB = (b.salePrice && b.salePrice > 0) ? b.salePrice : b.price;
+          return priceA - priceB;
+        });
         break;
       case "price-high":
-        result = result.sort((a, b) => b.price - a.price);
+        result = result.sort((a, b) => {
+          const priceA = (a.salePrice && a.salePrice > 0) ? a.salePrice : a.price;
+          const priceB = (b.salePrice && b.salePrice > 0) ? b.salePrice : b.price;
+          return priceB - priceA;
+        });
         break;
       case "rating":
         result = result.sort((a, b) => b.rating - a.rating);

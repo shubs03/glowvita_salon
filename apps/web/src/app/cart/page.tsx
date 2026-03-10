@@ -214,15 +214,18 @@ export default function CartPage() {
         isCartOrder: true
       };
     } else {
-      // Multiple unique items - pass a summary
+      // Multiple items from the same vendor - pass a summary
+      const firstItem = cartItems[0];
+      const vendorName = firstItem.vendorName || firstItem.supplierName || "Vendor";
+
       checkoutData = {
         id: `cart-${Date.now()}`,
         name: `Order of ${cartItems.length} items`,
         price: subtotal, // Passing aggregated subtotal as price
         image: cartItems[0]?.productImage || "https://placehold.co/100x100.png",
         quantity: 1, // Treat the whole cart as 1 unit of "Order"
-        vendorId: cartItems[0]?.vendorId || "mixed",
-        vendorName: "Multiple Vendors",
+        vendorId: firstItem.vendorId || "unknown",
+        vendorName: vendorName,
         isCartOrder: true
       };
     }
@@ -238,15 +241,22 @@ export default function CartPage() {
   };
 
   const subtotal = cartItems.reduce(
-    (acc: number, item: any) => acc + item.price * item.quantity,
+    (acc: number, item: any) => acc + (Number(item.price) * Number(item.quantity)),
     0
   );
 
+  const originalSubtotal = cartItems.reduce(
+    (acc: number, item: any) => acc + (Number(item.originalPrice || item.price) * Number(item.quantity)),
+    0
+  );
+  const totalSavings = originalSubtotal - subtotal;
+
   // Calculate dynamic shipping based on config
+  const shippingAmount = Number(shippingConfig?.amount || 0);
   const shipping = subtotal > 0 && shippingConfig?.isEnabled
-    ? shippingConfig.chargeType === 'percentage'
-      ? (subtotal * shippingConfig.amount) / 100
-      : shippingConfig.amount
+    ? (shippingConfig.chargeType === 'percentage'
+      ? (subtotal * shippingAmount) / 100
+      : shippingAmount)
     : 0;
 
   // Calculate tax based on dynamic tax settings from API
@@ -258,10 +268,10 @@ export default function CartPage() {
   const productPlatformFeeEnabled = taxSettings?.productPlatformFeeEnabled ?? true;
 
   const gst = productGSTEnabled
-    ? (productGSTType === 'percentage' ? subtotal * (productGST / 100) : productGST)
+    ? (productGSTType === 'percentage' ? subtotal * (Number(productGST) / 100) : Number(productGST))
     : 0;
   const platformFee = productPlatformFeeEnabled
-    ? (productPlatformFeeType === 'percentage' ? subtotal * (productPlatformFee / 100) : productPlatformFee)
+    ? (productPlatformFeeType === 'percentage' ? subtotal * (Number(productPlatformFee) / 100) : Number(productPlatformFee))
     : 0;
   const tax = gst + platformFee;
 
@@ -560,12 +570,31 @@ export default function CartPage() {
                     )}
 
                     {/* Pricing Breakdown */}
-                    <div className="flex justify-between text-sm lg:text-base">
-                      <span className="text-muted-foreground">
-                        Items ({itemCount})
-                      </span>
-                      <span className="font-medium">₹{subtotal.toFixed(2)}</span>
-                    </div>
+                    {totalSavings > 0 ? (
+                      <>
+                        <div className="flex justify-between text-sm lg:text-base">
+                          <span className="text-muted-foreground">Original Price</span>
+                          <span className="text-muted-foreground line-through">₹{originalSubtotal.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm lg:text-base text-green-600 font-medium font-bold">
+                          <span>Product Discount</span>
+                          <span>-₹{totalSavings.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm lg:text-base font-medium">
+                          <span className="text-muted-foreground">
+                            Subtotal
+                          </span>
+                          <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-between text-sm lg:text-base">
+                        <span className="text-muted-foreground">
+                          Items ({itemCount})
+                        </span>
+                        <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm lg:text-base">
                       <span className="text-muted-foreground">Est. Shipping</span>
                       <span className="font-medium">₹{shipping.toFixed(2)}</span>

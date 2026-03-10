@@ -87,7 +87,9 @@ export function NewProductCard({
       const productData = {
         id,
         name,
-        price: salePrice || price,
+        price: salePrice && salePrice > 0 ? salePrice : price,
+        originalPrice: price,
+        hasSale: salePrice && salePrice > 0 ? true : false,
         image,
         vendorName,
         vendorId: vendorId || 'unknown-vendor',
@@ -138,7 +140,9 @@ export function NewProductCard({
         const cartItem = {
           _id: id,
           productName: name,
-          price: salePrice || price,
+          price: salePrice && salePrice > 0 ? salePrice : price,
+          originalPrice: price,
+          hasSale: salePrice && salePrice > 0 ? true : false,
           quantity: 1,
           productImage: image,
           vendorId: vendorId,

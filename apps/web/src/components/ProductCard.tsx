@@ -6,10 +6,10 @@ import { Heart, ShoppingCart, Star } from "lucide-react";
 import { Badge } from "@repo/ui/badge";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { useAppDispatch } from "@repo/store/hooks";
+import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
 import { addToCart } from "@repo/store/slices/cartSlice";
+import { useGetClientCartQuery, useAddToClientCartMutation } from "@repo/store/api";
 import Image from "next/image";
-import { useAddToClientCartMutation } from "@repo/store/api";
 import { cn } from "@repo/ui/cn";
 
 interface ProductCardProps {
@@ -59,6 +59,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const { user, isAuthenticated } = useAuth();
   const dispatch = useAppDispatch();
   const [addToCartAPI] = useAddToClientCartMutation();
+  const localCartItems = useAppSelector((state) => state.cart.items);
+  const { data: cartData } = useGetClientCartQuery(undefined, {
+    skip: !isAuthenticated || !user?._id,
+  });
+
+  const cartItems = isAuthenticated && user?._id ? (cartData?.data?.items || []) : localCartItems;
 
   // Check if product is in wishlist on component mount
   useEffect(() => {
@@ -133,6 +139,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
+    // Check if cart already has items from a different vendor
+    if (cartItems.length > 0) {
+      const firstItem = cartItems[0];
+      const currentVendorId = firstItem.vendorId;
+      const currentVendorName = firstItem.vendorName || firstItem.supplierName || "another vendor";
+
+      if (vendorId && currentVendorId && vendorId !== currentVendorId) {
+        toast.error("Cannot add products from different vendors", {
+          description: `Your cart already contains products from ${currentVendorName}. Please checkout or remove existing items first.`,
+          duration: 5000,
+        });
+        return;
+      }
+    }
+
     try {
       if (isAuthenticated && user?._id) {
         // User is authenticated - use API
@@ -161,7 +182,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
         const cartItem = {
           _id: id,
           productName: name,
-          price: salePrice || price,
+          price: salePrice && salePrice > 0 ? salePrice : price,
+          originalPrice: price,
+          hasSale: salePrice && salePrice > 0 ? true : false,
           quantity: 1,
           productImage: image,
           vendorId: vendorId,
@@ -169,7 +192,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           // Additional details for better cart management
           category: category,
           stock: stock,
-          hint: hint || description,
+          hint: description,
         };
 
         // Dispatch to Redux store (will also save to localStorage)
@@ -193,13 +216,31 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const handleBuyNow = (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    // Check if cart already has items from a different vendor
+    if (cartItems.length > 0) {
+      const firstItem = cartItems[0];
+      const currentVendorId = firstItem.vendorId;
+      const currentVendorName = firstItem.vendorName || firstItem.supplierName || "another vendor";
+
+      if (vendorId && currentVendorId && vendorId !== currentVendorId) {
+        toast.error("Cannot proceed with mixed vendors", {
+          description: `Your cart already contains products from ${currentVendorName}. Please checkout or remove existing items first.`,
+          duration: 5000,
+        });
+        return;
+      }
+    }
+
     console.log('Buy Now clicked for product:', { id, name, vendorId });
     // Store product details in local storage
     try {
       const productData = {
         id,
         name,
-        price: salePrice || price,
+        price: salePrice && salePrice > 0 ? salePrice : price,
+        originalPrice: price,
+        hasSale: salePrice && salePrice > 0 ? true : false,
         image,
         vendorName,
         vendorId: vendorId || 'unknown-vendor',
@@ -259,9 +300,25 @@ const ProductCard: React.FC<ProductCardProps> = ({
           {description}
         </p>
         <div className="flex justify-between items-center mt-auto">
-          <p className="font-bold text-primary">
-            ₹{(salePrice || price).toFixed(2)}
-          </p>
+          <div className="flex items-center gap-2">
+            {salePrice && salePrice > 0 ? (
+              <>
+                <p className="font-bold text-primary">
+                  ₹{salePrice.toFixed(2)}
+                </p>
+                <p className="text-xs text-muted-foreground line-through">
+                  ₹{price.toFixed(2)}
+                </p>
+                <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+                  {Math.round(((price - salePrice) / price) * 100)}% OFF
+                </span>
+              </>
+            ) : (
+              <p className="font-bold text-primary">
+                ₹{price.toFixed(2)}
+              </p>
+            )}
+          </div>
           <div className="flex items-center gap-1">
             <Star className="h-3 w-3 text-yellow-400 fill-current" />
             <span className="text-xs text-muted-foreground font-medium">

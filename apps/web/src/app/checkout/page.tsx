@@ -138,11 +138,12 @@ export default function CheckoutPage() {
     if (!product) return;
 
     // Use the correct calculation for totalAmount that matches the checkout page display
-    const subtotal = product.price * product.quantity;
+    const subtotal = Number(product.price) * Number(product.quantity);
+    const shippingAmount = Number(shippingConfig?.amount || 0);
     const shipping = subtotal > 0 && shippingConfig?.isEnabled
-      ? shippingConfig.chargeType === 'percentage'
-        ? (subtotal * shippingConfig.amount) / 100
-        : shippingConfig.amount
+      ? (shippingConfig.chargeType === 'percentage'
+        ? (subtotal * shippingAmount) / 100
+        : shippingAmount)
       : 0;
 
     // Calculate tax based on dynamic tax settings from API
@@ -154,10 +155,10 @@ export default function CheckoutPage() {
     const productPlatformFeeEnabled = taxSettings?.productPlatformFeeEnabled ?? true;
 
     const gst = productGSTEnabled
-      ? (productGSTType === 'percentage' ? subtotal * (productGST / 100) : productGST)
+      ? (productGSTType === 'percentage' ? subtotal * (Number(productGST) / 100) : Number(productGST))
       : 0;
     const platformFee = productPlatformFeeEnabled
-      ? (productPlatformFeeType === 'percentage' ? subtotal * (productPlatformFee / 100) : productPlatformFee)
+      ? (productPlatformFeeType === 'percentage' ? subtotal * (Number(productPlatformFee) / 100) : Number(productPlatformFee))
       : 0;
     const tax = gst + platformFee;
 
@@ -424,13 +425,14 @@ export default function CheckoutPage() {
     );
   }
 
-  const subtotal = product.price * product.quantity;
+  const subtotal = Number(product.price) * Number(product.quantity);
 
   // Calculate dynamic shipping based on config
+  const shippingAmount = Number(shippingConfig?.amount || 0);
   const shipping = subtotal > 0 && shippingConfig?.isEnabled
-    ? shippingConfig.chargeType === 'percentage'
-      ? (subtotal * shippingConfig.amount) / 100
-      : shippingConfig.amount
+    ? (shippingConfig.chargeType === 'percentage'
+      ? (subtotal * shippingAmount) / 100
+      : shippingAmount)
     : 0;
 
   // Calculate tax based on dynamic tax settings from API
@@ -442,14 +444,23 @@ export default function CheckoutPage() {
   const productPlatformFeeEnabled = taxSettings?.productPlatformFeeEnabled ?? true;
 
   const gst = productGSTEnabled
-    ? (productGSTType === 'percentage' ? subtotal * (productGST / 100) : productGST)
+    ? (productGSTType === 'percentage' ? subtotal * (Number(productGST) / 100) : Number(productGST))
     : 0;
   const platformFee = productPlatformFeeEnabled
-    ? (productPlatformFeeType === 'percentage' ? subtotal * (productPlatformFee / 100) : productPlatformFee)
+    ? (productPlatformFeeType === 'percentage' ? subtotal * (Number(productPlatformFee) / 100) : Number(productPlatformFee))
     : 0;
   const tax = gst + platformFee;
 
   const total = subtotal + shipping + tax;
+
+  // Calculate total savings
+  let originalSubtotal = 0;
+  if (product.id.startsWith('cart-') && cartItems.length > 0) {
+    originalSubtotal = cartItems.reduce((acc, item) => acc + (item.originalPrice || item.price) * item.quantity, 0);
+  } else {
+    originalSubtotal = (product.originalPrice || product.price) * product.quantity;
+  }
+  const totalSavings = originalSubtotal - subtotal;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -637,10 +648,27 @@ export default function CheckoutPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span>₹{subtotal.toFixed(2)}</span>
-                  </div>
+                  {totalSavings > 0 ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Original Price</span>
+                        <span className="text-muted-foreground line-through">₹{originalSubtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-green-600 font-medium">
+                        <span>Discount</span>
+                        <span>-₹{totalSavings.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-medium">
+                        <span>Subtotal</span>
+                        <span>₹{subtotal.toFixed(2)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between">
+                      <span>Subtotal</span>
+                      <span>₹{subtotal.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span>Shipping</span>
                     <span>₹{shipping.toFixed(2)}</span>

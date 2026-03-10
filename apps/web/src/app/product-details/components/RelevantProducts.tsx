@@ -317,10 +317,15 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </p>
         <div className="flex justify-between items-center mt-auto">
           <div>
-            {product.salePrice && product.salePrice > 0 ? (
+            {product.salePrice && product.salePrice > 0 && product.salePrice < product.price ? (
               <div className="flex items-center gap-2">
                 <p className="font-bold text-primary">₹{product.salePrice.toFixed(2)}</p>
-                <p className="text-[10px] text-muted-foreground line-through">₹{product.price.toFixed(2)}</p>
+                <div className="flex flex-col">
+                  <p className="text-[10px] text-muted-foreground line-through">₹{product.price.toFixed(2)}</p>
+                  <span className="text-[8px] font-bold text-green-600 bg-green-50 px-1 py-0 rounded">
+                    {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
+                  </span>
+                </div>
               </div>
             ) : (
               <p className="font-bold text-primary">₹{product.price.toFixed(2)}</p>

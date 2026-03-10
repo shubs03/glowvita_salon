@@ -28,10 +28,10 @@ interface ProductData {
 
 const RecentlyAddedProducts = () => {
   const router = useRouter();
-  const { 
-    data: productsData, 
-    isLoading, 
-    error 
+  const {
+    data: productsData,
+    isLoading,
+    error
   } = useGetPublicProductsQuery(undefined);
 
   // Find the most recently created product
@@ -56,7 +56,7 @@ const RecentlyAddedProducts = () => {
 
     // Use all product images if available, otherwise use the main image
     const allImages = mostRecentProduct.productImages || [mostRecentProduct.image];
-    
+
     // Ensure we have 4 images for the grid (duplicate if needed)
     const gridImages = [];
     for (let i = 0; i < 4; i++) {
@@ -66,7 +66,7 @@ const RecentlyAddedProducts = () => {
     return {
       id: mostRecentProduct.id,
       name: mostRecentProduct.name || "Product Name",
-      description: mostRecentProduct.description || 
+      description: mostRecentProduct.description ||
         "Experience premium quality and exceptional value with this amazing product. Crafted with attention to detail and designed for your satisfaction.",
       price: mostRecentProduct.price || 0,
       salePrice: mostRecentProduct.salePrice,
@@ -175,7 +175,7 @@ const RecentlyAddedProducts = () => {
       </div>
 
       {/* Product Card */}
-      <div 
+      <div
         className="bg-card overflow-hidden duration-300 cursor-pointer"
         onClick={() => router.push(`/product-details/${product.id}`)}
       >
@@ -184,8 +184,8 @@ const RecentlyAddedProducts = () => {
           <div className="w-full lg:w-1/2 p-6 md:p-8">
             <div className="grid grid-cols-2 gap-4">
               {product.images.map((image, index) => (
-                <div 
-                  key={index} 
+                <div
+                  key={index}
                   className="aspect-square rounded-2xl overflow-hidden group-hover:opacity-90 transition-opacity"
                 >
                   <img
@@ -227,13 +227,16 @@ const RecentlyAddedProducts = () => {
 
               {/* Price */}
               <div className="flex items-center gap-2 mb-4">
-                {product.salePrice ? (
+                {product.salePrice && product.salePrice > 0 ? (
                   <>
                     <span className="text-xl font-bold text-primary">
                       ₹{product.salePrice.toFixed(2)}
                     </span>
                     <span className="text-sm text-muted-foreground line-through">
                       ₹{product.price.toFixed(2)}
+                    </span>
+                    <span className="text-xs font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                      {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
                     </span>
                   </>
                 ) : (
@@ -247,9 +250,9 @@ const RecentlyAddedProducts = () => {
               <div className="flex items-center gap-2 mb-4">
                 <div className="flex items-center">
                   {[...Array(5)].map((_, i) => (
-                    <Star 
-                      key={i} 
-                      className={`w-4 h-4 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-muted-foreground'}`} 
+                    <Star
+                      key={i}
+                      className={`w-4 h-4 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-muted-foreground'}`}
                     />
                   ))}
                 </div>
@@ -264,7 +267,7 @@ const RecentlyAddedProducts = () => {
 
             {/* Bottom Section - Action Button */}
             <div className="mt-6 pt-6 border-t border-border">
-              <Button 
+              <Button
                 className="inline-flex items-center gap-2 text-sm"
                 onClick={(e) => {
                   e.stopPropagation();
