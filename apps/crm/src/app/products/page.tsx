@@ -154,12 +154,15 @@ export default function ProductsPage() {
   };
 
   const filteredProducts = useMemo(() => {
-    if (!Array.isArray(productsData)) return [];
-    return productsData.filter(
-      (p) =>
-        p.productName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (statusFilter === "all" || p.status === statusFilter),
-    );
+    return [...productsData]
+      .filter(
+        (p) =>
+          p.productName.toLowerCase().includes(searchTerm.toLowerCase()) &&
+          (statusFilter === "all" || p.status === statusFilter),
+      )
+      .sort((a, b) => {
+        return new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime();
+      });
   }, [productsData, searchTerm, statusFilter]);
 
   // Calculate product statistics

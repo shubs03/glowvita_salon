@@ -118,10 +118,23 @@ const ProductCard = ({ product, onEdit, onDelete, onView, onToggleActive }: Prod
             No size info
           </p>
         )}
-        <div className="flex justify-between items-center mt-auto">
-          <p className="font-bold text-primary">
-            ₹{(product.salePrice > 0 ? product.salePrice : product.price).toFixed(2)}
-          </p>
+        <div className="flex justify-between items-center mt-auto pb-4">
+          <div className="flex flex-col">
+            {product.salePrice > 0 && product.salePrice < product.price ? (
+              <>
+                <span className="text-xs text-muted-foreground line-through decoration-1 font-normal">
+                  ₹{Number(product.price).toFixed(2)}
+                </span>
+                <span className="text-lg font-bold text-primary">
+                  ₹{Number(product.salePrice).toFixed(2)}
+                </span>
+              </>
+            ) : (
+              <span className="text-lg font-bold text-primary">
+                ₹{Number(product.price).toFixed(2)}
+              </span>
+            )}
+          </div>
           {!product.isActive && (
             <Badge variant="outline" className="text-[10px] py-0 h-4 border-dashed">
               Hidden on Web

@@ -356,7 +356,7 @@ const ProductFormFields = ({
       </div>
 
       {/* GST and Final Price Display */}
-      {selectedCategory && selectedCategory.gstType !== 'none' && formData.salePrice && (
+      {selectedCategory && selectedCategory.gstType !== 'none' && (formData.salePrice || formData.price) && (
         <div className="bg-muted/30 rounded-xl p-4 border border-border/30">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
@@ -379,7 +379,7 @@ const ProductFormFields = ({
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Calculation: Sale Price (₹{Number(formData.salePrice).toFixed(2)}) + GST (₹{gstAmount.toFixed(2)}) = Final Price (₹{calculatedFinalPrice.toFixed(2)})
+            Calculation: {formData.salePrice && formData.salePrice < (formData.price || 0) ? `Sale Price (₹${Number(formData.salePrice).toFixed(2)})` : `Regular Price (₹${Number(formData.price).toFixed(2)})`} + GST (₹{gstAmount.toFixed(2)}) = Final Price (₹{calculatedFinalPrice.toFixed(2)})
           </p>
         </div>
       )}

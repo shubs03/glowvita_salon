@@ -56,7 +56,7 @@ const ProductViewModal = ({
     if (!product) return null;
 
     const calculateDiscountPercentage = () => {
-        if (product.price > product.salePrice) {
+        if (product.salePrice > 0 && product.price > product.salePrice) {
             return Math.round(
                 ((product.price - product.salePrice) / product.price) * 100
             );
@@ -192,11 +192,17 @@ const ProductViewModal = ({
                             </h2>
 
                             <div className="flex items-baseline gap-3 mb-4">
-                                <span className="text-4xl font-bold text-foreground">
-                                    ₹{product.salePrice.toFixed(2)}
-                                </span>
-                                {product.price > product.salePrice && (
-                                    <span className="text-xl text-muted-foreground line-through decoration-muted-foreground/50">
+                                {product.salePrice > 0 && product.salePrice < product.price ? (
+                                    <>
+                                        <span className="text-4xl font-bold text-foreground">
+                                            ₹{product.salePrice.toFixed(2)}
+                                        </span>
+                                        <span className="text-xl text-muted-foreground line-through decoration-muted-foreground/50">
+                                            ₹{product.price.toFixed(2)}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span className="text-4xl font-bold text-foreground">
                                         ₹{product.price.toFixed(2)}
                                     </span>
                                 )}
