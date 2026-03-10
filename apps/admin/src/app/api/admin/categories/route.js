@@ -83,23 +83,27 @@ export const PUT = authMiddlewareAdmin(
       // Handle image upload if new image is provided
       if (updateData.image !== undefined) {
         if (updateData.image) {
-          // Upload new image to VPS
-          const fileName = `category-${Date.now()}`;
-          const imageUrl = await uploadBase64(updateData.image, fileName);
+          if (typeof updateData.image === 'string' && (updateData.image.startsWith('http') || updateData.image.startsWith('/uploads/'))) {
+            updateData.categoryImage = updateData.image;
+          } else {
+            // Upload new image to VPS
+            const fileName = `category-${Date.now()}`;
+            const imageUrl = await uploadBase64(updateData.image, fileName);
 
-          if (!imageUrl) {
-            return Response.json(
-              { message: "Failed to upload image" },
-              { status: 500 }
-            );
+            if (!imageUrl) {
+              return Response.json(
+                { message: "Failed to upload image" },
+                { status: 500 }
+              );
+            }
+
+            // Delete old image from VPS if it exists
+            if (existingCategory.categoryImage) {
+              await deleteFile(existingCategory.categoryImage);
+            }
+
+            updateData.categoryImage = imageUrl;
           }
-
-          // Delete old image from VPS if it exists
-          if (existingCategory.categoryImage) {
-            await deleteFile(existingCategory.categoryImage);
-          }
-
-          updateData.categoryImage = imageUrl;
         } else {
           // If image is null/empty, remove it
           updateData.categoryImage = null;
