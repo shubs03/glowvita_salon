@@ -351,7 +351,7 @@ export default function SupplierManagementPage() {
       orders: SupplierOrder[];
     }> = {};
 
-    supplierOrders.forEach((order: SupplierOrder) => {
+    [...supplierOrders].reverse().forEach((order: SupplierOrder) => {
       const sId = order.supplierId || "unknown";
       if (!groups[sId]) {
         groups[sId] = {
@@ -382,7 +382,12 @@ export default function SupplierManagementPage() {
     return Object.entries(groups).map(([id, data]) => ({
       id,
       ...data,
-    }));
+    })).sort((a, b) => {
+      const getLatestDate = (orders: SupplierOrder[]) => orders.length > 0
+        ? Math.max(...orders.map(o => new Date(o.date || 0).getTime()))
+        : 0;
+      return getLatestDate(b.orders) - getLatestDate(a.orders);
+    });
   }, [supplierOrders]);
 
   const filteredGroupedOrders = useMemo(() => {
@@ -410,7 +415,7 @@ export default function SupplierManagementPage() {
         (order.productName && order.productName.toLowerCase().includes(search)) ||
         (order.items && order.items.some(item => item.name?.toLowerCase().includes(search)))
       );
-    });
+    }).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
   }, [selectedSupplierGroup, supplierOrderSearch]);
 
   const paginatedSupplierOrders = useMemo(() => {
@@ -836,7 +841,7 @@ export default function SupplierManagementPage() {
   }, [licensePreviews]);
 
   // Filter and paginate suppliers
-  const filteredSuppliers = suppliers.filter((supplier: Supplier) => {
+  const filteredSuppliers = [...suppliers].reverse().filter((supplier: Supplier) => {
     const fullName = `${supplier.firstName} ${supplier.lastName}`.toLowerCase();
     const matchesSearch =
       fullName.includes(supplierSearch.toLowerCase()) ||

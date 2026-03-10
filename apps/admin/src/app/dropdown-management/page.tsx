@@ -310,7 +310,8 @@ const DropdownManager = ({
 };
 
 const ServiceCategoryManager = () => {
-    const { data: categories = [], isLoading, isError } = useGetCategoriesQuery(undefined);
+    const { data: categoriesRaw = [], isLoading, isError } = useGetCategoriesQuery(undefined);
+    const categories = useMemo(() => [...categoriesRaw].reverse(), [categoriesRaw]);
     const [createCategory] = useCreateCategoryMutation();
     const [updateCategory] = useUpdateCategoryMutation();
     const [deleteCategory] = useDeleteCategoryMutation();
@@ -554,7 +555,8 @@ const ServiceCategoryManager = () => {
 };
 
 const ServiceManager = () => {
-    const { data: services = [], isLoading, isError } = useGetServicesQuery(undefined);
+    const { data: servicesRaw = [], isLoading, isError } = useGetServicesQuery(undefined);
+    const services = useMemo(() => [...servicesRaw].reverse(), [servicesRaw]);
     const { data: categories = [] } = useGetCategoriesQuery(undefined);
     const [createService] = useCreateServiceMutation();
     const [updateService] = useUpdateServiceMutation();
@@ -823,7 +825,10 @@ const ServiceManager = () => {
 };
 
 const ProductMasterManager = () => {
-    const { data: productMasters = [], isLoading, isError } = useGetProductMastersQuery(undefined);
+    const { data: productMastersRaw = [], isLoading, isError } = useGetProductMastersQuery(undefined);
+    const productMasters = useMemo(() => {
+        return [...productMastersRaw].reverse();
+    }, [productMastersRaw]);
     const { data: productCategoriesResponse } = useGetAdminProductCategoriesQuery(undefined);
     const [createProductMaster] = useCreateProductMasterMutation();
     const [updateProductMaster] = useUpdateProductMasterMutation();
@@ -1145,10 +1150,10 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
 
     const [selectedDoctorType, setSelectedDoctorType] = useState<'Physician' | 'Surgeon'>();
 
-    const specializations = useMemo(() => data.filter(item => item.type === 'specialization'), [data]);
+    const specializations = useMemo(() => [...data.filter(item => item.type === 'specialization')].reverse(), [data]);
 
     const getChildren = (parentId: string) => {
-        return data.filter(item => item.type === 'disease' && item.parentId === parentId);
+        return [...data.filter(item => item.type === 'disease' && item.parentId === parentId)].reverse();
     }
 
     const handleOpenModal = (action: 'add' | 'edit', type: string, item?: Partial<DropdownItem>, parentId?: string, parentName?: string) => {
@@ -1229,23 +1234,23 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
                         </button>
                     )}
                     <span className="flex-grow font-medium">{item.name} {item.doctorType && <Badge variant="outline">{item.doctorType}</Badge>}</span>
-                    
+
                     {/* Move buttons */}
                     <div className="flex items-center gap-1 mr-2 border-r pr-2 shadow-sm">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7" 
-                            disabled={isFirst} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={isFirst}
                             onClick={() => handleMove(siblings, index, 'up')}
                         >
                             <ArrowUp className="h-3.5 w-3.5" />
                         </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7" 
-                            disabled={isLast} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={isLast}
                             onClick={() => handleMove(siblings, index, 'down')}
                         >
                             <ArrowDown className="h-3.5 w-3.5" />
@@ -1530,7 +1535,7 @@ export default function DropdownManagementPage() {
                                 key={d.key}
                                 listTitle={d.title}
                                 listDescription={d.description}
-                                items={data.filter((item: DropdownItem) => item.type === d.key)}
+                                items={[...data.filter((item: DropdownItem) => item.type === d.key)].reverse()}
                                 type={d.key}
                                 onUpdate={handleUpdate}
                                 isLoading={isLoading}
@@ -1564,7 +1569,7 @@ export default function DropdownManagementPage() {
                                 key={d.key}
                                 listTitle={d.title}
                                 listDescription={d.description}
-                                items={data.filter((item: DropdownItem) => item.type === d.key)}
+                                items={[...data.filter((item: DropdownItem) => item.type === d.key)].reverse()}
                                 type={d.key}
                                 onUpdate={handleUpdate}
                                 isLoading={isLoading}
@@ -1585,7 +1590,7 @@ export default function DropdownManagementPage() {
                                 key={d.key}
                                 listTitle={d.title}
                                 listDescription={d.description}
-                                items={data.filter((item: DropdownItem) => item.type === d.key)}
+                                items={[...data.filter((item: DropdownItem) => item.type === d.key)].reverse()}
                                 type={d.key}
                                 onUpdate={handleUpdate}
                                 isLoading={isLoading}
