@@ -150,7 +150,7 @@ export const glowvitaApi = createApi({
     "Billing", "VendorServices", "DoctorWishlist", "Product", "CrmClientOrder", "DoctorReviews",
     "SellingServicesReport", "TotalBookingsReport", "CompletedBookingsReport", "CancellationReport", "SalesBySalonReport", "SalesByProductsReport",
     "SalesByBrandReport", "SalesByCategoryReport", "ConsolidatedSalesReport", "SupplierReports", "Products", "Regions", "PublicAllOffers", "AddOns", "PendingWeddingPackages",
-    "ReferralReport", "ClientWallet", "ClientWithdrawals", "WalletSettings", "Inventory", "SettlementHistoryReport", "PlatformCollectionsReport", "Doctor", "CrmWallet","SalonWishlist"
+    "ReferralReport", "ClientWallet", "ClientWithdrawals", "WalletSettings", "Inventory", "SettlementHistoryReport", "PlatformCollectionsReport", "Doctor", "CrmWallet", "SalonWishlist"
   ],
 
   endpoints: (builder) => ({
@@ -222,7 +222,7 @@ export const glowvitaApi = createApi({
         if (params.regionId) queryParams.append("regionId", params.regionId);
         if (params.search) queryParams.append("search", params.search);
         if (params.userType) queryParams.append("userType", params.userType);
-        
+
         return {
           url: `/admin/wallet-withdrawals?${queryParams.toString()}`,
           method: "GET",
@@ -2057,7 +2057,10 @@ export const glowvitaApi = createApi({
 
     // Public shipping config endpoint
     getPublicShippingConfig: builder.query({
-      query: () => ({ url: "/shipping", method: "GET" }),
+      query: (vendorId) => ({
+        url: `/shipping${vendorId ? `?vendorId=${vendorId}` : ""}`,
+        method: "GET"
+      }),
       providesTags: ["ShippingCharge"],
       keepUnusedDataFor: 0, // Don't cache this data
       transformResponse: (response) => response.data || response,

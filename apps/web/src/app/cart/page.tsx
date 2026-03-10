@@ -109,8 +109,14 @@ export default function CartPage() {
   const { data: cartData, isLoading } = useGetClientCartQuery(undefined, {
     skip: !isAuthenticated || !user?._id,
   });
+
+  // Get vendorId from cart items (authenticated or local)
+  const currentVendorId = isAuthenticated && user?._id
+    ? cartData?.data?.items?.[0]?.vendorId
+    : localCartItems?.[0]?.vendorId;
+
   const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
-  const { data: shippingConfig } = useGetPublicShippingConfigQuery(undefined);
+  const { data: shippingConfig } = useGetPublicShippingConfigQuery(currentVendorId);
   const [updateCartItem] = useUpdateClientCartItemMutation();
   const [removeFromCartAPI] = useRemoveFromClientCartMutation();
 

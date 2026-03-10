@@ -40,7 +40,7 @@ export default function CheckoutPage() {
 
   const { user } = useAuth();
   const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
-  const { data: shippingConfig } = useGetPublicShippingConfigQuery(undefined);
+  const { data: shippingConfig } = useGetPublicShippingConfigQuery(product?.vendorId);
   const [createOrder, { isLoading }] = useCreateClientOrderMutation();
   const [createPaymentOrder] = useCreatePaymentOrderMutation();
   const [verifyPayment] = useVerifyPaymentMutation();
