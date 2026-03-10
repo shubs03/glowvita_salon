@@ -8,8 +8,8 @@ import { Skeleton } from '@repo/ui/skeleton';
 import { Plus, Package, Store } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  useGetAdminProductCategoriesQuery,
-  useCreateAdminProductCategoryMutation,
+  useGetProductCategoriesQuery,
+  useCreateProductCategoryMutation,
   useGetCrmProductsQuery,
   useCreateCrmProductMutation,
   useUpdateCrmProductMutation,
@@ -74,9 +74,9 @@ export default function SupplierProductsPage() {
   const [updateProduct, { isLoading: isUpdatingProduct }] = useUpdateCrmProductMutation();
   const [deleteProduct, { isLoading: isDeletingProduct }] = useDeleteCrmProductMutation();
 
-  const { data: categoriesDatas = { data: [] }, isLoading: isCategoriesLoading, refetch: refetchCategories } = useGetAdminProductCategoriesQuery({});
+  const { data: categoriesDatas, isLoading: isCategoriesLoading, refetch: refetchCategories } = useGetProductCategoriesQuery({});
   const categoriesData = categoriesDatas?.data || [];
-  const [createCategory, { isLoading: isCreatingCategory }] = useCreateAdminProductCategoryMutation();
+  const [createCategory, { isLoading: isCreatingCategory }] = useCreateProductCategoryMutation();
 
   // Component State
   const [currentPage, setCurrentPage] = useState(1);
@@ -97,11 +97,12 @@ export default function SupplierProductsPage() {
 
   // Filtered products
   const filteredProducts = useMemo(() => {
-    if (!Array.isArray(productsData)) return [];
-    return productsData.filter(p =>
-      p.productName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (statusFilter === 'all' || p.status === statusFilter)
-    );
+    return [...productsData]
+      .filter(p =>
+        p.productName.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        (statusFilter === 'all' || p.status === statusFilter)
+      )
+      .sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
   }, [productsData, searchTerm, statusFilter]);
 
   // Paginated products
@@ -164,15 +165,10 @@ export default function SupplierProductsPage() {
       return;
     }
 
-    // Ensure salePrice defaults to regular price if not entered or set to 0
-    const priceValue = Number(formData.price) || 0;
-    const salePriceValue = Number(formData.salePrice);
-    const finalSalePrice = (salePriceValue === 0 || isNaN(salePriceValue)) ? priceValue : salePriceValue;
-
     const mutationData = {
       ...formData,
-      price: priceValue,
-      salePrice: finalSalePrice
+      price: Number(formData.price) || 0,
+      salePrice: Number(formData.salePrice) || 0
     };
 
     const mutation = selectedProduct ? updateProduct : createProduct;

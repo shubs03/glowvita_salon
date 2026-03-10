@@ -160,6 +160,7 @@ interface DoctorProfile {
   physicalConsultation?: Record<string, Array<{ startTime: string, endTime: string }>>;
   videoConsultationEnabled?: boolean;
   videoConsultation?: Record<string, Array<{ startTime: string, endTime: string }>>;
+  documents?: Record<string, any>;
 }
 
 export default function ProfilePage() {
@@ -292,7 +293,8 @@ export default function ProfilePage() {
           startTime: '',
           endTime: '',
           days: []
-        }
+        },
+        documents: doctorData.data.documents || {}
       });
     }
   }, [doctorData]);

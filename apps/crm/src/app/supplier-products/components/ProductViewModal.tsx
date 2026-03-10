@@ -201,13 +201,19 @@ const ProductViewModal = ({
                                 {product.productName}
                             </h2>
 
-                            <div className="flex items-baseline gap-3 mb-4">
-                                <span className="text-4xl font-bold text-foreground">
-                                    ₹{(product.salePrice > 0 ? product.salePrice : product.price).toFixed(2)}
-                                </span>
-                                {product.salePrice > 0 && product.price > product.salePrice && (
-                                    <span className="text-xl text-muted-foreground line-through decoration-muted-foreground/50">
-                                        ₹{product.price.toFixed(2)}
+                            <div className="flex flex-col mb-4">
+                                {product.salePrice > 0 && product.salePrice < product.price ? (
+                                    <>
+                                        <span className="text-xl text-muted-foreground line-through decoration-muted-foreground/50">
+                                            ₹{Number(product.price).toFixed(2)}
+                                        </span>
+                                        <span className="text-4xl font-bold text-foreground">
+                                            ₹{Number(product.salePrice).toFixed(2)}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span className="text-4xl font-bold text-foreground">
+                                        ₹{Number(product.price).toFixed(2)}
                                     </span>
                                 )}
                             </div>

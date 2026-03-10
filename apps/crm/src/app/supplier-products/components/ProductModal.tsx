@@ -74,7 +74,7 @@ const ProductModal = ({
         setFormData({
           ...selectedProduct,
           price: selectedProduct.price || 0,
-          salePrice: selectedProduct.salePrice || 0,
+          salePrice: (selectedProduct.salePrice && selectedProduct.price && selectedProduct.salePrice < selectedProduct.price) ? selectedProduct.salePrice : 0,
           stock: selectedProduct.stock || 0,
           isActive: selectedProduct.isActive ?? true,
           status: selectedProduct.status || "pending",

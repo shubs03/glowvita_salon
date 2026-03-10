@@ -111,9 +111,22 @@ const ProductListItem = ({ product, onEdit, onDelete, onView, onToggleActive }: 
                       {product.isActive ? 'Active' : 'Inactive'}
                     </Label>
                   </div>
-                  <span className="font-semibold text-primary">
-                    ₹{(product.salePrice > 0 ? product.salePrice : product.price).toFixed(0)}
-                  </span>
+                  <div className="flex flex-col items-end">
+                    {product.salePrice > 0 && product.salePrice < product.price ? (
+                      <>
+                        <span className="text-[10px] text-muted-foreground line-through decoration-1">
+                          ₹{Number(product.price).toFixed(2)}
+                        </span>
+                        <span className="font-semibold text-primary">
+                          ₹{Number(product.salePrice).toFixed(2)}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="font-semibold text-primary">
+                        ₹{Number(product.price).toFixed(2)}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex gap-1">
