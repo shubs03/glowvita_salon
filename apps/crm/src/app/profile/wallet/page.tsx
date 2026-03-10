@@ -171,7 +171,7 @@ export default function CrmWalletPage() {
     const walletData = walletResp?.data;
     const balance = walletData?.balance || 0;
     const transactions = walletData?.transactions || [];
-    const pagination = walletData?.pagination || { currentPage: 1, totalPages: 1 };
+    const pagination = walletData?.pagination || { currentPage: 1, totalPages: 1, totalItems: 0 };
     const settings = walletData?.settings || {};
 
     return (
@@ -353,6 +353,9 @@ export default function CrmWalletPage() {
                                         currentPage={currentPage}
                                         totalPages={pagination.totalPages}
                                         onPageChange={setCurrentPage}
+                                        itemsPerPage={itemsPerPage}
+                                        onItemsPerPageChange={setItemsPerPage}
+                                        totalItems={pagination.totalItems || transactions.length}
                                     />
                                 </div>
                             )}
