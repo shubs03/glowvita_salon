@@ -45,6 +45,7 @@ const nextConfig = {
         {
           canvas: 'commonjs canvas',
           'html-pdf': 'commonjs html-pdf',
+          'node-cron': 'commonjs node-cron',
         },
       ];
     }
@@ -65,7 +66,7 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
-        {
+      {
         protocol: 'https',
         hostname: 'v2winonline.com',
         port: '',

@@ -119,6 +119,8 @@ type Service = {
   price: number;
   status: "pending" | "approved" | "disapproved";
   description: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type WeddingPackage = {
@@ -129,6 +131,8 @@ type WeddingPackage = {
   discountedPrice: number | null;
   status: "pending" | "approved" | "disapproved";
   description: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type Product = {
@@ -144,6 +148,8 @@ type Product = {
   supplierName?: string;
   vendorName?: string;
   vendorId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type Doctor = {
@@ -178,6 +184,8 @@ type Doctor = {
     udhayamCertStatus?: string;
     shopActStatus?: string;
   };
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 interface Supplier {
@@ -215,6 +223,8 @@ interface Supplier {
     shopActAdminRejectionReason?: string | null;
     panCardAdminRejectionReason?: string | null;
   };
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 type ActionType = 'approve' | 'reject' | 'delete';
