@@ -183,7 +183,7 @@ export default function ClientListSection({
                             </div>
                             <button
                               onClick={() => handleNameClick(client)}
-                              className="font-semibold truncate max-w-[80px] hover:underline cursor-pointer transition-colors"
+                              className="font-semibold truncate max-w-[80px] hover:underline cursor-pointer transition-colors text-green-600 hover:text-green-700"
                             >
                               {client.fullName}
                             </button>
