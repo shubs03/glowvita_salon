@@ -361,7 +361,6 @@ export const PUT = withSubscriptionCheck(async (req) => {
             }
         });
 
-        // Handle profile picture upload if provided
         if (updateData.profilePicture !== undefined) {
             if (updateData.profilePicture && updateData.profilePicture.startsWith('data:image')) {
                 // Upload new image to VPS
@@ -381,8 +380,8 @@ export const PUT = withSubscriptionCheck(async (req) => {
                 }
 
                 sanitizedUpdateData.profilePicture = imageUrl;
-            } else {
-                // If image is null/empty, remove it
+            } else if (updateData.profilePicture === '' || updateData.profilePicture === null) {
+                // If image is explicitly cleared
                 sanitizedUpdateData.profilePicture = '';
 
                 // Delete old image from VPS if it exists
@@ -390,6 +389,7 @@ export const PUT = withSubscriptionCheck(async (req) => {
                     await deleteFile(client.profilePicture);
                 }
             }
+            // If it's an existing URL, we don't update this field, keeping the current value
         }
 
         if (updateData.birthdayDate) {
