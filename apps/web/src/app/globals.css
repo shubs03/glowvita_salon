@@ -3,11 +3,11 @@
 
 /* Font utility classes */
 .font-display {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 .font-headline {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 .font-body {
@@ -20,13 +20,13 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
-/* Large text elements should use Playfair Display */
+/* Large text elements should use Montserrat */
 .text-4xl, .text-5xl, .text-6xl, .text-7xl, .text-8xl, .text-9xl,
 .text-3xl, .text-2xl {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 /* Medium text can use either, but default to Roboto for readability */
@@ -44,7 +44,7 @@ h1, h2, h3, h4, h5, h6 {
 .font-headline .text-lg,
 .font-display .text-xl,
 .font-display .text-lg {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 /* Ensure buttons and UI elements use Roboto */
