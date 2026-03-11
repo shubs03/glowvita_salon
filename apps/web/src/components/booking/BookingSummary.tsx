@@ -100,16 +100,16 @@ export function BookingSummary({
 
   const stepDetails = isWeddingPackage
     ? [
-        { label: 'Select Package', completed: !!weddingPackage },
-        { 
-          label: 'Select Location', 
-          completed: weddingVenueType === 'salon' || (weddingVenueType === 'venue' && !!(serviceLocation as any)?.address)
-        },
-        { label: 'Select Date & Time', completed: !!selectedTime },
-        { label: 'Confirm Booking', completed: false }
-      ]
+      { label: 'Select Package', completed: !!weddingPackage },
+      {
+        label: 'Select Location',
+        completed: weddingVenueType === 'salon' || (weddingVenueType === 'venue' && !!(serviceLocation as any)?.address)
+      },
+      { label: 'Select Date & Time', completed: !!selectedTime },
+      { label: 'Confirm Booking', completed: false }
+    ]
     : isHomeService
-    ? [
+      ? [
         {
           step: 1,
           label: 'Select Staff',
@@ -122,18 +122,18 @@ export function BookingSummary({
             ? serviceStaffAssignments.every(a => a.staff !== undefined)
             : !!selectedStaff
         },
-        { 
-          step: 3, 
-          label: 'Select Time Slot', 
+        {
+          step: 3,
+          label: 'Select Time Slot',
           enabled: !!serviceLocation
         },
-        { 
-          step: 4, 
-          label: 'Confirm Booking Details', 
+        {
+          step: 4,
+          label: 'Confirm Booking Details',
           enabled: !!selectedTime
         }
       ]
-    : [
+      : [
         {
           step: 1,
           label: 'Select Staff',
@@ -149,10 +149,10 @@ export function BookingSummary({
         { step: 3, label: 'Confirm Booking Details', enabled: !!selectedTime }
       ];
 
-  const nextStepInfo = isWeddingPackage 
+  const nextStepInfo = isWeddingPackage
     ? stepDetails[Math.min(currentStep - 1, stepDetails.length - 1)]
     : stepDetails.find(s => (s as any).step === currentStep);
-  
+
   const buttonLabel = isWeddingPackage
     ? (currentStep === 1 ? 'Select Location' : currentStep === 3 ? 'Select Time Slot' : currentStep === 4 ? 'Confirm Booking' : 'Continue')
     : (nextStepInfo?.label || 'Continue');
@@ -168,9 +168,9 @@ export function BookingSummary({
   };
 
   const isButtonEnabled = isWeddingPackage
-    ? (currentStep === 1 ? !!weddingPackage : 
-       currentStep === 3 ? (weddingVenueType === 'salon' || (weddingVenueType === 'venue' && isVenueLocationValid())) :
-       currentStep === 4 ? !!selectedTime : false)
+    ? (currentStep === 1 ? !!weddingPackage :
+      currentStep === 3 ? (weddingVenueType === 'salon' || (weddingVenueType === 'venue' && isVenueLocationValid())) :
+        currentStep === 4 ? !!selectedTime : false)
     : !!(nextStepInfo as any)?.enabled;
 
   // Debug wedding venue button state
@@ -321,55 +321,55 @@ export function BookingSummary({
                     <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-medium">Customized</span>
                   )}
                 </div>
-                  <p className="font-bold text-sm mb-1">{weddingPackage.name}</p>
-                  {weddingPackage.description && (
-                    <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{weddingPackage.description}</p>
-                  )}
+                <p className="font-bold text-sm mb-1">{weddingPackage.name}</p>
+                {weddingPackage.description && (
+                  <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{weddingPackage.description}</p>
+                )}
 
-                  <div className="space-y-2 pt-3 border-t">
+                <div className="space-y-2 pt-3 border-t">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Services Included</span>
+                    <span className="font-medium">
+                      {weddingPackageMode === 'customized' && customizedPackageServices
+                        ? customizedPackageServices.length
+                        : weddingPackage.services?.length || 0}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Total Duration</span>
+                    <span className="font-medium">{weddingPackage.duration} min</span>
+                  </div>
+                  {weddingPackage.staffCount && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Services Included</span>
+                      <span className="text-muted-foreground">Staff Required</span>
                       <span className="font-medium">
-                        {weddingPackageMode === 'customized' && customizedPackageServices
-                          ? customizedPackageServices.length
-                          : weddingPackage.services?.length || 0}
+                        {weddingPackage.staffCount} {weddingPackage.staffCount === 1 ? 'Professional' : 'Professionals'}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Total Duration</span>
-                      <span className="font-medium">{weddingPackage.duration} min</span>
-                    </div>
-                    {weddingPackage.staffCount && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Staff Required</span>
-                        <span className="font-medium">
-                          {weddingPackage.staffCount} {weddingPackage.staffCount === 1 ? 'Professional' : 'Professionals'}
-                        </span>
+                  )}
+                  {weddingPackage.assignedStaff && weddingPackage.assignedStaff.length > 0 && (
+                    <div className="text-sm">
+                      <span className="text-muted-foreground block mb-1.5">Available Staff</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {weddingPackage.assignedStaff.slice(0, 3).map((staff: any, idx: number) => (
+                          <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground border">
+                            {typeof staff === 'string' ? staff : staff.name}
+                          </span>
+                        ))}
+                        {weddingPackage.assignedStaff.length > 3 && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground">
+                            +{weddingPackage.assignedStaff.length - 3} more
+                          </span>
+                        )}
                       </div>
-                    )}
-                    {weddingPackage.assignedStaff && weddingPackage.assignedStaff.length > 0 && (
-                      <div className="text-sm">
-                        <span className="text-muted-foreground block mb-1.5">Available Staff</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {weddingPackage.assignedStaff.slice(0, 3).map((staff: any, idx: number) => (
-                            <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground border">
-                              {typeof staff === 'string' ? staff : staff.name}
-                            </span>
-                          ))}
-                          {weddingPackage.assignedStaff.length > 3 && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground">
-                              +{weddingPackage.assignedStaff.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex justify-between text-sm font-semibold border-t pt-2 mt-2">
-                      <span>Package Price</span>
-                      <span className="text-primary">₹{weddingPackage.discountedPrice || weddingPackage.totalPrice}</span>
                     </div>
+                  )}
+                  <div className="flex justify-between text-sm font-semibold border-t pt-2 mt-2">
+                    <span>Package Price</span>
+                    <span className="text-primary">₹{weddingPackage.discountedPrice || weddingPackage.totalPrice}</span>
                   </div>
                 </div>
+              </div>
             </div>
           ) : (
             <div className="p-3 bg-secondary/50 rounded-md">

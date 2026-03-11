@@ -351,8 +351,8 @@ function BookingPageContent() {
     if (selectedWeddingPackage) {
       const packagePrice = selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice || 0;
       setTotalAmount(packagePrice);
-    } else if (priceBreakdown?.finalTotal) {
-      setTotalAmount(priceBreakdown.finalTotal);
+    } else if (priceBreakdown?.subtotal) {
+      setTotalAmount(priceBreakdown.subtotal);
     } else {
       const amount = selectedServices.reduce((sum, service) => {
         const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
@@ -2150,7 +2150,7 @@ function BookingPageContent() {
                       sequence: ['block.upi', 'block.card', 'block.netbanking'],
                     },
                   },
-                  modal: { 
+                  modal: {
                     ondismiss: () => {
                       // Restore modals if user cancels
                       if (wasPaymentOpen) setIsPaymentModalOpen(true);
@@ -4350,7 +4350,7 @@ function BookingPageContent() {
                               <span>{service.duration}</span>
                             </div>
                           </div>
-                          <div className="font-semibold text-sm text-primary ml-2 flex-shrink-0">₹{service.price}</div>
+                          <div className="font-semibold text-sm text-primary ml-2 flex-shrink-0">₹{service.discountedPrice || service.price}</div>
                         </div>
 
                         {/* Display Add-ons */}

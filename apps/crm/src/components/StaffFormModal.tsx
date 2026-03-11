@@ -726,6 +726,11 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
 
         // Email validation: restrict special characters and check format
         const emailValue = formData.emailAddress;
+        if (!emailValue) {
+            toast.error("Email address is required.");
+            return;
+        }
+
         if (emailValue) {
             // Regex to allow only alphanumeric, @ and .
             const allowedCharsRegex = /^[a-zA-Z0-9@.]*$/;
@@ -809,22 +814,22 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
         <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
+                    <Label htmlFor="fullName">Full Name <span className="text-red-500">*</span></Label>
                     <Input id="fullName" name="fullName" value={formData.fullName} onChange={handleInputChange} required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="position">Position</Label>
+                    <Label htmlFor="position">Position <span className="text-red-500">*</span></Label>
                     <Input id="position" name="position" value={formData.position} onChange={handleInputChange} required />
                 </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                    <Label htmlFor="mobileNo">Mobile Number</Label>
+                    <Label htmlFor="mobileNo">Mobile Number <span className="text-red-500">*</span></Label>
                     <Input id="mobileNo" name="mobileNo" type="tel" value={formData.mobileNo} onChange={handleInputChange} required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="emailAddress">Email Address</Label>
-                    <Input id="emailAddress" name="emailAddress" type="email" value={formData.emailAddress} onChange={handleInputChange} required />
+                    <Label htmlFor="emailAddress">Email Address <span className="text-red-500">*</span></Label>
+                    <Input id="emailAddress" name="emailAddress" type="email" value={formData.emailAddress} onChange={handleInputChange} required disabled={!!staff} />
                 </div>
             </div>
             {staff && (
