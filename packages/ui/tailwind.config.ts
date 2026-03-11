@@ -65,8 +65,8 @@ const config: Omit<Config, "content"> = {
           to: { transform: 'translateX(-50%)' },
         },
         "slide-rtl": {
-            from: { transform: 'translateX(-50%)' },
-            to: { transform: 'translateX(0)' },
+          from: { transform: 'translateX(-50%)' },
+          to: { transform: 'translateX(0)' },
         },
         'gradient-sweep': {
           '0%': { 'background-position': '0% 50%' },
@@ -87,7 +87,7 @@ const config: Omit<Config, "content"> = {
           '100%': { 'box-shadow': '0 0 10px rgba(124, 58, 237, 0.4), 0 0 20px rgba(124, 58, 237, 0.4), 0 0 30px rgba(124, 58, 237, 0.4)' },
         },
         'bounce-soft': {
-          '0%, 100%': { 
+          '0%, 100%': {
             transform: 'translateY(-25%)',
             'animation-timing-function': 'cubic-bezier(0.8, 0, 1, 1)'
           },
@@ -179,10 +179,10 @@ const config: Omit<Config, "content"> = {
       },
       fontFamily: {
         'body': ['Roboto', 'sans-serif'],
-        'headline': ['Playfair Display', 'serif'],
-        'display': ['Playfair Display', 'serif'],
+        'headline': ['Montserrat', 'sans-serif'],
+        'display': ['Montserrat', 'sans-serif'],
         'sans': ['Roboto', 'sans-serif'],
-        'serif': ['Playfair Display', 'serif'],
+        'serif': ['Montserrat', 'sans-serif'],
       },
       perspective: {
         '1000': '1000px',
