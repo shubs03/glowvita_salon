@@ -344,6 +344,37 @@ const vendorSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  savedAddresses: [{
+    fullName: {
+      type: String,
+      trim: true,
+    },
+    mobileNo: {
+      type: String,
+      trim: true,
+    },
+    address: String,
+    city: String,
+    state: String,
+    pincode: String,
+    landmark: String,
+    location: {
+      lat: Number,
+      lng: Number,
+    },
+    label: {
+      type: String,
+      default: 'Home',
+    },
+    isPrimary: {
+      type: Boolean,
+      default: false,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  }],
 });
 
 // Add validation to ensure rejection reasons are provided when status is rejected

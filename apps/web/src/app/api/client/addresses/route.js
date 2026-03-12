@@ -169,12 +169,12 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { address, city, state, pincode, landmark, lat, lng, label, isPrimary } = body;
+    const { fullName, mobileNo, address, city, state, pincode, landmark, lat, lng, label, isPrimary } = body;
 
     // Validate required fields
-    if (!city || !state || !pincode) {
+    if (!city || !state || !pincode || !fullName || !mobileNo) {
       return NextResponse.json(
-        { message: 'Missing required address fields (city, state, pincode)' },
+        { message: 'Missing required address fields (fullName, mobileNo, city, state, pincode)' },
         { status: 400 }
       );
     }
@@ -187,6 +187,8 @@ export async function POST(request) {
     }
 
     const newAddress = {
+      fullName,
+      mobileNo,
       address: address || '',
       city,
       state,
