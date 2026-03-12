@@ -4432,7 +4432,7 @@ function BookingPageContent() {
                             </div>
                           ) : filteredOffers.length > 0 ? (
                             <div className="py-1">
-                              {filteredOffers.map((offer: { _id: string; code: string; type: string; value: number; businessType?: string }) => (
+                              {filteredOffers.map((offer: { _id: string; code: string; type: string; value: number; businessType?: string; isAdminGlobal?: boolean }) => (
                                 <div
                                   key={offer._id}
                                   className="px-3 py-2 hover:bg-primary/5 cursor-pointer border-b last:border-b-0 flex justify-between items-center"
@@ -4449,7 +4449,11 @@ function BookingPageContent() {
                                       <div className="font-semibold text-xs text-primary">{offer.code}</div>
                                       <div className="text-[10px] text-muted-foreground">
                                         {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
-                                        {offer.businessType === 'admin' && <span className="ml-1 text-[8px] px-1 bg-blue-100 text-blue-600 rounded">Global</span>}
+                                        {offer.businessType === 'admin' && (
+                                          <span className={`ml-1 text-[8px] px-1 rounded ${offer.isAdminGlobal ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                                            {offer.isAdminGlobal ? 'Global' : 'Region'}
+                                          </span>
+                                        )}
                                       </div>
                                     </div>
                                   </div>

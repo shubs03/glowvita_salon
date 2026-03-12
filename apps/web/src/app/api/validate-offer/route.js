@@ -53,7 +53,7 @@ export async function POST(request) {
           }
 
           if (isRegionValid && offer.disabledRegions && offer.disabledRegions.length > 0 && vendorRegionId) {
-            const disabledList = offer.disabledRegions.map((r: any) => r.toString());
+            const disabledList = offer.disabledRegions.map((r) => r.toString());
             if (disabledList.includes(vendorRegionId)) {
               isRegionValid = false;
             }

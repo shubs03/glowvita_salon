@@ -70,6 +70,7 @@ export async function GET(request) {
       isVendorOffer: false,
       businessType: 'admin',
       businessId: null,
+      isAdminGlobal: !offer.regionId,
     }));
 
     // Get all active CRM offers (vendor-specific offers)
