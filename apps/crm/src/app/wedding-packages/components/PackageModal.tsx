@@ -447,6 +447,7 @@ export function PackageModal({
                         {modalType !== "view" && (
                           <div className="flex items-center border rounded-lg">
                             <Button
+                              type="button"
                               size="sm"
                               variant="ghost"
                               className="h-8 w-8 p-0"
@@ -457,6 +458,7 @@ export function PackageModal({
                             </Button>
                             <span className="px-2 text-sm font-medium min-w-[30px] text-center">{pkgService.quantity}</span>
                             <Button
+                              type="button"
                               size="sm"
                               variant="ghost"
                               className="h-8 w-8 p-0"
@@ -468,6 +470,7 @@ export function PackageModal({
                         )}
                         {modalType !== "view" && (
                           <Button
+                            type="button"
                             size="sm"
                             variant="ghost"
                             className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
