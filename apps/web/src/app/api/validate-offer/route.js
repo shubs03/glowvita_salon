@@ -76,7 +76,9 @@ export async function POST(request) {
             expires: offer.expires,
             applicableSpecialties: offer.applicableSpecialties || [],
             applicableCategories: offer.applicableCategories || [],
-            isVendorOffer: false
+            isVendorOffer: false,
+            isAdminGlobal: !offer.regionId,
+            businessType: 'admin'
           }
         });
       }

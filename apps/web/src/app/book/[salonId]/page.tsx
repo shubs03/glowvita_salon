@@ -4486,6 +4486,11 @@ function BookingPageContent() {
                           <div className="font-semibold text-primary text-xs">{appliedOffer.code}</div>
                           <div className="text-primary text-[10px]">
                             {appliedOffer.type === 'percentage' ? `${appliedOffer.value}% off` : `₹${appliedOffer.value} off`}
+                            {appliedOffer.businessType === 'admin' && (
+                              <span className={`ml-1 px-1 rounded ${appliedOffer.isAdminGlobal ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'} text-[8px]`}>
+                                {appliedOffer.isAdminGlobal ? 'Global' : 'Region'}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
