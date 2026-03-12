@@ -58,7 +58,7 @@ import {
 } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
 // Add import for payment calculator - use cleaner @repo alias
-import { calculateBookingAmount, validateOfferCode } from '@repo/lib/utils';
+import { calculateBookingAmount, validateOfferCode, isOfferApplicable } from '@repo/lib/utils';
 import { toast } from 'sonner';
 import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
 import { GoogleMapSelector } from '@/components/GoogleMapSelector';
@@ -278,26 +278,29 @@ function BookingPageContent() {
     };
   }, []);
 
-  // Filter offers based on search term
+  // Filter offers based on search term and service applicability
   const filteredOffers = useMemo(() => {
     if (!vendorOffers || vendorOffers.length === 0) {
-      console.log('No vendor offers available');
       return [];
     }
+
+    // First filter by service applicability
+    const applicableOffers = vendorOffers.filter((offer: any) => 
+      isOfferApplicable(offer, selectedServices)
+    );
+
     if (!offerSearchTerm) {
-      console.log('Returning all vendor offers:', vendorOffers);
-      return vendorOffers;
+      return applicableOffers;
     }
 
-    const filtered = vendorOffers.filter((offer: { code: string; type: string; value: number }) =>
+    const filtered = applicableOffers.filter((offer: { code: string; type: string; value: number }) =>
       offer.code.toLowerCase().includes(offerSearchTerm.toLowerCase()) ||
       (offer.type === 'percentage' && `${offer.value}%`.includes(offerSearchTerm)) ||
       (offer.type === 'fixed' && `₹${offer.value}`.includes(offerSearchTerm))
     );
 
-    console.log('Filtered offers:', filtered);
     return filtered;
-  }, [vendorOffers, offerSearchTerm]);
+  }, [vendorOffers, offerSearchTerm, selectedServices]);
 
   // Fetch service-specific staff data when a service is selected
   const serviceStaffData = useBookingData(salonId as string, selectedService?.id || (selectedServices.length > 0 ? selectedServices[0]?.id : undefined));
@@ -803,6 +806,12 @@ function BookingPageContent() {
       const result = await response.json();
 
       if (result.success) {
+        // Validate applicability for selected services
+        if (!isOfferApplicable(result.data, selectedServices)) {
+          toast.error(`Offer ${result.data.code} is not applicable for your selected services.`);
+          return;
+        }
+
         setOffer(result.data); // Set the offer data directly
         setAppliedOffer(result.data); // Also set the applied offer
 
@@ -824,14 +833,25 @@ function BookingPageContent() {
   };
 
   // Handle offer selection from dropdown
-  const handleSelectOffer = (selectedOffer: { code: string; type: string; value: number }) => {
+  const handleSelectOffer = (selectedOffer: any) => {
+    // Double check applicability
+    if (!isOfferApplicable(selectedOffer, selectedServices)) {
+      toast.error(`Offer ${selectedOffer.code} is not applicable for the selected services.`);
+      return;
+    }
+
     setOfferCode(selectedOffer.code);
     setOffer(selectedOffer);
     setAppliedOffer(selectedOffer);
     setShowOfferDropdown(false);
     setOfferSearchTerm('');
-    const savings = selectedOffer.type === 'percentage' ? Math.round(totalAmount * selectedOffer.value / 100) : Math.round(selectedOffer.value);
-    toast.success(`Offer ${selectedOffer.code} applied successfully! You saved ₹${savings}.`);
+    
+    // Calculate preview savings
+    const savings = selectedOffer.type === 'percentage' 
+      ? Math.round(totalAmount * selectedOffer.value / 100) 
+      : Math.round(selectedOffer.value);
+    
+    toast.success(`Offer ${selectedOffer.code} applied successfully!`);
   };
 
   // Clear applied offer
@@ -3828,6 +3848,17 @@ function BookingPageContent() {
 
   // Calculate price breakdown when selected services or wedding package changes
   useEffect(() => {
+    // If an offer is applied, check if it's still valid for the current selection
+    if (appliedOffer && selectedServices.length > 0) {
+      if (!isOfferApplicable(appliedOffer, selectedServices)) {
+        toast.info(`Offer ${appliedOffer.code} is no longer applicable for the current selection.`);
+        setAppliedOffer(null);
+        setOffer(null);
+        setOfferCode('');
+        return;
+      }
+    }
+
     const calculatePrices = async () => {
       // Handle wedding package pricing with offer code support
       if (selectedWeddingPackage) {

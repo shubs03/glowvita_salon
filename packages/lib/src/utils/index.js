@@ -1,13 +1,15 @@
-import { calculateBookingAmount, calculateServicePriceWithTax, validateOfferCode } from './paymentCalculator';
+import { calculateBookingAmount, calculateServicePriceWithTax, validateOfferCode, isOfferApplicable } from './paymentCalculator';
 
 export {
   calculateBookingAmount,
   calculateServicePriceWithTax,
-  validateOfferCode
+  validateOfferCode,
+  isOfferApplicable
 };
 
 export default {
   calculateBookingAmount,
   calculateServicePriceWithTax,
-  validateOfferCode
+  validateOfferCode,
+  isOfferApplicable
 };
