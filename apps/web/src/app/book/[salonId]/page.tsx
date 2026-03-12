@@ -52,7 +52,7 @@ import DatePicker from 'react-datepicker';
 import { format } from 'date-fns';
 import { useBookingData, Service, StaffMember, ServiceStaffAssignment, calculateTotalDuration, convertDurationToMinutes, WeddingPackage } from '@/hooks/useBookingData';
 import {
-  useCreatePublicAppointmentMutation, useGetPublicVendorOffersQuery,
+  useCreatePublicAppointmentMutation, useGetPublicVendorOffersQuery, useGetPublicAllOffersQuery,
   useAcquireSlotLockMutation, useConfirmBookingMutation,
   useLockWeddingPackageMutation
 } from '@repo/store/api';
@@ -232,9 +232,25 @@ function BookingPageContent() {
     error
   } = useBookingData(salonId as string);
 
-  // Fetch vendor offers
-  const { data: vendorOffersData, isLoading: isOffersLoading } = useGetPublicVendorOffersQuery(salonId as string);
+  // Fetch all offers (Admin + CRM)
+  const { data: vendorOffersData, isLoading: isOffersLoading } = useGetPublicAllOffersQuery({ 
+    vendorId: salonId as string,
+    regionId: (salonInfo as any)?.regionId 
+  }, { 
+    skip: !salonId 
+  });
   const vendorOffers = vendorOffersData?.data || [];
+
+  // Debug log for offers
+  useEffect(() => {
+    if (vendorOffers.length > 0) {
+      console.log('✅ Fetched Offers:', {
+        count: vendorOffers.length,
+        adminOffers: vendorOffers.filter((o: any) => o.businessType === 'admin').length,
+        crmOffers: vendorOffers.filter((o: any) => o.businessType === 'vendor' || o.businessType === 'salon').length
+      });
+    }
+  }, [vendorOffers]);
 
   // Fetch tax fee settings using our custom hook
   const { taxFeeSettings, isLoading: isTaxFeeSettingsLoading } = useTaxFeeSettings();
@@ -351,8 +367,8 @@ function BookingPageContent() {
     if (selectedWeddingPackage) {
       const packagePrice = selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice || 0;
       setTotalAmount(packagePrice);
-    } else if (priceBreakdown?.finalTotal) {
-      setTotalAmount(priceBreakdown.finalTotal);
+    } else if (priceBreakdown?.subtotal) {
+      setTotalAmount(priceBreakdown.subtotal);
     } else {
       const amount = selectedServices.reduce((sum, service) => {
         const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
@@ -2150,7 +2166,7 @@ function BookingPageContent() {
                       sequence: ['block.upi', 'block.card', 'block.netbanking'],
                     },
                   },
-                  modal: { 
+                  modal: {
                     ondismiss: () => {
                       // Restore modals if user cancels
                       if (wasPaymentOpen) setIsPaymentModalOpen(true);
@@ -4350,7 +4366,7 @@ function BookingPageContent() {
                               <span>{service.duration}</span>
                             </div>
                           </div>
-                          <div className="font-semibold text-sm text-primary ml-2 flex-shrink-0">₹{service.price}</div>
+                          <div className="font-semibold text-sm text-primary ml-2 flex-shrink-0">₹{service.discountedPrice || service.price}</div>
                         </div>
 
                         {/* Display Add-ons */}
@@ -4402,21 +4418,21 @@ function BookingPageContent() {
                         placeholder="Enter code or select from offers"
                         value={offerCode}
                         onChange={(e) => setOfferCode(e.target.value.toUpperCase())}
-                        onFocus={() => vendorOffers && vendorOffers.length > 0 && setShowOfferDropdown(true)}
+                        onFocus={() => filteredOffers && filteredOffers.length > 0 && setShowOfferDropdown(true)}
                         className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-primary focus:border-primary"
                       />
 
                       {/* Offer Dropdown */}
-                      {showOfferDropdown && vendorOffers && vendorOffers.length > 0 && (
+                      {showOfferDropdown && filteredOffers && filteredOffers.length > 0 && (
                         <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto no-scrollbar">
                           {isOffersLoading ? (
                             <div className="p-4 text-center text-xs text-muted-foreground">
                               <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
                               Loading offers...
                             </div>
-                          ) : vendorOffers.length > 0 ? (
+                          ) : filteredOffers.length > 0 ? (
                             <div className="py-1">
-                              {vendorOffers.map((offer: { _id: string; code: string; type: string; value: number }) => (
+                              {filteredOffers.map((offer: { _id: string; code: string; type: string; value: number; businessType?: string; isAdminGlobal?: boolean }) => (
                                 <div
                                   key={offer._id}
                                   className="px-3 py-2 hover:bg-primary/5 cursor-pointer border-b last:border-b-0 flex justify-between items-center"
@@ -4425,10 +4441,20 @@ function BookingPageContent() {
                                     setShowOfferDropdown(false);
                                   }}
                                 >
-                                  <div>
-                                    <div className="font-semibold text-xs text-primary">{offer.code}</div>
-                                    <div className="text-[10px] text-muted-foreground">
-                                      {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
+                                  <div className="flex items-center gap-2">
+                                    <div className="bg-primary/5 p-1 rounded">
+                                      <Tag className="h-3 w-3 text-primary" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-semibold text-xs text-primary">{offer.code}</div>
+                                      <div className="text-[10px] text-muted-foreground">
+                                        {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
+                                        {offer.businessType === 'admin' && (
+                                          <span className={`ml-1 text-[8px] px-1 rounded ${offer.isAdminGlobal ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                                            {offer.isAdminGlobal ? 'Global' : 'Region'}
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                   <div className="text-[10px] text-primary">Select</div>
@@ -4460,6 +4486,11 @@ function BookingPageContent() {
                           <div className="font-semibold text-primary text-xs">{appliedOffer.code}</div>
                           <div className="text-primary text-[10px]">
                             {appliedOffer.type === 'percentage' ? `${appliedOffer.value}% off` : `₹${appliedOffer.value} off`}
+                            {appliedOffer.businessType === 'admin' && (
+                              <span className={`ml-1 px-1 rounded ${appliedOffer.isAdminGlobal ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'} text-[8px]`}>
+                                {appliedOffer.isAdminGlobal ? 'Global' : 'Region'}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>

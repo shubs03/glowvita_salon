@@ -161,7 +161,7 @@ export const POST = authMiddlewareCrm(async (req) => {
         }
 
         // Handle photo upload if provided
-        if (trimmedBody.photo) {
+        if (trimmedBody.photo && typeof trimmedBody.photo === 'string' && trimmedBody.photo.startsWith('data:')) {
             const fileName = `staff-${ownerId}-${Date.now()}`;
             const imageUrl = await uploadBase64(trimmedBody.photo, fileName);
 
@@ -356,7 +356,8 @@ export const PUT = authMiddlewareCrm(async (req) => {
 
         // Handle photo upload if provided
         if (updateData.photo !== undefined) {
-            if (updateData.photo) {
+            // Only upload if it's a new base64 image
+            if (updateData.photo && typeof updateData.photo === 'string' && updateData.photo.startsWith('data:')) {
                 // Upload new image to VPS
                 const fileName = `staff-${ownerId}-${Date.now()}`;
                 const imageUrl = await uploadBase64(updateData.photo, fileName);
@@ -374,8 +375,8 @@ export const PUT = authMiddlewareCrm(async (req) => {
                 }
 
                 updateData.photo = imageUrl;
-            } else {
-                // If image is null/empty, remove it
+            } else if (!updateData.photo) {
+                // If image is null/empty/falsy, remove it
                 updateData.photo = null;
 
                 // Delete old image from VPS if it exists
@@ -383,6 +384,9 @@ export const PUT = authMiddlewareCrm(async (req) => {
                     await deleteFile(staff.photo);
                 }
             }
+            // If it's a string but doesn't start with data:, it's likely an existing URL.
+            // In this case, we don't need to do anything - the existing URL in updateData.photo
+            // will be saved as-is by findByIdAndUpdate.
         }
 
         // Create a temporary staff instance to validate working hours before updating

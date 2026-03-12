@@ -2,12 +2,13 @@
 
 /* Font utility classes */
 .font-display {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 .font-headline {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Montserrat', sans-serif;
 }
+
 .font-body {
   font-family: 'Roboto', sans-serif;
 }
@@ -16,44 +17,71 @@ body {
   font-family: 'Roboto', sans-serif;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Playfair Display', serif;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Montserrat', sans-serif;
 }
 
-.text-4xl, .text-5xl, .text-6xl, .text-7xl, .text-8xl, .text-9xl,
-.text-3xl, .text-2xl {
-  font-family: 'Playfair Display', serif;
+.text-4xl,
+.text-5xl,
+.text-6xl,
+.text-7xl,
+.text-8xl,
+.text-9xl,
+.text-3xl,
+.text-2xl {
+  font-family: 'Montserrat', sans-serif;
 }
 
 /* Medium text can use either, but default to Roboto for readability */
-.text-xl, .text-lg {
+.text-xl,
+.text-lg {
   font-family: 'Roboto', sans-serif;
 }
-.text-xs, .text-sm, .text-base {
+
+.text-xs,
+.text-sm,
+.text-base {
   font-family: 'Roboto', sans-serif;
 }
 
 .font-display .text-lg {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Montserrat', sans-serif;
 }
-button, .btn, .button {
-  font-family: 'Roboto', sans-serif;
-}
-nav, .nav, .navigation {
-  font-family: 'Roboto', sans-serif;
-}
-input, textarea, select, label {
+
+button,
+.btn,
+.button {
   font-family: 'Roboto', sans-serif;
 }
 
-.card-content, .component-text {
+nav,
+.nav,
+.navigation {
+  font-family: 'Roboto', sans-serif;
+}
+
+input,
+textarea,
+select,
+label {
+  font-family: 'Roboto', sans-serif;
+}
+
+.card-content,
+.component-text {
   font-family: 'Roboto', sans-serif;
 }
 
 /* Add these to your global CSS file (globals.css or similar) */
 
 /* Prevent horizontal scrolling globally */
-html, body {
+html,
+body {
   overflow-x: hidden;
   height: 100%;
   margin: 0;
@@ -132,7 +160,7 @@ body {
     background: rgba(0, 0, 0, 0.6);
     z-index: 30;
   }
-  
+
   .mobile-sidebar {
     position: fixed;
     top: 0;
@@ -142,7 +170,7 @@ body {
     transform: translateX(-100%);
     transition: transform 300ms ease-in-out;
   }
-  
+
   .mobile-sidebar.open {
     transform: translateX(0);
   }
