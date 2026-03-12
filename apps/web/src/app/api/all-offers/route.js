@@ -13,6 +13,11 @@ export async function GET(request) {
     const vendorId = searchParams.get('vendorId'); // Optional vendor ID filter
     let regionId = searchParams.get('regionId'); // Region ID filter
 
+    // Normalize regionId (handle 'undefined' or 'null' strings from frontend)
+    if (regionId === 'undefined' || regionId === 'null') {
+      regionId = null;
+    }
+
     // If regionId not provided but vendorId is, derive regionId from vendor
     if (!regionId && vendorId) {
       try {
@@ -51,16 +56,17 @@ export async function GET(request) {
 
       // Status/Date check
       const now = new Date();
-      const started = offer.startDate <= now;
-      const notExpired = !offer.expires || offer.expires >= now;
+      const started = !offer.startDate || new Date(offer.startDate) <= now;
+      const notExpired = !offer.expires || new Date(offer.expires) >= now;
 
-      // Also respect internal 'isActive' flag and 'status' if it's explicitly 'Expired'
+      // Also respect internal 'isActive' flag
       const isNotManuallyDisabled = offer.isActive !== false;
 
       return started && notExpired && isNotManuallyDisabled;
     }).map(offer => ({
       ...offer,
-      status: 'Active', // Ensure frontend sees it as active since it passed date checks
+      type: (offer.type === 'fixed-amount' ? 'fixed' : offer.type),
+      status: 'Active',
       isVendorOffer: false,
       businessType: 'admin',
       businessId: null,

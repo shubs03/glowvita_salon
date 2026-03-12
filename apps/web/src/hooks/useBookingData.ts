@@ -107,6 +107,7 @@ export interface SalonInfo {
   reviews?: number;
   image?: string;
   phone?: string;
+  regionId?: string;
 }
 
 export interface ServiceStaffAssignment {
@@ -532,7 +533,8 @@ export const useSalonInfo = (salonId: string) => {
       rating: salon.rating || '4.5',
       reviews: salon.reviewCount || salon.reviews || 0,
       image: salon.logo || salon.image || `https://picsum.photos/seed/${salon.businessName}/400/400`,
-      phone: salon.phone || salon.contactNumber
+      phone: salon.phone || salon.contactNumber,
+      regionId: salon.regionId?.toString() || salon.regionId
     } as SalonInfo;
   }, [rawSalonData, salonId]);
 
