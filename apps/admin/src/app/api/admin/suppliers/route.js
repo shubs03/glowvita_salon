@@ -6,6 +6,7 @@ import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 import { ReferralModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer";
 import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import { NotificationService } from "@repo/lib";
 import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 
 // Initialize database connection (assuming _db is a promise-based connection function)
@@ -120,6 +121,18 @@ export const POST = async (req) => {
       }
     });
 
+    // Trigger Registration Notification
+    (async () => {
+        try {
+            await NotificationService.sendRegistrationAlert(newSupplier._id.toString(), 'supplier', {
+                name: newSupplier.firstName,
+                role: 'Supplier'
+            });
+        } catch (err) {
+            console.error('Registration Notification Error:', err);
+        }
+    })();
+
     // Handle referral if code provided
     if (referredByCode) {
       try {
@@ -139,6 +152,13 @@ export const POST = async (req) => {
             date: new Date(),
             status: 'Completed',
             bonus: String(bonusValue),
+          });
+
+          // Trigger Referral Notification for Referrer
+          await NotificationService.sendReferralAlert(referringSupplier._id.toString(), 'supplier', {
+            referrerName: newSupplier.shopName || newSupplier.firstName,
+            rewardAmount: bonusValue,
+            status: 'completed'
           });
         }
       } catch (err) {

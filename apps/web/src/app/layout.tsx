@@ -9,6 +9,8 @@ import { Toaster } from 'sonner';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { Footer } from '@/components/Footer';
 import { useState, useEffect } from 'react';
+import NotificationManager from '@/utils/NotificationManager';
+import { toast } from 'sonner';
 
 export default function RootLayout({
   children,
@@ -21,6 +23,30 @@ export default function RootLayout({
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
+
+  useEffect(() => {
+    // Initialize Notifications
+    const setupNotifications = async () => {
+      try {
+        await NotificationManager.requestPermission();
+        NotificationManager.onMessageListener().then((payload) => {
+          if (payload?.notification) {
+            toast(payload.notification.title, {
+              description: payload.notification.body,
+              action: payload.data?.url ? {
+                label: 'View',
+                onClick: () => window.location.href = payload.data.url
+              } : undefined
+            });
+          }
+        });
+      } catch (err) {
+        console.error('Notification Setup Error:', err);
+      }
+    };
+
+    setupNotifications();
+  }, []);
 
   const marketingPages = [
     '/',

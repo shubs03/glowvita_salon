@@ -5,6 +5,7 @@ import DoctorModel from "@repo/lib/models/Vendor/Docters.model";
 import { ReferralModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer";
 import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import { NotificationService } from "@repo/lib";
 import bcrypt from "bcryptjs";
 
 await _db();
@@ -87,6 +88,18 @@ export const POST = authMiddlewareAdmin(async (req) => {
       history: [],
     }
   });
+
+  // Trigger Registration Notification
+  (async () => {
+    try {
+      await NotificationService.sendRegistrationAlert(newDoctor._id.toString(), 'doctor', {
+        name: newDoctor.name,
+        role: 'Doctor'
+      });
+    } catch (err) {
+      console.error('Registration Notification Error:', err);
+    }
+  })();
 
   // ... (rest of the code)
 }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "doctors:edit");

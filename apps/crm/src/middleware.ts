@@ -71,7 +71,6 @@ export async function middleware(request: NextRequest) {
   if (pathname.includes('.') || pathname.startsWith('/_next/')) {
     return NextResponse.next();
   }
-
   if (isPublicPath) {
     return NextResponse.next();
   }

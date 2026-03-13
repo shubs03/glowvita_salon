@@ -132,7 +132,10 @@ export async function POST(request) {
     const { password: _, ...safeUser } = user.toObject();
 
     if (Model && Model.findByIdAndUpdate) {
-      await Model.findByIdAndUpdate(user._id, { lastLoginAt: new Date() });
+      await Model.findByIdAndUpdate(user._id, { 
+        lastLogin: new Date(),
+        inactivityReminderSent: false 
+      });
     }
 
     const response = NextResponse.json({

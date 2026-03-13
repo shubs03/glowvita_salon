@@ -25,6 +25,7 @@ import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import { useState } from "react";
 import { Cart } from "./cart/Cart";
 import { useGetCartQuery } from "@repo/store/api";
+import { NotificationDropdown } from "./NotificationDropdown";
 
 export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSidebar: () => void, subscription: any, isSubExpired: boolean }) {
   const router = useRouter();
@@ -174,48 +175,7 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
         )}
 
         {/* Notifications */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="flex-shrink-0 rounded-lg relative hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-105"
-            >
-              <div className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-2 -right-2 h-4 w-4 bg-destructive rounded-full flex items-center justify-center">
-                  <span className="text-[10px] font-bold text-white">3</span>
-                </span>
-              </div>
-              <span className="sr-only">Notifications</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80 bg-background/95 backdrop-blur-xl border border-border/30 shadow-lg rounded-lg">
-            <DropdownMenuLabel className="text-base font-bold border-b border-border/20 pb-3">
-              <div className="flex items-center justify-between">
-                <span>Notifications</span>
-                <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full font-bold">3 New</span>
-              </div>
-            </DropdownMenuLabel>
-            <div className="max-h-80 overflow-y-auto">
-              <DropdownMenuItem className="p-4 border-b border-border/10 hover:bg-muted/50 transition-colors">
-                <div className="flex items-start gap-3 w-full">
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-foreground">New Appointment Confirmed</p>
-                    <p className="text-xs text-muted-foreground mt-1">Booking with Sarah Johnson at 2:00 PM today.</p>
-                    <p className="text-xs text-primary font-medium mt-2">5 minutes ago</p>
-                  </div>
-                </div>
-              </DropdownMenuItem>
-            </div>
-            <DropdownMenuItem className="justify-center text-sm text-primary hover:text-primary/80 font-semibold p-4 border-t border-border/20 hover:bg-muted/50">
-              <div className="flex items-center gap-2">
-                <Bell className="h-4 w-4" />
-                <span>View all notifications</span>
-              </div>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <NotificationDropdown apiEndpoint="/api/notifications" />
 
         {/* User Profile */}
         <DropdownMenu>

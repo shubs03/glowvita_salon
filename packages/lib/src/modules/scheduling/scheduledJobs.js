@@ -34,6 +34,34 @@ const JOB_CONFIG = {
     reconciliation: {
         schedule: '*/30 * * * *', // Every 30 minutes
         enabled: true
+    },
+
+    // Appointment Reminders - runs once an hour
+    appointmentReminders: {
+        schedule: '0 * * * *', // Every hour
+        enabled: true,
+        reminderWindowHours: 24 // Remind 24 hours before
+    },
+
+    // Abandoned Cart - runs every hour
+    abandonedCart: {
+        schedule: '15 * * * *', // Every hour at :15
+        enabled: true,
+        abandonmentThresholdHours: 2 // Notify if cart older than 2 hours
+    },
+
+    // Offer Expiry Reminders - runs daily at 10 AM
+    offerExpiryReminders: {
+        schedule: '0 10 * * *',
+        enabled: true,
+        daysBeforeExpiry: 1
+    },
+
+    // User Inactivity Reminders - runs every Monday at 11 AM
+    inactivityReminders: {
+        schedule: '0 11 * * 1',
+        enabled: true,
+        inactivityDays: 30
     }
 };
 
@@ -101,6 +129,177 @@ export function startScheduledJobs() {
         });
 
         console.log(`✓ Reconciliation job scheduled: ${JOB_CONFIG.reconciliation.schedule}`);
+    }
+
+    // Job 4: Appointment Reminders
+    if (JOB_CONFIG.appointmentReminders.enabled) {
+        cron.schedule(JOB_CONFIG.appointmentReminders.schedule, async () => {
+            console.log('\n[CRON] Running appointment reminders...');
+            try {
+                const { NotificationService, SmsService } = await import('@repo/lib');
+                const AppointmentModel = (await import('@repo/lib/models/Appointment/Appointment.model')).default;
+                
+                const now = new Date();
+                const windowStart = new Date(now.getTime() + (JOB_CONFIG.appointmentReminders.reminderWindowHours * 60 * 60 * 1000));
+                const windowEnd = new Date(windowStart.getTime() + (60 * 60 * 1000)); // 1 hour window
+
+                const upcoming = await AppointmentModel.find({
+                    status: 'confirmed',
+                    date: { $gte: windowStart, $lt: windowEnd },
+                    reminderSent: { $ne: true }
+                }).lean();
+
+                for (const apt of upcoming) {
+                    // Send Push
+                    if (apt.client) {
+                        await NotificationService.sendAppointmentAlert(apt.client, 'client', apt, 'reminder');
+                    }
+                    // Send SMS
+                    const clientPhone = apt.clientPhone || apt.phone;
+                    if (clientPhone) {
+                        await SmsService.sendAppointmentSms(clientPhone, apt, 'reminder');
+                    }
+                    // Mark as sent
+                    await AppointmentModel.updateOne({ _id: apt._id }, { $set: { reminderSent: true } });
+                }
+                console.log(`[CRON] Sent ${upcoming.length} reminders.`);
+            } catch (error) {
+                console.error('[CRON] Reminders failed:', error);
+            }
+        });
+        console.log(`✓ Appointment reminders scheduled: ${JOB_CONFIG.appointmentReminders.schedule}`);
+    }
+
+    // Job 5: Abandoned Cart Notifications
+    if (JOB_CONFIG.abandonedCart.enabled) {
+        cron.schedule(JOB_CONFIG.abandonedCart.schedule, async () => {
+            console.log('\n[CRON] Running abandoned cart check...');
+            try {
+                const { NotificationService } = await import('@repo/lib');
+                const UserCartModel = (await import('@repo/lib/models/user/UserCart.model')).default;
+                
+                const threshold = new Date(Date.now() - (JOB_CONFIG.abandonedCart.abandonmentThresholdHours * 60 * 60 * 1000));
+                
+                const carts = await UserCartModel.find({
+                    updatedAt: { $lt: threshold },
+                    items: { $not: { $size: 0 } },
+                    notified: { $ne: true }
+                }).populate('items.vendorId').lean();
+
+                for (const cart of carts) {
+                    if (cart.userId) {
+                        const vendorName = cart.items[0]?.vendorId?.businessName || 'GlowVita Salon';
+                        await NotificationService.sendToUser(cart.userId, 'client', {
+                            title: 'Finish your booking! 💅',
+                            body: `Your cart at ${vendorName} is waiting for you. Get it before someone else does!`,
+                            data: { type: 'cart', cartId: cart._id.toString() }
+                        });
+                        await UserCartModel.updateOne({ _id: cart._id }, { $set: { notified: true } });
+                    }
+                }
+                console.log(`[CRON] Notified ${carts.length} abandoned carts.`);
+            } catch (error) {
+                console.error('[CRON] Abandoned cart job failed:', error);
+            }
+        });
+        console.log(`✓ Abandoned cart job scheduled: ${JOB_CONFIG.abandonedCart.schedule}`);
+    }
+
+    // Job 6: Offer Expiry Reminders
+    if (JOB_CONFIG.offerExpiryReminders.enabled) {
+        cron.schedule(JOB_CONFIG.offerExpiryReminders.schedule, async () => {
+            console.log('\n[CRON] Running offer expiry reminders...');
+            try {
+                const { NotificationService } = await import('@repo/lib');
+                const AdminOfferModel = (await import('@repo/lib/models/admin/AdminOffers.model')).default;
+                const CRMOfferModel = (await import('@repo/lib/models/Vendor/CRMOffer.model')).default;
+                const UserModel = (await import('@repo/lib/models/user/User.model')).default;
+
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + JOB_CONFIG.offerExpiryReminders.daysBeforeExpiry);
+                const startOfTomorrow = new Date(tomorrow.setHours(0,0,0,0));
+                const endOfTomorrow = new Date(tomorrow.setHours(23,59,59,999));
+
+                // Find offers expiring tomorrow
+                const adminOffers = await AdminOfferModel.find({
+                    status: 'Active',
+                    expires: { $gte: startOfTomorrow, $lte: endOfTomorrow }
+                }).lean();
+
+                const crmOffers = await CRMOfferModel.find({
+                    status: 'Active',
+                    expires: { $gte: startOfTomorrow, $lte: endOfTomorrow }
+                }).lean();
+
+                const allExpiring = [...adminOffers, ...crmOffers];
+
+                if (allExpiring.length > 0) {
+                    // This is tricky as we don't know who has the offer. 
+                    // For global offers, we might notify everyone.
+                    // For now, let's notify all active users about global admin offers.
+                    const users = await UserModel.find({ isActive: true }).select('_id').lean();
+                    
+                    for (const offer of allExpiring) {
+                        for (const user of users) {
+                            await NotificationService.sendOfferReminder(user._id, 'client', offer);
+                        }
+                    }
+                }
+                console.log(`[CRON] Handled expiry for ${allExpiring.length} offers.`);
+            } catch (error) {
+                console.error('[CRON] Offer expiry reminders failed:', error);
+            }
+        });
+        console.log(`✓ Offer expiry reminders scheduled: ${JOB_CONFIG.offerExpiryReminders.schedule}`);
+    }
+
+    // Job 7: Inactivity Reminders
+    if (JOB_CONFIG.inactivityReminders.enabled) {
+        cron.schedule(JOB_CONFIG.inactivityReminders.schedule, async () => {
+            console.log('\n[CRON] Running inactivity reminders...');
+            try {
+                const { NotificationService } = await import('@repo/lib');
+                const UserModel = (await import('@repo/lib/models/user/User.model')).default;
+                const VendorModel = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
+                const DoctorModel = (await import('@repo/lib/models/Vendor/Docters.model')).default;
+                const SupplierModel = (await import('@repo/lib/models/Vendor/Supplier.model')).default;
+                const StaffModel = (await import('@repo/lib/models/Vendor/Staff.model')).default;
+
+                const threshold = new Date();
+                threshold.setDate(threshold.getDate() - JOB_CONFIG.inactivityReminders.inactivityDays);
+
+                const models = [
+                    { model: UserModel, role: 'client' },
+                    { model: VendorModel, role: 'vendor' },
+                    { model: DoctorModel, role: 'doctor' },
+                    { model: SupplierModel, role: 'supplier' },
+                    { model: StaffModel, role: 'staff' }
+                ];
+
+                for (const { model, role } of models) {
+                    const inactiveUsers = await model.find({
+                        $or: [{ isActive: true }, { status: 'Active' }],
+                        lastLogin: { $lt: threshold },
+                        inactivityReminderSent: { $ne: true }
+                    }).lean();
+
+                    for (const user of inactiveUsers) {
+                        try {
+                            await NotificationService.sendInactivityReminder(user._id, role, {
+                                name: (user.firstName || user.name || user.fullName || 'User').trim()
+                            });
+                            await model.updateOne({ _id: user._id }, { $set: { inactivityReminderSent: true } });
+                        } catch (err) {
+                            console.error(`Failed to send inactivity reminder to ${role} ${user._id}:`, err);
+                        }
+                    }
+                    console.log(`[CRON] Sent ${inactiveUsers.length} inactivity reminders to ${role}s.`);
+                }
+            } catch (error) {
+                console.error('[CRON] Inactivity reminders failed:', error);
+            }
+        });
+        console.log(`✓ Inactivity reminders scheduled: ${JOB_CONFIG.inactivityReminders.schedule}`);
     }
 
     console.log('=== All Scheduled Jobs Started ===\n');

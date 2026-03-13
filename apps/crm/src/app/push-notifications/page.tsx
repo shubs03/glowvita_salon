@@ -9,7 +9,6 @@ import { Plus, Search, Eye, Trash2 } from "lucide-react";
 import { Input } from "@repo/ui/input";
 import { Label } from "@repo/ui/label";
 import { Textarea } from "@repo/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@repo/ui/radio-group";
 import { Checkbox } from "@repo/ui/checkbox";
 import { Badge } from "@repo/ui/badge";
 import { toast } from "sonner";
@@ -17,6 +16,7 @@ import {
   useGetVendorNotificationsQuery,
   useCreateVendorNotificationMutation,
   useDeleteVendorNotificationMutation,
+  useGetClientsQuery
 } from "@repo/store/api";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 import { Notification, Client } from './types';
@@ -26,14 +26,6 @@ import NotificationStatsCards from './components/NotificationStatsCards';
 import NotificationFiltersToolbar from './components/NotificationFiltersToolbar';
 import NotificationTable from './components/NotificationTable';
 import NotificationPaginationControls from './components/NotificationPaginationControls';
-
-const mockClients: Client[] = [
-  { id: "user_1", name: "Alice" },
-  { id: "user_2", name: "Bob" },
-  { id: "user_3", name: "Charlie" },
-  { id: "user_4", name: "David" },
-  { id: "user_5", name: "Eve" },
-];
 
 export default function PushNotificationsPage() {
   const { user } = useCrmAuth();
@@ -46,23 +38,25 @@ export default function PushNotificationsPage() {
   const [title, setTitle] = useState<string>("");
   const [content, setContent] = useState<string>("");
   const [channels, setChannels] = useState<string[]>(["Push"]);
-  const [targetType, setTargetType] = useState<
-    | "all_online_clients"
-    | "all_offline_clients"
-    | "all_staffs"
-    | "specific_clients"
-  >("all_online_clients");
+  const [targetType, setTargetType] = useState<string[]>(["all_online_clients"]);
   const [selectedTargets, setSelectedTargets] = useState<Client[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const { data, isLoading, error, refetch } = useGetVendorNotificationsQuery({
+  const { data, isLoading: isNotificationsLoading, error, refetch } = useGetVendorNotificationsQuery({
     vendorId: user?._id,
     page: currentPage,
     limit: itemsPerPage,
   }, { skip: !user?._id });
+
+  const { data: clientResponse, isLoading: isClientsLoading } = useGetClientsQuery({
+    source: targetType.includes('specific_clients') ? 'online' : 'all',
+    limit: 1000
+  }, { skip: !user?._id || !targetType.includes('specific_clients') });
+
+  const clients = clientResponse || [];
 
   const [createNotification, { isLoading: isCreating }] =
     useCreateVendorNotificationMutation();
@@ -76,6 +70,8 @@ export default function PushNotificationsPage() {
     smsSent: 0,
     mostTargeted: "All Online Clients",
   };
+
+  const isLoading = isNotificationsLoading;
 
   // Filter notifications based on search term and status
   const filteredNotifications = useMemo(() => {
@@ -97,12 +93,14 @@ export default function PushNotificationsPage() {
 
   const filteredTargets = useMemo(
     () =>
-      mockClients.filter(
-        (t) =>
-          t.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-          !selectedTargets.some((st) => st.id === t.id)
-      ),
-    [searchQuery, selectedTargets]
+      clients
+        .map((c: any) => ({ id: c._id, name: c.fullName }))
+        .filter(
+          (t: any) =>
+            t.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+            !selectedTargets.some((st) => st.id === t.id)
+        ),
+    [searchQuery, selectedTargets, clients]
   );
 
   const handleSelectTarget = (target: Client) => {
@@ -120,19 +118,23 @@ export default function PushNotificationsPage() {
   ) => {
     setModalType(type);
     setSelectedNotification(notification);
-    if (type === "add") {
+    if (type === "add" && !notification) {
       setTitle("");
       setContent("");
       setChannels(["Push"]);
-      setTargetType("all_online_clients");
+      setTargetType(["all_online_clients"]);
       setSelectedTargets([]);
       setSearchQuery("");
-    } else if (type === "view" && notification) {
+    } else if (notification) {
       setTitle(notification.title);
       setContent(notification.content);
       setChannels(notification.channels);
-      setTargetType(notification.targetType);
+      setTargetType(Array.isArray(notification.targetType) ? notification.targetType : [notification.targetType]);
       setSelectedTargets(notification.targets || []);
+      if (type === "add") {
+        // Resend mode: clear ID to make it a NEW notification
+        setSelectedNotification(null);
+      }
     }
     setIsModalOpen(true);
   };
@@ -161,7 +163,7 @@ export default function PushNotificationsPage() {
       content,
       channels,
       targetType,
-      targets: targetType === "specific_clients" ? selectedTargets.map(t => ({ id: t.id, name: t.name })) : [],
+      targets: targetType.includes("specific_clients") ? selectedTargets.map(t => ({ id: t.id, name: t.name })) : [],
     };
     try {
       await createNotification(notificationData).unwrap();
@@ -282,6 +284,7 @@ export default function PushNotificationsPage() {
                 currentItems={currentItems}
                 searchTerm={searchTerm}
                 onViewNotification={(notification) => handleOpenModal("view", notification)}
+                onResend={(notification) => handleOpenModal("add", notification)}
                 onDeleteClick={(notification) => {
                   setSelectedNotification(notification);
                   setIsDeleteModalOpen(true);
@@ -362,19 +365,54 @@ export default function PushNotificationsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Target Audience</Label>
-                <RadioGroup
-                  value={targetType}
-                  onValueChange={(value) => setTargetType(value as any)}
-                  className="grid grid-cols-2 md:grid-cols-4 gap-2"
-                  disabled={modalType === "view"}
-                >
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="all_online_clients" id="all_online_clients" /><Label htmlFor="all_online_clients">All Online</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="all_offline_clients" id="all_offline_clients" /><Label htmlFor="all_offline_clients">All Offline</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="specific_clients" id="specific_clients" /><Label htmlFor="specific_clients">Specific Clients</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="all_staffs" id="all_staffs" /><Label htmlFor="all_staffs">All Staffs</Label></div>
-                </RadioGroup>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="all_online_clients"
+                      checked={targetType.includes("all_online_clients")}
+                      onCheckedChange={(checked: boolean) => {
+                        setTargetType(prev => checked ? [...prev, "all_online_clients"] : prev.filter(t => t !== "all_online_clients"));
+                      }}
+                      disabled={modalType === "view"}
+                    />
+                    <Label htmlFor="all_online_clients">All Online</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="all_offline_clients"
+                      checked={targetType.includes("all_offline_clients")}
+                      onCheckedChange={(checked: boolean) => {
+                        setTargetType(prev => checked ? [...prev, "all_offline_clients"] : prev.filter(t => t !== "all_offline_clients"));
+                      }}
+                      disabled={modalType === "view"}
+                    />
+                    <Label htmlFor="all_offline_clients">All Offline</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="specific_clients"
+                      checked={targetType.includes("specific_clients")}
+                      onCheckedChange={(checked: boolean) => {
+                        setTargetType(prev => checked ? [...prev, "specific_clients"] : prev.filter(t => t !== "specific_clients"));
+                      }}
+                      disabled={modalType === "view"}
+                    />
+                    <Label htmlFor="specific_clients">Specific Clients</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="all_staffs"
+                      checked={targetType.includes("all_staffs")}
+                      onCheckedChange={(checked: boolean) => {
+                        setTargetType(prev => checked ? [...prev, "all_staffs"] : prev.filter(t => t !== "all_staffs"));
+                      }}
+                      disabled={modalType === "view"}
+                    />
+                    <Label htmlFor="all_staffs">All Staffs</Label>
+                  </div>
+                </div>
               </div>
-              {targetType === "specific_clients" && (
+              {targetType.includes("specific_clients") && (
                 <div className="space-y-2">
                   <Label>Select Clients</Label>
                   {modalType === 'add' &&

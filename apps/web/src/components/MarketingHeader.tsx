@@ -40,6 +40,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import Cookies from "js-cookie";
+import { NotificationDropdown } from "./NotificationDropdown";
 
 interface User {
   firstName?: string;
@@ -275,6 +276,11 @@ export function MarketingHeader({
             </div>
             {!isLoading && (
               <>
+                {isAuthenticated && user && (
+                  <div className="mr-2">
+                    <NotificationDropdown apiEndpoint="/api/notifications" />
+                  </div>
+                )}
                 {isAuthenticated && user ? (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

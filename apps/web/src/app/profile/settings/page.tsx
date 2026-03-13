@@ -10,6 +10,7 @@ import { Eye, EyeOff, Camera, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Avatar, AvatarImage, AvatarFallback } from '@repo/ui/avatar';
 import { toast } from 'sonner';
+import { Switch } from '@repo/ui/switch';
 
 export default function SettingsPage() {
     const { user, updateUser } = useAuth();
@@ -21,6 +22,12 @@ export default function SettingsPage() {
         state: '',
         city: '',
         pincode: '',
+        notificationPreferences: {
+            pushEnabled: true,
+            smsEnabled: true,
+            appointments: true,
+            promotional: true,
+        }
     });
 
     const [passwords, setPasswords] = useState({
@@ -44,6 +51,12 @@ export default function SettingsPage() {
                 state: user.state || '',
                 city: user.city || '',
                 pincode: user.pincode || '',
+                notificationPreferences: user.notificationPreferences || {
+                    pushEnabled: true,
+                    smsEnabled: true,
+                    appointments: true,
+                    promotional: true,
+                }
             });
         }
     }, [user]);
@@ -56,6 +69,16 @@ export default function SettingsPage() {
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
         setPasswords(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handlePreferenceToggle = (key: string) => {
+        setFormData(prev => ({
+            ...prev,
+            notificationPreferences: {
+                ...prev.notificationPreferences,
+                [key]: !prev.notificationPreferences[key as keyof typeof prev.notificationPreferences]
+            }
+        }));
     };
     
     const handleProfileUpdate = async (e: React.FormEvent) => {
@@ -75,6 +98,7 @@ export default function SettingsPage() {
                     state: formData.state,
                     city: formData.city,
                     pincode: formData.pincode,
+                    notificationPreferences: formData.notificationPreferences,
                 }),
             });
             
@@ -136,6 +160,23 @@ export default function SettingsPage() {
             toast.error("An error occurred while updating password");
         } finally {
             setIsPasswordLoading(false);
+        }
+    };
+
+    const [isTestLoading, setIsTestLoading] = useState(false);
+    const handleTestNotification = async () => {
+        setIsTestLoading(true);
+        try {
+            const response = await fetch('/api/client/notifications/test', { method: 'POST' });
+            if (response.ok) {
+                toast.success("Test notification sent! Check your device.");
+            } else {
+                toast.error("Failed to send test notification. Check console.");
+            }
+        } catch (error) {
+            toast.error("Error sending test notification.");
+        } finally {
+            setIsTestLoading(false);
         }
     };
 
@@ -292,6 +333,70 @@ export default function SettingsPage() {
                         {isPasswordLoading ? "Updating..." : "Update Password"}
                     </Button>
                 </form>
+                <Separator />
+                <div className="space-y-6">
+                    <h3 className="font-semibold text-lg">Notification Alerts</h3>
+                    <p className="text-sm text-muted-foreground">
+                        Configure how you receive updates and reminders.
+                    </p>
+                    
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label className="text-sm font-medium">Push Notifications</Label>
+                                <p className="text-xs text-muted-foreground">Receive alerts in your browser.</p>
+                            </div>
+                            <Switch 
+                                checked={formData.notificationPreferences.pushEnabled} 
+                                onCheckedChange={() => handlePreferenceToggle('pushEnabled')} 
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label className="text-sm font-medium">SMS Alerts</Label>
+                                <p className="text-xs text-muted-foreground">Critical updates via SMS.</p>
+                            </div>
+                            <Switch 
+                                checked={formData.notificationPreferences.smsEnabled} 
+                                onCheckedChange={() => handlePreferenceToggle('smsEnabled')} 
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label className="text-sm font-medium">Appointments</Label>
+                                <p className="text-xs text-muted-foreground">Reminders and status changes.</p>
+                            </div>
+                            <Switch 
+                                checked={formData.notificationPreferences.appointments} 
+                                onCheckedChange={() => handlePreferenceToggle('appointments')} 
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div className="space-y-0.5">
+                                <Label className="text-sm font-medium">Promotional</Label>
+                                <p className="text-xs text-muted-foreground">Offers and new features.</p>
+                            </div>
+                            <Switch 
+                                checked={formData.notificationPreferences.promotional} 
+                                onCheckedChange={() => handlePreferenceToggle('promotional')} 
+                            />
+                        </div>
+                    </div>
+
+                    <div className="pt-2">
+                        <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={handleTestNotification} 
+                            disabled={isTestLoading}
+                        >
+                            {isTestLoading ? "Firing..." : "🚀 Fire Test Notification"}
+                        </Button>
+                    </div>
+                </div>
             </CardContent>
         </Card>
     );

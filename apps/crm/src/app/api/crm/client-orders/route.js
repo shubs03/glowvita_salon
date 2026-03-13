@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import ClientOrder from '@repo/lib/models/user/ClientOrder.model';
 import { withSubscriptionCheck } from '@/middlewareCrm';
+import { NotificationService } from '@repo/lib';
 
 await _db();
 
@@ -88,6 +89,15 @@ export const PATCH = withSubscriptionCheck(async (req) => {
     });
 
     await order.save();
+
+    // Trigger Notification to Client (Non-blocking)
+    (async () => {
+      try {
+        await NotificationService.sendOrderAlert(order.userId, 'client', order, status.toLowerCase());
+      } catch (err) {
+        console.error('Order Status Update Notification Error:', err);
+      }
+    })();
 
     console.log("Order saved successfully:", order._id);
     return NextResponse.json(order, { status: 200 });

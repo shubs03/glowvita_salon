@@ -7,179 +7,140 @@ import { withSubscriptionCheck } from '@/middlewareCrm';
 import { sendEmail } from "../../../../../../../packages/lib/src/emailService";
 import { getConfirmationTemplate, getCompletionTemplate, getInvoiceTemplate, getCancellationTemplate } from "../../../../../../../packages/lib/src/emailTemplates";
 import VendorModelLib from "../../../../../../../packages/lib/src/models/Vendor/Vendor.model";
+import { NotificationService, SmsService } from "@repo/lib";
 
-// Helper function to send appointment emails
+// Helper function to send appointment emails and notifications
 const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus, fallbackClientId = null) => {
-    console.log(`[Email Debug] Attempting to send email for appointment ${appointment._id}`);
-    console.log(`[Email Debug] Status change: ${oldStatus} -> ${newStatus}`);
+    console.log(`[Notification Debug] Processing appointment ${appointment._id}`);
+    console.log(`[Notification Debug] Status change: ${oldStatus} -> ${newStatus}`);
 
-    if (newStatus === oldStatus) {
-        console.log('[Email Debug] Status unchanged, skipping email');
-        return;
-    }
+    if (newStatus === oldStatus) return;
 
     try {
         const vendor = await VendorModelLib.findById(vendorId).select('businessName address phone city state pincode');
         const businessName = vendor?.businessName || 'GlowVita Salon';
         const businessAddress = `${vendor?.address || ''}, ${vendor?.city || ''}, ${vendor?.state || ''}, ${vendor?.pincode || ''}`.trim().replace(/^,|,$/g, '');
         const businessPhone = vendor?.phone || '';
-
+        
+        // Resolve Client Info
         let clientEmail = appointment.client?.email || appointment.clientEmail;
         let clientName = appointment.client?.fullName || appointment.clientName;
         let clientPhone = appointment.client?.phone || '';
+        let clientId = appointment.client?._id || appointment.client || fallbackClientId;
 
-        // If client email is missing, it might be an online booking with a User ID stored in the client field
-        // We check appointment.client (which might be populated/null) or try to get the raw ID
-        const clientId = appointment.client?._id || appointment.client || fallbackClientId;
-
-        if (!clientEmail && clientId) {
-            console.log(`[Email Debug] Client email missing, checking User model for ID: ${clientId}`);
+        if ((!clientEmail || !clientPhone) && clientId) {
             try {
                 const user = await UserModel.findById(clientId).select('firstName lastName emailAddress email mobileNo');
                 if (user) {
-                    clientEmail = user.emailAddress || user.email;
+                    clientEmail = clientEmail || user.emailAddress || user.email;
                     clientName = clientName || `${user.firstName} ${user.lastName}`;
-                    clientPhone = user.mobileNo || user.phone;
-                    console.log(`[Email Debug] Found user info from User model: Name=${clientName}, Email=${clientEmail}, Phone=${clientPhone}`);
+                    clientPhone = clientPhone || user.mobileNo || user.phone;
                 }
-            } catch (userError) {
-                console.error('[Email Debug] Error fetching user data:', userError);
+            } catch (err) {
+                console.error('[Notification Debug] User fetch error:', err);
             }
         }
 
-        console.log(`[Email Debug] Final Client Info for email: Name=${clientName}, Email=${clientEmail}`);
-
+        // 1. Send Email (Existing Logic Restored)
         if (clientEmail) {
-            if (newStatus === 'confirmed') {
-                const emailHtml = getConfirmationTemplate({
-                    clientName,
-                    businessName,
-                    serviceName: appointment.serviceName,
-                    date: appointment.date,
-                    startTime: appointment.startTime,
-                    location: appointment.homeServiceLocation?.address || businessName
-                });
-
-                await sendEmail({
-                    to: clientEmail,
-                    subject: `Appointment Confirmed - ${businessName}`,
-                    html: emailHtml
-                });
-                console.log(`Confirmation email sent to ${clientEmail}`);
-            } else if (newStatus === 'completed' || newStatus === 'completed without payment') {
-                // Send completion template
-                const completionHtml = getCompletionTemplate({
-                    clientName,
-                    businessName,
-                    serviceName: appointment.serviceName
-                });
-
-                // Fetch formal invoice
-                let invoiceHtml;
-                let formalInvoice;
-                try {
-                    const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
-                    formalInvoice = await InvoiceModel.findOne({ appointmentId: appointment._id });
-
-                    if (formalInvoice) {
-                        invoiceHtml = getInvoiceTemplate({
-                            clientName,
-                            clientPhone,
-                            businessName,
-                            businessAddress,
-                            businessPhone,
-                            date: new Date(formalInvoice.createdAt).toLocaleDateString(),
-                            items: formalInvoice.items,
-                            subtotal: formalInvoice.subtotal,
-                            tax: formalInvoice.taxAmount,
-                            taxRate: formalInvoice.taxRate,
-                            platformFee: formalInvoice.platformFee,
-                            discount: formalInvoice.discountAmount,
-                            couponCode: appointment.payment?.offer?.code || "",
-                            totalAmount: formalInvoice.totalAmount,
-                            paymentStatus: formalInvoice.paymentStatus,
-                            invoiceNumber: formalInvoice.invoiceNumber,
-                            paymentMethod: formalInvoice.paymentMethod
-                        });
-                    } else {
-                        // Fallback
-                        invoiceHtml = getInvoiceTemplate({
-                            clientName,
-                            clientPhone,
-                            businessName,
-                            businessAddress,
-                            businessPhone,
-                            date: new Date(appointment.date).toLocaleDateString(),
-                            items: [{
-                                name: appointment.serviceName,
-                                price: appointment.amount,
-                                quantity: 1,
-                                totalPrice: appointment.amount
-                            }],
-                            subtotal: appointment.amount,
-                            tax: appointment.serviceTax || appointment.tax || 0,
-                            taxRate: 0,
-                            platformFee: appointment.platformFee || 0,
-                            discount: appointment.discountAmount || appointment.discount || 0,
-                            totalAmount: appointment.totalAmount,
-                            paymentStatus: appointment.paymentStatus,
-                            invoiceNumber: appointment.invoiceNumber || appointment._id.toString(),
-                            paymentMethod: appointment.paymentMethod
-                        });
-                    }
-                } catch (tplError) {
-                    console.error('Error fetching invoice for email:', tplError);
-                }
-
-                // Generate PDF Buffer (add this for consistency if missing)
-                let pdfBuffer;
-                if (invoiceHtml) {
+            try {
+                if (newStatus === 'confirmed') {
+                    const emailHtml = getConfirmationTemplate({
+                        clientName, businessName, serviceName: appointment.serviceName,
+                        date: appointment.date, startTime: appointment.startTime,
+                        location: appointment.homeServiceLocation?.address || businessName
+                    });
+                    await sendEmail({ to: clientEmail, subject: `Appointment Confirmed - ${businessName}`, html: emailHtml });
+                } else if (newStatus === 'completed' || newStatus === 'completed without payment') {
+                    const completionHtml = getCompletionTemplate({ clientName, businessName, serviceName: appointment.serviceName });
+                    
+                    let invoiceHtml;
+                    let formalInvoice;
                     try {
-                        const pdf = (await import('html-pdf')).default;
-                        pdfBuffer = await new Promise((resolve, reject) => {
-                            pdf.create(invoiceHtml, { format: 'A4' }).toBuffer((err, buffer) => {
-                                if (err) reject(err);
-                                else resolve(buffer);
-                            });
-                        });
-                    } catch (pdfError) {
-                        console.error('PDF generation failed in appointments route:', pdfError);
-                    }
-                }
+                        const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+                        formalInvoice = await InvoiceModel.findOne({ appointmentId: appointment._id });
 
-                await sendEmail({
-                    to: clientEmail,
-                    subject: `Appointment Completed - ${businessName}`,
-                    html: completionHtml,
-                    attachments: pdfBuffer ? [
-                        {
+                        if (formalInvoice) {
+                            invoiceHtml = getInvoiceTemplate({
+                                clientName, clientPhone, businessName, businessAddress, businessPhone,
+                                date: new Date(formalInvoice.createdAt).toLocaleDateString(),
+                                items: formalInvoice.items, subtotal: formalInvoice.subtotal,
+                                tax: formalInvoice.taxAmount, taxRate: formalInvoice.taxRate,
+                                platformFee: formalInvoice.platformFee, discount: formalInvoice.discountAmount,
+                                couponCode: appointment.payment?.offer?.code || "",
+                                totalAmount: formalInvoice.totalAmount, paymentStatus: formalInvoice.paymentStatus,
+                                invoiceNumber: formalInvoice.invoiceNumber, paymentMethod: formalInvoice.paymentMethod
+                            });
+                        } else {
+                            invoiceHtml = getInvoiceTemplate({
+                                clientName, clientPhone, businessName, businessAddress, businessPhone,
+                                date: new Date(appointment.date).toLocaleDateString(),
+                                items: [{ name: appointment.serviceName, price: appointment.amount, quantity: 1, totalPrice: appointment.amount }],
+                                subtotal: appointment.amount, tax: appointment.serviceTax || appointment.tax || 0,
+                                taxRate: 0, platformFee: appointment.platformFee || 0,
+                                discount: appointment.discountAmount || appointment.discount || 0,
+                                totalAmount: appointment.totalAmount, paymentStatus: appointment.paymentStatus,
+                                invoiceNumber: appointment.invoiceNumber || appointment._id.toString(),
+                                paymentMethod: appointment.paymentMethod
+                            });
+                        }
+                    } catch (tplError) { console.error('Error fetching invoice for email:', tplError); }
+
+                    let pdfBuffer;
+                    if (invoiceHtml) {
+                        try {
+                            const pdf = (await import('html-pdf')).default;
+                            pdfBuffer = await new Promise((resolve, reject) => {
+                                pdf.create(invoiceHtml, { format: 'A4' }).toBuffer((err, buffer) => {
+                                    if (err) reject(err); else resolve(buffer);
+                                });
+                            });
+                        } catch (pdfError) { console.error('PDF generation failed:', pdfError); }
+                    }
+
+                    await sendEmail({
+                        to: clientEmail,
+                        subject: `Appointment Completed - ${businessName}`,
+                        html: completionHtml,
+                        attachments: pdfBuffer ? [{
                             filename: `Invoice_${formalInvoice?.invoiceNumber || appointment.invoiceNumber || appointment._id}.pdf`,
                             content: pdfBuffer,
                             contentType: 'application/pdf'
-                        }
-                    ] : []
-                });
-                console.log(`Completion email and invoice sent to ${clientEmail}`);
-            } else if (newStatus === 'cancelled') {
-                const emailHtml = getCancellationTemplate({
-                    clientName,
-                    businessName,
-                    serviceName: appointment.serviceName,
-                    date: appointment.date,
-                    startTime: appointment.startTime,
-                    cancellationReason: appointment.cancellationReason
-                });
-
-                await sendEmail({
-                    to: clientEmail,
-                    subject: `Appointment Cancelled - ${businessName}`,
-                    html: emailHtml
-                });
-                console.log(`Cancellation email sent to ${clientEmail}`);
+                        }] : []
+                    });
+                } else if (newStatus === 'cancelled') {
+                    const emailHtml = getCancellationTemplate({
+                        clientName, businessName, serviceName: appointment.serviceName,
+                        date: appointment.date, startTime: appointment.startTime,
+                        cancellationReason: appointment.cancellationReason
+                    });
+                    await sendEmail({ to: clientEmail, subject: `Appointment Cancelled - ${businessName}`, html: emailHtml });
+                }
+            } catch (e) {
+                console.error('Email Dispatch Fail:', e);
             }
         }
-    } catch (emailError) {
-        console.error('Error sending appointment status email:', emailError);
+
+        // 2. Send Push Notification (INSTANT)
+        if (clientId && clientId.toString().length === 24) {
+            await NotificationService.sendAppointmentAlert(clientId, 'client', appointment, newStatus);
+        }
+        
+        // Notify Vendor as well
+        if (vendorId) {
+            await NotificationService.sendAppointmentAlert(vendorId, 'vendor', appointment, newStatus);
+        }
+
+        // 3. Send SMS (CRITICAL STATUSES)
+        if (clientPhone) {
+            const smsStatusMap = ['confirmed', 'cancelled', 'scheduled'];
+            if (smsStatusMap.includes(newStatus)) {
+                await SmsService.sendAppointmentSms(clientPhone, appointment, newStatus);
+            }
+        }
+
+    } catch (error) {
+        console.error('Notification Dispatch Error:', error);
     }
 };
 

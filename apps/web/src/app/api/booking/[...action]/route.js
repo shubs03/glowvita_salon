@@ -13,6 +13,7 @@ import { getCache, setCache } from "@repo/lib/modules/caching/CacheManager";
 import { sendEmail } from "../../../../../../../packages/lib/src/emailService";
 import { getCancellationTemplate } from "../../../../../../../packages/lib/src/emailTemplates";
 import UserModel from "../../../../../../../packages/lib/src/models/user/User.model";
+import { NotificationService, SmsService } from "@repo/lib";
 
 // Utility functions for internally use
 /**
@@ -1455,6 +1456,26 @@ async function handleBookingConfirmation(body) {
     }
   }
 
+  // Trigger Instant Notifications
+  (async () => {
+    try {
+      const appointment = confirmResult.appointment;
+      if (appointment.client && appointment.client.toString().length === 24) {
+        await NotificationService.sendAppointmentAlert(appointment.client, 'client', appointment, 'confirmed');
+      }
+      // Also notify vendor
+      await NotificationService.sendAppointmentAlert(appointment.vendorId, 'vendor', appointment, 'confirmed');
+
+      // SMS Alerts (Critical)
+      const clientPhone = appointment.clientPhone;
+      if (clientPhone) {
+        await SmsService.sendAppointmentSms(clientPhone, appointment, 'confirmed');
+      }
+    } catch (err) {
+      console.error('Booking Confirmation Notification Error:', err);
+    }
+  })();
+
   return Response.json({
     success: true,
     message: "Appointment confirmed successfully",
@@ -1577,6 +1598,20 @@ async function handleBookingCancellation(body) {
   if (appointment.lockToken) {
     await releaseLock(appointment.lockToken);
   }
+
+  // Trigger Notifications
+  (async () => {
+    try {
+      if (appointment.client) {
+        await NotificationService.sendAppointmentAlert(appointment.client, 'client', appointment, 'cancelled');
+      }
+      if (appointment.vendorId) {
+        await NotificationService.sendAppointmentAlert(appointment.vendorId, 'vendor', appointment, 'cancelled');
+      }
+    } catch (err) {
+      console.error('Cancellation Notification Error:', err);
+    }
+  })();
 
   // Send cancellation email
   try {

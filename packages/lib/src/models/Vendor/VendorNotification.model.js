@@ -22,13 +22,7 @@ const notificationSchema = new mongoose.Schema(
       maxlength: 500,
     },
     targetType: {
-      type: String,
-      enum: [
-        "all_online_clients",
-        "all_offline_clients",
-        "all_staffs",
-        "specific_clients",
-      ],
+      type: [String],
       required: true,
     },
     targets: [
@@ -123,8 +117,11 @@ vendorNotificationsSchema.statics.getNotificationsByVendor = async function (
   return this.aggregate(pipeline).exec();
 };
 
-const VendorNotificationsModel =
-  mongoose.models.VendorNotifications ||
-  mongoose.model("VendorNotifications", vendorNotificationsSchema);
+// Force delete model to ensure schema updates during development hot-reloading
+if (mongoose.models.VendorNotifications) {
+  delete mongoose.models.VendorNotifications;
+}
+
+const VendorNotificationsModel = mongoose.model("VendorNotifications", vendorNotificationsSchema);
 
 export default VendorNotificationsModel;

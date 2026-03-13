@@ -3,6 +3,7 @@ import _db from "@repo/lib/db";
 import OfferModel from "@repo/lib/models/admin/AdminOffers";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
+import { NotificationService } from "@repo/lib";
 
 // Predefined options for validation
 const validCategories = ['Men', 'Women', 'Unisex'];
@@ -124,6 +125,22 @@ export const POST = authMiddlewareAdmin(
       isCustomCode: isCustom,
       regionId: finalRegionId,
     });
+
+    // Trigger Offer Notification if Active
+    if (newOffer.status === 'Active') {
+      (async () => {
+        try {
+          await NotificationService.sendOfferAlert('ALL_CLIENTS', 'client', {
+            title: `New Offer: ${newOffer.code}`,
+            message: `Get ${newOffer.value}${newOffer.type === 'percentage' ? '%' : ' OFF'} starting today!`,
+            offerCode: newOffer.code,
+            expiryDate: newOffer.expires
+          });
+        } catch (err) {
+          console.error('Offer Notification Error:', err);
+        }
+      })();
+    }
 
     return Response.json(
       { message: "Offer created successfully", offer: newOffer },
@@ -324,6 +341,22 @@ export const PUT = authMiddlewareAdmin(
       { new: true }
     );
 
+    // Trigger Offer Notification if status changed to Active
+    if (updatedOffer && existingOffer.status !== 'Active' && updatedOffer.status === 'Active') {
+      (async () => {
+        try {
+          await NotificationService.sendOfferAlert('ALL_CLIENTS', 'client', {
+            title: `Offer Live: ${updatedOffer.code}`,
+            message: `Don't miss out! Get ${updatedOffer.value}${updatedOffer.type === 'percentage' ? '%' : ' OFF'} now!`,
+            offerCode: updatedOffer.code,
+            expiryDate: updatedOffer.expires
+          });
+        } catch (err) {
+          console.error('Offer Notification Error:', err);
+        }
+      })();
+    }
+    
     if (!updatedOffer) {
       return Response.json({ message: "Offer not found" }, { status: 404 });
     }

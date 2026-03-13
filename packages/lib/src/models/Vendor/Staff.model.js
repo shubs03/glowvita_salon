@@ -167,10 +167,14 @@ const staffSchema = new mongoose.Schema(
       default: "Active",
       index: true, // Most common query
     },
-    lastLoginAt: {
+    lastLogin: {
       type: Date,
-      default: null,
+      default: Date.now,
       index: true, // For activity tracking
+    },
+    inactivityReminderSent: {
+      type: Boolean,
+      default: false,
     },
 
     // OPTIMIZED AVAILABILITY FIELDS - Flattened for better indexing
@@ -242,6 +246,17 @@ const staffSchema = new mongoose.Schema(
     // Caching fields for complex calculations
     lastAvailabilityUpdate: { type: Date, default: Date.now },
     availabilityHash: { type: String }, // For change detection
+    fcmTokens: {
+      type: [String],
+      default: [],
+      index: true,
+    },
+    notificationPreferences: {
+      pushEnabled: { type: Boolean, default: true },
+      smsEnabled: { type: Boolean, default: true },
+      appointments: { type: Boolean, default: true },
+      promotional: { type: Boolean, default: true },
+    },
   },
   {
     timestamps: true,

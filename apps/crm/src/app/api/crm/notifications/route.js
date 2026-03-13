@@ -16,7 +16,8 @@ export const POST = withSubscriptionCheck(async (req) => {
   const vendorId = vendor.userId.toString();
 
   // 1️⃣ Validate required fields
-  if (!vendorId || !title || !channels || !Array.isArray(channels) || !content || !targetType) {
+  const isValidTargetType = Array.isArray(targetType) ? targetType.length > 0 : !!targetType;
+  if (!vendorId || !title || !channels || !Array.isArray(channels) || !content || !isValidTargetType) {
     return Response.json(
       { message: "Vendor ID, title, channels array, content, and targetType are required" },
       { status: 400 }
@@ -24,7 +25,8 @@ export const POST = withSubscriptionCheck(async (req) => {
   }
 
   // 2️⃣ Validate target if specific
-  if (targetType === 'specific_clients' && (!targets || !Array.isArray(targets))) {
+  const includesSpecific = Array.isArray(targetType) ? targetType.includes('specific_clients') : targetType === 'specific_clients';
+  if (includesSpecific && (!targets || !Array.isArray(targets))) {
     return Response.json(
       { message: "Targets array is required for specific_clients" },
       { status: 400 }
@@ -36,7 +38,7 @@ export const POST = withSubscriptionCheck(async (req) => {
     channels, 
     content, 
     targetType, 
-    targets: targetType === 'specific_clients' ? targets : [],
+    targets: includesSpecific ? targets : [],
     date: new Date(),
     status: 'Sent', 
     createdAt: new Date(), 
@@ -52,6 +54,62 @@ export const POST = withSubscriptionCheck(async (req) => {
     },
     { upsert: true, new: true }
   );
+
+  // 4️⃣ Trigger Push Notifications
+  try {
+    const { NotificationService } = await import("@repo/lib");
+    const targetTypesArray = Array.isArray(targetType) ? targetType : [targetType];
+    
+    // Group recipient IDs by role
+    const recipientsByRole = {
+      client: new Set(),
+      staff: new Set(),
+      vendor: new Set(), // Vendor might use this too if they target other vendors
+    };
+
+    const { default: mongoose } = await import("mongoose");
+    const AppointmentModel = (await import("@repo/lib/models/Appointment/Appointment.model")).default;
+    const ClientModel = (await import("@repo/lib/models/Vendor/Client.model")).default;
+    const StaffModel = (await import("@repo/lib/models/Vendor/Staff.model")).default;
+
+    for (const type of targetTypesArray) {
+      if (type === 'all_online_clients') {
+        const appointments = await AppointmentModel.find({ 
+          vendorId: new mongoose.Types.ObjectId(vendorId), 
+          client: { $exists: true, $ne: null } 
+        }).select('client').lean();
+        appointments.forEach(appt => recipientsByRole.client.add(appt.client.toString()));
+      } else if (type === 'all_offline_clients') {
+        const offlineClients = await ClientModel.find({ vendorId: vendorId }).select('_id').lean();
+        offlineClients.forEach(c => recipientsByRole.client.add(c._id.toString()));
+      } else if (type === 'all_staffs') {
+        const staffs = await StaffModel.find({ vendorId: vendorId }).select('_id').lean();
+        staffs.forEach(s => recipientsByRole.staff.add(s._id.toString()));
+      } else if (type === 'specific_clients') {
+        if (targets && Array.isArray(targets)) {
+          targets.forEach(t => {
+            const id = t.id || t._id || t;
+            if (id) recipientsByRole.client.add(id.toString());
+          });
+        }
+      }
+    }
+
+    // Send notifications for each role that has recipients
+    for (const [role, idsSet] of Object.entries(recipientsByRole)) {
+      const recipientIds = Array.from(idsSet);
+      if (recipientIds.length > 0) {
+        console.log(`Sending mass notification to ${recipientIds.length} ${role}s`);
+        await NotificationService.sendMassNotification(recipientIds, role, {
+          title: title,
+          body: content,
+          type: 'broadcast'
+        });
+      }
+    }
+  } catch (err) {
+    console.error('CRM Push Notification Trigger Error:', err);
+  }
 
   return Response.json(
     { message: "Notification created successfully", vendorNotifications },
@@ -99,7 +157,10 @@ export const GET = withSubscriptionCheck(async (req) => {
   const smsSent = allNotifications.filter(n => n.channels.includes('SMS')).length;
 
   const targetCounts = allNotifications.reduce((acc, n) => {
-    acc[n.targetType] = (acc[n.targetType] || 0) + 1;
+    const types = Array.isArray(n.targetType) ? n.targetType : [n.targetType];
+    types.forEach(type => {
+      acc[type] = (acc[type] || 0) + 1;
+    });
     return acc;
   }, {});
 

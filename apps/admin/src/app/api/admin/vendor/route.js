@@ -4,6 +4,7 @@ import ClientModel from "@repo/lib/models/Vendor/Client.model";
 import PlanModel from "@repo/lib/models/admin/SubscriptionPlan";
 import RegionModel from "@repo/lib/models/admin/Region.model";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin";
+import { NotificationService } from "@repo/lib";
 import bcrypt from "bcryptjs";
 import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 import { buildRegionQueryFromRequest, validateAndLockRegion, hasPermission, forbiddenResponse } from "@repo/lib";
@@ -332,9 +333,20 @@ export const POST = authMiddlewareAdmin(
       gallery: galleryUrls,
       bankDetails: bankDetailsData,
       documents: documentsData,
-      createdAt: Date.now(),
       updatedAt: Date.now(),
     });
+
+    // Trigger Registration Notification
+    (async () => {
+      try {
+        await NotificationService.sendRegistrationAlert(newVendor._id.toString(), 'vendor', {
+          name: newVendor.firstName,
+          role: 'Vendor'
+        });
+      } catch (err) {
+        console.error('Registration Notification Error:', err);
+      }
+    })();
 
     // Remove password from response
     const vendorData = newVendor.toObject();

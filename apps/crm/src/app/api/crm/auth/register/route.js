@@ -7,6 +7,7 @@ import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan.model";
 import { ReferralModel, V2VSettingsModel } from "../../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
 import _db from "@repo/lib/db";
 import mongoose from "mongoose";
+import { NotificationService } from "@repo/lib";
 
 await _db();
 
@@ -279,6 +280,18 @@ export async function POST(req) {
         history: [],
       }
     });
+
+    // Trigger Registration Notification
+    (async () => {
+      try {
+        await NotificationService.sendRegistrationAlert(newVendor._id.toString(), 'vendor', {
+          name: newVendor.firstName,
+          role: 'Vendor'
+        });
+      } catch (err) {
+        console.error('Registration Notification Error:', err);
+      }
+    })();
     
     // Reload the vendor to ensure we have the proper _id
     console.log(`Vendor created with ID: ${newVendor._id}`);
@@ -352,6 +365,27 @@ export async function POST(req) {
           status: 'Completed',
           bonus: String(bonusValue), // Use the dynamic bonus value
         });
+
+        // Trigger Referral Notifications
+        (async () => {
+          try {
+            // Notify Referee
+            await NotificationService.sendReferralAlert(newVendor._id.toString(), 'vendor', {
+              referrerName: referringVendor.businessName,
+              rewardAmount: bonusValue,
+              status: 'completed'
+            });
+
+            // Notify Referrer
+            await NotificationService.sendReferralAlert(referringVendor._id.toString(), 'vendor', {
+              referrerName: newVendor.businessName,
+              rewardAmount: bonusValue,
+              status: 'completed'
+            });
+          } catch (err) {
+            console.error('Referral Notification Error:', err);
+          }
+        })();
       }
     }
 

@@ -84,7 +84,7 @@ export function TopSellingProductsChart({
   let topProducts: TopProductData[] = [];
   
   if (apiResponse?.success && apiResponse.data?.salesByProduct) {
-    topProducts = apiResponse.data.salesByProduct
+    topProducts = [...apiResponse.data.salesByProduct]
       .sort((a: any, b: any) => b.quantitySold - a.quantitySold)
       .slice(0, 5);
   }

@@ -3,6 +3,7 @@ import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model";
 import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import UserModel from "@repo/lib/models/user/User.model";
 import _db from '@repo/lib/db';
+import { NotificationService, SmsService } from "@repo/lib";
 
 await _db();
 
@@ -549,6 +550,27 @@ export const POST = async (req) => {
                 select: 'fullName position',
                 strictPopulate: false // This prevents the strictPopulate error
             });
+
+        // Trigger Instant Notifications
+        (async () => {
+            try {
+                const clientId = body.client || body.userId;
+                if (clientId && clientId.toString().length === 24) {
+                    await NotificationService.sendAppointmentAlert(clientId, 'client', newAppointment, 'scheduled');
+                }
+                
+                // Also notify vendor
+                await NotificationService.sendAppointmentAlert(body.vendorId, 'vendor', newAppointment, 'scheduled');
+
+                // SMS for critical events
+                const clientPhone = body.clientPhone || body.phone;
+                if (clientPhone) {
+                    await SmsService.sendAppointmentSms(clientPhone, newAppointment, 'scheduled');
+                }
+            } catch (err) {
+                console.error('New Booking Notification Error:', err);
+            }
+        })();
 
         // Add CORS headers
         const response = NextResponse.json(

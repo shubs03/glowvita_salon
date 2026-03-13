@@ -2,6 +2,7 @@
 import _db from "@repo/lib/db";
 import NotificationModel from "@repo/lib/models/admin/CustomPushNotificationAdmin";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
+import { NotificationService } from "@repo/lib";
 
 await _db();
 
@@ -44,6 +45,67 @@ export const POST = authMiddlewareAdmin(
       date: Date.now(),
       updatedAt: Date.now(),
     });
+
+    // Trigger Push Notification if status is Sent (default)
+    if (newNotification.status === 'Sent') {
+      try {
+        const targetTypesArray = Array.isArray(targetType) ? targetType : [targetType];
+        
+        // Group recipient IDs by role
+        const recipientsByRole = {
+          client: new Set(),
+          vendor: new Set(),
+          staff: new Set(),
+          admin: new Set(),
+        };
+
+        const UserModel = (await import("@repo/lib/models/user/User.model")).default;
+        const VendorModel = (await import("@repo/lib/models/Vendor/Vendor.model")).default;
+        const StaffModel = (await import("@repo/lib/models/Vendor/Staff.model")).default;
+        const AdminModel = (await import("@repo/lib/models/admin/AdminUser")).default;
+
+        for (const type of targetTypesArray) {
+          if (type === 'all_users') {
+            const query = (req.user.roleName === 'SUPER_ADMIN' && !body.regionId) ? {} : { regionId: finalRegionId };
+            const users = await UserModel.find(query).select('_id').lean();
+            users.forEach(u => recipientsByRole.client.add(u._id.toString()));
+          } else if (type === 'all_vendors') {
+            const query = (req.user.roleName === 'SUPER_ADMIN' && !body.regionId) ? {} : { regionId: finalRegionId };
+            const vendors = await VendorModel.find(query).select('_id').lean();
+            vendors.forEach(v => recipientsByRole.vendor.add(v._id.toString()));
+          } else if (type === 'all_staff' || type === 'all_staffs') {
+            const staffs = await StaffModel.find().select('_id').lean();
+            staffs.forEach(s => recipientsByRole.staff.add(s._id.toString()));
+          } else if (type === 'all_admins') {
+            const admins = await AdminModel.find().select('_id').lean();
+            admins.forEach(a => recipientsByRole.admin.add(a._id.toString()));
+          } else if (type === 'specific_users') {
+            if (specificIds && Array.isArray(specificIds)) {
+              specificIds.forEach(id => recipientsByRole.client.add(id.toString()));
+            }
+          } else if (type === 'specific_vendors') {
+            if (specificIds && Array.isArray(specificIds)) {
+              specificIds.forEach(id => recipientsByRole.vendor.add(id.toString()));
+            }
+          }
+        }
+
+        // Send notifications for each role that has recipients
+        for (const [role, idsSet] of Object.entries(recipientsByRole)) {
+          const recipientIds = Array.from(idsSet);
+          if (recipientIds.length > 0) {
+            console.log(`Sending mass notification to ${recipientIds.length} ${role}s`);
+            await NotificationService.sendMassNotification(recipientIds, role, {
+              title: newNotification.title,
+              body: newNotification.content,
+              type: 'broadcast'
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Mass Notification Error:', err);
+      }
+    }
 
     return Response.json(
       { message: "Notification created successfully", notification: newNotification },

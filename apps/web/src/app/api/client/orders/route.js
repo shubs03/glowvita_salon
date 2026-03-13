@@ -5,6 +5,7 @@ import ProductModel from '@repo/lib/models/Vendor/Product.model';
 import UserCartModel from '@repo/lib/models/user/UserCart.model';
 import { verifyJwt } from '@repo/lib/auth';
 import { cookies } from 'next/headers';
+import { NotificationService } from '@repo/lib';
 
 // GET User's Orders
 export async function GET(req) {
@@ -226,9 +227,21 @@ export async function POST(req) {
         { $set: { items: [] } }
       );
     } catch (cartError) {
-      // Log error but don't fail the order if cart clearing fails
       console.error('Error clearing cart:', cartError);
     }
+
+    // Trigger Notifications
+    (async () => {
+      try {
+        // Notify Client
+        await NotificationService.sendOrderAlert(payload.userId, 'client', newOrder, 'placed');
+        
+        // Notify Vendor/Supplier
+        await NotificationService.sendOrderAlert(finalVendorId, ownerType.toLowerCase(), newOrder, 'placed');
+      } catch (err) {
+        console.error('Order Notification Error:', err);
+      }
+    })();
 
     return NextResponse.json({ success: true, message: 'Order placed successfully', data: newOrder }, { status: 201 });
 
@@ -293,9 +306,19 @@ export async function PATCH(req) {
     
     await order.save();
     console.log('Order after save:', order);
-    // Also log specific fields
-    console.log('Saved order status:', order.status);
-    console.log('Saved order cancellationReason:', order.cancellationReason);
+    
+    // Trigger Notifications for Cancellation
+    (async () => {
+      try {
+        // Notify Client
+        await NotificationService.sendOrderAlert(payload.userId, 'client', order, 'cancelled');
+        
+        // Notify Vendor
+        await NotificationService.sendOrderAlert(order.vendorId, 'vendor', order, 'cancelled');
+      } catch (err) {
+        console.error('Order Cancellation Notification Error:', err);
+      }
+    })();
 
     return NextResponse.json({ 
       success: true, 

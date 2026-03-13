@@ -3,6 +3,7 @@ import _db from '@repo/lib/db';
 import OrderModel from '@repo/lib/models/Vendor/Order.model';
 import { authMiddlewareCrm } from '@/middlewareCrm';
 import mongoose from 'mongoose';
+import { NotificationService } from '@repo/lib';
 
 await _db();
 
@@ -60,6 +61,20 @@ export const POST = authMiddlewareCrm(async (req) => {
     });
 
     await newOrder.save();
+
+    // Trigger Notification to Supplier (Non-blocking)
+    (async () => {
+      try {
+        await NotificationService.sendToUser(supplierId, 'vendor', {
+          title: 'New B2B Order! 📦',
+          body: `You received a new order ${orderId} from a vendor.`,
+          data: { type: 'order_new', orderId: newOrder._id.toString() }
+        });
+      } catch (err) {
+        console.error('Order Notification Error:', err);
+      }
+    })();
+
     return NextResponse.json(newOrder, { status: 201 });
   } catch (error) {
     console.error("Error creating order:", error);
@@ -159,6 +174,30 @@ export const PATCH = authMiddlewareCrm(async (req) => {
 
     await order.save();
     
+    // Trigger Notification for Status Update (Non-blocking)
+    (async () => {
+      try {
+        // If B2B (vendor placed order to supplier), notify vendor
+        if (order.vendorId && !order.customerId) {
+          await NotificationService.sendToUser(order.vendorId, 'vendor', {
+            title: `Order Update: ${status} 📦`,
+            body: `Your order ${order.orderId} status is now ${status}.`,
+            data: { type: 'order_update', orderId: order._id.toString(), status }
+          });
+        }
+        // If B2C (customer placed order to vendor), notify customer
+        else if (order.customerId) {
+           await NotificationService.sendToUser(order.customerId, 'client', {
+            title: `Order Update: ${status} 🛍️`,
+            body: `Your order ${order.orderId} from the salon is now ${status}.`,
+            data: { type: 'order_update', orderId: order._id.toString(), status }
+          });
+        }
+      } catch (err) {
+        console.error('Order Status Update Notification Error:', err);
+      }
+    })();
+
     return NextResponse.json(order, { status: 200 });
 
   } catch (error) {

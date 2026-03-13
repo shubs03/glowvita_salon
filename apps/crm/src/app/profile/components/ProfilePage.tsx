@@ -3,7 +3,15 @@
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@repo/ui/tabs";
 import { useCrmAuth } from '@/hooks/useCrmAuth';
-import { useGetVendorProfileQuery, useGetWorkingHoursQuery, useGetCurrentSupplierProfileQuery, useGetDoctorProfileQuery } from '@repo/store/api';
+import { 
+  useGetVendorProfileQuery, 
+  useGetWorkingHoursQuery, 
+  useGetCurrentSupplierProfileQuery, 
+  useGetDoctorProfileQuery,
+  useUpdateVendorProfileMutation,
+  useUpdateSupplierProfileMutation,
+  useUpdateDoctorProfileMutation
+} from '@repo/store/api';
 import { toast } from 'sonner';
 import { ProfileTab } from './tabs/ProfileTab';
 import { SupplierProfileTab } from './tabs/SupplierProfileTab';
@@ -14,6 +22,7 @@ import { TravelSettingsTab } from './tabs/TravelSettingsTab';
 import { DocumentsTab } from './tabs/DocumentsTab';
 import { OpeningHoursTab } from './tabs/OpeningHoursTab';
 import { TaxesTab } from './tabs/TaxesTab';
+import { NotificationsTab } from './tabs/NotificationsTab';
 
 import { SmsPackagesTab } from '@/components/SmsPackagesTab';
 import { QRCodeModal } from './modals/QRCodeModal';
@@ -175,6 +184,10 @@ export default function ProfilePage() {
   const { data: doctorData, isLoading: isDoctorLoading, isError: isDoctorError, refetch: refetchDoctor, error: doctorError } = useGetDoctorProfileQuery(undefined, {
     skip: !user?._id || role !== 'doctor'
   });
+
+  const [apiUpdateVendor] = useUpdateVendorProfileMutation();
+  const [apiUpdateSupplier] = useUpdateSupplierProfileMutation();
+  const [apiUpdateDoctor] = useUpdateDoctorProfileMutation();
 
   console.log("Doctor Data:", doctorData);
 
@@ -461,6 +474,12 @@ export default function ProfilePage() {
                     >
                       Taxes
                     </TabsTrigger>
+                    <TabsTrigger
+                      value="notifications"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Notifications
+                    </TabsTrigger>
                   </>
                 )}
                 {role === 'supplier' && (
@@ -502,15 +521,29 @@ export default function ProfilePage() {
                     >
                       Taxes
                     </TabsTrigger>
+                    <TabsTrigger
+                      value="notifications"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Notifications
+                    </TabsTrigger>
                   </>
                 )}
                 {role === 'doctor' && (
-                  <TabsTrigger
-                    value="subscription"
-                    className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
-                  >
-                    Subscription
-                  </TabsTrigger>
+                  <>
+                    <TabsTrigger
+                      value="subscription"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Subscription
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="notifications"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Notifications
+                    </TabsTrigger>
+                  </>
                 )}
               </TabsList>
             </div>
@@ -604,6 +637,30 @@ export default function ProfilePage() {
               <SubscriptionTab subscription={localDoctor?.subscription} userType="doctor" />
             </TabsContent>
           )}
+
+          <TabsContent value="notifications">
+            {role === 'vendor' && localVendor && (
+              <NotificationsTab 
+                profile={localVendor} 
+                setProfile={setLocalVendor} 
+                updateMutation={apiUpdateVendor} 
+              />
+            )}
+            {role === 'supplier' && localSupplier && (
+              <NotificationsTab 
+                profile={localSupplier} 
+                setProfile={setLocalSupplier} 
+                updateMutation={apiUpdateSupplier} 
+              />
+            )}
+            {role === 'doctor' && localDoctor && (
+              <NotificationsTab 
+                profile={localDoctor} 
+                setProfile={setLocalDoctor} 
+                updateMutation={apiUpdateDoctor} 
+              />
+            )}
+          </TabsContent>
         </Tabs>
 
         <QRCodeModal

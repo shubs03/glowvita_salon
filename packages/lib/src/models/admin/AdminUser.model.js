@@ -71,6 +71,17 @@ const adminUserSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  fcmTokens: {
+    type: [String],
+    default: [],
+    index: true,
+  },
+  notificationPreferences: {
+    pushEnabled: { type: Boolean, default: true },
+    smsEnabled: { type: Boolean, default: true },
+    appointments: { type: Boolean, default: true },
+    promotional: { type: Boolean, default: true },
+  },
 });
 
 

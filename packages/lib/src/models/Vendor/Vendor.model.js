@@ -349,6 +349,26 @@ const vendorSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  fcmTokens: {
+    type: [String],
+    default: [],
+    index: true,
+  },
+  notificationPreferences: {
+    pushEnabled: { type: Boolean, default: true },
+    smsEnabled: { type: Boolean, default: true },
+    appointments: { type: Boolean, default: true },
+    promotional: { type: Boolean, default: true },
+    walletUpdates: { type: Boolean, default: true },
+  },
+  lastLogin: {
+    type: Date,
+    default: Date.now,
+  },
+  inactivityReminderSent: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 // Add validation to ensure rejection reasons are provided when status is rejected

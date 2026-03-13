@@ -23,6 +23,7 @@ import { clearAdminAuth } from "@repo/store/slices/adminAuthSlice";
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import { useState } from "react";
 import RegionSelector from "./RegionSelector";
+import { NotificationDropdown } from "./NotificationDropdown";
 
 export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
   const router = useRouter();
@@ -98,48 +99,7 @@ export function Header({ toggleSidebar }: { toggleSidebar: () => void }) {
         <ThemeToggle />
 
         {/* Notification Bell with Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="flex-shrink-0 rounded-full relative"
-            >
-              <Bell className="h-5 w-5" />
-              <span className="sr-only">Toggle notifications</span>
-              <span className="absolute top-1 right-1 flex h-2.5 w-2.5">
-                {/* <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span> */}
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-              </span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel>Notifications</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem>
-              <div className="flex items-start gap-3">
-                <div className="bg-green-100 text-green-600 p-2 rounded-full"><CheckCircle className="h-4 w-4" /></div>
-                <div>
-                  <p className="text-sm font-medium">New Appointment</p>
-                  <p className="text-xs text-muted-foreground">Booking with John Doe at 2:00 PM.</p>
-                </div>
-              </div>
-            </DropdownMenuItem>
-            <DropdownMenuItem>
-              <div className="flex items-start gap-3">
-                <div className="bg-red-100 text-red-600 p-2 rounded-full"><XCircle className="h-4 w-4" /></div>
-                <div>
-                  <p className="text-sm font-medium">Cancellation</p>
-                  <p className="text-xs text-muted-foreground">Appointment with Jane Smith cancelled.</p>
-                </div>
-              </div>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="justify-center text-sm text-muted-foreground hover:text-primary">
-              View all notifications
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <NotificationDropdown apiEndpoint="/api/admin/notifications" />
 
         {/* User Profile with Dropdown */}
         <DropdownMenu>

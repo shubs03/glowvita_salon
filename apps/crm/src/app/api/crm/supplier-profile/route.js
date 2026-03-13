@@ -114,7 +114,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
     const allowedFields = [
       'firstName', 'lastName', 'shopName', 'description', 'email', 'mobile',
       'country', 'state', 'city', 'pincode', 'address', 'supplierType',
-      'businessRegistrationNo', 'profileImage', 'gallery', 'documents', 'bankDetails', 'licenseFiles', 'referralCode', 'taxes'
+      'businessRegistrationNo', 'profileImage', 'gallery', 'documents', 'bankDetails', 'licenseFiles', 'referralCode', 'taxes', 'notificationPreferences'
     ];
 
     // Keep existing subscription data unless specifically provided in the update

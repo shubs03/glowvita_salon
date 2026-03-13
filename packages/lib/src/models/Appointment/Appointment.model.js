@@ -442,6 +442,11 @@ const appointmentSchema = new mongoose.Schema(
       required: true,
       default: "offline",
     },
+    // Notification tracking
+    reminderSent: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

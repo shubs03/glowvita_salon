@@ -12,12 +12,11 @@ import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
 import { Plus, Eye, Trash2, Send, MessageSquare, Mail, Users, Search, X, Edit2 } from 'lucide-react';
 import { Checkbox } from '@repo/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 import { Badge } from '@repo/ui/badge';
 import { Skeleton } from '@repo/ui/skeleton';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { openNotificationModal, closeNotificationModal } from '@repo/store/slices/notificationSlice';
-import { useGetNotificationsQuery, useCreateNotificationMutation, useUpdateNotificationMutation, useDeleteNotificationMutation, useGetUsersQuery, useGetVendorsQuery, useGetRegionsQuery } from '@repo/store/api';
+import { useGetNotificationsQuery, useCreateNotificationMutation, useUpdateNotificationMutation, useDeleteNotificationMutation, useGetAdminUsersQuery, useGetVendorsQuery, useGetRegionsQuery } from '@repo/store/api';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 
 
@@ -31,7 +30,7 @@ interface Notification {
   title: string;
   content: string;
   types: string[];
-  targetType: string;
+  targetType: string | string[];
   specificIds?: string[];
   status: string;
   date: string;
@@ -49,7 +48,8 @@ export default function PushNotificationsPage() {
 
   
   const { data: notifications = [], isLoading: isNotificationsLoading } = useGetNotificationsQuery(selectedRegion || undefined);
-  const { data: users = [], isLoading: isUsersLoading } = useGetUsersQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
+  const { data: usersResponse = [], isLoading: isUsersLoading } = useGetAdminUsersQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
+  const users = Array.isArray(usersResponse) ? usersResponse : (usersResponse as any)?.users || [];
   const { data: vendors = [], isLoading: isVendorsLoading } = useGetVendorsQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
   const [createNotification] = useCreateNotificationMutation();
   const [updateNotification] = useUpdateNotificationMutation();
@@ -60,7 +60,7 @@ export default function PushNotificationsPage() {
   const [title, setTitle] = useState<string>('');
   const [content, setContent] = useState<string>('');
   const [types, setTypes] = useState<string[]>([]);
-  const [targetType, setTargetType] = useState<string>('all_users');
+  const [targetType, setTargetType] = useState<string[]>(['all_users']);
   const [selectedTargets, setSelectedTargets] = useState<Target[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
 
@@ -90,13 +90,14 @@ export default function PushNotificationsPage() {
         setTitle(data?.title || '');
         setContent(data?.content || '');
         setTypes(data?.types || []);
-        setTargetType(data?.targetType || 'all_users');
+        const apiTargetType = (data as any)?.targetType;
+        setTargetType(Array.isArray(apiTargetType) ? apiTargetType : [apiTargetType || 'all_users']);
         setSelectedTargets(getSelectedTargetsFromData(data));
       } else {
         setTitle('');
         setContent('');
         setTypes([]);
-        setTargetType('all_users');
+        setTargetType(['all_users']);
         setSelectedTargets([]);
       }
       setSearchQuery('');
@@ -104,8 +105,9 @@ export default function PushNotificationsPage() {
   }, [isModalOpen, modalType, notificationData]); // Removed users, vendors from dependencies to prevent loop
 
   const getSelectedTargetsFromData = useCallback((data: Notification | null): Target[] => {
-    if (data?.specificIds && (data.targetType === 'specific_users' || data.targetType === 'specific_vendors')) {
-      const list = data.targetType === 'specific_users' ? users : vendors;
+    if (data?.specificIds && (data.targetType.includes('specific_users') || data.targetType.includes('specific_vendors'))) {
+      const isUsers = data.targetType.includes('specific_users');
+      const list = isUsers ? users : vendors;
       return data.specificIds.map(id => {
         const found = list.find((item: Target) => item.id === id);
         return found ? { id, name: found.name } : null;
@@ -115,8 +117,8 @@ export default function PushNotificationsPage() {
   }, [users, vendors]);
 
   const getTargetData = useCallback((): Target[] => {
-    if (targetType === 'specific_users') return users;
-    if (targetType === 'specific_vendors') return vendors;
+    if (targetType.includes('specific_users')) return users;
+    if (targetType.includes('specific_vendors')) return vendors;
     return [];
   }, [targetType, users, vendors]);
 
@@ -175,12 +177,16 @@ export default function PushNotificationsPage() {
 
   const getDisplayTarget = useCallback((n: Notification): string => {
     const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-    if (n.targetType.startsWith('all_')) {
-      return `All ${cap(n.targetType.split('_')[1])}`;
-    } else {
-      const plural = n.targetType.split('_')[1];
-      return `Specific ${cap(plural)} (${n.specificIds?.length || 0})`;
-    }
+    const types = Array.isArray(n.targetType) ? n.targetType : [n.targetType];
+    
+    return types.map(type => {
+      if (type.startsWith('all_')) {
+        return `All ${cap(type.split('_')[1])}`;
+      } else {
+        const plural = type.split('_')[1];
+        return `Specific ${cap(plural)} (${n.specificIds?.length || 0})`;
+      }
+    }).join(", ");
   }, []);
 
   const { smsCount, emailCount, targetCounts, mostTargeted } = useMemo(() => {
@@ -368,8 +374,8 @@ export default function PushNotificationsPage() {
                       <Button variant="ghost" size="icon" onClick={() => handleOpenModal('edit', notification)}>
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenModal('add', notification)}>
-                        <Send className="h-4 w-4" />
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenModal('add', notification)} title="Resend">
+                        <Send className="h-4 w-4 text-blue-500" />
                       </Button>
                       <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(notification._id)}>
                         <Trash2 className="h-4 w-4" />
@@ -436,19 +442,33 @@ export default function PushNotificationsPage() {
               </div>
               <div className="space-y-2">
                 <Label>Target Audience</Label>
-                <RadioGroup value={targetType} onValueChange={setTargetType} className="grid grid-cols-2 lg:grid-cols-3 gap-2" disabled={modalType === 'view'}>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="all_users" id="all_users" /><Label htmlFor="all_users">All Users</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="all_vendors" id="all_vendors" /><Label htmlFor="all_vendors">All Vendors</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="all_staff" id="all_staff" /><Label htmlFor="all_staff">All Staff</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="all_admins" id="all_admins" /><Label htmlFor="all_admins">All Admins</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="specific_users" id="specific_users" /><Label htmlFor="specific_users">Specific Users</Label></div>
-                  <div className="flex items-center space-x-2"><RadioGroupItem value="specific_vendors" id="specific_vendors" /><Label htmlFor="specific_vendors">Specific Vendors</Label></div>
-                </RadioGroup>
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    { id: 'all_users', label: 'All Users' },
+                    { id: 'all_vendors', label: 'All Vendors' },
+                    { id: 'all_staff', label: 'All Staff' },
+                    { id: 'all_admins', label: 'All Admins' },
+                    { id: 'specific_users', label: 'Specific Users' },
+                    { id: 'specific_vendors', label: 'Specific Vendors' },
+                  ].map((target) => (
+                    <div key={target.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={target.id}
+                        checked={targetType.includes(target.id)}
+                        onCheckedChange={(checked: boolean) => {
+                          setTargetType(prev => checked ? [...prev, target.id] : prev.filter(t => t !== target.id));
+                        }}
+                        disabled={modalType === 'view'}
+                      />
+                      <Label htmlFor={target.id}>{target.label}</Label>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {(targetType === 'specific_users' || targetType === 'specific_vendors') && (
+              {(targetType.includes('specific_users') || targetType.includes('specific_vendors')) && (
                 <div className="space-y-2">
-                  <Label>Select {targetType === 'specific_users' ? 'Users' : 'Vendors'}</Label>
+                  <Label>Select {targetType.includes('specific_users') ? 'Users' : 'Vendors'}</Label>
                   {modalType !== 'view' && (
                     <>
                       <div className="relative">

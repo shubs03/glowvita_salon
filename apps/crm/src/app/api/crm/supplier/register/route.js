@@ -4,6 +4,7 @@ import _db from "@repo/lib/db";
 import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
 import { ReferralModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer.model";
 import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan.model";
+import { NotificationService } from "@repo/lib";
 
 // Initialize database connection
 const initDb = async () => {
@@ -118,6 +119,18 @@ export async function POST(req) {
             }
         });
 
+        // Trigger Registration Notification
+        (async () => {
+            try {
+                await NotificationService.sendRegistrationAlert(newSupplier._id.toString(), 'supplier', {
+                    name: newSupplier.firstName,
+                    role: 'Supplier'
+                });
+            } catch (err) {
+                console.error('Registration Notification Error:', err);
+            }
+        })();
+
         // Handle referral if code provided
         if (referredByCode) {
             try {
@@ -138,6 +151,27 @@ export async function POST(req) {
                         status: 'Completed',
                         bonus: String(bonusValue),
                     });
+
+                    // Trigger Referral Notifications
+                    (async () => {
+                        try {
+                            // Notify Referee
+                            await NotificationService.sendReferralAlert(newSupplier._id.toString(), 'supplier', {
+                                referrerName: referringSupplier.shopName || referringSupplier.firstName,
+                                rewardAmount: bonusValue,
+                                status: 'completed'
+                            });
+
+                            // Notify Referrer
+                            await NotificationService.sendReferralAlert(referringSupplier._id.toString(), 'supplier', {
+                                referrerName: newSupplier.shopName || newSupplier.firstName,
+                                rewardAmount: bonusValue,
+                                status: 'completed'
+                            });
+                        } catch (err) {
+                            console.error('Referral Notification Error:', err);
+                        }
+                    })();
                 }
             } catch (err) {
                 console.error("Referral creation failed:", err);

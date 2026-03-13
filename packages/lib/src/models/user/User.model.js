@@ -104,6 +104,18 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  fcmTokens: {
+    type: [String],
+    default: [],
+    index: true,
+  },
+  notificationPreferences: {
+    pushEnabled: { type: Boolean, default: true },
+    smsEnabled: { type: Boolean, default: true },
+    appointments: { type: Boolean, default: true },
+    promotional: { type: Boolean, default: true },
+    walletUpdates: { type: Boolean, default: true },
+  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -113,6 +125,18 @@ const userSchema = new mongoose.Schema({
     default: Date.now,
   },
   isBlocked: {
+    type: Boolean,
+    default: false,
+  },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
+  lastLogin: {
+    type: Date,
+    default: Date.now,
+  },
+  inactivityReminderSent: {
     type: Boolean,
     default: false,
   },
