@@ -75,7 +75,8 @@ export async function POST(request) {
     }
 
     // Send email with reset link
-    const baseUrl = NEXT_PUBLIC_WEB_URL;
+    const url = new URL(request.url);
+    const baseUrl = `${url.protocol}//${url.host}`;
     const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${email}`;
     console.log('Reset URL:', resetUrl);
     

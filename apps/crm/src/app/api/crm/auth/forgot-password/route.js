@@ -93,7 +93,8 @@ export async function POST(request) {
     }
 
     // Send email with reset link
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL || 'http://localhost:3001';
+    const url = new URL(request.url);
+    const baseUrl = `${url.protocol}//${url.host}`;
     const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${email}`;
     console.log('Reset URL:', resetUrl);
     

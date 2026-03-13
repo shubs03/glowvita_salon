@@ -63,6 +63,8 @@ function ClientRegisterForm() {
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
   const [showRegistrationForm, setShowRegistrationForm] = useState(false);
+  const [showOtpForm, setShowOtpForm] = useState(false);
+  const [otp, setOtp] = useState('');
 
   // New state to track confirmed location
   const [confirmedLocation, setConfirmedLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -78,27 +80,87 @@ function ClientRegisterForm() {
     }
 
     try {
-      // Check if email already exists
-      const res = await fetch(`/api/auth/check-email?email=${encodeURIComponent(email)}`);
+      // Check if email already exists and send OTP
+      const res = await fetch(`/api/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
 
       if (res.ok) {
-        const data = await res.json();
-        if (data.exists) {
-          toast.error('This email is already registered. Please use a different email or log in.');
-          return;
-        } else {
-          // Email doesn't exist, proceed to registration form
-          setShowRegistrationForm(true);
-        }
+        setShowOtpForm(true);
+        toast.success('OTP sent to your email');
       } else {
-        // If the check fails, we'll still proceed to avoid blocking legitimate users
-        console.warn('Email check failed, proceeding with registration');
-        setShowRegistrationForm(true);
+        const data = await res.json();
+        toast.error(data.error || 'Failed to send OTP. Please try again.');
       }
     } catch (error) {
-      console.error('Error checking email:', error);
-      // If there's a network error, we'll still proceed to avoid blocking legitimate users
-      setShowRegistrationForm(true);
+      console.error('Error sending OTP:', error);
+      toast.error('Network error. Please check your connection.');
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!otp || otp.length !== 6) {
+      toast.error('Please enter a valid 6-digit OTP');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp })
+      });
+
+      if (res.ok) {
+        setShowOtpForm(false);
+        setShowRegistrationForm(true);
+        toast.success('Email verified successfully');
+      } else {
+        const data = await res.json();
+        toast.error(data.error || 'Invalid OTP');
+      }
+    } catch (error) {
+      console.error('Error verifying OTP:', error);
+      toast.error('Network error. Please try again.');
+    }
+  };
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (value.length > 1) {
+      value = value.slice(0, 1);
+    }
+    const newOtp = otp.split('');
+    // Fill empty slots if user jumps ahead
+    for (let i = 0; i < 6; i++) {
+      if (!newOtp[i]) newOtp[i] = '';
+    }
+    newOtp[index] = value;
+    const finalOtp = newOtp.join('');
+    setOtp(finalOtp);
+    
+    // Move to next input
+    if (value && index < 5) {
+      const nextInput = document.getElementById(`otp-${index + 1}`);
+      nextInput?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      const prevInput = document.getElementById(`otp-${index - 1}`);
+      prevInput?.focus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      // Only submit if form is theoretically valid
+      if (otp.length === 6) {
+        // Find form and request submit
+        const form = document.getElementById('otp-form') as HTMLFormElement;
+        if (form) form.requestSubmit();
+      }
     }
   };
 
@@ -460,7 +522,7 @@ function ClientRegisterForm() {
     <div className="h-screen w-screen overflow-hidden flex flex-col md:flex-row">
       {/* Back Button */}
       <button
-        onClick={() => showRegistrationForm ? setShowRegistrationForm(false) : router.back()}
+        onClick={() => showRegistrationForm ? setShowRegistrationForm(false) : showOtpForm ? setShowOtpForm(false) : router.back()}
         className="absolute top-4 left-4 z-20 bg-white/80 hover:bg-white text-gray-800 rounded-full p-2 shadow-md transition-all duration-200"
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -472,7 +534,7 @@ function ClientRegisterForm() {
       <div className="flex-1 md:w-1/2 flex items-center justify-center p-4 sm:p-6 relative z-10 bg-gradient-to-br from-gray-50 to-gray-100">
         <div className="w-full max-w-md self-center py-6">
           {/* Heading - Only show when not on registration form */}
-          {!showRegistrationForm && (
+          {!showRegistrationForm && !showOtpForm && (
             <div className="text-center mb-6">
               <div className="flex justify-center mb-4">
                 <img
@@ -486,7 +548,7 @@ function ClientRegisterForm() {
             </div>
           )}
 
-          {!showRegistrationForm ? (
+          {!showRegistrationForm && !showOtpForm ? (
             <div className="space-y-5">
               <form onSubmit={handleContinue} className="space-y-4">
                 {/* Email Field */}
@@ -562,6 +624,91 @@ function ClientRegisterForm() {
                   >
                     Sign in to manage your appointments.
                   </Link>
+                </div>
+              </form>
+            </div>
+          ) : showOtpForm ? (
+            <div className="space-y-5">
+              <form id="otp-form" onSubmit={handleVerifyOtp} className="space-y-6">
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 mb-4 shadow-inner">
+                    <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-2xl font-extrabold text-gray-900 md:text-xl">Check your email</h2>
+                  <p className="text-gray-600 mt-2">We've sent a 6-digit confirmation code to</p>
+                  <p className="font-bold text-gray-900 mt-1">{email}</p>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="block text-sm font-medium text-gray-700 text-center mb-2">
+                    Enter Confirmation Code <span className="text-destructive">*</span>
+                  </label>
+                  <div className="flex justify-center gap-2 sm:gap-3">
+                    {[0, 1, 2, 3, 4, 5].map((index) => (
+                      <input
+                        key={index}
+                        id={`otp-${index}`}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        required={index === 0} // Only first is naturally required to let user paste
+                        value={otp[index] || ''}
+                        onChange={(e) => handleOtpChange(index, e.target.value.replace(/\D/g, ''))}
+                        onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                        onPaste={(e) => {
+                          e.preventDefault();
+                          const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+                          if (pastedData) {
+                            setOtp(pastedData);
+                            if (pastedData.length === 6) {
+                              const lastInput = document.getElementById(`otp-5`);
+                              lastInput?.focus();
+                            } else {
+                              const targetInput = document.getElementById(`otp-${pastedData.length}`);
+                              targetInput?.focus();
+                            }
+                          }
+                        }}
+                        className="w-11 h-12 sm:w-12 sm:h-14 text-center text-xl font-bold bg-white text-gray-900 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={otp.length !== 6}
+                  className="w-full h-12 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 mt-6 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Verify Email
+                </Button>
+
+                <div className="text-center mt-8 space-y-4">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Didn't receive the code?</p>
+                    <button
+                      type="button"
+                      onClick={handleContinue}
+                      className="text-sm font-semibold text-blue-600 hover:text-blue-700 transition-colors"
+                    >
+                      Click to resend
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowOtpForm(false)}
+                      className="flex items-center text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                      </svg>
+                      Back to email entry
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
