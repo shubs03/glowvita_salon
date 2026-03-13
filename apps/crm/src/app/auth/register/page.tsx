@@ -83,8 +83,9 @@ const RoleSelectionScreen = ({ onSelectRole }: RoleSelectionScreenProps) => (
       <div className="inline-block mb-3 sm:mb-5">
         <div className="flex justify-center mb-6">
           <img
-            src="/favicon.jpeg"
-            className="w-20 h-20 object-contain rounded-full border-4 border-white shadow-xl animate-fade-in"
+            src="/images/GlowVita%20Salon%20PNG.png"
+            alt="GlowVita Salon"
+            className="h-16 w-auto object-contain drop-shadow-lg animate-fade-in"
           />
         </div>
         <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4 tracking-tight bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800 bg-clip-text text-transparent animate-fade-in">

@@ -108,19 +108,25 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
         )}>
           <Link href="/dashboard" className={cn(
             "group flex items-center font-bold text-base font-headline text-foreground hover:text-primary transition-all duration-300 relative z-10",
-            isOpen ? "gap-3" : "justify-center"
+            isOpen ? "flex-1 justify-center" : "justify-center"
           )}>
-            <img
-              src="/favicon.jpeg"
-              className={cn(
-                "object-contain rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:scale-110 group-hover:rotate-3 flex-shrink-0 border border-primary/20",
-                "w-[60px] h-[60px]"
-              )}
-            />
-            {isOpen && (
-              <span className="hidden">
-                GlowVita
-              </span>
+            {isOpen ? (
+              <img
+                src="/images/GlowVita%20Salon%20PNG.png"
+                alt="GlowVita Salon"
+                className={cn(
+                  "object-contain transition-all duration-300 hover:scale-105 group-hover:drop-shadow-sm flex-shrink-0 animate-fade-in",
+                  "h-[48px] w-auto"
+                )}
+              />
+            ) : (
+              <img
+                src="/favicon.jpeg"
+                className={cn(
+                  "object-contain rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:scale-110 group-hover:rotate-3 flex-shrink-0 border border-primary/20",
+                  "w-[45px] h-[45px]"
+                )}
+              />
             )}
           </Link>
           {/* Toggle Button - Always Visible */}

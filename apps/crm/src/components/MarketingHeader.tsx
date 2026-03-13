@@ -494,11 +494,10 @@ export function MarketingHeader({
             className="flex items-center gap-2 font-bold text-xl sm:text-2xl font-headline text-primary bg-clip-text hover:opacity-80 transition-opacity"
           >
             <img
-              src="/favicon.jpeg"
-              className="w-[60px] h-[60px] object-contain rounded-full border-2 border-primary/20"
+              src="/images/GlowVita%20Salon%20PNG.png"
+              alt="GlowVita Salon"
+              className="h-[60px] w-auto object-contain"
             />
-            <span className="hidden sm:inline"></span>
-            <span className="hidden sm:hidden">GlowVita</span>
           </Link>
 
           {/* Desktop & Tablet Nav */}

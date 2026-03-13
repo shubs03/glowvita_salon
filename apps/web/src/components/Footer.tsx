@@ -11,11 +11,10 @@ export function Footer() {
           <div className="space-y-4 md:col-span-2 lg:col-span-1">
             <div className="flex items-center gap-2 font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
               <img
-                src="/favicon.jpeg"
-
-                className="w-8 h-8 object-contain rounded-full border border-primary/20"
+                src="/images/GlowVita%20Salon%20PNG.png"
+                alt="GlowVita Salon"
+                className="h-10 sm:h-12 w-auto object-contain"
               />
-              GlowVita Salon
             </div>
             <p className="text-muted-foreground text-sm leading-relaxed">
               At GlowVita Salon, we believe in enhancing your natural beauty with a touch of elegance and a lot of care.
