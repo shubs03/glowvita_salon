@@ -110,12 +110,22 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
     )}>
       <div className="flex flex-col flex-grow min-h-0">
         <div className={cn("flex-shrink-0 p-4 h-16 border-b flex items-center gap-3", isOpen ? "justify-between" : "justify-center")}>
-          <Link href="/dashboard" className="flex items-center gap-3 font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-            <img
-              src="/favicon.jpeg"
-              className="w-[60px] h-[60px] object-contain rounded-lg border-2 border-primary/20"
-            />
-            <span className={cn(!isOpen && "hidden", "hidden")}>GlowVita</span>
+          <Link href="/dashboard" className={cn(
+            "flex items-center font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent",
+            isOpen ? "flex-1 justify-center" : "justify-center"
+          )}>
+            {isOpen ? (
+              <img
+                src="/images/GlowVita%20Salon%20PNG.png"
+                alt="GlowVita Salon"
+                className="h-[48px] w-auto object-contain transition-all duration-300 hover:scale-105 drop-shadow-sm"
+              />
+            ) : (
+              <img
+                src="/favicon.jpeg"
+                className="w-[45px] h-[45px] object-contain rounded-lg border-2 border-primary/20 transition-all duration-300"
+              />
+            )}
           </Link>
 
           <Button

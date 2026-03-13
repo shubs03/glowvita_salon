@@ -170,6 +170,19 @@ export const GET = authMiddlewareAdmin(
     }
 
     // Super Admin logic
+    const { getRegionIdFromRequest } = await import("@repo/lib");
+    const selectedRegionId = getRegionIdFromRequest(req);
+
+    if (selectedRegionId) {
+      // Super Admin filtering by region: show exact regional matches + global offers
+      query = {
+        $or: [
+          { regionId: selectedRegionId },
+          { regionId: null }
+        ]
+      };
+    }
+
     const offers = await OfferModel.find(query).lean();
     const sanitizedOffers = offers.map(offer => {
       const currentDate = new Date();
@@ -185,6 +198,7 @@ export const GET = authMiddlewareAdmin(
       return {
         ...offer,
         status: newStatus,
+        isActive: offer.isActive !== false,
         applicableSpecialties: Array.isArray(offer.applicableSpecialties) ? offer.applicableSpecialties : [],
         applicableCategories: Array.isArray(offer.applicableCategories) ? offer.applicableCategories : [],
       };

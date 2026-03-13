@@ -63,6 +63,14 @@ const userSchema = new mongoose.Schema({
     default: '',
   },
   savedAddresses: [{
+    fullName: {
+      type: String,
+      trim: true,
+    },
+    mobileNo: {
+      type: String,
+      trim: true,
+    },
     address: String,
     city: String,
     state: String,

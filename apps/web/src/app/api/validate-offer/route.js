@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import AdminOfferModel from '@repo/lib/models/admin/AdminOffers';
-import CRMOfferModel from '@repo/lib/models/Vendor/CRMOffer.model';
+import AdminOfferModel from '@repo/lib/models/admin/AdminOffers.model.js';
+import CRMOfferModel from '@repo/lib/models/Vendor/CRMOffer.model.js';
+import VendorModel from '@repo/lib/models/Vendor/Vendor.model.js';
 import connectDB from '@repo/lib/db';
 
 export async function POST(request) {
@@ -37,20 +38,47 @@ export async function POST(request) {
       const isDateValid = (!offer.startDate || new Date(offer.startDate) <= currentDate) &&
         (!offer.expires || new Date(offer.expires) >= currentDate);
 
-      if (isDateValid) {
+      // Check if manually disabled
+      const isNotManuallyDisabled = offer.isActive !== false;
+
+      // Check region validity if it's an admin offer
+      let isRegionValid = true;
+      if (vendorId && (offer.regionId || (offer.disabledRegions && offer.disabledRegions.length > 0))) {
+        try {
+          const vendor = await VendorModel.findById(vendorId).select('regionId').lean();
+          const vendorRegionId = vendor?.regionId?.toString();
+
+          if (offer.regionId && offer.regionId.toString() !== vendorRegionId) {
+            isRegionValid = false;
+          }
+
+          if (isRegionValid && offer.disabledRegions && offer.disabledRegions.length > 0 && vendorRegionId) {
+            const disabledList = offer.disabledRegions.map((r) => r.toString());
+            if (disabledList.includes(vendorRegionId)) {
+              isRegionValid = false;
+            }
+          }
+        } catch (e) {
+          console.warn('[validate-offer] Region check failed:', e);
+        }
+      }
+
+      if (isDateValid && isNotManuallyDisabled && isRegionValid) {
         return NextResponse.json({
           success: true,
           data: {
             _id: offer._id,
             code: offer.code,
-            type: offer.type,
+            type: (offer.type === 'fixed-amount' ? 'fixed' : offer.type),
             value: offer.value,
             status: offer.status,
             startDate: offer.startDate,
             expires: offer.expires,
             applicableSpecialties: offer.applicableSpecialties || [],
             applicableCategories: offer.applicableCategories || [],
-            isVendorOffer: false
+            isVendorOffer: false,
+            isAdminGlobal: !offer.regionId,
+            businessType: 'admin'
           }
         });
       }

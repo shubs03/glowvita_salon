@@ -31,6 +31,10 @@ const productMasterSchema = new mongoose.Schema({
     type: String, // URL to the uploaded image
     trim: true,
   },
+  productImages: {
+    type: [String], // Array of URLs to uploaded images
+    default: [],
+  },
   isActive: {
     type: Boolean,
     default: true,

@@ -16,6 +16,15 @@ import { Switch } from '@repo/ui/switch';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
 import { closeModal, openModal } from '@repo/store/slices/modalSlice';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@repo/ui/dropdown-menu";
+import { ChevronDown, Filter } from "lucide-react";
 import { useForm } from 'react-hook-form';
 import {
   useGetAdminOffersQuery,
@@ -75,6 +84,9 @@ export default function OffersCouponsPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [useCustomCode, setUseCustomCode] = useState(false);
+  const [serviceFilters, setServiceFilters] = useState<string[]>([]);
+  const [serviceSearchTerm, setServiceSearchTerm] = useState('');
+  const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { token, admin } = useAppSelector((state: any) => state.adminAuth);
@@ -178,7 +190,7 @@ export default function OffersCouponsPage() {
   const handleSpecialtyChange = (specialty: string, checked: boolean) => {
     const updated = checked
       ? [...selectedSpecialties, specialty]
-      : selectedSpecialties.filter(s => s !== specialty);
+      : selectedSpecialties.filter((s: string) => s !== specialty);
     setSelectedSpecialties(updated);
     setValue('applicableSpecialties', updated);
   };
@@ -187,7 +199,7 @@ export default function OffersCouponsPage() {
   const handleCategoryChange = (category: string, checked: boolean) => {
     const updated = checked
       ? [...selectedCategories, category]
-      : selectedCategories.filter(c => c !== category);
+      : selectedCategories.filter((c: string) => c !== category);
     setSelectedCategories(updated);
     setValue('applicableCategories', updated);
 
@@ -210,7 +222,7 @@ export default function OffersCouponsPage() {
         });
       } else {
         // When category is unchecked, remove all its services
-        updatedSpecialties = updatedSpecialties.filter(sName => !servicesInCategory.includes(sName));
+        updatedSpecialties = updatedSpecialties.filter((sName: string) => !servicesInCategory.includes(sName));
       }
 
       setSelectedSpecialties(updatedSpecialties);
@@ -252,9 +264,27 @@ export default function OffersCouponsPage() {
 
   const filteredCoupons = useMemo(() => {
     if (!Array.isArray(couponsData)) return [];
-    if (statusFilter === 'all') return couponsData;
-    return couponsData.filter((coupon) => coupon.status === statusFilter);
-  }, [couponsData, statusFilter]);
+    
+    let filtered = couponsData;
+
+    // Status Filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((coupon: Coupon) => coupon.status === statusFilter);
+    }
+
+    // Service Filter
+    if (serviceFilters.length > 0) {
+      filtered = filtered.filter((coupon) => {
+        // If coupon applies to all services (specialties list is empty or undefined)
+        const isGlobalOffer = !coupon.applicableSpecialties || coupon.applicableSpecialties.length === 0;
+        
+        // Show if it's global OR if it matches any of the selected service filters
+        return isGlobalOffer || coupon.applicableSpecialties.some((s: string) => serviceFilters.includes(s));
+      });
+    }
+
+    return filtered;
+  }, [couponsData, statusFilter, serviceFilters]);
 
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
@@ -486,6 +516,48 @@ export default function OffersCouponsPage() {
                   <SelectItem value="Expired">Expired</SelectItem>
                 </SelectContent>
               </Select>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-[150px] lg:w-[180px] justify-between">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <Filter className="h-4 w-4 shrink-0" />
+                      <span className="truncate">
+                        {serviceFilters.length === 0 ? "All Services" : `${serviceFilters.length} Services`}
+                      </span>
+                    </div>
+                    <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 max-h-80 overflow-y-auto">
+                  <DropdownMenuLabel>Filter by Service</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={serviceFilters.length === 0}
+                    onCheckedChange={() => setServiceFilters([])}
+                  >
+                    All Services
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuSeparator />
+                  {specialtyOptions.map((service: string) => (
+                    <DropdownMenuCheckboxItem
+                      key={service}
+                      checked={serviceFilters.includes(service)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setServiceFilters([...serviceFilters, service]);
+                        } else {
+                          setServiceFilters(serviceFilters.filter((s: string) => s !== service));
+                        }
+                        setCurrentPage(1);
+                      }}
+                    >
+                      {service}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <Button onClick={() => handleOpenModal('addCoupon')} disabled={isCreating} className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" />
                 Create New Coupon
@@ -899,22 +971,56 @@ export default function OffersCouponsPage() {
 
               <div className="space-y-2">
                 <Label>3. Individual Services (Select specific services if needed)</Label>
-                <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-40 overflow-y-auto">
-                  {specialtyOptions.map((specialty: any) => (
-                    <div key={specialty} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`specialty-${specialty}`}
-                        checked={selectedSpecialties.includes(specialty)}
-                        onCheckedChange={(checked) => handleSpecialtyChange(specialty, !!checked)}
+                <DropdownMenu open={isServiceDropdownOpen} onOpenChange={setIsServiceDropdownOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      <span className="truncate">
+                        {selectedSpecialties.length === 0 
+                          ? "Apply to all services" 
+                          : `Selected ${selectedSpecialties.length} services`}
+                      </span>
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-[calc(100vw-3rem)] sm:w-[500px] max-h-60 overflow-y-auto">
+                    <div className="p-2 sticky top-0 bg-popover z-10">
+                      <Input
+                        placeholder="Search services..."
+                        value={serviceSearchTerm}
+                        onChange={(e) => setServiceSearchTerm(e.target.value)}
+                        className="h-8"
+                        onClick={(e) => e.stopPropagation()}
                       />
-                      <Label htmlFor={`specialty-${specialty}`} className="text-sm">
-                        {specialty}
-                      </Label>
                     </div>
-                  ))}
-                </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                      checked={selectedSpecialties.length === 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedSpecialties([]);
+                          setValue('applicableSpecialties', []);
+                        }
+                      }}
+                    >
+                      Apply to All Services
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuSeparator />
+                    {specialtyOptions
+                      .filter((s: string) => s.toLowerCase().includes(serviceSearchTerm.toLowerCase()))
+                      .map((specialty: string) => (
+                        <DropdownMenuCheckboxItem
+                          key={specialty}
+                          checked={selectedSpecialties.includes(specialty)}
+                          onCheckedChange={(checked) => handleSpecialtyChange(specialty, !!checked)}
+                        >
+                          {specialty}
+                        </DropdownMenuCheckboxItem>
+                      ))
+                    }
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <p className="text-sm text-muted-foreground">
-                  {selectedSpecialties.length === 0 ? 'Will apply to all services' : `Selected services: ${selectedSpecialties.length}`}
+                  {selectedSpecialties.length === 0 ? 'Will apply to all services' : `Active filters: ${selectedSpecialties.length}`}
                 </p>
               </div>
 
