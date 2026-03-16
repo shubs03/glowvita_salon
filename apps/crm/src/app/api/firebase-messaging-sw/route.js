@@ -34,6 +34,7 @@ messaging.onBackgroundMessage((payload) => {
     icon: '/logo.png',
     badge: '/badge.png',
     data: payload.data || {},
+    silent: false,
   };
   self.registration.showNotification(notificationTitle, notificationOptions);
 });

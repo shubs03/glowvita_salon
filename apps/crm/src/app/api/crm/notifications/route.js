@@ -103,7 +103,8 @@ export const POST = withSubscriptionCheck(async (req) => {
         await NotificationService.sendMassNotification(recipientIds, role, {
           title: title,
           body: content,
-          type: 'broadcast'
+          type: 'broadcast',
+          channels: channels || ['Push']
         });
       }
     }
@@ -155,6 +156,7 @@ export const GET = withSubscriptionCheck(async (req) => {
   const total = allNotifications.length;
   const pushSent = allNotifications.filter(n => n.channels.includes('Push')).length;
   const smsSent = allNotifications.filter(n => n.channels.includes('SMS')).length;
+  const emailSent = allNotifications.filter(n => n.channels.includes('Email')).length;
 
   const targetCounts = allNotifications.reduce((acc, n) => {
     const types = Array.isArray(n.targetType) ? n.targetType : [n.targetType];
@@ -164,7 +166,7 @@ export const GET = withSubscriptionCheck(async (req) => {
     return acc;
   }, {});
 
-  const mostTargetedType = total > 0 ? Object.keys(targetCounts).reduce((a, b) => targetCounts[a] > targetCounts[b] ? a : b) : 'None';
+  const mostTargetedType = total > 0 ? Object.keys(targetCounts).reduce((a, b) => targetCounts[a] > targetCounts[b] ? a : b, '') : 'None';
   const mostTargeted = targetDisplayMap[mostTargetedType] || mostTargetedType;
 
   const response = {
@@ -177,6 +179,7 @@ export const GET = withSubscriptionCheck(async (req) => {
       total,
       pushSent,
       smsSent,
+      emailSent,
       mostTargeted,
     },
   };

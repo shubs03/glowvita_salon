@@ -8,6 +8,8 @@ import AdminModel from '../models/admin/AdminUser.model.js';
 import StaffModel from '../models/Vendor/Staff.model.js';
 import NotificationModel from '../models/Notification.model.js';
 import { FIREBASE_SERVICE_ACCOUNT } from '@repo/config/config';
+import { sendEmail } from '../emailService.js';
+import SmsService from './SmsService.js';
 
 /**
  * NotificationService
@@ -91,95 +93,119 @@ class NotificationService {
                 return;
             }
 
-            const user = await Model.findById(userId).select('fcmTokens notificationPreferences');
+            const user = await Model.findById(userId).select('fcmTokens notificationPreferences email emailAddress mobileNo phone');
 
             if (!user) {
-                console.warn(`[NotificationService] Recipient not found: ID=${userId}, Role=${userType}. Skipping push.`);
+                console.warn(`[NotificationService] Recipient not found: ID=${userId}, Role=${userType}. Skipping notification.`);
                 return;
             }
 
-            if (!user.fcmTokens || user.fcmTokens.length === 0) {
-                console.log(`[NotificationService] No FCM tokens for ${userType} ${userId}. (Notification saved to DB history)`);
-                return;
-            }
+            const requestedChannels = payload.channels || ['Push'];
 
-            // Check preferences
-            if (user.notificationPreferences && !user.notificationPreferences.pushEnabled) {
-                console.log(`Push notifications disabled for user: ${userId}`);
-                return;
-            }
-
-            const messagePayload = {
-                notification: {
-                    title: title,
-                    body: body,
-                    ...(payload.image && { imageUrl: payload.image })
-                },
-                data: payload.data ? Object.keys(payload.data).reduce((acc, key) => {
-                    acc[key] = String(payload.data[key]);
-                    return acc;
-                }, {
-                    type: String(type),
-                    click_action: 'FLUTTER_NOTIFICATION_CLICK'
-                }) : {
-                    type: String(type),
-                    click_action: 'FLUTTER_NOTIFICATION_CLICK'
-                },
-                tokens: user.fcmTokens,
-                android: {
-                    priority: priority,
-                    notification: {
-                        sound: 'default',
-                        channelId: 'glowvita_alerts'
-                    }
-                },
-                apns: {
-                    payload: {
-                        aps: {
+            // 1. Handle Push Notification
+            if (requestedChannels.includes('Push') || requestedChannels.includes('Notification')) {
+                if (!user.fcmTokens || user.fcmTokens.length === 0) {
+                    console.log(`[NotificationService] No FCM tokens for ${userType} ${userId}.`);
+                } else if (user.notificationPreferences && !user.notificationPreferences.pushEnabled) {
+                    console.log(`Push notifications disabled for user: ${userId}`);
+                } else {
+                    const messagePayload = {
+                        notification: { 
+                            title, 
+                            body, 
                             sound: 'default',
-                            'content-available': 1
-                        }
-                    }
-                },
-                webpush: {
-                    headers: {
-                        Urgency: priority === 'high' ? 'high' : 'normal'
-                    },
-                    notification: {
-                        icon: '/logo.png',
-                        badge: '/badge.png'
-                    }
-                }
-            };
-
-            // Direct dispatch (don't use setImmediate in serverless environments to ensure delivery)
-            try {
-                console.log(`Attempting to send FCM to ${userType} ${userId} with ${user.fcmTokens.length} tokens`);
-                const response = await admin.messaging().sendEachForMulticast(messagePayload);
-                console.log(`Successfully sent ${response.successCount} messages to ${userType} ${userId}. Failures: ${response.failureCount}`);
-                
-                // Cleanup invalid tokens if any
-                if (response.failureCount > 0) {
-                    const failedTokens = [];
-                    response.responses.forEach((resp, idx) => {
-                        if (!resp.success) {
-                            const errorCode = resp.error?.code;
-                            if (errorCode === 'messaging/invalid-registration-token' || 
-                                errorCode === 'messaging/registration-token-not-registered') {
-                                failedTokens.push(user.fcmTokens[idx]);
+                            ...(payload.image && { imageUrl: payload.image }) 
+                        },
+                        android: {
+                            priority: 'high',
+                            notification: {
+                                sound: 'default',
+                                channelId: 'glowvita_alerts',
+                                icon: 'notification_icon',
+                                color: '#FF0000'
+                            }
+                        },
+                        apns: {
+                            payload: {
+                                aps: {
+                                    sound: 'default',
+                                    badge: 1
+                                }
+                            }
+                        },
+                        webpush: {
+                            headers: {
+                                Urgency: 'high'
+                            },
+                            notification: {
+                                icon: '/logo.png',
+                                badge: '/badge.png',
+                                sound: 'default',
+                                vibrate: [300, 100, 400],
+                                renormalize: true,
+                                requireInteraction: true,
+                                actions: [
+                                    {
+                                        action: 'open',
+                                        title: 'View Details'
+                                    }
+                                ]
+                            }
+                        },
+                        data: { 
+                            type: String(type), 
+                            click_action: 'FLUTTER_NOTIFICATION_CLICK',
+                            ...(payload.data ? Object.keys(payload.data).reduce((acc, k) => ({ ...acc, [k]: String(payload.data[k]) }), {}) : {})
+                        },
+                        tokens: user.fcmTokens,
+                    };
+                    try {
+                        const response = await admin.messaging().sendEachForMulticast(messagePayload);
+                        console.log(`FCM Result: ${response.successCount} success, ${response.failureCount} failure`);
+                        if (response.failureCount > 0) {
+                            const failedTokens = response.responses
+                                .map((resp, idx) => (!resp.success && (resp.error?.code === 'messaging/invalid-registration-token' || resp.error?.code === 'messaging/registration-token-not-registered') ? user.fcmTokens[idx] : null))
+                                .filter(Boolean);
+                            if (failedTokens.length > 0) {
+                                await Model.findByIdAndUpdate(userId, { $pull: { fcmTokens: { $in: failedTokens } } });
                             }
                         }
-                    });
-                    
-                    if (failedTokens.length > 0) {
-                        console.log(`Cleaning up ${failedTokens.length} invalid tokens for ${userType} ${userId}`);
-                        await Model.findByIdAndUpdate(userId, {
-                            $pull: { fcmTokens: { $in: failedTokens } }
-                        });
-                    }
+                    } catch (err) { console.error('FCM Send Error:', err); }
                 }
-            } catch (sendError) {
-                console.error('FCM Send Error:', sendError);
+            }
+
+            // 2. Handle Email
+            if (requestedChannels.includes('Email')) {
+                const recipientEmail = user.emailAddress || user.email;
+                if (recipientEmail) {
+                    try {
+                        await sendEmail({
+                            to: recipientEmail,
+                            subject: title,
+                            text: body,
+                            html: `<div style="font-family: Arial, sans-serif; padding: 20px;">
+                                    <h2 style="color: #333;">${title}</h2>
+                                    <p style="color: #555; line-height: 1.5;">${body}</p>
+                                   </div>`
+                        });
+                        console.log(`Email sent to ${recipientEmail}`);
+                    } catch (err) { console.error('Email Send Error:', err); }
+                } else {
+                    console.warn(`No email found for ${userType} ${userId}`);
+                }
+            }
+
+            // 3. Handle SMS
+            if (requestedChannels.includes('SMS')) {
+                const recipientPhone = user.mobileNo || user.phone;
+                if (recipientPhone) {
+                    try {
+                        await SmsService.sendSms(recipientPhone, `${title}: ${body}`);
+                        console.log(`SMS sent to ${recipientPhone}`);
+                    } catch (err) { console.error('SMS Send Error:', err); }
+                } else {
+                    console.warn(`No phone number found for ${userType} ${userId}`);
+                }
             }
 
         } catch (error) {
@@ -420,24 +446,32 @@ class NotificationService {
      * Send mass notification to selected people (Admin/CRM feature)
      */
     async sendMassNotification(userIds, recipientRole, payload) {
-        console.log(`Mass Notification: Sending to ${userIds.length} ${recipientRole}s`);
+        console.log(`Mass Notification: Sending to ${userIds.length} ${recipientRole}s via [${(payload.channels || ['Push']).join(', ')}]`);
         
         // Ensure initialized
         if (!admin.apps.length) this.initialize();
 
         // Limit concurrent sends to avoid overwhelming the server or hitting limits
-        const batchSize = 50;
+        const batchSize = 10;
         const results = [];
         
         for (let i = 0; i < userIds.length; i += batchSize) {
             const batch = userIds.slice(i, i + batchSize);
+            console.log(`[NotificationService] Sending batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(userIds.length/batchSize)}`);
+            
             const batchPromises = batch.map(userId => 
                 this.sendToUser(userId, recipientRole, payload)
             );
             const batchResults = await Promise.allSettled(batchPromises);
             results.push(...batchResults);
+
+            // Add a small delay between batches to respect SMTP rate limits
+            if (i + batchSize < userIds.length) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
         }
         
+        console.log(`[NotificationService] Mass send completed. Successes: ${results.filter(r => r.status === 'fulfilled').length}, Failures: ${results.filter(r => r.status === 'rejected').length}`);
         return results;
     }
 

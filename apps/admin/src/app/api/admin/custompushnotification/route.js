@@ -1,6 +1,6 @@
 // app/api/notifications/route.js
 import _db from "@repo/lib/db";
-import NotificationModel from "@repo/lib/models/admin/CustomPushNotificationAdmin";
+import NotificationModel from "@repo/lib/models/admin/CustomPushNotificationAdmin.model";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import { NotificationService } from "@repo/lib";
 
@@ -62,7 +62,7 @@ export const POST = authMiddlewareAdmin(
         const UserModel = (await import("@repo/lib/models/user/User.model")).default;
         const VendorModel = (await import("@repo/lib/models/Vendor/Vendor.model")).default;
         const StaffModel = (await import("@repo/lib/models/Vendor/Staff.model")).default;
-        const AdminModel = (await import("@repo/lib/models/admin/AdminUser")).default;
+        const AdminModel = (await import("@repo/lib/models/admin/AdminUser.model")).default;
 
         for (const type of targetTypesArray) {
           if (type === 'all_users') {
@@ -98,7 +98,8 @@ export const POST = authMiddlewareAdmin(
             await NotificationService.sendMassNotification(recipientIds, role, {
               title: newNotification.title,
               body: newNotification.content,
-              type: 'broadcast'
+              type: 'broadcast',
+              channels: newNotification.types || ['Push']
             });
           }
         }

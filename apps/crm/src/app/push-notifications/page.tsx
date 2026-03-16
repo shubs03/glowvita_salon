@@ -339,6 +339,15 @@ export default function PushNotificationsPage() {
                     />
                     <Label htmlFor="sms">SMS</Label>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="email"
+                      checked={channels.includes("Email")}
+                      onCheckedChange={(checked: boolean) => handleChannelChange("Email", checked)}
+                      disabled={modalType === "view"}
+                    />
+                    <Label htmlFor="email">Email</Label>
+                  </div>
                 </div>
               </div>
               <div className="space-y-2">

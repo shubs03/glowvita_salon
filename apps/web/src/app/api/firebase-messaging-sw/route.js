@@ -35,6 +35,7 @@ messaging.onBackgroundMessage((payload) => {
     icon: '/logo.png',
     badge: '/badge.png',
     data: payload.data || {},
+    silent: false, // Ensure sound plays if the OS allows it
   };
   self.registration.showNotification(notificationTitle, notificationOptions);
 });

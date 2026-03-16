@@ -157,7 +157,7 @@ export default function RootLayout({
     const setupCrmNotifications = async () => {
       try {
         await NotificationManager.requestPermission();
-        NotificationManager.onMessageListener().then((payload) => {
+        NotificationManager.onMessageListener((payload) => {
           if (payload?.notification) {
             toast(payload.notification.title, {
               description: payload.notification.body,
