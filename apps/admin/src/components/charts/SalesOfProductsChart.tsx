@@ -3,16 +3,16 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 const COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "hsl(var(--chart-6))",
-  "hsl(var(--chart-7))",
-  "hsl(var(--chart-8))",
-  "hsl(var(--chart-9))",
-  "hsl(var(--chart-10))",
+  "#3b82f6", // blue-500
+  "#10b981", // emerald-500
+  "#f59e0b", // amber-500
+  "#ef4444", // red-500
+  "#8b5cf6", // violet-500
+  "#ec4899", // pink-500
+  "#06b6d4", // cyan-500
+  "#84cc16", // lime-500
+  "#f97316", // orange-500
+  "#14b8a6", // teal-500
 ];
 
 interface ProductData {
@@ -99,16 +99,17 @@ export function SalesOfProductsChart({ productsData, filterType, filterValue }: 
 
   return (
     <ResponsiveContainer width="100%" height={350} className="min-w-max">
-      <PieChart>
+      <PieChart margin={{ top: 20, right: 30, left: 30, bottom: 20 }}>
         <Pie
           data={chartData}
           cx="50%"
-          cy="50%"
-          labelLine={false}
-          outerRadius={100}
+          cy="45%"
+          outerRadius={75}
           fill="hsl(var(--primary))"
           dataKey="value"
           nameKey="name"
+          labelLine={true}
+          style={{ fontSize: '12px' }}
           label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
         >
           {chartData.map((entry: any, index: number) => (
@@ -116,7 +117,7 @@ export function SalesOfProductsChart({ productsData, filterType, filterValue }: 
           ))}
         </Pie>
         <Tooltip content={<CustomTooltip />} />
-        <Legend layout="vertical" verticalAlign="middle" align="right" />
+        <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ paddingTop: "20px" }} />
       </PieChart>
     </ResponsiveContainer>
   );

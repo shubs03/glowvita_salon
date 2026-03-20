@@ -8,6 +8,7 @@ import { Button } from "@repo/ui/button";
 import {
   LogOut,
   ChevronLeft,
+  ChevronRight,
   LayoutGrid
 } from 'lucide-react';
 import { sidebarNavItems } from "@/lib/routes";
@@ -109,33 +110,46 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile }: { isOpen: boolean, 
       isOpen ? "w-64" : "w-20",
     )}>
       <div className="flex flex-col flex-grow min-h-0">
-        <div className={cn("flex-shrink-0 p-4 h-16 border-b flex items-center gap-3", isOpen ? "justify-between" : "justify-center")}>
-          <Link href="/dashboard" className={cn(
-            "flex items-center font-bold text-xl font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent",
+        <div className={cn(
+          "flex-shrink-0 h-16 border-b flex items-center relative overflow-hidden",
+          isOpen ? "px-4 justify-between" : "px-4 justify-center"
+        )}>
+          <div className={cn(
+            "group flex items-center font-bold text-base font-headline bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent transition-all duration-300 relative z-10 cursor-default",
             isOpen ? "flex-1 justify-center" : "justify-center"
           )}>
             {isOpen ? (
               <img
                 src="/images/GlowVita%20Salon%20PNG.png"
                 alt="GlowVita Salon"
-                className="h-[48px] w-auto object-contain transition-all duration-300 hover:scale-105 drop-shadow-sm"
+                className={cn(
+                  "object-contain transition-all duration-300 hover:scale-105 group-hover:drop-shadow-sm flex-shrink-0 animate-fade-in",
+                  "h-[48px] w-auto"
+                )}
               />
             ) : (
               <img
                 src="/favicon.jpeg"
-                className="w-[45px] h-[45px] object-contain rounded-lg border-2 border-primary/20 transition-all duration-300"
+                className={cn(
+                  "object-contain rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:scale-110 group-hover:rotate-3 flex-shrink-0 border border-primary/20",
+                  "w-[45px] h-[45px]"
+                )}
               />
             )}
-          </Link>
+          </div>
 
           <Button
             variant="ghost"
             size="icon"
-            className={cn("hidden lg:flex flex-shrink-0 text-muted-foreground", !isOpen && "rotate-180")}
+            className="hidden lg:flex group relative rounded-md transition-all duration-300 text-muted-foreground hover:text-primary hover:bg-accent flex-shrink-0"
             onClick={toggleSidebar}
           >
-            <ChevronLeft className="h-5 w-5" />
-            <span className="sr-only">Toggle navigation menu</span>
+            {isOpen ? (
+              <ChevronLeft className="h-4 w-4 relative z-10 transition-transform duration-300 group-hover:-translate-x-0.5" />
+            ) : (
+              <ChevronRight className="h-4 w-4 relative z-10 transition-transform duration-300 group-hover:translate-x-0.5" />
+            )}
+            <span className="sr-only">{isOpen ? 'Collapse' : 'Expand'} sidebar</span>
           </Button>
         </div>
 
