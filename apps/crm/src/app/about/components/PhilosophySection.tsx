@@ -1,97 +1,83 @@
-'use client'
-
-import React, { useState } from 'react';
-import { Heart, Zap, Shield, ChevronDown } from 'lucide-react';
+import React from 'react';
+import Image from 'next/image';
 
 const PhilosophySection = () => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  
-  const values = [
+  const approaches = [
     {
-      icon: Heart,
+      icon: '/icons/energy 1.png',
       title: 'Efficiency',
       description: 'We believe salon management should be streamlined and intuitive, eliminating operational bottlenecks and administrative overhead.',
     },
     {
-      icon: Zap,
+      icon: '/icons/quality 1.png',
       title: 'Reliability',
       description: 'We deliver robust, dependable systems that you can trust to run your business smoothly and securely.',
     },
     {
-      icon: Shield,
+      icon: '/icons/growth (2) 1.png',
       title: 'Growth',
       description: 'We build solutions that help your business scale and adapt to changing market demands.',
     },
   ];
 
   return (
-    <section className="py-10 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="pt-0 pb-12 md:pb-20 px-6 lg:px-16 max-w-7xl mx-auto bg-white" style={{ fontFamily: 'Poppins, sans-serif' }}>
       {/* Section Header */}
-      <div className="mb-12">
-        <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4 mx-auto">
+      <div className="mb-10">
+        <h2 className="text-2xl md:text-3xl font-bold text-[#1C1C1C] relative inline-block pb-3">
           Our Business Approach
+          <div className="absolute bottom-0 left-0 w-full h-[3px] bg-gradient-to-r from-[#302131] to-transparent"></div>
         </h2>
-        <p className="text-muted-foreground mt-4 text-base max-w-2xl">
-          Our approach is guided by three fundamental principles that shape every business 
-          solution we develop for salon owners and managers.
+        <p className="text-[#433D48]/70 mt-4 text-[14.5px] max-w-3xl font-medium leading-relaxed">
+          Our approach is guided by three fundamental principles that shape every business solution we develop for salon owners and managers.
         </p>
       </div>
 
-      {/* Interactive Accordion Layout */}
-      <div className="space-y-4 max-w-4xl mx-auto">
-        {values.map((value, index) => {
-          const Icon = value.icon;
-          const isActive = activeIndex === index;
-          
-          return (
-            <div 
-              key={index} 
-              className="bg-card border border-border rounded-2xl overflow-hidden transition-all duration-300"
-            >
-              <button
-                className={`w-full p-4 text-left flex items-center justify-between ${
-                  isActive ? 'bg-primary/5' : 'hover:bg-accent/30'
-                }`}
-                onClick={() => setActiveIndex(isActive ? -1 : index)}
-              >
-                <div className="flex items-center gap-4">
-                  <div className={`p-2 rounded-xl ${
-                    isActive 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-primary/10 text-primary'
-                  } transition-all duration-300`}>
-                    <Icon className="w-5 h-5" strokeWidth={2.5} />
-                  </div>
-                  <h3 className={`font-bold text-lg ${
-                    isActive ? 'text-primary' : 'text-card-foreground'
-                  }`}>
-                    {value.title}
-                  </h3>
-                </div>
-                <ChevronDown 
-                  className={`w-5 h-5 transition-transform duration-300 ${
-                    isActive ? 'rotate-180 text-primary' : 'text-muted-foreground'
-                  }`} 
-                />
-              </button>
+      {/* Staggered Cards Layout - Still more compact */}
+      <div className="flex flex-col gap-4 md:gap-6">
+        {approaches.map((approach, index) => (
+          <div 
+            key={index}
+            className={`flex items-stretch max-w-3xl transition-all duration-300 ${
+              index === 1 ? 'md:ml-16 lg:ml-24' : 
+              index === 2 ? 'md:ml-32 lg:ml-48' : ''
+            }`}
+          >
+            {/* Left Vertical Accent Bar */}
+            <div className={`w-1.5 md:w-2 bg-[#302131] rounded-l-[10px] flex-shrink-0`}></div>
+            
+            {/* Main Card Content */}
+            <div className="flex-1 bg-white border border-[#00000015] rounded-r-[16px] p-4 md:p-5 shadow-[0_5px_20px_-10px_rgba(0,0,0,0.05)] group hover:shadow-[0_8px_30px_-12px_rgba(0,0,0,0.07)] transition-all">
               
-              <div 
-                className={`overflow-hidden transition-all duration-500 ease-in-out ${
-                  isActive ? 'max-h-64 opacity-100' : 'max-h-0 opacity-0'
-                }`}
-              >
-                <div className="p-4 border-t border-border">
-                  <p className="text-muted-foreground text-sm">
-                    {value.description}
-                  </p>
+              {/* Card Header: Icon + Title */}
+              <div className="flex items-center gap-3 mb-3">
+                <div className="relative w-9 h-9 md:w-10 md:h-10 bg-[#F0F7FF] rounded-full flex items-center justify-center p-2 border border-[#00000005]">
+                  <div className="relative w-full h-full">
+                    <Image 
+                      src={approach.icon} 
+                      alt={approach.title} 
+                      fill 
+                      className="object-contain"
+                    />
+                  </div>
                 </div>
+                <h3 className="text-[#1C1C1C] font-bold text-[15.5px] md:text-[17px]">
+                  {approach.title}
+                </h3>
+              </div>
+
+              {/* Nested Description Box */}
+              <div className="bg-[#F0F7FF] border border-[#E9EFFD] rounded-[10px] p-3 md:p-4 md:px-5">
+                <p className="text-[#1C1C1C]/85 text-[13px] md:text-[14px] leading-relaxed font-medium">
+                  {approach.description}
+                </p>
               </div>
             </div>
-          );
-        })}
+          </div>
+        ))}
       </div>
     </section>
   );
 };
 
-export default PhilosophySection;
+export default PhilosophySection;

@@ -12,7 +12,6 @@ const AboutPage = () => {
     <div className="flex flex-col min-h-screen text-foreground">
       <main className="flex-grow">
         <IntroductionSection />
-        <StatsSection />
         <PurposeVisionSection />
         <FeaturesSection />
         <AudienceSection />

@@ -75,7 +75,7 @@ export function SocialProofSection({ className }: SocialProofSectionProps) {
   ];
 
   return (
-    <section 
+    <section
       id="social-proof-section"
       className={cn(
         "relative py-20 md:py-28 bg-gradient-to-br from-background via-primary/2 to-secondary/3 overflow-hidden",
@@ -86,7 +86,7 @@ export function SocialProofSection({ className }: SocialProofSectionProps) {
       <div className="absolute inset-0 z-0">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent"></div>
         <div className="absolute inset-0 bg-[url('/grid.svg')] [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))] opacity-20"></div>
-        
+
         {/* Floating Elements */}
         <div className="absolute top-20 left-10 w-32 h-32 bg-gradient-to-r from-primary/10 to-transparent rounded-full blur-2xl animate-float"></div>
         <div className="absolute bottom-20 right-10 w-40 h-40 bg-gradient-to-r from-secondary/10 to-transparent rounded-full blur-2xl animate-float-delayed"></div>
@@ -125,35 +125,35 @@ export function SocialProofSection({ className }: SocialProofSectionProps) {
                 <div className="relative mb-6">
                   <div className="flex -space-x-4">
                     <div className="relative">
-                      <Image 
-                        src="https://picsum.photos/seed/user1/56/56" 
-                        alt="Happy Customer" 
-                        width={56} 
-                        height={56} 
-                        className="rounded-full border-4 border-background shadow-xl group-hover:scale-110 transition-transform cursor-pointer" 
-                        data-ai-hint="satisfied salon owner" 
+                      <Image
+                        src="https://picsum.photos/seed/user1/56/56"
+                        alt="Happy Customer"
+                        width={56}
+                        height={56}
+                        className="rounded-full border-4 border-background shadow-xl group-hover:scale-110 transition-transform cursor-pointer"
+                        data-ai-hint="satisfied salon owner"
                       />
                       <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full border-2 border-background"></div>
                     </div>
                     <div className="relative">
-                      <Image 
-                        src="https://picsum.photos/seed/user2/56/56" 
-                        alt="Happy Customer" 
-                        width={56} 
-                        height={56} 
-                        className="rounded-full border-4 border-background shadow-xl group-hover:scale-110 transition-transform cursor-pointer" 
-                        data-ai-hint="professional stylist" 
+                      <Image
+                        src="https://picsum.photos/seed/user2/56/56"
+                        alt="Happy Customer"
+                        width={56}
+                        height={56}
+                        className="rounded-full border-4 border-background shadow-xl group-hover:scale-110 transition-transform cursor-pointer"
+                        data-ai-hint="professional stylist"
                       />
                       <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full border-2 border-background"></div>
                     </div>
                     <div className="relative">
-                      <Image 
-                        src="https://picsum.photos/seed/user3/56/56" 
-                        alt="Happy Customer" 
-                        width={56} 
-                        height={56} 
-                        className="rounded-full border-4 border-background shadow-xl group-hover:scale-110 transition-transform cursor-pointer" 
-                        data-ai-hint="beauty professional" 
+                      <Image
+                        src="https://picsum.photos/seed/user3/56/56"
+                        alt="Happy Customer"
+                        width={56}
+                        height={56}
+                        className="rounded-full border-4 border-background shadow-xl group-hover:scale-110 transition-transform cursor-pointer"
+                        data-ai-hint="beauty professional"
                       />
                       <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full border-2 border-background"></div>
                     </div>
@@ -162,14 +162,14 @@ export function SocialProofSection({ className }: SocialProofSectionProps) {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center mb-3">
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="h-5 w-5 text-yellow-400 fill-yellow-400 drop-shadow-sm" />
                   ))}
                   <span className="ml-3 text-lg font-bold text-foreground">4.9/5</span>
                 </div>
-                
+
                 <h3 className="font-semibold text-lg text-foreground mb-2">Customer Satisfaction</h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   Average rating from thousands of happy salon owners and beauty professionals
@@ -177,7 +177,7 @@ export function SocialProofSection({ className }: SocialProofSectionProps) {
               </div>
             </div>
           </div>
-          
+
           {/* Performance Stats Card */}
           <div className={cn(
             "transition-all duration-1000 delay-400",
@@ -219,7 +219,7 @@ export function SocialProofSection({ className }: SocialProofSectionProps) {
                     <h3 className="text-xl font-bold text-foreground mb-2">Why Choose Us</h3>
                     <p className="text-sm text-muted-foreground">Everything you need to succeed</p>
                   </div>
-                  
+
                   {benefits.map((benefit, index) => (
                     <div key={index} className="flex items-center gap-4 group/item">
                       <div className={`w-10 h-10 rounded-full bg-gradient-to-r ${benefit.color} flex items-center justify-center shadow-lg group-hover/item:scale-110 transition-transform`}>
@@ -255,7 +255,7 @@ export function SocialProofSection({ className }: SocialProofSectionProps) {
               <p className="text-lg text-muted-foreground mb-6 max-w-2xl mx-auto leading-relaxed">
                 Join thousands of salon owners who've revolutionized their business with our platform
               </p>
-              
+
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <div className="inline-flex items-center gap-3 text-sm text-muted-foreground bg-muted/50 px-6 py-3 rounded-full border border-primary/10">
                   <Calendar className="w-4 h-4" />

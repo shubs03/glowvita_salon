@@ -3,11 +3,12 @@ import React from "react";
 const PurposeVisionSection = () => {
   return (
     <section className="py-10 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
-      <div className="mb-8">
-        <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
+      <div className="mb-8 pl-1">
+        <h2 className="text-2xl md:text-3xl font-bold text-[#1C1C1C] relative inline-block pb-3 mb-2">
           Our Support Promise
+          <div className="absolute bottom-0 left-0 w-full h-[3px] bg-gradient-to-r from-[#302131] to-transparent"></div>
         </h2>
-        <p className="text-muted-foreground mt-3 text-sm max-w-2xl">
+        <p className="text-muted-foreground text-[14px] max-w-2xl mt-1">
           Dedicated to helping your salon business succeed
         </p>
       </div>
@@ -25,7 +26,7 @@ const PurposeVisionSection = () => {
             </h3>
           </div>
           <p className="text-muted-foreground text-base leading-relaxed pl-16">
-            New to GlowVita CRM? We offer comprehensive onboarding resources to help you set up your salon management system. 
+            New to GlowVita CRM? We offer comprehensive onboarding resources to help you set up your salon management system.
             From adding your services to configuring staff schedules, our guides will walk you through every step.
           </p>
         </div>
@@ -42,7 +43,7 @@ const PurposeVisionSection = () => {
             </h3>
           </div>
           <p className="text-muted-foreground text-base leading-relaxed pl-16 mb-8">
-            As your business grows, we're here to support you. Our team provides continuous assistance with advanced features, 
+            As your business grows, we're here to support you. Our team provides continuous assistance with advanced features,
             troubleshooting, and optimization strategies to maximize your CRM investment.
           </p>
           <div className="pl-16">

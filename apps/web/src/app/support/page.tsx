@@ -236,19 +236,19 @@ export default function SupportPage() {
               <p className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent group-hover:scale-105 transition-transform">24/7</p>
               <p className="text-sm text-muted-foreground mt-1">Support Available</p>
             </div>
-            <div className="group p-6 rounded-xl bg-background hover:bg-blue-50/30 dark:hover:bg-blue-950/10 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl border border-blue-100/20">
+            <div className="group p-6 rounded-xl rounded-tl-none rounded-br-none bg-background hover:bg-blue-50/30 dark:hover:bg-blue-950/10 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl border border-blue-100/20">
               <div className="mb-3 w-12 h-12 rounded-full bg-blue-100/50 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
                 <Zap className="h-6 w-6 text-blue-600" />
               </div>
-              <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent group-hover:scale-105 transition-transform">&lt; 2min</p>
+              <p className="text-3xl font-bold italic bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent group-hover:scale-105 transition-transform">&lt; 2min</p>
               <p className="text-sm text-muted-foreground mt-1">Average Response Time</p>
               <p className="text-xs text-blue-600/80 mt-2">Real-time chat support available</p>
             </div>
-            <div className="group p-6 rounded-xl bg-background hover:bg-blue-50/30 dark:hover:bg-blue-950/10 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl border border-blue-100/20">
+            <div className="group p-6 rounded-xl rounded-tl-none rounded-br-none bg-background hover:bg-blue-50/30 dark:hover:bg-blue-950/10 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl border border-blue-100/20">
               <div className="mb-3 w-12 h-12 rounded-full bg-blue-100/50 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
                 <ThumbsUp className="h-6 w-6 text-blue-600" />
               </div>
-              <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent group-hover:scale-105 transition-transform">98%</p>
+              <p className="text-3xl font-bold italic bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent group-hover:scale-105 transition-transform">98%</p>
               <p className="text-sm text-muted-foreground mt-1">Satisfaction Rate</p>
               <p className="text-xs text-blue-600/80 mt-2">Based on 10,000+ reviews</p>
             </div>
