@@ -688,7 +688,7 @@ export default function ClientsPage() {
                 {
                   header: 'Birthday',
                   key: 'birthdayDate',
-                  transform: (val) => formatDateForDisplay(val)
+                  transform: (val) => formatDateForDisplay(val, "-")
                 },
                 {
                   header: 'Last Visit',
