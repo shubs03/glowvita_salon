@@ -98,42 +98,39 @@ export function SalesOfServicesChart({ servicesData, filterType, filterValue }: 
   };
 
   return (
-    <ResponsiveContainer width="100%" height={350} className="min-w-max">
+    <ResponsiveContainer width="100%" height={350}>
       <BarChart
         data={chartData}
-        layout="vertical"
         margin={{
           top: 20,
           right: 30,
-          left: 60,
+          left: 20,
           bottom: 20,
         }}
       >
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} vertical={true} />
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
         <XAxis
-          type="number"
-          stroke="hsl(var(--muted-foreground))"
-          fontSize={12}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(value) => `₹${value.toLocaleString()}`}
-        />
-        <YAxis
-          type="category"
           dataKey="name"
           stroke="hsl(var(--muted-foreground))"
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          width={80}
           tickFormatter={(value) => truncateName(value, 15)}
+        />
+        <YAxis
+          stroke="hsl(var(--muted-foreground))"
+          fontSize={12}
+          tickLine={false}
+          axisLine={false}
+          width={80}
+          tickFormatter={(value) => `₹${value.toLocaleString()}`}
         />
         <Tooltip content={<CustomTooltip />} />
         <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '30px' }} />
         <Bar 
           dataKey="value" 
           name="Sale (₹)"
-          radius={[0, 4, 4, 0]}
+          radius={[4, 4, 0, 0]}
         >
           {chartData.map((entry: any, index: number) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
