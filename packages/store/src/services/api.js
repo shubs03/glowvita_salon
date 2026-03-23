@@ -625,6 +625,25 @@ export const glowvitaApi = createApi({
       }),
       providesTags: ["admin"],
     }),
+    getAdminOnlineTransactions: builder.query({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append("page", params.page);
+        if (params.limit) queryParams.append("limit", params.limit);
+        if (params.search) queryParams.append("search", params.search);
+        if (params.status && params.status !== 'all') queryParams.append("status", params.status);
+        if (params.vendorId && params.vendorId !== 'all') queryParams.append("vendorId", params.vendorId);
+        if (params.serviceName && params.serviceName !== 'all') queryParams.append("serviceName", params.serviceName);
+        if (params.regionId && params.regionId !== 'all') queryParams.append("regionId", params.regionId);
+
+        const queryString = queryParams.toString();
+        return {
+          url: `/admin/online-transactions${queryString ? `?${queryString}` : ""}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["Appointments"],
+    }),
     // Service Approval Endpoints
     getVendorServicesForApproval: builder.query({
       query: (params) => {
@@ -3550,4 +3569,5 @@ export const {
   // Admin Wallet Monitoring Hooks
   useGetAdminWithdrawalsQuery,
   useGetAdminTransactionsQuery,
+  useGetAdminOnlineTransactionsQuery,
 } = glowvitaApi;
