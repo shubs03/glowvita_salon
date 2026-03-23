@@ -3,7 +3,7 @@ import {
   FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaBox, FaUserMd,
   FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags,
   FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaSync,
-  FaMapMarkedAlt, FaBell, FaWallet, FaEnvelopeOpen
+  FaMapMarkedAlt, FaBell, FaWallet, FaEnvelopeOpen, FaCreditCard
 } from "react-icons/fa";
 import { FaListUl } from "react-icons/fa";
 import { IconType } from "react-icons";
@@ -129,6 +129,12 @@ export const sidebarNavItems: NavItem[] = [
     title: "Reports",
     href: "/reports",
     Icon: FaFileAlt,
+    permission: "reports",
+  },
+  {
+    title: "Online Transactions",
+    href: "/online-transactions",
+    Icon: FaCreditCard,
     permission: "reports",
   },
   {
