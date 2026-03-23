@@ -112,7 +112,7 @@ export const GET = withSubscriptionCheck(async (req) => {
                     .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(limit)
-                    .select('firstName lastName emailAddress mobileNo createdAt')
+                    .select('firstName lastName emailAddress mobileNo gender birthdayDate address createdAt')
                     .lean();
 
                 const total = await UserModel.countDocuments(query);
@@ -123,12 +123,12 @@ export const GET = withSubscriptionCheck(async (req) => {
                     fullName: `${user.firstName} ${user.lastName}`,
                     email: user.emailAddress,
                     phone: user.mobileNo,
-                    birthdayDate: null,
-                    gender: 'Other',
+                    birthdayDate: user.birthdayDate,
+                    gender: user.gender || 'Other',
                     country: '',
                     occupation: '',
                     profilePicture: '',
-                    address: '',
+                    address: user.address || '',
                     lastVisit: user.createdAt,
                     totalBookings: 0, // Will be calculated in frontend
                     totalSpent: 0,    // Will be calculated in frontend

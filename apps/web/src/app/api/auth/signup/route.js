@@ -40,7 +40,7 @@ export async function POST(req) {
       return NextResponse.json({ message: 'Invalid request format. Please check your input.' }, { status: 400 });
     }
 
-    const { firstName, lastName, email, mobileNo, location, state, city, pincode, referralCode, password } = body;
+    const { firstName, lastName, email, mobileNo, location, address, state, city, pincode, referralCode, password, gender, birthdayDate } = body;
 
     // Required fields validation (referralCode is optional)
     if (!firstName || !lastName || !email || !mobileNo || !state || !city || !pincode || !password) {
@@ -86,12 +86,15 @@ export async function POST(req) {
       lastName,
       emailAddress: email, // Map email to emailAddress
       mobileNo,
+      address,
       state,
       city,
       pincode,
       refferalCode: newUserReferralCode, // Assign generated referral code
       password: hashedPassword,
       role: 'USER', // Default role for web signup
+      gender: gender || '',
+      birthdayDate: birthdayDate || null,
     };
 
     // Add location if provided

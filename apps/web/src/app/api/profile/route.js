@@ -94,7 +94,7 @@ export async function PUT(req) {
     
     // Handle profile update (excluding password fields)
     const updateData = {};
-    const allowedFields = ['firstName', 'lastName', 'mobileNo', 'state', 'city', 'pincode'];
+    const allowedFields = ['firstName', 'lastName', 'mobileNo', 'state', 'city', 'pincode', 'gender', 'birthdayDate'];
     
     allowedFields.forEach(field => {
       if (body[field] !== undefined) {

@@ -708,13 +708,15 @@ export default function ClientsPage() {
                 { header: 'Status', key: 'status' }
               ]}
             />
-            <Button
-              onClick={() => handleOpenModal()}
-              className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1 sm:flex-none"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Client
-            </Button>
+            {clientSegment === "offline" && (
+              <Button
+                onClick={() => handleOpenModal()}
+                className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1 sm:flex-none"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Client
+              </Button>
+            )}
           </div>
         </div>
 
