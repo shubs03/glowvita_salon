@@ -29,7 +29,7 @@ export default function OnlineTransactionsPage() {
         currentPage: 1,
         itemsPerPage: 10
     });
-    
+
     // To handle view details dialog
     const [selectedTransaction, setSelectedTransaction] = useState<any | null>(null);
 
@@ -47,6 +47,12 @@ export default function OnlineTransactionsPage() {
     const transactions = response?.data || [];
     const vendorsList = response?.vendorsList || [];
     const servicesList = response?.servicesList || [];
+    const summary = response?.summary || {
+        totalAppointments: 0,
+        completedAppointments: 0,
+        cancelledAppointments: 0,
+        totalAmountPaid: 0
+    };
     const totalTransactions = response?.pagination?.total || 0;
     const totalPages = response?.pagination?.totalPages || 0;
 
@@ -67,6 +73,42 @@ export default function OnlineTransactionsPage() {
     return (
         <div className="p-4 sm:p-6 lg:p-8">
             <h1 className="text-2xl font-bold font-headline mb-6">Online Transactions</h1>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Total Appointments</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{summary.totalAppointments}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium ">Completed Appointments</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold ">{summary.completedAppointments}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Cancelled Appointments</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold ">{summary.cancelledAppointments}</div>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium ">Total Amount Paid</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold ">₹{(summary.totalAmountPaid || 0).toFixed(2)}</div>
+                    </CardContent>
+                </Card>
+            </div>
 
             <Card>
                 <CardHeader>
@@ -203,9 +245,9 @@ export default function OnlineTransactionsPage() {
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <Badge variant={
-                                                        tx.paymentStatus === 'completed' ? 'success' : 
-                                                        tx.paymentStatus === 'failed' ? 'destructive' : 
-                                                        'secondary'
+                                                        tx.paymentStatus === 'completed' ? 'success' :
+                                                            tx.paymentStatus === 'failed' ? 'destructive' :
+                                                                'secondary'
                                                     }>
                                                         {tx.paymentStatus || 'unknown'}
                                                     </Badge>
@@ -280,12 +322,12 @@ export default function OnlineTransactionsPage() {
                             <div>
                                 <p className="text-sm text-muted-foreground">Date & Time</p>
                                 <p className="text-sm">
-                                    {selectedTransaction?.date ? new Date(selectedTransaction.date).toLocaleDateString() : 'N/A'} <br/>
+                                    {selectedTransaction?.date ? new Date(selectedTransaction.date).toLocaleDateString() : 'N/A'} <br />
                                     {selectedTransaction?.startTime} - {selectedTransaction?.endTime}
                                 </p>
                             </div>
                         </div>
-                        
+
                         {selectedTransaction?.isMultiService && selectedTransaction?.serviceItems?.length > 0 && (
                             <div className="mt-4 border-t pt-4">
                                 <p className="font-medium mb-2">Services Provided:</p>

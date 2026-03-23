@@ -69,6 +69,41 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
         const total = await AppointmentModel.countDocuments(query);
         
+        // Calculate summary metrics
+        const summaryPipeline = [
+            { $match: query },
+            {
+                $group: {
+                    _id: null,
+                    totalAppointments: { $sum: 1 },
+                    completedAppointments: {
+                        $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] }
+                    },
+                    cancelledAppointments: {
+                        $sum: { $cond: [{ $eq: ["$status", "cancelled"] }, 1, 0] }
+                    },
+                    totalAmountPaid: {
+                        $sum: { 
+                             $cond: [
+                                 { $eq: ["$paymentStatus", "completed"] }, 
+                                 { $ifNull: ["$finalAmount", "$totalAmount"] },
+                                 0
+                             ] 
+                        }
+                    }
+                }
+            }
+        ];
+        
+        const summaryResult = await AppointmentModel.aggregate(summaryPipeline);
+        const summary = summaryResult.length > 0 ? summaryResult[0] : {
+            totalAppointments: 0,
+            completedAppointments: 0,
+            cancelledAppointments: 0,
+            totalAmountPaid: 0
+        };
+        delete summary._id;
+        
         // Fetch valid dropdown options based on the base query (without pagination/vendor/service filters)
         const baseQuery = { ...regionQuery, paymentMethod: "Pay Online" };
         const uniqueServiceNames = await AppointmentModel.distinct('serviceName', baseQuery);
@@ -81,6 +116,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
             data: appointments,
             servicesList: uniqueServiceNames.filter(Boolean),
             vendorsList: vendorsList,
+            summary: summary,
             pagination: {
                 page,
                 limit,
