@@ -8,17 +8,19 @@ const OverviewPreview = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 items-stretch">
 
           {/* Left Side: Content */}
-          <div className="space-y-6 order-2 lg:order-1 text-center lg:text-left flex flex-col justify-start py-6 lg:py-0 lg:pr-16">
+          <div className="space-y-6 order-2 lg:order-1 text-left flex flex-col justify-center py-6 lg:py-0 lg:pr-16">
             <h2 className="text-2xl md:text-[2.25rem] font-serif text-gray-900 leading-[1.2]">
-              Automate your Salon & Spa <span className="italic text-[#0C1880] font-bold">business</span> with <span className="italic text-[#0C1880] font-bold">GlowVita Salon</span>
+              Automate your salon<br />
+              & spa <span className="italic text-[#0C1880] font-bold">Business</span><br />
+              with <span className="italic text-[#0C1880] font-bold">GlowVita Salon</span>
             </h2>
 
-            <p className="text-gray-700 text-lg md:text-xl font-normal leading-relaxed max-w-xl mx-auto lg:mx-0">
+            <p className="text-gray-700 text-lg md:text-xl font-normal leading-relaxed max-w-xl">
               GlowVita Salon brings you the most elegant and easy-to-use solution for your salon & spa business.
               Automate bookings, manage staff, track operations, and delight your clients effortlessly with a complete digital management system.
             </p>
 
-            <div className="pt-4 flex justify-center lg:justify-start">
+            <div className="pt-4 flex justify-start">
               <button className="px-10 py-3.5 bg-[#3d2c3e] text-white font-semibold rounded-[1rem] hover:bg-[#2d1c2d] transition-all duration-300 shadow-sm active:scale-95 text-lg">
                 Start a free trial
               </button>

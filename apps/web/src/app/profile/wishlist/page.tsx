@@ -101,8 +101,10 @@ export default function WishlistPage() {
   const [productWishlistLoading, setProductWishlistLoading] = useState(false);
 
   // Fetch product wishlist items from API
+  const userId = user?._id;
+
   const fetchProductWishlist = useCallback(async () => {
-    if (!isAuthenticated || !user) {
+    if (!isAuthenticated || !userId) {
       return;
     }
 
@@ -131,7 +133,7 @@ export default function WishlistPage() {
     } finally {
       setProductWishlistLoading(false);
     }
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, userId]);
 
   // Fetch product wishlist on mount
   useEffect(() => {
