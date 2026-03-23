@@ -39,8 +39,9 @@ const HeroSection = () => {
         {/* Text Content */}
         <div className="relative z-20 px-8 py-20 lg:py-0 w-full max-w-lg text-center lg:pr-20">
           <h1 className="text-2xl md:text-[2.25rem] font-serif text-gray-900 leading-[1.2] mb-10">
-            Automate your salon & spa <span className="italic text-[#0C1880] font-bold">business</span> <br />
-            with <span className="italic text-[#0C1880] font-bold">GlowVitaSalon</span>
+            Automate your salon<br />
+            & spa <span className="italic text-[#0C1880] font-bold">Business</span><br />
+            with <span className="italic text-[#0C1880] font-bold">GlowVita Salon</span>
           </h1>
 
           <p className="text-gray-700 text-lg md:text-xl font-normal leading-relaxed mb-12 max-w-sm mx-auto">
