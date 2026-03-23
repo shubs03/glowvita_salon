@@ -22,8 +22,7 @@ export const getConfirmationTemplate = ({ clientName, businessName, serviceName,
     <div class="container">
         <div class="header">
             <div style="text-align: center;">
-                <img src="${LOGO_URL}" alt="GlowVita Salon" style="max-width: 80px; height: auto; vertical-align: middle;">
-                <h1 style="display: inline-block; vertical-align: middle; margin: 0 0 0 10px; color: #333; font-size: 24px;">GlowVita Salon</h1>
+                <img src="${LOGO_URL}" alt="GlowVita Salon" style="max-width: 250px; height: auto; vertical-align: middle;">
             </div>
             <h2 style="margin-top: 15px;">Appointment Confirmed!</h2>
         </div>
@@ -167,7 +166,6 @@ export const getCompletionTemplate = ({
                 </div>
                 
                 <div class="branding-footer">
-                    <div class="branding-name">GlowVita Salon</div>
                     <div class="footer-text" style="font-size: 11px;">Professional Salon Management Platform</div>
                     <div class="footer-text" style="font-size: 11px; margin-top: 5px; color: #999;">&copy; 2026 GlowVita. All rights reserved.</div>
                 </div>
@@ -228,7 +226,6 @@ export const getInvoiceTemplate = ({
         
         /* GlowVita Branding Header */
         .branding-header { background-color: #111827; color: white; padding: 12px 24px; text-align: center; }
-        .branding-title { font-size: 18px; font-weight: bold; margin: 0; color: #ffffff; letter-spacing: 0.025em; }
         .branding-subtitle { font-size: 10px; margin-top: 2px; opacity: 0.8; }
         
         .main-content { padding: 30px; }
@@ -272,7 +269,6 @@ export const getInvoiceTemplate = ({
     <div class="invoice-container">
         <!-- GlowVita Branding Header -->
         <div class="branding-header">
-            <div class="branding-title">GlowVita Salon</div>
             <div class="branding-subtitle">Professional Salon Management Platform</div>
         </div>
 
@@ -374,7 +370,7 @@ export const getInvoiceTemplate = ({
                 </p>
                 
                 <div class="branding-footer">
-                    <div class="footer-brand">Powered by GlowVita Salon</div>
+                    <div class="footer-brand">Professional Salon Management Platform</div>
                     <p class="footer-subtitle">Professional Salon Management Platform</p>
                     <p class="footer-link">www.glowvitasalon.com</p>
                 </div>
@@ -403,8 +399,7 @@ export const getCancellationTemplate = ({ clientName, businessName, serviceName,
     <div class="container">
         <div class="header">
             <div style="text-align: center;">
-                <img src="${LOGO_URL}" alt="GlowVita Salon" style="max-width: 80px; height: auto; vertical-align: middle;">
-                <h1 style="display: inline-block; vertical-align: middle; margin: 0 0 0 10px; color: #dc3545; font-size: 24px;">GlowVita Salon</h1>
+                <img src="${LOGO_URL}" alt="GlowVita Salon" style="max-width: 250px; height: auto; vertical-align: middle;">
             </div>
             <h2 style="color: #dc3545; margin-top: 15px;">Appointment Cancelled</h2>
         </div>
@@ -447,8 +442,7 @@ export const noshowAppointmentEmail = ({ clientName, serviceName, appointmentDat
     <div class="container">
         <div class="header">
              <div style="text-align: center;">
-                <img src="${LOGO_URL}" alt="GlowVita Salon" style="max-width: 80px; height: auto; vertical-align: middle;">
-                <h1 style="display: inline-block; vertical-align: middle; margin: 0 0 0 10px; color: #f39c12; font-size: 24px;">GlowVita Salon</h1>
+                <img src="${LOGO_URL}" alt="GlowVita Salon" style="max-width: 250px; height: auto; vertical-align: middle;">
             </div>
             <h2 style="color: #f39c12; margin-top: 15px;">Appointment Marked as No-Show</h2>
         </div>
