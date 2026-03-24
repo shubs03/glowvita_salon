@@ -209,7 +209,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
   const router = useRouter();
   const pathname = usePathname();
   const isSalonsPage = pathname === '/salons';
-  const { selectedCity, setSelectedCity } = useSalonFilter();
+  const { userLat, userLng, selectedCity, setSelectedCity } = useSalonFilter();
 
   const {
     data: vendorsData,
@@ -221,7 +221,10 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
     data: landingData,
     isLoading: isLandingLoading,
     error: landingError,
-  } = useGetLandingSalonsQuery({ city: selectedCity }, { skip: isSalonsPage });
+  } = useGetLandingSalonsQuery(
+    { lat: userLat, lng: userLng },
+    { skip: isSalonsPage }
+  );
 
   const isLoading = (isSalonsPage ? isVendorsLoading : isLandingLoading) || false;
   const error = isSalonsPage ? vendorsError : landingError;
@@ -540,6 +543,28 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
               </div>
             </div>
           ))}
+        </div>
+      ) : landingData?.noServiceArea ? (
+        <div className="py-20 flex flex-col items-center text-center">
+          <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mb-6">
+            <MapPin className="w-10 h-10 text-primary/30" />
+          </div>
+          <h3 className="text-2xl font-black text-gray-900 mb-3">We're not available here yet</h3>
+          <p className="text-muted-foreground max-w-md mx-auto mb-8 font-medium">
+            We are currently expanding and haven't reached your location. 
+            Try searching for a different area or explore our available cities:
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 max-w-2xl">
+            {landingData?.data?.cities?.slice(0, 8).map((city: string) => (
+              <button 
+                key={city}
+                onClick={() => setSelectedCity(city)}
+                className="px-5 py-2 bg-white border border-gray-100 rounded-full text-xs font-bold text-gray-600 hover:text-primary hover:border-primary transition-all shadow-sm"
+              >
+                {city}
+              </button>
+            ))}
+          </div>
         </div>
       ) : error ? (
         <div className="text-center py-12">

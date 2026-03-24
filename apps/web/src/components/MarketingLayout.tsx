@@ -24,7 +24,6 @@ export function MarketingLayout({ children }: { children: ReactNode; }) {
     <>
       {/* The header is now rendered in the root layout, so it's removed from here */}
       {children}
-      <Footer />
     </>
   );
 }

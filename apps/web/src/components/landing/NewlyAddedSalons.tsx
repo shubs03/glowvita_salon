@@ -24,13 +24,13 @@ interface NewlyAddedSalonsProps {
 
 const NewlyAddedSalons: React.FC<NewlyAddedSalonsProps> = ({ maxSalons = 8 }) => {
   const router = useRouter();
-  const { selectedCity } = useSalonFilter();
+  const { userLat, userLng } = useSalonFilter();
 
   const {
     data: landingData,
     isLoading,
     error,
-  } = useGetLandingSalonsQuery({ city: selectedCity });
+  } = useGetLandingSalonsQuery({ lat: userLat, lng: userLng });
 
   const transformVendor = (vendor: any) => {
     const imageUrl =
@@ -80,8 +80,8 @@ const NewlyAddedSalons: React.FC<NewlyAddedSalonsProps> = ({ maxSalons = 8 }) =>
     );
   }
 
-  if (error || (salons.length === 0 && selectedCity)) {
-    return null; // Don't show if error or no salons in selected city
+  if (error || salons.length === 0 || landingData?.noServiceArea) {
+    return null;
   }
 
   return (
