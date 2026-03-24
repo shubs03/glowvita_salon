@@ -719,13 +719,13 @@ export function MarketingHeader({
                         className="w-full h-12 justify-center"
                         asChild
                       >
-                        <Link href="/crm/login">Login</Link>
+                        <Link href="/login">Login</Link>
                       </Button>
                       <Button
                         className="w-full h-12 justify-center bg-primary hover:to-secondary/90"
                         asChild
                       >
-                        <Link href="/crm/register">
+                        <Link href="/auth/register">
                           <span className="flex items-center gap-2">
                             Get Started
                             <ArrowRight className="h-4 w-4" />

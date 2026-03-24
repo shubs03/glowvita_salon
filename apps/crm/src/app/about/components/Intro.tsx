@@ -1,9 +1,24 @@
 "use client";
 
-import React from "react";
 import Image from "next/image";
+import { useCrmAuth } from "@/hooks/useCrmAuth";
+import { useRouter } from "next/navigation";
 
 const IntroductionSection = () => {
+  const { isCrmAuthenticated } = useCrmAuth();
+  const router = useRouter();
+
+  const handleAccessDashboard = () => {
+    if (isCrmAuthenticated) {
+      router.push("/dashboard");
+    } else {
+      router.push("/auth/register");
+    }
+  };
+
+  const handleJoinAsVendor = () => {
+    router.push("/auth/register");
+  };
   return (
     <section className="relative w-full py-6 md:py-10 px-6 lg:px-16 bg-[#F1F3F2] overflow-hidden">
       <div className="max-w-7xl mx-auto">
@@ -40,18 +55,18 @@ const IntroductionSection = () => {
 
             {/* Action Buttons - Pill Shaped */}
             <div className="flex flex-wrap gap-4 mb-10">
-              <a
-                href="/dashboard"
+              <button
+                onClick={handleAccessDashboard}
                 className="bg-[#302131] text-white px-8 py-3.5 rounded-full font-bold shadow-md hover:shadow-xl transition-all hover:scale-[1.02] flex items-center justify-center min-w-[180px] text-sm md:text-base"
               >
                 Access Dashboard
-              </a>
-              <a
-                href="/about#cta-section"
+              </button>
+              <button
+                onClick={handleJoinAsVendor}
                 className="bg-white border border-[#1C1C1C]/10 text-[#1C1C1C] px-8 py-3.5 rounded-full font-bold shadow-sm hover:shadow-md transition-all hover:bg-white/95 flex items-center justify-center min-w-[180px] text-sm md:text-base"
               >
                 Join as Vendor
-              </a>
+              </button>
             </div>
 
             {/* Bottom Stats Section */}

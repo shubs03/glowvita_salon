@@ -1,7 +1,20 @@
+"use client";
 import React from "react";
 import Image from "next/image";
+import { useCrmAuth } from "@/hooks/useCrmAuth";
+import { useRouter } from "next/navigation";
 
 const HeroSection = () => {
+  const { isCrmAuthenticated } = useCrmAuth();
+  const router = useRouter();
+
+  const handleStartTrial = () => {
+    if (isCrmAuthenticated) {
+      router.push("/dashboard");
+    } else {
+      router.push("/auth/register");
+    }
+  };
   return (
     <div className="relative w-full overflow-hidden bg-white min-h-[500px] lg:h-[700px] flex flex-col lg:flex-row">
 
@@ -48,7 +61,10 @@ const HeroSection = () => {
             GlowvitaSalon brings you the most easy-to-use solution for your salon & spa business
           </p>
 
-          <button className="px-10 py-3.5 bg-[#3d2c3e] text-white font-semibold rounded-[1rem] hover:bg-[#2d1c2d] transition-all duration-300 shadow-sm active:scale-95 text-lg">
+          <button
+            onClick={handleStartTrial}
+            className="px-10 py-3.5 bg-[#3d2c3e] text-white font-semibold rounded-[1rem] hover:bg-[#2d1c2d] transition-all duration-300 shadow-sm active:scale-95 text-lg"
+          >
             Start a free trial
           </button>
         </div>

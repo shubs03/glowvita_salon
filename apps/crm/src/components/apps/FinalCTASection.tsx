@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 const FinalCTASection = () => {
   return (
@@ -23,13 +24,12 @@ const FinalCTASection = () => {
 
         {/* Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <button className="bg-white text-[#422A3C] hover:bg-white/90 px-6 py-2.5 rounded-full font-bold text-sm transition-all duration-300 shadow-md transform hover:scale-105">
-            Join as a business owner
-          </button>
-
-          <button className="bg-transparent border-2 border-white/40 hover:border-white/70 text-white hover:bg-white/10 px-6 py-2.5 rounded-full font-bold text-sm transition-all duration-300 transform hover:scale-105">
-            Learn more about benefits
-          </button>
+          <Link 
+            href="/auth/register"
+            className="bg-white text-[#422A3C] hover:bg-white/90 px-8 py-3 rounded-full font-bold text-sm transition-all duration-300 shadow-md transform hover:scale-105 inline-block"
+          >
+            Join as business owner
+          </Link>
         </div>
       </div>
     </section>

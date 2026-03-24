@@ -1,4 +1,5 @@
 import React from "react";
+import { ArrowRight } from "lucide-react";
 
 const PurposeVisionSection = () => {
   return (
@@ -52,10 +53,7 @@ const PurposeVisionSection = () => {
               className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-4 rounded-xl font-semibold text-base sm:text-lg transition-all duration-300 shadow-sm hover:shadow-md group"
             >
               Contact Support
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300">
-                <path d="m7 17 4-4-4-4"></path>
-                <path d="m11 13 4 4 4-4"></path>
-              </svg>
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
             </a>
           </div>
         </div>
