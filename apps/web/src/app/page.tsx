@@ -33,6 +33,8 @@ import WhyChooseUs from "@/components/landing/WhyChooseUs";
 import Testimonials2 from "@/components/landing/Testimonials2";
 import { SalonFilterProvider } from "@/components/landing/SalonFilterContext";
 import WhereToGo from "@/components/landing/WhereToDo";
+import AllSalons from "@/components/landing/AllSalons";
+import NewlyAddedSalons from "@/components/landing/NewlyAddedSalons";
 import DownloadApp from "@/components/landing/DownloadApp";
 
 
@@ -70,7 +72,9 @@ export default function HomePage() {
       <main className="flex-grow">
         <HeroSection2 />
         <OffersSection2 />
-        <WhereToGo maxSalons={6} showViewAllButton={true} />
+        <WhereToGo maxSalons={6} showViewAllButton={false} />
+        <AllSalons maxSalons={6} />
+        <NewlyAddedSalons maxSalons={6} />
         <WhyChooseUs/>
         <Testimonials2 />
         <DownloadApp />

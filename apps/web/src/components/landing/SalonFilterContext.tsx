@@ -5,8 +5,10 @@ import React, { createContext, useContext, useState, ReactNode } from "react";
 interface SalonFilterContextType {
   selectedCategories: string[];
   selectedServices: string[];
+  selectedCity: string;
   setSelectedCategories: (categories: string[]) => void;
   setSelectedServices: (services: string[]) => void;
+  setSelectedCity: (city: string) => void;
   clearFilters: () => void;
   // New functions to manage individual selections
   addCategory: (categoryId: string) => void;
@@ -19,8 +21,10 @@ interface SalonFilterContextType {
 const defaultContextValue: SalonFilterContextType = {
   selectedCategories: [],
   selectedServices: [],
+  selectedCity: "",
   setSelectedCategories: () => {},
   setSelectedServices: () => {},
+  setSelectedCity: () => {},
   clearFilters: () => {},
   addCategory: () => {},
   removeCategory: () => {},
@@ -33,10 +37,12 @@ const SalonFilterContext = createContext<SalonFilterContextType>(defaultContextV
 export function SalonFilterProvider({ children }: { children: ReactNode }) {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedCity, setSelectedCity] = useState<string>("");
 
   const clearFilters = () => {
     setSelectedCategories([]);
     setSelectedServices([]);
+    setSelectedCity("");
   };
 
   const addCategory = (categoryId: string) => {
@@ -64,8 +70,10 @@ export function SalonFilterProvider({ children }: { children: ReactNode }) {
       value={{
         selectedCategories,
         selectedServices,
+        selectedCity,
         setSelectedCategories,
         setSelectedServices,
+        setSelectedCity,
         clearFilters,
         addCategory,
         removeCategory,
