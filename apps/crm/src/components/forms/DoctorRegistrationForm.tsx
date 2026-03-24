@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { toast } from 'sonner';
-import { useCreateDoctorMutation, useGetSuperDataQuery } from '@repo/store/api';
+import { useRegisterDoctorCrmMutation, useGetSuperDataQuery } from '@repo/store/api';
 import { Label } from '@repo/ui/label';
 import { Checkbox } from '@repo/ui/checkbox';
 import { Skeleton } from '@repo/ui/skeleton';
@@ -107,7 +107,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
   });
 
   const [step, setStep] = useState(1);
-  const [createDoctor, { isLoading }] = useCreateDoctorMutation();
+  const [createDoctor, { isLoading }] = useRegisterDoctorCrmMutation();
 
   const doctorTypes = [
     { name: "Physician", description: "Specializes in non-surgical medical care." },
@@ -146,7 +146,7 @@ export function DoctorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     let finalValue = value;
 
     if (name === "name") {
-      finalValue = value.replace(/[^a-zA-Z]/g, "");
+      finalValue = value.replace(/[^a-zA-Z\s]/g, "");
     } else if (name === "phone") {
       // Allow only digits and limit to 10
       finalValue = value.replace(/\D/g, "").slice(0, 10);

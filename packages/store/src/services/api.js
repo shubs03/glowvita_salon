@@ -1061,6 +1061,16 @@ export const glowvitaApi = createApi({
       invalidatesTags: ["doctors"],
     }),
 
+    // Public CRM doctor self-registration (no admin token required)
+    registerDoctorCrm: builder.mutation({
+      query: (doctor) => ({
+        url: "/crm/auth/register-doctor",
+        method: "POST",
+        body: doctor,
+      }),
+      invalidatesTags: ["doctors"],
+    }),
+
     updateDoctor: builder.mutation({
       query: (doctor) => ({
         url: "/admin/doctors",
@@ -3226,6 +3236,7 @@ export const {
   useDeleteVendorMutation,
   useGetDoctorsQuery,
   useCreateDoctorMutation,
+  useRegisterDoctorCrmMutation,
   useUpdateDoctorMutation,
   useUpdateDoctorStatusMutation,
   useUpdateDoctorDocumentStatusMutation,

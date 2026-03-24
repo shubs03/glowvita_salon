@@ -31,6 +31,9 @@ export default function ForgotPasswordPage() {
           description: data.message,
           duration: 5000,
         });
+        setTimeout(() => {
+          router.push('/login');
+        }, 1500);
       } else {
         toast.error('Error', {
           description: data.error || 'Failed to send reset email. Please try again.',
