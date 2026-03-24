@@ -1,58 +1,93 @@
-import { Download, Users, BarChart } from "lucide-react";
 import { cn } from "@repo/ui/cn";
 
 const HowItWorksSection = () => {
   const steps = [
     {
-      icon: <Download className="h-7 w-7" />,
-      title: "Download & Setup",
-      description:
-        "Get your salon listed and set up your services, staff, and schedule in minutes.",
+      icon: "/icons/add-user 1.png",
+      title: "1. Sign Up & Setup",
+      description: "Create your account and set up your salon services, staff, and schedule in minutes.",
     },
     {
-      icon: <Users className="h-7 w-7" />,
-      title: "Clients Book Online",
-      description:
-        "Clients find your salon and book appointments 24/7 through the GlowVita app or your website.",
+      icon: "/icons/appointment (1) 2.png",
+      title: "2. Client Bookings",
+      description: "Clients book appointments 24/7 through the GlowVita app or your website, with automated reminders.",
     },
     {
-      icon: <BarChart className="h-7 w-7" />,
-      title: "Manage & Grow",
-      description:
-        "Use the CRM app to manage bookings, process payments, and grow your business with marketing tools.",
+      icon: "/icons/Mask group.png",
+      title: "3. Manage Operations",
+      description: "Track appointments, manage staff schedules and handle payments seamlessly in one place.",
+    },
+    {
+      icon: "/icons/web-design 1.png",
+      title: "4. Grow & Analyze",
+      description: "Use analytics and marketing tools to grow your business and increase revenue.",
     },
   ];
 
   return (
-    <section className="py-10 overflow-hidden bg-white">
-      <div className="px-6 lg:px-8 max-w-7xl mx-auto mb-16">
-        <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-gray-900 inline-block pb-4">
+    <section className="py-12 overflow-hidden bg-white">
+      {/* Header Section */}
+      <div className="px-6 lg:px-24 max-w-[1537px] mx-auto mb-16 text-left">
+        <h2 
+          className="text-2xl md:text-3xl font-bold text-gray-900 border-b-[2px] border-gray-900 inline-block pb-1 font-manrope"
+          style={{ letterSpacing: '-0.01em' }}
+        >
           How It Works
         </h2>
         
-        <p className="mt-2 text-gray-600 max-w-2xl">
-          A simple and intuitive process for both you and your clients.
+        <p className="mt-4 text-gray-500 max-w-2xl text-[16px] font-manrope font-light">
+          Our simple 4-step process to transform your salon business with our CRM platform.
         </p>
       </div>
 
-      <div className="px-6 lg:px-8 max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {/* Steps Grid - Staggered Layout like the image */}
+      <div className="px-6 lg:px-24 max-w-[1537px] mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-12 gap-y-12 items-start">
           {steps.map((step, index) => (
-            <div key={index} className="relative pl-16">
-              <div className="absolute left-0 top-0 flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary font-bold text-2xl border-2 border-primary/20">
-                {index + 1}
-              </div>
-              <div className="flex items-center gap-4 mb-2">
-                <div className="bg-primary/10 text-primary p-3 rounded-2xl flex-shrink-0">
-                  {step.icon}
+            <div 
+              key={index} 
+              className={cn(
+                "flex flex-col items-center text-center group transition-all duration-700 ease-out",
+                // Staggered vertical positioning: 2nd and 4th items are higher
+                index % 2 === 1 ? "lg:-mt-20" : "lg:mt-10"
+              )}
+            >
+              {/* Visual Element Container: Circular Frame + Hexagon Icon */}
+              <div className="relative w-56 h-56 mb-4 flex items-center justify-center">
+                {/* Background Frame: Balloon/Circle shape with vertical line and dot */}
+                <img 
+                  src="/icons/Group 1000002468.png" 
+                  alt="Background frame"
+                  className="w-full h-full object-contain opacity-90 group-hover:opacity-100 transition-opacity duration-300" 
+                />
+                
+                {/* Hexagon Icon Container: Dark Purple background */}
+                <div 
+                  className="absolute top-[12%] left-1/2 -translate-x-1/2 flex items-center justify-center w-[78px] h-[88px] bg-[#53435c] shadow-xl transition-all duration-500 group-hover:scale-110 group-hover:bg-[#63536c]"
+                  style={{ 
+                    clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                  }}
+                >
+                  <img 
+                    src={step.icon} 
+                    alt={step.title} 
+                    className="w-11 h-11 object-contain brightness-0 invert opacity-90 group-hover:opacity-100 transition-opacity" 
+                  />
                 </div>
-                <h3 className="font-bold text-card-foreground text-lg items-center leading-tight">
+              </div>
+
+              {/* Step Content: Title and Description placed below the frame's dot */}
+              <div className="max-w-[280px] mt-2">
+                <h3 className="font-bold text-gray-900 text-[18px] mb-3 font-manrope tracking-tight">
                   {step.title}
                 </h3>
+                <p 
+                  className="text-gray-500 text-[14px] leading-[1.6] font-manrope font-normal px-2"
+                  style={{ textAlign: 'center' }}
+                >
+                  {step.description}
+                </p>
               </div>
-              <p className="text-muted-foreground text-sm leading-relaxed pl-16">
-                {step.description}
-              </p>
             </div>
           ))}
         </div>

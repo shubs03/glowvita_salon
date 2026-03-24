@@ -10,6 +10,7 @@ import { Loader2, DollarSign, CheckCircle } from "lucide-react";
 
 // Import types
 import { SettlementData } from "./types";
+import SettlementsPaymentModal from './components/SettlementsPaymentModal';
 
 export default function SettlementsPage() {
   // State management
@@ -114,7 +115,7 @@ export default function SettlementsPage() {
   };
 
   // Payment handler — vendor can only record payments TO admin (Pay at Salon fees)
-  const handlePayVendor = async (amount: number, paymentMethod: string, transactionId?: string, notes?: string) => {
+  const handlePayVendor = async (payoutId: string, amount: number, paymentMethod: string, transactionId?: string, notes?: string) => {
     if (!selectedSettlement) return;
 
     // Vendors can only record paying admin (platform fees for Pay at Salon appointments)
@@ -632,144 +633,20 @@ export default function SettlementsPage() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
-          <DialogContent>
-            {selectedSettlement && (() => {
-              const direction = selectedSettlement.netSettlement > 0
-                ? { type: 'admin_owes', amount: selectedSettlement.vendorAmount }
-                : selectedSettlement.netSettlement < 0
-                  ? { type: 'vendor_owes', amount: selectedSettlement.adminReceivableAmount }
-                  : { type: 'balanced', amount: 0 };
-
-              return (
-                <>
-                  <DialogHeader>
-                    <DialogTitle>
-                      Pay Admin — Platform Fees
-                    </DialogTitle>
-                    <DialogDescription>
-                      Record your payment of platform fees owed to Admin for Pay at Salon appointments.
-                      Pending: ₹{direction.amount.toFixed(2)}
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <PaymentForm
-                    settlement={selectedSettlement}
-                    onSubmit={handlePayVendor}
-                    isProcessing={isProcessingPayment}
-                    onCancel={handleClosePaymentModal}
-                  />
-                </>
-              );
-            })()}
-          </DialogContent>
-        </Dialog>
+        <SettlementsPaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={handleClosePaymentModal}
+          onCollectPayment={handlePayVendor}
+          selectedPayout={selectedSettlement ? {
+            id: selectedSettlement.id,
+            pendingAmount: selectedSettlement.amountPending,
+            // Add other mock fields if needed by the interface
+          } : null}
+          isProcessing={isProcessingPayment}
+        />
       </div>
     </div>
   );
 }
 
-// Payment Form Component
-function PaymentForm({
-  settlement,
-  onSubmit,
-  isProcessing,
-  onCancel
-}: {
-  settlement: SettlementData;
-  onSubmit: (amount: number, paymentMethod: string, transactionId?: string, notes?: string) => void;
-  isProcessing: boolean;
-  onCancel: () => void;
-}) {
-  const [amount, setAmount] = useState(settlement.amountPending.toString());
-  const [paymentMethod, setPaymentMethod] = useState('Bank Transfer');
-  const [transactionId, setTransactionId] = useState('');
-  const [notes, setNotes] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const amountNum = parseFloat(amount);
-
-    if (isNaN(amountNum) || amountNum <= 0) {
-      toast.error("Please enter a valid amount");
-      return;
-    }
-
-    onSubmit(amountNum, paymentMethod, transactionId || undefined, notes || undefined);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium mb-1">Amount</label>
-        <input
-          type="number"
-          step="0.01"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="w-full px-3 py-2 border rounded-md"
-          placeholder="Enter amount (e.g. amount paid to Agent)"
-          required
-        />
-        <div className="text-xs text-muted-foreground mt-1">
-          Pending: ₹{settlement.amountPending.toFixed(2)}
-        </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">Payment Method</label>
-        <select
-          value={paymentMethod}
-          onChange={(e) => setPaymentMethod(e.target.value)}
-          className="w-full px-3 py-2 border rounded-md"
-          required
-        >
-          <option value="Bank Transfer">Bank Transfer</option>
-          <option value="UPI">UPI</option>
-          <option value="Online">Online</option>
-          <option value="Cash">Cash</option>
-          <option value="Agent">Agent</option>
-          <option value="Cheque">Cheque</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">Transaction ID (Optional)</label>
-        <input
-          type="text"
-          value={transactionId}
-          onChange={(e) => setTransactionId(e.target.value)}
-          className="w-full px-3 py-2 border rounded-md"
-          placeholder="Enter transaction ID"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium mb-1">Notes (Optional)</label>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="w-full px-3 py-2 border rounded-md"
-          placeholder="Add any notes..."
-          rows={3}
-        />
-      </div>
-
-      <div className="flex gap-2 justify-end">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isProcessing}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isProcessing}>
-          {isProcessing ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            'Record Payment'
-          )}
-        </Button>
-      </div>
-    </form>
-  );
-}
+// Removed the local PaymentForm component - using SettlementsPaymentModal from components instead

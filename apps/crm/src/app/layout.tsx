@@ -174,6 +174,10 @@ export default function RootLayout({
         <style dangerouslySetInnerHTML={{
           __html: `
             @font-face {
+              font-family: 'Manrope';
+              font-display: swap;
+            }
+            @font-face {
               font-family: 'Montserrat';
               font-display: swap;
             }

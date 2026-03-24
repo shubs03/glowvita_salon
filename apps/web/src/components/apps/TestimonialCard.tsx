@@ -1,42 +1,52 @@
-import { Star } from "lucide-react";
+import { cn } from "@repo/ui/cn";
 
 interface TestimonialCardProps {
+  imageSrc?: string;
+  name: string;
+  role: string;
   review: string;
-  author: string;
-  location: string;
-  rating: number;
+  date?: string;
 }
 
 const TestimonialCard = ({
+  imageSrc = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
+  name,
+  role,
   review,
-  author,
-  location,
-  rating,
+  date = "May 8, 2020",
 }: TestimonialCardProps) => (
-  <div className="bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group hover:border-primary/50 flex flex-col h-full">
-    <div className="flex items-center gap-4 mb-4">
-      <div className="bg-primary/10 text-primary p-3 rounded-2xl flex-shrink-0 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-300">
-        <Star className="w-6 h-6" strokeWidth={2.5} fill="currentColor" />
-      </div>
-      <h3 className="font-bold text-card-foreground text-lg items-center leading-tight">
-        {author}
-      </h3>
-    </div>
-    <div className="flex mb-3">
-      {[...Array(5)].map((_, i) => (
-        <Star
-          key={i}
-          className={`w-4 h-4 ${i < rating ? 'text-primary fill-primary' : 'text-muted-foreground fill-muted-foreground'}`}
-          strokeWidth={1.5}
+  <div className="bg-white rounded-[24px] p-6 md:p-8 shadow-lg flex flex-col md:flex-row items-center md:items-start gap-6 max-w-4xl mx-auto border border-white/20 h-full max-h-[320px] overflow-hidden">
+    {/* Profile Image */}
+    <div className="flex-shrink-0 relative group">
+      <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-4 border-white shadow-md relative z-10">
+        <img 
+          src={imageSrc} 
+          alt={name} 
+          className="w-full h-full object-cover grayscale-[10%] group-hover:grayscale-0 transition-all duration-500"
         />
-      ))}
+      </div>
+      <div className="absolute inset-0 rounded-full border-2 border-indigo-100 -m-1.5 opacity-40 group-hover:scale-110 transition-transform duration-500"></div>
     </div>
-    <p className="text-muted-foreground text-sm leading-relaxed flex-grow">
-      "{review}"
-    </p>
-    <p className="text-xs text-muted-foreground mt-4 pt-3 border-t border-border">
-      {location}
-    </p>
+
+    {/* Content */}
+    <div className="flex-grow text-center md:text-left overflow-hidden">
+      <div className="flex flex-col md:flex-row md:items-baseline gap-2 mb-3">
+        <h3 className="text-xl md:text-2xl font-bold text-gray-900 font-manrope tracking-tight">
+          {name}
+        </h3>
+        <span className="text-gray-400 text-xs md:text-sm font-medium font-manrope flex items-center gap-1.5">
+          <span className="hidden md:inline text-gray-200">•</span> {role}
+        </span>
+      </div>
+      
+      <p className="text-gray-600 text-sm md:text-base leading-relaxed font-manrope font-light italic relative mb-4 line-clamp-4">
+        "{review}"
+      </p>
+      
+      <p className="text-gray-400 text-xs font-manrope font-medium tracking-wide">
+        {date}
+      </p>
+    </div>
   </div>
 );
 

@@ -42,9 +42,25 @@ export default function AppsPage() {
       {/* Section 1: Hero */}
       <HeroSection
         title="Your Business, In Your Pocket"
+        description="Manage your salon and connect with your clients on the go with our powerful, intuitive mobile apps."
+        subTitle="From managing appointments to connecting with clients, everything you need for your salon business is right here in one place."
+        backgroundImage="/appbackimage.png"
+        ctaButtons={[
+          {
+            text: "Join GlowVita Today",
+            href: "/login",
+            variant: "primary",
+          },
+        ]}
       />
 
-      {/* Section 2: Main App Promotion */}
+      {/* Section 2: App Features */}
+      <FeaturesGridSection 
+        title="App Features"
+        description="Powerful tools designed to streamline your salon business and enhance customer relationships."
+      />
+
+      {/* Section 3: Main App Promotion */}
       <AppPromotionSection
         title="Download the GlowVita App"
         description="Discover and book top-rated salons, spas, and wellness experiences instantly with GlowVita."
@@ -70,30 +86,41 @@ export default function AppsPage() {
         ]}
       />
 
-      <TestimonialsSection 
-        title="What Our Customers Say"
-        description="Hear from the people who matter most to us."
-        testimonials={[{
-          review: "GlowVita transformed how I manage my salon bookings. The interface is intuitive and the customer engagement features have increased our revenue by 40%.",
-          author: "Sarah Johnson",
-          location: "New York, NY",
-          rating: 5
-        }, {
-          review: "As a customer, I love how easy it is to book appointments and discover new beauty services. The app makes finding trusted professionals effortless.",
-          author: "Michael Chen",
-          location: "Los Angeles, CA",
-          rating: 5
-        }, {
-          review: "The marketing tools helped my small spa reach new customers. Our bookings doubled within two months of using GlowVita.",
-          author: "Emma Rodriguez",
-          location: "Miami, FL",
-          rating: 4
-        }, {
-          review: "Outstanding platform for both service providers and clients. The payment processing is seamless and the customer support is responsive.",
-          author: "David Thompson",
-          location: "Chicago, IL",
-          rating: 5
-        }]}
+      <TestimonialsSection
+        title="Here is what our Clients are saying About us"
+        testimonials={[
+          {
+            name: "Olivia Cameron",
+            role: "Nail Artist & Owner",
+            review: "Finally, a CRM that truly understands the beauty industry. Before this, we were juggling appointment books, WhatsApp messages and spreadsheets. Now everything — bookings, client history, payments, and staff schedules — is in one place. The analytics help us see which services are most popular and which days are busiest, so we can plan better. It has completely changed the way we run our salon, and honestly, we can't imagine going back to our old system.",
+            date: "May 8, 2020",
+            imageSrc: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop"
+          },
+          {
+            name: "Sarah Johnson",
+            role: "Salon Director, Glow Loft",
+            review: "GlowVita transformed how I manage my salon bookings. The interface is intuitive and the real-time updates have virtually eliminated double-bookings. Our customer engagement features have increased our revenue by 40% in just six months.",
+            date: "October 14, 2021",
+            imageSrc: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&h=400&fit=crop"
+          },
+          {
+            name: "Michael Chen",
+            role: "Creative Partner, Style Studio",
+            review: "As a professional, I love how easy it is to manage my chair and communicate with clients. The automated reminders are a lifesaver, and the reporting tools help me track my growth perfectly. This app makes finding and keeping trusted professionals effortless.",
+            date: "February 22, 2023",
+            imageSrc: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop"
+          }
+        ]}
+      />
+
+      <FeatureComparisonSection
+        title="VENDOR APP FEATURES"
+        description="Everything your vendor business needs — beautifully unified in one app."
+      />
+
+      <HowItWorksSection
+        title="How It Works"
+        description="Our simple 4-step process to transform your salon business with our CRM platform."
       />
 
     </PageContainer>

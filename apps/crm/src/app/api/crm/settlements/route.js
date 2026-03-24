@@ -397,6 +397,8 @@ export const POST = authMiddlewareCrm(async (req) => {
             notes,
             paymentDate: new Date(),
             createdBy: req.user.userId,
+            createdByType: 'vendor',
+            verified: false
         });
 
         return NextResponse.json({

@@ -26,6 +26,7 @@ const _db = async () => {
     console.warn("MONGODB_URI is not defined, skipping database connection");
     return null;
   }
+  console.log("Connecting with MONGODB_URI:", MONGODB_URI.substring(0, 20) + "...");
 
   if (!cached.promise) {
     const opts = {

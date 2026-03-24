@@ -1,11 +1,9 @@
 import { cn } from "@repo/ui/cn";
-import { ReactNode } from "react";
-import PhoneMockup from "./PhoneMockup";
 
 interface AppPromotionSectionProps {
   title: string;
   description: string;
-  images: { src: string; hint: string }[];
+  images?: { src: string; hint: string }[];
   reverse?: boolean;
 }
 
@@ -15,6 +13,13 @@ const AppPromotionSection = ({
   images,
   reverse = false,
 }: AppPromotionSectionProps) => {
+  const points = [
+    { number: "01", text: "Easy to use" },
+    { number: "02", text: "Real-time updates" },
+    { number: "03", text: "Secure payments" },
+    { number: "04", text: "24/7 support" }
+  ];
+
   return (
     <section className="pt-2 pb-16 px-6 lg:px-8 bg-background">
       <div className="max-w-6xl mx-auto">
@@ -33,12 +38,12 @@ const AppPromotionSection = ({
             <h2 className="text-4xl md:text-5xl lg:text-6xl text-black mb-6 italic" style={{ fontFamily: "'Luxurious Roman', cursive" }}>
               {title.replace("Vendor CRM App (", "").replace(")", "")}
             </h2>
-            
+
             {/* Description */}
             <p className="mb-10 text-gray-500 max-w-xl text-lg leading-relaxed">
               {description}
             </p>
-            
+
             {/* Key Features List */}
             <div className="mb-12 space-y-0 text-lg text-black">
               {[
@@ -53,7 +58,7 @@ const AppPromotionSection = ({
                 </div>
               ))}
             </div>
-            
+
             {/* Trust Indicators and Google Play */}
             <div className="flex flex-wrap items-center gap-x-8 gap-y-6 text-black">
               <div className="flex flex-col">
@@ -68,10 +73,10 @@ const AppPromotionSection = ({
                 <span className="font-serif text-3xl font-medium">24/7</span>
                 <span className="text-sm text-gray-500">Support</span>
               </div>
-              
+
               <div className="ml-auto md:ml-4">
-                <img 
-                  src="/icons/Group 1000002487.png" 
+                <img
+                  src="/icons/Group 1000002487.png"
                   alt="Get it on Google Play"
                   className="h-12 object-contain cursor-pointer hover:opacity-90 transition-opacity"
                 />
@@ -88,10 +93,11 @@ const AppPromotionSection = ({
               />
             </div>
           </div>
+
         </div>
       </div>
     </section>
   );
 };
 
-export default AppPromotionSection;
+export default AppPromotionSection;
