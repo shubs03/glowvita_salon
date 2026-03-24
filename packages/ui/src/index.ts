@@ -29,3 +29,4 @@ export * from "./separator";
 export * from "./header";
 export * from "./footer";
 export * from "./alert";
+export * from "./tooltip";

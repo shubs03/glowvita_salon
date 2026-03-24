@@ -12,7 +12,6 @@ const AboutPage = () => {
     <div className="flex flex-col min-h-screen text-foreground">
       <main className="flex-grow">
         <IntroductionSection />
-        <StatsSection />
         <PurposeVisionSection />
         <FeaturesSection />
         <AudienceSection />
@@ -22,7 +21,7 @@ const AboutPage = () => {
           description="Manage your entire salon from the palm of your hand. Our vendor app gives you the power to run your business from anywhere, at any time."
           images={[
             {
-              src: "https://placehold.co/375x812.png",
+              src: "/icons/close-up-hand-holding-phone (1) (1) 1 (1).png",
               hint: "app dashboard screen",
             },
             {

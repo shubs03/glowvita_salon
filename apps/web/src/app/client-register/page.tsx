@@ -29,7 +29,10 @@ function ClientRegisterForm() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [mobileNo, setMobileNo] = useState('');
+  const [gender, setGender] = useState('');
+  const [birthdayDate, setBirthdayDate] = useState('');
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [address, setAddress] = useState('');
   const [state, setState] = useState('');
   const [city, setCity] = useState('');
   const [pincode, setPincode] = useState('');
@@ -240,11 +243,14 @@ function ClientRegisterForm() {
           email,
           mobileNo,
           location: confirmedLocation,
+          address,
           state,
           city,
           pincode,
           referralCode,
-          password
+          password,
+          gender,
+          birthdayDate
         }),
       });
 
@@ -472,6 +478,7 @@ function ClientRegisterForm() {
           setState(state || '');
           setCity(city || '');
           setPincode(pincode || '');
+          setAddress(result.formatted_address || '');
         }
       });
     } catch (error) {
@@ -485,7 +492,7 @@ function ClientRegisterForm() {
     placesService.current.getDetails(
       {
         placeId: result.place_id,
-        fields: ['geometry', 'address_components'],
+        fields: ['geometry', 'address_components', 'formatted_address'],
       },
       (place, status) => {
         if (status === google.maps.places.PlacesServiceStatus.OK && place?.geometry?.location) {
@@ -514,6 +521,7 @@ function ClientRegisterForm() {
           setState(state || '');
           setCity(city || '');
           setPincode(pincode || '');
+          setAddress(place.formatted_address || '');
 
           if (map.current) {
             map.current.setCenter({ lat, lng });
@@ -751,6 +759,38 @@ function ClientRegisterForm() {
                 </div>
 
 
+
+                {/* Gender and Birthday */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1">
+                      Gender <span className="font-normal text-gray-400">(Optional)</span>
+                    </label>
+                    <select
+                      id="gender"
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                      className="w-full h-11 px-4 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                    >
+                      <option value="">Select Gender</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="birthdayDate" className="block text-sm font-medium text-gray-700 mb-1">
+                      Birthday <span className="font-normal text-gray-400">(Optional)</span>
+                    </label>
+                    <input
+                      id="birthdayDate"
+                      type="date"
+                      value={birthdayDate}
+                      onChange={(e) => setBirthdayDate(e.target.value)}
+                      className="w-full h-11 px-4 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
+                    />
+                  </div>
+                </div>
 
                 {/* Location and Referral Code - Same Line */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

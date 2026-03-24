@@ -3,16 +3,16 @@
 import { BarChart, Bar, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 
 const COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "hsl(var(--chart-6))",
-  "hsl(var(--chart-7))",
-  "hsl(var(--chart-8))",
-  "hsl(var(--chart-9))",
-  "hsl(var(--chart-10))",
+  "#3b82f6", // blue-500
+  "#10b981", // emerald-500
+  "#f59e0b", // amber-500
+  "#ef4444", // red-500
+  "#8b5cf6", // violet-500
+  "#ec4899", // pink-500
+  "#06b6d4", // cyan-500
+  "#84cc16", // lime-500
+  "#f97316", // orange-500
+  "#14b8a6", // teal-500
 ];
 
 interface ServiceData {
@@ -98,14 +98,14 @@ export function SalesOfServicesChart({ servicesData, filterType, filterValue }: 
   };
 
   return (
-    <ResponsiveContainer width="100%" height={350} className="min-w-max">
+    <ResponsiveContainer width="100%" height={350}>
       <BarChart
         data={chartData}
         margin={{
           top: 20,
           right: 30,
           left: 20,
-          bottom: 60,
+          bottom: 20,
         }}
       >
         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -115,21 +115,18 @@ export function SalesOfServicesChart({ servicesData, filterType, filterValue }: 
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          angle={-45}
-          textAnchor="end"
-          height={60}
           tickFormatter={(value) => truncateName(value, 15)}
-          interval={0}
         />
         <YAxis
           stroke="hsl(var(--muted-foreground))"
           fontSize={12}
           tickLine={false}
           axisLine={false}
+          width={80}
           tickFormatter={(value) => `₹${value.toLocaleString()}`}
         />
         <Tooltip content={<CustomTooltip />} />
-        <Legend />
+        <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '30px' }} />
         <Bar 
           dataKey="value" 
           name="Sale (₹)"

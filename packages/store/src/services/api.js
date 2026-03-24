@@ -414,6 +414,19 @@ export const glowvitaApi = createApi({
       transformResponse: (response) => response,
     }),
 
+    getLandingSalons: builder.query({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.city) queryParams.append("city", params.city);
+        const queryString = queryParams.toString();
+        return {
+          url: `/vendors/landing${queryString ? `?${queryString}` : ""}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["PublicVendors"],
+    }),
+
     getPublicVendorById: builder.query({
       query: (vendorId) => ({ url: `/vendors/${vendorId}`, method: "GET" }),
       providesTags: (result, error, vendorId) => [{ type: "PublicVendor", id: vendorId }],
@@ -624,6 +637,25 @@ export const glowvitaApi = createApi({
         method: "GET",
       }),
       providesTags: ["admin"],
+    }),
+    getAdminOnlineTransactions: builder.query({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.page) queryParams.append("page", params.page);
+        if (params.limit) queryParams.append("limit", params.limit);
+        if (params.search) queryParams.append("search", params.search);
+        if (params.status && params.status !== 'all') queryParams.append("status", params.status);
+        if (params.vendorId && params.vendorId !== 'all') queryParams.append("vendorId", params.vendorId);
+        if (params.serviceName && params.serviceName !== 'all') queryParams.append("serviceName", params.serviceName);
+        if (params.regionId && params.regionId !== 'all') queryParams.append("regionId", params.regionId);
+
+        const queryString = queryParams.toString();
+        return {
+          url: `/admin/online-transactions${queryString ? `?${queryString}` : ""}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["Appointments"],
     }),
     // Service Approval Endpoints
     getVendorServicesForApproval: builder.query({
@@ -1036,6 +1068,16 @@ export const glowvitaApi = createApi({
     createDoctor: builder.mutation({
       query: (doctor) => ({
         url: "/admin/doctors",
+        method: "POST",
+        body: doctor,
+      }),
+      invalidatesTags: ["doctors"],
+    }),
+
+    // Public CRM doctor self-registration (no admin token required)
+    registerDoctorCrm: builder.mutation({
+      query: (doctor) => ({
+        url: "/crm/auth/register-doctor",
         method: "POST",
         body: doctor,
       }),
@@ -3147,6 +3189,7 @@ export const {
   // Web App
   useGetMeQuery,
   useGetPublicVendorsQuery,
+  useGetLandingSalonsQuery,
   useGetPublicVendorByIdQuery,
   useGetPublicProductsQuery,
   useGetPublicServicesQuery,
@@ -3207,6 +3250,7 @@ export const {
   useDeleteVendorMutation,
   useGetDoctorsQuery,
   useCreateDoctorMutation,
+  useRegisterDoctorCrmMutation,
   useUpdateDoctorMutation,
   useUpdateDoctorStatusMutation,
   useUpdateDoctorDocumentStatusMutation,
@@ -3550,4 +3594,5 @@ export const {
   // Admin Wallet Monitoring Hooks
   useGetAdminWithdrawalsQuery,
   useGetAdminTransactionsQuery,
+  useGetAdminOnlineTransactionsQuery,
 } = glowvitaApi;

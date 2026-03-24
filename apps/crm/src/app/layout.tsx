@@ -140,8 +140,7 @@ export default function RootLayout({
     '/add-ons',
     '/doctor-calendar',
     '/supplier-referrals',
-    '/renew-plan',
-    '/about'
+    '/renew-plan'
   ].some(path => pathname.startsWith(path));
 
   const isAuthPage = pathname.startsWith('/login') ||
@@ -171,7 +170,7 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Montserrat:wght@400..900&family=Roboto:wght@300..700&family=Poppins:wght@400;500;600&family=Luxurious+Roman&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Roboto:wght@300;400;500;600;700&family=Poppins:wght@300;400;500;600;700&family=Romanesco&family=Luxurious+Roman&display=swap" rel="stylesheet" />
         <style dangerouslySetInnerHTML={{
           __html: `
             @font-face {
@@ -184,6 +183,10 @@ export default function RootLayout({
             }
             @font-face {
               font-family: 'Roboto';
+              font-display: swap;
+            }
+            @font-face {
+              font-family: 'Poppins';
               font-display: swap;
             }
           `

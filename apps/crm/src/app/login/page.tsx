@@ -35,6 +35,16 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Basic email validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      toast.error('Invalid email', {
+        description: 'Please enter a valid email address',
+        duration: 4000,
+      });
+      return;
+    }
+
     try {
       const response = await vendorLogin({ email, password }).unwrap();
 

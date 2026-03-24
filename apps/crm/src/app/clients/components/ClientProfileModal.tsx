@@ -373,18 +373,22 @@ export default function ClientProfileModal({
                           {profileClient.gender || 'Not specified'}
                         </p>
                       </div>
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Country</Label>
-                        <p className="text-base font-medium text-foreground mt-1">
-                          {profileClient.country || 'Not provided'}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Occupation</Label>
-                        <p className="text-base font-medium text-foreground mt-1">
-                          {profileClient.occupation || 'Not provided'}
-                        </p>
-                      </div>
+                      {profileClient.source !== 'online' && (
+                        <>
+                          <div>
+                            <Label className="text-sm font-medium text-muted-foreground">Country</Label>
+                            <p className="text-base font-medium text-foreground mt-1">
+                              {profileClient.country || 'Not provided'}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-muted-foreground">Occupation</Label>
+                            <p className="text-base font-medium text-foreground mt-1">
+                              {profileClient.occupation || 'Not provided'}
+                            </p>
+                          </div>
+                        </>
+                      )}
                       <div>
                         <Label className="text-sm font-medium text-muted-foreground">
                           Online Booking
@@ -407,14 +411,16 @@ export default function ClientProfileModal({
                           {profileClient.address || 'Not provided'}
                         </p>
                       </div>
-                      <div className="col-span-2">
-                        <Label className="text-sm font-medium text-muted-foreground">
-                          Preferences
-                        </Label>
-                        <p className="text-base font-medium text-foreground mt-1">
-                          {profileClient.preferences || 'No preferences recorded.'}
-                        </p>
-                      </div>
+                      {profileClient.source !== 'online' && (
+                        <div className="col-span-2">
+                          <Label className="text-sm font-medium text-muted-foreground">
+                            Preferences
+                          </Label>
+                          <p className="text-base font-medium text-foreground mt-1">
+                            {profileClient.preferences || 'No preferences recorded.'}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

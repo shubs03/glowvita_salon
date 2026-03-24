@@ -78,7 +78,7 @@ const OfficesLocations = () => {
                   rel="noopener noreferrer"
                   className="flex items-center text-xs tracking-wide font-medium text-center text-primary"
                 >
-                  Get Directions <ArrowRightIcon className='w-4 h-4 ml-2'/>
+                  Get Directions <ArrowRightIcon className='w-4 h-4 ml-2' />
                 </a>
               </div>
             </div>

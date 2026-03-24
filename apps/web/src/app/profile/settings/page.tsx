@@ -21,6 +21,8 @@ export default function SettingsPage() {
         state: '',
         city: '',
         pincode: '',
+        gender: '',
+        birthdayDate: '',
     });
 
     const [passwords, setPasswords] = useState({
@@ -52,6 +54,8 @@ export default function SettingsPage() {
                 state: user.state || '',
                 city: user.city || '',
                 pincode: user.pincode || '',
+                gender: user.gender || '',
+                birthdayDate: user.birthdayDate || '',
             });
         }
     }, [user]);
@@ -144,6 +148,8 @@ export default function SettingsPage() {
                     state: formData.state,
                     city: formData.city,
                     pincode: formData.pincode,
+                    gender: formData.gender,
+                    birthdayDate: formData.birthdayDate,
                 }),
             });
 
@@ -240,27 +246,57 @@ export default function SettingsPage() {
                             {errors.lastName && <p className="text-xs text-destructive">{errors.lastName}</p>}
                         </div>
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                            id="email"
-                            name="email"
-                            type="email"
-                            value={formData.email}
-                            onChange={handleInputChange}
-                            disabled
-                        />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="email">Email</Label>
+                            <Input
+                                id="email"
+                                name="email"
+                                type="email"
+                                value={formData.email}
+                                onChange={handleInputChange}
+                                disabled
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="phone">Phone</Label>
+                            <Input
+                                id="phone"
+                                name="phone"
+                                value={formData.phone}
+                                onChange={handleInputChange}
+                                required
+                            />
+                            {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="phone">Phone</Label>
-                        <Input
-                            id="phone"
-                            name="phone"
-                            value={formData.phone}
-                            onChange={handleInputChange}
-                            required
-                        />
-                        {errors.phone && <p className="text-xs text-destructive">{errors.phone}</p>}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="gender">Gender</Label>
+                            <select
+                                id="gender"
+                                name="gender"
+                                value={formData.gender}
+                                onChange={(e: any) => setFormData(prev => ({ ...prev, gender: e.target.value }))}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="birthdayDate">Birthday</Label>
+                            <Input
+                                id="birthdayDate"
+                                name="birthdayDate"
+                                type="date"
+                                value={formData.birthdayDate}
+                                onChange={handleInputChange}
+                            />
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2">

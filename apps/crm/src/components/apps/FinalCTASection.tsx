@@ -1,51 +1,35 @@
 import React from 'react';
+import Link from 'next/link';
 
 const FinalCTASection = () => {
   return (
-    <section 
-      id="cta-section" 
-      className="py-20 px-6 overflow-hidden relative"
+    <section
+      id="cta-section"
+      className="py-10 md:py-14 px-6 lg:px-8 w-full rounded-2xl md:rounded-3xl overflow-hidden"
       style={{
-        background: 'linear-gradient(135deg, #2D1A2E 0%, #7B4B7B 50%, #B890B8 100%)',
+        background: 'linear-gradient(135deg, #422A3C 0%, #A86B99 100%)'
       }}
     >
-      {/* Decorative Blur Elements for depth */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute -top-[20%] -left-[10%] w-[40%] h-[60%] bg-purple-500/20 blur-[120px] rounded-full" />
-        <div className="absolute -bottom-[20%] -right-[10%] w-[40%] h-[60%] bg-pink-500/20 blur-[120px] rounded-full" />
-      </div>
-
-      <div className="max-w-4xl mx-auto text-center relative z-10">
+      <div className="max-w-4xl mx-auto text-center text-white">
         {/* Headline */}
-        <h2 
-          className="text-3xl md:text-5xl font-bold text-white mb-6 font-manrope tracking-tight"
-          style={{ lineHeight: '1.2' }}
-        >
+        <h2 className="text-xl md:text-3xl font-bold mb-3 tracking-tight">
           Ready To Transform Your Business?
         </h2>
 
         {/* Description */}
-        <p 
-          className="text-white/80 text-base md:text-[18px] mb-12 max-w-2xl mx-auto font-poppins font-light leading-relaxed"
-        >
-          Join thousands of salon owners using GlowVita CRM to streamline operations and boost revenue.
+        <p className="text-white/90 text-sm md:text-base mb-6 max-w-2xl mx-auto leading-relaxed">
+          Join thousands of salon owners using GlowVita CRM to streamline operations
+          <br className="hidden md:block" /> and boost revenue.
         </p>
 
-        {/* Buttons Row */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-          <button 
-            className="bg-white text-[#53435c] px-8 py-4 rounded-full font-bold text-[16px] transition-all duration-300 hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-105 active:scale-95"
-            style={{ fontFamily: 'Manrope, sans-serif' }}
+        {/* Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <Link
+            href="/auth/register"
+            className="bg-white text-[#422A3C] hover:bg-white/90 px-8 py-3 rounded-full font-bold text-sm transition-all duration-300 shadow-md transform hover:scale-105 inline-block"
           >
-            Join as a business owner
-          </button>
-
-          <button 
-            className="border-2 border-white/40 text-white px-8 py-4 rounded-full font-medium text-[16px] transition-all duration-300 hover:bg-white/10 hover:border-white hover:scale-105 active:scale-95 backdrop-blur-sm"
-            style={{ fontFamily: 'Manrope, sans-serif' }}
-          >
-            Learn more about benefits
-          </button>
+            Join as business owner
+          </Link>
         </div>
       </div>
     </section>

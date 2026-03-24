@@ -1,15 +1,9 @@
 
 "use client";
 import { useEffect } from "react";
-import HeroSection from "@/components/apps/HeroSection";
-import FeaturesGridSection from "@/components/apps/FeaturesGridSection";
-import HowItWorksSection from "@/components/apps/HowItWorksSection";
-import TestimonialsSection from "@/components/apps/TestimonialsSection";
-import FeatureComparisonSection from "@/components/apps/FeatureComparisonSection";
-import AppPromotionSection from "@/components/apps/AppPromotionSection";
-import CTACRM from "@/components/landing/CTACRM";
+import HeroSection from "@/components/landing/HeroSection";
+import CoreFeatures from "@/components/landing/CoreFeatures";
 import OverviewPreview from "@/components/landing/OverviewPreview";
-import RealResults from "@/components/landing/RealResults";
 
 export default function CrmHomePage() {
   useEffect(() => {
@@ -26,13 +20,8 @@ export default function CrmHomePage() {
     <div className="flex flex-col min-h-screen text-foreground">
       <main className="flex-grow">
         <HeroSection />
-        <FeaturesGridSection />
-        <TestimonialsSection />
-        <FeatureComparisonSection />
-        <HowItWorksSection />
+        <CoreFeatures />
         <OverviewPreview />
-        <RealResults />
-        <CTACRM />
       </main>
     </div>
   );

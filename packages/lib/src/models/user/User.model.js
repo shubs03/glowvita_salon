@@ -24,6 +24,15 @@ const userSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
+  gender: {
+    type: String,
+    enum: ['Male', 'Female', 'Other', ''],
+    default: '',
+  },
+  birthdayDate: {
+    type: String,
+    default: null,
+  },
   location: {
     lat: {
       type: Number,

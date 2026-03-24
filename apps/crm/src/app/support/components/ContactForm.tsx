@@ -9,7 +9,6 @@ const ContactForm = () => {
     lastName: '',
     email: '',
     phone: '',
-    salonName: '',
     subject: '',
     message: ''
   });
@@ -17,6 +16,24 @@ const ContactForm = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+
+    if (name === 'firstName' || name === 'lastName') {
+      // Only allow alphabets and spaces
+      if (value !== '' && !/^[a-zA-Z\s]*$/.test(value)) {
+        return;
+      }
+    }
+
+    if (name === 'phone') {
+      // Only allow digits and max 10 characters
+      if (value !== '' && !/^\d*$/.test(value)) {
+        return;
+      }
+      if (value.length > 10) {
+        return;
+      }
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -25,6 +42,20 @@ const ContactForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Email validation: must contain @ and .
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Please enter a valid email address (e.g., example@domain.com)');
+      return;
+    }
+
+    // Phone validation: exactly 10 digits if provided
+    if (formData.phone && formData.phone.length !== 10) {
+      toast.error('Phone number must be exactly 10 digits');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -33,7 +64,6 @@ const ContactForm = () => {
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone,
-        salonName: formData.salonName,
         message: `Subject: ${formData.subject}\n\n${formData.message}`,
         source: "crm"
       };
@@ -50,7 +80,7 @@ const ContactForm = () => {
         throw new Error(data.message || 'Something went wrong');
       }
 
-      toast.success('Thank you for reaching out! ✨ Your message has been received, and our dedicated support team will get back to you shortly. We value your feedback!', {
+      toast.success('Thank you for reaching out!  Your message has been received, and our dedicated support team will get back to you shortly.', {
         duration: 5000,
       });
 
@@ -59,12 +89,11 @@ const ContactForm = () => {
         lastName: '',
         email: '',
         phone: '',
-        salonName: '',
         subject: '',
         message: ''
       });
     } catch (error: any) {
-      toast.error(error.message || 'Oops! We encountered a small issue sending your message. Please try again or reach out to us at support@glowvita.com.', {
+      toast.error(error.message || 'Oops! We encountered a small issue sending your message. Please try again.', {
         duration: 5000,
       });
     } finally {
@@ -74,21 +103,22 @@ const ContactForm = () => {
 
   return (
     <section className="py-10 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
-      <div className="mb-8">
-        <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
+      <div className="mb-8 pl-1">
+        <h2 className="text-2xl md:text-3xl font-bold text-[#1C1C1C] relative inline-block pb-3 mb-2">
           Contact Support
+          <div className="absolute bottom-0 left-0 w-full h-[3px] bg-gradient-to-r from-[#302131] to-transparent"></div>
         </h2>
-        <p className="text-muted-foreground mt-3 text-sm max-w-2xl">
-          Fill out the form below and our team will get back to you as soon as possible
+        <p className="text-muted-foreground text-sm max-w-2xl mt-1">
+          Fill out the form below and our team will get back to you as soon as possible.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-        <div className="bg-card border border-border rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 group hover:border-primary/50">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+        <div className="lg:col-span-6 bg-card border border-[#00000036] rounded-xl p-6 md:p-8 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="firstName" className="block text-sm font-medium text-foreground mb-2">
+                <label htmlFor="firstName" className="block text-sm font-semibold text-foreground mb-1.5">
                   First Name
                 </label>
                 <input
@@ -98,13 +128,15 @@ const ContactForm = () => {
                   value={formData.firstName}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
-                  placeholder="Enter first name"
+                  pattern="[A-Za-z\s]*"
+                  title="Only alphabets are allowed"
+                  className="w-full px-4 py-2.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-[#A86B99] focus:border-transparent transition-all duration-300"
+                  placeholder="Enter your first name"
                 />
               </div>
 
               <div>
-                <label htmlFor="lastName" className="block text-sm font-medium text-foreground mb-2">
+                <label htmlFor="lastName" className="block text-sm font-semibold text-foreground mb-1.5">
                   Last Name
                 </label>
                 <input
@@ -114,15 +146,17 @@ const ContactForm = () => {
                   value={formData.lastName}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
-                  placeholder="Enter last name"
+                  pattern="[A-Za-z\s]*"
+                  title="Only alphabets are allowed"
+                  className="w-full px-4 py-2.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-[#A86B99] focus:border-transparent transition-all duration-300"
+                  placeholder="Enter your last name"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-foreground mb-2">
+                <label htmlFor="email" className="block text-sm font-semibold text-foreground mb-1.5">
                   Email Address
                 </label>
                 <input
@@ -132,13 +166,13 @@ const ContactForm = () => {
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  className="w-full px-4 py-3 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
+                  className="w-full px-4 py-2.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-[#A86B99] focus:border-transparent transition-all duration-300"
                   placeholder="Enter your email address"
                 />
               </div>
 
               <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-foreground mb-2">
+                <label htmlFor="phone" className="block text-sm font-semibold text-foreground mb-1.5">
                   Phone Number
                 </label>
                 <input
@@ -147,29 +181,17 @@ const ContactForm = () => {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
-                  placeholder="Enter your phone number (optional)"
+                  maxLength={10}
+                  pattern="\d{10}"
+                  title="Phone number must be exactly 10 digits"
+                  className="w-full px-4 py-2.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-[#A86B99] focus:border-transparent transition-all duration-300"
+                  placeholder="Enter your phone number"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="salonName" className="block text-sm font-medium text-foreground mb-2">
-                Salon Name (Optional)
-              </label>
-              <input
-                type="text"
-                id="salonName"
-                name="salonName"
-                value={formData.salonName}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
-                placeholder="Enter your salon name (optional)"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="subject" className="block text-sm font-medium text-foreground mb-2">
+              <label htmlFor="subject" className="block text-sm font-semibold text-foreground mb-1.5">
                 Subject
               </label>
               <input
@@ -179,13 +201,13 @@ const ContactForm = () => {
                 value={formData.subject}
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300"
+                className="w-full px-4 py-2.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-[#A86B99] focus:border-transparent transition-all duration-300"
                 placeholder="What is this regarding?"
               />
             </div>
 
             <div>
-              <label htmlFor="message" className="block text-sm font-medium text-foreground mb-2">
+              <label htmlFor="message" className="block text-sm font-semibold text-foreground mb-1.5">
                 Message
               </label>
               <textarea
@@ -194,92 +216,75 @@ const ContactForm = () => {
                 value={formData.message}
                 onChange={handleChange}
                 required
-                rows={5}
-                className="w-full px-4 py-3 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-300 resize-none"
+                rows={4}
+                className="w-full px-4 py-2.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-[#A86B99] focus:border-transparent transition-all duration-300 resize-none"
                 placeholder="Please describe your issue or question in detail..."
               ></textarea>
             </div>
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={`w-full bg-primary text-primary-foreground py-4 px-6 rounded-xl font-semibold text-base transition-all duration-300 shadow-sm hover:shadow-md ${isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-primary/90'
-                }`}
-            >
-              {isSubmitting ? 'Sending...' : 'Send Message'}
-            </button>
+            <div className="flex justify-center pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`bg-[#422A3C] text-white py-3 px-14 rounded-lg font-medium text-sm transition-all duration-300 hover:bg-[#422A3C]/90 ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''
+                  }`}
+              >
+                {isSubmitting ? 'Sending...' : 'Send Message'}
+              </button>
+            </div>
           </form>
         </div>
 
-        <div className="space-y-6 sticky top-6 h-full">
-          <div className="bg-card border border-border rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 group hover:border-primary/50">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="bg-primary/10 text-primary p-3 rounded-2xl flex-shrink-0 group-hover:bg-primary/20 transition-all duration-300">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="16" x2="12" y2="12"></line>
-                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                </svg>
+        <div className="lg:col-span-6 space-y-6">
+          <div className="bg-card border border-[#00000036] rounded-xl p-6 md:p-8 shadow-sm">
+            <div className="flex items-start gap-3 mb-2">
+              <div className="flex-shrink-0 mt-0.5">
+                <img src="/icons/letter-i (1) 1.png" alt="Info" className="w-6 h-6 object-contain" />
               </div>
               <div>
-                <h3 className="font-bold text-card-foreground text-xl mb-2">Before You Contact Us</h3>
-                <p className="text-muted-foreground text-base leading-relaxed">
-                  Check out our knowledge base and FAQ section for quick answers to common questions.
-                  Many issues can be resolved instantly without waiting for a response.
-                </p>
+                <h3 className="font-bold text-foreground text-[16px]">Before You Contact Us</h3>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => {
-                  const element = document.getElementById('faq-section');
-                  if (element) {
-                    element.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }}
-                className="block text-primary hover:underline font-medium text-left bg-transparent border-none p-0 cursor-pointer"
-              >
-                View Frequently Asked Questions
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  // Navigate to the home page and scroll to the overview section
-                  window.location.href = '/#overview-preview';
-                }}
-                className="block text-primary hover:underline font-medium text-left bg-transparent border-none p-0 cursor-pointer"
-              >
-                Watch Video Tutorials
-              </button>
+            <div className="pl-8">
+              <p className="text-muted-foreground text-[13px] leading-relaxed mb-4">
+                Check out our knowledge base and FAQ section for quick answers to common questions. Many issues can be resolved instantly without waiting for a response.
+              </p>
+
+              <div className="space-y-1.5 text-[13px] text-foreground">
+                <button type="button" className="block font-medium text-left hover:text-[#0ED3FF] transition-colors">
+                  View Frequently Asked Questions
+                </button>
+                <button type="button" className="block font-medium text-left hover:text-[#0ED3FF] transition-colors">
+                  Watch Video Tutorials
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="bg-card border border-border rounded-2xl p-8 shadow-sm hover:shadow-md transition-all duration-300 group hover:border-primary/50">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="bg-primary/10 text-primary p-3 rounded-2xl flex-shrink-0 group-hover:bg-primary/20 transition-all duration-300">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                  <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                </svg>
+          <div className="bg-card border border-[#00000036] rounded-xl p-6 md:p-8 shadow-sm">
+            <div className="flex items-start gap-3 mb-2">
+              <div className="flex-shrink-0 mt-0.5">
+                <img src="/icons/customer-service (5) 1.png" alt="Emergency Support" className="w-6 h-6 object-contain" />
               </div>
               <div>
-                <h3 className="font-bold text-card-foreground text-xl mb-2">Emergency Support</h3>
-                <p className="text-muted-foreground text-base leading-relaxed">
-                  For urgent issues that require immediate attention, please contact our emergency support line.
-                </p>
+                <h3 className="font-bold text-foreground text-[16px]">Emergency Support</h3>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <p className="text-muted-foreground">
-                <span className="font-medium">Phone:</span> <a href="tel:+18001234567" className="text-primary hover:underline">+1 (800) 123-4567</a>
+            <div className="pl-8">
+              <p className="text-muted-foreground text-[13px] leading-relaxed mb-4">
+                For urgent issues that require immediate attention, please contact our emergency support line.
               </p>
-              <p className="text-muted-foreground">
-                <span className="font-medium">Hours:</span> 24/7
-              </p>
+
+              <div className="space-y-1.5 text-[13px] text-foreground">
+                <p className="font-medium">
+                  Phone : +91 9412355675
+                </p>
+                <button type="button" className="block font-medium text-left hover:text-[#0ED3FF] transition-colors">
+                  Watch Video Tutorials
+                </button>
+              </div>
             </div>
           </div>
         </div>

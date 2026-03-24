@@ -191,7 +191,7 @@ export default function ClientListSection({
                         </TableCell>
                         <TableCell className="min-w-[150px] max-w-[180px] truncate">{client.email}</TableCell>
                         <TableCell className="min-w-[120px] max-w-[150px] truncate">{client.phone}</TableCell>
-                        <TableCell className="min-w-[100px] truncate">{formatDateForDisplay(client.birthdayDate)}</TableCell>
+                        <TableCell className="min-w-[100px] truncate">{formatDateForDisplay(client.birthdayDate, "-")}</TableCell>
                         <TableCell className="min-w-[100px] truncate">
                           {formatDateForDisplay(lastVisitDateById.get(String(client._id)))}
                         </TableCell>
