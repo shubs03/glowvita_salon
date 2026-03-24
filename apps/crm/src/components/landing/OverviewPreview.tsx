@@ -1,7 +1,20 @@
+"use client";
 import React from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 const OverviewPreview = () => {
+  const router = useRouter();
+  const { isCrmAuthenticated } = useCrmAuth();
+
+  const handleStartTrial = () => {
+    if (isCrmAuthenticated) {
+      router.push("/dashboard");
+    } else {
+      router.push("/auth/register");
+    }
+  };
   return (
     <section id="overview-preview" className="pt-0 pb-12 overflow-hidden bg-white">
       <div className="px-6 lg:px-8 max-w-7xl mx-auto">
@@ -21,7 +34,10 @@ const OverviewPreview = () => {
             </p>
 
             <div className="pt-4 flex justify-start">
-              <button className="px-10 py-3.5 bg-[#3d2c3e] text-white font-semibold rounded-[1rem] hover:bg-[#2d1c2d] transition-all duration-300 shadow-sm active:scale-95 text-lg">
+              <button 
+                onClick={handleStartTrial}
+                className="px-10 py-3.5 bg-[#3d2c3e] text-white font-semibold rounded-[1rem] hover:bg-[#2d1c2d] transition-all duration-300 shadow-sm active:scale-95 text-lg"
+              >
                 Start a free trial
               </button>
             </div>

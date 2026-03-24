@@ -117,16 +117,16 @@ export function Footer({ className }: FooterProps) {
                     <p>Salon District, City 12345</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <Phone className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <a href="tel:+1-800-BEAUTY" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    +1 (800) BEAUTY
+                <div>
+                  <a href="tel:+919075201035" className="flex items-center space-x-3 text-sm text-muted-foreground hover:text-foreground transition-colors group">
+                    <Phone className="h-4 w-4 text-muted-foreground !text-inherit flex-shrink-0" />
+                    <span>+91 9075201035</span>
                   </a>
                 </div>
-                <div className="flex items-center space-x-3">
-                  <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <a href="mailto:hello@glowvita.com" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    hello@glowvita.com
+                <div>
+                  <a href="mailto:glowvitasalon@gmail.com" className="flex items-center space-x-3 text-sm text-muted-foreground hover:text-foreground transition-colors group">
+                    <Mail className="h-4 w-4 text-muted-foreground !text-inherit flex-shrink-0" />
+                    <span>glowvitasalon@gmail.com</span>
                   </a>
                 </div>
               </div>

@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 
 const ContactForm = () => {
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     phone: '',
     subject: '',
@@ -15,6 +16,24 @@ const ContactForm = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+
+    if (name === 'firstName' || name === 'lastName') {
+      // Only allow alphabets and spaces
+      if (value !== '' && !/^[a-zA-Z\s]*$/.test(value)) {
+        return;
+      }
+    }
+
+    if (name === 'phone') {
+      // Only allow digits and max 10 characters
+      if (value !== '' && !/^\d*$/.test(value)) {
+        return;
+      }
+      if (value.length > 10) {
+        return;
+      }
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -23,12 +42,26 @@ const ContactForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Email validation: must contain @ and .
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      toast.error('Please enter a valid email address (e.g., example@domain.com)');
+      return;
+    }
+
+    // Phone validation: exactly 10 digits if provided
+    if (formData.phone && formData.phone.length !== 10) {
+      toast.error('Phone number must be exactly 10 digits');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const apiBody = {
-        firstName: formData.fullName.split(' ')[0] || '',
-        lastName: formData.fullName.split(' ').slice(1).join(' ') || '',
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone,
         message: `Subject: ${formData.subject}\n\n${formData.message}`,
@@ -47,12 +80,13 @@ const ContactForm = () => {
         throw new Error(data.message || 'Something went wrong');
       }
 
-      toast.success('Thank you for reaching out! ✨ Your message has been received, and our dedicated support team will get back to you shortly.', {
+      toast.success('Thank you for reaching out!  Your message has been received, and our dedicated support team will get back to you shortly.', {
         duration: 5000,
       });
 
       setFormData({
-        fullName: '',
+        firstName: '',
+        lastName: '',
         email: '',
         phone: '',
         subject: '',
@@ -82,20 +116,42 @@ const ContactForm = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
         <div className="lg:col-span-6 bg-card border border-[#00000036] rounded-xl p-6 md:p-8 shadow-sm">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-semibold text-foreground mb-1.5">
-                Full Name
-              </label>
-              <input
-                type="text"
-                id="fullName"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleChange}
-                required
-                className="w-full px-4 py-2.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-[#A86B99] focus:border-transparent transition-all duration-300"
-                placeholder="Enter your full name"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-semibold text-foreground mb-1.5">
+                  First Name
+                </label>
+                <input
+                  type="text"
+                  id="firstName"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  required
+                  pattern="[A-Za-z\s]*"
+                  title="Only alphabets are allowed"
+                  className="w-full px-4 py-2.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-[#A86B99] focus:border-transparent transition-all duration-300"
+                  placeholder="Enter your first name"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-semibold text-foreground mb-1.5">
+                  Last Name
+                </label>
+                <input
+                  type="text"
+                  id="lastName"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  required
+                  pattern="[A-Za-z\s]*"
+                  title="Only alphabets are allowed"
+                  className="w-full px-4 py-2.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-[#A86B99] focus:border-transparent transition-all duration-300"
+                  placeholder="Enter your last name"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -125,6 +181,9 @@ const ContactForm = () => {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
+                  maxLength={10}
+                  pattern="\d{10}"
+                  title="Phone number must be exactly 10 digits"
                   className="w-full px-4 py-2.5 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-[#A86B99] focus:border-transparent transition-all duration-300"
                   placeholder="Enter your phone number"
                 />

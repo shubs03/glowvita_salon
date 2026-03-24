@@ -414,6 +414,19 @@ export const glowvitaApi = createApi({
       transformResponse: (response) => response,
     }),
 
+    getLandingSalons: builder.query({
+      query: (params = {}) => {
+        const queryParams = new URLSearchParams();
+        if (params.city) queryParams.append("city", params.city);
+        const queryString = queryParams.toString();
+        return {
+          url: `/vendors/landing${queryString ? `?${queryString}` : ""}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["PublicVendors"],
+    }),
+
     getPublicVendorById: builder.query({
       query: (vendorId) => ({ url: `/vendors/${vendorId}`, method: "GET" }),
       providesTags: (result, error, vendorId) => [{ type: "PublicVendor", id: vendorId }],
@@ -3176,6 +3189,7 @@ export const {
   // Web App
   useGetMeQuery,
   useGetPublicVendorsQuery,
+  useGetLandingSalonsQuery,
   useGetPublicVendorByIdQuery,
   useGetPublicProductsQuery,
   useGetPublicServicesQuery,

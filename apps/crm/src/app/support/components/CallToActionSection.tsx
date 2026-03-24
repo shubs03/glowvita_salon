@@ -12,7 +12,7 @@ const CallToActionSection = () => {
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <a 
-            href="mailto:support@glowvita.com"
+            href="mailto:glowvitasalon@gmail.com"
             className="bg-white hover:bg-white/90 text-primary px-8 py-4 rounded-xl font-semibold text-base transition-all duration-300 flex items-center gap-3 shadow-sm group"
           >
             <img src="/icons/email (10) 1.png" alt="Email" className="w-6 h-6 object-contain" />
@@ -20,11 +20,11 @@ const CallToActionSection = () => {
           </a>
           
           <a 
-            href="tel:+18001234567"
+            href="tel:+919075201035"
             className="bg-white hover:bg-white/90 text-primary px-8 py-4 rounded-xl font-semibold text-base transition-all duration-300 flex items-center gap-3 shadow-sm group"
           >
             <img src="/icons/call (1) 1.png" alt="Call" className="w-6 h-6 object-contain" />
-            Call Support
+            +91 9075201035
           </a>
         </div>
       </div>
