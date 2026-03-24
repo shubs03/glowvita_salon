@@ -44,7 +44,7 @@ export default function AppsPage() {
       <FeaturesGridSection />
       <TestimonialsSection />
       <FeatureComparisonSection />
-      <HowItWorks />
+      <HowItWorksSection />
       <SecuritySection />
       <AppPromotionSection
         title="Vendor CRM App (For Your Business)"

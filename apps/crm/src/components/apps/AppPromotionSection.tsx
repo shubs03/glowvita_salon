@@ -1,11 +1,9 @@
 import { cn } from "@repo/ui/cn";
-import { ReactNode } from "react";
-import PhoneMockup from "./PhoneMockup";
 
 interface AppPromotionSectionProps {
   title: string;
   description: string;
-  images: { src: string; hint: string }[];
+  images?: { src: string; hint: string }[];
   reverse?: boolean;
 }
 
@@ -15,99 +13,129 @@ const AppPromotionSection = ({
   images,
   reverse = false,
 }: AppPromotionSectionProps) => {
+  const points = [
+    { number: "01", text: "Easy to use" },
+    { number: "02", text: "Real-time updates" },
+    { number: "03", text: "Secure payments" },
+    { number: "04", text: "24/7 support" }
+  ];
+
   return (
-    <section className="py-16 px-6 lg:px-8 bg-background">
-      <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-          <div className="lg:pl-8">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-serif font-bold text-primary mb-4 border-b-2 border-gray-900 pb-6">
-              {title}
-            </h2>
-            <p className="mb-4 text-gray-600 max-w-2xl leading-relaxed">
-              {description}
-            </p>
-            
-            {/* Key Features */}
-            <div className="mb-6 grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
-                  <div className="w-2 h-2 bg-primary rounded-full"></div>
-                </div>
-                <span className="text-sm text-secondary-foreground">Easy to use</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
-                  <div className="w-2 h-2 bg-primary rounded-full"></div>
-                </div>
-                <span className="text-sm text-secondary-foreground">Real-time updates</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
-                  <div className="w-2 h-2 bg-primary rounded-full"></div>
-                </div>
-                <span className="text-sm text-secondary-foreground">Secure payments</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center">
-                  <div className="w-2 h-2 bg-primary rounded-full"></div>
-                </div>
-                <span className="text-sm text-secondary-foreground">24/7 support</span>
-              </div>
-            </div>
-            
-            {/* Google Play Button */}
-            <div className="flex flex-wrap gap-4">
-              <a
-                href="#"
-                className="bg-foreground hover:bg-foreground/90 text-background px-6 py-3 rounded-xl transition-all duration-300 flex items-center gap-3 shadow-lg hover:shadow-xl group"
-              >
-                <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z" />
-                </svg>
-                <div className="text-left">
-                  <p className="text-xs opacity-90">Get it on</p>
-                  <p className="text-lg font-semibold">Google Play</p>
-                </div>
-              </a>
-            </div>
-            
-            {/* Trust Indicators */}
-            <div className="mt-6 flex items-center gap-6 text-sm text-gray-600">
-              <div className="flex items-center gap-1">
-                <span className="font-semibold text-primary">4.9/5</span>
-                <span>Rating</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="font-semibold text-primary">100K+</span>
-                <span>Downloads</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span className="font-semibold text-primary">24/7</span>
-                <span>Support</span>
-              </div>
-            </div>
-          </div>
+    <section className="py-12 bg-white overflow-hidden">
+      <div className="max-w-[1537px] mx-auto px-6 lg:px-24">
+        
+        {/* Top Header with Single Line - Left Aligned */}
+        <div className="flex items-center gap-8 mb-12 text-left">
+          <span 
+            className="text-[#53435c] text-sm md:text-md uppercase tracking-[0.3em] whitespace-nowrap"
+            style={{ fontFamily: 'Luxurious Roman, serif' }}
+          >
+            VENDOR CRM APP
+          </span>
+          <div className="h-[1px] bg-gray-200 flex-grow"></div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           
-          {/* Phone Mockup */}
-          <div className="flex justify-center lg:pl-28">
-            <div className="relative">
-              {/* Phone Frame */}
-              <div className="relative w-64 h-[500px] bg-foreground rounded-[2.5rem] p-2 shadow-2xl">
-                {/* Screen */}
-                <div className="w-full h-full bg-background rounded-[2rem] overflow-hidden relative">
-                  {/* Notch */}
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-5 bg-foreground rounded-b-2xl z-10"></div>
-                  
-                  {/* Screen Content - First Image */}
-                  <img
-                    src={images[0].src}
-                    alt={`${title} screenshot 1`}
-                    className="w-full h-full object-cover"
-                  />
+          {/* Left Side: Information */}
+          <div className="flex flex-col">
+            <h2 
+              className="text-gray-900 mb-6 italic"
+              style={{ 
+                fontFamily: 'Luxurious Roman, serif',
+                fontSize: '51px',
+                fontWeight: 400,
+                lineHeight: '91px'
+              }}
+            >
+              For Your Business
+            </h2>
+            
+            <p 
+              className="text-gray-500 mb-12 max-w-[500px]"
+              style={{
+                fontFamily: 'Poppins, sans-serif',
+                fontSize: '14px',
+                fontWeight: 400,
+                lineHeight: '100%'
+              }}
+            >
+              Manage your entire salon from the palm of your hand. Our vendor app gives you the power to run your business from anywhere, at any time.
+            </p>
+
+            {/* Feature Points with Dividers */}
+            <div className="flex flex-col mb-16 max-w-[450px]">
+              {points.map((point, index) => (
+                <div key={index}>
+                  <div className="py-5 flex items-center gap-4 group">
+                    <span 
+                      className="text-gray-300 text-lg font-medium w-8"
+                      style={{ fontFamily: 'Poppins, sans-serif' }}
+                    >
+                      {point.number}.
+                    </span>
+                    <span 
+                      className="text-gray-800 flex-grow transition-colors group-hover:text-indigo-900"
+                      style={{
+                        fontFamily: 'Poppins, sans-serif',
+                        fontSize: '18px',
+                        fontWeight: 400,
+                        lineHeight: '100%',
+                        textAlign: 'justify'
+                      }}
+                    >
+                      {point.text}
+                    </span>
+                  </div>
+                  {index < points.length - 1 && <div className="h-[1px] bg-gray-200 w-full" />}
                 </div>
+              ))}
+              <div className="h-[1px] bg-gray-200 w-full" />
+            </div>
+
+            {/* Bottom Stats and Google Play - All in one row */}
+            <div className="flex flex-wrap items-center gap-12">
+              <div className="flex items-start gap-10">
+                <div className="flex flex-col">
+                  <span className="text-2xl font-bold text-gray-900 font-manrope">4.9/5</span>
+                  <span className="text-gray-500 text-xs uppercase tracking-wider font-manrope">Rating</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-2xl font-bold text-gray-900 font-manrope">20k+</span>
+                  <span className="text-gray-500 text-xs uppercase tracking-wider font-manrope">Downloads</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-2xl font-bold text-gray-900 font-manrope">24/7</span>
+                  <span className="text-gray-500 text-xs uppercase tracking-wider font-manrope">Support</span>
+                </div>
+              </div>
+
+              <div className="flex">
+                <a href="#" className="hover:scale-105 transition-transform duration-300">
+                  <img 
+                    src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" 
+                    alt="Get it on Google Play"
+                    className="h-[52px]"
+                  />
+                </a>
               </div>
             </div>
           </div>
+
+          {/* Right Side: Large App Image */}
+          <div className="relative flex justify-center lg:justify-end items-center">
+            {/* Soft Blue Glow Background */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-blue-50/60 rounded-full blur-3xl -z-10" />
+            
+            <div className="relative max-w-[500px] w-full transform lg:translate-x-10">
+              <img 
+                src="/icons/AppImage.png" 
+                alt="Vendor App Mockup" 
+                className="w-full h-auto object-contain drop-shadow-2xl"
+              />
+            </div>
+          </div>
+
         </div>
       </div>
     </section>

@@ -34,8 +34,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
         };
 
         const buildRegionFilter = () => {
-            if (roleName === 'SUPER_ADMIN' || roleName === 'superadmin') {
-                if (regionId) {
+            const role = (roleName || '').toUpperCase();
+            if (role === 'SUPER_ADMIN' || role === 'SUPERADMIN') {
+                if (regionId && regionId !== 'all') {
                     return { regionId: toObjectId(regionId) };
                 }
                 return {}; // No region restriction for Super Admin by default
@@ -44,7 +45,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
             // Regional Admin is scoped to their assigned regions
             if (assignedRegions && assignedRegions.length > 0) {
                 const objectIdRegions = assignedRegions.map(toObjectId);
-                if (regionId && assignedRegions.includes(regionId)) {
+                if (regionId && regionId !== 'all' && assignedRegions.includes(regionId)) {
                     return { regionId: toObjectId(regionId) };
                 }
                 return { regionId: { $in: objectIdRegions } };
@@ -54,8 +55,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
         };
 
         const regionFilter = buildRegionFilter();
-        const hasRegionFilter = Object.keys(regionFilter).length > 0;
-        console.log('[Settlements] Region filter:', JSON.stringify(regionFilter));
+        console.log('[Settlements] Raw Region Filter:', JSON.stringify(regionFilter));
 
         // Calculate date range
         let startDate, endDate;
@@ -89,13 +89,16 @@ export const GET = authMiddlewareAdmin(async (req) => {
                     break;
                 default: // 'all'
                     startDate = new Date(2020, 0, 1);
-                    endDate = new Date(now.getFullYear() + 1, 0, 1, 23, 59, 59, 999);
+                    endDate = new Date(now.getFullYear() + 1, 11, 31, 23, 59, 59, 999);
             }
         }
 
+        // 1. Get ALL vendors matching region to initialize the list
+        // This ensures we show vendors with balances even if they have no new appointments
+        const vendors = await VendorModel.find(regionFilter).select('businessName ownerName contactNumber email regionId');
+        console.log(`[Settlements] Found ${vendors.length} vendors in region`);
+
         // Build appointment query: date + region
-        // Pay Online: client paid platform (Razorpay) → needs paymentStatus:'completed'
-        // Pay at Salon: client pays vendor directly in cash → only needs status:'completed' (paymentStatus stays 'pending' by default)
         const appointmentMatchFilter = {
             date: { $gte: startDate, $lte: endDate },
             status: { $in: ['completed', 'partially-completed'] },
@@ -107,9 +110,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
             ...regionFilter
         };
 
-        console.log('[Settlements] Appointment filter:', JSON.stringify(appointmentMatchFilter, null, 2));
-
-        // 1. Get Opening Balances for all vendors up to startDate
+        // 2. Get Opening Balances for all vendors up to startDate
         const openingStatsArray = await AppointmentModel.aggregate([
             {
                 $match: {
@@ -138,7 +139,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
         const openingPaymentsArray = await VendorSettlementPaymentModel.aggregate([
             {
-                $match: { paymentDate: { $lt: startDate } }
+                $match: { 
+                    paymentDate: { $lt: startDate },
+                    verified: { $ne: false }
+                }
             },
             {
                 $group: {
@@ -152,80 +156,52 @@ export const GET = authMiddlewareAdmin(async (req) => {
         // Map for quick lookup
         const openingBalancesMap = new Map();
         openingStatsArray.forEach(s => {
-            const vId = s._id.toString();
-            openingBalancesMap.set(vId, (s.adminOwesVendor - s.vendorOwesAdmin));
+            if (s._id) {
+                const vId = s._id.toString();
+                openingBalancesMap.set(vId, (s.adminOwesVendor - s.vendorOwesAdmin));
+            }
         });
         openingPaymentsArray.forEach(p => {
-            const vId = p._id.toString();
-            const current = openingBalancesMap.get(vId) || 0;
-            openingBalancesMap.set(vId, current + (p.paidToVendor - p.paidToAdmin));
+            if (p._id) {
+                const vId = p._id.toString();
+                const current = openingBalancesMap.get(vId) || 0;
+                openingBalancesMap.set(vId, current + (p.paidToVendor - p.paidToAdmin));
+            }
         });
 
-        // 2. Fetch current period appointments
-        const appointments = await AppointmentModel.find(appointmentMatchFilter)
-            .populate({
-                path: 'vendorId',
-                select: 'businessName ownerName contactNumber email regionId',
-                strictPopulate: false
-            })
-            .sort({ date: -1 });
-
-        // 3. Fetch current period payment history
-        const filteredVendorIds = [...new Set(
-            appointments
-                .map(a => a.vendorId?._id?.toString() || a.vendorId?.toString())
-                .filter(Boolean)
-        )];
-
-        const paymentHistoryFilter = {
-            paymentDate: { $gte: startDate, $lte: endDate }
-        };
-
-        if (hasRegionFilter) {
-            if (filteredVendorIds.length > 0) {
-                paymentHistoryFilter.vendorId = {
-                    $in: filteredVendorIds.map(id => new mongoose.Types.ObjectId(id))
-                };
-            } else {
-                paymentHistoryFilter.vendorId = { $in: [] };
-            }
-        }
-
-        const paymentHistory = await VendorSettlementPaymentModel.find(paymentHistoryFilter)
-            .populate('vendorId', 'businessName ownerName contactNumber email')
-            .sort({ paymentDate: -1 });
-
-        // 4. Group appointments by vendor
+        // 3. Initialize the vendorSettlementsMap with ALL relevant vendors
         const vendorSettlementsMap = new Map();
+        vendors.forEach(vendor => {
+            const vId = vendor._id.toString();
+            vendorSettlementsMap.set(vId, {
+                vendorId: vId,
+                vendorName: vendor.businessName || 'N/A',
+                contactNo: vendor.contactNumber || 'N/A',
+                ownerName: vendor.ownerName || 'N/A',
+                appointments: [],
+                totalAmount: 0,
+                platformFeeTotal: 0,
+                serviceTaxTotal: 0,
+                adminOwesVendor: 0,
+                vendorOwesAdmin: 0,
+                openingBalance: openingBalancesMap.get(vId) || 0,
+                netSettlement: 0,
+                adminReceivableAmount: 0,
+                vendorAmount: 0,
+                amountPaid: 0,
+                amountPending: 0,
+                paymentHistory: []
+            });
+        });
+
+        // 4. Fetch current period appointments and group them
+        const appointments = await AppointmentModel.find(appointmentMatchFilter).sort({ date: -1 });
 
         appointments.forEach(appt => {
-            const vendorId = appt.vendorId?._id?.toString() || appt.vendorId?.toString();
-            if (!vendorId) return;
-
-            if (!vendorSettlementsMap.has(vendorId)) {
-                vendorSettlementsMap.set(vendorId, {
-                    vendorId: vendorId,
-                    vendorName: appt.vendorId?.businessName || 'Unknown Vendor',
-                    contactNo: appt.vendorId?.contactNumber || 'N/A',
-                    ownerName: appt.vendorId?.ownerName || 'N/A',
-                    appointments: [],
-                    totalAmount: 0,
-                    platformFeeTotal: 0,
-                    serviceTaxTotal: 0,
-                    adminOwesVendor: 0,
-                    vendorOwesAdmin: 0,
-                    openingBalance: openingBalancesMap.get(vendorId) || 0,
-                    netSettlement: 0,
-                    adminReceivableAmount: 0,
-                    vendorAmount: 0,
-                    amountPaid: 0,
-                    amountPending: 0,
-                    paymentHistory: []
-                });
-            }
+            const vendorId = appt.vendorId?.toString();
+            if (!vendorId || !vendorSettlementsMap.has(vendorId)) return;
 
             const settlement = vendorSettlementsMap.get(vendorId);
-
             const appointmentData = {
                 _id: appt._id.toString(),
                 date: appt.date,
@@ -254,66 +230,62 @@ export const GET = authMiddlewareAdmin(async (req) => {
             }
         });
 
-        // Add payment history
+        // 5. Fetch current period payment history
+        const paymentHistoryFilter = {
+            paymentDate: { $gte: startDate, $lte: endDate }
+        };
+
+        const paymentHistory = await VendorSettlementPaymentModel.find(paymentHistoryFilter)
+            .populate({ path: 'vendorId', select: 'businessName ownerName contactNumber email', strictPopulate: false })
+            .populate({ path: 'verifiedBy', select: 'name email', strictPopulate: false })
+            .populate({ path: 'createdBy', select: 'name email', strictPopulate: false })
+            .sort({ paymentDate: -1 })
+            .lean();
+
+        // Add payment history to map
         paymentHistory.forEach(payment => {
             const vId = payment.vendorId?._id?.toString() || payment.vendorId?.toString();
             if (!vId) return;
 
-            if (!vendorSettlementsMap.has(vId)) {
-                vendorSettlementsMap.set(vId, {
-                    vendorId: vId,
-                    vendorName: payment.vendorId?.businessName || 'Unknown Vendor',
-                    contactNo: payment.vendorId?.contactNumber || 'N/A',
-                    ownerName: payment.vendorId?.ownerName || 'N/A',
-                    appointments: [],
-                    totalAmount: 0,
-                    platformFeeTotal: 0,
-                    serviceTaxTotal: 0,
-                    adminOwesVendor: 0,
-                    vendorOwesAdmin: 0,
-                    openingBalance: openingBalancesMap.get(vId) || 0,
-                    netSettlement: 0,
-                    adminReceivableAmount: 0,
-                    vendorAmount: 0,
-                    amountPaid: 0,
-                    amountPending: 0,
-                    paymentHistory: []
-                });
+            if (vendorSettlementsMap.has(vId)) {
+                const s = vendorSettlementsMap.get(vId);
+                s.paymentHistory.push(payment);
             }
-
-            const s = vendorSettlementsMap.get(vId);
-            s.paymentHistory.push(payment);
         });
 
-        // Calculate final amounts with Ledger Logic
+        // 6. Calculate final amounts with Ledger Logic
         const settlements = Array.from(vendorSettlementsMap.values()).map(settlement => {
             const periodNet = settlement.adminOwesVendor - settlement.vendorOwesAdmin;
             const totalNetBalance = settlement.openingBalance + periodNet;
 
             const totalPaidToVendorInPeriod = settlement.paymentHistory
-                .filter(p => p.type === "Payment to Vendor").reduce((acc, p) => acc + p.amount, 0);
+                .filter(p => p.type === "Payment to Vendor" && p.verified !== false).reduce((acc, p) => acc + p.amount, 0);
             const totalPaidToAdminInPeriod = settlement.paymentHistory
-                .filter(p => p.type === "Payment to Admin").reduce((acc, p) => acc + p.amount, 0);
+                .filter(p => p.type === "Payment to Admin" && p.verified !== false).reduce((acc, p) => acc + p.amount, 0);
 
-            const closingBalance = totalNetBalance - totalPaidToVendorInPeriod + totalPaidToAdminInPeriod;
+            let closingBalance = totalNetBalance - totalPaidToVendorInPeriod + totalPaidToAdminInPeriod;
+            // Handle float precision
+            closingBalance = Math.round(closingBalance * 100) / 100;
 
             settlement.netSettlement = totalNetBalance;
 
-            if (closingBalance > 0) {
+            if (closingBalance > 0.01) {
                 // Admin owes vendor
                 settlement.adminReceivableAmount = 0;
                 settlement.vendorAmount = closingBalance;
                 settlement.amountPending = closingBalance;
-                settlement.status = closingBalance <= 0 ? 'Paid' : (totalPaidToVendorInPeriod > 0 ? 'Partially Paid' : 'Pending');
-            } else if (closingBalance < 0) {
+                settlement.status = (totalPaidToVendorInPeriod > 0) ? 'Partially Paid' : 'Pending';
+            } else if (closingBalance < -0.01) {
                 // Vendor owes admin
                 const vendorOwes = Math.abs(closingBalance);
                 settlement.adminReceivableAmount = vendorOwes;
                 settlement.vendorAmount = 0;
                 settlement.amountPending = vendorOwes;
-                settlement.status = vendorOwes <= 0 ? 'Paid' : (totalPaidToAdminInPeriod > 0 ? 'Partially Paid' : 'Pending');
+                settlement.status = (totalPaidToAdminInPeriod > 0) ? 'Partially Paid' : 'Pending';
             } else {
                 settlement.amountPending = 0;
+                settlement.adminReceivableAmount = 0;
+                settlement.vendorAmount = 0;
                 settlement.status = 'Paid';
             }
 
@@ -388,8 +360,16 @@ export const POST = authMiddlewareAdmin(async (req) => {
             notes,
             paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
             createdBy: req.user.userId,
-            createdByType: 'admin'
+            createdByType: 'admin',
+            verified: true
         });
+        
+        // Also ensure verifiedAt and verifiedBy are set since it's already verified
+        if (paymentRecord.verified) {
+           paymentRecord.verifiedAt = new Date();
+           paymentRecord.verifiedBy = req.user.userId;
+           await paymentRecord.save();
+        }
 
         return NextResponse.json({
             success: true,

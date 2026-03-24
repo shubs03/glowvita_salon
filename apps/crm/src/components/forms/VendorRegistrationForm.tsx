@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Building, MapPin, User, ChevronRight, ArrowLeft, ArrowRight, Map as MapIcon } from 'lucide-react';
+import { Eye, EyeOff, Building, MapPin, User, ChevronRight, ArrowLeft, ArrowRight, Map as MapIcon, ShieldCheck, RefreshCw } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
@@ -78,7 +78,7 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number, setStep:
   );
 };
 
-export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
+export function VendorRegistrationForm({ onSuccess, email }: { onSuccess: () => void, email?: string }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const refCode = searchParams.get('ref');
@@ -89,7 +89,7 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     firstName: '',
     lastName: '',
     businessName: '',
-    email: '',
+    email: email || '',
     phone: '',
     password: '',
     confirmPassword: '',
@@ -112,6 +112,106 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [registerVendor, { isLoading }] = useVendorRegisterMutation();
 
+  const [emailOtp, setEmailOtp] = useState('');
+  const [isEmailOtpSent, setIsEmailOtpSent] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+
+  const [phoneOtp, setPhoneOtp] = useState('');
+  const [isPhoneOtpSent, setIsPhoneOtpSent] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+
+  const [isOtpLoading, setIsOtpLoading] = useState(false);
+
+  const handleSendEmailOtp = async () => {
+    if (!formData.email || !/\S+@\S+\.\S+/.test(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    setIsOtpLoading(true);
+    try {
+      const res = await fetch('/api/crm/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsEmailOtpSent(true);
+        toast.success(data.message);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (err) {
+      toast.error("Failed to send email OTP");
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleVerifyEmailOtp = async () => {
+    if (!emailOtp || emailOtp.length < 6) {
+      toast.error("Please enter a valid OTP");
+      return;
+    }
+    setIsOtpLoading(true);
+    try {
+      const res = await fetch('/api/crm/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, otp: emailOtp }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message);
+        setIsEmailVerified(true);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (err) {
+      toast.error("Failed to verify email OTP");
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleSendPhoneOtp = async () => {
+    if (!formData.phone || formData.phone.length < 10) {
+      toast.error("Please enter a valid phone number");
+      return;
+    }
+    setIsOtpLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setIsPhoneOtpSent(true);
+      toast.success("OTP sent securely! (Test mode: use 123456)");
+    } catch (err) {
+      toast.error("Failed to send phone OTP");
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleVerifyPhoneOtp = async () => {
+    if (!phoneOtp || phoneOtp.length < 6) {
+      toast.error("Please enter a valid OTP");
+      return;
+    }
+    setIsOtpLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      if (phoneOtp === "123456") {
+        toast.success("Phone verified successfully!");
+        setIsPhoneVerified(true);
+      } else {
+        toast.error("Invalid phone OTP");
+      }
+    } catch (err) {
+      toast.error("Failed to verify phone OTP");
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<GooglePlacesResult[]>([]);
@@ -130,6 +230,12 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
     }
   }, [refCode]);
 
+  useEffect(() => {
+    if (email) {
+      setFormData(prev => ({ ...prev, email }));
+    }
+  }, [email]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     let finalValue = value;
@@ -138,8 +244,13 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
       finalValue = value.replace(/[^a-zA-Z]/g, '');
     } else if (name === 'phone') {
       finalValue = value.replace(/\D/g, '').slice(0, 10);
+      setIsPhoneVerified(false);
+      setIsPhoneOtpSent(false);
     } else if (name === 'email') {
+      if (email) return; // Prevent manual change if verified email provided
       finalValue = value.replace(/[^a-zA-Z0-9@.]/g, '');
+      setIsEmailVerified(false);
+      setIsEmailOtpSent(false);
     }
 
     setFormData(prev => ({ ...prev, [name]: finalValue }));
@@ -179,6 +290,8 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
+    } else if (!isEmailVerified) {
+      newErrors.email = 'Please verify your email address';
     }
     if (!formData.phone) {
       newErrors.phone = 'Phone is required';
@@ -186,6 +299,8 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
       newErrors.phone = 'Phone must be 10 digits';
     } else if (!/^[0-9]+$/.test(formData.phone)) {
       newErrors.phone = 'Phone can only contain numbers';
+    } else if (!isPhoneVerified) {
+      newErrors.phone = 'Please verify your phone number';
     }
     if (!formData.password) {
       newErrors.password = 'Password is required';
@@ -626,13 +741,113 @@ export function VendorRegistrationForm({ onSuccess }: { onSuccess: () => void })
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-                  <div>
-                    <Input name="email" type="email" placeholder="Email Address" onChange={handleChange} value={formData.email} required className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+                  <div className="space-y-3 p-4 rounded-xl border border-gray-200 bg-gray-50/50">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-sm font-semibold flex items-center gap-1">Email <span className="text-red-500">*</span></Label>
+                      {isEmailVerified && <span className="text-green-600 text-xs font-bold flex items-center gap-1"><ShieldCheck className="w-4 h-4" /> Verified</span>}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input 
+                        name="email" 
+                        type="email" 
+                        placeholder="Email Address" 
+                        onChange={handleChange} 
+                        value={formData.email} 
+                        required 
+                        disabled={isEmailVerified || isOtpLoading || !!email}
+                        className={cn("h-12 flex-1 sm:h-14 px-4 sm:px-5 text-base sm:text-lg bg-white focus:ring-2 focus:ring-purple-100", isEmailVerified && "border-green-300 bg-green-50 text-green-800")} 
+                      />
+                      {!isEmailVerified && (
+                        <Button 
+                          type="button"
+                          onClick={handleSendEmailOtp}
+                          disabled={isOtpLoading || !formData.email || !!email}
+                          className="h-12 sm:h-14 px-4 rounded-xl font-bold bg-purple-100 text-purple-700 hover:bg-purple-200"
+                        >
+                          {isEmailOtpSent ? "Resend" : "Send OTP"}
+                        </Button>
+                      )}
+                    </div>
                     {renderError('email')}
+                    
+                    {isEmailOtpSent && !isEmailVerified && (
+                      <div className="pt-2 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex gap-2">
+                          <Input 
+                            type="text" 
+                            placeholder="OTP" 
+                            maxLength={6}
+                            value={emailOtp} 
+                            onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
+                            disabled={isOtpLoading}
+                            className="h-12 sm:h-14 flex-1 text-center text-lg tracking-widest font-black bg-white focus:ring-2 focus:ring-purple-100 border-gray-200"
+                          />
+                          <Button 
+                            type="button"
+                            onClick={handleVerifyEmailOtp}
+                            disabled={isOtpLoading || emailOtp.length < 6}
+                            className="h-12 sm:h-14 px-6 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
+                          >
+                            {isOtpLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : "Verify"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <Input name="phone" type="tel" placeholder="Phone Number" onChange={handleChange} value={formData.phone} required maxLength={10} className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg" />
+
+                  <div className="space-y-3 p-4 rounded-xl border border-gray-200 bg-gray-50/50">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-sm font-semibold flex items-center gap-1">Phone <span className="text-red-500">*</span></Label>
+                      {isPhoneVerified && <span className="text-green-600 text-xs font-bold flex items-center gap-1"><ShieldCheck className="w-4 h-4" /> Verified</span>}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input 
+                        name="phone" 
+                        type="tel" 
+                        placeholder="Phone Number" 
+                        onChange={handleChange} 
+                        value={formData.phone} 
+                        required 
+                        maxLength={10} 
+                        disabled={isPhoneVerified || isOtpLoading}
+                        className={cn("h-12 flex-1 sm:h-14 px-4 sm:px-5 text-base sm:text-lg bg-white focus:ring-2 focus:ring-purple-100", isPhoneVerified && "border-green-300 bg-green-50 text-green-800")} 
+                      />
+                      {!isPhoneVerified && (
+                        <Button 
+                          type="button"
+                          onClick={handleSendPhoneOtp}
+                          disabled={isOtpLoading || formData.phone.length < 10}
+                          className="h-12 sm:h-14 px-4 rounded-xl font-bold bg-purple-100 text-purple-700 hover:bg-purple-200"
+                        >
+                          {isPhoneOtpSent ? "Resend" : "Send OTP"}
+                        </Button>
+                      )}
+                    </div>
                     {renderError('phone')}
+
+                    {isPhoneOtpSent && !isPhoneVerified && (
+                      <div className="pt-2 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex gap-2">
+                          <Input 
+                            type="text" 
+                            placeholder="OTP" 
+                            maxLength={6}
+                            value={phoneOtp} 
+                            onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ''))}
+                            disabled={isOtpLoading}
+                            className="h-12 sm:h-14 flex-1 text-center text-lg tracking-widest font-black bg-white focus:ring-2 focus:ring-purple-100 border-gray-200"
+                          />
+                          <Button 
+                            type="button"
+                            onClick={handleVerifyPhoneOtp}
+                            disabled={isOtpLoading || phoneOtp.length < 6}
+                            className="h-12 sm:h-14 px-6 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
+                          >
+                            {isOtpLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : "Verify"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">

@@ -1,30 +1,49 @@
-import { CheckCircle, Download, Users, BarChart } from "lucide-react";
 import { cn } from "@repo/ui/cn";
 
 interface HowItWorksStepProps {
-  icon: React.ReactNode;
+  iconSrc: string;
   title: string;
   description: string;
-  step: number;
   className?: string;
 }
 
 export const HowItWorksStep = ({
-  icon,
+  iconSrc,
   title,
   description,
-  step,
   className,
 }: HowItWorksStepProps) => (
-  <div className={cn("bg-card border border-border rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group hover:border-primary/50 flex items-start gap-4", className)}>
-    <div className="bg-primary/10 text-primary p-3 rounded-2xl flex-shrink-0 group-hover:bg-primary/20 transition-all duration-300">
-      {icon}
+  <div className={cn("flex flex-col items-center text-center group", className)}>
+    {/* Visual Element Container */}
+    <div className="relative w-48 h-48 mb-8 flex items-center justify-center">
+      {/* Background Frame (Balloon/Circle with line) */}
+      <img 
+        src="/icons/Group 1000002468.png" 
+        alt="Background frame"
+        className="w-full h-full object-contain opacity-80 group-hover:opacity-100 transition-opacity duration-300" 
+      />
+      
+      {/* Hexagon Icon */}
+      <div 
+        className="absolute top-[18%] left-1/2 -translate-x-1/2 flex items-center justify-center w-[72px] h-[82px] bg-[#53435c] shadow-lg transition-transform duration-500 group-hover:scale-110"
+        style={{ 
+          clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+        }}
+      >
+        <img 
+          src={iconSrc} 
+          alt={title} 
+          className="w-10 h-10 object-contain brightness-0 invert" 
+        />
+      </div>
     </div>
-    <div>
-      <h4 className="font-bold text-card-foreground text-lg items-center leading-tight">
+
+    {/* Text Content */}
+    <div className="max-w-[280px]">
+      <h3 className="font-bold text-gray-900 text-xl mb-4 font-manrope">
         {title}
-      </h4>
-      <p className="text-muted-foreground text-sm leading-relaxed pl-16">
+      </h3>
+      <p className="text-gray-500 text-sm leading-relaxed font-manrope">
         {description}
       </p>
     </div>
