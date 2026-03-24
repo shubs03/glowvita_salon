@@ -76,12 +76,12 @@ const DownloadApp = () => {
           </div>
 
           {/* Right Image Container */}
-          <div className="order-1 lg:order-2 flex justify-center lg:justify-end relative h-[250px] sm:h-[350px] md:h-[400px] lg:h-[450px] mb-4 sm:mb-0">
-            <div className="relative w-full h-full">
+          <div className="order-1 lg:order-2 flex justify-center lg:justify-end relative h-[300px] sm:h-[400px] md:h-[450px] lg:h-[500px] mb-4 sm:mb-0">
+            <div className="relative w-[90%] lg:w-[85%] h-full">
               <img
                 src="/images/close-up-hand-holding-phone (1) (2) 1.svg"
                 alt="Download App"
-                className="w-full h-full object-cover object-center"
+                className="w-full h-full object-contain lg:object-right"
               />
             </div>
           </div>
