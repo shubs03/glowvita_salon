@@ -87,8 +87,8 @@ const AppPromotionSection = ({
           <div className="flex justify-center lg:justify-end lg:order-2 order-2 mt-8 lg:mt-0 lg:pl-10 h-full min-h-[400px]">
             <div className="relative w-full h-full overflow-hidden">
               <img
-                src={images[0]?.src || "/icons/mobile-8560599_1920 (3) 1.png"}
-                alt={images[0]?.hint || `${title} showcase`}
+                src={images?.[0]?.src || "/icons/mobile-8560599_1920 (3) 1.png"}
+                alt={images?.[0]?.hint || `${title} showcase`}
                 className="w-full h-full object-cover"
               />
             </div>
