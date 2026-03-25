@@ -397,10 +397,10 @@ export default function ProfilePage() {
           <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold font-headline mb-1 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
-                Salon Profile
+                {role === 'supplier' ? 'Supplier Profile' : role === 'doctor' ? 'Doctor Profile' : 'Salon Profile'}
               </h1>
               <p className="text-muted-foreground text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl">
-                Manage your salon profile and settings
+                Manage your {role === 'supplier' ? 'supplier' : role === 'doctor' ? 'doctor' : 'salon'} profile and settings
               </p>
             </div>
           </div>
