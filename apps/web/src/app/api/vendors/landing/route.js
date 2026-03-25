@@ -162,10 +162,28 @@ export const GET = async (request) => {
     };
 
     // ── Aggregation queries ──────────────────────────────────────────────────
+    
+    // Stage to filter vendors with at least one approved service
+    const filterApprovedServices = [
+      {
+        $lookup: {
+          from: "vendorservices", // lowercased collection name for VendorServices
+          localField: "_id",
+          foreignField: "vendor",
+          as: "vendorServicesItems"
+        }
+      },
+      {
+        $match: {
+          "vendorServicesItems.services.status": "approved"
+        }
+      }
+    ];
 
     // Recommended: highest rated first, then most booked
     const recommendedSalons = await VendorModel.aggregate([
       { $match: matchStage },
+      ...filterApprovedServices,
       lookupReviews,
       lookupAppointments,
       projectStats,
@@ -176,6 +194,7 @@ export const GET = async (request) => {
     // Newly Added: most recently created first
     const newlyAddedSalons = await VendorModel.aggregate([
       { $match: matchStage },
+      ...filterApprovedServices,
       lookupReviews,
       lookupAppointments,
       projectStats,
@@ -183,9 +202,10 @@ export const GET = async (request) => {
       { $limit: 8 },
     ]);
 
-    // All Salons: first 8
+    // All Salons: first 6
     const allSalons = await VendorModel.aggregate([
       { $match: matchStage },
+      ...filterApprovedServices,
       lookupReviews,
       lookupAppointments,
       projectStats,

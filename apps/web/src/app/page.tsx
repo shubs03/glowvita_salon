@@ -72,9 +72,9 @@ export default function HomePage() {
       <main className="flex-grow">
         <HeroSection2 />
         <OffersSection2 />
-        <WhereToGo maxSalons={6} showViewAllButton={false} />
-        <AllSalons maxSalons={6} />
-        <NewlyAddedSalons maxSalons={6} />
+        <WhereToGo maxSalons={8} showViewAllButton={false} />
+        <AllSalons maxSalons={8} />
+        <NewlyAddedSalons maxSalons={8} />
         <WhyChooseUs/>
         <Testimonials2 />
         <DownloadApp />
