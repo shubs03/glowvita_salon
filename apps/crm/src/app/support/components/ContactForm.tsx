@@ -34,6 +34,13 @@ const ContactForm = () => {
       }
     }
 
+    if (name === 'email') {
+      // Only allow alphanumeric, @, and .
+      if (value !== '' && !/^[a-zA-Z0-9@.]*$/.test(value)) {
+        return;
+      }
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -252,12 +259,9 @@ const ContactForm = () => {
               </p>
 
               <div className="space-y-1.5 text-[13px] text-foreground">
-                <button type="button" className="block font-medium text-left hover:text-[#0ED3FF] transition-colors">
+                <a href="#faq-section" className="block font-medium text-left hover:text-[#0ED3FF] transition-colors">
                   View Frequently Asked Questions
-                </button>
-                <button type="button" className="block font-medium text-left hover:text-[#0ED3FF] transition-colors">
-                  Watch Video Tutorials
-                </button>
+                </a>
               </div>
             </div>
           </div>
@@ -279,11 +283,8 @@ const ContactForm = () => {
 
               <div className="space-y-1.5 text-[13px] text-foreground">
                 <p className="font-medium">
-                  Phone : +91 9412355675
+                  Phone : +91 9075201035
                 </p>
-                <button type="button" className="block font-medium text-left hover:text-[#0ED3FF] transition-colors">
-                  Watch Video Tutorials
-                </button>
               </div>
             </div>
           </div>

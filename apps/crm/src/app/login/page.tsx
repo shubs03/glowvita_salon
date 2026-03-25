@@ -28,7 +28,7 @@ export default function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isCrmAuthenticated) {
-      router.push('/dashboard');
+      router.replace('/dashboard');
     }
   }, [isCrmAuthenticated, router]);
 
