@@ -565,20 +565,9 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
           </div>
           <h3 className="text-2xl font-black text-gray-900 mb-3">We're not available here yet</h3>
           <p className="text-muted-foreground max-w-md mx-auto mb-8 font-medium">
-            We are currently expanding and haven't reached your location.
-            Try searching for a different area or explore our available cities:
+            We are currently expanding and haven't reached your location yet. We’ll be available in your area soon—stay tuned!
           </p>
-          <div className="flex flex-wrap justify-center gap-2 max-w-2xl">
-            {landingData?.data?.cities?.slice(0, 8).map((city: string) => (
-              <button
-                key={city}
-                onClick={() => setSelectedCity(city)}
-                className="px-5 py-2 bg-white border border-gray-100 rounded-full text-xs font-bold text-gray-600 hover:text-primary hover:border-primary transition-all shadow-sm"
-              >
-                {city}
-              </button>
-            ))}
-          </div>
+
         </div>
       ) : error ? (
         <div className="text-center py-12">

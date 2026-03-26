@@ -205,11 +205,10 @@ const SearchResults = () => {
                     <MapPin className="w-8 h-8 text-primary/30" />
                   </div>
                   <h2 className="text-3xl font-black text-gray-900 mb-3 tracking-tight">
-                    We are not available here right now
+                    We're not available here yet
                   </h2>
                   <p className="text-gray-400 text-sm font-medium mb-8 max-w-md mx-auto">
-                    We haven't reached {locationLabel || "this area"} yet. 
-                    Try choosing another location or explore our available salons in other regions.
+                    We are currently expanding and haven't reached your location yet. We’ll be available in your area soon—stay tuned!
                   </p>
                   <Button
                     variant="default"
