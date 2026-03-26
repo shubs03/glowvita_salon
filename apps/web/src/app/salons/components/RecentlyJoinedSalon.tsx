@@ -3,7 +3,8 @@
 import React from "react";
 import { MapPin, ArrowRight } from "lucide-react";
 import { useGetPublicVendorsQuery } from "@repo/store/services/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSalonFilter } from "@/components/landing/SalonFilterContext";
 
 interface VendorData {
   _id: string;
@@ -44,13 +45,30 @@ interface VendorData {
   updatedAt?: string;
 }
 
+
 const RecentlyJoinedSalon = () => {
   const router = useRouter();
-  const { 
-    data: vendorsData, 
-    isLoading, 
-    error 
-  } = useGetPublicVendorsQuery(undefined);
+  const searchParams = useSearchParams();
+  const { userLat, userLng, locationLabel, selectedCity, serviceQuery } = useSalonFilter();
+  
+  // Use location from context or search params if available
+  const qLat = searchParams?.get("lat") ? parseFloat(searchParams.get("lat")!) : userLat;
+  const qLng = searchParams?.get("lng") ? parseFloat(searchParams.get("lng")!) : userLng;
+  const qCityRaw = searchParams?.get("city") || searchParams?.get("locationLabel") || selectedCity;
+  const qCity = qCityRaw?.split(',')[0].trim();
+  const qServiceName = searchParams?.get("serviceName") || serviceQuery;
+
+
+  const {
+    data: vendorsData,
+    isLoading,
+    error
+  } = useGetPublicVendorsQuery({
+    lat: qLat || undefined,
+    lng: qLng || undefined,
+    city: qCity || undefined,
+    serviceName: qServiceName || undefined
+  });
 
   // Find the most recently created vendor
   const mostRecentSalon = React.useMemo(() => {
@@ -76,7 +94,7 @@ const RecentlyJoinedSalon = () => {
       id: mostRecentSalon._id,
       name: mostRecentSalon.businessName || "Beauty Salon",
       location: `${mostRecentSalon.city || "Unknown City"}, ${mostRecentSalon.state || "Unknown State"}`,
-      category: 
+      category:
         mostRecentSalon.category === "unisex"
           ? "Full-Service Salon"
           : mostRecentSalon.category === "women"
@@ -84,11 +102,11 @@ const RecentlyJoinedSalon = () => {
             : mostRecentSalon.category === "men"
               ? "Men's Grooming"
               : "Beauty Services",
-      image: 
+      image:
         mostRecentSalon.profileImage ||
         `https://placehold.co/600x400/gradient?text=${encodeURIComponent(mostRecentSalon.businessName || "Salon")}`,
       isNew: true, // Always true since it's the most recent
-      description: mostRecentSalon.description || 
+      description: mostRecentSalon.description ||
         "Experience luxury and relaxation at our newest salon location. We offer premium hair styling, coloring, and beauty services with the latest techniques and products. Our skilled professionals are dedicated to making you look and feel your best.",
     };
   }, [mostRecentSalon]);
@@ -170,7 +188,7 @@ const RecentlyJoinedSalon = () => {
       </div>
 
       {/* Salon Card */}
-      <div 
+      <div
         className="bg-card overflow-hidden duration-300 cursor-pointer"
         onClick={() => router.push(`/salon-details/${salon.id}`)}
       >
@@ -217,7 +235,7 @@ const RecentlyJoinedSalon = () => {
 
             {/* Bottom Section - Action Button */}
             <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-border">
-              <button 
+              <button
                 className="inline-flex items-center gap-1.5 md:gap-2 text-primary hover:text-primary/80 font-semibold text-sm transition-colors duration-300"
                 onClick={(e) => {
                   e.stopPropagation();

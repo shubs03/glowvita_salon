@@ -24,7 +24,7 @@ interface AllSalonsProps {
 
 const AllSalons: React.FC<AllSalonsProps> = ({ maxSalons = 8 }) => {
   const router = useRouter();
-  const { userLat, userLng } = useSalonFilter();
+  const { userLat, userLng, locationLabel } = useSalonFilter();
 
   const {
     data: landingData,
@@ -99,7 +99,14 @@ const AllSalons: React.FC<AllSalonsProps> = ({ maxSalons = 8 }) => {
         </div>
 
         <button 
-          onClick={() => router.push("/salons")}
+          onClick={() => {
+            const params = new URLSearchParams();
+            if (userLat) params.append("lat", userLat.toString());
+            if (userLng) params.append("lng", userLng.toString());
+            if (locationLabel) params.append("locationLabel", locationLabel);
+            const queryString = params.toString() ? `?${params.toString()}` : "";
+            router.push(`/salons${queryString}`);
+          }}
           className="text-primary font-semibold flex items-center gap-1 hover:underline mb-4 md:mb-0"
         >
           View All <ArrowRight className="w-4 h-4" />

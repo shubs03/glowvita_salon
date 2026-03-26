@@ -66,9 +66,14 @@ export const GET = async (request) => {
         if (region) {
           regionId = region._id;
           console.log(`[SearchAPI] Region matched: ${region.name} for [${lat}, ${lng}]`);
+        } else if (city && city !== "Current Location" && city !== "") {
+          // Fallback to city-based matching if coordinates are outside any region
+          useCityFallback = true;
+          cityLegacy = city;
+          console.log(`[SearchAPI] No region for [${lat}, ${lng}] – Falling back to city: ${city}`);
         } else {
-          // Coordinates given but outside any defined service area
-          console.log(`[SearchAPI] No region for [${lat}, ${lng}] – returning noServiceArea`);
+          // Coordinates given but outside any defined service area and no city provided
+          console.log(`[SearchAPI] No region for [${lat}, ${lng}] and no city fallback – returning noServiceArea`);
           return setCorsHeaders(
             Response.json({
               success: true,

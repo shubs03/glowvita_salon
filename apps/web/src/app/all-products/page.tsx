@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { useGetPublicProductsQuery } from "@repo/store/api";
@@ -385,53 +385,55 @@ export default function AllProductsPage() {
 
   return (
     <PageContainer padding="none">
-      <HeroSection onSearch={setSearchTerm} />
-      <RecentlyAddedProducts />
+      <Suspense fallback={<div className="min-h-screen bg-background animate-pulse" />}>
+        <HeroSection onSearch={setSearchTerm} />
+        <RecentlyAddedProducts />
 
-
-      {/* Filters Row - Similar to WhereToDo component */}
-      <FilterComponent
-        allBodyParts={allBodyParts}
-        allBrands={allBrands}
-        selectedBodyParts={selectedBodyParts}
-        setSelectedBodyParts={setSelectedBodyParts}
-        selectedBrand={selectedBrand}
-        setSelectedBrand={setSelectedBrand}
-        ratingFilter={ratingFilter}
-        setRatingFilter={setRatingFilter}
-        sortBy={sortBy}
-        setSortBy={setSortBy}
-        resetFilters={resetFilters}
-      />
-
-      <div className="container mx-auto px-4 py-8">
-        {/* 5. Product Grid */}
-        <ProductsGrid
-          products={filteblueProducts}
-          isLoading={isLoading}
-          apiError={apiError}
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          viewMode={viewMode}
-          setViewMode={setViewMode}
-          filteblueProducts={filteblueProducts}
-          setIsFilterModalOpen={setIsFilterModalOpen}
+        {/* Filters Row - Similar to WhereToDo component */}
+        <FilterComponent
+          allBodyParts={allBodyParts}
+          allBrands={allBrands}
+          selectedBodyParts={selectedBodyParts}
+          setSelectedBodyParts={setSelectedBodyParts}
+          selectedBrand={selectedBrand}
+          setSelectedBrand={setSelectedBrand}
+          ratingFilter={ratingFilter}
+          setRatingFilter={setRatingFilter}
+          sortBy={sortBy}
+          setSortBy={setSortBy}
+          resetFilters={resetFilters}
         />
-      </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="lg:grid lg:grid-cols-12 lg:gap-8">
-          <main className="lg:col-span-12">
-            {/* 8. Testimonials Section */}
-            <Testimonials />
-
-            <DownloadApp />
-          </main>
+        <div className="container mx-auto px-4 py-8">
+          {/* 5. Product Grid */}
+          <ProductsGrid
+            products={filteblueProducts}
+            isLoading={isLoading}
+            apiError={apiError}
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            viewMode={viewMode}
+            setViewMode={setViewMode}
+            filteblueProducts={filteblueProducts}
+            setIsFilterModalOpen={setIsFilterModalOpen}
+          />
         </div>
-      </div>
-      <CTASection />
+
+        <div className="container mx-auto px-4 py-8">
+          <div className="lg:grid lg:grid-cols-12 lg:gap-8">
+            <main className="lg:col-span-12">
+              {/* 8. Testimonials Section */}
+              <Testimonials />
+
+              <DownloadApp />
+            </main>
+          </div>
+        </div>
+        <CTASection />
+      </Suspense>
     </PageContainer>
   );
+
 }
 
 // Separator Component for local use

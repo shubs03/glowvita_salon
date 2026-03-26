@@ -34,6 +34,8 @@ interface SalonFilterContextType {
   // ── Legacy city support (derived from locationLabel) ──────────────────────
   selectedCity: string;
   setSelectedCity: (city: string) => void;
+  serviceQuery: string;
+  setServiceQuery: (query: string) => void;
 }
 
 const defaultContextValue: SalonFilterContextType = {
@@ -54,6 +56,8 @@ const defaultContextValue: SalonFilterContextType = {
   removeService: () => { },
   selectedCity: "",
   setSelectedCity: () => { },
+  serviceQuery: "",
+  setServiceQuery: () => { },
 };
 
 const SalonFilterContext =
@@ -66,6 +70,7 @@ export function SalonFilterProvider({ children }: { children: ReactNode }) {
   const [userLng, setUserLng] = useState<number | null>(null);
   const [locationLabel, setLocationLabel] = useState<string>("");
   const [geoStatus, setGeoStatus] = useState<GeoStatus>("pending");
+  const [serviceQuery, setServiceQuery] = useState<string>("");
 
   // Guard: run geolocation only once per session
   const geoAttempted = useRef(false);
@@ -207,6 +212,8 @@ export function SalonFilterProvider({ children }: { children: ReactNode }) {
         removeService,
         selectedCity,
         setSelectedCity,
+        serviceQuery,
+        setServiceQuery,
       }}
     >
       {children}

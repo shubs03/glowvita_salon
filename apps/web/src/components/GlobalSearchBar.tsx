@@ -123,7 +123,26 @@ export const GlobalSearchBar = ({
   }, [searchParams, categoriesData]);
 
   // ── Sync with global context (Requirements 1 & 3) ─────────────────────────
-  const { userLat, userLng, locationLabel, setUserLocation } = useSalonFilter();
+  const { userLat, userLng, locationLabel, setUserLocation, setServiceQuery, setSelectedCity } = useSalonFilter();
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.location.pathname !== "/salons") return;
+
+    const timer = setTimeout(() => {
+      // Update global context for live results
+      setServiceQuery(serviceInput);
+      
+      // If user has manually cleared or changed text, let it filter by city
+      if (locationInput && locationInput !== "Current Location" && locationInput !== locationLabel) {
+        setSelectedCity(locationInput);
+      } else if (!locationInput) {
+        // Handle clear
+        setSelectedCity("");
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [serviceInput, locationInput, locationLabel, setSelectedCity, setServiceQuery]);
 
   useEffect(() => {
     if (locationLabel) {
@@ -140,7 +159,7 @@ export const GlobalSearchBar = ({
       setSelectedLat(userLat);
       setSelectedLng(userLng);
     }
-  }, [userLat, userLng]);
+  }, [userLat, userLng, selectedLat]);
 
   // ── Google Places predictions (allow geocode type for neighbourhoods) ────────
   useEffect(() => {
@@ -175,10 +194,24 @@ export const GlobalSearchBar = ({
       (results, status) => {
         if (status === "OK" && results && results[0]) {
           const loc = results[0].geometry.location;
-          setSelectedLat(loc.lat());
-          setSelectedLng(loc.lng());
-          // Update global context so other parts of page react
-          setUserLocation(loc.lat(), loc.lng(), prediction.description.split(",")[0].trim());
+          const lat = loc.lat();
+          const lng = loc.lng();
+          const cityLabel = prediction.description.split(",")[0].trim();
+          
+          setSelectedLat(lat);
+          setSelectedLng(lng);
+          // Update global context
+          setUserLocation(lat, lng, cityLabel);
+          
+          // Update URL if on salons page to ensure components re-fetch with new state
+          if (typeof window !== 'undefined' && window.location.pathname === "/salons") {
+            const params = new URLSearchParams(window.location.search);
+            params.set("lat", lat.toString());
+            params.set("lng", lng.toString());
+            params.set("locationLabel", cityLabel);
+            params.set("city", cityLabel); // For fallback
+            router.push(`/salons?${params.toString()}`);
+          }
         }
       }
     );

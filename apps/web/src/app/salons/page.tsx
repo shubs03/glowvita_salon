@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import HeroSection from './components/HeroSection';
 import WhereToGo from '@/components/landing/WhereToDo';
 import RecentlyJoinedSalon from './components/RecentlyJoinedSalon';
@@ -8,13 +8,15 @@ import CTASection from './components/CTASection';
 const SalonsPage = () => {
   return (
     <div className="min-h-screen bg-background">
-      <HeroSection />
-      <RecentlyJoinedSalon />
-      <WhereToGo maxSalons={Infinity} showViewAllButton={false} />
+      <Suspense fallback={<div className="min-h-screen bg-background animate-pulse" />}>
+        <HeroSection />
+        <RecentlyJoinedSalon />
+        <WhereToGo maxSalons={Infinity} showViewAllButton={false} />
+      </Suspense>
       <DownloadApp />
-      <CTASection/>
+      <CTASection />
     </div>
   );
 };
 
-export default SalonsPage;
+export default SalonsPage;

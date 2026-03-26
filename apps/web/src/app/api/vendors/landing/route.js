@@ -59,9 +59,13 @@ export const GET = async (request) => {
         if (region) {
           console.log(`[LandingAPI] Region matched: ${region.name} for [${lat}, ${lng}]`);
           matchStage.regionId = region._id;
+        } else if (city && city !== "null" && city !== "undefined" && city !== "" && city !== "All Locations") {
+          // Fallback to city-based matching if coordinates are outside any region
+          console.log(`[LandingAPI] No region matched for [${lat}, [${lng}] – Falling back to city: ${city}`);
+          matchStage.city = { $regex: new RegExp(`^${city}$`, "i") };
         } else {
           // Coordinates given but outside any defined service area
-          console.log(`[LandingAPI] No region matched for [${lat}, ${lng}] – returning noServiceArea`);
+          console.log(`[LandingAPI] No region matched for [${lat}, ${lng}] and no city fallback – returning noServiceArea`);
           return setCorsHeaders(
             Response.json({
               success: true,
@@ -162,7 +166,7 @@ export const GET = async (request) => {
     };
 
     // ── Aggregation queries ──────────────────────────────────────────────────
-    
+
     // Stage to filter vendors with at least one approved service
     const filterApprovedServices = [
       {

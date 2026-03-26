@@ -209,13 +209,27 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
   const router = useRouter();
   const pathname = usePathname();
   const isSalonsPage = pathname === '/salons';
-  const { userLat, userLng, selectedCity, setSelectedCity } = useSalonFilter();
+  const { userLat, userLng, selectedCity, setSelectedCity, locationLabel, serviceQuery } = useSalonFilter();
+  
+  // Fetch params for filtering
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const qLat = searchParams?.get("lat") ? parseFloat(searchParams.get("lat")!) : userLat;
+  const qLng = searchParams?.get("lng") ? parseFloat(searchParams.get("lng")!) : userLng;
+  const qCityRaw = searchParams?.get("city") || searchParams?.get("locationLabel") || selectedCity;
+  const qCity = qCityRaw?.split(',')[0].trim();
+  const qServiceName = searchParams?.get("serviceName") || serviceQuery;
 
   const {
     data: vendorsData,
     isLoading: isVendorsLoading,
     error: vendorsError,
-  } = useGetPublicVendorsQuery(undefined, { skip: !isSalonsPage });
+  } = useGetPublicVendorsQuery({
+    lat: qLat || undefined,
+    lng: qLng || undefined,
+    city: qCity || undefined,
+    serviceName: qServiceName || undefined,
+    limit: 1000
+  }, { skip: !isSalonsPage });
 
   const {
     data: landingData,
@@ -551,12 +565,12 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
           </div>
           <h3 className="text-2xl font-black text-gray-900 mb-3">We're not available here yet</h3>
           <p className="text-muted-foreground max-w-md mx-auto mb-8 font-medium">
-            We are currently expanding and haven't reached your location. 
+            We are currently expanding and haven't reached your location.
             Try searching for a different area or explore our available cities:
           </p>
           <div className="flex flex-wrap justify-center gap-2 max-w-2xl">
             {landingData?.data?.cities?.slice(0, 8).map((city: string) => (
-              <button 
+              <button
                 key={city}
                 onClick={() => setSelectedCity(city)}
                 className="px-5 py-2 bg-white border border-gray-100 rounded-full text-xs font-bold text-gray-600 hover:text-primary hover:border-primary transition-all shadow-sm"
@@ -592,7 +606,14 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
         <div className="flex justify-center mt-8">
           <button
             className="group bg-primary hover:bg-primary/90 text-primary-foreground px-10 py-4 rounded-full font-bold transition-all duration-300 flex items-center gap-3 shadow-xl hover:scale-105 active:scale-95"
-            onClick={() => router.push("/salons")}
+            onClick={() => {
+              const params = new URLSearchParams();
+              if (userLat) params.append("lat", userLat.toString());
+              if (userLng) params.append("lng", userLng.toString());
+              if (locationLabel) params.append("locationLabel", locationLabel);
+              const queryString = params.toString() ? `?${params.toString()}` : "";
+              router.push(`/salons${queryString}`);
+            }}
           >
             View All Salons
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />

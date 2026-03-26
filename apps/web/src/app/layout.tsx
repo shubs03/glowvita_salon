@@ -9,6 +9,7 @@ import { Toaster } from 'sonner';
 import { MarketingHeader } from '@/components/MarketingHeader';
 import { Footer } from '@/components/Footer';
 import { useState, useEffect } from 'react';
+import { SalonFilterProvider } from '@/components/landing/SalonFilterContext';
 
 export default function RootLayout({
   children,
@@ -94,20 +95,22 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
-          <div className="flex flex-col min-h-screen bg-background text-foreground">
-            {showHeader && (
-              <MarketingHeader
-                isMobileMenuOpen={isMobileMenuOpen}
-                toggleMobileMenu={toggleMobileMenu}
-                isHomePage={pathname === '/'}
-              />
-            )}
-            <main className="flex-grow">
-              {children}
-            </main>
-            {showFooter && <Footer />}
-          </div>
-          <Toaster />
+          <SalonFilterProvider>
+            <div className="flex flex-col min-h-screen bg-background text-foreground">
+              {showHeader && (
+                <MarketingHeader
+                  isMobileMenuOpen={isMobileMenuOpen}
+                  toggleMobileMenu={toggleMobileMenu}
+                  isHomePage={pathname === '/'}
+                />
+              )}
+              <main className="flex-grow">
+                {children}
+              </main>
+              {showFooter && <Footer />}
+            </div>
+            <Toaster />
+          </SalonFilterProvider>
         </StoreProvider>
       </body>
     </html>
