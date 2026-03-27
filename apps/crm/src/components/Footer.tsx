@@ -7,7 +7,7 @@ export function Footer() {
     <footer className="bg-[#422A3C] text-white border-t border-white/10 relative overflow-hidden">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
-          
+
           {/* Column 1: Logo & Description */}
           <div className="space-y-4">
             <div className="flex items-center">
@@ -88,10 +88,10 @@ export function Footer() {
           </div>
 
         </div>
-        
+
         <div className="border-t border-white/10 pt-6 mt-8 flex justify-center items-center">
           <div className="text-center text-white text-sm">
-            &copy; 2025 Created by GlowVita Salon | Developed by <a href="https://www.paarshinfotech.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">Paarsh Infotech Pvt. Ltd.</a>
+            &copy; 2026 Created by GlowVita Salon | Developed by <a href="https://www.paarshinfotech.com/" target="_blank" rel="noopener noreferrer" className="hover:underline">Paarsh Infotech Pvt. Ltd.</a>
           </div>
         </div>
       </div>

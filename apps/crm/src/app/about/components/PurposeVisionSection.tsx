@@ -5,7 +5,7 @@ import { ChevronRight } from "lucide-react";
 
 const PurposeVisionSection = () => {
   return (
-    <section className="py-12 md:py-20 px-6 lg:px-16 max-w-7xl mx-auto bg-white">
+    <section className="pt-4 md:pt-6 pb-12 md:pb-20 px-6 lg:px-16 max-w-7xl mx-auto bg-white">
       {/* Section Header */}
       <div className="mb-12">
         <h2 className="text-2xl md:text-3xl font-bold text-[#1C1C1C] relative inline-block pb-3">
