@@ -318,7 +318,6 @@ export default function VendorReports() {
                     <CardFooter className="pt-0">
                       <div className="flex gap-2 w-full">
                         <Skeleton className="h-10 flex-1" />
-                        <Skeleton className="h-10 flex-1" />
                       </div>
                     </CardFooter>
                   </Card>
@@ -391,10 +390,6 @@ export default function VendorReports() {
                           <Eye className="mr-2 h-4 w-4" />
                           View
                         </Button>
-                        <Button size="sm">
-                          <Download className="mr-2 h-4 w-4" />
-                          Download
-                        </Button>
                       </CardFooter>
                     </Card>
                   ))}
@@ -411,7 +406,44 @@ export default function VendorReports() {
       {openReportTitle && reportRegistry[openReportTitle] && (
         <ReportModal
           isOpen={true}
-          onClose={() => setOpenReportTitle(null)}
+          onClose={() => {
+            if (openReportTitle) {
+              // Map report titles to their filter keys for resetting
+              const reportKeys: Record<string, string> = {
+                "All Appointments Report": 'allAppointments',
+                "Appointment Summary by Service": 'summaryByService',
+                "Completed Appointments Report": 'completedAppointments',
+                "Cancelled Appointments Report": 'cancelledAppointments',
+                "All Appointments by Staff": 'allAppointments',
+                "Sales by Service": 'salesByService',
+                "Sales by Customer": 'salesByCustomer',
+                "Sales by Product": 'salesByProduct',
+                "All Products Report": 'productSummary',
+                "Inventory / Stock Report": 'productSummary',
+                "Category-wise Product Report": 'productSummary',
+                "Settlement Summary Report": 'settlementSummary',
+              };
+              
+              const key = reportKeys[openReportTitle];
+              if (key) {
+                // Reset common filters to empty strings
+                updateFilter(key as any, {
+                  startDate: '',
+                  endDate: '',
+                  client: '',
+                  service: '',
+                  staff: '',
+                  status: '',
+                  bookingType: '',
+                  product: '',
+                  category: '',
+                  brand: '',
+                  isActive: undefined
+                });
+              }
+            }
+            setOpenReportTitle(null);
+          }}
           title={reportRegistry[openReportTitle].title}
           description={reportRegistry[openReportTitle].description}
         >
