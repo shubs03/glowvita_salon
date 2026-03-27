@@ -135,15 +135,10 @@ const AllSalons: React.FC<AllSalonsProps> = ({ maxSalons = 8 }) => {
 
             <div className="p-4">
               <div className="flex items-start justify-between mb-2">
-                <div className="flex-1">
-                  <h3 className="font-bold text-card-foreground text-base leading-tight mb-1 truncate">
-                    {salon.name}
-                  </h3>
-                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold">
-                    {salon.type}
-                  </p>
-                </div>
-                <div className="flex items-center gap-1 bg-accent/50 px-2 py-0.5 rounded-lg ml-2">
+                <h3 className="font-bold text-card-foreground text-base leading-tight truncate pr-2 flex-1">
+                  {salon.name}
+                </h3>
+                <div className="flex items-center gap-1 bg-accent/50 px-2 py-0.5 rounded-lg flex-shrink-0">
                   <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
                   <span className="text-xs font-bold text-accent-foreground">
                     {Number(salon.rating).toFixed(1)}
@@ -151,11 +146,27 @@ const AllSalons: React.FC<AllSalonsProps> = ({ maxSalons = 8 }) => {
                 </div>
               </div>
 
-              <div className="flex items-start gap-1.5 mb-3">
-                <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
-                <p className="text-muted-foreground text-xs leading-tight truncate">
-                  {salon.location}
-                </p>
+              <div className="flex items-end justify-between mb-3">
+                <div className="flex-1 overflow-hidden pr-2 flex flex-col gap-1.5">
+                  <p className="text-muted-foreground text-[10px] uppercase tracking-wider font-semibold truncate">
+                    {salon.type}
+                  </p>
+                  <div className="flex items-start gap-1.5">
+                    <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+                    <p className="text-muted-foreground text-xs leading-tight truncate">
+                      {salon.location}
+                    </p>
+                  </div>
+                </div>
+                {salon.badge && (
+                  <div className="flex-shrink-0 mb-1">
+                    <img 
+                      src="/images/new-offer.png" 
+                      alt="Offer" 
+                      className="h-10 w-auto object-contain" 
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5 pt-3 border-t border-border">

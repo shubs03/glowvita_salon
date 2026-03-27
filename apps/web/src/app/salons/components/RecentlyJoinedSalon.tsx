@@ -106,6 +106,7 @@ const RecentlyJoinedSalon = () => {
         mostRecentSalon.profileImage ||
         `https://placehold.co/600x400/gradient?text=${encodeURIComponent(mostRecentSalon.businessName || "Salon")}`,
       isNew: true, // Always true since it's the most recent
+      hasOffer: mostRecentSalon.offers && Array.isArray(mostRecentSalon.offers) && mostRecentSalon.offers.length > 0,
       description: mostRecentSalon.description ||
         "Experience luxury and relaxation at our newest salon location. We offer premium hair styling, coloring, and beauty services with the latest techniques and products. Our skilled professionals are dedicated to making you look and feel your best.",
     };
@@ -206,28 +207,46 @@ const RecentlyJoinedSalon = () => {
           <div className="w-full lg:w-1/2 p-6 md:p-8 flex flex-col justify-between h-full">
             {/* Top Section */}
             <div>
-              {/* New Badge */}
+              {/* Badges Row */}
               {salon.isNew && (
-                <span className="inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold mb-2 md:mb-3">
-                  New
-                </span>
+                <div className="mb-2 md:mb-3">
+                  <span className="inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold">
+                    New
+                  </span>
+                </div>
               )}
 
               {/* Salon Name */}
-              <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2 md:mb-3 line-clamp-1">
+              <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2 md:mb-4 line-clamp-1">
                 {salon.name}
               </h3>
 
-              {/* Location */}
-              <div className="flex items-center gap-1.5 md:gap-2 text-muted-foreground mb-2 md:mb-3">
-                <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                <span className="text-sm md:text-base line-clamp-1">{salon.location}</span>
-              </div>
+              {/* Type, Location and Offer Row */}
+              <div className="flex items-center justify-between mb-4 md:mb-5">
+                <div className="flex flex-col gap-2">
+                  {/* Category */}
+                  <p className="text-muted-foreground text-sm md:text-base font-medium">
+                    {salon.category}
+                  </p>
 
-              {/* Category */}
-              <p className="text-muted-foreground text-sm md:text-base mb-3 md:mb-4">
-                {salon.category}
-              </p>
+                  {/* Location */}
+                  <div className="flex items-center gap-1.5 md:gap-2 text-muted-foreground">
+                    <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                    <span className="text-sm md:text-base line-clamp-1">{salon.location}</span>
+                  </div>
+                </div>
+
+                {/* Offer */}
+                {salon.hasOffer && (
+                  <div className="flex-shrink-0">
+                    <img 
+                      src="/images/new-offer.png" 
+                      alt="Offer" 
+                      className="h-12 md:h-14 w-auto object-contain" 
+                    />
+                  </div>
+                )}
+              </div>
 
               {/* Description */}
               <p className="text-foreground text-sm md:text-base line-clamp-3">{salon.description}</p>
