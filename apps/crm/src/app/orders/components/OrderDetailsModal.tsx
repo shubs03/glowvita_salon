@@ -48,7 +48,7 @@ export function OrderDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden p-0">
+      <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden p-0">
         <style jsx>{`
           .modal-content::-webkit-scrollbar {
             display: none;

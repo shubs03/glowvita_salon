@@ -130,7 +130,7 @@ const OrdersTable = ({
                           <span>View</span>
                         </Button>
 
-                        {(role === "supplier" || role === "vendor") && order.status !== 'Delivered' && order.status !== 'Cancelled' && (
+                        {(role === "supplier" || role === "vendor") && activeTab !== 'my-purchases' && order.status !== 'Delivered' && order.status !== 'Cancelled' && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
