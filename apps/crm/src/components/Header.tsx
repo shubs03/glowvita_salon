@@ -25,6 +25,7 @@ import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import { useState } from "react";
 import { Cart } from "./cart/Cart";
 import { useGetCartQuery, useGetCrmWalletQuery } from "@repo/store/api";
+import { SearchDialog } from "./SearchDialog";
 
 export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSidebar: () => void, subscription: any, isSubExpired: boolean }) {
   const router = useRouter();
@@ -34,6 +35,7 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const { data: cartData } = useGetCartQuery(user?._id, {
     skip: !isCrmAuthenticated || !user?._id,
@@ -153,6 +155,7 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
           variant="ghost"
           size="icon"
           className="hidden md:flex flex-shrink-0 rounded-lg hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-105"
+          onClick={() => setIsSearchOpen(true)}
         >
           <Search className="h-5 w-5" />
           <span className="sr-only">Search</span>
@@ -304,6 +307,7 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
           isLoading={isLoggingOut}
         />
         <Cart isOpen={isCartOpen} onOpenChange={setIsCartOpen} />
+        <SearchDialog isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       </div>
     </header>
   );
