@@ -113,6 +113,7 @@ export const GET = async (request) => {
         businessName: { $first: "$vendorData.businessName" },
         firstName: { $first: "$vendorData.firstName" },
         lastName: { $first: "$vendorData.lastName" },
+        phone: { $first: "$vendorData.phone" },
         city: { $first: "$vendorData.city" },
         state: { $first: "$vendorData.state" },
         category: { $first: "$vendorData.category" },

@@ -356,6 +356,8 @@ export function Step3_LocationSelection({
           credentials: 'include',
           body: JSON.stringify({
             ...locationData,
+            fullName: user ? `${user.firstName} ${user.lastName}`.trim() : 'Guest User',
+            mobileNo: user?.mobileNo || '0000000000',
             label: 'Home',
             isPrimary: savedAddresses.length === 0
           })
