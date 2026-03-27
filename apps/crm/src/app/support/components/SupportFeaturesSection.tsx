@@ -17,15 +17,15 @@ const SupportFeaturesSection = () => {
       <div className="grid lg:grid-cols-2 gap-6 lg:gap-8 w-full">
         <div className="bg-white border border-[#00000036] rounded-3xl rounded-tl-none rounded-br-none p-6 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col sm:flex-row items-start gap-5">
           <div className="bg-[#EEF2FC] text-primary p-4 rounded-[14px] w-16 h-16 flex items-center justify-center flex-shrink-0 transition-transform duration-300">
-            <img src="/icons/youtube 1.png" alt="Video Tutorials" className="w-8 h-8 object-contain" />
+            <img src="/icons/communication (2) (1).png" alt="Email Support" className="w-8 h-8 object-contain" />
           </div>
           <div>
-            <h3 className="font-bold text-[#1C1C1C] text-[18px] mb-2">Video Tutorials</h3>
+            <h3 className="font-bold text-[#1C1C1C] text-[18px] mb-2">Email Support</h3>
             <p className="text-[#6B6B6B] text-[14px] mb-6 leading-relaxed">
-              Watch step-by-step video guides demonstrating how to use various features of GlowVita CRM effectively.
+              Reach out to our support team via email and get detailed solutions to your queries within a short time.
             </p>
-            <a href="/support/tutorials" className="bg-[#F0F7FF] border border-[#00000036] rounded-2xl px-6 py-2.5 text-[#1C1C1C] hover:bg-[#E5EEFA] font-medium inline-flex items-center gap-3 transition-colors text-[14px]">
-              Watch Tutorials
+            <a href="mailto:glowvitasalon@gmail.com" className="bg-[#F0F7FF] border border-[#00000036] rounded-2xl px-6 py-2.5 text-[#1C1C1C] hover:bg-[#E5EEFA] font-medium inline-flex items-center gap-3 transition-colors text-[14px]">
+              Email
               <img src="/icons/right 1.png" alt="Right" className="w-3.5 h-3.5 object-contain" />
             </a>
           </div>

@@ -397,12 +397,19 @@ export const glowvitaApi = createApi({
       query: (params = {}) => {
         const queryParams = new URLSearchParams();
 
-        // Only append truthy parameters
         if (params.serviceName) queryParams.append("serviceName", params.serviceName);
-        if (params.city) queryParams.append("city", params.city);
         if (params.categoryIds) queryParams.append("categoryIds", params.categoryIds);
         if (params.limit) queryParams.append("limit", params.limit.toString());
         if (params.offset) queryParams.append("offset", params.offset.toString());
+
+        // Coordinate-based location (primary)
+        if (params.lat != null && params.lng != null) {
+          queryParams.append("lat", params.lat.toString());
+          queryParams.append("lng", params.lng.toString());
+        } else if (params.city) {
+          // Legacy city fallback
+          queryParams.append("city", params.city);
+        }
 
         const queryString = queryParams.toString();
         return {
@@ -417,7 +424,16 @@ export const glowvitaApi = createApi({
     getLandingSalons: builder.query({
       query: (params = {}) => {
         const queryParams = new URLSearchParams();
-        if (params.city) queryParams.append("city", params.city);
+
+        // Coordinate-based location (primary)
+        if (params.lat != null && params.lng != null) {
+          queryParams.append("lat", params.lat.toString());
+          queryParams.append("lng", params.lng.toString());
+        } else if (params.city) {
+          // Legacy city fallback
+          queryParams.append("city", params.city);
+        }
+
         const queryString = queryParams.toString();
         return {
           url: `/vendors/landing${queryString ? `?${queryString}` : ""}`,

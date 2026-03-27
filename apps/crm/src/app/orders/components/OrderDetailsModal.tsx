@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { OrderStatusTimeline } from '@/components/OrderStatusTimeline';
-import { Package, ShoppingCart, User, Mail, MapPin, Truck, XCircle, Calendar, Building } from 'lucide-react';
+import { Package, ShoppingCart, User, Mail, MapPin, Truck, XCircle, Calendar, Building, Phone } from 'lucide-react';
 import Image from 'next/image';
 
 type OrderItem = {
@@ -16,39 +16,43 @@ type OrderItem = {
 
 type Order = {
   _id: string;
-  orderId?: string; // Make orderId optional since ClientOrder doesn't have it
+  orderId?: string;
   items: OrderItem[];
-  customerName?: string; 
+  customerName?: string;
   customerEmail?: string;
-  vendorId?: string;
-  supplierId?: string;
+  customerPhone?: string;
+  vendorId?: any;
+  supplierId?: any;
   totalAmount: number;
   status: 'Pending' | 'Processing' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled';
   shippingAddress: string;
   createdAt: string;
   trackingNumber?: string;
   courier?: string;
-  cancellationReason?: string; // Add cancellation reason field
-  // For ClientOrder specific fields
-  userId?: string; // To identify online orders
+  cancellationReason?: string;
+  userId?: any;
 };
 
 interface OrderDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   selectedOrder: Order | null;
+  role?: string;
+  activeTab?: string;
 }
 
 export function OrderDetailsModal({ 
   isOpen, 
   onClose, 
-  selectedOrder 
+  selectedOrder,
+  role,
+  activeTab,
 }: OrderDetailsModalProps) {
   if (!selectedOrder) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-hidden p-0">
+      <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden p-0">
         <style jsx>{`
           .modal-content::-webkit-scrollbar {
             display: none;
@@ -119,8 +123,41 @@ export function OrderDetailsModal({
                       </div>
                     ))}
                     
-                    {/* Order Total */}
-                    <div className="rounded-lg p-3 bg-muted">
+                    {/* Order Total Breakdown */}
+                    <div className="rounded-lg p-3 bg-muted space-y-2">
+                      {/* Show fee breakdown only for online orders */}
+                      {((selectedOrder as any).shippingAmount > 0 || (selectedOrder as any).gstAmount > 0 || (selectedOrder as any).platformFeeAmount > 0) && (
+                        <>
+                          <div className="flex justify-between items-center text-sm text-muted-foreground">
+                            <span>Subtotal</span>
+                            <span>₹{(
+                              (selectedOrder.totalAmount || 0) -
+                              ((selectedOrder as any).shippingAmount || 0) -
+                              ((selectedOrder as any).gstAmount || 0) -
+                              ((selectedOrder as any).platformFeeAmount || 0)
+                            ).toFixed(2)}</span>
+                          </div>
+                          {(selectedOrder as any).shippingAmount > 0 && (
+                            <div className="flex justify-between items-center text-sm text-muted-foreground">
+                              <span>Shipping</span>
+                              <span>₹{((selectedOrder as any).shippingAmount || 0).toFixed(2)}</span>
+                            </div>
+                          )}
+                          {(selectedOrder as any).gstAmount > 0 && (
+                            <div className="flex justify-between items-center text-sm text-muted-foreground">
+                              <span>GST</span>
+                              <span>₹{((selectedOrder as any).gstAmount || 0).toFixed(2)}</span>
+                            </div>
+                          )}
+                          {(selectedOrder as any).platformFeeAmount > 0 && (
+                            <div className="flex justify-between items-center text-sm text-muted-foreground">
+                              <span>Platform Fee</span>
+                              <span>₹{((selectedOrder as any).platformFeeAmount || 0).toFixed(2)}</span>
+                            </div>
+                          )}
+                          <div className="border-t border-border pt-2 mt-1" />
+                        </>
+                      )}
                       <div className="flex justify-between items-center">
                         <span className="text-md font-semibold">Total Amount</span>
                         <span className="text-xl font-bold text-primary">₹{(selectedOrder.totalAmount || 0).toFixed(2)}</span>
@@ -132,24 +169,102 @@ export function OrderDetailsModal({
 
               {/* Order Information */}
               <div className="space-y-4">
-                {/* Customer Information */}
+                {/* Customer / Supplier / Vendor Information */}
                 <div className="rounded-lg p-4 border">
-                  <h3 className="font-bold text-md mb-3 flex items-center gap-2">
-                    <User className="h-4 w-4 text-primary" />
-                    Customer Details
-                  </h3>
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium text-sm">{selectedOrder.customerName || `Vendor ID: ${selectedOrder.vendorId || ''}`}</span>
-                    </div>
-                    {selectedOrder.customerEmail && (
-                      <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{selectedOrder.customerEmail}</span>
-                      </div>
-                    )}
-                  </div>
+                  {/* Determine what to show based on role and tab */}
+                  {(() => {
+                    // Vendor in My Purchases tab → show supplier who supplied the goods
+                    const isMyPurchases = activeTab === 'my-purchases';
+                    const supplierObj = selectedOrder.supplierId && typeof selectedOrder.supplierId === 'object' ? selectedOrder.supplierId : null;
+                    const vendorObj = selectedOrder.vendorId && typeof selectedOrder.vendorId === 'object' ? selectedOrder.vendorId : null;
+
+                    if (isMyPurchases && supplierObj) {
+                      return (
+                        <>
+                          <h3 className="font-bold text-md mb-3 flex items-center gap-2">
+                            <Building className="h-4 w-4 text-primary" />
+                            Supplier Details
+                          </h3>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                              <Building className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium text-sm">{supplierObj.shopName || supplierObj.businessName || `${supplierObj.firstName || ''} ${supplierObj.lastName || ''}`.trim() || 'N/A'}</span>
+                            </div>
+                            {supplierObj.email && (
+                              <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                                <Mail className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{supplierObj.email}</span>
+                              </div>
+                            )}
+                            {(supplierObj.mobile || supplierObj.phone) && (
+                              <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{supplierObj.mobile || supplierObj.phone}</span>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      );
+                    }
+
+                    // Supplier in Received Orders tab → show vendor who placed the order
+                    if (role === 'supplier' && vendorObj) {
+                      return (
+                        <>
+                          <h3 className="font-bold text-md mb-3 flex items-center gap-2">
+                            <Building className="h-4 w-4 text-primary" />
+                            Vendor Details
+                          </h3>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                              <Building className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium text-sm">{vendorObj.businessName || `${vendorObj.firstName || ''} ${vendorObj.lastName || ''}`.trim() || 'N/A'}</span>
+                            </div>
+                            {vendorObj.email && (
+                              <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                                <Mail className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{vendorObj.email}</span>
+                              </div>
+                            )}
+                            {vendorObj.phone && (
+                              <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                                <Phone className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-sm">{vendorObj.phone}</span>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      );
+                    }
+
+                    // Default: Customer Orders tab → show customer info
+                    return (
+                      <>
+                        <h3 className="font-bold text-md mb-3 flex items-center gap-2">
+                          <User className="h-4 w-4 text-primary" />
+                          Customer Details
+                        </h3>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium text-sm">{selectedOrder.customerName || 'N/A'}</span>
+                          </div>
+                          {selectedOrder.customerEmail && (
+                            <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                              <Mail className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm">{selectedOrder.customerEmail}</span>
+                            </div>
+                          )}
+                          {(selectedOrder as any).customerPhone && (
+                            <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
+                              <Phone className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm">{(selectedOrder as any).customerPhone}</span>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {/* Shipping Information */}

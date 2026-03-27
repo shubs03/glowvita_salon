@@ -12,8 +12,10 @@ const _db = async () => {
   // Don't connect during build time
   if (process.env.NEXT_PHASE === 'phase-production-build') {
     console.log("Skipping MongoDB connection during build phase");
+    mongoose.set('bufferCommands', false); // Disable buffering to prevent hanging
     return null;
   }
+
 
   // If already connected, return the existing connection
   if (cached.conn) {

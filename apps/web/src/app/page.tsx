@@ -24,7 +24,7 @@ import {
 import { Award, Users, LineChart, Clock, ArrowRight, ShoppingCart, Star, Heart } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { useGetAdminProductCategoriesQuery, useGetVendorsQuery } from "@repo/store/services/api";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { NewProductCard } from "@/components/landing/NewProductCard";
 import { Badge } from "@repo/ui/badge";
 import HeroSection2 from "@/components/landing/HeroSection2";
@@ -67,30 +67,18 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <SalonFilterProvider>
-      
       <main className="flex-grow">
-        <HeroSection2 />
-        <OffersSection2 />
-        <WhereToGo maxSalons={6} showViewAllButton={false} />
-        <AllSalons maxSalons={6} />
-        <NewlyAddedSalons maxSalons={6} />
-        <WhyChooseUs/>
-        <Testimonials2 />
-        <DownloadApp />
-
-        {/* <HeroSection /> */}
-        {/* <PlatformFor /> */}
-        {/* <SalonsSection /> */}
-        {/* <Offers /> */}
-        {/* <FeaturedProductsSection /> */}
-        {/* <Services /> */}
-        {/* <StatisticsSection /> */}
-        {/* <VideoTestimonialSection /> */}
-        {/* <Testimonials /> */}
-        {/* <AppCTA /> */}
+        <Suspense fallback={<div className="min-h-screen bg-background animate-pulse" />}>
+          <HeroSection2 />
+          <OffersSection2 />
+          <WhereToGo maxSalons={8} showViewAllButton={false} />
+          <AllSalons maxSalons={8} />
+          <NewlyAddedSalons maxSalons={8} />
+          <WhyChooseUs />
+          <Testimonials2 />
+          <DownloadApp />
+        </Suspense>
       </main>
-      </SalonFilterProvider>
     </div>
   );
 }

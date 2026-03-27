@@ -3,7 +3,8 @@
 import React from "react";
 import { MapPin, ArrowRight } from "lucide-react";
 import { useGetPublicVendorsQuery } from "@repo/store/services/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useSalonFilter } from "@/components/landing/SalonFilterContext";
 
 interface VendorData {
   _id: string;
@@ -44,13 +45,30 @@ interface VendorData {
   updatedAt?: string;
 }
 
+
 const RecentlyJoinedSalon = () => {
   const router = useRouter();
-  const { 
-    data: vendorsData, 
-    isLoading, 
-    error 
-  } = useGetPublicVendorsQuery(undefined);
+  const searchParams = useSearchParams();
+  const { userLat, userLng, locationLabel, selectedCity, serviceQuery } = useSalonFilter();
+  
+  // Use location from context or search params if available
+  const qLat = searchParams?.get("lat") ? parseFloat(searchParams.get("lat")!) : userLat;
+  const qLng = searchParams?.get("lng") ? parseFloat(searchParams.get("lng")!) : userLng;
+  const qCityRaw = searchParams?.get("city") || searchParams?.get("locationLabel") || selectedCity;
+  const qCity = qCityRaw?.split(',')[0].trim();
+  const qServiceName = searchParams?.get("serviceName") || serviceQuery;
+
+
+  const {
+    data: vendorsData,
+    isLoading,
+    error
+  } = useGetPublicVendorsQuery({
+    lat: qLat || undefined,
+    lng: qLng || undefined,
+    city: qCity || undefined,
+    serviceName: qServiceName || undefined
+  });
 
   // Find the most recently created vendor
   const mostRecentSalon = React.useMemo(() => {
@@ -76,7 +94,7 @@ const RecentlyJoinedSalon = () => {
       id: mostRecentSalon._id,
       name: mostRecentSalon.businessName || "Beauty Salon",
       location: `${mostRecentSalon.city || "Unknown City"}, ${mostRecentSalon.state || "Unknown State"}`,
-      category: 
+      category:
         mostRecentSalon.category === "unisex"
           ? "Full-Service Salon"
           : mostRecentSalon.category === "women"
@@ -84,11 +102,11 @@ const RecentlyJoinedSalon = () => {
             : mostRecentSalon.category === "men"
               ? "Men's Grooming"
               : "Beauty Services",
-      image: 
+      image:
         mostRecentSalon.profileImage ||
         `https://placehold.co/600x400/gradient?text=${encodeURIComponent(mostRecentSalon.businessName || "Salon")}`,
       isNew: true, // Always true since it's the most recent
-      description: mostRecentSalon.description || 
+      description: mostRecentSalon.description ||
         "Experience luxury and relaxation at our newest salon location. We offer premium hair styling, coloring, and beauty services with the latest techniques and products. Our skilled professionals are dedicated to making you look and feel your best.",
     };
   }, [mostRecentSalon]);
@@ -110,39 +128,39 @@ const RecentlyJoinedSalon = () => {
 
         {/* Loading Skeleton */}
         <div className="bg-card overflow-hidden duration-300">
-          <div className="flex flex-col lg:flex-row">
+          <div className="flex flex-col lg:flex-row lg:h-[460px]">
             {/* Left - Large Image Skeleton */}
-            <div className="w-full lg:w-1/2 h-64 lg:h-auto flex-shrink-0 rounded-2xl bg-gray-200 animate-pulse"></div>
+            <div className="w-full lg:w-1/2 h-80 md:h-96 lg:h-full flex-shrink-0 rounded-2xl bg-gray-200 animate-pulse"></div>
 
             {/* Right - Details Skeleton */}
-            <div className="w-full lg:w-1/2 p-6 md:p-8 flex flex-col justify-between">
+            <div className="w-full lg:w-1/2 p-6 md:p-8 flex flex-col justify-between h-full">
               <div>
                 {/* New Badge Skeleton */}
-                <div className="h-6 w-16 bg-gray-200 rounded-full mb-3 animate-pulse"></div>
+                <div className="h-5 md:h-6 w-14 md:w-16 bg-gray-200 rounded-full mb-2 md:mb-3 animate-pulse"></div>
 
                 {/* Salon Name Skeleton */}
-                <div className="h-8 bg-gray-200 rounded mb-3 animate-pulse w-3/4"></div>
+                <div className="h-6 md:h-8 bg-gray-200 rounded mb-2 md:mb-3 animate-pulse w-3/4"></div>
 
                 {/* Location Skeleton */}
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-4 h-4 bg-gray-200 animate-pulse"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
+                <div className="flex items-center gap-1.5 md:gap-2 mb-2 md:mb-3">
+                  <div className="w-3.5 h-3.5 md:w-4 md:h-4 bg-gray-200 animate-pulse"></div>
+                  <div className="h-3.5 md:h-4 bg-gray-200 rounded w-1/2 animate-pulse"></div>
                 </div>
 
                 {/* Category Skeleton */}
-                <div className="h-4 bg-gray-200 rounded w-2/3 mb-4 animate-pulse"></div>
+                <div className="h-3.5 md:h-4 bg-gray-200 rounded w-2/3 mb-3 md:mb-4 animate-pulse"></div>
 
                 {/* Description Skeleton */}
-                <div className="space-y-2">
-                  <div className="h-4 bg-gray-200 rounded animate-pulse"></div>
-                  <div className="h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
-                  <div className="h-4 bg-gray-200 rounded w-4/6 animate-pulse"></div>
+                <div className="space-y-1.5 md:space-y-2 mb-3 md:mb-4">
+                  <div className="h-3.5 md:h-4 bg-gray-200 rounded animate-pulse"></div>
+                  <div className="h-3.5 md:h-4 bg-gray-200 rounded w-5/6 animate-pulse"></div>
+                  <div className="h-3.5 md:h-4 bg-gray-200 rounded w-4/6 animate-pulse"></div>
                 </div>
               </div>
 
               {/* Bottom Section - Action Button Skeleton */}
-              <div className="mt-6 pt-6 border-t border-border">
-                <div className="h-6 w-24 bg-gray-200 rounded animate-pulse"></div>
+              <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-border">
+                <div className="h-5 md:h-6 w-20 md:w-24 bg-gray-200 rounded animate-pulse"></div>
               </div>
             </div>
           </div>
@@ -170,13 +188,13 @@ const RecentlyJoinedSalon = () => {
       </div>
 
       {/* Salon Card */}
-      <div 
+      <div
         className="bg-card overflow-hidden duration-300 cursor-pointer"
         onClick={() => router.push(`/salon-details/${salon.id}`)}
       >
-        <div className="flex flex-col lg:flex-row">
+        <div className="flex flex-col lg:flex-row lg:h-[460px]">
           {/* Left - Large Image */}
-          <div className="w-full lg:w-1/2 h-64 lg:h-auto flex-shrink-0 rounded-2xl">
+          <div className="w-full lg:w-1/2 h-80 md:h-96 lg:h-full flex-shrink-0 rounded-2xl">
             <img
               src={salon.image}
               alt={salon.name}
@@ -185,40 +203,40 @@ const RecentlyJoinedSalon = () => {
           </div>
 
           {/* Right - Details */}
-          <div className="w-full lg:w-1/2 p-6 md:p-8 flex flex-col justify-between">
+          <div className="w-full lg:w-1/2 p-6 md:p-8 flex flex-col justify-between h-full">
             {/* Top Section */}
             <div>
               {/* New Badge */}
               {salon.isNew && (
-                <span className="inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold mb-3">
+                <span className="inline-block bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-semibold mb-2 md:mb-3">
                   New
                 </span>
               )}
 
               {/* Salon Name */}
-              <h3 className="text-2xl font-bold text-foreground mb-3">
+              <h3 className="text-xl md:text-2xl font-bold text-foreground mb-2 md:mb-3 line-clamp-1">
                 {salon.name}
               </h3>
 
               {/* Location */}
-              <div className="flex items-center gap-2 text-muted-foreground mb-4">
-                <MapPin className="w-4 h-4" />
-                <span className="text-sm">{salon.location}</span>
+              <div className="flex items-center gap-1.5 md:gap-2 text-muted-foreground mb-2 md:mb-3">
+                <MapPin className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                <span className="text-sm md:text-base line-clamp-1">{salon.location}</span>
               </div>
 
               {/* Category */}
-              <p className="text-muted-foreground text-sm mb-4">
+              <p className="text-muted-foreground text-sm md:text-base mb-3 md:mb-4">
                 {salon.category}
               </p>
 
               {/* Description */}
-              <p className="text-foreground mb-6">{salon.description}</p>
+              <p className="text-foreground text-sm md:text-base line-clamp-3">{salon.description}</p>
             </div>
 
             {/* Bottom Section - Action Button */}
-            <div className="mt-6 pt-6 border-t border-border">
-              <button 
-                className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-semibold text-sm transition-colors duration-300"
+            <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-border">
+              <button
+                className="inline-flex items-center gap-1.5 md:gap-2 text-primary hover:text-primary/80 font-semibold text-sm transition-colors duration-300"
                 onClick={(e) => {
                   e.stopPropagation();
                   router.push(`/salon-details/${salon.id}`);

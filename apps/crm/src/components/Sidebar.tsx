@@ -106,7 +106,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
           "flex-shrink-0 h-16 border-b border-border flex items-center relative overflow-hidden",
           isOpen ? "px-4 justify-between" : "px-4 justify-center"
         )}>
-          <Link href="/dashboard" className={cn(
+          <Link href="/" className={cn(
             "group flex items-center font-bold text-base font-headline text-foreground hover:text-primary transition-all duration-300 relative z-10",
             isOpen ? "flex-1 justify-center" : "justify-center"
           )}>

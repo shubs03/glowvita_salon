@@ -1,10 +1,11 @@
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
 const PurposeVisionSection = () => {
   return (
-    <section className="py-12 md:py-20 px-6 lg:px-16 max-w-7xl mx-auto bg-white">
+    <section className="pt-4 md:pt-6 pb-12 md:pb-20 px-6 lg:px-16 max-w-7xl mx-auto bg-white">
       {/* Section Header */}
       <div className="mb-12">
         <h2 className="text-2xl md:text-3xl font-bold text-[#1C1C1C] relative inline-block pb-3">
@@ -67,14 +68,13 @@ const PurposeVisionSection = () => {
             </p>
             
             <div className="absolute bottom-6 right-6 md:right-10 md:bottom-10">
-              <a 
+              <Link 
                 href="/login" 
-                target="_blank"
                 className="inline-flex items-center gap-2 bg-[#302131] hover:bg-[#302131]/90 text-white px-5 py-2 rounded-lg font-bold text-[12px] tracking-wide transition-all shadow-sm active:scale-95 group"
               >
                 Manage Your Business Today
                 <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-              </a>
+              </Link>
             </div>
           </div>
         </div>

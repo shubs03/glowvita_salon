@@ -24,13 +24,13 @@ interface NewlyAddedSalonsProps {
 
 const NewlyAddedSalons: React.FC<NewlyAddedSalonsProps> = ({ maxSalons = 8 }) => {
   const router = useRouter();
-  const { selectedCity } = useSalonFilter();
+  const { userLat, userLng, locationLabel } = useSalonFilter();
 
   const {
     data: landingData,
     isLoading,
     error,
-  } = useGetLandingSalonsQuery({ city: selectedCity });
+  } = useGetLandingSalonsQuery({ lat: userLat, lng: userLng });
 
   const transformVendor = (vendor: any) => {
     const imageUrl =
@@ -80,8 +80,8 @@ const NewlyAddedSalons: React.FC<NewlyAddedSalonsProps> = ({ maxSalons = 8 }) =>
     );
   }
 
-  if (error || (salons.length === 0 && selectedCity)) {
-    return null; // Don't show if error or no salons in selected city
+  if (error || salons.length === 0 || landingData?.noServiceArea) {
+    return null;
   }
 
   return (
@@ -99,7 +99,14 @@ const NewlyAddedSalons: React.FC<NewlyAddedSalonsProps> = ({ maxSalons = 8 }) =>
         </div>
 
         <button 
-          onClick={() => router.push("/salons")}
+          onClick={() => {
+            const params = new URLSearchParams();
+            if (userLat) params.append("lat", userLat.toString());
+            if (userLng) params.append("lng", userLng.toString());
+            if (locationLabel) params.append("locationLabel", locationLabel);
+            const queryString = params.toString() ? `?${params.toString()}` : "";
+            router.push(`/salons${queryString}`);
+          }}
           className="text-primary font-semibold flex items-center gap-1 hover:underline mb-4 md:mb-0"
         >
           View All <ArrowRight className="w-4 h-4" />

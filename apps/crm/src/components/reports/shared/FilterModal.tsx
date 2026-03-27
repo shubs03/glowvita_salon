@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
@@ -61,6 +61,27 @@ export const FilterModal = ({
     const [brand, setBrand] = useState<string>(initialFilters.brand || 'all');
     const [region, setRegion] = useState<string>(initialFilters.region || 'all');
     const [isActive, setIsActive] = useState<string>(initialFilters.isActive !== undefined ? (typeof initialFilters.isActive === 'boolean' ? initialFilters.isActive.toString() : initialFilters.isActive) : 'all');
+    
+    // Sync local state with initialFilters when modal opens or initialFilters change
+    useEffect(() => {
+        if (isOpen) {
+            setStartDate(initialFilters.startDate || '');
+            setEndDate(initialFilters.endDate || '');
+            setSettlementFromDate(initialFilters.settlementFromDate || '');
+            setSettlementToDate(initialFilters.settlementToDate || '');
+            setSaleType(initialFilters.saleType || initialFilters.bookingType || 'all');
+            setClient(initialFilters.client || 'all');
+            setService(initialFilters.service || 'all');
+            setStaff(initialFilters.staff || 'all');
+            setStatus(initialFilters.status || 'all');
+            setUserType(initialFilters.userType || 'all');
+            setProduct(initialFilters.product || 'all');
+            setCategory(initialFilters.category || 'all');
+            setBrand(initialFilters.brand || 'all');
+            setRegion(initialFilters.region || 'all');
+            setIsActive(initialFilters.isActive !== undefined ? (typeof initialFilters.isActive === 'boolean' ? initialFilters.isActive.toString() : initialFilters.isActive) : 'all');
+        }
+    }, [isOpen, initialFilters]);
 
     // Fetch unique values for dropdowns
     const { data: clientsData } = useGetUniqueClientsQuery({});

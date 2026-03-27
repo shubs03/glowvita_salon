@@ -49,6 +49,18 @@ export const CompletedAppointmentsTable = ({ startDate, endDate, client, service
     bookingType: bookingType && bookingType !== 'all' ? bookingType : undefined
   });
 
+  // Sync local filters state with props from parent
+  useEffect(() => {
+    setFilters({
+      startDate,
+      endDate,
+      client,
+      service,
+      staff,
+      bookingType
+    });
+  }, [startDate, endDate, client, service, staff, bookingType]);
+
   const handleFilterChange = (newFilters: FilterParams) => {
     setFilters(newFilters);
     setCurrentPage(1); // Reset to first page when filters change
@@ -160,23 +172,52 @@ export const CompletedAppointmentsTable = ({ startDate, endDate, client, service
   // Extract appointments from the API response (already filtered by backend)
   const filteredAppointments = data?.data?.complete?.appointments || data?.data || [];
 
-  // Filter data based on search term
-  const searchedAppointments = useMemo(() => {
-    if (!searchTerm) return filteredAppointments;
+  // Filter data based on search term and filter props
+  const finalFilteredAppointments = useMemo(() => {
+    let result = filteredAppointments;
 
-    return filteredAppointments.filter((appointment: any) =>
-      Object.values(appointment).some(value =>
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [filteredAppointments, searchTerm]);
+    // 1. Filter by specific client if selected
+    if (client && client !== 'all') {
+      result = result.filter((a: any) => 
+        (a.clientName === client) || 
+        (a.client?.fullName === client)
+      );
+    }
+
+    // 2. Filter by specific service if selected
+    if (service && service !== 'all') {
+      result = result.filter((a: any) => 
+        (a.serviceName === service) || 
+        (a.service?.name === service)
+      );
+    }
+
+    // 3. Filter by specific staff if selected
+    if (staff && staff !== 'all') {
+      result = result.filter((a: any) => 
+        (a.staffName === staff) || 
+        (a.staff?.fullName === staff)
+      );
+    }
+
+    // 4. Filter by search term
+    if (searchTerm) {
+      result = result.filter((appointment: any) =>
+        Object.values(appointment).some(value =>
+          value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+
+    return result;
+  }, [filteredAppointments, searchTerm, client, service, staff]);
 
   // Pagination logic
-  const totalItems = searchedAppointments.length;
+  const totalItems = finalFilteredAppointments.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedAppointments = searchedAppointments.slice(startIndex, endIndex);
+  const paginatedAppointments = finalFilteredAppointments.slice(startIndex, endIndex);
 
   if (isLoading) {
     return (
@@ -268,47 +309,6 @@ export const CompletedAppointmentsTable = ({ startDate, endDate, client, service
     );
   }
 
-  if (paginatedAppointments.length === 0) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-gray-500">
-          No completed appointments data available.
-        </div>
-        <FilterModal
-          isOpen={isFilterModalOpen}
-          onClose={() => setIsFilterModalOpen(false)}
-          onApplyFilters={handleFilterChange}
-          cities={[]}
-          initialFilters={filters}
-          showStatusFilter={false}
-          hideClientFilter={false}
-          hideServiceFilter={false}
-          hideStaffFilter={false}
-          hideBookingTypeFilter={false}
-        />
-      </div>
-    );
-  }
-
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -376,157 +376,169 @@ export const CompletedAppointmentsTable = ({ startDate, endDate, client, service
         hideBookingTypeFilter={false}
       />
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="border rounded-lg p-4 bg-primary/10">
-          <p className="text-sm text-gray-600">Total Completed</p>
-          <p className="text-2xl font-bold">{
-            // Count unique appointments, treating multi-service appointments as one
-            Array.from(new Set<string>(paginatedAppointments.map((appt: any) => appt._id || appt.id))).length
-          }</p>
+      {paginatedAppointments.length === 0 ? (
+        <div className="text-center py-12 border rounded-md bg-muted/10">
+          <p className="text-muted-foreground">No completed appointments data available for the selected filters.</p>
+          <Button 
+            variant="link" 
+            onClick={() => handleFilterChange({})}
+            className="mt-2"
+          >
+            Clear all filters
+          </Button>
         </div>
-        <div className="border rounded-lg p-4 bg-primary/5">
-          <p className="text-sm text-gray-600">Online Completed</p>
-          <p className="text-2xl font-bold">{
-            // Count unique online appointments
-            Array.from(
-              new Set<string>(
-                paginatedAppointments
-                  .filter((appt: any) => (appt.mode || '').toLowerCase() === 'online')
-                  .map((appt: any) => appt._id || appt.id)
-              )
-            ).length
-          }</p>
-        </div>
-        <div className="border rounded-lg p-4 bg-secondary/20">
-          <p className="text-sm text-gray-600">Offline Completed</p>
-          <p className="text-2xl font-bold">{
-            // Count unique offline appointments
-            Array.from(
-              new Set<string>(
-                paginatedAppointments
-                  .filter((appt: any) => (appt.mode || '').toLowerCase() === 'offline')
-                  .map((appt: any) => appt._id || appt.id)
-              )
-            ).length
-          }</p>
-        </div>
-        <div className="border rounded-lg p-4 bg-secondary/10">
-          <p className="text-sm text-gray-600">Total Revenue</p>
-          <p className="text-2xl font-bold">₹{
-            // Calculate revenue from all appointments (already filtered as completed)
-            // For multi-service appointments, sum the base amounts of all services
-            paginatedAppointments.reduce((sum: number, appt: any) => sum + (appt.amount || 0), 0)
-          }</p>
-        </div>
-      </div>
+      ) : (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="border rounded-lg p-4 bg-primary/10">
+              <p className="text-sm text-gray-600">Total Completed</p>
+              <p className="text-2xl font-bold">{
+                // Count unique appointments, treating multi-service appointments as one
+                Array.from(new Set<string>(paginatedAppointments.map((appt: any) => appt._id || appt.id))).length
+              }</p>
+            </div>
+            <div className="border rounded-lg p-4 bg-primary/5">
+              <p className="text-sm text-gray-600">Online Completed</p>
+              <p className="text-2xl font-bold">{
+                // Count unique online appointments
+                Array.from(
+                  new Set<string>(
+                    paginatedAppointments
+                      .filter((appt: any) => (appt.mode || '').toLowerCase() === 'online')
+                      .map((appt: any) => appt._id || appt.id)
+                  )
+                ).length
+              }</p>
+            </div>
+            <div className="border rounded-lg p-4 bg-secondary/20">
+              <p className="text-sm text-gray-600">Offline Completed</p>
+              <p className="text-2xl font-bold">{
+                // Count unique offline appointments
+                Array.from(
+                  new Set<string>(
+                    paginatedAppointments
+                      .filter((appt: any) => (appt.mode || '').toLowerCase() === 'offline')
+                      .map((appt: any) => appt._id || appt.id)
+                  )
+                ).length
+              }</p>
+            </div>
+            <div className="border rounded-lg p-4 bg-secondary/10">
+              <p className="text-sm text-gray-600">Total Revenue</p>
+              <p className="text-2xl font-bold">₹{
+                // Calculate revenue from all appointments (already filtered as completed)
+                // For multi-service appointments, sum the base amounts of all services
+                paginatedAppointments.reduce((sum: number, appt: any) => sum + (appt.amount || 0), 0)
+              }</p>
+            </div>
+          </div>
 
-      <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Client</TableHead>
-              <TableHead>Service</TableHead>
-              <TableHead>Staff</TableHead>
-              <TableHead>Scheduled On</TableHead>
-              <TableHead>Created On</TableHead>
-              <TableHead>Time</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Base Amount</TableHead>
-              <TableHead>Platform Fee</TableHead>
-              <TableHead>Service Tax</TableHead>
-              <TableHead>Final Amount</TableHead>
-              <TableHead>Status</TableHead>
-
-
-
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedAppointments.map((item: any) => {
-              // Format dates
-              const scheduledDate = item.date ? new Date(item.date).toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric'
-              }) : 'N/A';
-
-              const createdDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric'
-              }) : 'N/A';
-
-              // Format time range
-              const timeRange = item.startTime && item.endTime ?
-                `${item.startTime} - ${item.endTime}` : 'N/A';
-
-              // Format service name for multi-service appointments
-              let serviceName = item.serviceName || item.service?.name || 'N/A';
-              if (item.isMultiService && item.multiServiceTotal) {
-                serviceName = `${serviceName}(${item.multiServiceIndex + 1}/${item.multiServiceTotal})`;
-              }
-
-              // Format status with asterisk for multi-service appointments
-              const statusText = item.isMultiService ? `${item.status}*` : item.status || 'N/A';
-
-              return (
-                <TableRow key={`${item.id}-${item.multiServiceIndex || 0}`}>
-                  <TableCell>{item.clientName || 'N/A'}</TableCell>
-                  <TableCell>{serviceName}</TableCell>
-                  <TableCell>{item.staffName || item.staff?.fullName || 'N/A'}</TableCell>
-                  <TableCell>{scheduledDate}</TableCell>
-                  <TableCell>{createdDate}</TableCell>
-                  <TableCell>{timeRange}</TableCell>
-                  <TableCell>{item.duration || item.totalDuration || 'N/A'} mins</TableCell>
-                  <TableCell>₹{item.amount || 0}</TableCell>
-                  <TableCell>₹{item.platformFee || 0}</TableCell>
-                  <TableCell>₹{item.serviceTax || 0}</TableCell>
-                  <TableCell>₹{item.finalAmount || item.totalAmount || 0}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${(item.status || '').toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
-                      (item.status || '').toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        (item.status || '').toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
-                          (item.status || '').toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800' :
-                            (item.status || '').toLowerCase() === 'scheduled' ? 'bg-purple-100 text-purple-800' :
-                              'bg-gray-100 text-gray-800'
-                      }`}>
-                      {statusText}
-                    </span>
-                  </TableCell>
+          <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Service</TableHead>
+                  <TableHead>Staff</TableHead>
+                  <TableHead>Scheduled On</TableHead>
+                  <TableHead>Created On</TableHead>
+                  <TableHead>Time</TableHead>
+                  <TableHead>Duration</TableHead>
+                  <TableHead>Base Amount</TableHead>
+                  <TableHead>Platform Fee</TableHead>
+                  <TableHead>Service Tax</TableHead>
+                  <TableHead>Final Amount</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              );
-            })}
-            {/* Total Row */}
-            <TableRow className="font-bold bg-gray-50">
-              <TableCell>Total</TableCell>
-              <TableCell colSpan={6}></TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.amount || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.platformFee || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.serviceTax || 0), 0)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.finalAmount || item.totalAmount || 0), 0)}
-              </TableCell>
-              <TableCell></TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination
-        className="mt-4"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={totalItems}
-      />
+              </TableHeader>
+              <TableBody>
+                {paginatedAppointments.map((item: any) => {
+                  // Format dates
+                  const scheduledDate = item.date ? new Date(item.date).toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                  }) : 'N/A';
+
+                  const createdDate = item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                  }) : 'N/A';
+
+                  // Format time range
+                  const timeRange = item.startTime && item.endTime ?
+                    `${item.startTime} - ${item.endTime}` : 'N/A';
+
+                  // Format service name for multi-service appointments
+                  let serviceName = item.serviceName || item.service?.name || 'N/A';
+                  if (item.isMultiService && item.multiServiceTotal) {
+                    serviceName = `${serviceName}(${item.multiServiceIndex + 1}/${item.multiServiceTotal})`;
+                  }
+
+                  // Format status with asterisk for multi-service appointments
+                  const statusText = item.isMultiService ? `${item.status}*` : item.status || 'N/A';
+
+                  return (
+                    <TableRow key={`${item.id}-${item.multiServiceIndex || 0}`}>
+                      <TableCell>{item.clientName || 'N/A'}</TableCell>
+                      <TableCell>{serviceName}</TableCell>
+                      <TableCell>{item.staffName || item.staff?.fullName || 'N/A'}</TableCell>
+                      <TableCell>{scheduledDate}</TableCell>
+                      <TableCell>{createdDate}</TableCell>
+                      <TableCell>{timeRange}</TableCell>
+                      <TableCell>{item.duration || item.totalDuration || 'N/A'} mins</TableCell>
+                      <TableCell>₹{item.amount || 0}</TableCell>
+                      <TableCell>₹{item.platformFee || 0}</TableCell>
+                      <TableCell>₹{item.serviceTax || 0}</TableCell>
+                      <TableCell>₹{item.finalAmount || item.totalAmount || 0}</TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs ${(item.status || '').toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+                          (item.status || '').toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            (item.status || '').toLowerCase() === 'cancelled' ? 'bg-red-100 text-red-800' :
+                              (item.status || '').toLowerCase() === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                                (item.status || '').toLowerCase() === 'scheduled' ? 'bg-purple-100 text-purple-800' :
+                                  'bg-gray-100 text-gray-800'
+                          }`}>
+                          {statusText}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                {/* Total Row */}
+                <TableRow className="font-bold bg-gray-50">
+                  <TableCell>Total</TableCell>
+                  <TableCell colSpan={6}></TableCell>
+                  <TableCell>
+                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.amount || 0), 0)}
+                  </TableCell>
+                  <TableCell>
+                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.platformFee || 0), 0)}
+                  </TableCell>
+                  <TableCell>
+                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.serviceTax || 0), 0)}
+                  </TableCell>
+                  <TableCell>
+                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.finalAmount || item.totalAmount || 0), 0)}
+                  </TableCell>
+                  <TableCell></TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+          <Pagination
+            className="mt-4"
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            onItemsPerPageChange={setItemsPerPage}
+            totalItems={totalItems}
+          />
+        </>
+      )}
     </div>
   );
 };

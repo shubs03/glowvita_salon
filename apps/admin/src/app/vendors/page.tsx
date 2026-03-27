@@ -66,6 +66,13 @@ import {
 } from "@repo/ui/dialog";
 import { useAppSelector } from "@repo/store/hooks";
 import { selectSelectedRegion } from "@repo/store/slices/adminAuthSlice";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/select";
 
 type ActionType = "enable" | "disable" | "delete" | "approve" | "disapprove";
 
@@ -80,6 +87,7 @@ export default function VendorManagementPage() {
   const [filterSalon, setFilterSalon] = useState('');
   const [filterOwner, setFilterOwner] = useState('');
   const [filterPhone, setFilterPhone] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
 
   const selectedRegion = useAppSelector(selectSelectedRegion);
 
@@ -103,7 +111,8 @@ export default function VendorManagementPage() {
     const salonMatch = !filterSalon || (v.businessName || '').toLowerCase().includes(filterSalon.toLowerCase());
     const ownerMatch = !filterOwner || `${v.firstName} ${v.lastName}`.toLowerCase().includes(filterOwner.toLowerCase());
     const phoneMatch = !filterPhone || (v.phone || '').includes(filterPhone);
-    return salonMatch && ownerMatch && phoneMatch;
+    const statusMatch = filterStatus === 'all' || (v.status || 'Pending').toLowerCase() === filterStatus.toLowerCase();
+    return salonMatch && ownerMatch && phoneMatch && statusMatch;
   });
   const currentItems = filteredVendors.slice(firstItemIndex, lastItemIndex);
 
@@ -552,6 +561,7 @@ export default function VendorManagementPage() {
                   setFilterSalon('');
                   setFilterOwner('');
                   setFilterPhone('');
+                  setFilterStatus('all');
                   setCurrentPage(1);
                 }}
               >
@@ -559,7 +569,7 @@ export default function VendorManagementPage() {
                 Clear Filters
               </Button>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Input
                 type="text"
                 placeholder="Filter by Salon Name..."
@@ -581,6 +591,23 @@ export default function VendorManagementPage() {
                 value={filterPhone}
                 onChange={(e) => { setFilterPhone(e.target.value); setCurrentPage(1); }}
               />
+              <Select
+                disabled={isLoading}
+                value={filterStatus}
+                onValueChange={(value) => { setFilterStatus(value); setCurrentPage(1); }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Disabled">Disabled</SelectItem>
+                  <SelectItem value="Approved">Approved</SelectItem>
+                  <SelectItem value="Disapproved">Disapproved</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

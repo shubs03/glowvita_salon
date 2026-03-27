@@ -16,7 +16,7 @@ const HeroSection = () => {
     }
   };
   return (
-    <div className="relative w-full overflow-hidden bg-white min-h-[500px] lg:h-[700px] flex flex-col lg:flex-row">
+    <div className="relative w-full overflow-hidden bg-white min-h-[450px] lg:h-[550px] flex flex-col lg:flex-row">
 
       {/* Left Content Section */}
       <div className="relative lg:w-[42%] w-full flex items-center justify-center z-20">
@@ -50,14 +50,14 @@ const HeroSection = () => {
         </div>
 
         {/* Text Content */}
-        <div className="relative z-20 px-8 py-20 lg:py-0 w-full max-w-lg text-center lg:pr-20">
-          <h1 className="text-2xl md:text-[2.25rem] font-serif text-gray-900 leading-[1.2] mb-10">
+        <div className="relative z-20 px-8 py-12 lg:py-0 w-full max-w-lg text-center lg:pr-20">
+          <h1 className="text-2xl md:text-[2.25rem] font-serif text-gray-900 leading-[1.2] mb-6">
             Automate your salon<br />
             & spa <span className="italic text-[#0C1880] font-bold">Business</span><br />
             with <span className="italic text-[#0C1880] font-bold">GlowVita Salon</span>
           </h1>
 
-          <p className="text-gray-700 text-lg md:text-xl font-normal leading-relaxed mb-12 max-w-sm mx-auto">
+          <p className="text-gray-700 text-lg md:text-xl font-normal leading-relaxed mb-8 max-w-sm mx-auto">
             GlowvitaSalon brings you the most easy-to-use solution for your salon & spa business
           </p>
 
@@ -71,7 +71,7 @@ const HeroSection = () => {
       </div>
 
       {/* Right Image Section */}
-      <div className="relative lg:w-[58%] w-full min-h-[450px] lg:h-full">
+      <div className="relative lg:w-[58%] w-full min-h-[350px] lg:h-full">
         <Image
           src="/images/Laptop Mockup 1 (1).png"
           alt="GlowVita Salon Dashboard on Laptop"

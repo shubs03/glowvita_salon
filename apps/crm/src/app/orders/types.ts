@@ -10,21 +10,24 @@ export type OrderStatus = 'Pending' | 'Processing' | 'Packed' | 'Shipped' | 'Del
 
 export interface Order {
   _id: string;
-  orderId?: string; // Make orderId optional since ClientOrder doesn't have it
+  orderId?: string;
   items: OrderItem[];
-  customerName?: string; 
+  customerName?: string;
   customerEmail?: string;
-  vendorId?: string;
-  supplierId?: string;
+  customerPhone?: string;
+  vendorId?: any; // may be a populated Vendor object or string id
+  supplierId?: any; // may be a populated Vendor/Supplier object or string id
   totalAmount: number;
+  shippingAmount?: number;
+  gstAmount?: number;
+  platformFeeAmount?: number;
   status: OrderStatus;
   shippingAddress: string;
   createdAt: string;
   trackingNumber?: string;
   courier?: string;
-  cancellationReason?: string; // Add cancellation reason field
-  // For ClientOrder specific fields
-  userId?: string; // To identify online orders
+  cancellationReason?: string;
+  userId?: any; // may be populated User object or string id
 }
 
 export interface OrdersTableProps {
