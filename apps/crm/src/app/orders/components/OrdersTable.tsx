@@ -92,9 +92,20 @@ const OrdersTable = ({
                       </div>
                     </TableCell>
                     <TableCell className="min-w-[150px] max-w-[180px] truncate">
-                      {order.customerName ||
-                        (role === "supplier" && order.vendorId) ||
-                        "N/A"}
+                      {(() => {
+                        // My Purchases tab (vendor): show supplier info
+                        if (activeTab === 'my-purchases' && order.supplierId && typeof order.supplierId === 'object') {
+                          return order.supplierId.shopName || order.supplierId.businessName ||
+                            `${order.supplierId.firstName || ''} ${order.supplierId.lastName || ''}`.trim() || 'N/A';
+                        }
+                        // Received Orders tab (supplier): show vendor info
+                        if (role === 'supplier' && order.vendorId && typeof order.vendorId === 'object') {
+                          return order.vendorId.businessName ||
+                            `${order.vendorId.firstName || ''} ${order.vendorId.lastName || ''}`.trim() || 'N/A';
+                        }
+                        // Customer Orders tab: show customerName
+                        return order.customerName || 'N/A';
+                      })()}
                     </TableCell>
                     <TableCell className="min-w-[120px] max-w-[150px] truncate">
                       {order.items?.map((item, idx) => (

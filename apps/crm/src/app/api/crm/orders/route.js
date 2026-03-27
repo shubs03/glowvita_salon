@@ -3,6 +3,8 @@ import _db from '@repo/lib/db';
 import OrderModel from '@repo/lib/models/Vendor/Order.model';
 import ProductModel from '@repo/lib/models/Vendor/Product.model';
 import InventoryTransactionModel from '@repo/lib/models/Vendor/InventoryTransaction.model';
+import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
+import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
 import { authMiddlewareCrm } from '@/middlewareCrm';
 import mongoose from 'mongoose';
 
@@ -28,7 +30,11 @@ export const GET = authMiddlewareCrm(async (req) => {
       query = { supplierId: userId };
     }
 
-    const orders = await OrderModel.find(query).sort({ createdAt: -1 });
+    // Populate supplierId from Supplier model and vendorId from Vendor model
+    const orders = await OrderModel.find(query)
+      .populate({ path: 'supplierId', model: SupplierModel, select: 'firstName lastName shopName email mobile' })
+      .populate({ path: 'vendorId', model: VendorModel, select: 'firstName lastName businessName email phone' })
+      .sort({ createdAt: -1 });
 
     return NextResponse.json(orders, { status: 200 });
   } catch (error) {

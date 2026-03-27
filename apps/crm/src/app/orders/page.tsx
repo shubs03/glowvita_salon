@@ -56,9 +56,9 @@ export default function OrdersPage() {
   const { customerOrders, myPurchases, receivedOrders, onlineCustomerOrders } = useMemo(() => {
     if (!ordersData) return { customerOrders: [], myPurchases: [], receivedOrders: [], onlineCustomerOrders: [] };
 
-    const customerOrders = ordersData.filter((o: Order) => o.vendorId?.toString() === user?._id && o.customerName);
-    const myPurchases = ordersData.filter((o: Order) => o.vendorId?.toString() === user?._id && o.supplierId);
-    const receivedOrders = ordersData.filter((o: Order) => o.supplierId?.toString() === user?._id);
+    const customerOrders = ordersData.filter((o: Order) => o.vendorId?._id?.toString() === user?._id || o.vendorId?.toString() === user?._id).filter((o: Order) => o.customerName);
+    const myPurchases = ordersData.filter((o: Order) => (o.vendorId?._id?.toString() === user?._id || o.vendorId?.toString() === user?._id) && o.supplierId);
+    const receivedOrders = ordersData.filter((o: Order) => o.supplierId?._id?.toString() === user?._id || o.supplierId?.toString() === user?._id);
 
     const transformedOnlineOrders = (clientOrdersData || [])
       .map((clientOrder: any) => {
@@ -74,15 +74,31 @@ export default function OrdersPage() {
           return null;
         }
 
+        // Extract real customer info from populated userId object
+        const userObj = clientOrder.userId;
+        const customerName = userObj && typeof userObj === 'object'
+          ? `${userObj.firstName || ''} ${userObj.lastName || ''}`.trim() || 'Online Customer'
+          : 'Online Customer';
+        const customerEmail = userObj && typeof userObj === 'object'
+          ? userObj.emailAddress || undefined
+          : undefined;
+        const customerPhone = userObj && typeof userObj === 'object'
+          ? userObj.mobileNo || undefined
+          : undefined;
+
         return {
           _id: clientOrder._id,
           orderId: undefined,
           items: transformedItems,
-          customerName: 'Online Customer',
-          customerEmail: undefined,
+          customerName,
+          customerEmail,
+          customerPhone,
           vendorId: clientOrder.vendorId || '',
           supplierId: undefined,
           totalAmount: clientOrder.totalAmount || 0,
+          shippingAmount: clientOrder.shippingAmount || 0,
+          gstAmount: clientOrder.gstAmount || 0,
+          platformFeeAmount: clientOrder.platformFeeAmount || 0,
           status: clientOrder.status || 'Pending',
           shippingAddress: clientOrder.shippingAddress || '',
           createdAt: clientOrder.createdAt || new Date().toISOString(),
@@ -329,6 +345,8 @@ export default function OrdersPage() {
           isOpen={isDetailModalOpen}
           onClose={() => setIsDetailModalOpen(false)}
           selectedOrder={selectedOrder}
+          role={role}
+          activeTab={activeTab}
         />
 
         <ShipOrderModal
