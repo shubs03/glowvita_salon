@@ -51,6 +51,19 @@ export const SummaryByServiceTable = ({ startDate, endDate, client, service, sta
     bookingType: bookingType && bookingType !== 'all' ? bookingType : undefined
   });
 
+  // Sync local filters state with props from parent
+  useEffect(() => {
+    setFilters({
+      startDate,
+      endDate,
+      client,
+      service,
+      staff,
+      status,
+      bookingType
+    });
+  }, [startDate, endDate, client, service, staff, status, bookingType]);
+
   const handleFilterChange = (newFilters: FilterParams) => {
     setFilters(newFilters);
     setCurrentPage(1); // Reset to first page when filters change
@@ -162,26 +175,46 @@ export const SummaryByServiceTable = ({ startDate, endDate, client, service, sta
   // Extract services from the API response
   const services = data?.data?.summaryByService || data?.data || [];
 
-  // Filter data based on search term
-  const searchedServices = useMemo(() => {
-    if (!searchTerm) return services;
+  // Filter data based on search term and filter props
+  const filteredServices = useMemo(() => {
+    let result = services;
 
-    return services.filter((service: any) =>
-      Object.values(service).some(value =>
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [services, searchTerm]);
+    // 1. Filter by specific service if selected
+    if (service && service !== 'all') {
+      result = result.filter((s: any) => 
+        (s.serviceName === service) || 
+        (s.name === service)
+      );
+    }
+
+    // 2. Only show services that have at least one appointment matching the filters
+    // This helps clean up the report when filtering by staff, client, etc.
+    result = result.filter((s: any) => {
+      const count = s.count || s.appointmentCount || 0;
+      return count > 0;
+    });
+
+    // 3. Filter by search term
+    if (searchTerm) {
+      result = result.filter((service: any) =>
+        Object.values(service).some(value =>
+          value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+
+    return result;
+  }, [services, searchTerm, service]);
 
   // Pagination logic
-  const totalItems = searchedServices.length;
+  const totalItems = filteredServices.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedServices = searchedServices.slice(startIndex, endIndex);
+  const paginatedServices = filteredServices.slice(startIndex, endIndex);
 
-  // Calculate total appointments for percentage calculation
-  const totalAppointments = paginatedServices.reduce((sum: number, service: any) => sum + (service.count || service.appointmentCount || 0), 0);
+  // Calculate total appointments for percentage calculation based on all filtered services
+  const totalAppointments = filteredServices.reduce((sum: number, service: any) => sum + (service.count || service.appointmentCount || 0), 0);
 
   if (isLoading) {
     return (
@@ -273,35 +306,6 @@ export const SummaryByServiceTable = ({ startDate, endDate, client, service, sta
     );
   }
 
-  if (paginatedServices.length === 0) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-gray-500">
-          No sales by service data available.
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -364,56 +368,71 @@ export const SummaryByServiceTable = ({ startDate, endDate, client, service, sta
         initialFilters={filters}
       />
 
-      <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Service</TableHead>
-              <TableHead>Total Appointments</TableHead>
-              <TableHead>Total Sale</TableHead>
-              <TableHead>Total Duration</TableHead>
-              <TableHead>Percentage</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedServices.map((item: any, index: number) => {
-              const count = item.count || item.appointmentCount || 0;
-              const revenue = item.totalAmount || item.revenue || 0;
-              const duration = item.totalDuration || item.averageDuration || 0;
-              const percentage = totalAppointments > 0 ? (count / totalAppointments) * 100 : 0;
-
-              return (
-                <TableRow key={index}>
-                  <TableCell className="font-medium">{item.serviceName || 'Unknown Service'}</TableCell>
-                  <TableCell>{count}</TableCell>
-                  <TableCell>₹{typeof revenue === 'number' ? revenue.toFixed(2) : '0.00'}</TableCell>
-                  <TableCell>{typeof duration === 'number' ? duration.toFixed(0) : 0} mins</TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <span className="mr-2">{percentage.toFixed(1)}%</span>
-                      <div className="w-16 bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-blue-600 h-2 rounded-full"
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </TableCell>
+      {paginatedServices.length === 0 ? (
+        <div className="text-center py-12 border rounded-md bg-muted/10">
+          <p className="text-muted-foreground">No data available for the selected filters.</p>
+          <Button 
+            variant="link" 
+            onClick={() => handleFilterChange({})}
+            className="mt-2"
+          >
+            Clear all filters
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Service</TableHead>
+                  <TableHead>Total Appointments</TableHead>
+                  <TableHead>Total Sale</TableHead>
+                  <TableHead>Total Duration</TableHead>
+                  <TableHead>Percentage</TableHead>
                 </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination
-        className="mt-4"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={totalItems}
-      />
+              </TableHeader>
+              <TableBody>
+                {paginatedServices.map((item: any, index: number) => {
+                  const count = item.count || item.appointmentCount || 0;
+                  const revenue = item.totalAmount || item.revenue || 0;
+                  const duration = item.totalDuration || item.averageDuration || 0;
+                  const percentage = totalAppointments > 0 ? (count / totalAppointments) * 100 : 0;
+
+                  return (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{item.serviceName || 'Unknown Service'}</TableCell>
+                      <TableCell>{count}</TableCell>
+                      <TableCell>₹{typeof revenue === 'number' ? revenue.toFixed(2) : '0.00'}</TableCell>
+                      <TableCell>{typeof duration === 'number' ? duration.toFixed(0) : 0} mins</TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <span className="mr-2">{percentage.toFixed(1)}%</span>
+                          <div className="w-16 bg-gray-200 rounded-full h-2">
+                            <div
+                              className="bg-blue-600 h-2 rounded-full"
+                              style={{ width: `${percentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          <Pagination
+            className="mt-4"
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            onItemsPerPageChange={setItemsPerPage}
+            totalItems={totalItems}
+          />
+        </>
+      )}
     </div>
   );
 };
