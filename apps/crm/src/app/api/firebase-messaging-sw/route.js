@@ -6,10 +6,6 @@ import {
 } from '@repo/config/config';
 import { NextResponse } from 'next/server';
 
-/**
- * Dynamic Firebase Service Worker for CRM app.
- * Injects real Firebase config at runtime.
- */
 export async function GET() {
   const swContent = `
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
@@ -25,21 +21,63 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
+const soundChannel = new BroadcastChannel('notification_sound_channel');
 
-messaging.onBackgroundMessage((payload) => {
-  console.log('[CRM SW] Background message received:', payload);
-  const notificationTitle = payload.notification?.title || 'GlowVita CRM';
-  const notificationOptions = {
-    body: payload.notification?.body || '',
-    icon: '/logo.png',
-    badge: '/badge.png',
-    data: payload.data || {},
-    silent: false,
-  };
-  self.registration.showNotification(notificationTitle, notificationOptions);
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+
+// RAW PUSH - THE INSTANT BROADCASTER (CRM)
+self.addEventListener('push', (event) => {
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      const data = payload.data || payload; 
+      const title = data.title || payload.notification?.title || 'GlowVita CRM';
+      const body = data.body || payload.notification?.body || 'New update received';
+      
+      // SEND THE FULL MESSAGE TO CRM TABS INSTANTLY
+      soundChannel.postMessage({ 
+        type: 'PLAY_SOUND', 
+        payload: { 
+          notification: { title, body },
+          data: data,
+          from: 'SW_RAW_CRM'
+        } 
+      });
+
+      const options = {
+        body, icon: '/logo.png', badge: '/badge.png', data, tag: 'glowvita-priority-crm', renotify: true, requireInteraction: true
+      };
+      event.waitUntil(self.registration.showNotification(title, options));
+    } catch (e) {
+      console.log('[CRM SW] Push signal received, triggering backup sound');
+      soundChannel.postMessage({ type: 'PLAY_SOUND', from: 'SW_FALLBACK_CRM' });
+    }
+  }
 });
 
-// Handle notification click — redirect to relevant CRM page
+messaging.onBackgroundMessage((payload) => {
+  console.log('[CRM SW] background arrival:', payload);
+  const data = payload.data || {};
+  const title = data.title || payload.notification?.title || 'GlowVita CRM';
+  const body = data.body || payload.notification?.body || '';
+  
+  // Forward everything to CRM tabs instantly
+  soundChannel.postMessage({ 
+    type: 'PLAY_SOUND', 
+    payload: {
+      notification: { title, body },
+      data: data,
+      from: 'SW_FCM_CRM'
+    }
+  });
+
+  const options = {
+    body, icon: '/logo.png', badge: '/badge.png', data, tag: 'glowvita-priority-crm'
+  };
+  self.registration.showNotification(title, options);
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data?.url || '/dashboard';

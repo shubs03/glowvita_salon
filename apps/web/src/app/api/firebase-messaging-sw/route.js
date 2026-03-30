@@ -6,11 +6,6 @@ import {
 } from '@repo/config/config';
 import { NextResponse } from 'next/server';
 
-/**
- * This route serves the Firebase Messaging Service Worker as a JS file,
- * injecting the Firebase config at runtime so no hardcoding is needed.
- * The public/firebase-messaging-sw.js fetches this and evals it.
- */
 export async function GET() {
   const swContent = `
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
@@ -26,21 +21,70 @@ firebase.initializeApp({
 });
 
 const messaging = firebase.messaging();
+const soundChannel = new BroadcastChannel('notification_sound_channel');
 
-messaging.onBackgroundMessage((payload) => {
-  console.log('[SW] Background message received:', payload);
-  const notificationTitle = payload.notification?.title || 'Glowvita';
-  const notificationOptions = {
-    body: payload.notification?.body || '',
-    icon: '/logo.png',
-    badge: '/badge.png',
-    data: payload.data || {},
-    silent: false, // Ensure sound plays if the OS allows it
-  };
-  self.registration.showNotification(notificationTitle, notificationOptions);
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+
+// RAW PUSH - THE INSTANT BROADCASTER
+self.addEventListener('push', (event) => {
+  if (event.data) {
+    try {
+      const payload = event.data.json();
+      const data = payload.data || payload; 
+      const title = data.title || payload.notification?.title || 'Glowvita';
+      const body = data.body || payload.notification?.body || '';
+      
+      // Send the FULL payload to all tabs for instant Bell Icon updates
+      soundChannel.postMessage({ 
+        type: 'PLAY_SOUND', 
+        payload: { 
+          notification: { title, body },
+          data: data,
+          from: 'SW_RAW'
+        } 
+      });
+
+      const options = {
+        body: body,
+        icon: '/logo.png',
+        badge: '/badge.png',
+        data: data,
+        tag: 'glowvita-priority-alert',
+        renotify: true,
+        requireInteraction: true
+      };
+      
+      event.waitUntil(self.registration.showNotification(title, options));
+    } catch (e) {
+      console.log('[SW] Push signal received, triggering backup sound');
+      soundChannel.postMessage({ type: 'PLAY_SOUND', from: 'SW_FALLBACK' });
+    }
+  }
 });
 
-// Handle notification click
+messaging.onBackgroundMessage((payload) => {
+  console.log('[SW] Background arrival:', payload);
+  const data = payload.data || {};
+  const title = data.title || payload.notification?.title || 'Glowvita';
+  const body = data.body || payload.notification?.body || '';
+  
+  // Forward everything to tabs instantly
+  soundChannel.postMessage({ 
+    type: 'PLAY_SOUND', 
+    payload: {
+      notification: { title, body },
+      data: data,
+      from: 'SW_FCM'
+    }
+  });
+
+  const options = {
+    body, icon: '/logo.png', badge: '/badge.png', data, tag: 'glowvita-priority-alert'
+  };
+  self.registration.showNotification(title, options);
+});
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const url = event.notification.data?.url || '/';

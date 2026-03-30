@@ -12,51 +12,107 @@ const firebaseConfig = {
 
 const VAPID_KEY = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
 
-const NOTIFICATION_SOUND_B64 = 'data:audio/mp3;base64,SUQzBAAAAAABEVRYWFhYAAAAHAAAAGNoYW5uZWxzAEFsbCBjaGFubmVscyBzeW5jZWRUWFhYAAAAEgAAAGdlbnJlAE90aGVyAFRYWFgAAAAWAAAAY29tbWVudABDb252ZXJ0ZWQgYnkgAFRYWFgAAAAXAAAAdGl0bGUATm90aWZpY2F0aW9uIFBpbmdfSU5GTwAAEAAAAEVCUkUAAAAAAAAAAFRFTkMAAAAMAAAAU291bmQgTGlicmFyeS8vLytnQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUAAAAD/PWPBF8P///8AAAAAbW9kZQAAAAAhAAAAAQAADAAAAAAAAP//////LzNqAAYAAAAMBQQAAAACIAAAAAEgAB8AAL89Y0FmcmVlYm9ybiBQcmVzZW50cwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP89Y0FmcmVlYm9ybiBQcmVzZW50cwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP89Y0FmcmVlYm9ybiBQcmVzZW50cwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP89Y0FmcmVlYm9ybiBQcmVzZW50cwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/Z'
-
 class NotificationManager {
   constructor() {
     this.messaging = null;
-    this.audioUnlocked = false;
-    this.audio = null;
+    this.audioContext = null;
+    this.listeners = []; // Multi-listener support (CRM)
 
     if (typeof window !== 'undefined') {
-      // 1. Pre-load audio using Base64 to bypass all network/CORS issues
-      this.audio = new Audio(NOTIFICATION_SOUND_B64);
-      this.audio.volume = 1.0;
-      
-      // 2. Aggressive audio unlocking on any user interaction
-      const unlockAudio = () => {
-        if (this.audio && !this.audioUnlocked) {
-          console.log('[NotificationManager] Attempting to unlock audio...');
-          this.audio.play().then(() => {
-            this.audio.pause();
-            this.audio.currentTime = 0;
-            this.audioUnlocked = true;
-            console.log('[NotificationManager] Audio engine UNLOCKED successfully');
-            // Remove listeners once unlocked
-            ['click', 'keydown', 'touchstart', 'mousedown'].forEach(evt => 
-               window.removeEventListener(evt, unlockAudio)
-            );
-          }).catch(e => {
-            console.log('[NotificationManager] Audio unlock waiting for real user action:', e.message);
-          });
-        }
-      };
+      window.playTestSound = () => this.playNotificationSound();
 
-      ['click', 'keydown', 'touchstart', 'mousedown'].forEach(evt => 
-        window.addEventListener(evt, unlockAudio, { passive: true })
-      );
-
-      if ('serviceWorker' in navigator) {
+      try {
         const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
         this.messaging = getMessaging(app);
-        navigator.serviceWorker
-          .register('/firebase-messaging-sw.js')
-          .then((reg) => console.log('[Web/CRM] Firebase SW registered:', reg.scope))
-          .catch((err) => console.error('[Web/CRM] Firebase SW registration failed:', err));
+
+        const triggerSound = (payload) => {
+          console.log('[NotificationManager] SIGNAL (CRM)!', payload);
+          this.playNotificationSound();
+          
+          // BROADCAST to all active components in CRM
+          this.listeners.forEach(callback => {
+            try { callback(payload); } catch (e) { }
+          });
+        };
+
+        const soundChannel = new BroadcastChannel('notification_sound_channel');
+        soundChannel.onmessage = (event) => {
+          if (event.data?.type === 'PLAY_SOUND') {
+            triggerSound(event.data.payload || { from: 'SW_DIRECT_CRM' });
+          }
+        };
+
+        onMessage(this.messaging, (payload) => {
+          triggerSound(payload);
+        });
+
+        const initAudio = async () => {
+          if (!this.audioContext) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.audioContext = new AudioCtx();
+          }
+          if (this.audioContext && this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
+            console.log('[Audio] CRM System Ready');
+          }
+        };
+
+        ['click', 'keydown', 'touchstart', 'mousedown'].forEach(evt =>
+          window.addEventListener(evt, initAudio, { passive: true })
+        );
+
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/api/firebase-messaging-sw', { scope: '/' })
+            .then(() => console.log('[System] CRM Service Ready'));
+        }
+      } catch (err) {
+        console.error('[NotificationManager] CRM Init error:', err);
       }
     }
+  }
+
+  async playNotificationSound() {
+    console.log('[Sound] Playing (CRM) beep...');
+    try {
+      if (!this.audioContext) {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        this.audioContext = new AudioCtx();
+      }
+      if (this.audioContext.state === 'suspended') await this.audioContext.resume();
+      
+      const ctx = this.audioContext;
+      const now = ctx.currentTime;
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.frequency.setValueAtTime(880, now);
+      gain1.gain.setValueAtTime(0, now);
+      gain1.gain.linearRampToValueAtTime(0.5, now + 0.05);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc1.connect(gain1); gain1.connect(ctx.destination);
+      osc1.start(now); osc1.stop(now + 0.5);
+
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.frequency.setValueAtTime(660, now + 0.25);
+      gain2.gain.setValueAtTime(0, now + 0.25);
+      gain2.gain.linearRampToValueAtTime(0.4, now + 0.3);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+      osc2.connect(gain2); gain2.connect(ctx.destination);
+      osc2.start(now + 0.25); osc2.stop(now + 0.8);
+    } catch (err) {
+      console.error('[Audio] CRM Beep Error:', err);
+    }
+  }
+
+  // ALLOW MULTIPLE LISTENERS IN CRM
+  onMessageListener(callback) {
+    if (typeof callback === 'function') {
+      this.listeners.push(callback);
+    }
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== callback);
+    };
   }
 
   async requestPermission() {
@@ -66,66 +122,29 @@ class NotificationManager {
       if (permission === 'granted') {
         const token = await getToken(this.messaging, {
           vapidKey: VAPID_KEY,
-          serviceWorkerRegistration: await navigator.serviceWorker.getRegistration('/firebase-messaging-sw.js'),
+          serviceWorkerRegistration: await navigator.serviceWorker.getRegistration('/api/firebase-messaging-sw'),
         });
         if (token) {
-          console.log('FCM Token generated:', token);
           await this.saveTokenToServer(token);
           return token;
         }
       }
     } catch (error) {
-      console.error('Error requesting notification permission:', error);
     }
     return null;
   }
 
   async saveTokenToServer(token) {
     try {
-      const isCrm = typeof window !== 'undefined' && window.location.pathname.includes('/crm');
-      const endpoint = isCrm ? '/api/crm/notifications/register-token' : '/api/client/notifications/register-token';
+      const endpoint = '/api/crm/notifications/register-token';
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
-      if (response.ok) console.log('FCM Token registered on server successfully.');
+      if (response.ok) console.log('[NotificationManager] CRM Registration Success');
     } catch (error) {
-      console.error('Error saving FCM token to server:', error);
     }
-  }
-
-  playNotificationSound() {
-    if (!this.audio) {
-        console.error('[NotificationManager] Sound object not initialized');
-        return;
-    }
-    try {
-      console.log('[NotificationManager] Playing notification sound...');
-      this.audio.currentTime = 0;
-      const playPromise = this.audio.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.catch(e => {
-          console.warn('[NotificationManager] Sound blocked by browser. User must click on page first.', e);
-          // Try one more time with a small fallback
-          if (this.audioUnlocked) {
-             setTimeout(() => this.audio.play(), 100);
-          }
-        });
-      }
-    } catch (err) {
-      console.error('Error playing sound:', err);
-    }
-  }
-
-  onMessageListener(callback) {
-    if (!this.messaging) return;
-    onMessage(this.messaging, (payload) => {
-      console.log('[NotificationManager] Foreground Message received:', payload);
-      this.playNotificationSound();
-      if (callback) callback(payload);
-    });
   }
 }
 

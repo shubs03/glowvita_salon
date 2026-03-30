@@ -12,6 +12,7 @@ import {
 } from "@repo/ui/dropdown-menu";
 import { cn } from "@repo/ui/cn";
 import { useRouter } from "next/navigation";
+import NotificationManager from "@/utils/NotificationManager";
 
 interface Notification {
   _id: string;
@@ -47,8 +48,21 @@ export function NotificationDropdown({ apiEndpoint }: NotificationDropdownProps)
   }, [apiEndpoint]);
 
   useEffect(() => {
+    // Initial fetch always
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+
+    // INSTANT UPDATE: Listen for the sound signal to refresh the bell icon IMMEDIATELY
+    const setupInstantSync = () => {
+      NotificationManager.onMessageListener((payload) => {
+        console.log('[BellIcon] Instant signal received, refreshing count...');
+        fetchNotifications();
+      });
+    };
+
+    setupInstantSync();
+
+    // Fallback interval reduced from 30s to 10s for safety, but the listener above is the primary trigger
+    const interval = setInterval(fetchNotifications, 10000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
@@ -162,7 +176,7 @@ export function NotificationDropdown({ apiEndpoint }: NotificationDropdownProps)
                     <div className="flex items-center justify-between">
                        <p className={cn("text-sm font-bold truncate", !notification.isRead ? "text-foreground" : "text-muted-foreground")}>
                         {notification.title}
-                      </p>
+                       </p>
                     </div>
                     <p className="text-xs text-muted-foreground line-clamp-2">
                       {notification.body}

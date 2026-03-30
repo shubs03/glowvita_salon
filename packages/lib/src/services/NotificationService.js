@@ -110,7 +110,7 @@ class NotificationService {
                     console.log(`Push notifications disabled for user: ${userId}`);
                 } else {
                     const messagePayload = {
-                        notification: { 
+                        notification: (userType === 'client' || userType === 'vendor' || userType === 'staff' || userType === 'admin') ? undefined : { 
                             title, 
                             body, 
                             sound: 'default',
@@ -119,15 +119,19 @@ class NotificationService {
                         android: {
                             priority: 'high',
                             notification: {
+                                title,
+                                body,
                                 sound: 'default',
                                 channelId: 'glowvita_alerts',
                                 icon: 'notification_icon',
-                                color: '#FF0000'
+                                color: '#FF0000',
+                                ...(payload.image && { imageUrl: payload.image }) 
                             }
                         },
                         apns: {
                             payload: {
                                 aps: {
+                                    alert: { title, body },
                                     sound: 'default',
                                     badge: 1
                                 }
@@ -137,24 +141,22 @@ class NotificationService {
                             headers: {
                                 Urgency: 'high'
                             },
-                            notification: {
-                                icon: '/logo.png',
-                                badge: '/badge.png',
-                                sound: 'default',
-                                vibrate: [300, 100, 400],
-                                renormalize: true,
-                                requireInteraction: true,
-                                actions: [
-                                    {
-                                        action: 'open',
-                                        title: 'View Details'
-                                    }
-                                ]
+                            // IMPORTANT: No top-level notification block for WebPush
+                            // This ensures onMessage and onBackgroundMessage fire reliably
+                            data: {
+                                title: String(title),
+                                body: String(body),
+                                type: String(type),
+                                play_sound: "true",
+                                ...(payload.data ? Object.keys(payload.data).reduce((acc, k) => ({ ...acc, [k]: String(payload.data[k]) }), {}) : {})
                             }
                         },
                         data: { 
+                            title: String(title),
+                            body: String(body),
                             type: String(type), 
                             click_action: 'FLUTTER_NOTIFICATION_CLICK',
+                            play_sound: "true",
                             ...(payload.data ? Object.keys(payload.data).reduce((acc, k) => ({ ...acc, [k]: String(payload.data[k]) }), {}) : {})
                         },
                         tokens: user.fcmTokens,
