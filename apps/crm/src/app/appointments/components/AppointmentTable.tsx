@@ -210,8 +210,6 @@ const AppointmentTable = ({
                       <div className="flex justify-end gap-1">
                         {remainingAmount > 0 &&
                           appointment.status !== 'cancelled' &&
-                          appointment.status !== 'completed' &&
-                          appointment.status !== 'completed without payment' &&
                           ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) !== 'completed' && (
                             <Button
                               variant="ghost"

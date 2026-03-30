@@ -2756,6 +2756,17 @@ export const glowvitaApi = createApi({
       invalidatesTags: ['PublicAppointments', 'Appointments'],
     }),
 
+    // Fetch invoice for a specific appointment (Web - for clients)
+    getAppointmentInvoice: builder.query({
+      query: (appointmentId) => ({
+        url: `/invoice/${appointmentId}`,
+        method: "GET",
+      }),
+      providesTags: (result, error, appointmentId) => [
+        { type: 'AppointmentInvoice', id: appointmentId }
+      ],
+    }),
+
     // Acquire slot lock for preventing concurrent bookings
     acquireSlotLock: builder.mutation({
       query: (lockData) => ({
@@ -3516,6 +3527,8 @@ export const {
   useConfirmBookingMutation,
   // Cancel Booking Mutation (added)
   useCancelBookingMutation,
+  // Appointment Invoice Hook (Web - for clients)
+  useGetAppointmentInvoiceQuery,
   // Lock Wedding Package Mutation
   useLockWeddingPackageMutation,
   // Public Wedding Packages Hook

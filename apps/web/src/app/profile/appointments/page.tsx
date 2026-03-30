@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo
 import { Button } from '@repo/ui/button';
 import { Badge } from '@repo/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
-import { AlertCircle, Calendar, CheckCircle, X, Trash, Search, MapPin, Clock, User, Scissors, DollarSign, Edit, MoreVertical, Link as LinkIcon, Info } from 'lucide-react';
+import { AlertCircle, Calendar, CheckCircle, X, Trash, Search, MapPin, Clock, User, Scissors, DollarSign, Edit, MoreVertical, Link as LinkIcon, Info, FileText, Download } from 'lucide-react';
 import { StatCard } from '../../../components/profile/StatCard';
 import { Pagination } from '@repo/ui/pagination';
 import { Input } from '@repo/ui/input';
@@ -16,6 +16,7 @@ import { Textarea } from '@repo/ui/textarea';
 import { Label } from '@repo/ui/label';
 import { cn } from '@repo/ui/cn';
 import { useUserAppointments } from '@/hooks/useUserAppointments';
+import { useGetAppointmentInvoiceQuery } from '@repo/store/api';
 
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -62,6 +63,214 @@ interface AppointmentCardProps {
     onSelect: () => void;
     isSelected: boolean;
 }
+
+// ─── Invoice Modal ────────────────────────────────────────────────
+const InvoiceModal = ({ appointmentId, onClose }: { appointmentId: string; onClose: () => void }) => {
+    const { data, isLoading, isError, error } = useGetAppointmentInvoiceQuery(appointmentId);
+
+    const handleDownload = async () => {
+        const element = document.getElementById('web-invoice-pdf-area');
+        if (!element) return;
+        try {
+            const html2pdf = (await import('html2pdf.js' as any)).default;
+            const invoiceNum = data?.data?.invoice?.invoiceNumber || appointmentId;
+            await html2pdf().set({
+                margin: 5,
+                filename: `Invoice_${invoiceNum}.pdf`,
+                image: { type: 'jpeg', quality: 0.9 },
+                html2canvas: { scale: 1.5, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            }).from(element).save();
+        } catch (e) {
+            console.error('PDF download failed:', e);
+        }
+    };
+
+    const invoice = data?.data?.invoice;
+    const vendor = data?.data?.vendor;
+    const appointment = data?.data?.appointment;
+
+    const vendorName = vendor?.businessName || vendor?.salonName || 'Salon';
+    const vendorAddress = [vendor?.address, vendor?.city, vendor?.state, vendor?.pincode].filter(Boolean).join(', ') || 'N/A';
+    const vendorPhone = vendor?.phone || vendor?.mobile || 'N/A';
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+                {/* Modal Header */}
+                <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-slate-50 to-white">
+                    <div className="flex items-center gap-3">
+                        <div className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center">
+                            <FileText className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                            <h2 className="font-bold text-gray-900 text-lg">Appointment Invoice</h2>
+                            {invoice && <p className="text-xs text-gray-500">Invoice #{invoice.invoiceNumber}</p>}
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        {invoice && (
+                            <button
+                                onClick={handleDownload}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition-colors"
+                            >
+                                <Download className="h-4 w-4" />
+                                Download PDF
+                            </button>
+                        )}
+                        <button
+                            onClick={onClose}
+                            className="h-8 w-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Modal Body */}
+                <div className="flex-1 overflow-y-auto">
+                    {isLoading && (
+                        <div className="flex flex-col items-center justify-center py-20 gap-3">
+                            <div className="h-10 w-10 rounded-full border-2 border-t-green-500 border-gray-200 animate-spin" />
+                            <p className="text-sm text-gray-500">Loading your invoice...</p>
+                        </div>
+                    )}
+
+                    {isError && (
+                        <div className="flex flex-col items-center justify-center py-16 gap-3 px-6 text-center">
+                            <div className="h-14 w-14 rounded-full bg-amber-100 flex items-center justify-center">
+                                <FileText className="h-7 w-7 text-amber-500" />
+                            </div>
+                            <p className="font-semibold text-gray-800">Invoice Not Available Yet</p>
+                            <p className="text-sm text-gray-500 max-w-xs">
+                                {(error as any)?.data?.message || 'The invoice will be available once the vendor finalises your appointment.'}
+                            </p>
+                        </div>
+                    )}
+
+                    {invoice && (
+                        <div id="web-invoice-pdf-area" className="p-6 font-sans bg-white">
+                            {/* Branding */}
+                            <div className="bg-slate-50 text-slate-900 py-3 px-4 rounded-t-lg -mx-6 -mt-6 mb-6 border-b border-slate-200 flex justify-center">
+                                <img src="/images/GlowVita%20Salon%20PNG.png" alt="GlowVita Salon" className="h-10 w-auto object-contain" />
+                            </div>
+
+                            {/* Header */}
+                            <div className="flex justify-between items-start mb-4 border-b-2 border-black pb-4">
+                                <div>
+                                    <h1 className="text-xl font-bold text-black">{vendorName}</h1>
+                                    <p className="text-xs text-gray-700 mt-1">{vendorAddress}</p>
+                                    <p className="text-xs text-gray-700 mt-1">Phone: {vendorPhone}</p>
+                                </div>
+                                <h2 className="text-2xl font-bold text-black">INVOICE</h2>
+                            </div>
+
+                            {/* Meta */}
+                            <div className="flex justify-between mb-4">
+                                <p className="text-sm text-black">
+                                    <span className="font-semibold">Date:</span>{' '}
+                                    {new Date(invoice.createdAt || appointment?.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </p>
+                                <p className="text-sm text-black">
+                                    <span className="font-semibold">Invoice No:</span> {invoice.invoiceNumber}
+                                </p>
+                            </div>
+
+                            <div className="border-t border-black my-3" />
+
+                            {/* Client Info */}
+                            <div className="mb-4">
+                                <p className="text-sm text-black">
+                                    <span className="font-semibold">Invoice To:</span> {invoice.clientInfo?.fullName || 'N/A'}
+                                </p>
+                                {invoice.clientInfo?.phone && (
+                                    <p className="text-sm text-black">
+                                        <span className="font-semibold">Phone:</span> {invoice.clientInfo.phone}
+                                    </p>
+                                )}
+                            </div>
+
+                            {/* Items Table */}
+                            <div className="overflow-x-auto mb-6">
+                                <table className="w-full border-collapse border border-black text-sm">
+                                    <thead>
+                                        <tr className="bg-gray-200">
+                                            <th className="border border-black p-2 text-left font-bold text-black text-xs">ITEM DESCRIPTION</th>
+                                            <th className="border border-black p-2 text-right font-bold text-black text-xs">₹ PRICE</th>
+                                            <th className="border border-black p-2 text-right font-bold text-black text-xs">QTY</th>
+                                            <th className="border border-black p-2 text-right font-bold text-black text-xs">₹ AMOUNT</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(invoice.items || []).map((item: any, idx: number) => (
+                                            <tr key={idx} className="border border-black">
+                                                <td className="border border-black p-2 text-black text-xs">
+                                                    <div className={`font-semibold ${item.itemType === 'Addon' ? 'pl-4 text-gray-600' : ''}`}>
+                                                        {item.itemType === 'Addon' ? '+ ' : ''}{item.name}
+                                                    </div>
+                                                    {item.staffName && <div className="text-[11px] text-gray-500 mt-0.5">Staff: {item.staffName}</div>}
+                                                </td>
+                                                <td className="border border-black p-2 text-right text-black text-xs">₹{(item.price || 0).toFixed(2)}</td>
+                                                <td className="border border-black p-2 text-right text-black text-xs">{item.quantity || 1}</td>
+                                                <td className="border border-black p-2 text-right font-semibold text-black text-xs">₹{(item.totalPrice || 0).toFixed(2)}</td>
+                                            </tr>
+                                        ))}
+                                        {/* Summary rows */}
+                                        <tr className="border border-black">
+                                            <td colSpan={3} className="border border-black p-2 text-right font-semibold text-black text-xs">Subtotal:</td>
+                                            <td className="border border-black p-2 text-right font-semibold text-black text-xs">₹{(invoice.subtotal || 0).toFixed(2)}</td>
+                                        </tr>
+                                        {invoice.discountAmount > 0 && (
+                                            <tr className="border border-black">
+                                                <td colSpan={3} className="border border-black p-2 text-right font-semibold text-green-600 text-xs">Discount:</td>
+                                                <td className="border border-black p-2 text-right font-semibold text-green-600 text-xs">-₹{(invoice.discountAmount || 0).toFixed(2)}</td>
+                                            </tr>
+                                        )}
+                                        {invoice.taxAmount > 0 && (
+                                            <tr className="border border-black">
+                                                <td colSpan={3} className="border border-black p-2 text-right font-semibold text-black text-xs">Tax ({invoice.taxRate || 0}%):</td>
+                                                <td className="border border-black p-2 text-right font-semibold text-black text-xs">₹{(invoice.taxAmount || 0).toFixed(2)}</td>
+                                            </tr>
+                                        )}
+                                        {invoice.platformFee > 0 && (
+                                            <tr className="border border-black">
+                                                <td colSpan={3} className="border border-black p-2 text-right font-semibold text-black text-xs">Platform Fee:</td>
+                                                <td className="border border-black p-2 text-right font-semibold text-black text-xs">₹{(invoice.platformFee || 0).toFixed(2)}</td>
+                                            </tr>
+                                        )}
+                                        <tr className="border border-black bg-gray-200">
+                                            <td colSpan={3} className="border border-black p-2 text-right font-bold text-black text-xs">Total:</td>
+                                            <td className="border border-black p-2 text-right font-bold text-black text-xs">₹{(invoice.totalAmount || 0).toFixed(2)}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Payment footer */}
+                            <div className="border-t-2 border-black pt-3">
+                                <p className="text-center text-black font-medium text-xs mb-1">
+                                    {invoice.paymentMethod && invoice.paymentMethod !== 'Pending'
+                                        ? `Payment of ₹${(invoice.totalAmount || 0).toFixed(2)} received via ${invoice.paymentMethod}`
+                                        : `Payment of ₹${(invoice.totalAmount || 0).toFixed(2)} is pending`}
+                                </p>
+                                <p className="text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                    NOTE: This is a computer generated receipt and does not require physical signature.
+                                </p>
+                                <div className="mt-6 pt-4 border-t border-gray-300 flex flex-col items-center gap-1">
+                                    <span className="text-xs text-gray-400 font-medium">Powered by</span>
+                                    <img src="/images/GlowVita%20Salon%20PNG.png" alt="GlowVita Salon" className="h-8 w-auto object-contain" />
+                                    <p className="text-xs text-gray-400">www.glowvitasalon.com</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+// ─────────────────────────────────────────────────────────────────
+
 
 const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardProps) => {
     const statusConfig: Record<string, { icon: any, color: string }> = {
@@ -138,9 +347,10 @@ const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardP
 interface AppointmentDetailsProps {
     appointment: Appointment | null;
     onCancelClick: (appointment: Appointment) => void;
+    onViewInvoice: (appointmentId: string) => void;
 }
 
-const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsProps) => {
+const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: AppointmentDetailsProps) => {
     const router = useRouter();
     console.log("AppointmentDetails received appointment:", appointment);
     console.log("Pricing details - amount:", appointment?.amount, "platformFee:", appointment?.platformFee, "serviceTax:", appointment?.serviceTax, "discountAmount:", appointment?.discountAmount, "finalAmount:", appointment?.finalAmount);
@@ -370,6 +580,15 @@ const AppointmentDetails = ({ appointment, onCancelClick }: AppointmentDetailsPr
                         <Button variant="outline" className="justify-start gap-2" onClick={handleSalonDetails} disabled={!appointment.vendorId}>
                             <LinkIcon className="h-4 w-4" /> Salon Details
                         </Button>
+                        {appointment.status === 'Completed' && (
+                            <Button
+                                variant="outline"
+                                className="justify-start gap-2 col-span-2 border-green-300 text-green-700 hover:bg-green-50 hover:text-green-800"
+                                onClick={() => onViewInvoice(appointment.id)}
+                            >
+                                <FileText className="h-4 w-4" /> View Invoice
+                            </Button>
+                        )}
                     </div>
                 </div>
 
@@ -462,6 +681,7 @@ export default function AppointmentsPage() {
 
     const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
     const [cancelBooking, { isLoading: isCancelling }] = useCancelBookingMutation();
+    const [invoiceModalAppointmentId, setInvoiceModalAppointmentId] = useState<string | null>(null);
 
     // Update appointments when user appointments data changes
     // Use a ref to track if we've already set the initial selection to prevent infinite loops
@@ -656,7 +876,11 @@ export default function AppointmentsPage() {
 
                         {/* Right Column: Appointment Details */}
                         <div className="lg:col-span-2">
-                            <AppointmentDetails appointment={selectedAppointment} onCancelClick={handleCancelClick} />
+                            <AppointmentDetails
+                                appointment={selectedAppointment}
+                                onCancelClick={handleCancelClick}
+                                onViewInvoice={(id) => setInvoiceModalAppointmentId(id)}
+                            />
                         </div>
                     </div>
                 </>
@@ -688,6 +912,14 @@ export default function AppointmentsPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Invoice Modal */}
+            {invoiceModalAppointmentId && (
+                <InvoiceModal
+                    appointmentId={invoiceModalAppointmentId}
+                    onClose={() => setInvoiceModalAppointmentId(null)}
+                />
+            )}
         </div>
     );
 }

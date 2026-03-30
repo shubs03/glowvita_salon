@@ -361,6 +361,10 @@ export default function AppointmentsPage() {
                       setIsModalOpen(false);
                       handleOpenDeleteModal(selectedAppointment);
                     }}
+                    onPaymentCollect={() => {
+                        setIsModalOpen(false);
+                        handleOpenPaymentModal(selectedAppointment!);
+                    }}
                     onClose={() => setIsModalOpen(false)}
                   />
                 </div>
