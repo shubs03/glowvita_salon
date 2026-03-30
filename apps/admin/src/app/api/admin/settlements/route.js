@@ -273,6 +273,19 @@ export const POST = authMiddlewareAdmin(async (req) => {
             createdByType: 'admin'
         });
 
+        // Trigger Notification for settlement
+        (async () => {
+            try {
+                // If it's a payment to vendor, notify the vendor
+                if (type === "Payment to Vendor") {
+                     const NotificationService = (await import('@repo/lib/services/NotificationService.js')).default;
+                     await NotificationService.sendSettlementAlert(vendorId, 'vendor', amount, 'processed');
+                }
+            } catch (err) {
+                console.error('Settlement Notification Error:', err);
+            }
+        })();
+
         return NextResponse.json({
             success: true,
             message: "Payment recorded successfully",

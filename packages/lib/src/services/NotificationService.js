@@ -312,13 +312,17 @@ class NotificationService {
                 title: 'Order Placed! 📦',
                 body: `Your order #${order.orderId || order._id} has been received and is being processed.`
             },
+            'confirmed': {
+                title: 'Order Confirmed! ✅',
+                body: `Your order #${order.orderId || order._id} has been confirmed and will be dispatched soon.`
+            },
             'shipped': {
-                title: 'Order Shipped! 🚚',
-                body: `Great news! Your order #${order.orderId || order._id} is on its way.`
+                title: 'Order Dispatched! 🚚',
+                body: `Great news! Your order #${order.orderId || order._id} has been dispatched.`
             },
             'delivered': {
                 title: 'Order Delivered! 🎉',
-                body: `Your package for order #${order.orderId || order._id} has been delivered.`
+                body: `Your package for order #${order.orderId || order._id} has been delivered and received.`
             },
             'cancelled': {
                 title: 'Order Cancelled ❌',
@@ -331,9 +335,17 @@ class NotificationService {
                 title: 'New Order Received! 🛍️',
                 body: `You have a new order #${order.orderId || order._id}. check it in your dashboard.`
             },
+            'confirmed': {
+                title: 'Order Confirmed ✅',
+                body: `Order #${order.orderId || order._id} has been confirmed.`
+            },
             'shipped': {
-                title: 'Order Shipped 🚚',
-                body: `Order #${order.orderId || order._id} has been marked as shipped.`
+                title: 'Order Dispatched! 🚚',
+                body: `Order #${order.orderId || order._id} has been marked as dispatched.`
+            },
+            'delivered': {
+                title: 'Order Delivered 🎉',
+                body: `Order #${order.orderId || order._id} status is now delivered.`
             },
             'cancelled': {
                 title: 'Order Cancelled 🔄',
@@ -442,6 +454,127 @@ class NotificationService {
             type: 'system',
             data: { type: 're-engagement' }
         });
+    }
+
+    /**
+     * Send account approval alert
+     */
+    async sendApprovalAlert(userId, role, status, message = '') {
+        const isApproved = status.toLowerCase() === 'approved';
+        const title = isApproved ? 'Account Approved! 🎉' : 'Account Update 📋';
+        const body = message || (isApproved 
+            ? `Congratulations! Your account with GlowVita has been approved. You can now access all features.`
+            : `There is an update regarding your account status: ${status}.`);
+
+        await this.sendToUser(userId, role, {
+            title,
+            body,
+            type: 'system',
+            data: { type: 'approval_update', status }
+        });
+    }
+
+    /**
+     * Send document approval alert
+     */
+    async sendDocumentAlert(userId, role, documentName, status, reason = '') {
+        const isApproved = status.toLowerCase() === 'approved';
+        const title = isApproved ? 'Document Approved! ✅' : 'Document Rejected! ❌';
+        let body = `Your ${documentName} has been ${status}.`;
+        if (!isApproved && reason) body += ` Reason: ${reason}`;
+
+        await this.sendToUser(userId, role, {
+            title,
+            body,
+            type: 'system',
+            data: { type: 'document_update', documentName, status }
+        });
+    }
+
+    /**
+     * Send marketplace order notification (Vendor <-> Supplier)
+     */
+    async sendMarketplaceOrderAlert(userId, role, order, status) {
+        const copyMap = {
+            'placed': {
+                title: 'New Marketplace Order! 📦',
+                body: `A new order #${order.orderId || order._id} has been placed.`
+            },
+            'confirmed': {
+                title: 'Marketplace Order Confirmed! ✅',
+                body: `Order #${order.orderId || order._id} has been confirmed.`
+            },
+            'shipped': {
+                title: 'Marketplace Order Dispatched! 🚚',
+                body: `Order #${order.orderId || order._id} is on its way.`
+            },
+            'delivered': {
+                title: 'Marketplace Order Delivered! 🎉',
+                body: `Order #${order.orderId || order._id} has been successfully delivered.`
+            }
+        };
+
+        const copy = copyMap[status] || { title: 'Marketplace Update', body: `Order #${order.orderId || order._id} status is now ${status}.` };
+
+        await this.sendToUser(userId, role, {
+            ...copy,
+            type: 'order',
+            data: { type: 'marketplace_order', orderId: order._id.toString(), status }
+        });
+    }
+
+    /**
+     * Send subscription related notifications
+     */
+    async sendSubscriptionAlert(userId, role, planName, daysLeft) {
+        const title = daysLeft <= 0 ? 'Subscription Expired! ⚠️' : 'Subscription Ending Soon! ⏳';
+        const body = daysLeft <= 0 
+            ? `Your ${planName} has expired. Please renew to continue using GlowVita services.`
+            : `Your ${planName} will expire in ${daysLeft} days. Renew now to avoid interruption.`;
+
+        await this.sendToUser(userId, role, {
+            title,
+            body,
+            type: 'system',
+            data: { type: 'subscription_expiry', planName, daysLeft }
+        });
+    }
+
+    /**
+     * Send settlement notification
+     */
+    async sendSettlementAlert(userId, role, amount, status) {
+        const title = 'Settlement Update 💰';
+        const body = `Your settlement of ₹${amount} has been ${status}.`;
+
+        await this.sendToUser(userId, role, {
+            title,
+            body,
+            type: 'system',
+            data: { type: 'settlement_update', amount, status }
+        });
+    }
+
+    /**
+     * Send admin alerts for new registrations
+     */
+    async sendAdminAlert(action, details) {
+        // Find all super admins to notify
+        try {
+            const admins = await AdminModel.find({ roleName: 'SUPER_ADMIN' }).select('_id');
+            const adminIds = admins.map(a => a._id.toString());
+            
+            if (adminIds.length > 0) {
+                await this.sendMassNotification(adminIds, 'admin', {
+                    title: `Admin Alert: ${action} 🔔`,
+                    body: details,
+                    type: 'system',
+                    data: { type: 'admin_alert', action }
+                });
+            }
+        } catch (err) {
+            console.error('Admin Alert Error:', err);
+        }
     }
 
     /**

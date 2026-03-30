@@ -9,6 +9,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useApiErrorHandler } from '@/hooks/useApiErrorHandler';
 import { sidebarNavItems } from '@/lib/routes';
 import { cn } from '@repo/ui/cn';
+import NotificationManager from '@/utils/NotificationManager';
+import { toast } from 'sonner';
+import { Bell } from 'lucide-react';
 
 export function AdminLayout({ children }: { children: React.ReactNode; }) {
   const router = useRouter();
@@ -73,9 +76,29 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
         router.push('/');
       } else {
         setHasAccess(true);
+        // Initialize Notifications when access is verified
+        NotificationManager.requestPermission();
       }
     }
   }, [admin, isLoading, isAdminAuthenticated, router, pathname]);
+
+  // Listen for real-time notifications to show popups (popups are for the foreground)
+  useEffect(() => {
+    if (isAdminAuthenticated) {
+      const unsubscribe = NotificationManager.onMessageListener((payload) => {
+        console.log('[AdminLayout] FCM Message Received:', payload);
+        const title = payload.notification?.title || payload.data?.title || 'System Alert';
+        const body = payload.notification?.body || payload.data?.body || 'New update received';
+        
+        toast(title, {
+          description: body,
+          icon: <Bell className="h-4 w-4 text-primary" />,
+          duration: 10000,
+        });
+      });
+      return () => unsubscribe();
+    }
+  }, [isAdminAuthenticated]);
 
   const toggleSidebar = () => {
     setSidebarOpen(!isSidebarOpen);

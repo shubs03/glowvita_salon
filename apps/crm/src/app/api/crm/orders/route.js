@@ -62,14 +62,14 @@ export const POST = authMiddlewareCrm(async (req) => {
 
     await newOrder.save();
 
-    // Trigger Notification to Supplier (Non-blocking)
+    // Trigger Notification for Marketplace Order
     (async () => {
       try {
-        await NotificationService.sendToUser(supplierId, 'vendor', {
-          title: 'New B2B Order! 📦',
-          body: `You received a new order ${orderId} from a vendor.`,
-          data: { type: 'order_new', orderId: newOrder._id.toString() }
-        });
+        // Notify Supplier
+        await NotificationService.sendMarketplaceOrderAlert(supplierId, 'supplier', newOrder, 'placed');
+        
+        // Notify Admin of new B2B activity
+        await NotificationService.sendAdminAlert('New Marketplace Order', `New order ${orderId} placed from a vendor to a supplier.`);
       } catch (err) {
         console.error('Order Notification Error:', err);
       }
@@ -179,11 +179,7 @@ export const PATCH = authMiddlewareCrm(async (req) => {
       try {
         // If B2B (vendor placed order to supplier), notify vendor
         if (order.vendorId && !order.customerId) {
-          await NotificationService.sendToUser(order.vendorId, 'vendor', {
-            title: `Order Update: ${status} 📦`,
-            body: `Your order ${order.orderId} status is now ${status}.`,
-            data: { type: 'order_update', orderId: order._id.toString(), status }
-          });
+          await NotificationService.sendMarketplaceOrderAlert(order.vendorId, 'vendor', order, status);
         }
         // If B2C (customer placed order to vendor), notify customer
         else if (order.customerId) {

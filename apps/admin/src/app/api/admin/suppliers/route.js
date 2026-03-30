@@ -333,6 +333,15 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
         return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
       }
 
+      // Trigger Notification for Supplier Approval
+      (async () => {
+        try {
+          await NotificationService.sendApprovalAlert(id, 'supplier', status);
+        } catch (err) {
+          console.error('Supplier Approval Notification Error:', err);
+        }
+      })();
+
       return NextResponse.json({
         message: `Supplier ${status} successfully`,
         supplier: updatedSupplier,
@@ -377,6 +386,22 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       if (!updatedSupplier) {
         return NextResponse.json({ message: "Supplier not found" }, { status: 404 });
       }
+
+      // Trigger Notification for Document Status Update
+      (async () => {
+        try {
+          const docLabels = {
+            'aadharCard': 'Aadhar Card',
+            'udyogAadhar': 'Udyog Aadhar',
+            'udhayamCert': 'Udhayam Certificate',
+            'shopLicense': 'Shop License',
+            'panCard': 'PAN Card'
+          };
+          await NotificationService.sendDocumentAlert(supplierId, 'supplier', docLabels[documentType] || documentType, status, rejectionReason);
+        } catch (err) {
+          console.error('Document Status Notification Error:', err);
+        }
+      })();
 
       return NextResponse.json({
         message: `Document ${status} successfully`,

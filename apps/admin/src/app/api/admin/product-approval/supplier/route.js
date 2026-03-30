@@ -89,6 +89,16 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       );
     }
 
+    // Trigger Notification for Product Approval
+    (async () => {
+      try {
+        const NotificationService = (await import('@repo/lib/services/NotificationService.js')).default;
+        await NotificationService.sendDocumentAlert(updatedProduct.vendorId._id.toString(), 'supplier', `Product "${updatedProduct.name}"`, status, rejectionReason);
+      } catch (err) {
+        console.error('Product Approval Notification Error:', err);
+      }
+    })();
+
     return Response.json({
       message: `Supplier product ${status} successfully`,
       product: updatedProduct,

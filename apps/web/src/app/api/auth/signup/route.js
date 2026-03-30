@@ -168,6 +168,8 @@ export async function POST(req) {
           name: user.firstName,
           role: 'Customer'
         });
+        // Notify Admin
+        await NotificationService.sendAdminAlert('New User Registration', `New customer registered: ${user.firstName} ${user.lastName} (${user.emailAddress})`);
       } catch (err) {
         console.error('Registration Notification Error:', err);
       }

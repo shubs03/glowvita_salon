@@ -126,6 +126,8 @@ export async function POST(req) {
                     name: newSupplier.firstName,
                     role: 'Supplier'
                 });
+                // Notify Admin
+                await NotificationService.sendAdminAlert('Supplier Registration', `New supplier registered: ${newSupplier.shopName || newSupplier.firstName} (${newSupplier.email})`);
             } catch (err) {
                 console.error('Registration Notification Error:', err);
             }

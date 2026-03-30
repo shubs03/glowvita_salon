@@ -822,6 +822,15 @@ export const PATCH = authMiddlewareAdmin(
         }
       }
 
+      // Trigger Notification for Vendor Approval
+      (async () => {
+        try {
+          await NotificationService.sendApprovalAlert(id, 'vendor', status);
+        } catch (err) {
+          console.error('Vendor Approval Notification Error:', err);
+        }
+      })();
+
       return Response.json({
         message: `Vendor ${status === "Approved" ? "Approved" : "Disapproved"} successfully`,
         vendor: updatedVendor,
@@ -889,6 +898,22 @@ export const PATCH = authMiddlewareAdmin(
       if (!updatedVendor) {
         return Response.json({ message: "Vendor not found" }, { status: 404 });
       }
+
+      // Trigger Notification for Document Status Update
+      (async () => {
+        try {
+          const docLabels = {
+            'aadharCard': 'Aadhar Card',
+            'udyogAadhar': 'Udyog Aadhar',
+            'udhayamCert': 'Udhayam Certificate',
+            'shopLicense': 'Shop License',
+            'panCard': 'PAN Card'
+          };
+          await NotificationService.sendDocumentAlert(vendorId, 'vendor', docLabels[documentType] || documentType, status, rejectionReason);
+        } catch (err) {
+          console.error('Document Status Notification Error:', err);
+        }
+      })();
 
       return Response.json({
         message: `Document ${status === "approved" ? "Approved" : status === "rejected" ? "Rejected" : "Reset to Pending"} successfully`,

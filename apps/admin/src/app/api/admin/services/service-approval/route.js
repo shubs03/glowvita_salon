@@ -140,6 +140,16 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       rejectionReason: updatedService?.rejectionReason
     });
 
+    // Trigger Notification for Service Approval
+    (async () => {
+      try {
+        const NotificationService = (await import('@repo/lib/services/NotificationService.js')).default;
+        await NotificationService.sendDocumentAlert(updatedVendorService.vendor.toString(), 'vendor', `Service "${updatedService.name}"`, status, rejectionReason);
+      } catch (err) {
+        console.error('Service Approval Notification Error:', err);
+      }
+    })();
+
     return Response.json({ message: "Service status updated successfully", service: updatedService }, { status: 200 });
   } catch (error) {
     return Response.json(

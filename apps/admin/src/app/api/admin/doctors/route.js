@@ -96,6 +96,8 @@ export const POST = authMiddlewareAdmin(async (req) => {
         name: newDoctor.name,
         role: 'Doctor'
       });
+      // Notify Admin
+      await NotificationService.sendAdminAlert('Doctor Registration', `New doctor registered: ${newDoctor.name} (${newDoctor.email})`);
     } catch (err) {
       console.error('Registration Notification Error:', err);
     }
@@ -134,6 +136,17 @@ export const PUT = authMiddlewareAdmin(
 
     if (!updatedDoctor) {
       return Response.json({ message: "Doctor not found" }, { status: 404 });
+    }
+
+    // Trigger Notification for Approval if status changed
+    if (body.status) {
+      (async () => {
+        try {
+          await NotificationService.sendApprovalAlert(id, 'doctor', body.status);
+        } catch (err) {
+          console.error('Doctor Approval Notification Error:', err);
+        }
+      })();
     }
 
     return Response.json(updatedDoctor);

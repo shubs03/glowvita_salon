@@ -288,6 +288,8 @@ export async function POST(req) {
           name: newVendor.firstName,
           role: 'Vendor'
         });
+        // Notify Admin
+        await NotificationService.sendAdminAlert('Vendor Registration', `New vendor registered: ${newVendor.businessName} (${newVendor.email})`);
       } catch (err) {
         console.error('Registration Notification Error:', err);
       }

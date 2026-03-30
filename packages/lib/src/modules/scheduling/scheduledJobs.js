@@ -62,6 +62,13 @@ const JOB_CONFIG = {
         schedule: '0 11 * * 1',
         enabled: true,
         inactivityDays: 30
+    },
+
+    // Subscription Expiry - runs daily at 9 AM
+    subscriptionExpiry: {
+        schedule: '0 9 * * *',
+        enabled: true,
+        reminderDays: [7, 3, 1, 0] // Notify 7, 3, 1 day before and on same day
     }
 };
 
@@ -300,6 +307,48 @@ export function startScheduledJobs() {
             }
         });
         console.log(`✓ Inactivity reminders scheduled: ${JOB_CONFIG.inactivityReminders.schedule}`);
+    }
+
+    // Job 8: Subscription Expiry
+    if (JOB_CONFIG.subscriptionExpiry.enabled) {
+        cron.schedule(JOB_CONFIG.subscriptionExpiry.schedule, async () => {
+            console.log('\n[CRON] Running subscription expiry check...');
+            try {
+                const { NotificationService } = await import('@repo/lib');
+                const VendorModel = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
+                const SupplierModel = (await import('@repo/lib/models/Vendor/Supplier.model')).default;
+                const DoctorModel = (await import('@repo/lib/models/Vendor/Docters.model')).default;
+
+                const checkModels = [
+                    { model: VendorModel, role: 'vendor' },
+                    { model: SupplierModel, role: 'supplier' },
+                    { model: DoctorModel, role: 'doctor' }
+                ];
+
+                for (const { model, role } of checkModels) {
+                    const users = await model.find({
+                        'subscription.status': 'Active',
+                        'subscription.endDate': { $exists: true }
+                    }).populate('subscription.plan').lean();
+
+                    for (const user of users) {
+                        const endDate = new Date(user.subscription.endDate);
+                        const today = new Date();
+                        const timeDiff = endDate.getTime() - today.getTime();
+                        const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+                        if (JOB_CONFIG.subscriptionExpiry.reminderDays.includes(daysLeft)) {
+                            const planName = user.subscription.plan?.name || 'Subscription Plan';
+                            await NotificationService.sendSubscriptionAlert(user._id, role, planName, daysLeft);
+                        }
+                    }
+                }
+                console.log(`[CRON] Subscription expiry check completed.`);
+            } catch (error) {
+                console.error('[CRON] Subscription expiry job failed:', error);
+            }
+        });
+        console.log(`✓ Subscription expiry job scheduled: ${JOB_CONFIG.subscriptionExpiry.schedule}`);
     }
 
     console.log('=== All Scheduled Jobs Started ===\n');
