@@ -889,6 +889,8 @@ function BookingPageContent() {
           landmark: location.landmark || '',
           lat,
           lng,
+          fullName: user ? `${user.firstName} ${user.lastName}`.trim() : 'Guest User',
+          mobileNo: user?.mobileNo || '0000000000',
           label: label,
           isPrimary: false
         })

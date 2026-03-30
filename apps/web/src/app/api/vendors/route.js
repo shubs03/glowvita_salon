@@ -178,6 +178,7 @@ export const GET = async (request) => {
         businessName: { $first: "$vendorData.businessName" },
         firstName: { $first: "$vendorData.firstName" },
         lastName: { $first: "$vendorData.lastName" },
+        phone: { $first: "$vendorData.phone" },
         city: { $first: "$vendorData.city" },
         state: { $first: "$vendorData.state" },
         category: { $first: "$vendorData.category" },
@@ -194,6 +195,27 @@ export const GET = async (request) => {
 
     /* 7️⃣ Safety net: remove vendors with NO services */
     pipeline.push({ $match: { services: { $ne: [] } } });
+
+    /* Fetch active CRM offers for vendors */
+    pipeline.push({
+      $lookup: {
+        from: "crmoffers",
+        let: { vendorId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$businessId", "$$vendorId"] },
+                  { $eq: ["$status", "Active"] }
+                ]
+              }
+            }
+          }
+        ],
+        as: "offers"
+      }
+    });
 
     /* 8️⃣ Sort + Pagination */
     pipeline.push({ $sort: { createdAt: -1 } });

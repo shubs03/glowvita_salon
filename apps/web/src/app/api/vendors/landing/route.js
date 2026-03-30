@@ -184,12 +184,33 @@ export const GET = async (request) => {
       }
     ];
 
+    const lookupOffers = {
+      $lookup: {
+        from: "crmoffers",
+        let: { vendorId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$businessId", "$$vendorId"] },
+                  { $eq: ["$status", "Active"] }
+                ]
+              }
+            }
+          }
+        ],
+        as: "offers"
+      }
+    };
+
     // Recommended: highest rated first, then most booked
     const recommendedSalons = await VendorModel.aggregate([
       { $match: matchStage },
       ...filterApprovedServices,
       lookupReviews,
       lookupAppointments,
+      lookupOffers,
       projectStats,
       { $sort: { rating: -1, totalBookings: -1 } },
       { $limit: 8 },
@@ -201,6 +222,7 @@ export const GET = async (request) => {
       ...filterApprovedServices,
       lookupReviews,
       lookupAppointments,
+      lookupOffers,
       projectStats,
       { $sort: { createdAt: -1 } },
       { $limit: 8 },
@@ -212,6 +234,7 @@ export const GET = async (request) => {
       ...filterApprovedServices,
       lookupReviews,
       lookupAppointments,
+      lookupOffers,
       projectStats,
       { $limit: 8 },
     ]);
