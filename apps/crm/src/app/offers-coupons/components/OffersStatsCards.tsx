@@ -10,6 +10,7 @@ interface Coupon {
   startDate: string;
   expires: string;
   redeemed: number;
+  totalDiscount?: number;
   applicableSpecialties: string[];
   applicableCategories: string[];
   applicableDiseases: string[];
@@ -27,13 +28,9 @@ interface OffersStatsCardsProps {
 }
 
 const OffersStatsCards = ({ couponsData }: OffersStatsCardsProps) => {
-  // Calculate total discount value
+  // Calculate total actual discount value from all coupons
   const totalDiscountValue = couponsData.reduce((acc, coupon) => {
-    if (coupon.type === 'fixed') {
-      return acc + coupon.value * coupon.redeemed;
-    }
-    // Assuming average order value of 1000 for percentage calculations
-    return acc + (1000 * (coupon.value / 100)) * coupon.redeemed;
+    return acc + (coupon.totalDiscount || 0);
   }, 0);
 
   return (
@@ -95,7 +92,7 @@ const OffersStatsCards = ({ couponsData }: OffersStatsCardsProps) => {
               <p className="text-2xl font-bold text-secondary-foreground dark:text-secondary-foreground">
                 ₹{totalDiscountValue.toLocaleString()}
               </p>
-              <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">Estimated value of discounts</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">Total value of discounts</p>
             </div>
             <div className="p-3 bg-primary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-primary/20 dark:group-hover:bg-secondary/30">
               <IndianRupee className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />

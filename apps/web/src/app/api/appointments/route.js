@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model";
 import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import UserModel from "@repo/lib/models/user/User.model";
+import CRMOfferModel from "@repo/lib/models/Vendor/CRMOffer.model";
 import _db from '@repo/lib/db';
 
 await _db();
@@ -446,7 +447,8 @@ export const POST = async (req) => {
             totalAmount: Number(body.totalAmount) || 0,
             platformFee: Number(body.platformFee) || 0,
             serviceTax: Number(body.serviceTax) || 0,
-            discountAmount: Number(body.discountAmount) || 0,
+            discountAmount: Number(body.discountAmount || body.discount) || 0,
+            couponCode: body.couponCode || null,
             finalAmount: Number(body.finalAmount) || Number(body.totalAmount) || 0,
             paymentMethod: body.paymentMethod || 'Pay at Salon',
             paymentStatus: body.paymentStatus || 'pending',
@@ -546,6 +548,16 @@ export const POST = async (req) => {
 
         const newAppointment = await AppointmentModel.create(appointmentData);
         console.log('Appointment created successfully with ID:', newAppointment._id);
+
+        // Increment coupon redemption count and total discount if applicable
+        if (appointmentData.couponCode) {
+            try {
+                await CRMOfferModel.incrementRedemption(appointmentData.couponCode, appointmentData.discountAmount || 0);
+                console.log(`Incremented redemption count and discount for public booking coupon: ${appointmentData.couponCode}`);
+            } catch (offerErr) {
+                console.error(`Error incrementing public coupon redemption for ${appointmentData.couponCode}:`, offerErr);
+            }
+        }
         console.log('Saved appointment data:', {
             isHomeService: newAppointment.isHomeService,
             homeServiceLocation: newAppointment.homeServiceLocation,

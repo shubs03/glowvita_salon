@@ -11,6 +11,7 @@ interface Coupon {
   startDate: string;
   expires: string;
   redeemed: number;
+  totalDiscount?: number;
   applicableSpecialties: string[];
   applicableCategories: string[];
   applicableDiseases: string[];
@@ -63,6 +64,7 @@ const OffersTable = ({
               {userRole === 'doctor' && <TableHead>Applicable Conditions</TableHead>}
               {userRole === 'supplier' && <TableHead>Min Order Amount</TableHead>}
               <TableHead>Redeemed</TableHead>
+              <TableHead>Total Discount</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -113,6 +115,7 @@ const OffersTable = ({
                     </TableCell>
                   )}
                   <TableCell>{coupon.redeemed}</TableCell>
+                  <TableCell>₹{(coupon.totalDiscount || 0).toLocaleString()}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button

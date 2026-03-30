@@ -250,6 +250,17 @@ export async function PUT(request) {
       updatedAt: new Date()
     });
 
+    // Increment coupon redemption count and total discount if applicable
+    if (selectedSlot.couponCode) {
+      try {
+        const discountToTrack = selectedSlot.discountAmount || selectedSlot.discount || 0;
+        await CRMOfferModel.incrementRedemption(selectedSlot.couponCode, discountToTrack);
+        console.log(`Incremented redemption count and discount for wedding coupon: ${selectedSlot.couponCode}`);
+      } catch (offerErr) {
+        console.error(`Error incrementing wedding coupon redemption for ${selectedSlot.couponCode}:`, offerErr);
+      }
+    }
+
     await appointment.save();
     console.log("Appointment confirmed and saved:", appointment._id);
 

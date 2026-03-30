@@ -123,6 +123,17 @@ export const POST = async (req) => {
       notes: body.notes
     });
 
+    // Increment coupon redemption count and total discount if applicable
+    if (body.couponCode) {
+      try {
+        const discountToTrack = body.discountAmount || body.discount || 0;
+        await CRMOfferModel.incrementRedemption(body.couponCode, discountToTrack);
+        console.log(`Incremented redemption count and discount for consultation coupon: ${body.couponCode}`);
+      } catch (offerErr) {
+        console.error(`Error incrementing consultation coupon redemption for ${body.couponCode}:`, offerErr);
+      }
+    }
+
     // Check and credit referral bonus if user was referred (triggers on first consultation)
     if (consultation.userId) {
       try {

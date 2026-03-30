@@ -444,7 +444,9 @@ export const POST = withSubscriptionCheck(async (req) => {
             status: body.status || 'scheduled',
             amount: baseAmount,
             addOnsAmount,
-            discount: Number(body.discount) || 0,
+            discount: Number(body.discount || body.discountAmount) || 0,
+            discountAmount: Number(body.discountAmount || body.discount) || 0,
+            couponCode: body.couponCode || null,
             tax: Number(body.tax) || 0,
             totalAmount,
             finalAmount: totalAmount, // <--- Ensure finalAmount is set for online/offline consistency
@@ -476,6 +478,18 @@ export const POST = withSubscriptionCheck(async (req) => {
         }
 
         const newAppointment = await AppointmentModel.create(appointmentData);
+
+        // Increment coupon redemption count and total discount if applicable
+        if (appointmentData.couponCode) {
+            try {
+                const CRMOfferModel = (await import('../../../../../../../packages/lib/src/models/Vendor/CRMOffer.model')).default;
+                const discountToTrack = appointmentData.discountAmount || appointmentData.discount || 0;
+                await CRMOfferModel.incrementRedemption(appointmentData.couponCode, discountToTrack);
+                console.log(`Incremented redemption count and discount for offline booking coupon: ${appointmentData.couponCode}`);
+            } catch (offerErr) {
+                console.error(`Error incrementing offline coupon redemption for ${appointmentData.couponCode}:`, offerErr);
+            }
+        }
 
         // CREDIT STAFF LEDGER IF CREATED AS COMPLETED
         if (newAppointment.status === 'completed' || newAppointment.status === 'completed without payment') {
@@ -633,6 +647,27 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
         // Ensure totalAmount and finalAmount are in sync if updated
         if (updateData.totalAmount !== undefined) {
             updatedAppointment.finalAmount = updateData.totalAmount;
+        }
+
+        // Support both naming conventions for discount in updates
+        if (updateData.discountAmount !== undefined && updateData.discount === undefined) {
+            updateData.discount = updateData.discountAmount;
+        } else if (updateData.discount !== undefined && updateData.discountAmount === undefined) {
+            updateData.discountAmount = updateData.discount;
+        }
+
+        // Check if couponCode is being added or changed to increment redemption count and total discount
+        if (updateData.couponCode && updateData.couponCode !== existingAppointment.couponCode) {
+            try {
+                const CRMOfferModel = (await import('../../../../../../../packages/lib/src/models/Vendor/CRMOffer.model')).default;
+                const discountToTrack = updateData.discountAmount !== undefined ? updateData.discountAmount : 
+                                       (updateData.discount !== undefined ? updateData.discount : 
+                                       (existingAppointment.discountAmount || existingAppointment.discount || 0));
+                await CRMOfferModel.incrementRedemption(updateData.couponCode, discountToTrack);
+                console.log(`Incremented redemption count and discount for updated coupon: ${updateData.couponCode}`);
+            } catch (offerErr) {
+                console.error(`Error incrementing updated coupon redemption for ${updateData.couponCode}:`, offerErr);
+            }
         }
 
         await updatedAppointment.save({ validateBeforeSave: false });

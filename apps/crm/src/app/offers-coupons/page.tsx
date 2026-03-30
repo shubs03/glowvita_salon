@@ -85,6 +85,7 @@ type Coupon = {
   startDate: string;
   expires: string;
   redeemed: number;
+  totalDiscount?: number;
   applicableSpecialties: string[];
   applicableCategories: string[];
   applicableDiseases: string[];
@@ -578,14 +579,6 @@ export default function OffersCouponsPage() {
     return categoryIds;
   };
 
-  const totalDiscountValue = Array.isArray(couponsData)
-    ? couponsData.reduce((acc, coupon) => {
-      if (coupon.type === "fixed") {
-        return acc + coupon.value * coupon.redeemed;
-      }
-      return acc + 1000 * (coupon.value / 100) * coupon.redeemed;
-    }, 0)
-    : 0;
 
   // Get role-specific page title
   const getPageTitle = () => {
