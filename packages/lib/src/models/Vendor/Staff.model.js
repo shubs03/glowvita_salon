@@ -256,6 +256,7 @@ const staffSchema = new mongoose.Schema(
       smsEnabled: { type: Boolean, default: true },
       appointments: { type: Boolean, default: true },
       promotional: { type: Boolean, default: true },
+    },
 
     // CONSOLIDATED EARNINGS FIELDS
     accumulatedEarnings: {

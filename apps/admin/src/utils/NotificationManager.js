@@ -17,91 +17,115 @@ class NotificationManager {
     this.messaging = null;
     this.audioContext = null;
     this.listeners = [];
+    this.swRegistration = null;
 
     if (typeof window !== 'undefined') {
-      window.playAdminTestSound = () => this.playNotificationSound();
+      // Diagnostic tool for the user
+      window.playAdminTestSound = () => {
+        console.log('[Diagnostic] Manual sound test triggered');
+        this.playNotificationSound();
+      };
+      
+      window.getAdminNotificationStatus = () => ({
+        permission: Notification.permission,
+        hasMessaging: !!this.messaging,
+        hasSW: !!this.swRegistration,
+        listeners: this.listeners.length
+      });
 
-      try {
-        const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-        this.messaging = getMessaging(app);
+      this.initFirebase();
+    }
+  }
 
-        const triggerSound = (payload) => {
-          console.log('[NotificationManager] SIGNAL (ADMIN)!', payload);
-          this.playNotificationSound();
-          
-          // BROADCAST to all active components in Admin
-          this.listeners.forEach(callback => {
-            try { callback(payload); } catch (e) { }
-          });
-        };
+  async initFirebase() {
+    try {
+      const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+      this.messaging = getMessaging(app);
 
-        const soundChannel = new BroadcastChannel('notification_sound_channel');
-        soundChannel.onmessage = (event) => {
-          if (event.data?.type === 'PLAY_SOUND') {
-            triggerSound(event.data.payload || { from: 'SW_DIRECT_ADMIN' });
-          }
-        };
-
-        onMessage(this.messaging, (payload) => {
-          triggerSound(payload);
+      const triggerSound = (payload) => {
+        console.log('[NotificationManager] SIGNAL (ADMIN) -> Playing sound and notifying listeners', payload);
+        this.playNotificationSound();
+        
+        this.listeners.forEach(callback => {
+          try { callback(payload); } catch (e) { console.error('[NotificationManager] Listener error:', e); }
         });
+      };
 
-        const initAudio = async () => {
-          if (!this.audioContext) {
-            const AudioCtx = window.AudioContext || window.webkitAudioContext;
-            if (AudioCtx) this.audioContext = new AudioCtx();
-          }
-          if (this.audioContext && this.audioContext.state === 'suspended') {
-            await this.audioContext.resume();
-            console.log('[Audio] Admin System Ready');
-          }
-        };
-
-        ['click', 'keydown', 'touchstart', 'mousedown'].forEach(evt =>
-          window.addEventListener(evt, initAudio, { passive: true })
-        );
-
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('/api/firebase-messaging-sw', { scope: '/' })
-            .then(() => console.log('[System] Admin Service Ready'));
+      // Listen for signals from Service Worker (Background)
+      const soundChannel = new BroadcastChannel('notification_sound_channel');
+      soundChannel.onmessage = (event) => {
+        console.log('[NotificationManager] Received signal from BroadcastChannel:', event.data);
+        if (event.data?.type === 'PLAY_SOUND') {
+          triggerSound(event.data.payload || { from: 'SW_DIRECT_ADMIN' });
         }
-      } catch (err) {
-        console.error('[NotificationManager] Admin Init error:', err);
+      };
+
+      // Listen for foreground messages
+      onMessage(this.messaging, (payload) => {
+        console.log('[NotificationManager] Received foreground message:', payload);
+        triggerSound(payload);
+      });
+
+      // Prepare AudioContext on interaction
+      const initAudio = async () => {
+        if (!this.audioContext) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.audioContext = new AudioCtx();
+        }
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+          await this.audioContext.resume();
+          console.log('[Audio] Admin System Ready (AudioContext resumed)');
+        }
+      };
+
+      ['click', 'keydown', 'touchstart', 'mousedown'].forEach(evt =>
+        window.addEventListener(evt, initAudio, { passive: true, once: false })
+      );
+
+      // Register Service Worker and wait for it
+      if ('serviceWorker' in navigator) {
+        this.swRegistration = await navigator.serviceWorker.register('/api/firebase-messaging-sw', { scope: '/' });
+        console.log('[System] Admin Service Registered');
       }
+    } catch (err) {
+      console.error('[NotificationManager] Admin Init error:', err);
     }
   }
 
   async playNotificationSound() {
-    console.log('[Sound] Playing (Admin) beep...');
     try {
       if (!this.audioContext) {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtx) return;
         this.audioContext = new AudioCtx();
       }
-      if (this.audioContext.state === 'suspended') await this.audioContext.resume();
+      
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
       
       const ctx = this.audioContext;
       const now = ctx.currentTime;
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.frequency.setValueAtTime(880, now);
-      gain1.gain.setValueAtTime(0, now);
-      gain1.gain.linearRampToValueAtTime(0.5, now + 0.05);
-      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
-      osc1.connect(gain1); gain1.connect(ctx.destination);
-      osc1.start(now); osc1.stop(now + 0.5);
 
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.frequency.setValueAtTime(660, now + 0.25);
-      gain2.gain.setValueAtTime(0, now + 0.25);
-      gain2.gain.linearRampToValueAtTime(0.4, now + 0.3);
-      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
-      osc2.connect(gain2); gain2.connect(ctx.destination);
-      osc2.start(now + 0.25); osc2.stop(now + 0.8);
+      // Professional Double Beep
+      const playBeep = (freq, startTime, duration) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, startTime);
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+
+      playBeep(880, now, 0.3); // High A
+      playBeep(660, now + 0.15, 0.4); // E
     } catch (err) {
-      console.error('[Audio] Admin Beep Error:', err);
+      console.error('[Audio] Admin Play Error:', err);
     }
   }
 
@@ -116,35 +140,60 @@ class NotificationManager {
 
   async requestPermission() {
     try {
-      if (!this.messaging) return null;
+      if (!this.messaging) {
+         console.warn('[NotificationManager] Messaging not initialized. Retrying init...');
+         await this.initFirebase();
+      }
+
+      console.log('[NotificationManager] Requesting permission...');
       const permission = await Notification.requestPermission();
+      
       if (permission === 'granted') {
+        console.log('[NotificationManager] Permission granted. Getting token...');
+        
+        // Wait for SW if not ready
+        if (!this.swRegistration) {
+           this.swRegistration = await navigator.serviceWorker.ready;
+        }
+
         const token = await getToken(this.messaging, {
           vapidKey: VAPID_KEY,
-          serviceWorkerRegistration: await navigator.serviceWorker.getRegistration('/api/firebase-messaging-sw'),
+          serviceWorkerRegistration: this.swRegistration,
         });
+
         if (token) {
+          console.log('[NotificationManager] Token obtained. Registering with server...');
           await this.saveTokenToServer(token);
           return token;
+        } else {
+          console.warn('[NotificationManager] Failed to get FCM token');
         }
+      } else {
+        console.warn('[NotificationManager] Permission denied:', permission);
       }
     } catch (error) {
-       console.error('[NotificationManager] Permission error:', error);
+       console.error('[NotificationManager] requestPermission Error:', error);
+       if (!VAPID_KEY) console.error('[NotificationManager] CRITICAL: NEXT_PUBLIC_FIREBASE_VAPID_KEY is missing!');
     }
     return null;
   }
 
   async saveTokenToServer(token) {
     try {
-      const endpoint = '/api/admin/notifications/register-token';
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/admin/notifications/register-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
-      if (response.ok) console.log('[NotificationManager] Admin Registration Success');
+      
+      const data = await response.json();
+      if (response.ok) {
+        console.log('[NotificationManager] Admin Server Registration Success');
+      } else {
+        console.error('[NotificationManager] Admin Server Registration Failed:', data.message);
+      }
     } catch (error) {
-       console.error('[NotificationManager] Save token error:', error);
+       console.error('[NotificationManager] saveTokenToServer Error:', error);
     }
   }
 }

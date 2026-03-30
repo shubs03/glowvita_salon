@@ -296,6 +296,7 @@ const doctorSchema = new mongoose.Schema({
   inactivityReminderSent: {
     type: Boolean,
     default: false,
+  },
   wallet: {
     type: Number,
     default: 0,
