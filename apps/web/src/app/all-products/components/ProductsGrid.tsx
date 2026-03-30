@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
-import { Search, Filter, Grid, List } from "lucide-react";
+import { Search, Filter, Grid, List, MapPin, CheckCircle } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 // Product type definition
 interface Product {
@@ -37,6 +37,7 @@ interface ProductsGridProps {
   setViewMode: (mode: string) => void;
   filteblueProducts: Product[];
   setIsFilterModalOpen: (open: boolean) => void;
+  noServiceArea?: boolean;
 }
 
 const ProductsGrid: React.FC<ProductsGridProps> = ({
@@ -49,6 +50,7 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({
   setViewMode,
   filteblueProducts,
   setIsFilterModalOpen,
+  noServiceArea,
 }) => {
   return (
     <section className="py-20 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
@@ -95,9 +97,36 @@ const ProductsGrid: React.FC<ProductsGridProps> = ({
             Failed to load products. Please try again later.
           </p>
         </div>
+      ) : noServiceArea ? (
+        <div className="text-center py-20 bg-card rounded-3xl border border-border">
+          <div className="w-20 h-20 bg-primary/5 rounded-full flex items-center justify-center mx-auto mb-6">
+            <MapPin className="w-10 h-10 text-primary/30" />
+          </div>
+          <h3 className="text-2xl font-black text-gray-900 mb-3">We're not available here yet</h3>
+          <p className="text-muted-foreground max-w-md mx-auto mb-8 font-medium">
+            We are currently expanding our product delivery network and haven't reached your location yet.
+            We’ll be available in your area soon—stay tuned!
+          </p>
+          <Button
+            onClick={() => window.location.href = "/all-products"}
+            className="rounded-full px-8"
+          >
+            Explore all products
+          </Button>
+        </div>
       ) : filteblueProducts.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No products found.</p>
+        <div className="text-center py-20 bg-card rounded-3xl border border-border">
+          <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-6">
+            <Search className="w-10 h-10 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground font-medium">No products found matching your search or filters.</p>
+          <Button
+            variant="outline"
+            className="mt-6 rounded-full"
+            onClick={() => setSearchTerm("")}
+          >
+            Clear search
+          </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">

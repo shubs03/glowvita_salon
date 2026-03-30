@@ -17,6 +17,65 @@ export const GET = async (request) => {
     const vendorId = url.searchParams.get('vendorId');
     const categoryId = url.searchParams.get('categoryId');
 
+    // ── Coordinate-based location filtering (primary) ──────────────────────
+    const latStr = url.searchParams.get("lat");
+    const lngStr = url.searchParams.get("lng");
+    const lat = latStr ? parseFloat(latStr) : NaN;
+    const lng = lngStr ? parseFloat(lngStr) : NaN;
+
+    // ── Legacy city-name fallback ──────────────────────────────────────────
+    const city = url.searchParams.get("city")?.trim();
+
+    /* ── Determine region filter ─────────────────────────────────────────── */
+    let regionId = null;
+    let useCityFallback = false;
+    let cityLegacy = null;
+
+    if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+      try {
+        const RegionModel = (await import("@repo/lib/models/admin/Region.model")).default;
+        const region = await RegionModel.findOne({
+          geometry: {
+            $geoIntersects: {
+              $geometry: {
+                type: "Point",
+                coordinates: [lng, lat], // GeoJSON: [lng, lat]
+              },
+            },
+          },
+          isActive: true,
+        });
+
+        if (region) {
+          regionId = region._id;
+          console.log(`[ProductsAPI] Region matched: ${region.name} for [${lat}, ${lng}]`);
+        } else if (city && city !== "Current Location" && city !== "") {
+          // Fallback to city-based matching if coordinates are outside any region
+          useCityFallback = true;
+          cityLegacy = city;
+          console.log(`[ProductsAPI] No region for [${lat}, ${lng}] – Falling back to city: ${city}`);
+        } else {
+          // Coordinates given but outside any defined service area and no city provided
+          console.log(`[ProductsAPI] No region for [${lat}, ${lng}] and no city fallback – returning noServiceArea`);
+          return new Response(JSON.stringify({
+            success: true,
+            products: [],
+            count: 0,
+            noServiceArea: true,
+            message: "We're not available in this area yet"
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      } catch (err) {
+        console.error("[ProductsAPI] Region lookup error:", err);
+      }
+    } else if (city && city !== "Current Location" && city !== "") {
+      useCityFallback = true;
+      cityLegacy = city;
+    }
+
     // Build query with optional filters
     const query = {
       status: 'approved',
@@ -49,18 +108,31 @@ export const GET = async (request) => {
     const supplierIds = [...new Set(supplierProducts.map(p => p.vendorId))];
 
     // Fetch vendors and suppliers in parallel
+    const vendorQuery = {
+      _id: { $in: vendorIds },
+      status: 'Approved'
+    };
+
+    const supplierQuery = {
+      _id: { $in: supplierIds },
+      status: 'Approved'
+    };
+
+    // Apply location filters to vendor/supplier lookups
+    if (regionId) {
+      vendorQuery.regionId = regionId;
+      supplierQuery.regionId = regionId;
+    } else if (useCityFallback && cityLegacy) {
+      vendorQuery.city = { $regex: new RegExp(`^${cityLegacy}$`, "i") };
+      supplierQuery.city = { $regex: new RegExp(`^${cityLegacy}$`, "i") };
+    }
+
     const [vendors, suppliers] = await Promise.all([
       vendorIds.length > 0
-        ? VendorModel.find({
-          _id: { $in: vendorIds },
-          status: 'Approved'
-        }).select('_id businessName firstName lastName status city state')
+        ? VendorModel.find(vendorQuery).select('_id businessName firstName lastName status city state')
         : Promise.resolve([]),
       supplierIds.length > 0
-        ? SupplierModel.find({
-          _id: { $in: supplierIds },
-          status: 'Approved'
-        }).select('_id shopName firstName lastName status city state')
+        ? SupplierModel.find(supplierQuery).select('_id shopName firstName lastName status city state')
         : Promise.resolve([])
     ]);
 

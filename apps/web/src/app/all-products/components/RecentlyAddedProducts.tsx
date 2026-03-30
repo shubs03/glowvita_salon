@@ -3,6 +3,7 @@
 import React from "react";
 import { MapPin, ArrowRight, Star } from "lucide-react";
 import { useGetPublicProductsQuery } from "@repo/store/api";
+import { useSalonFilter } from "@/components/landing/SalonFilterContext";
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Badge } from "@repo/ui/badge";
@@ -28,11 +29,16 @@ interface ProductData {
 
 const RecentlyAddedProducts = () => {
   const router = useRouter();
+  const { userLat, userLng } = useSalonFilter();
+  
   const {
     data: productsData,
     isLoading,
     error
-  } = useGetPublicProductsQuery(undefined);
+  } = useGetPublicProductsQuery({
+    lat: userLat || undefined,
+    lng: userLng || undefined,
+  });
 
   // Find the most recently created product
   const mostRecentProduct = React.useMemo(() => {
