@@ -370,6 +370,11 @@ export function MarketingHeader({
 
           {/* Mobile Nav Toggle */}
           <div className="lg:hidden flex items-center gap-2">
+            {!isLoading && isAuthenticated && user && (
+              <div className="mr-1">
+                <NotificationDropdown apiEndpoint="/api/notifications" />
+              </div>
+            )}
             <ThemeToggle />
             <Button
               variant="ghost"
