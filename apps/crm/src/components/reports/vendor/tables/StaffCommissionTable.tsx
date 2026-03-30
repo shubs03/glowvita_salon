@@ -165,7 +165,7 @@ export const StaffCommissionTable = ({ startDate, endDate, staff, onFiltersChang
             const wb = XLSX.utils.table_to_book(table, { sheet: 'Sheet1' });
             XLSX.writeFile(wb, `${fileName}.csv`);
         } else if (format === 'pdf') {
-            html2canvas(table).then(canvas => {
+            html2canvas(table as HTMLElement).then(canvas => {
                 const imgData = canvas.toDataURL('image/png');
                 const pdf = new jsPDF();
                 const imgWidth = pdf.internal.pageSize.getWidth() - 20;

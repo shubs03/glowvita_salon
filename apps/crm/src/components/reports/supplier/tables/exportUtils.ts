@@ -30,7 +30,7 @@ export const exportToPDF = async (tableRef: React.RefObject<HTMLDivElement>, fil
   if (!table) return;
 
   // Use html2canvas to capture only the table
-  const canvas = await html2canvas(table);
+  const canvas = await html2canvas(table as HTMLElement);
   const imgData = canvas.toDataURL('image/png');
 
   // Create PDF

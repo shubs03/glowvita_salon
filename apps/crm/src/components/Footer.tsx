@@ -51,19 +51,15 @@ export function Footer() {
             <ul className="space-y-2 text-sm text-white">
               <li className="flex items-center gap-2 group">
                 <span className="w-1 h-1 rounded-full bg-white"></span>
-                <Link href="#" className="hover:underline transition-all duration-200">Shipping & Delivery Policy</Link>
+                <Link href="/privacy-policy" className="hover:underline transition-all duration-200">Privacy Policy</Link>
               </li>
               <li className="flex items-center gap-2 group">
                 <span className="w-1 h-1 rounded-full bg-white"></span>
-                <Link href="#" className="hover:underline transition-all duration-200">Terms & Conditions</Link>
+                <Link href="/terms-conditions" className="hover:underline transition-all duration-200">Terms & Conditions</Link>
               </li>
               <li className="flex items-center gap-2 group">
                 <span className="w-1 h-1 rounded-full bg-white"></span>
-                <Link href="#" className="hover:underline transition-all duration-200">Privacy Policy</Link>
-              </li>
-              <li className="flex items-center gap-2 group">
-                <span className="w-1 h-1 rounded-full bg-white"></span>
-                <Link href="#" className="hover:underline transition-all duration-200">Refund Policy</Link>
+                <Link href="/return-policy" className="hover:underline transition-all duration-200">Return Policy</Link>
               </li>
             </ul>
           </div>

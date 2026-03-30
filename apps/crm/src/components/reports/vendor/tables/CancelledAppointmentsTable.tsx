@@ -101,7 +101,7 @@ export const CancelledAppointmentsTable = ({ startDate, endDate, client, service
     if (!tableRef.current) return;
 
     // Use html2canvas to capture the table
-    const canvas = await html2canvas(tableRef.current);
+    const canvas = await html2canvas(tableRef.current as HTMLElement);
     const imgData = canvas.toDataURL('image/png');
 
     // Create PDF

@@ -71,7 +71,7 @@ export const AllAppointmentsTable = ({ startDate, endDate, client, service, staf
 
   const exportToPDF = async () => {
     if (!tableRef.current) return;
-    const canvas = await html2canvas(tableRef.current);
+    const canvas = await html2canvas(tableRef.current as HTMLElement);
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF();
     const imgWidth = pdf.internal.pageSize.getWidth();
