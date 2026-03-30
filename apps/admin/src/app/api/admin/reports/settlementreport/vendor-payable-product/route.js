@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import ClientOrderModel from '@repo/lib/models/user/ClientOrder.model';
+import VendorSettlementPaymentModel from '@repo/lib/models/Vendor/VendorSettlementPayment.model';
 import { authMiddlewareAdmin } from '../../../../../../middlewareAdmin';
 import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 
@@ -18,7 +19,7 @@ const initDb = async () => {
 export const GET = authMiddlewareAdmin(async (req) => {
   try {
     await initDb();
-    
+
     // Extract filter parameters from query
     const { searchParams } = new URL(req.url);
     const filterType = searchParams.get('filterType'); // 'day', 'month', 'year', or null
@@ -29,21 +30,21 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const businessName = searchParams.get('businessName'); // Business name filter (vendor/supplier)
     const userType = searchParams.get('userType'); // 'vendor', 'supplier', or 'all'
     const regionId = searchParams.get('regionId'); // Region filter
-    
-    console.log("Vendor Payable to Admin Report - Product Filter parameters:", { 
-      filterType, 
-      filterValue, 
-      startDateParam, 
-      endDateParam, 
-      city, 
+
+    console.log("Vendor Payable to Admin Report - Product Filter parameters:", {
+      filterType,
+      filterValue,
+      startDateParam,
+      endDateParam,
+      city,
       businessName,
-      userType 
+      userType
     });
-    
+
     // Build date filter
     const buildDateFilter = (filterType, filterValue, startDateParam, endDateParam) => {
       let startDate, endDate;
-      
+
       // Handle custom date range first
       if (startDateParam && endDateParam) {
         startDate = new Date(startDateParam);
@@ -59,7 +60,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           startDate = new Date(year, month - 1, day);
           endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
           break;
-          
+
         case 'month':
           // Specific month - format: YYYY-MM
           const [monthYear, monthNum] = filterValue.split('-').map(Number);
@@ -67,7 +68,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           endDate = new Date(monthYear, monthNum, 1);
           endDate.setTime(endDate.getTime() - 1);
           break;
-          
+
         case 'year':
           // Specific year - format: YYYY
           const trimmedYearValue = filterValue.trim();
@@ -75,7 +76,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           startDate = new Date(yearValue, 0, 1);
           endDate = new Date(yearValue, 11, 31, 23, 59, 59, 999);
           break;
-          
+
         default:
           // No filter - use all time
           startDate = new Date(0);
@@ -84,15 +85,16 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
       return filterType ? { createdAt: { $gte: startDate, $lte: endDate } } : {};
     };
-    
+
     const dateFilter = buildDateFilter(filterType, filterValue, startDateParam, endDateParam);
     console.log("Date filter:", dateFilter);
-    
+
     // Create the main filter for client orders
     const regionQuery = getRegionQuery(req.user, regionId);
     const mainFilter = {
       ...dateFilter,
       ...regionQuery,
+      paymentMethod: 'cash-on-delivery', // Only cash-on-delivery orders
       status: 'Delivered', // Only include delivered orders
     };
 
@@ -159,38 +161,53 @@ export const GET = authMiddlewareAdmin(async (req) => {
         }
       },
       // Apply business name filter if provided
-      ...(businessName && businessName !== 'all' ? [{ 
-        $match: { 
-          businessName: businessName 
-        } 
+      ...(businessName && businessName !== 'all' ? [{
+        $match: {
+          businessName: businessName
+        }
       }] : []),
       // Apply city filter if provided
-      ...(city && city !== 'all' ? [{ 
-        $match: { 
-          city: city 
-        } 
+      ...(city && city !== 'all' ? [{
+        $match: {
+          city: city
+        }
       }] : []),
       // Apply user type filter if provided
-      ...(userType && userType !== 'all' ? [{ 
-        $match: { 
+      ...(userType && userType !== 'all' ? [{
+        $match: {
           ownerType: userType.charAt(0).toUpperCase() + userType.slice(1) // Capitalize first letter
-        } 
+        }
       }] : []),
       // Unwind items array to process each product separately
       { $unwind: "$items" },
-      // Group by owner (vendor/supplier) to calculate totals
+      // Group by order and owner to avoid overcounting order-level fields (fees/tax)
       {
         $group: {
           _id: {
+            orderId: "$_id",
             ownerId: "$productInfo.vendorId",
             businessName: "$businessName",
             city: "$city",
             ownerType: "$ownerType"
           },
-          productPlatformFee: { $sum: "$platformFeeAmount" }, // Platform fee for products
-          productTax: { $sum: "$gstAmount" }, // GST for products
-          orderCount: { $sum: 1 },
-          deliveredOrders: { $sum: { $cond: [{ $eq: ["$status", "Delivered"] }, 1, 0] } }
+          orderGrossAmount: { $sum: { $multiply: ["$items.quantity", "$items.price"] } },
+          platformFeeAmount: { $first: "$platformFeeAmount" },
+          gstAmount: { $first: "$gstAmount" }
+        }
+      },
+      // Group by owner (vendor/supplier) to calculate final totals
+      {
+        $group: {
+          _id: {
+            ownerId: "$_id.ownerId",
+            businessName: "$_id.businessName",
+            city: "$_id.city",
+            ownerType: "$_id.ownerType"
+          },
+          productGrossAmount: { $sum: "$orderGrossAmount" },
+          productPlatformFee: { $sum: "$platformFeeAmount" },
+          productTax: { $sum: "$gstAmount" },
+          orderCount: { $sum: 1 }
         }
       },
       // Project the final structure with required fields
@@ -200,12 +217,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
           ownerId: "$_id.ownerId",
           "Payee Type": "$_id.ownerType", // Vendor or Supplier
           "Payee Name": "$_id.businessName", // Business name of the vendor/supplier
+          "product Gross Amount": "$productGrossAmount",
           "product Platform Fee": "$productPlatformFee",
           "product Tax/gst": "$productTax",
           "Total": { $add: ["$productPlatformFee", "$productTax"] }, // Total = Platform Fee + Tax/GST
           city: "$_id.city",
           orderCount: 1,
-          deliveredOrders: 1
+          deliveredOrders: "$orderCount" // Assuming all matched orders are delivered based on mainFilter
         }
       }
     ];
@@ -213,11 +231,44 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Execute aggregation
     const results = await ClientOrderModel.aggregate(pipeline);
 
-    console.log("Vendor payable to admin report - product results:", results);
+    // Also fetch actual collections for these vendors in the same period
+    const paymentFilter = {
+      ...dateFilter,
+      ...regionQuery,
+      type: "Payment to Admin"
+    };
+
+    const actualPayments = await VendorSettlementPaymentModel.aggregate([
+      { $match: paymentFilter },
+      {
+        $group: {
+          _id: "$vendorId",
+          collectedAmount: { $sum: "$amount" }
+        }
+      }
+    ]);
+
+    const paymentMap = actualPayments.reduce((acc, curr) => {
+      acc[curr._id.toString()] = curr.collectedAmount;
+      return acc;
+    }, {});
+
+    // Add payment info to results
+    const resultsWithPayments = results.map(entity => {
+      const collectedAmount = paymentMap[entity.ownerId.toString()] || 0;
+      const totalPayable = entity.Total || 0;
+      return {
+        ...entity,
+        "Actually Collected": collectedAmount,
+        "Pending Amount": Math.max(0, totalPayable - collectedAmount)
+      };
+    });
+
+    console.log("Vendor payable to admin report - product results with payments:", resultsWithPayments);
 
     // Get unique cities for filter dropdown
     const cityPipeline = [
-      { $match: { ...regionQuery, status: 'Delivered' } },
+      { $match: { ...regionQuery, paymentMethod: 'cash-on-delivery', status: 'Delivered' } },
       {
         $lookup: {
           from: "crm_products",
@@ -264,7 +315,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Get unique business names for filter dropdown
     const businessNamePipeline = [
-      { $match: { ...regionQuery, status: 'Delivered' } },
+      { $match: { ...regionQuery, paymentMethod: 'cash-on-delivery', status: 'Delivered' } },
       {
         $lookup: {
           from: "crm_products",
@@ -311,35 +362,39 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Calculate aggregated totals
     const aggregatedTotals = results.reduce((totals, entity) => {
+      totals.productGrossAmount += entity["product Gross Amount"] || 0;
       totals.productPlatformFee += entity["product Platform Fee"] || 0;
       totals.productTax += entity["product Tax/gst"] || 0;
       totals.total = entity.Total ? (totals.total + entity.Total) : totals.total;
+      totals.totalCollected = (totals.totalCollected || 0) + (entity["Actually Collected"] || 0);
+      totals.totalPending = (totals.totalPending || 0) + (entity["Pending Amount"] || 0);
       totals.orderCount += entity.orderCount || 0;
       totals.deliveredOrders += entity.deliveredOrders || 0;
       return totals;
     }, {
+      productGrossAmount: 0,
       productPlatformFee: 0,
       productTax: 0,
       total: 0, // This will be the sum of all vendor/supplier payables to admin
+      totalCollected: 0,
+      totalPending: 0,
       orderCount: 0,
       deliveredOrders: 0
     });
 
     return NextResponse.json({
       success: true,
-      data: {
-        vendorPayableReport: results,
-        cities: cities,
-        businessNames: businessNames,
-        aggregatedTotals: aggregatedTotals,
-        filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
-      }
+      vendorPayableReport: resultsWithPayments,
+      cities: cities,
+      businessNames: businessNames,
+      aggregatedTotals: aggregatedTotals,
+      filter: filterType ? `${filterType}: ${filterValue}` : 'All time'
     }, { status: 200 });
 
   } catch (error) {
     console.error("Error fetching vendor payable to admin report - product:", error);
-    
-    return NextResponse.json({ 
+
+    return NextResponse.json({
       success: false,
       message: "Error fetching vendor payable to admin report - product",
       error: error.message

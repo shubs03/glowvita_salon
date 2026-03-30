@@ -2,7 +2,18 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
+const COLORS = [
+  "#3b82f6", // blue-500
+  "#10b981", // emerald-500
+  "#f59e0b", // amber-500
+  "#ef4444", // red-500
+  "#8b5cf6", // violet-500
+  "#ec4899", // pink-500
+  "#06b6d4", // cyan-500
+  "#84cc16", // lime-500
+  "#f97316", // orange-500
+  "#14b8a6", // teal-500
+];
 
 interface ProductData {
   product: string;
@@ -65,17 +76,19 @@ export function SalesOfProductsChart({ productsData, filterType, filterValue }: 
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-background border border-border p-4 rounded-md shadow-md">
-          <p className="font-bold text-lg">{data.name}</p>
-          <p className="text-sm">
-            <span className="font-medium">Product Total Amount:</span> ₹{data.totalAmount.toLocaleString('en-IN')}
-          </p>
-          <p className="text-sm">
-            <span className="font-medium">Product Platform Fee:</span> ₹{data.platformFee?.toLocaleString('en-IN') || '0.00'}
-          </p>
-          <p className="text-sm">
-            <span className="font-medium">Product Sold:</span> {data.sales}
-          </p>
+        <div className="bg-background border border-border p-3 rounded-lg shadow-lg">
+          <p className="font-semibold text-foreground mb-1">{data.name}</p>
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Sale:</span> ₹{data.totalAmount.toLocaleString('en-IN')}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Platform Fee:</span> ₹{data.platformFee?.toLocaleString('en-IN') || '0.00'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Sold:</span> {data.sales}
+            </p>
+          </div>
         </div>
       );
     }
@@ -86,24 +99,25 @@ export function SalesOfProductsChart({ productsData, filterType, filterValue }: 
 
   return (
     <ResponsiveContainer width="100%" height={350} className="min-w-max">
-      <PieChart>
+      <PieChart margin={{ top: 20, right: 30, left: 30, bottom: 20 }}>
         <Pie
           data={chartData}
           cx="50%"
-          cy="50%"
-          labelLine={true}
-          outerRadius={100}
-          fill="#8884d8"
+          cy="45%"
+          outerRadius={75}
+          fill="hsl(var(--primary))"
           dataKey="value"
-          name="Total Product Amount"
-          label={({name}) => name}
+          nameKey="name"
+          labelLine={true}
+          style={{ fontSize: '12px' }}
+          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
         >
           {chartData.map((entry: any, index: number) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
           ))}
         </Pie>
         <Tooltip content={<CustomTooltip />} />
-        <Legend layout="vertical" verticalAlign="middle" align="right" />
+        <Legend layout="horizontal" verticalAlign="bottom" align="center" wrapperStyle={{ paddingTop: "20px" }} />
       </PieChart>
     </ResponsiveContainer>
   );

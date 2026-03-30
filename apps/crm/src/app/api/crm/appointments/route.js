@@ -8,6 +8,7 @@ import { sendEmail } from "../../../../../../../packages/lib/src/emailService";
 import { getConfirmationTemplate, getCompletionTemplate, getInvoiceTemplate, getCancellationTemplate } from "../../../../../../../packages/lib/src/emailTemplates";
 import VendorModelLib from "../../../../../../../packages/lib/src/models/Vendor/Vendor.model";
 import { NotificationService, SmsService } from "@repo/lib";
+import { checkAndCreditReferralBonus } from "../../../../../../../packages/lib/src/utils/referralWalletCredit";
 
 // Helper function to send appointment emails and notifications
 const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus, fallbackClientId = null) => {
@@ -43,19 +44,96 @@ const sendAppointmentEmail = async (appointment, vendorId, newStatus, oldStatus,
 
         // 1. Send Email (Existing Logic Restored)
         if (clientEmail) {
-            try {
-                if (newStatus === 'confirmed') {
-                    const emailHtml = getConfirmationTemplate({
-                        clientName, businessName, serviceName: appointment.serviceName,
-                        date: appointment.date, startTime: appointment.startTime,
-                        location: appointment.homeServiceLocation?.address || businessName
-                    });
-                    await sendEmail({ to: clientEmail, subject: `Appointment Confirmed - ${businessName}`, html: emailHtml });
-                } else if (newStatus === 'completed' || newStatus === 'completed without payment') {
-                    const completionHtml = getCompletionTemplate({ clientName, businessName, serviceName: appointment.serviceName });
-                    
-                    let invoiceHtml;
-                    let formalInvoice;
+            if (newStatus === 'confirmed') {
+                const emailHtml = getConfirmationTemplate({
+                    clientName,
+                    businessName,
+                    serviceName: appointment.serviceName,
+                    date: appointment.date,
+                    startTime: appointment.startTime,
+                    location: appointment.homeServiceLocation?.address || businessName
+                });
+
+                await sendEmail({
+                    to: clientEmail,
+                    subject: `Appointment Confirmed - ${businessName}`,
+                    html: emailHtml
+                });
+                console.log(`Confirmation email sent to ${clientEmail}`);
+            } else if (newStatus === 'completed' || newStatus === 'completed without payment') {
+                // Send completion template
+                const completionHtml = getCompletionTemplate({
+                    clientName,
+                    businessName,
+                    serviceName: appointment.serviceName,
+                    appointmentId: appointment.invoiceNumber || appointment._id.toString(),
+                    completedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
+                    orderTotal: appointment.totalAmount,
+                    location: appointment.homeServiceLocation?.address || businessName,
+                    businessAddress,
+                    businessPhone
+                });
+
+                // Fetch formal invoice
+                let invoiceHtml;
+                let formalInvoice;
+                try {
+                    const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
+                    formalInvoice = await InvoiceModel.findOne({ appointmentId: appointment._id });
+
+                    if (formalInvoice) {
+                        invoiceHtml = getInvoiceTemplate({
+                            clientName,
+                            clientPhone,
+                            businessName,
+                            businessAddress,
+                            businessPhone,
+                            date: new Date(formalInvoice.createdAt).toLocaleDateString(),
+                            items: formalInvoice.items,
+                            subtotal: formalInvoice.subtotal,
+                            tax: formalInvoice.taxAmount,
+                            taxRate: formalInvoice.taxRate,
+                            platformFee: formalInvoice.platformFee,
+                            discount: formalInvoice.discountAmount,
+                            couponCode: appointment.payment?.offer?.code || "",
+                            totalAmount: formalInvoice.totalAmount,
+                            paymentStatus: formalInvoice.paymentStatus,
+                            invoiceNumber: formalInvoice.invoiceNumber,
+                            paymentMethod: formalInvoice.paymentMethod
+                        });
+                    } else {
+                        // Fallback
+                        invoiceHtml = getInvoiceTemplate({
+                            clientName,
+                            clientPhone,
+                            businessName,
+                            businessAddress,
+                            businessPhone,
+                            date: new Date(appointment.date).toLocaleDateString(),
+                            items: [{
+                                name: appointment.serviceName,
+                                price: appointment.amount,
+                                quantity: 1,
+                                totalPrice: appointment.amount
+                            }],
+                            subtotal: appointment.amount,
+                            tax: appointment.serviceTax || appointment.tax || 0,
+                            taxRate: 0,
+                            platformFee: appointment.platformFee || 0,
+                            discount: appointment.discountAmount || appointment.discount || 0,
+                            totalAmount: appointment.totalAmount,
+                            paymentStatus: appointment.paymentStatus,
+                            invoiceNumber: appointment.invoiceNumber || appointment._id.toString(),
+                            paymentMethod: appointment.paymentMethod
+                        });
+                    }
+                } catch (tplError) {
+                    console.error('Error fetching invoice for email:', tplError);
+                }
+
+                // Generate PDF Buffer (add this for consistency if missing)
+                let pdfBuffer;
+                if (invoiceHtml) {
                     try {
                         const { default: InvoiceModel } = await import('@repo/lib/models/Invoice/Invoice.model');
                         formalInvoice = await InvoiceModel.findOne({ appointmentId: appointment._id });
@@ -177,7 +255,7 @@ export const GET = withSubscriptionCheck(async (req, { params }) => {
     try {
         console.log('GET request - params:', params);
         console.log('GET request - req.user:', req.user);
-        const vendorId = req.user.userId;
+        const vendorId = req.user.vendorId || req.user.userId;
         const { searchParams } = new URL(req.url);
         const id = extractAppointmentId(req.url, params);
 
@@ -295,7 +373,7 @@ export const GET = withSubscriptionCheck(async (req, { params }) => {
 // POST a new appointment
 export const POST = withSubscriptionCheck(async (req) => {
     try {
-        const vendorId = req.user.userId.toString();
+        const vendorId = (req.user.vendorId || req.user.userId).toString();
         const body = await req.json();
 
         console.log('POST request - creating appointment:', body);
@@ -398,7 +476,9 @@ export const POST = withSubscriptionCheck(async (req) => {
             status: body.status || 'scheduled',
             amount: baseAmount,
             addOnsAmount,
-            discount: Number(body.discount) || 0,
+            discount: Number(body.discount || body.discountAmount) || 0,
+            discountAmount: Number(body.discountAmount || body.discount) || 0,
+            couponCode: body.couponCode || null,
             tax: Number(body.tax) || 0,
             totalAmount,
             finalAmount: totalAmount, // <--- Ensure finalAmount is set for online/offline consistency
@@ -430,6 +510,29 @@ export const POST = withSubscriptionCheck(async (req) => {
         }
 
         const newAppointment = await AppointmentModel.create(appointmentData);
+
+        // Increment coupon redemption count and total discount if applicable
+        if (appointmentData.couponCode) {
+            try {
+                const CRMOfferModel = (await import('../../../../../../../packages/lib/src/models/Vendor/CRMOffer.model')).default;
+                const discountToTrack = appointmentData.discountAmount || appointmentData.discount || 0;
+                await CRMOfferModel.incrementRedemption(appointmentData.couponCode, discountToTrack);
+                console.log(`Incremented redemption count and discount for offline booking coupon: ${appointmentData.couponCode}`);
+            } catch (offerErr) {
+                console.error(`Error incrementing offline coupon redemption for ${appointmentData.couponCode}:`, offerErr);
+            }
+        }
+
+        // CREDIT STAFF LEDGER IF CREATED AS COMPLETED
+        if (newAppointment.status === 'completed' || newAppointment.status === 'completed without payment') {
+            try {
+                const { syncStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
+                await syncStaffCommission(newAppointment._id);
+            } catch (accError) {
+                console.error("Error syncing staff on creation:", accError);
+            }
+        }
+
         const populatedAppointment = await AppointmentModel.findById(newAppointment._id)
             .populate('staff', 'fullName position')
             .populate('service', 'name duration price')
@@ -451,7 +554,7 @@ export const POST = withSubscriptionCheck(async (req) => {
 // Handle PUT /api/crm/appointments/[id] (update)
 export const PUT = withSubscriptionCheck(async (req, { params }) => {
     try {
-        const vendorId = req.user.userId;
+        const vendorId = req.user.vendorId || req.user.userId;
         const appointmentId = params?.id;
 
         if (!appointmentId) {
@@ -560,6 +663,14 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
             );
         }
 
+        // Handle cancellation specifically to capture reason and add to notes
+        if (updateData.status === 'cancelled' && existingAppointment.status !== 'cancelled') {
+            updateData.cancellationReason = updateData.cancellationReason || 'No reason provided';
+            const cancellationNote = `[${new Date().toISOString()}] Appointment cancelled: ${updateData.cancellationReason}`;
+            const existingNotes = existingAppointment.notes || '';
+            updateData.notes = existingNotes ? `${cancellationNote}\n${existingNotes}` : cancellationNote;
+        }
+
         // Apply updates
         Object.keys(updateData).forEach(key => {
             updatedAppointment[key] = updateData[key];
@@ -570,7 +681,41 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
             updatedAppointment.finalAmount = updateData.totalAmount;
         }
 
+        // Support both naming conventions for discount in updates
+        if (updateData.discountAmount !== undefined && updateData.discount === undefined) {
+            updateData.discount = updateData.discountAmount;
+        } else if (updateData.discount !== undefined && updateData.discountAmount === undefined) {
+            updateData.discountAmount = updateData.discount;
+        }
+
+        // Check if couponCode is being added or changed to increment redemption count and total discount
+        if (updateData.couponCode && updateData.couponCode !== existingAppointment.couponCode) {
+            try {
+                const CRMOfferModel = (await import('../../../../../../../packages/lib/src/models/Vendor/CRMOffer.model')).default;
+                const discountToTrack = updateData.discountAmount !== undefined ? updateData.discountAmount : 
+                                       (updateData.discount !== undefined ? updateData.discount : 
+                                       (existingAppointment.discountAmount || existingAppointment.discount || 0));
+                await CRMOfferModel.incrementRedemption(updateData.couponCode, discountToTrack);
+                console.log(`Incremented redemption count and discount for updated coupon: ${updateData.couponCode}`);
+            } catch (offerErr) {
+                console.error(`Error incrementing updated coupon redemption for ${updateData.couponCode}:`, offerErr);
+            }
+        }
+
         await updatedAppointment.save({ validateBeforeSave: false });
+
+        // SYNC STAFF LEDGER IF RELEVANT CHANGES OCCURRED
+        const commissionRelevantFields = ['status', 'amount', 'discount', 'staff', 'serviceItems', 'totalAmount'];
+        const hasRelevantChanges = Object.keys(updateData).some(key => commissionRelevantFields.includes(key));
+
+        if (hasRelevantChanges) {
+            try {
+                const { syncStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
+                await syncStaffCommission(appointmentId);
+            } catch (accError) {
+                console.error("Error syncing staff on update:", accError);
+            }
+        }
 
         // Populate for response
         await updatedAppointment.populate([
@@ -605,7 +750,7 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
 export const DELETE = withSubscriptionCheck(async (req, { params }) => {
     try {
         console.log('=== DELETE REQUEST START ===');
-        const vendorId = req.user.userId;
+        const vendorId = req.user.vendorId || req.user.userId;
         const appointmentId = extractAppointmentId(req.url, params);
 
         console.log('DELETE Request URL:', req.url);
@@ -655,7 +800,7 @@ export const DELETE = withSubscriptionCheck(async (req, { params }) => {
 // PATCH /api/crm/appointments - Update appointment status
 export const PATCH = withSubscriptionCheck(async (req, { params }) => {
     try {
-        const vendorId = req.user.userId;
+        const vendorId = req.user.vendorId || req.user.userId;
         const body = await req.json();
         const appointmentId = extractAppointmentId(req.url, params) || body._id;
 
@@ -670,7 +815,7 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
         }
 
         // Validate status
-        const validStatuses = ['scheduled', 'confirmed', 'completed', 'cancelled', 'no-show'];
+        const validStatuses = ['scheduled', 'confirmed', 'completed', 'completed without payment', 'partially-completed', 'cancelled', 'no-show'];
         if (!validStatuses.includes(body.status)) {
             return NextResponse.json(
                 { message: "Invalid status value" },
@@ -726,6 +871,14 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                 await sendAppointmentEmail(updatedAppointment, vendorId, 'cancelled', oldStatus, rawClientId);
             }
 
+            // Sync Commission on PATCH
+            try {
+                const { syncStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
+                await syncStaffCommission(appointmentId);
+            } catch (accError) {
+                console.error("Error syncing staff on PATCH:", accError);
+            }
+
             return NextResponse.json({
                 message: "Appointment status updated successfully",
                 appointment: updatedAppointment
@@ -760,8 +913,80 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                         updatedAppointment.invoiceNumber = invoice.invoiceNumber;
                         console.log(`Linked sequential invoice ${invoice.invoiceNumber} to appointment ${appointmentId}`);
                     }
+
+                    // CREDIT STAFF COMMISSION TO LEDGER
+                    try {
+                        const { creditStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
+                        await creditStaffCommission(appointmentId);
+                        console.log(`Credited staff commission for appointment ${appointmentId}`);
+                    } catch (commError) {
+                        console.error("Error crediting staff commission:", commError);
+                    }
                 } catch (invoiceError) {
                     console.error("Error in centralized invoice generation:", invoiceError);
+                }
+
+                // Check and credit referral bonus if user was referred (triggers on first completed appointment)
+                console.log(`[CRM Referral] ===== STARTING REFERRAL BONUS CHECK =====`);
+                console.log(`[CRM Referral] Appointment ID: ${appointmentId}`);
+                console.log(`[CRM Referral] Appointment status: ${updatedAppointment.status}`);
+                // LOGIC FIX: Handle both online (User ID) and offline (Client ID) modes
+                let targetUserId = null;
+
+                if (updatedAppointment.mode === 'online') {
+                    // For online appointments, client field IS the User ID
+                    // We need to check if it's an object (populated) or string/ObjectId
+                    if (updatedAppointment.client && updatedAppointment.client._id) {
+                        targetUserId = updatedAppointment.client._id.toString();
+                    } else {
+                        targetUserId = updatedAppointment.client?.toString();
+                    }
+                    console.log(`[CRM Referral] Online appointment detected. Using client field as User ID: ${targetUserId}`);
+                } else {
+                    // For offline appointments, client field is Client ID. We need to find if this Client is linked to a User.
+                    // Note: The client field might be populated or just an ID depending on the finding logic
+                    let clientIdToCheck = null;
+                    if (updatedAppointment.client && updatedAppointment.client._id) {
+                        clientIdToCheck = updatedAppointment.client._id;
+                    } else if (updatedAppointment.client) {
+                        clientIdToCheck = updatedAppointment.client;
+                    }
+
+                    if (clientIdToCheck) {
+                        try {
+                            const ClientModel = (await import('@repo/lib/models/Vendor/Client.model')).default;
+                            const clientDoc = await ClientModel.findById(clientIdToCheck).select('userId');
+                            if (clientDoc && clientDoc.userId) {
+                                targetUserId = clientDoc.userId.toString();
+                                console.log(`[CRM Referral] Offline appointment linked to User ID: ${targetUserId}`);
+                            } else {
+                                console.log(`[CRM Referral] Offline appointment client not linked to any User`);
+                            }
+                        } catch (clientErr) {
+                            console.error(`[CRM Referral] Error fetching client details:`, clientErr);
+                        }
+                    }
+                }
+
+                if (targetUserId) {
+                    try {
+                        console.log(`[CRM Referral] ===== TRIGGERING REFERRAL BONUS CHECK =====`);
+                        const referralResult = await checkAndCreditReferralBonus(targetUserId, 'appointment');
+                        console.log(`[CRM Referral] ===== REFERRAL BONUS RESULT =====`);
+                        console.log(`[CRM Referral] Success: ${referralResult.success}`);
+                        console.log(`[CRM Referral] Message: ${referralResult.message}`);
+
+                        if (referralResult.success) {
+                            console.log(`[CRM Referral] ✅ Referral bonus credited successfully!`);
+                        } else {
+                            console.warn(`[CRM Referral] ⚠️ Referral bonus not credited: ${referralResult.message}`);
+                        }
+                    } catch (referralError) {
+                        // Don't fail the appointment update if referral crediting fails, just log the error
+                        console.error('[CRM Referral] ❌ ERROR crediting referral bonus:', referralError);
+                    }
+                } else {
+                    console.log(`[CRM Referral] ❌ No valid User ID found for referral bonus check`);
                 }
             }
 

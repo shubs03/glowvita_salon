@@ -38,6 +38,7 @@ interface Product {
     productForm?: string;
     brand?: string;
     vendorId?: { name: string };
+    showOnWebsite?: boolean;
 }
 
 interface ProductViewModalProps {
@@ -56,7 +57,7 @@ const ProductViewModal = ({
     if (!product) return null;
 
     const calculateDiscountPercentage = () => {
-        if (product.price > product.salePrice) {
+        if (product.salePrice > 0 && product.price > product.salePrice) {
             return Math.round(
                 ((product.price - product.salePrice) / product.price) * 100
             );
@@ -69,7 +70,8 @@ const ProductViewModal = ({
     // GST Calculation Logic matching ProductFormFields
     const gstDetails = useMemo(() => {
         const selectedCategory = categories.find((cat) => cat.name === product.category);
-        const salePrice = Number(product.salePrice) || 0;
+        const regularPrice = Number(product.price) || 0;
+        const salePrice = (Number(product.salePrice) || 0) || regularPrice;
 
         if (!selectedCategory || !selectedCategory.gstType || selectedCategory.gstType === "none") {
             return {
@@ -165,6 +167,14 @@ const ProductViewModal = ({
                                 >
                                     {product.isActive ? "Active in Store" : "Hidden"}
                                 </Badge>
+                                {product.showOnWebsite === false && (
+                                    <Badge
+                                        variant="outline"
+                                        className="bg-amber-100 text-amber-700 border-amber-200 px-3"
+                                    >
+                                        Hidden from Website
+                                    </Badge>
+                                )}
                             </div>
                             {product.status === "rejected" && product.rejectionReason && (
                                 <div className="mt-2 p-3 bg-red-50 border border-red-100 rounded-lg text-sm text-red-600 font-medium">
@@ -191,13 +201,19 @@ const ProductViewModal = ({
                                 {product.productName}
                             </h2>
 
-                            <div className="flex items-baseline gap-3 mb-4">
-                                <span className="text-4xl font-bold text-foreground">
-                                    ₹{product.salePrice.toFixed(2)}
-                                </span>
-                                {product.price > product.salePrice && (
-                                    <span className="text-xl text-muted-foreground line-through decoration-muted-foreground/50">
-                                        ₹{product.price.toFixed(2)}
+                            <div className="flex flex-col mb-4">
+                                {product.salePrice > 0 && product.salePrice < product.price ? (
+                                    <>
+                                        <span className="text-xl text-muted-foreground line-through decoration-muted-foreground/50">
+                                            ₹{Number(product.price).toFixed(2)}
+                                        </span>
+                                        <span className="text-4xl font-bold text-foreground">
+                                            ₹{Number(product.salePrice).toFixed(2)}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span className="text-4xl font-bold text-foreground">
+                                        ₹{Number(product.price).toFixed(2)}
                                     </span>
                                 )}
                             </div>

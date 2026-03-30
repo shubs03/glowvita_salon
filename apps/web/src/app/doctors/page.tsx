@@ -92,7 +92,7 @@ const transformDoctor = (apiDoctor: any): Doctor => {
     id: apiDoctor.id || apiDoctor._id,
     name: apiDoctor.name || 'Unknown Doctor',
     phone: apiDoctor.phone,
-    email:apiDoctor.email,
+    email: apiDoctor.email,
     specialty: apiDoctor.doctorType || (apiDoctor.specialties && apiDoctor.specialties[0]) || 'General Medicine',
     specialties: apiDoctor.specialties || [],
     doctorType: apiDoctor.doctorType,
@@ -130,28 +130,28 @@ const transformDoctor = (apiDoctor: any): Doctor => {
 function DoctorCard({ doctor }: { doctor: Doctor }) {
   const { isAuthenticated } = useAuth();
   const router = useRouter();
-  
+
   // Check if doctor is in wishlist
   const { data: wishlistStatusData } = useCheckDoctorWishlistStatusQuery(doctor.id, {
     skip: !isAuthenticated,
   });
-  
+
   // Wishlist mutations
   const [addDoctorToWishlist] = useAddDoctorToWishlistMutation();
   const [removeDoctorFromWishlist] = useRemoveDoctorFromWishlistMutation();
-  
+
   const isFavorite = wishlistStatusData?.isInWishlist || false;
-  
+
   const handleWishlistToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!isAuthenticated) {
       toast.error("Please login to add doctors to your wishlist");
       router.push("/client-login");
       return;
     }
-    
+
     try {
       if (isFavorite) {
         // Remove from wishlist
@@ -175,7 +175,7 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
   };
 
   return (
-    <div 
+    <div
       className="group relative overflow-hidden rounded-md hover:shadow-lg border bg-card transition-all duration-300 hover:-translate-y-1"
     >
       {/* Upper Half: Doctor Image */}
@@ -192,7 +192,7 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
             <User className="h-20 w-20 text-primary/40" />
           </div>
         )}
-        
+
 
         {/* Wishlist Button */}
         <button
@@ -203,21 +203,21 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
           <Heart
             className={cn(
               "h-4 w-4",
-              isFavorite ? "fill-blue-500 text-blue-500" : "text-gray-600"
+              isFavorite ? "fill-red-500 text-red-500" : "text-gray-600"
             )}
           />
         </button>
 
         {/* Rating Badge */}
-        <Badge 
+        <Badge
           variant="default"
-          className="absolute top-2 left-2 bg-blue-500 text-white border-0 text-xs px-2 py-0.5 rounded-full font-medium"
+          className="absolute top-2 left-2 bg-yellow-400 text-foreground border-0 text-xs px-2 py-0.5 rounded-full font-medium"
         >
-          <Star className="h-3 w-3 mr-1 fill-white" />
+          <Star className="h-3 w-3 mr-1 fill-current" />
           {doctor.rating?.toFixed(1)}
         </Badge>
-        
-        
+
+
       </div>
 
       {/* Lower Half: Details */}
@@ -235,12 +235,12 @@ function DoctorCard({ doctor }: { doctor: Doctor }) {
             {doctor.patientSatisfaction !== undefined && doctor.patientSatisfaction > 0 && (
               <div className="flex items-center gap-1.5">
                 <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full transition-all duration-300"
+                  <div
+                    className="h-full bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full transition-all duration-300"
                     style={{ width: `${doctor.patientSatisfaction}%` }}
                   />
                 </div>
-                <span className="text-[10px] font-semibold text-blue-600">
+                <span className="text-[10px] font-semibold text-yellow-600">
                   {doctor.patientSatisfaction}%
                 </span>
               </div>
@@ -470,7 +470,7 @@ export default function DoctorsPage() {
                 </div>
               </div>
             </button>
-            
+
           </div>
         </div>
       </section>

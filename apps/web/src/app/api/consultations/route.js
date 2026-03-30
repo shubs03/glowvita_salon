@@ -4,6 +4,7 @@ import Patient from '@repo/lib/models/Vendor/Patient.model';
 import Doctor from '@repo/lib/models/Vendor/Docters.model';
 import _db from '@repo/lib/db';
 import { NotificationService } from '@repo/lib';
+import { checkAndCreditReferralBonus } from '@repo/lib/utils/referralWalletCredit';
 
 await _db();
 
@@ -137,6 +138,33 @@ export const POST = async (req) => {
         console.error('Consultation Booking Notification Error:', err);
       }
     })();
+    // Increment coupon redemption count and total discount if applicable
+    if (body.couponCode) {
+      try {
+        const discountToTrack = body.discountAmount || body.discount || 0;
+        await CRMOfferModel.incrementRedemption(body.couponCode, discountToTrack);
+        console.log(`Incremented redemption count and discount for consultation coupon: ${body.couponCode}`);
+      } catch (offerErr) {
+        console.error(`Error incrementing consultation coupon redemption for ${body.couponCode}:`, offerErr);
+      }
+    }
+
+    // Check and credit referral bonus if user was referred (triggers on first consultation)
+    if (consultation.userId) {
+      try {
+        await checkAndCreditReferralBonus(consultation.userId.toString(), 'consultation');
+      } catch (referralError) {
+        // Don't fail the consultation if referral crediting fails, just log the error
+        console.error('Error crediting referral bonus:', referralError);
+      }
+    }
+
+    // Update patient's consultation count
+    if (patient) {
+      patient.totalConsultations = (patient.totalConsultations || 0) + 1;
+      patient.lastConsultation = new Date();
+      await patient.save();
+    }
 
     return NextResponse.json(
       {

@@ -19,10 +19,13 @@ const COLORS = [
 ];
 
 interface TopServiceData {
-  service: string;
-  serviceSold: number;
-  totalSales: number;
-  bookingCount?: number; // Some reports might use booking count instead of sales
+  service?: string;
+  serviceName?: string;
+  serviceSold?: number;
+  count?: number;
+  totalSales?: number;
+  totalAmount?: number;
+  bookingCount?: number;
 }
 
 interface TopServicesChartProps {
@@ -60,20 +63,21 @@ export function TopServicesChart({
   // Extract and format the summary by service data
   // The summary report might have different property names, try common variations
   const rawData = reportData?.summaryByService || 
+                  reportData?.data?.summaryByService ||
                   reportData?.serviceSummary || 
                   reportData?.services || 
-                  reportData?.data || 
+                  (Array.isArray(reportData?.data) ? reportData.data : []) || 
                   [];
   
   // Ensure rawData is an array before sorting
   const dataArray = Array.isArray(rawData) ? rawData : [];
   
-  // Get top 5 services by booking count (if available) or fallback to sales
-  const data = dataArray
+  // Get top 5 services by usage count (count, bookingCount, or serviceSold)
+  const data = [...dataArray]
     .sort((a: TopServiceData, b: TopServiceData) => {
-      // Try booking count first, fallback to serviceSold, then totalSales
-      const aCount = a.bookingCount || a.serviceSold || a.totalSales || 0;
-      const bCount = b.bookingCount || b.serviceSold || b.totalSales || 0;
+      // Prioritize count or booking count to represent "mostly used"
+      const aCount = a.count || a.bookingCount || a.serviceSold || a.totalAmount || a.totalSales || 0;
+      const bCount = b.count || b.bookingCount || b.serviceSold || b.totalAmount || b.totalSales || 0;
       return bCount - aCount;
     })
     .slice(0, 5);
@@ -115,36 +119,41 @@ export function TopServicesChart({
   }
 
   // Calculate total for percentage calculation
-  // Use booking count if available, otherwise fall back to totalSales
   const totalValue = data.reduce((sum: number, item: TopServiceData) => {
-    return sum + (item.bookingCount || item.serviceSold || item.totalSales || 0);
+    return sum + (item.count || item.bookingCount || item.serviceSold || item.totalAmount || item.totalSales || 0);
   }, 0);
 
-  // Format data with explicit percentages for display
-  const formattedData = data.map((item: TopServiceData) => ({
-    ...item,
-    percentage: totalValue > 0 ? ((item.bookingCount || item.serviceSold || item.totalSales || 0) / totalValue) * 100 : 0
-  }));
+  // Format data with explicit percentages for display and a consistent chartValue for Recharts
+  const formattedData = data.map((item: TopServiceData) => {
+    const value = item.count || item.bookingCount || item.serviceSold || item.totalAmount || item.totalSales || 0;
+    const name = item.serviceName || item.service || 'Unknown Service';
+    return {
+      ...item,
+      normalizedService: name,
+      chartValue: value,
+      percentage: totalValue > 0 ? (value / totalValue) * 100 : 0
+    };
+  });
 
   // Custom tooltip to show detailed information
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
-      // Determine the primary metric to display (booking count or fallback)
-      const primaryMetric = data.bookingCount || data.serviceSold || data.totalSales || 0;
-      const metricLabel = data.bookingCount ? 'Bookings' : 
+      // Determine the primary metric to display
+      const isCountBased = data.count || data.bookingCount || data.serviceSold;
+      const primaryMetric = data.chartValue;
+      const metricLabel = data.count ? 'Usage Count' : data.bookingCount ? 'Bookings' : 
                          data.serviceSold ? 'Services Sold' : 'Total Sales';
-      const currencyPrefix = data.bookingCount ? '' : '₹';
+      const currencyPrefix = isCountBased ? '' : '₹';
+      
+      const salesMetric = data.totalAmount || data.totalSales || 0;
       
       return (
         <div className="bg-background border border-border p-3 rounded-lg shadow-lg">
-          <p className="font-semibold text-foreground">{data.service}</p>
-          <p className="text-sm text-muted-foreground">{metricLabel}: {currencyPrefix}{primaryMetric.toFixed(data.bookingCount ? 0 : 2)}</p>
-          {data.bookingCount && data.serviceSold && (
-            <p className="text-sm text-muted-foreground">Services Sold: {data.serviceSold}</p>
-          )}
-          {data.bookingCount && data.totalSales && (
-            <p className="text-sm text-muted-foreground">Total Sales: ₹{data.totalSales.toFixed(2)}</p>
+          <p className="font-semibold text-foreground">{data.normalizedService}</p>
+          <p className="text-sm text-muted-foreground">{metricLabel}: {currencyPrefix}{primaryMetric.toFixed(isCountBased ? 0 : 2)}</p>
+          {salesMetric > 0 && (
+            <p className="text-sm text-muted-foreground">Sales Amount: ₹{salesMetric.toFixed(2)}</p>
           )}
           <p className="text-sm text-muted-foreground">Percentage: {data.percentage.toFixed(1)}%</p>
         </div>
@@ -179,9 +188,9 @@ export function TopServicesChart({
                 labelLine={false}
                 outerRadius={100}
                 fill="hsl(var(--primary))"
-                dataKey="bookingCount"
-                nameKey="service"
-                label={({ service, percentage }) => `${service}: ${percentage.toFixed(0)}%`}
+                dataKey="chartValue"
+                nameKey="normalizedService"
+                label={({ normalizedService, percentage }) => `${normalizedService}: ${percentage.toFixed(0)}%`}
               >
                 {formattedData.map((entry: TopServiceData, index: number) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

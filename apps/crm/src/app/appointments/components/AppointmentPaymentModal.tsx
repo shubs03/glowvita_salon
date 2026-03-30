@@ -127,10 +127,10 @@ const AppointmentPaymentModal = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="cash">💰 Cash</SelectItem>
-                <SelectItem value="card">💳 Card</SelectItem>
-                <SelectItem value="upi">📱 UPI</SelectItem>
-                <SelectItem value="netbanking">🏦 Net Banking</SelectItem>
+                <SelectItem value="cash">Cash</SelectItem>
+                <SelectItem value="card">Card</SelectItem>
+                <SelectItem value="upi">UPI</SelectItem>
+                <SelectItem value="netbanking">Net Banking</SelectItem>
               </SelectContent>
             </Select>
           </div>

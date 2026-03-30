@@ -182,12 +182,13 @@ export default function ClientsPage() {
   }, [reviewsResponse]);
 
   // Compute bookings and totals per client
-  const { bookingsById, totalsById, completedById, cancelledById } =
+  const { bookingsById, totalsById, completedById, cancelledById, lastVisitDateById } =
     useMemo(() => {
       const countsById = new Map<string, number>();
       const totalsById = new Map<string, number>();
       const completedCountById = new Map<string, number>();
       const cancelledCountById = new Map<string, number>();
+      const lastVisitByClientId = new Map<string, string>();
 
       // Create lookup maps for online customers
       const emailToClientId = new Map<string, string>();
@@ -257,6 +258,14 @@ export default function ClientsPage() {
             clientId,
             (completedCountById.get(clientId) || 0) + 1
           );
+
+          // Update last visit date
+          if (appt?.date) {
+            const currentLastVisit = lastVisitByClientId.get(clientId);
+            if (!currentLastVisit || new Date(appt.date) > new Date(currentLastVisit)) {
+              lastVisitByClientId.set(clientId, appt.date);
+            }
+          }
         } else if (status === "cancelled") {
           cancelledCountById.set(
             clientId,
@@ -270,6 +279,7 @@ export default function ClientsPage() {
         totalsById,
         completedById: completedCountById,
         cancelledById: cancelledCountById,
+        lastVisitDateById: lastVisitByClientId,
       };
     }, [appointments, offlineClients, onlineClients]);
 
@@ -678,12 +688,12 @@ export default function ClientsPage() {
                 {
                   header: 'Birthday',
                   key: 'birthdayDate',
-                  transform: (val) => formatDateForDisplay(val)
+                  transform: (val) => formatDateForDisplay(val, "-")
                 },
                 {
                   header: 'Last Visit',
-                  key: 'lastVisit',
-                  transform: (val) => formatDateForDisplay(val)
+                  key: '_id',
+                  transform: (val) => formatDateForDisplay(lastVisitDateById.get(String(val)))
                 },
                 {
                   header: 'Total Bookings',
@@ -698,13 +708,15 @@ export default function ClientsPage() {
                 { header: 'Status', key: 'status' }
               ]}
             />
-            <Button
-              onClick={() => handleOpenModal()}
-              className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1 sm:flex-none"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Client
-            </Button>
+            {clientSegment === "offline" && (
+              <Button
+                onClick={() => handleOpenModal()}
+                className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1 sm:flex-none"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Client
+              </Button>
+            )}
           </div>
         </div>
 
@@ -718,6 +730,7 @@ export default function ClientsPage() {
           handleDeleteClick={handleDeleteClick}
           bookingsById={bookingsById}
           totalsById={totalsById}
+          lastVisitDateById={lastVisitDateById}
           offlineClients={offlineClients}
           onlineClients={onlineClients}
           appointments={appointments}

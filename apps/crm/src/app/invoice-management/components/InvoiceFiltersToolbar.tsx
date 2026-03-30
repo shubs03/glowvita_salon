@@ -11,11 +11,13 @@ interface InvoiceFiltersToolbarProps {
   searchTerm: string;
   selectedPaymentMethod: string;
   selectedItemType: 'all' | 'Service' | 'Product';
+  selectedAppointmentMode: string;
   startDate: string;
   endDate: string;
   onSearchChange: (value: string) => void;
   onPaymentMethodChange: (value: string) => void;
   onItemTypeChange: (value: 'all' | 'Service' | 'Product') => void;
+  onAppointmentModeChange: (value: string) => void;
   onStartDateChange: (value: string) => void;
   onEndDateChange: (value: string) => void;
   onClearDateFilters: () => void;
@@ -30,11 +32,13 @@ const InvoiceFiltersToolbar = ({
   searchTerm,
   selectedPaymentMethod,
   selectedItemType,
+  selectedAppointmentMode,
   startDate,
   endDate,
   onSearchChange,
   onPaymentMethodChange,
   onItemTypeChange,
+  onAppointmentModeChange,
   onStartDateChange,
   onEndDateChange,
   onClearDateFilters,
@@ -62,7 +66,8 @@ const InvoiceFiltersToolbar = ({
         { header: 'Date', key: 'date' },
         { header: 'Total Amount', key: 'finalAmount' },
         { header: 'Status', key: 'status' },
-        { header: 'Payment Method', key: 'paymentMethod' }
+        { header: 'Payment Method', key: 'paymentMethod' },
+        { header: 'Mode', key: 'mode' }
       ];
     }
   };
@@ -144,6 +149,19 @@ const InvoiceFiltersToolbar = ({
                     Products
                   </div>
                 </SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+
+          {activeTab === 'appointments' && (
+            <Select value={selectedAppointmentMode} onValueChange={onAppointmentModeChange}>
+              <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-lg border-border hover:border-primary">
+                <SelectValue placeholder="Appointment Mode" />
+              </SelectTrigger>
+              <SelectContent className="rounded-lg border border-border/40">
+                <SelectItem value="all">All Modes</SelectItem>
+                <SelectItem value="online">Online</SelectItem>
+                <SelectItem value="offline">Offline</SelectItem>
               </SelectContent>
             </Select>
           )}

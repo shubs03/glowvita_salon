@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Button } from "@repo/ui/button";
-import { Label } from 'recharts';
+import { Label } from '@repo/ui/label';
 import { Input } from '@repo/ui/input';
 import { Truck, Package } from 'lucide-react';
 
@@ -17,7 +17,7 @@ type Order = {
   _id: string;
   orderId?: string; // Make orderId optional since ClientOrder doesn't have it
   items: OrderItem[];
-  customerName?: string; 
+  customerName?: string;
   customerEmail?: string;
   vendorId?: string;
   supplierId?: string;
@@ -45,16 +45,16 @@ interface TrackingInfo {
   courier: string;
 }
 
-export function ShipOrderModal({ 
-  isOpen, 
-  onClose, 
+export function ShipOrderModal({
+  isOpen,
+  onClose,
   onConfirm,
   orderToShip,
   isUpdatingStatus
 }: ShipOrderModalProps) {
-  const [trackingInfo, setTrackingInfo] = useState<TrackingInfo>({ 
-    trackingNumber: '', 
-    courier: '' 
+  const [trackingInfo, setTrackingInfo] = useState<TrackingInfo>({
+    trackingNumber: '',
+    courier: ''
   });
 
   if (!orderToShip) return null;
@@ -74,23 +74,23 @@ export function ShipOrderModal({
         <div className="space-y-6 py-6">
           <div className="space-y-3">
             <Label className="text-base font-semibold">Tracking Number</Label>
-            <Input 
-              placeholder="Enter tracking number" 
-              value={trackingInfo.trackingNumber} 
-              onChange={e => setTrackingInfo(prev => ({...prev, trackingNumber: e.target.value}))}
+            <Input
+              placeholder="Enter tracking number"
+              value={trackingInfo.trackingNumber}
+              onChange={e => setTrackingInfo(prev => ({ ...prev, trackingNumber: e.target.value }))}
               className="h-12 rounded-xl border-border/30 focus:border-primary focus:ring-primary/20"
             />
           </div>
           <div className="space-y-3">
             <Label className="text-base font-semibold">Courier Service</Label>
-            <Input 
-              placeholder="Enter courier name (e.g., FedEx, DHL)" 
-              value={trackingInfo.courier} 
-              onChange={e => setTrackingInfo(prev => ({...prev, courier: e.target.value}))}
+            <Input
+              placeholder="Enter courier name (e.g., FedEx, DHL)"
+              value={trackingInfo.courier}
+              onChange={e => setTrackingInfo(prev => ({ ...prev, courier: e.target.value }))}
               className="h-12 rounded-xl border-border/30 focus:border-primary focus:ring-primary/20"
             />
           </div>
-          
+
           {/* Order Preview */}
           <div className="bg-gradient-to-r from-muted/30 to-muted/10 rounded-xl p-4">
             <h4 className="font-semibold mb-3 flex items-center gap-2">
@@ -119,8 +119,8 @@ export function ShipOrderModal({
           <Button variant="outline" onClick={onClose} className="px-6">
             Cancel
           </Button>
-          <Button 
-            onClick={() => onConfirm(trackingInfo)} 
+          <Button
+            onClick={() => onConfirm(trackingInfo)}
             disabled={isUpdatingStatus || !trackingInfo.trackingNumber.trim() || !trackingInfo.courier.trim()}
             className="px-6 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
           >

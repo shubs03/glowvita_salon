@@ -6,51 +6,93 @@
 
 /* Font utility classes */
 .font-display {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Montserrat', sans-serif;
 }
 
 .font-headline {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Montserrat', sans-serif;
 }
+
 .font-body {
   font-family: 'Roboto', sans-serif;
 }
 
 body {
   font-family: 'Roboto', sans-serif;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: 'Playfair Display', serif;
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
-.text-4xl, .text-5xl, .text-6xl, .text-7xl, .text-8xl, .text-9xl,
-.text-3xl, .text-2xl {
-  font-family: 'Playfair Display', serif;
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Montserrat', sans-serif;
+}
+
+.text-4xl,
+.text-5xl,
+.text-6xl,
+.text-7xl,
+.text-8xl,
+.text-9xl,
+.text-3xl,
+.text-2xl {
+  font-family: 'Montserrat', sans-serif;
 }
 
 /* Medium text can use either, but default to Roboto for readability */
-.text-xl, .text-lg {
+.text-xl,
+.text-lg {
   font-family: 'Roboto', sans-serif;
 }
-.text-xs, .text-sm, .text-base {
+
+.text-xs,
+.text-sm,
+.text-base {
   font-family: 'Roboto', sans-serif;
 }
 
 .font-display .text-lg {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Montserrat', sans-serif;
 }
-button, .btn, .button {
-  font-family: 'Roboto', sans-serif;
-}
-nav, .nav, .navigation {
-  font-family: 'Roboto', sans-serif;
-}
-input, textarea, select, label {
+
+button,
+.btn,
+.button {
   font-family: 'Roboto', sans-serif;
 }
 
-.card-content, .component-text {
+nav,
+.nav,
+.navigation {
+  font-family: 'Roboto', sans-serif;
+}
+
+input,
+textarea,
+select,
+label {
+  font-family: 'Roboto', sans-serif;
+}
+
+.card-content,
+.component-text {
   font-family: 'Roboto', sans-serif;
 }
 
@@ -58,10 +100,14 @@ input, textarea, select, label {
   body {
     @apply bg-secondary text-foreground;
   }
-  
+
   /* Fix for dark mode borders */
-  .dark .border-border, .dark .border-b, .dark .border-r, .dark .border-t, .dark .border-l {
-      @apply border-white/10;
+  .dark .border-border,
+  .dark .border-b,
+  .dark .border-r,
+  .dark .border-t,
+  .dark .border-l {
+    @apply border-white/10;
   }
 
   /* Ensure native inputs respect dark theme */
@@ -92,131 +138,133 @@ input, textarea, select, label {
   .dark .bg-secondary {
     @apply bg-slate-900;
   }
-  
+
   /* Utility to hide scrollbars */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
   .no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
   }
-  
-  /* Additional scrollbar hiding utility */
-  .scrollbar-hidden {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE 10+ */
+
+  /* Global scrollbar hiding as requested */
+  *, *::before, *::after {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
   }
-  .scrollbar-hidden::-webkit-scrollbar {
-    width: 0;
-    height: 0;
-    display: none;
-  }
-  
-  /* Scrollbar hide utility for modals */
-  .scrollbar-hide {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
+
+  *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 }
 
 @layer utilities {
+
   /* Product card animations */
   @keyframes fadeInUp {
     from {
       opacity: 0;
       transform: translateY(30px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
     }
   }
-  
+
   @keyframes float {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: translateY(0px);
     }
+
     50% {
       transform: translateY(-10px);
     }
   }
-  
+
   @keyframes shimmer {
     0% {
       background-position: -200px 0;
     }
+
     100% {
       background-position: calc(200px + 100%) 0;
     }
   }
-  
+
   @keyframes pulse-glow {
-    0%, 100% {
+
+    0%,
+    100% {
       box-shadow: 0 0 20px rgba(var(--primary), 0.3);
     }
+
     50% {
       box-shadow: 0 0 30px rgba(var(--primary), 0.5);
     }
   }
-  
+
   .animate-fadeInUp {
     animation: fadeInUp 0.6s ease-out forwards;
   }
-  
+
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }
-  
+
   .animate-shimmer {
     animation: shimmer 2s infinite;
-    background: linear-gradient(
-      90deg,
-      transparent,
-      rgba(255, 255, 255, 0.2),
-      transparent
-    );
+    background: linear-gradient(90deg,
+        transparent,
+        rgba(255, 255, 255, 0.2),
+        transparent);
     background-size: 200px 100%;
   }
-  
+
   .animate-pulse-glow {
     animation: pulse-glow 2s ease-in-out infinite;
   }
-  
+
   /* Glassmorphism utilities */
   .glass {
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.2);
   }
-  
+
   .glass-dark {
     background: rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
-  
+
   /* Custom shadow utilities for enhanced depth */
   .shadow-glow {
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.1), 0 10px 20px rgba(0, 0, 0, 0.1);
   }
-  
+
   .shadow-glow-primary {
     box-shadow: 0 0 20px rgba(var(--primary), 0.3), 0 10px 20px rgba(var(--primary), 0.2);
   }
-  
+
   .shadow-4xl {
     box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.25);
   }
-  
+
   /* Card hover effects */
   .card-hover {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  
+
   .card-hover:hover {
     transform: translateY(-8px) scale(1.02);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);

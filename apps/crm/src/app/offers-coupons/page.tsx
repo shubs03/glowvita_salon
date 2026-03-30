@@ -85,6 +85,7 @@ type Coupon = {
   startDate: string;
   expires: string;
   redeemed: number;
+  totalDiscount?: number;
   applicableSpecialties: string[];
   applicableCategories: string[];
   applicableDiseases: string[];
@@ -279,7 +280,7 @@ export default function OffersCouponsPage() {
   const handleCategoryChange = (category: string, checked: boolean) => {
     const updated = checked
       ? [...selectedCategories, category]
-      : selectedCategories.filter((c) => c !== category);
+      : selectedCategories.filter((c: string) => c !== category);
     setSelectedCategories(updated);
     setValue("applicableCategories", updated);
   };
@@ -288,7 +289,7 @@ export default function OffersCouponsPage() {
   const handleDiseaseChange = (diseaseId: string, checked: boolean) => {
     const updated = checked
       ? [...selectedDiseases, diseaseId]
-      : selectedDiseases.filter((d) => d !== diseaseId);
+      : selectedDiseases.filter((d: string) => d !== diseaseId);
     setSelectedDiseases(updated);
     setValue("applicableDiseases", updated);
   };
@@ -297,7 +298,7 @@ export default function OffersCouponsPage() {
   const handleServiceChange = (serviceId: string, checked: boolean) => {
     const updated = checked
       ? [...selectedServices, serviceId]
-      : selectedServices.filter((s) => s !== serviceId);
+      : selectedServices.filter((s: string) => s !== serviceId);
 
     setSelectedServices(updated);
     setValue("applicableServices", updated);
@@ -308,7 +309,7 @@ export default function OffersCouponsPage() {
     // Merge auto-detected categories with manually selected ones
     // Keep manually selected categories that don't conflict with auto-detected ones
     const currentManualCategories = selectedServiceCategories.filter(
-      (catId) => !autoCategories.includes(catId)
+      (catId: string) => !autoCategories.includes(catId)
     );
 
     const finalCategories = Array.from(
@@ -324,21 +325,41 @@ export default function OffersCouponsPage() {
     categoryId: string,
     checked: boolean
   ) => {
-    // Get auto-detected categories from currently selected services
-    const autoCategories = getAutoCategoriesFromServices(selectedServices);
+    // Determine which services belong to this category
+    const servicesInCat = vendorServicesData?.services
+      ? (vendorServicesData.services as any[])
+          .filter((s: any) => 
+            s.category === categoryId || 
+            (typeof s.category === 'object' && s.category?._id === categoryId)
+          )
+          .map((s: any) => s._id)
+      : [];
 
-    // If this is an auto-detected category, don't allow manual deselection
-    if (autoCategories.includes(categoryId) && !checked) {
-      // Show a message or just return without changing
-      return;
+    let updatedServices = [...selectedServices];
+    if (checked) {
+      // When category is checked, add all its services
+      servicesInCat.forEach((id: string) => {
+        if (!updatedServices.includes(id)) {
+          updatedServices.push(id);
+        }
+      });
+    } else {
+      // When category is unchecked, remove all its services
+      updatedServices = updatedServices.filter((id: string) => !servicesInCat.includes(id));
     }
 
-    const updated = checked
-      ? [...selectedServiceCategories, categoryId]
-      : selectedServiceCategories.filter((c) => c !== categoryId);
+    setSelectedServices(updatedServices);
+    setValue("applicableServices", updatedServices);
 
-    setSelectedServiceCategories(updated);
-    setValue("applicableServiceCategories", updated);
+    // Update categories state
+    const autoCategories = getAutoCategoriesFromServices(updatedServices);
+    
+    const updatedCategories = checked
+      ? Array.from(new Set([...selectedServiceCategories, categoryId, ...autoCategories]))
+      : Array.from(new Set([...selectedServiceCategories.filter((c: string) => c !== categoryId)]));
+
+    setSelectedServiceCategories(updatedCategories);
+    setValue("applicableServiceCategories", updatedCategories);
   };
 
   // Update form values when editing
@@ -558,14 +579,6 @@ export default function OffersCouponsPage() {
     return categoryIds;
   };
 
-  const totalDiscountValue = Array.isArray(couponsData)
-    ? couponsData.reduce((acc, coupon) => {
-      if (coupon.type === "fixed") {
-        return acc + coupon.value * coupon.redeemed;
-      }
-      return acc + 1000 * (coupon.value / 100) * coupon.redeemed;
-    }, 0)
-    : 0;
 
   // Get role-specific page title
   const getPageTitle = () => {
@@ -1116,83 +1129,19 @@ export default function OffersCouponsPage() {
               {/* Role-specific fields */}
               {userRole === "vendor" && (
                 <>
-                  {/* Services Selection */}
-                  <div className="space-y-2">
-                    <Label>
-                      Applicable Services (Select specific services or leave
-                      empty for all)
-                    </Label>
-                    {isServicesLoading ? (
-                      <div className="p-3 border rounded-md">
-                        Loading services...
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 gap-2 p-3 border rounded-md max-h-40 overflow-y-auto">
-                        {vendorServicesData?.services
-                          ?.filter(
-                            (service: any) => service.status === "approved"
-                          )
-                          .map((service: any) => (
-                            <div
-                              key={service._id}
-                              className="flex items-center space-x-2"
-                            >
-                              <Checkbox
-                                id={`service-${service._id}`}
-                                checked={selectedServices.includes(service._id)}
-                                onCheckedChange={(checked) =>
-                                  handleServiceChange(service._id, !!checked)
-                                }
-                              />
-                              <Label
-                                htmlFor={`service-${service._id}`}
-                                className="text-sm"
-                              >
-                                {service.name} - ₹{service.price} (
-                                {service.categoryName})
-                              </Label>
-                            </div>
-                          )) || (
-                            <div className="text-sm text-muted-foreground">
-                              No approved services found
-                            </div>
-                          )}
-                      </div>
-                    )}
-                    <p className="text-sm text-muted-foreground">
-                      {selectedServices.length === 0 ? (
-                        "Will apply to all services"
-                      ) : (
-                        <>
-                          Selected: {selectedServices.length} service(s)
-                          {selectedServices.length > 0 && (
-                            <span className="block text-blue-600">
-                              Auto-selecting{" "}
-                              {
-                                getAutoCategoriesFromServices(selectedServices)
-                                  .length
-                              }{" "}
-                              category(ies) from these services
-                            </span>
-                          )}
-                        </>
-                      )}
-                    </p>
-                  </div>
-
                   {/* Service Categories Selection */}
                   <div className="space-y-2">
                     <Label>
-                      Applicable Service Categories (Auto-selected based on
+                      1. Applicable Service Categories (Auto-selected based on
                       services + manual selection)
                     </Label>
                     {isCategoriesLoading ? (
-                      <div className="p-3 border rounded-md">
+                      <div className="p-3 border rounded-md font-medium text-muted-foreground animate-pulse">
                         Loading categories...
                       </div>
                     ) : (
-                      <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-40 overflow-y-auto">
-                        {categoriesData.map((category: any) => {
+                      <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-48 overflow-y-auto">
+                        {(categoriesData as any[]).map((category: any) => {
                           const autoCategories =
                             getAutoCategoriesFromServices(selectedServices);
                           const isAutoSelected = autoCategories.includes(
@@ -1205,7 +1154,7 @@ export default function OffersCouponsPage() {
                           return (
                             <div
                               key={category._id}
-                              className="flex items-center space-x-2"
+                              className={`flex items-center space-x-2 p-1.5 rounded-sm transition-colors ${isAutoSelected ? "bg-blue-50/50" : "hover:bg-accent/50"}`}
                             >
                               <Checkbox
                                 id={`service-category-${category._id}`}
@@ -1216,15 +1165,14 @@ export default function OffersCouponsPage() {
                                     !!checked
                                   )
                                 }
-                                disabled={isAutoSelected}
                               />
                               <Label
                                 htmlFor={`service-category-${category._id}`}
-                                className={`text-sm ${isAutoSelected ? "text-blue-600 font-medium" : ""}`}
+                                className={`text-sm cursor-pointer flex-1 ${isAutoSelected ? "text-blue-600 font-semibold" : ""}`}
                               >
                                 {category.name}
                                 {isAutoSelected && (
-                                  <span className="ml-1 text-xs bg-blue-100 text-blue-800 px-1 rounded">
+                                  <span className="ml-1 text-[10px] bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-bold uppercase">
                                     Auto
                                   </span>
                                 )}
@@ -1238,16 +1186,69 @@ export default function OffersCouponsPage() {
                       {selectedServiceCategories.length === 0
                         ? "Will apply to all categories"
                         : `Selected: ${selectedServiceCategories.length} category(ies)`}
-                      {getAutoCategoriesFromServices(selectedServices).length >
-                        0 && (
-                          <span className="block text-blue-600">
-                            {
+                    </p>
+                  </div>
+
+                  {/* Services Selection */}
+                  <div className="space-y-2">
+                    <Label>
+                      2. Applicable Services (Select specific services or leave
+                      empty for all)
+                    </Label>
+                    {isServicesLoading ? (
+                      <div className="p-3 border rounded-md font-medium text-muted-foreground animate-pulse">
+                        Loading services...
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-2 p-3 border rounded-md max-h-56 overflow-y-auto">
+                        {(vendorServicesData?.services as any[])
+                          ?.filter(
+                            (service: any) => service.status === "approved"
+                          )
+                          .map((service: any) => (
+                            <div
+                              key={service._id}
+                              className="flex items-center space-x-2 p-1 hover:bg-accent/50 rounded-sm transition-colors"
+                            >
+                              <Checkbox
+                                id={`service-${service._id}`}
+                                checked={selectedServices.includes(service._id)}
+                                onCheckedChange={(checked) =>
+                                  handleServiceChange(service._id, !!checked)
+                                }
+                              />
+                              <Label
+                                htmlFor={`service-${service._id}`}
+                                className="text-sm cursor-pointer flex-1"
+                              >
+                                {service.name}
+                                <span className="ml-2 text-muted-foreground">
+                                  ₹{service.price} ({service.categoryName})
+                                </span>
+                              </Label>
+                            </div>
+                          )) || (
+                          <div className="text-sm text-muted-foreground p-4 text-center italic">
+                            No approved services found
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-sm text-muted-foreground">
+                      {selectedServices.length === 0 ? (
+                        "Will apply to all services"
+                      ) : (
+                        <>
+                          Selected: {selectedServices.length} service(s)
+                          <span className="block text-blue-600 font-medium">
+                            Includes services from {
                               getAutoCategoriesFromServices(selectedServices)
                                 .length
                             }{" "}
-                            category(ies) auto-selected from services
+                            parent category(ies)
                           </span>
-                        )}
+                        </>
+                      )}
                     </p>
                   </div>
 

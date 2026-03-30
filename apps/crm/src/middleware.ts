@@ -64,7 +64,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('crm_access_token')?.value;
 
-  const publicPaths = ['/login', '/auth/register', '/', '/apps', '/pricing', '/support', '/forgot-password', '/reset-password', '/about'];
+  const publicPaths = ['/login', '/auth/register', '/', '/apps', '/pricing', '/support', '/forgot-password', '/reset-password', '/about', '/privacy-policy', '/terms-conditions', '/return-policy'];
   const isPublicPath = publicPaths.some(path => pathname === path);
 
   // Allow static files and Next.js internal assets

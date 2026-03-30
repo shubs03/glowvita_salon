@@ -106,7 +106,12 @@ export function withSubscriptionCheck(handler) {
     }
 
     // Attach user to request for the handler
-    req.user = payload;
+    req.user = {
+      ...payload,
+      businessId: mainUser?._id?.toString() || payload.userId, // Use employer ID as businessId
+      // Keep vendorId as an alias for convenience in many routes
+      vendorId: mainUser?._id?.toString() || payload.userId
+    };
 
     return handler(req, ...args);
   };

@@ -7,16 +7,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load environment variables from root .env
-dotenv.config({ path: '../../.env' });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const libPackageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../packages/lib/package.json'), 'utf8'));
 const storePackageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../packages/store/package.json'), 'utf8'));
+
+import { RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET } from '../../packages/config/config.js';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
   transpilePackages: ["@repo/ui", "@repo/lib", "@repo/store", "@repo/config"],
   env: {
+    RAZORPAY_KEY_ID: RAZORPAY_KEY_ID,
+    RAZORPAY_KEY_SECRET: RAZORPAY_KEY_SECRET,
+    NEXT_PUBLIC_RAZORPAY_KEY_ID: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || RAZORPAY_KEY_ID,
   },
   async headers() {
     return [
@@ -42,6 +47,12 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'picsum.photos',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'glowvitasalon.com',
         port: '',
         pathname: '/**',
       },
@@ -76,9 +87,21 @@ const nextConfig = {
         pathname: '/**',
       },
       {
+        protocol: 'https',
+        hostname: 'www.logo.wine',
+        port: '',
+        pathname: '/**',
+      },
+      {
         protocol: 'http',
         hostname: 'localhost',
         port: '3001',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'v2winonline.com',
+        port: '',
         pathname: '/**',
       },
     ],

@@ -172,14 +172,14 @@ export default function DoctorDetailsPage({
 
   const fetchReviews = async () => {
     if (!params.id) return;
-    
+
     try {
       setIsLoadingReviews(true);
-      
+
       // Get token from localStorage
       const authData = localStorage.getItem('auth');
       let token = null;
-      
+
       if (authData) {
         try {
           const parsedAuth = JSON.parse(authData);
@@ -361,7 +361,7 @@ export default function DoctorDetailsPage({
                 <Heart
                   className={cn(
                     "h-4 w-4",
-                    isFavorite && "fill-current text-blue-500"
+                    isFavorite && "fill-red-500 text-red-500"
                   )}
                 />
               </Button>
@@ -435,9 +435,9 @@ export default function DoctorDetailsPage({
                   </div>
 
                   <div>
-                    <div className="flex items-start gap-2 bg-blue-50 px-2.5 py-1 bg-secondary/10 text-secondary-foreground text-xs font-semibold rounded-full border-2 border-secondary">
-                      <Star className="h-3 w-3 text-blue-500 fill-blue-400" />
-                      <span className="font-semibold text-sm text-blue-800">
+                    <div className="flex items-start gap-2 bg-yellow-50 px-2.5 py-1 bg-secondary/10 text-secondary-foreground text-xs font-semibold rounded-full border-2 border-secondary">
+                      <Star className="h-3 w-3 text-yellow-400 fill-current" />
+                      <span className="font-semibold text-sm text-yellow-800">
                         4.9
                       </span>
                       <span className="text-muted-foreground text-xs">
@@ -506,7 +506,7 @@ export default function DoctorDetailsPage({
                     // Encode doctor data as base64 JSON
                     console.log('🏥 Doctor object:', doctor);
                     console.log('🆔 Doctor ID:', doctor.id);
-                    
+
                     const doctorData = {
                       id: doctor.id,
                       name: doctor.name,
@@ -518,12 +518,12 @@ export default function DoctorDetailsPage({
                       clinic: doctor.clinicName || '',
                       address: doctor.clinicAddress || ''
                     };
-                    
+
                     console.log('📦 Doctor data to encode:', doctorData);
                     const encoded = btoa(JSON.stringify(doctorData));
                     console.log('🔐 Encoded data:', encoded);
                     console.log('🔗 Navigation URL:', `/doctors/physical-consultation?data=${encoded}`);
-                    
+
                     router.push(`/doctors/physical-consultation?data=${encoded}`);
                   }}
                 >
@@ -541,11 +541,11 @@ export default function DoctorDetailsPage({
                       if (doctor.doctorAvailability?.toLowerCase() !== 'online') {
                         return;
                       }
-                      
+
                       // Encode doctor data as base64 JSON (same pattern as physical consultation)
                       console.log('🎥 Video Consultation - Doctor object:', doctor);
                       console.log('🆔 Doctor ID:', doctor.id);
-                      
+
                       const doctorData = {
                         id: doctor.id,
                         name: doctor.name,
@@ -558,12 +558,12 @@ export default function DoctorDetailsPage({
                         address: doctor.clinicAddress || '',
                         experience: doctor.experience
                       };
-                      
+
                       console.log('📦 Doctor data to encode:', doctorData);
                       const encoded = btoa(JSON.stringify(doctorData));
                       console.log('🔐 Encoded data:', encoded);
                       console.log('🔗 Navigation URL:', `/doctors/video-consultation?data=${encoded}`);
-                      
+
                       router.push(`/doctors/video-consultation?data=${encoded}`);
                     }}
                   >
@@ -873,127 +873,127 @@ export default function DoctorDetailsPage({
             </Card>
 
             <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold flex items-center gap-2">
-                <Star className="h-6 w-6 text-primary" />
-                Reviews
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLoadingReviews ? (
-                <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="border-t pt-4 animate-pulse">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-muted"></div>
-                          <div className="space-y-1">
-                            <div className="h-3 w-20 bg-muted rounded"></div>
-                            <div className="h-2 w-16 bg-muted rounded"></div>
+              <CardHeader>
+                <CardTitle className="text-2xl font-bold flex items-center gap-2">
+                  <Star className="h-6 w-6 text-primary" />
+                  Reviews
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoadingReviews ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="border-t pt-4 animate-pulse">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-muted"></div>
+                            <div className="space-y-1">
+                              <div className="h-3 w-20 bg-muted rounded"></div>
+                              <div className="h-2 w-16 bg-muted rounded"></div>
+                            </div>
                           </div>
+                          <div className="h-4 w-20 bg-muted rounded"></div>
                         </div>
-                        <div className="h-4 w-20 bg-muted rounded"></div>
+                        <div className="h-4 w-full bg-muted rounded"></div>
+                        <div className="h-4 w-3/4 bg-muted rounded mt-1"></div>
                       </div>
-                      <div className="h-4 w-full bg-muted rounded"></div>
-                      <div className="h-4 w-3/4 bg-muted rounded mt-1"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : reviews.length > 0 ? (
-                <div className="space-y-6">
-                  {reviews.map((review: any) => (
-                    <div key={review._id} className="border-t pt-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary">
-                            {review.userName?.charAt(0) || "U"}
+                    ))}
+                  </div>
+                ) : reviews.length > 0 ? (
+                  <div className="space-y-6">
+                    {reviews.map((review: any) => (
+                      <div key={review._id} className="border-t pt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-semibold text-primary">
+                              {review.userName?.charAt(0) || "U"}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">
+                                {review.userName || "Anonymous"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(review.createdAt).toLocaleDateString(
+                                  "en-US",
+                                  {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  }
+                                )}
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold text-sm">
-                              {review.userName || "Anonymous"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(review.createdAt).toLocaleDateString(
-                                "en-US",
-                                {
-                                  day: "numeric",
-                                  month: "short",
-                                  year: "numeric",
-                                }
-                              )}
-                            </p>
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                className={`h-4 w-4 ${star <= review.rating ? "text-yellow-400 fill-current" : "text-gray-300"}`}
+                              />
+                            ))}
                           </div>
                         </div>
-                        <div className="flex items-center gap-1">
-                          {[1, 2, 3, 4, 5].map((star) => (
-                            <Star
-                              key={star}
-                              className={`h-4 w-4 ${star <= review.rating ? "text-yellow-400 fill-current" : "text-gray-300"}`}
-                            />
-                          ))}
-                        </div>
+                        <p className="text-sm text-muted-foreground italic">
+                          "{review.comment || "No review text available"}"
+                        </p>
                       </div>
-                      <p className="text-sm text-muted-foreground italic">
-                        "{review.comment || "No review text available"}"
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">
-                    No reviews yet
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Be the first to leave a review!
-                  </p>
-                </div>
-              )}
-              
-              <div className="mt-6 pt-6 border-t">
-                {showReviewForm ? (
-                  <div>
-                    <ReviewForm 
-                      entityId={doctor.id}
-                      entityType="doctor"
-                      onSubmitSuccess={() => {
-                        setShowReviewForm(false);
-                        // Refresh reviews after successful submission
-                        fetchReviews();
-                      }}
-                    />
-                    <Button 
-                      variant="outline" 
-                      className="w-full mt-4"
-                      onClick={() => setShowReviewForm(false)}
-                    >
-                      Cancel
-                    </Button>
+                    ))}
                   </div>
                 ) : (
-                  <Button 
-                    variant="outline" 
-                    className="w-full"
-                    onClick={() => {
-                      if (!isAuthenticated) {
-                        toast.error("Please login to write a review");
-                        router.push("/client-login");
-                        return;
-                      }
-                      setShowReviewForm(true);
-                    }}
-                  >
-                    Write a Review
-                  </Button>
+                  <div className="text-center py-8">
+                    <Star className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground">
+                      No reviews yet
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Be the first to leave a review!
+                    </p>
+                  </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
+
+                <div className="mt-6 pt-6 border-t">
+                  {showReviewForm ? (
+                    <div>
+                      <ReviewForm
+                        entityId={doctor.id}
+                        entityType="doctor"
+                        onSubmitSuccess={() => {
+                          setShowReviewForm(false);
+                          // Refresh reviews after successful submission
+                          fetchReviews();
+                        }}
+                      />
+                      <Button
+                        variant="outline"
+                        className="w-full mt-4"
+                        onClick={() => setShowReviewForm(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          toast.error("Please login to write a review");
+                          router.push("/client-login");
+                          return;
+                        }
+                        setShowReviewForm(true);
+                      }}
+                    >
+                      Write a Review
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
           </div>
         </div>
-        
+
       </div>
     </div>
   );

@@ -11,11 +11,11 @@ const config: Pick<Config, "content" | "presets" | "theme"> = {
   theme: {
     extend: {
       fontFamily: {
-        display: ["Playfair Display", "serif"],
-        headline: ["Playfair Display", "serif"],
+        display: ["Montserrat", "sans-serif"],
+        headline: ["Montserrat", "sans-serif"],
         body: ["Roboto", "sans-serif"],
         sans: ["Roboto", "sans-serif"],
-        serif: ["Playfair Display", "serif"],
+        serif: ["Montserrat", "sans-serif"],
       },
       keyframes: {
         marquee: {

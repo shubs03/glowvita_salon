@@ -22,8 +22,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "../packages/ui/src/globals.css",
-    "../crm/src/components/landing/CoreFeatures.tsx"
+    "../packages/ui/src/globals.css"
   ],
   "exclude": [
     "node_modules"

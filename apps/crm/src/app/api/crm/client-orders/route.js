@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import ClientOrder from '@repo/lib/models/user/ClientOrder.model';
+import UserModel from '@repo/lib/models/user/User.model';
 import { withSubscriptionCheck } from '@/middlewareCrm';
 import { NotificationService } from '@repo/lib';
 
@@ -17,8 +18,10 @@ export const GET = withSubscriptionCheck(async (req) => {
       return NextResponse.json({ message: "Access denied" }, { status: 403 });
     }
 
-    // Fetch online customer orders for this vendor or supplier
-    const clientOrders = await ClientOrder.find({ vendorId: userId }).sort({ createdAt: -1 });
+    // Fetch online customer orders, populated with real customer info from User model
+    const clientOrders = await ClientOrder.find({ vendorId: userId })
+      .populate('userId', 'firstName lastName emailAddress mobileNo')
+      .sort({ createdAt: -1 });
 
     return NextResponse.json(clientOrders, { status: 200 });
   } catch (error) {

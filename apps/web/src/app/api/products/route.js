@@ -1,45 +1,42 @@
 import _db from "@repo/lib/db";
+export const dynamic = 'force-dynamic';
 import ProductModel from "@repo/lib/models/Vendor/Product.model";
 import VendorModel from "@repo/lib/models/Vendor.model";
 import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
+import ProductCategoryModel from "@repo/lib/models/admin/ProductCategory.model";
+import ReviewModel from "@repo/lib/models/Review/Review.model";
 
 await _db();
-
-// Handle CORS preflight
-export const OPTIONS = async (request) => {
-  return new Response(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
-      'Access-Control-Max-Age': '86400',
-    },
-  });
-};
+// ... (OPTIONS remains the same)
 
 // Get Public Products (only products approved via admin panel)
 export const GET = async (request) => {
   try {
-    // Extract vendorId from query parameters if provided
+    // ... (vendorId extraction remains the same)
     const url = new URL(request.url);
     const vendorId = url.searchParams.get('vendorId');
-    
-    // Build query with optional vendor filter
-    const query = { 
-      status: 'approved', // This is set by admin panel product approval
+    const categoryId = url.searchParams.get('categoryId');
+
+    // Build query with optional filters
+    const query = {
+      status: 'approved',
       isActive: true,
-      stock: { $gt: 0 }
+      stock: { $gt: 0 },
+      showOnWebsite: { $ne: false }
     };
-    
-    // Add vendor filter if vendorId is provided
+
     if (vendorId) {
       query.vendorId = vendorId;
     }
-    
+
+    if (categoryId) {
+      query.category = categoryId;
+    }
+
     // Get products that are approved via admin panel
     const approvedProducts = await ProductModel.find(query)
-      .select('productName description price salePrice productImages vendorId stock createdAt origin size sizeMetric keyIngredients forBodyPart bodyPartType productForm brand')
+      .select('productName description price salePrice productImages vendorId stock createdAt origin size sizeMetric keyIngredients forBodyPart bodyPartType productForm brand category')
+      .populate('category', 'name')
       .sort({ createdAt: -1 })
       .limit(50);
 
@@ -53,17 +50,17 @@ export const GET = async (request) => {
 
     // Fetch vendors and suppliers in parallel
     const [vendors, suppliers] = await Promise.all([
-      vendorIds.length > 0 
-        ? VendorModel.find({ 
-            _id: { $in: vendorIds }, 
-            status: 'Approved' 
-          }).select('_id businessName firstName lastName status city state')
+      vendorIds.length > 0
+        ? VendorModel.find({
+          _id: { $in: vendorIds },
+          status: 'Approved'
+        }).select('_id businessName firstName lastName status city state')
         : Promise.resolve([]),
-      supplierIds.length > 0 
-        ? SupplierModel.find({ 
-            _id: { $in: supplierIds }, 
-            status: 'Approved' 
-          }).select('_id shopName firstName lastName status city state')
+      supplierIds.length > 0
+        ? SupplierModel.find({
+          _id: { $in: supplierIds },
+          status: 'Approved'
+        }).select('_id shopName firstName lastName status city state')
         : Promise.resolve([])
     ]);
 
@@ -104,18 +101,18 @@ export const GET = async (request) => {
         description: product.description || '',
         price: product.price,
         salePrice: product.salePrice > 0 ? product.salePrice : null,
-        image: product.productImages && product.productImages.length > 0 
-          ? product.productImages[0] 
+        image: product.productImages && product.productImages.length > 0
+          ? product.productImages[0]
           : 'https://placehold.co/320x224/e2e8f0/64748b?text=Product',
         vendorId: vendorData?._id || product.vendorId,
-        vendorName: product.origin === 'Vendor' 
-          ? (vendorData?.businessName || 'Unknown Vendor') 
+        vendorName: product.origin === 'Vendor'
+          ? (vendorData?.businessName || 'Unknown Vendor')
           : (vendorData?.shopName || 'Unknown Supplier'),
-        category: product.category || 'Beauty Products',
+        category: product.category?.name || 'Beauty Products',
         stock: product.stock,
         isNew: new Date(product.createdAt) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-        rating: (4.2 + Math.random() * 0.8).toFixed(1),
-        reviewCount: Math.floor(50 + Math.random() * 500),
+        rating: 0,
+        reviewCount: 0,
         hint: product.description || product.productName,
         // Additional fields from product schema
         size: product.size || null,
@@ -124,8 +121,38 @@ export const GET = async (request) => {
         forBodyPart: product.forBodyPart || null,
         bodyPartType: product.bodyPartType || null,
         productForm: product.productForm || null,
-        brand: product.brand || null
+        brand: product.brand || null,
+        categoryId: product.category?._id || product.category || null
       };
+    });
+
+    // Fetch real ratings and review counts in parallel
+    const productStats = await Promise.all(transformedProducts.map(async (p) => {
+      const stats = await ReviewModel.aggregate([
+        { $match: { entityId: p.id, entityType: 'product', isApproved: true } },
+        {
+          $group: {
+            _id: '$entityId',
+            averageRating: { $avg: '$rating' },
+            reviewCount: { $sum: 1 }
+          }
+        }
+      ]);
+      return {
+        id: p.id,
+        rating: stats.length > 0 ? stats[0].averageRating.toFixed(1) : "0.0",
+        reviewCount: stats.length > 0 ? stats[0].reviewCount : 0
+      };
+    }));
+
+    // Update transformed products with real stats
+    const statsMap = new Map(productStats.map(s => [s.id.toString(), s]));
+    transformedProducts.forEach(p => {
+      const stats = statsMap.get(p.id.toString());
+      if (stats) {
+        p.rating = stats.rating;
+        p.reviewCount = stats.reviewCount;
+      }
     });
 
     return new Response(JSON.stringify({
@@ -148,9 +175,9 @@ export const GET = async (request) => {
       stack: error.stack,
       name: error.name
     });
-    
-    return new Response(JSON.stringify({ 
-      success: false, 
+
+    return new Response(JSON.stringify({
+      success: false,
       message: `Failed to fetch products: ${error.message}`,
       products: [],
       error: error.message

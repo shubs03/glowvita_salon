@@ -96,7 +96,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
 
   const visibleNavItems = getNavItemsForRole();
 
-  const SidebarContent = () => (
+  const sidebarContentJSX = (
     <div className={cn(
       "bg-background border-r border-border flex flex-col h-full overflow-hidden relative transition-all duration-300",
       isOpen ? "w-64" : "w-20",
@@ -106,21 +106,27 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
           "flex-shrink-0 h-16 border-b border-border flex items-center relative overflow-hidden",
           isOpen ? "px-4 justify-between" : "px-4 justify-center"
         )}>
-          <Link href="/dashboard" className={cn(
+          <Link href="/" className={cn(
             "group flex items-center font-bold text-base font-headline text-foreground hover:text-primary transition-all duration-300 relative z-10",
-            isOpen ? "gap-3" : "justify-center"
+            isOpen ? "flex-1 justify-center" : "justify-center"
           )}>
-            <img
-              src="/favicon.jpeg"
-              className={cn(
-                "object-contain rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:scale-110 group-hover:rotate-3 flex-shrink-0 border border-primary/20",
-                "w-[60px] h-[60px]"
-              )}
-            />
-            {isOpen && (
-              <span className="hidden">
-                GlowVita
-              </span>
+            {isOpen ? (
+              <img
+                src="/images/GlowVita%20Salon%20PNG.png"
+                alt="GlowVita Salon"
+                className={cn(
+                  "object-contain transition-all duration-300 hover:scale-105 group-hover:drop-shadow-sm flex-shrink-0 animate-fade-in",
+                  "h-[48px] w-auto"
+                )}
+              />
+            ) : (
+              <img
+                src="/favicon.jpeg"
+                className={cn(
+                  "object-contain rounded-xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:scale-110 group-hover:rotate-3 flex-shrink-0 border border-primary/20",
+                  "w-[45px] h-[45px]"
+                )}
+              />
             )}
           </Link>
           {/* Toggle Button - Always Visible */}
@@ -155,7 +161,6 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                       {(user?.businessName || user?.name || "U").charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  {/* <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full border-2 border-background animate-pulse shadow-lg shadow-green-500/50"></div> */}
                 </div>
 
                 <div className="flex-1 min-w-0">
@@ -163,11 +168,6 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                     <p className="text-sm font-semibold text-foreground truncate transition-transform duration-300">
                       {user?.businessName || user?.name}
                     </p>
-                    {/* <div className="px-2 py-0.5 bg-gradient-to-r from-primary/10 to-primary/20 rounded-full border border-primary/20">
-                      <span className="text-xs font-medium text-primary uppercase tracking-wide">
-                        {role === 'vendor' ? 'PRO' : role?.charAt(0).toUpperCase() + role?.slice(1)}
-                      </span>
-                    </div> */}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">
                     {role?.charAt(0).toUpperCase() + role?.slice(1)} Account
@@ -216,6 +216,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                   isActive && !isDisabled && "bg-primary text-primary-foreground font-semibold"
                 )}
                 title={!isOpen ? item.title : undefined}
+                scroll={false}
               >
                 {/* Icon Container - Enhanced */}
                 <div className={cn(
@@ -238,7 +239,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
                 )}>
                   <span className={cn(
                     "font-medium transition-all duration-300 group-hover:scale-105 whitespace-nowrap",
-                    isActive && "bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-primary-foreground"
+                    isActive && "text-primary-foreground"
                   )}>
                     {item.title}
                   </span>
@@ -312,7 +313,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
           "fixed top-0 left-0 h-full z-40 transition-transform duration-300 ease-in-out lg:hidden",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}>
-          <SidebarContent />
+          {sidebarContentJSX}
         </div>
       </>
     );
@@ -320,7 +321,7 @@ export function Sidebar({ isOpen, toggleSidebar, isMobile, isSubExpired, classNa
 
   return (
     <div className={cn("hidden lg:block h-full flex-shrink-0 fixed top-0 left-0 z-40", className)}>
-      <SidebarContent />
+      {sidebarContentJSX}
     </div>
   );
 }

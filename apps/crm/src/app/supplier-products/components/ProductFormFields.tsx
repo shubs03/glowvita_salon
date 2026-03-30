@@ -6,8 +6,9 @@ import { Textarea } from '@repo/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Button } from '@repo/ui/button';
 import { Plus, Trash2 } from 'lucide-react';
-import { useGetProductMastersQuery } from '@repo/store/api';
+import { useGetCrmProductMastersQuery } from '@repo/store/api';
 import { Badge } from '@repo/ui/badge';
+import { Switch } from '@repo/ui/switch';
 
 interface Product {
   productName?: string;
@@ -24,6 +25,8 @@ interface Product {
   forBodyPart?: string;
   bodyPartType?: string;
   keyIngredients?: string[];
+  isActive?: boolean;
+  showOnWebsite?: boolean;
 }
 
 interface Category {
@@ -61,7 +64,7 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
   const [gstAmount, setGstAmount] = useState<number>(0);
 
   // Fetch product masters
-  const { data: productMastersData, isLoading: productMastersLoading, error: productMastersError } = useGetProductMastersQuery(undefined);
+  const { data: productMastersData, isLoading: productMastersLoading, error: productMastersError } = useGetCrmProductMastersQuery(undefined);
   const productMasters = productMastersData || [];
 
   // Debug logging
@@ -80,7 +83,8 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
 
   // Calculate GST and final price whenever sale price or category changes
   useEffect(() => {
-    const salePrice = Number(formData.salePrice) || 0;
+    const price = Number(formData.price) || 0;
+    const salePrice = (Number(formData.salePrice) || 0) || price;
 
     if (!selectedCategory || !selectedCategory.gstType || selectedCategory.gstType === 'none') {
       setGstAmount(0);
@@ -350,12 +354,12 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
       </div>
 
       {/* GST and Final Price Display */}
-      {selectedCategory && selectedCategory.gstType && selectedCategory.gstType !== 'none' && formData.salePrice && (
+      {selectedCategory && selectedCategory.gstType && selectedCategory.gstType !== 'none' && (formData.salePrice || formData.price) && (
         <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">Sale Price:</span>
-              <span className="text-sm font-medium">₹{Number(formData.salePrice).toFixed(2)}</span>
+              <span className="text-sm text-muted-foreground">{formData.salePrice && formData.salePrice < (formData.price || 0) ? 'Sale Price:' : 'Regular Price:'}</span>
+              <span className="text-sm font-medium">₹{Number(formData.salePrice && formData.salePrice < (formData.price || 0) ? formData.salePrice : formData.price).toFixed(2)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">
@@ -372,6 +376,9 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
               </div>
             </div>
           </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Calculation: {formData.salePrice && formData.salePrice < (formData.price || 0) ? `Sale Price (₹${Number(formData.salePrice).toFixed(2)})` : `Regular Price (₹${Number(formData.price).toFixed(2)})`} + GST (₹{gstAmount.toFixed(2)}) = Final Price (₹{calculatedFinalPrice.toFixed(2)})
+          </p>
         </div>
       )}
 
@@ -457,6 +464,20 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
           className="rounded-xl border-border/40 focus:border-primary/50"
         />
         <p className="text-xs text-muted-foreground mt-1">Separate multiple ingredients with commas</p>
+      </div>
+
+      <div className="flex items-center justify-between p-4 rounded-xl border border-border/40 bg-muted/5">
+        <div className="space-y-0.5">
+          <Label htmlFor="showOnWebsite" className="text-sm font-medium">Show on Website</Label>
+          <p className="text-xs text-muted-foreground">
+            Decide whether this product should be displayed on the public website.
+          </p>
+        </div>
+        <Switch
+          id="showOnWebsite"
+          checked={formData.showOnWebsite !== false}
+          onCheckedChange={(checked) => setFormData(prev => ({ ...prev, showOnWebsite: checked }))}
+        />
       </div>
     </>
   );

@@ -12,6 +12,7 @@ import { setUserAuth } from '@repo/store/slices/Web/userAuthSlice';
 import { useAuth } from '@/hooks/useAuth';
 import Image from 'next/image';
 import customerImage from '../../../public/images/web_login.jpg';
+import { NEXT_PUBLIC_CRM_URL } from "@repo/config/config";
 
 function LoginPageContent() {
   const [email, setEmail] = useState('');
@@ -107,9 +108,9 @@ function LoginPageContent() {
           <div className="text-center mb-6">
             <div className="flex justify-center mb-4">
               <img
-                src="/favicon.jpeg"
-
-                className="w-16 h-16 object-contain rounded-full border-4 border-white shadow-lg"
+                src="/images/GlowVita%20Salon%20PNG.png"
+                alt="GlowVita Salon"
+                className="h-16 w-auto object-contain drop-shadow-md"
               />
             </div>
             <h1 className="text-2xl font-extrabold text-gray-900 md:text-xl">Glowvita Salon for customers</h1>
@@ -238,16 +239,16 @@ function LoginPageContent() {
 
               <div className="text-center">
                 <p className="text-sm font-medium text-gray-600">
-                  Have a business account?
+                  Have a business account?{" "}
+                  <a
+                    href={`${NEXT_PUBLIC_CRM_URL || "http://localhost:3001"}/login`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-blue-600 hover:text-blue-500"
+                  >
+                    Sign in as a professional
+                  </a>
                 </p>
-                <a
-                  href="http://localhost:3001/login"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm font-medium text-blue-600 hover:text-blue-500 block mt-1"
-                >
-                  Sign in as a professional
-                </a>
               </div>
             </form>
           </div>

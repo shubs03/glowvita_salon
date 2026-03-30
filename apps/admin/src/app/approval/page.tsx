@@ -28,7 +28,8 @@ import {
   Tags,
   Map as MapIcon,
   CreditCard,
-  FileText
+  FileText,
+  FileCheck
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
@@ -45,6 +46,7 @@ import {
   useDeleteSupplierMutation,
   useGetDoctorsQuery,
   useUpdateDoctorMutation,
+  useUpdateDoctorStatusMutation,
   useDeleteDoctorMutation,
   useGetVendorsQuery,
   useUpdateVendorStatusMutation,
@@ -59,6 +61,8 @@ import {
 } from '@repo/store/api';
 import { toast } from 'sonner';
 import DocumentStatusManager from '../../components/DocumentStatusManager';
+import { useAppSelector } from "@repo/store/hooks";
+import { selectSelectedRegion } from "@repo/store/slices/adminAuthSlice";
 
 // Vendor type
 type Vendor = {
@@ -88,25 +92,21 @@ type Vendor = {
   documents?: {
     [key: string]: any;
     aadharCard?: string | null;
-    udyogAadhar?: string | null;
     udhayamCert?: string | null;
-    shopLicense?: string | null;
+    shopAct?: string | null;
     panCard?: string | null;
     otherDocs?: string[] | null;
     aadharCardStatus?: string;
-    udyogAadharStatus?: string;
     udhayamCertStatus?: string;
-    shopLicenseStatus?: string;
+    shopActStatus?: string;
     panCardStatus?: string;
     aadharCardRejectionReason?: string | null;
-    udyogAadharRejectionReason?: string | null;
     udhayamCertRejectionReason?: string | null;
-    shopLicenseRejectionReason?: string | null;
+    shopActRejectionReason?: string | null;
     panCardRejectionReason?: string | null;
     aadharCardAdminRejectionReason?: string | null;
-    udyogAadharAdminRejectionReason?: string | null;
     udhayamCertAdminRejectionReason?: string | null;
-    shopLicenseAdminRejectionReason?: string | null;
+    shopActAdminRejectionReason?: string | null;
     panCardAdminRejectionReason?: string | null;
   };
 };
@@ -119,6 +119,8 @@ type Service = {
   price: number;
   status: "pending" | "approved" | "disapproved";
   description: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type WeddingPackage = {
@@ -129,6 +131,8 @@ type WeddingPackage = {
   discountedPrice: number | null;
   status: "pending" | "approved" | "disapproved";
   description: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type Product = {
@@ -141,6 +145,11 @@ type Product = {
   description: string;
   stock: number;
   status: 'pending' | 'approved' | 'disapproved';
+  supplierName?: string;
+  vendorName?: string;
+  vendorId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type Doctor = {
@@ -165,6 +174,18 @@ type Doctor = {
   assistantName: string;
   assistantContact: string;
   doctorAvailability: string;
+  documents?: {
+    aadharCard?: string;
+    panCard?: string;
+    udhayamCert?: string;
+    shopAct?: string;
+    aadharCardStatus?: string;
+    panCardStatus?: string;
+    udhayamCertStatus?: string;
+    shopActStatus?: string;
+  };
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 interface Supplier {
@@ -185,56 +206,57 @@ interface Supplier {
   documents?: {
     [key: string]: any;
     aadharCard?: string | null;
-    udyogAadhar?: string | null;
     udhayamCert?: string | null;
-    shopLicense?: string | null;
+    shopAct?: string | null;
     panCard?: string | null;
     otherDocs?: string[] | null;
     aadharCardStatus?: string;
-    udyogAadharStatus?: string;
     udhayamCertStatus?: string;
-    shopLicenseStatus?: string;
+    shopActStatus?: string;
     panCardStatus?: string;
     aadharCardRejectionReason?: string | null;
-    udyogAadharRejectionReason?: string | null;
     udhayamCertRejectionReason?: string | null;
-    shopLicenseRejectionReason?: string | null;
+    shopActRejectionReason?: string | null;
     panCardRejectionReason?: string | null;
     aadharCardAdminRejectionReason?: string | null;
-    udyogAadharAdminRejectionReason?: string | null;
     udhayamCertAdminRejectionReason?: string | null;
-    shopLicenseAdminRejectionReason?: string | null;
+    shopActAdminRejectionReason?: string | null;
     panCardAdminRejectionReason?: string | null;
   };
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 type ActionType = 'approve' | 'reject' | 'delete';
 type ItemType = 'vendor' | 'service' | 'vendor-product' | 'supplier-product' | 'doctor' | 'supplier' | 'wedding-package';
 
 export default function VendorApprovalPage() {
+  const selectedRegion = useAppSelector(selectSelectedRegion);
+
   // RTK Query hooks
-  const { data: vendors = [], isLoading: vendorsLoading, error: vendorsError, refetch: refetchVendors } = useGetVendorsQuery(undefined);
+  const { data: vendors = [], isLoading: vendorsLoading, error: vendorsError, refetch: refetchVendors } = useGetVendorsQuery(selectedRegion);
   const [updateVendorStatus] = useUpdateVendorStatusMutation();
-  const { data: suppliersData = [], isLoading: suppliersLoading, refetch: refetchSuppliers } = useGetSuppliersQuery(undefined);
+  const { data: suppliersData = [], isLoading: suppliersLoading, refetch: refetchSuppliers } = useGetSuppliersQuery(selectedRegion);
   const [updateSupplierStatus] = useUpdateSupplierStatusMutation();
   const [deleteSupplier] = useDeleteSupplierMutation();
-  const { data: doctorsData = [], isLoading: doctorsLoading } = useGetDoctorsQuery(undefined);
-  const { data: pendingServices = [], isLoading: servicesLoading, refetch: refetchPendingServices } = useGetVendorServicesForApprovalQuery({ status: 'pending' });
+  const { data: doctorsData = [], isLoading: doctorsLoading, refetch: refetchDoctors } = useGetDoctorsQuery(selectedRegion);
+  const { data: pendingServices = [], isLoading: servicesLoading, refetch: refetchPendingServices } = useGetVendorServicesForApprovalQuery({ status: 'pending', regionId: selectedRegion });
   const [updateServiceStatus] = useUpdateServiceStatusMutation();
 
   // Vendor product approvals
-  const { data: vendorProductData, isLoading: vendorProductsLoading, error: vendorProductsError, refetch: refetchVendorProducts } = useGetVendorProductApprovalsQuery(undefined);
+  const { data: vendorProductData, isLoading: vendorProductsLoading, error: vendorProductsError, refetch: refetchVendorProducts } = useGetVendorProductApprovalsQuery(selectedRegion);
   const [updateVendorProductStatus] = useUpdateVendorProductStatusMutation();
 
   // Supplier product approvals
-  const { data: supplierProductData, isLoading: supplierProductsLoading, error: supplierProductsError, refetch: refetchSupplierProducts } = useGetSupplierProductApprovalsQuery(undefined);
+  const { data: supplierProductData, isLoading: supplierProductsLoading, error: supplierProductsError, refetch: refetchSupplierProducts } = useGetSupplierProductApprovalsQuery(selectedRegion);
   const [updateSupplierProductStatus] = useUpdateSupplierProductStatusMutation();
 
   // Wedding package approvals
-  const { data: pendingWeddingPackages = [], isLoading: weddingPackagesLoading, refetch: refetchPendingWeddingPackages } = useGetPendingWeddingPackagesQuery(undefined);
+  const { data: pendingWeddingPackages = [], isLoading: weddingPackagesLoading, refetch: refetchPendingWeddingPackages } = useGetPendingWeddingPackagesQuery(selectedRegion);
   const [updateWeddingPackageStatus] = useUpdateWeddingPackageStatusMutation();
 
   const [updateDoctor] = useUpdateDoctorMutation();
+  const [updateDoctorStatus] = useUpdateDoctorStatusMutation();
   const [deleteDoctor] = useDeleteDoctorMutation();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -306,20 +328,26 @@ export default function VendorApprovalPage() {
     return false;
   });
 
-  const getUnapprovedDocuments = (entity: Vendor | Supplier) => {
+  const getUnapprovedDocuments = (entity: Vendor | Supplier | Doctor) => {
     const mandatoryDocs = [
       { key: "aadharCard", label: "Aadhar Card" },
       { key: "panCard", label: "PAN Card" },
-      { key: "udyogAadhar", label: "Udyog Aadhar" },
       { key: "udhayamCert", label: "Udhayam Certificate" },
-      { key: "shopLicense", label: "Shop License" },
+      { key: "shopAct", label: "Shop Act" },
     ];
 
     const documents = entity.documents || {};
     return mandatoryDocs
       .filter((doc) => {
-        const isUploaded = documents[doc.key] && documents[doc.key] !== "";
+        const isUploaded = !!((documents as any)[doc.key] && (documents as any)[doc.key] !== "");
         const status = (documents as any)[`${doc.key}Status`];
+
+        // Aadhaar and PAN are strictly mandatory
+        if (doc.key === "aadharCard" || doc.key === "panCard") {
+          return !isUploaded || status !== "approved";
+        }
+
+        // Other docs: if uploaded, must be approved
         return isUploaded && status !== "approved";
       })
       .map((doc) => doc.label);
@@ -329,22 +357,30 @@ export default function VendorApprovalPage() {
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
   const filteredPendingServices = useMemo(() => {
-    return pendingServices.filter((service: any) =>
-      vendorFilter === "all" || service.vendorId === vendorFilter || service.vendorName === vendorFilter
-    );
+    return pendingServices
+      .filter((service: any) =>
+        vendorFilter === "all" || service.vendorId === vendorFilter || service.vendorName === vendorFilter
+      )
+      .slice()
+      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [pendingServices, vendorFilter]);
 
-  const currentVendors = pendingVendors.slice(firstItemIndex, lastItemIndex);
-  const currentServices = filteredPendingServices.slice(firstItemIndex, lastItemIndex);
-  const currentWeddingPackages = pendingWeddingPackages.slice(firstItemIndex, lastItemIndex);
-  const currentDoctors = pendingDoctors.slice(firstItemIndex, lastItemIndex);
-  const currentSuppliers = pendingSuppliers.slice(firstItemIndex, lastItemIndex);
+  const sortedPendingVendors = [...pendingVendors].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const sortedPendingDoctors = [...pendingDoctors].sort((a: Doctor, b: Doctor) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
+  const sortedPendingSuppliers = [...pendingSuppliers].sort((a: Supplier, b: Supplier) => new Date((b as any).createdAt ?? 0).getTime() - new Date((a as any).createdAt ?? 0).getTime());
+  const sortedPendingWeddingPackages = [...pendingWeddingPackages].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-  const totalVendorPages = Math.ceil(pendingVendors.length / itemsPerPage);
+  const currentVendors = sortedPendingVendors.slice(firstItemIndex, lastItemIndex);
+  const currentServices = filteredPendingServices.slice(firstItemIndex, lastItemIndex);
+  const currentWeddingPackages = sortedPendingWeddingPackages.slice(firstItemIndex, lastItemIndex);
+  const currentDoctors = sortedPendingDoctors.slice(firstItemIndex, lastItemIndex);
+  const currentSuppliers = sortedPendingSuppliers.slice(firstItemIndex, lastItemIndex);
+
+  const totalVendorPages = Math.ceil(sortedPendingVendors.length / itemsPerPage);
   const totalServicePages = Math.ceil(filteredPendingServices.length / itemsPerPage);
-  const totalWeddingPackagePages = Math.ceil(pendingWeddingPackages.length / itemsPerPage);
-  const totalDoctorPages = Math.ceil(pendingDoctors.length / itemsPerPage);
-  const totalSupplierPages = Math.ceil(pendingSuppliers.length / itemsPerPage);
+  const totalWeddingPackagePages = Math.ceil(sortedPendingWeddingPackages.length / itemsPerPage);
+  const totalDoctorPages = Math.ceil(sortedPendingDoctors.length / itemsPerPage);
+  const totalSupplierPages = Math.ceil(sortedPendingSuppliers.length / itemsPerPage);
 
   const handleActionClick = (item: Vendor | Service | Product | Doctor | Supplier | WeddingPackage, type: ItemType, action: ActionType) => {
     setSelectedItem(item);
@@ -396,7 +432,7 @@ export default function VendorApprovalPage() {
           toast.success(`Doctor "${itemName}" deleted.`);
         } else {
           const newStatus = actionType === 'approve' ? 'Approved' : 'Rejected';
-          await updateDoctor({ id: doctor._id, status: newStatus }).unwrap();
+          await updateDoctorStatus({ id: doctor._id, status: newStatus }).unwrap();
           toast.success(`Doctor "${itemName}" status updated to ${newStatus}.`);
         }
       } else if (itemType === 'service') {
@@ -472,8 +508,9 @@ export default function VendorApprovalPage() {
         toast.success(`Wedding Package "${pkg.name}" has been ${newStatus}.`);
         refetchPendingWeddingPackages();
       }
-    } catch (error) {
-      // Global error handler handles network/server errors with better messages
+    } catch (error: any) {
+      const errorMessage = error?.data?.message || error?.message || 'Action failed. Please try again.';
+      toast.error(errorMessage);
       console.error('Action failed:', error);
     }
 
@@ -528,8 +565,14 @@ export default function VendorApprovalPage() {
   console.log("Vendor Products Data:", vendorProducts);
   console.log("Supplier Products Data:", supplierProducts);
 
-  const pendingVendorProducts = vendorProducts.filter((p: Product) => p.status === 'pending');
-  const pendingSupplierProducts = supplierProducts.filter((p: Product) => p.status === 'pending');
+  const pendingVendorProducts = vendorProducts
+    .filter((p: Product) => p.status === 'pending')
+    .slice()
+    .sort((a: Product, b: Product) => new Date((b as any).createdAt ?? 0).getTime() - new Date((a as any).createdAt ?? 0).getTime());
+  const pendingSupplierProducts = supplierProducts
+    .filter((p: Product) => p.status === 'pending')
+    .slice()
+    .sort((a: Product, b: Product) => new Date((b as any).createdAt ?? 0).getTime() - new Date((a as any).createdAt ?? 0).getTime());
 
   const totalVendorProductPages = Math.ceil(pendingVendorProducts.length / itemsPerPage);
   const totalSupplierProductPages = Math.ceil(pendingSupplierProducts.length / itemsPerPage);
@@ -598,7 +641,14 @@ export default function VendorApprovalPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <h1 className="text-2xl font-bold font-headline mb-6">Approvals</h1>
+      <div className="flex items-center gap-4 mb-6">
+        <h1 className="text-2xl font-bold font-headline">Approvals</h1>
+        {selectedRegion && selectedRegion !== 'all' && (
+          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+            Region Filtered
+          </Badge>
+        )}
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
@@ -941,6 +991,7 @@ export default function VendorApprovalPage() {
                       <TableHead className="text-xs">Product</TableHead>
                       <TableHead className="text-xs">Price</TableHead>
                       <TableHead className="text-xs">Category</TableHead>
+                      <TableHead className="text-xs">Vendor</TableHead>
                       <TableHead className="text-xs">Status</TableHead>
                       <TableHead className="text-right text-xs">Actions</TableHead>
                     </TableRow>
@@ -949,7 +1000,7 @@ export default function VendorApprovalPage() {
                     {vendorProductsLoading ? (
                       [...Array(3)].map((_, i) => (
                         <TableRow key={i}>
-                          {[...Array(5)].map((_, j) => (
+                          {[...Array(6)].map((_, j) => (
                             <TableCell key={j}>
                               <Skeleton className="h-5 w-full" />
                             </TableCell>
@@ -958,11 +1009,11 @@ export default function VendorApprovalPage() {
                       ))
                     ) : vendorProductsError ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center">Error loading vendor products.</TableCell>
+                        <TableCell colSpan={6} className="text-center">Error loading vendor products.</TableCell>
                       </TableRow>
                     ) : !Array.isArray(pendingVendorProducts) || pendingVendorProducts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center">No pending vendor product approvals.</TableCell>
+                        <TableCell colSpan={6} className="text-center">No pending vendor product approvals.</TableCell>
                       </TableRow>
                     ) : (
                       pendingVendorProducts.map((product) => (
@@ -993,6 +1044,12 @@ export default function VendorApprovalPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-xs max-w-[80px] truncate">{product.category?.name || 'N/A'}</TableCell>
+                          <TableCell className="text-xs max-w-[100px] truncate">
+                            {(product.vendorId as any)?.businessName ||
+                              ((product.vendorId as any)?.firstName
+                                ? `${(product.vendorId as any).firstName} ${(product.vendorId as any).lastName || ''}`.trim()
+                                : product.vendorName || 'N/A')}
+                          </TableCell>
                           <TableCell>
                             <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
                               {product.status || 'pending'}
@@ -1044,6 +1101,7 @@ export default function VendorApprovalPage() {
                       <TableHead className="text-xs">Product</TableHead>
                       <TableHead className="text-xs">Price</TableHead>
                       <TableHead className="text-xs">Category</TableHead>
+                      <TableHead className="text-xs">Supplier</TableHead>
                       <TableHead className="text-xs">Status</TableHead>
                       <TableHead className="text-right text-xs">Actions</TableHead>
                     </TableRow>
@@ -1052,7 +1110,7 @@ export default function VendorApprovalPage() {
                     {supplierProductsLoading ? (
                       [...Array(3)].map((_, i) => (
                         <TableRow key={i}>
-                          {[...Array(5)].map((_, j) => (
+                          {[...Array(6)].map((_, j) => (
                             <TableCell key={j}>
                               <Skeleton className="h-5 w-full" />
                             </TableCell>
@@ -1061,11 +1119,11 @@ export default function VendorApprovalPage() {
                       ))
                     ) : supplierProductsError ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center">Error loading supplier products.</TableCell>
+                        <TableCell colSpan={6} className="text-center">Error loading supplier products.</TableCell>
                       </TableRow>
                     ) : !Array.isArray(pendingSupplierProducts) || pendingSupplierProducts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center">No pending supplier product approvals.</TableCell>
+                        <TableCell colSpan={6} className="text-center">No pending supplier product approvals.</TableCell>
                       </TableRow>
                     ) : (
                       pendingSupplierProducts.map((product) => (
@@ -1096,6 +1154,7 @@ export default function VendorApprovalPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-xs max-w-[80px] truncate">{product.category?.name || 'N/A'}</TableCell>
+                          <TableCell className="text-xs max-w-[80px] truncate">{product.supplierName || product.vendorId || 'N/A'}</TableCell>
                           <TableCell>
                             <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
                               {product.status || 'pending'}
@@ -1195,8 +1254,16 @@ export default function VendorApprovalPage() {
                               <Eye className="h-4 w-4" />
                               <span className="sr-only">View</span>
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleActionClick(doctor, 'doctor', 'approve')}>
-                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleActionClick(doctor, 'doctor', 'approve')}
+                              disabled={getUnapprovedDocuments(doctor).length > 0}
+                              title={getUnapprovedDocuments(doctor).length > 0
+                                ? `Approve documents first: ${getUnapprovedDocuments(doctor).join(', ')}`
+                                : 'Approve Doctor'}
+                            >
+                              <CheckCircle className={cn("h-4 w-4", getUnapprovedDocuments(doctor).length > 0 ? "text-gray-400" : "text-green-600")} />
                               <span className="sr-only">Approve</span>
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleActionClick(doctor, 'doctor', 'reject')}>
@@ -1641,6 +1708,29 @@ export default function VendorApprovalPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Document Management Section */}
+                    {doctor.documents ? (
+                      <div className="pt-6 border-t mt-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-sm font-semibold text-primary flex items-center gap-2 uppercase tracking-wide">
+                            <FileCheck className="h-4 w-4" /> Document Verification
+                          </h4>
+                          <Badge variant="outline" className="text-[10px] font-bold uppercase transition-colors">
+                            {getUnapprovedDocuments(doctor).length > 0
+                              ? `${getUnapprovedDocuments(doctor).length} Pending Docs`
+                              : "All Documents Approved"}
+                          </Badge>
+                        </div>
+                        <DocumentStatusManager
+                          entity={doctor}
+                          role="doctor"
+                          onUpdate={() => {
+                            refetchDoctors();
+                          }}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 );
               }

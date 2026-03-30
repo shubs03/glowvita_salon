@@ -16,34 +16,35 @@ import { FilterModal } from '../common';
 import { useReport } from '../hooks/useReport';
 
 export const SubscriptionReportTable = () => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5); // 5 entries by default
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
-  // Use the API hook to fetch subscription report data with filters
-  const apiFilters = filters;
-  
+  const {
+    filters,
+    apiFilters,
+    isFilterModalOpen,
+    currentPage,
+    itemsPerPage,
+    searchTerm,
+    tableRef,
+    setFilters,
+    setIsFilterModalOpen,
+    setCurrentPage,
+    setItemsPerPage,
+    setSearchTerm,
+    handleFilterChange,
+    filterAndPaginateData
+  } = useReport<SubscriptionData>(5);
+
   console.log("Subscription Report API filters:", apiFilters);
-  
+
   const { data, isLoading, isError, error } = useGetSubscriptionReportQuery(apiFilters);
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    console.log("Subscription Report filter change:", newFilters);
-    setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-  };
-  
+
   // Define data variables after API call
   const subscriptionData: SubscriptionData[] = (data?.subscriptions || []) as SubscriptionData[];
   const cities = data?.cities || []; // Get cities from API response
-  
+
   // Store complete lists of business names and plan statuses
   const [allBusinessNames, setAllBusinessNames] = useState<string[]>([]);
   const [allPlanStatuses, setAllPlanStatuses] = useState<string[]>([]);
-  
+
   // Extract business names and plan statuses from data when there are no filters applied
   // This assumes that when no filters are applied, we get the complete dataset
   useEffect(() => {
@@ -52,28 +53,28 @@ export const SubscriptionReportTable = () => {
       const names: string[] = Array.from(new Set<string>(subscriptionData.map((item: SubscriptionData) => item.vendor))).filter(name => name && name !== 'N/A');
       setAllBusinessNames(names);
     }
-    
+
     if ((Object.keys(apiFilters).length === 0 || allPlanStatuses.length === 0) && subscriptionData.length > 0) {
       const statuses: string[] = Array.from(new Set<string>(subscriptionData.map((item: SubscriptionData) => item.planStatus))).filter(status => status);
       setAllPlanStatuses(statuses);
     }
   }, [subscriptionData, apiFilters, allBusinessNames.length, allPlanStatuses.length]);
-  
+
   // Use the complete lists for filter options
   const businessNames = allBusinessNames;
   const planStatuses = allPlanStatuses;
-  
+
   // Filter data based on search term
   const filteredData = useMemo((): SubscriptionData[] => {
     if (!searchTerm) return subscriptionData;
-    
-    return subscriptionData.filter((subscription: SubscriptionData) => 
-      Object.values(subscription).some((value: any) => 
+
+    return subscriptionData.filter((subscription: SubscriptionData) =>
+      Object.values(subscription).some((value: any) =>
         value.toString().toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
   }, [subscriptionData, searchTerm]);
-  
+
   // Pagination logic
   const totalItems = filteredData.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -97,7 +98,7 @@ export const SubscriptionReportTable = () => {
             </Card>
           ))}
         </div>
-        
+
         <div className="flex justify-end mb-4 gap-2">
           <Button onClick={() => setIsFilterModalOpen(true)}>
             <Filter className="mr-2 h-4 w-4" />
@@ -134,7 +135,7 @@ export const SubscriptionReportTable = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        
+
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -178,7 +179,7 @@ export const SubscriptionReportTable = () => {
       </div>
     );
   }
-  
+
   if (isError) {
     console.error("Error fetching subscription report:", error);
     return (
@@ -231,15 +232,15 @@ export const SubscriptionReportTable = () => {
       </div>
     );
   }
-  
+
   const totalSubscriptions = data?.totalSubscriptions || 0;
   const totalRevenue = data?.totalRevenue || 0;
   const activePlans = data?.activePlans || 0;
   const inactivePlans = data?.inactivePlans || 0;
-  
+
   // Calculate total price of all subscriptions
   const totalPrice = subscriptionData.reduce((sum: number, subscription: any) => sum + subscription.price, 0);
-  
+
   // Show table structure even when there's no data
   if (subscriptionData.length === 0) {
     return (
@@ -255,7 +256,7 @@ export const SubscriptionReportTable = () => {
               <div className="text-2xl font-bold">0</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
@@ -265,7 +266,7 @@ export const SubscriptionReportTable = () => {
               <div className="text-2xl font-bold">₹0.00</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Plans</CardTitle>
@@ -275,7 +276,7 @@ export const SubscriptionReportTable = () => {
               <div className="text-2xl font-bold">0</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Inactive Plans</CardTitle>
@@ -286,7 +287,7 @@ export const SubscriptionReportTable = () => {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="flex justify-between items-center mb-4 gap-2">
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -338,8 +339,8 @@ export const SubscriptionReportTable = () => {
             </DropdownMenu>
           </div>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -352,7 +353,7 @@ export const SubscriptionReportTable = () => {
           showBusinessNameFilter={true}
           showPlanStatusFilter={true}
         />
-        
+
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -381,7 +382,7 @@ export const SubscriptionReportTable = () => {
       </div>
     );
   }
-  
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -435,8 +436,8 @@ export const SubscriptionReportTable = () => {
           </DropdownMenu>
         </div>
       </div>
-      
-      <FilterModal 
+
+      <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         onApplyFilters={handleFilterChange}
@@ -449,7 +450,7 @@ export const SubscriptionReportTable = () => {
         showBusinessNameFilter={true}
         showPlanStatusFilter={true}
       />
-      
+
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
@@ -463,7 +464,7 @@ export const SubscriptionReportTable = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Business</CardTitle>
@@ -475,7 +476,7 @@ export const SubscriptionReportTable = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Plans</CardTitle>
@@ -487,7 +488,7 @@ export const SubscriptionReportTable = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Inactive Plans</CardTitle>
@@ -500,7 +501,7 @@ export const SubscriptionReportTable = () => {
           </CardContent>
         </Card>
       </div>
-      
+
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>
@@ -529,11 +530,10 @@ export const SubscriptionReportTable = () => {
                 <TableCell>{new Date(subscription.endDate).toLocaleDateString()}</TableCell>
                 <TableCell>₹{subscription.price.toFixed(2)}</TableCell>
                 <TableCell>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    subscription.planStatus === 'Active' 
-                      ? 'bg-green-100 text-green-800' 
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${subscription.planStatus === 'Active'
+                      ? 'bg-green-100 text-green-800'
                       : 'bg-red-100 text-red-800'
-                  }`}>
+                    }`}>
                     {subscription.planStatus}
                   </span>
                 </TableCell>

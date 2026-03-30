@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 import { Switch } from '@repo/ui/switch';
+import { Badge } from '@repo/ui/badge';
 import {
   openModal,
   closeModal,
@@ -23,15 +24,15 @@ import {
   setC2CSettings,
   setC2VSettings,
   setV2VSettings,
-} from '../../../../../packages/store/src/slices/Admin/refferalSlice';
-import { setSelectedRegion, selectSelectedRegion } from '../../../../../packages/store/src/slices/Admin/adminAuthSlice';
+} from '@repo/store/slices/refferalSlice';
+import { setSelectedRegion, selectSelectedRegion } from '@repo/store/slices/adminAuthSlice';
 
 import {
   useGetReferralsQuery,
   useUpdateSettingsMutation,
   useGetSettingsQuery,
   useGetRegionsQuery,
-} from '../../../../../packages/store/src/services/api';
+} from '@repo/store/services/api';
 import { useAppSelector } from '@repo/store/hooks';
 import { selectRootState } from '@repo/store/store';
 
@@ -233,8 +234,8 @@ export default function ReferralManagementPage() {
               data.map((item, index) => (
                 <TableRow key={item?.referralId || index}>
                   <TableCell>{item?.referralId || 'N/A'}</TableCell>
-                  <TableCell>{item?.referrer || 'N/A'}</TableCell>
-                  <TableCell>{item?.referee || 'N/A'}</TableCell>
+                  <TableCell>{item?.referrerName || item?.referrer || 'N/A'}</TableCell>
+                  <TableCell>{item?.refereeName || item?.referee || 'N/A'}</TableCell>
                   <TableCell>{item?.date ? new Date(item.date).toLocaleDateString() : 'N/A'}</TableCell>
                   <TableCell>{item?.status || 'N/A'}</TableCell>
                   <TableCell>{item?.bonus || 'N/A'}</TableCell>

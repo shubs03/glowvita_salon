@@ -59,6 +59,7 @@ import {
 } from "@repo/ui/select";
 import {
   useGetSuppliersQuery,
+  useGetSupplierOrdersQuery,
   useCreateSupplierMutation,
   useUpdateSupplierMutation,
   useDeleteSupplierMutation,
@@ -69,61 +70,10 @@ import { toast } from "sonner";
 import { Skeleton } from "@repo/ui/skeleton";
 import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '../../../../../packages/config/config';
 import SupplierEditForm from "../../components/SupplierEditForm";
+import { useAppSelector } from "@repo/store/hooks";
+import { selectSelectedRegion } from "@repo/store/slices/adminAuthSlice";
+import { Badge } from "@repo/ui/badge";
 
-
-// Sample data for supplier orders
-const supplierOrdersData = [
-  {
-    id: "ORD-1001",
-    supplierId: "SUP-001",
-    supplierName: "Global Beauty Supplies",
-    productName: "Professional Hair Dryer",
-    customerName: "Priya Sharma",
-    amount: 12500,
-    status: "Completed",
-    date: "2025-08-10",
-  },
-  {
-    id: "ORD-1002",
-    supplierId: "SUP-001",
-    supplierName: "Global Beauty Supplies",
-    productName: "Ceramic Hair Straightener",
-    customerName: "Rahul Verma",
-    amount: 8700,
-    status: "Processing",
-    date: "2025-08-12",
-  },
-  {
-    id: "ORD-1003",
-    supplierId: "SUP-002",
-    supplierName: "Organic Skincare Inc.",
-    productName: "Aloe Vera Gel",
-    customerName: "Anjali Patel",
-    amount: 4200,
-    status: "Shipped",
-    date: "2025-08-11",
-  },
-  {
-    id: "ORD-1004",
-    supplierId: "SUP-003",
-    supplierName: "Nail Art Creations",
-    productName: "Gel Nail Polish Set",
-    customerName: "Meera Gupta",
-    amount: 6500,
-    status: "Delivered",
-    date: "2025-08-09",
-  },
-  {
-    id: "ORD-1005",
-    supplierId: "SUP-004",
-    supplierName: "Modern Hair Tools",
-    productName: "Professional Hair Clipper",
-    customerName: "Vikram Singh",
-    amount: 9500,
-    status: "Pending",
-    date: "2025-08-13",
-  },
-];
 
 type Supplier = {
   _id: string;
@@ -165,7 +115,50 @@ type NewSupplier = {
   confirmPassword: string;
 };
 
-type SupplierOrder = (typeof supplierOrdersData)[0];
+type SupplierOrder = {
+  _id?: string;
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  productName: string;
+  quantity: number;
+  customerName: string;
+  totalAmount: number;
+  platformFeeAmount?: number;
+  gstAmount?: number;
+  shippingAmount?: number;
+  taxAmount?: number;
+  status: string;
+  date: string;
+  items?: any[];
+  shippingAddress?: string;
+  contactNumber?: string;
+  paymentMethod?: string;
+  orderSource?: 'B2C' | 'B2B';
+};
+type GroupedSupplierOrder = {
+  id: string;
+  supplierName: string;
+  totalOrders: number;
+  pending: number;
+  processing: number;
+  packed: number;
+  shipped: number;
+  delivered: number;
+  cancelled: number;
+  orders: SupplierOrder[];
+};
+
+type InventoryProduct = {
+  id: string;
+  name: string;
+  sku: string;
+  price: number;
+  stock: number;
+  status: string;
+  category: string;
+};
+
 type ActionType = "approve" | "reject" | "delete";
 
 const SupplierPageSkeleton = () => (
@@ -264,12 +257,13 @@ const SupplierPageSkeleton = () => (
 );
 
 export default function SupplierManagementPage() {
+  const selectedRegion = useAppSelector(selectSelectedRegion);
   const {
     data: suppliers = [],
     isLoading,
     isError,
     refetch,
-  } = useGetSuppliersQuery(undefined);
+  } = useGetSuppliersQuery(selectedRegion);
   const [createSupplier] = useCreateSupplierMutation();
   const [updateSupplier] = useUpdateSupplierMutation();
   const [deleteSupplier] = useDeleteSupplierMutation();
@@ -299,6 +293,8 @@ export default function SupplierManagementPage() {
   const [newLicenseFiles, setNewLicenseFiles] = useState<File[]>([]);
   const [removedLicenseFiles, setRemovedLicenseFiles] = useState<string[]>([]); // Track removed files
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [isSupplierOrdersModalOpen, setIsSupplierOrdersModalOpen] = useState(false);
+  const [selectedSupplierGroup, setSelectedSupplierGroup] = useState<GroupedSupplierOrder | null>(null);
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
     null
   );
@@ -306,7 +302,18 @@ export default function SupplierManagementPage() {
     null
   );
   const [actionType, setActionType] = useState<ActionType | null>(null);
-  
+
+  // Pagination and search for Supplier Specific Orders Modal
+  const [currentSupplierOrdersPage, setCurrentSupplierOrdersPage] = useState(1);
+  const [supplierOrdersPerPage, setSupplierOrdersPerPage] = useState(10);
+  const [supplierOrderSearch, setSupplierOrderSearch] = useState("");
+
+
+  // Pagination for Inventory Modal
+  const [currentInventoryPage, setCurrentInventoryPage] = useState(1);
+  const [inventoryPerPage, setInventoryPerPage] = useState(10);
+
+
   // Map states
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -323,6 +330,105 @@ export default function SupplierManagementPage() {
   // Inventory modal state
   const [inventorySearch, setInventorySearch] = useState("");
   const [inventoryStatusFilter, setInventoryStatusFilter] = useState("all");
+
+  // Fetch Supplier Orders
+  const { data: supplierOrders = [], isLoading: isOrdersLoading } = useGetSupplierOrdersQuery({
+    regionId: selectedRegion,
+    status: orderStatusFilter,
+  });
+
+  // Grouped Supplier Orders logic
+  const groupedSupplierOrders = useMemo(() => {
+    const groups: Record<string, {
+      supplierName: string;
+      totalOrders: number;
+      pending: number;
+      processing: number;
+      packed: number;
+      shipped: number;
+      delivered: number;
+      cancelled: number;
+      orders: SupplierOrder[];
+    }> = {};
+
+    [...supplierOrders].reverse().forEach((order: SupplierOrder) => {
+      const sId = order.supplierId || "unknown";
+      if (!groups[sId]) {
+        groups[sId] = {
+          supplierName: order.supplierName,
+          totalOrders: 0,
+          pending: 0,
+          processing: 0,
+          packed: 0,
+          shipped: 0,
+          delivered: 0,
+          cancelled: 0,
+          orders: [],
+        };
+      }
+
+      groups[sId].totalOrders++;
+      groups[sId].orders.push(order);
+
+      const status = order.status.toLowerCase();
+      if (status === "pending") groups[sId].pending++;
+      else if (status === "processing") groups[sId].processing++;
+      else if (status === "packed") groups[sId].packed++;
+      else if (status === "shipped") groups[sId].shipped++;
+      else if (status === "delivered" || status === "completed") groups[sId].delivered++;
+      else if (status === "cancelled") groups[sId].cancelled++;
+    });
+
+    return Object.entries(groups).map(([id, data]) => ({
+      id,
+      ...data,
+    })).sort((a, b) => {
+      const getLatestDate = (orders: SupplierOrder[]) => orders.length > 0
+        ? Math.max(...orders.map(o => new Date(o.date || 0).getTime()))
+        : 0;
+      return getLatestDate(b.orders) - getLatestDate(a.orders);
+    });
+  }, [supplierOrders]);
+
+  const filteredGroupedOrders = useMemo(() => {
+    return groupedSupplierOrders.filter(group =>
+      group.supplierName.toLowerCase().includes(orderSearch.toLowerCase())
+    );
+  }, [groupedSupplierOrders, orderSearch]);
+
+  const currentGroupedOrders = useMemo(() => {
+    const lastIndex = currentOrdersPage * ordersPerPage;
+    const firstIndex = lastIndex - ordersPerPage;
+    return filteredGroupedOrders.slice(firstIndex, lastIndex);
+  }, [filteredGroupedOrders, currentOrdersPage, ordersPerPage]);
+
+  const totalGroupedPages = Math.ceil(filteredGroupedOrders.length / ordersPerPage);
+
+  // Paginated and Filtered Supplier Orders in Modal
+  const filteredModalOrders = useMemo(() => {
+    if (!selectedSupplierGroup) return [];
+    return (selectedSupplierGroup.orders || []).filter((order: SupplierOrder) => {
+      const search = supplierOrderSearch.toLowerCase();
+      return (
+        order.id.toLowerCase().includes(search) ||
+        order.customerName.toLowerCase().includes(search) ||
+        (order.productName && order.productName.toLowerCase().includes(search)) ||
+        (order.items && order.items.some(item => item.name?.toLowerCase().includes(search)))
+      );
+    }).sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
+  }, [selectedSupplierGroup, supplierOrderSearch]);
+
+  const paginatedSupplierOrders = useMemo(() => {
+    const lastIndex = currentSupplierOrdersPage * supplierOrdersPerPage;
+    const firstIndex = lastIndex - supplierOrdersPerPage;
+    return filteredModalOrders.slice(firstIndex, lastIndex);
+  }, [filteredModalOrders, currentSupplierOrdersPage, supplierOrdersPerPage]);
+
+  const totalSupplierOrdersPages = useMemo(() => {
+    return Math.ceil(filteredModalOrders.length / supplierOrdersPerPage);
+  }, [filteredModalOrders, supplierOrdersPerPage]);
+
+
 
   const initialNewSupplierState: NewSupplier = {
     firstName: "",
@@ -361,7 +467,7 @@ export default function SupplierManagementPage() {
         id: item._id,
         name: item.name,
       }));
-    }, [superData]);
+  }, [superData]);
 
   // Load Google Maps script
   useEffect(() => {
@@ -386,10 +492,10 @@ export default function SupplierManagementPage() {
 
     const scriptId = 'google-maps-native-script';
     const existingScript = document.getElementById(scriptId);
-    
+
     if (existingScript) {
       if (checkGoogleMaps()) return;
-      
+
       const checkInterval = setInterval(() => {
         if (checkGoogleMaps()) {
           clearInterval(checkInterval);
@@ -403,7 +509,7 @@ export default function SupplierManagementPage() {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places,drawing,geometry&v=weekly`;
     script.async = true;
     script.defer = true;
-    
+
     (window as any).gm_authFailure = () => {
       console.error("Google Maps API Key Authentication Failure - This usually means the API Key is invalid, has no billing, or is restricted incorrectly.");
       toast.error("Google Maps Authentication Failed. Please check your API key.");
@@ -421,18 +527,18 @@ export default function SupplierManagementPage() {
   // Initialize map when modal opens
   useEffect(() => {
     if (!isMapOpen || !isGoogleMapsLoaded || !GOOGLE_MAPS_API_KEY) return;
-    
+
     const initMap = () => {
       if (!mapContainer.current || !window.google) return;
-      
+
       if (map.current) {
         google.maps.event.clearInstanceListeners(map.current);
       }
-      
-      const center = newSupplier.location 
+
+      const center = newSupplier.location
         ? { lat: newSupplier.location.lat, lng: newSupplier.location.lng }
         : { lat: 23.2599, lng: 77.4126 };
-      
+
       // Ensure container still exists and has height
       if (mapContainer.current) {
         const rect = mapContainer.current.getBoundingClientRect();
@@ -456,12 +562,12 @@ export default function SupplierManagementPage() {
       geocoder.current = new google.maps.Geocoder();
       autocompleteService.current = new google.maps.places.AutocompleteService();
       placesService.current = new google.maps.places.PlacesService(map.current);
-      
+
       // Remove existing marker
       if (marker.current) {
         marker.current.setMap(null);
       }
-      
+
       // Add marker if location exists
       if (newSupplier.location) {
         marker.current = new google.maps.Marker({
@@ -470,7 +576,7 @@ export default function SupplierManagementPage() {
           draggable: true,
           animation: google.maps.Animation.DROP,
         });
-          
+
         marker.current.addListener('dragend', () => {
           const position = marker.current!.getPosition();
           if (position) {
@@ -479,14 +585,14 @@ export default function SupplierManagementPage() {
           }
         });
       }
-      
+
       // Handle map clicks
       map.current.addListener('click', (e: google.maps.MapMouseEvent) => {
         if (!e.latLng) return;
         const lat = e.latLng.lat();
         const lng = e.latLng.lng();
         setNewSupplier(prev => ({ ...prev, location: { lat, lng } }));
-        
+
         // Remove existing marker and add new one
         if (marker.current) {
           marker.current.setMap(null);
@@ -498,7 +604,7 @@ export default function SupplierManagementPage() {
             draggable: true,
             animation: google.maps.Animation.DROP,
           });
-            
+
           marker.current.addListener('dragend', () => {
             const position = marker.current!.getPosition();
             if (position) {
@@ -507,14 +613,14 @@ export default function SupplierManagementPage() {
             }
           });
         }
-        
+
         fetchAddress({ lat, lng });
       });
     };
-    
+
     // Initialize with a larger delay to ensure DOM is ready and modal animation finished
     const timeoutId = setTimeout(initMap, 500);
-    
+
     // Cleanup function
     return () => {
       clearTimeout(timeoutId);
@@ -523,14 +629,14 @@ export default function SupplierManagementPage() {
       }
     };
   }, [isMapOpen, isGoogleMapsLoaded]);
-  
+
   // Search for locations using Google Places Autocomplete
   const handleSearch = async (query: string) => {
     if (!query || !autocompleteService.current) {
       setSearchResults([]);
       return;
     }
-    
+
     try {
       autocompleteService.current.getPlacePredictions(
         {
@@ -553,11 +659,11 @@ export default function SupplierManagementPage() {
       setSearchResults([]);
     }
   };
-  
+
   // Fetch address details based on coordinates
   const fetchAddress = async (location: { lat: number; lng: number }) => {
     if (!geocoder.current) return;
-    
+
     try {
       geocoder.current.geocode({ location }, (results, status) => {
         if (status === 'OK' && results && results.length > 0) {
@@ -566,7 +672,7 @@ export default function SupplierManagementPage() {
 
           let state = '';
           let city = '';
-          
+
           result.address_components.forEach((component) => {
             if (component.types.includes('administrative_area_level_1')) {
               state = component.long_name;
@@ -575,7 +681,7 @@ export default function SupplierManagementPage() {
               city = component.long_name;
             }
           });
-          
+
           setNewSupplier(prev => ({
             ...prev,
             address,
@@ -588,7 +694,7 @@ export default function SupplierManagementPage() {
       console.error('Error fetching address:', error);
     }
   };
-  
+
   // Handle selection of a search result
   const handleSearchResultSelect = (result: any) => {
     if (!placesService.current) return;
@@ -615,7 +721,7 @@ export default function SupplierManagementPage() {
               city = component.long_name;
             }
           });
-          
+
           setNewSupplier(prev => ({
             ...prev,
             location: newLocation,
@@ -623,18 +729,18 @@ export default function SupplierManagementPage() {
             state: state || prev.state,
             city: city || prev.city,
           }));
-          
+
           // Update map
           if (map.current) {
             map.current.setCenter({ lat, lng });
             map.current.setZoom(15);
           }
-          
+
           // Update marker
           if (marker.current) {
             marker.current.setPosition({ lat, lng });
           }
-          
+
           // Clear search
           setSearchResults([]);
           setSearchQuery('');
@@ -681,7 +787,7 @@ export default function SupplierManagementPage() {
         ...supplierData,
         licenseFiles: licenseFilesBase64,
       }).unwrap();
-      
+
       toast.success("Supplier added successfully!");
       setNewSupplier(initialNewSupplierState);
       setLicensePreviews([]);
@@ -710,13 +816,13 @@ export default function SupplierManagementPage() {
       const files = Array.from(e.target.files);
       const validFiles: File[] = [];
       const previewUrls: string[] = [];
-      
+
       files.forEach(file => {
         if (!file.type.startsWith("image/")) {
           alert("Please upload only image files (JPEG, PNG, etc.)");
           return;
         }
-        
+
         validFiles.push(file);
         previewUrls.push(URL.createObjectURL(file));
       });
@@ -735,7 +841,7 @@ export default function SupplierManagementPage() {
   }, [licensePreviews]);
 
   // Filter and paginate suppliers
-  const filteredSuppliers = suppliers.filter((supplier: Supplier) => {
+  const filteredSuppliers = [...suppliers].reverse().filter((supplier: Supplier) => {
     const fullName = `${supplier.firstName} ${supplier.lastName}`.toLowerCase();
     const matchesSearch =
       fullName.includes(supplierSearch.toLowerCase()) ||
@@ -756,7 +862,7 @@ export default function SupplierManagementPage() {
   const totalPages = Math.ceil(filteredSuppliers.length / itemsPerPage);
 
   // Filter and paginate orders
-  const filteredOrders = supplierOrdersData.filter((order) => {
+  const filteredOrders = supplierOrders.filter((order: SupplierOrder) => {
     const matchesSearch =
       order.id.toLowerCase().includes(orderSearch.toLowerCase()) ||
       order.supplierName.toLowerCase().includes(orderSearch.toLowerCase()) ||
@@ -817,6 +923,16 @@ export default function SupplierManagementPage() {
     return matchesSearch && matchesStatus;
   });
 
+  // Paginated Inventory
+  const paginatedInventory = useMemo(() => {
+    const lastIndex = currentInventoryPage * inventoryPerPage;
+    const firstIndex = lastIndex - inventoryPerPage;
+    return filteredInventory.slice(firstIndex, lastIndex);
+  }, [filteredInventory, currentInventoryPage, inventoryPerPage]);
+
+  const totalInventoryPages = Math.ceil(filteredInventory.length / inventoryPerPage);
+
+
   const handleActionClick = (supplier: Supplier, action: ActionType) => {
     setSelectedSupplier(supplier);
     setActionType(action);
@@ -830,6 +946,7 @@ export default function SupplierManagementPage() {
 
   const handleInventoryClick = (supplier: Supplier) => {
     setSelectedSupplier(supplier);
+    setCurrentInventoryPage(1);
     setIsInventoryModalOpen(true);
   };
 
@@ -912,10 +1029,15 @@ export default function SupplierManagementPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold font-headline">
           Supplier Management
         </h1>
+        {selectedRegion && selectedRegion !== 'all' && (
+          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+            Region Filtered
+          </Badge>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
@@ -979,8 +1101,10 @@ export default function SupplierManagementPage() {
             <div className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,248</div>
-            <p className="text-xs text-muted-foreground">All-time orders</p>
+            <div className="text-2xl font-bold">
+              {isOrdersLoading ? <Skeleton className="h-8 w-16" /> : supplierOrders.length}
+            </div>
+            <p className="text-xs text-muted-foreground">Total supplier orders</p>
           </CardContent>
         </Card>
       </div>
@@ -1063,13 +1187,12 @@ export default function SupplierManagementPage() {
                           <TableCell>{supplier.supplierType}</TableCell>
                           <TableCell>
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                supplier.status === "Approved"
-                                  ? "bg-green-100 text-green-800"
-                                  : supplier.status === "Pending"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-red-100 text-red-800"
-                              }`}
+                              className={`px-2 py-1 rounded-full text-xs font-semibold ${supplier.status === "Approved"
+                                ? "bg-green-100 text-green-800"
+                                : supplier.status === "Pending"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                                }`}
                             >
                               {supplier.status}
                             </span>
@@ -1195,9 +1318,11 @@ export default function SupplierManagementPage() {
                       <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="Pending">Pending</SelectItem>
                       <SelectItem value="Processing">Processing</SelectItem>
+                      <SelectItem value="Packed">Packed</SelectItem>
                       <SelectItem value="Shipped">Shipped</SelectItem>
                       <SelectItem value="Delivered">Delivered</SelectItem>
                       <SelectItem value="Completed">Completed</SelectItem>
+                      <SelectItem value="Cancelled">Cancelled</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1208,64 +1333,88 @@ export default function SupplierManagementPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Order ID</TableHead>
                       <TableHead>Supplier</TableHead>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead className="text-center">Total</TableHead>
+                      <TableHead className="text-center">Pending</TableHead>
+                      <TableHead className="text-center">Processing</TableHead>
+                      <TableHead className="text-center">Packed</TableHead>
+                      <TableHead className="text-center">Shipped</TableHead>
+                      <TableHead className="text-center">Delivered</TableHead>
+                      <TableHead className="text-center">Cancelled</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {currentOrders.length > 0 ? (
-                      currentOrders.map((order) => (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-medium">
-                            {order.id}
+                    {isOrdersLoading ? (
+                      [...Array(5)].map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
+                        </TableRow>
+                      ))
+                    ) : currentGroupedOrders.length > 0 ? (
+                      currentGroupedOrders.map((group: GroupedSupplierOrder) => (
+                        <TableRow key={group.id}>
+                          <TableCell className="font-medium whitespace-nowrap">
+                            {group.supplierName}
                           </TableCell>
-                          <TableCell>{order.supplierName}</TableCell>
-                          <TableCell>{order.productName}</TableCell>
-                          <TableCell>{order.customerName}</TableCell>
-                          <TableCell>
-                            ₹{order.amount.toLocaleString()}
+                          <TableCell className="text-center">{group.totalOrders}</TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                              {group.pending}
+                            </Badge>
                           </TableCell>
-                          <TableCell>
-                            <span
-                              className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                order.status === "Completed"
-                                  ? "bg-green-100 text-green-800"
-                                  : order.status === "Processing"
-                                    ? "bg-blue-100 text-blue-800"
-                                    : order.status === "Shipped"
-                                      ? "bg-purple-100 text-purple-800"
-                                      : order.status === "Delivered"
-                                        ? "bg-indigo-100 text-indigo-800"
-                                        : "bg-yellow-100 text-yellow-800"
-                              }`}
-                            >
-                              {order.status}
-                            </span>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              {group.processing}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                              {group.packed}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200">
+                              {group.shipped}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              {group.delivered}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                              {group.cancelled}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleViewOrderClick(order)}
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedSupplierGroup(group);
+                                setCurrentSupplierOrdersPage(1);
+                                setIsSupplierOrdersModalOpen(true);
+                              }}
                             >
-                              <Eye className="h-4 w-4" />
-                              <span className="sr-only">View Order</span>
+                              View Orders
                             </Button>
                           </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell
-                          colSpan={7}
-                          className="text-center py-10 text-muted-foreground"
-                        >
-                          No orders found.
+                        <TableCell colSpan={9} className="text-center py-10 text-muted-foreground">
+                          No orders found for this search.
                         </TableCell>
                       </TableRow>
                     )}
@@ -1275,16 +1424,135 @@ export default function SupplierManagementPage() {
               <Pagination
                 className="mt-4"
                 currentPage={currentOrdersPage}
-                totalPages={totalOrdersPages}
+                totalPages={totalGroupedPages}
                 onPageChange={setCurrentOrdersPage}
                 itemsPerPage={ordersPerPage}
                 onItemsPerPageChange={setOrdersPerPage}
-                totalItems={filteredOrders.length}
+                totalItems={filteredGroupedOrders.length}
               />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Supplier Specific Orders Modal */}
+      <Dialog open={isSupplierOrdersModalOpen} onOpenChange={setIsSupplierOrdersModalOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Supplier: {selectedSupplierGroup?.supplierName}</DialogTitle>
+            <DialogDescription>
+              Viewing all orders for {selectedSupplierGroup?.supplierName}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order ID</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Product</TableHead>
+                  <TableHead className="text-center">Qty</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Order Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {paginatedSupplierOrders.map((order: SupplierOrder) => (
+                  <TableRow key={order._id || order.id}>
+                    <TableCell className="font-medium align-top py-4 text-[12px]">{order.id}</TableCell>
+                    <TableCell className="align-top py-4 whitespace-nowrap text-[12px]">
+                      {order.customerName}
+                    </TableCell>
+                    <TableCell className="align-top py-4">
+                      <div className="space-y-2">
+                        {order.items && order.items.length > 0 ? (
+                          order.items.map((item: any, idx: number) => (
+                            <div key={idx} className="text-[12px] border-b border-gray-50 last:border-0 pb-1 last:pb-0">
+                              {item.name}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-[12px]">{order.productName}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center align-top py-4 font-semibold">
+                      <div className="space-y-2">
+                        {order.items && order.items.length > 0 ? (
+                          order.items.map((item: any, idx: number) => (
+                            <div key={idx} className="text-[12px] border-b border-gray-50 last:border-0 pb-1 last:pb-0">
+                              {item.quantity}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-[12px]">{order.quantity}</div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-top py-4">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-primary text-[12px]">₹{order.totalAmount.toLocaleString()}</span>
+                        {order.items && order.items.length > 1 && (
+                          <span className="text-[10px] text-muted-foreground">(Total for {order.items.length} items)</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="align-top py-4 whitespace-nowrap text-[12px]">
+                      {new Date(order.date).toLocaleDateString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </TableCell>
+                    <TableCell className="align-top py-4">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-semibold ${order.status === "Completed" || order.status === "Delivered"
+                          ? "bg-green-100 text-green-800"
+                          : order.status === "Processing" || order.status === "Shipped" || order.status === "Packed"
+                            ? "bg-blue-100 text-blue-800"
+                            : order.status === "Pending"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                      >
+                        {order.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right align-top py-4">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setSelectedOrder(order);
+                          setIsOrderViewModalOpen(true);
+                        }}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            <Pagination
+              className="mt-4"
+              currentPage={currentSupplierOrdersPage}
+              totalPages={totalSupplierOrdersPages}
+              onPageChange={setCurrentSupplierOrdersPage}
+              itemsPerPage={supplierOrdersPerPage}
+              onItemsPerPageChange={setSupplierOrdersPerPage}
+              totalItems={filteredModalOrders.length}
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setIsSupplierOrdersModalOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
 
       {/* Action Confirmation Modal */}
       <Dialog open={isActionModalOpen} onOpenChange={setIsActionModalOpen}>
@@ -1370,13 +1638,12 @@ export default function SupplierManagementPage() {
                 </span>
                 <span className="col-span-2">
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      selectedSupplier.status === "Approved"
-                        ? "bg-green-100 text-green-800"
-                        : selectedSupplier.status === "Pending"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-red-100 text-red-800"
-                    }`}
+                    className={`px-2 py-1 rounded-full text-xs font-semibold ${selectedSupplier.status === "Approved"
+                      ? "bg-green-100 text-green-800"
+                      : selectedSupplier.status === "Pending"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-red-100 text-red-800"
+                      }`}
                   >
                     {selectedSupplier.status}
                   </span>
@@ -1392,14 +1659,16 @@ export default function SupplierManagementPage() {
 
       {/* Edit Supplier Modal */}
       {/* Edit Supplier Modal - Replaced with Component */}
-      {selectedSupplier && (
-        <SupplierEditForm
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          supplier={selectedSupplier}
-          refetch={refetch}
-        />
-      )}
+      {
+        selectedSupplier && (
+          <SupplierEditForm
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            supplier={selectedSupplier}
+            refetch={refetch}
+          />
+        )
+      }
 
       {/* View Inventory Modal */}
       <Dialog
@@ -1451,7 +1720,7 @@ export default function SupplierManagementPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredInventory.map((product) => (
+                  {paginatedInventory.map((product: InventoryProduct) => (
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">
                         {product.id}
@@ -1459,11 +1728,10 @@ export default function SupplierManagementPage() {
                       <TableCell>{product.name}</TableCell>
                       <TableCell>
                         <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            product.status === "In Stock"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${product.status === "In Stock"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-red-100 text-red-800"
+                            }`}
                         >
                           {product.status}
                         </span>
@@ -1483,6 +1751,15 @@ export default function SupplierManagementPage() {
                 </TableBody>
               </Table>
             </div>
+            <Pagination
+              className="mt-4"
+              currentPage={currentInventoryPage}
+              totalPages={totalInventoryPages}
+              onPageChange={setCurrentInventoryPage}
+              itemsPerPage={inventoryPerPage}
+              onItemsPerPageChange={setInventoryPerPage}
+              totalItems={filteredInventory.length}
+            />
           </div>
           <DialogFooter>
             <Button
@@ -1735,15 +2012,15 @@ export default function SupplierManagementPage() {
                         Location
                       </Label>
                       <div className="flex items-center gap-2">
-                        <Input 
-                          value={newSupplier.location ? `${newSupplier.location.lat}, ${newSupplier.location.lng}` : ''} 
-                          placeholder="Select location from map" 
-                          readOnly 
+                        <Input
+                          value={newSupplier.location ? `${newSupplier.location.lat}, ${newSupplier.location.lng}` : ''}
+                          placeholder="Select location from map"
+                          readOnly
                           className="flex-1"
                         />
-                        <Button 
-                          type="button" 
-                          variant="outline" 
+                        <Button
+                          type="button"
+                          variant="outline"
                           onClick={() => setIsMapOpen(true)}
                         >
                           <Map className="mr-2 h-4 w-4" /> Choose from Map
@@ -1808,76 +2085,76 @@ export default function SupplierManagementPage() {
                             multiple
                             onChange={handleFileChange}
                             ref={fileInputRef}
-                            />
-                          </label>
-                        </div>
-
-                        {/* Show license file previews for new supplier */}
-                        <div className="flex flex-wrap gap-2">
-                          {licensePreviews.map((preview, index) => (
-                            <div key={`license-${preview}-${index}`} className="w-24 h-24 border rounded-lg overflow-hidden relative">
-                              <img
-                                src={preview}
-                                alt={`License preview ${index + 1}`}
-                                className="w-full h-full object-cover"
-                              />
-                              <button
-                                type="button"
-                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  // Remove the preview
-                                  setLicensePreviews(prev => prev.filter((_, i) => i !== index));
-                                  // Remove the file from newSupplier
-                                  setNewSupplier(prev => ({
-                                    ...prev,
-                                    licenseFiles: prev.licenseFiles.filter((_, i) => i !== index)
-                                  }));
-                                  // Revoke the object URL
-                                  URL.revokeObjectURL(preview);
-                                }}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
+                          />
+                        </label>
                       </div>
-                      {newSupplier.licenseFiles.length > 0 && (
-                        <p className="mt-1 text-sm text-gray-600">
-                          Selected {newSupplier.licenseFiles.length} file(s)
-                        </p>
-                      )}
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="supplierType"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Supplier Type <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={newSupplier.supplierType}
-                        onValueChange={handleSupplierTypeChange}
-                        required
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select supplier type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {supplierTypes.map((type: { id: string; name: string; description?: string }) => (
-                            <SelectItem key={type.id} value={type.name}>
-                              {type.name}
-                              {type.description && ` - ${type.description}`}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {isSuperDataLoading && (
-                        <p className="text-sm text-gray-500">Loading supplier types...</p>
-                      )}
+                      {/* Show license file previews for new supplier */}
+                      <div className="flex flex-wrap gap-2">
+                        {licensePreviews.map((preview, index) => (
+                          <div key={`license-${preview}-${index}`} className="w-24 h-24 border rounded-lg overflow-hidden relative">
+                            <img
+                              src={preview}
+                              alt={`License preview ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Remove the preview
+                                setLicensePreviews(prev => prev.filter((_, i) => i !== index));
+                                // Remove the file from newSupplier
+                                setNewSupplier(prev => ({
+                                  ...prev,
+                                  licenseFiles: prev.licenseFiles.filter((_, i) => i !== index)
+                                }));
+                                // Revoke the object URL
+                                URL.revokeObjectURL(preview);
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
+                    {newSupplier.licenseFiles.length > 0 && (
+                      <p className="mt-1 text-sm text-gray-600">
+                        Selected {newSupplier.licenseFiles.length} file(s)
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="supplierType"
+                      className="text-sm font-medium text-gray-700"
+                    >
+                      Supplier Type <span className="text-red-500">*</span>
+                    </Label>
+                    <Select
+                      value={newSupplier.supplierType}
+                      onValueChange={handleSupplierTypeChange}
+                      required
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select supplier type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {supplierTypes.map((type: { id: string; name: string; description?: string }) => (
+                          <SelectItem key={type.id} value={type.name}>
+                            {type.name}
+                            {type.description && ` - ${type.description}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {isSuperDataLoading && (
+                      <p className="text-sm text-gray-500">Loading supplier types...</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1970,92 +2247,168 @@ export default function SupplierManagementPage() {
         open={isOrderViewModalOpen}
         onOpenChange={setIsOrderViewModalOpen}
       >
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Order Details: {selectedOrder?.id}</DialogTitle>
+            <DialogTitle className="text-xl font-bold">
+              Order Details: <span className="text-primary">#{selectedOrder?.id}</span>
+            </DialogTitle>
+            <DialogDescription>
+              Detailed view of the order transaction and items.
+            </DialogDescription>
           </DialogHeader>
+
           {selectedOrder && (
-            <div className="grid gap-4 py-4 text-sm">
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Order ID
-                </span>
-                <span className="col-span-2">{selectedOrder.id}</span>
+            <div className="space-y-8 py-4">
+              {/* Main Info Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-sm border-b pb-2">
+                    <span className="font-bold text-slate-900 uppercase text-[12px] tracking-wider">Order Information</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="font-medium text-slate-500">Date:</span>
+                    <span className="col-span-2 text-slate-900">{new Date(selectedOrder.date).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="font-medium text-slate-500">Payment:</span>
+                    <span className="col-span-2 text-slate-900">{selectedOrder.paymentMethod || "COD"}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="font-medium text-slate-500">Status:</span>
+                    <span className="col-span-2">
+                      <Badge className={`px-2 py-0.5 text-[10px] font-bold ${selectedOrder.status === 'Delivered' || selectedOrder.status === 'Completed' ? 'bg-green-100 text-green-800 border-green-200' :
+                        selectedOrder.status === 'Cancelled' ? 'bg-red-100 text-red-800 border-red-200' :
+                          'bg-blue-100 text-blue-800 border-blue-200'
+                        }`}>
+                        {selectedOrder.status}
+                      </Badge>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center text-sm border-b pb-2">
+                    <span className="font-bold text-slate-900 uppercase text-[12px] tracking-wider">Participant Details</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="font-medium text-slate-500">Customer:</span>
+                    <span className="col-span-2 text-slate-900">{selectedOrder.customerName}</span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm">
+                    <span className="font-medium text-slate-500">Supplier:</span>
+                    <span className="col-span-2 text-slate-900">{selectedOrder.supplierName}</span>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Supplier
-                </span>
-                <span className="col-span-2">
-                  {selectedOrder.supplierName} ({selectedOrder.supplierId})
-                </span>
+
+              {/* Shipping Address */}
+              <div className="space-y-2">
+                <span className="font-bold text-slate-900 uppercase text-[12px] tracking-wider block border-b pb-2">Shipping Address</span>
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  {selectedOrder.shippingAddress || "Service-based or electronic delivery basis."}
+                </p>
               </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Product
-                </span>
-                <span className="col-span-2">{selectedOrder.productName}</span>
+
+              {/* Items Table with Full Borders */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="font-bold text-slate-900 uppercase text-[12px] tracking-wider">Order Items</span>
+                </div>
+                <div className="border rounded-md overflow-hidden">
+                  <Table className="border-collapse">
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead className="text-[12px] font-bold uppercase text-slate-900 pl-4 border-r">Description</TableHead>
+                        <TableHead className="text-[12px] font-bold uppercase text-slate-900 text-center border-r">Quantity</TableHead>
+                        <TableHead className="text-[12px] font-bold uppercase text-slate-900 pr-4 text-right">Price</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedOrder.items && selectedOrder.items.length > 0 ? (
+                        selectedOrder.items.map((item, idx) => (
+                          <TableRow key={idx} className="hover:bg-slate-50/50">
+                            <TableCell className="text-sm py-3 font-medium text-slate-600 pl-4 border-r border-b">
+                              {item.name || item.productName}
+                            </TableCell>
+                            <TableCell className="text-sm py-3 text-center text-slate-600 border-r border-b">
+                              {item.quantity}
+                            </TableCell>
+                            <TableCell className="text-sm py-3 text-right font-bold text-slate-900 pr-4 border-b">
+                              ₹{Number(item.price || 0).toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell className="text-sm py-3 font-medium text-slate-600 pl-4 border-r border-b">{selectedOrder.productName}</TableCell>
+                          <TableCell className="text-sm py-3 text-center text-slate-600 border-r border-b">{selectedOrder.quantity}</TableCell>
+                          <TableCell className="text-sm py-3 text-right font-bold text-slate-900 pr-4 border-b">₹{Number(selectedOrder.totalAmount || 0).toLocaleString()}</TableCell>
+                        </TableRow>
+                      )}
+
+                      {/* Financial Summary Rows with Borders */}
+                      {selectedOrder.orderSource === 'B2C' ? (
+                        <>
+                          <TableRow className="bg-white">
+                            <TableCell colSpan={2} className="text-right font-bold text-slate-600 py-2 border-r border-b">Subtotal</TableCell>
+                            <TableCell className="text-right font-bold text-slate-900 pr-4 py-2 border-b">
+                              ₹{(selectedOrder.items && selectedOrder.items.length > 0
+                                ? selectedOrder.items.reduce((acc, item) => acc + (Number(item.price || 0) * Number(item.quantity || 1)), 0)
+                                : Number(selectedOrder.totalAmount || 0) - Number(selectedOrder.gstAmount || 0) - Number(selectedOrder.platformFeeAmount || 0) - Number(selectedOrder.shippingAmount || 0)
+                              ).toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                          <TableRow className="bg-white">
+                            <TableCell colSpan={2} className="text-right font-bold text-slate-600 py-2 border-r border-b">Shipping</TableCell>
+                            <TableCell className="text-right font-bold text-slate-900 pr-4 py-2 border-b">₹{Number(selectedOrder.shippingAmount || 0).toLocaleString()}</TableCell>
+                          </TableRow>
+                          <TableRow className="bg-white">
+                            <TableCell colSpan={2} className="text-right font-bold text-slate-600 py-2 border-r border-b">GST</TableCell>
+                            <TableCell className="text-right font-bold text-slate-900 pr-4 py-2 border-b">+ ₹{Number(selectedOrder.gstAmount || 0).toLocaleString()}</TableCell>
+                          </TableRow>
+                          <TableRow className="bg-white">
+                            <TableCell colSpan={2} className="text-right font-bold text-slate-600 py-2 border-r border-b">Platform Fee</TableCell>
+                            <TableCell className="text-right font-bold text-slate-900 pr-4 py-2 border-b">+ ₹{Number(selectedOrder.platformFeeAmount || 0).toLocaleString()}</TableCell>
+                          </TableRow>
+                        </>
+                      ) : (
+                        <TableRow className="bg-white">
+                          <TableCell colSpan={2} className="text-right font-bold text-slate-600 py-2 border-r border-b">Procurement Total</TableCell>
+                          <TableCell className="text-right font-bold text-slate-900 pr-4 py-2 border-b">₹{Number(selectedOrder.totalAmount || 0).toLocaleString()}</TableCell>
+                        </TableRow>
+                      )}
+
+                      {/* Total Amount Row */}
+                      <TableRow className="bg-slate-50">
+                        <TableCell colSpan={2} className="text-right font-bold text-slate-900 text-[13px] py-4 uppercase tracking-wider border-r">Total Amount</TableCell>
+                        <TableCell className="text-right font-bold text-primary text-[18px] pr-4 py-4">
+                          ₹{Number(selectedOrder.totalAmount || 0).toLocaleString()}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Customer
-                </span>
-                <span className="col-span-2">{selectedOrder.customerName}</span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Amount
-                </span>
-                <span className="col-span-2">
-                  ₹{selectedOrder.amount.toLocaleString()}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Status
-                </span>
-                <span className="col-span-2">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      selectedOrder.status === "Completed"
-                        ? "bg-green-100 text-green-800"
-                        : selectedOrder.status === "Processing"
-                          ? "bg-blue-100 text-blue-800"
-                          : selectedOrder.status === "Shipped"
-                            ? "bg-purple-100 text-purple-800"
-                            : selectedOrder.status === "Delivered"
-                              ? "bg-indigo-100 text-indigo-800"
-                              : "bg-yellow-100 text-yellow-800"
-                    }`}
-                  >
-                    {selectedOrder.status}
-                  </span>
-                </span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Order Date
-                </span>
-                <span className="col-span-2">
-                  {new Date(selectedOrder.date).toLocaleDateString("en-IN", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </span>
-              </div>
+
             </div>
           )}
-          <DialogFooter>
-            <Button onClick={() => setIsOrderViewModalOpen(false)}>
-              Close
+
+          <DialogFooter className="pt-4 border-t flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="font-bold border-slate-300 hover:bg-slate-50 text-slate-800"
+              onClick={() => setIsOrderViewModalOpen(false)}
+            >
+              Close Details
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
+
       {/* Map Modal */}
-      <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+      < Dialog open={isMapOpen} onOpenChange={setIsMapOpen} >
         <DialogContent className="sm:max-w-5xl h-[85vh] p-0 overflow-hidden flex flex-col border-none shadow-2xl rounded-3xl">
           <DialogHeader className="p-6 bg-gradient-to-r from-primary/10 to-transparent border-b">
             <div className="flex items-center justify-between">
@@ -2067,7 +2420,7 @@ export default function SupplierManagementPage() {
               </div>
             </div>
           </DialogHeader>
-          
+
           <div className="flex-1 flex flex-col relative overflow-hidden">
             {/* Floating Search Bar with Glassmorphism */}
             <div className="absolute top-6 left-6 right-6 z-[100] max-w-md">
@@ -2109,17 +2462,17 @@ export default function SupplierManagementPage() {
 
             {/* Map Container */}
             <div className="flex-1 relative bg-slate-100">
-              <div 
-                ref={mapContainer} 
+              <div
+                ref={mapContainer}
                 className="w-full h-full"
               />
               <div className="absolute bottom-6 left-6 z-50">
-                 <div className="bg-white/90 backdrop-blur-md px-4 py-3 rounded-2xl shadow-xl border border-white/20 flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                    <span className="text-sm font-bold text-slate-700 font-headline uppercase tracking-wider">Logistics Radar</span>
-                 </div>
+                <div className="bg-white/90 backdrop-blur-md px-4 py-3 rounded-2xl shadow-xl border border-white/20 flex items-center gap-3">
+                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  <span className="text-sm font-bold text-slate-700 font-headline uppercase tracking-wider">Logistics Radar</span>
+                </div>
               </div>
-              
+
               {authError && (
                 <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6 z-[200]">
                   <div className="bg-white rounded-3xl p-8 shadow-2xl max-w-md text-center border border-red-100">
@@ -2130,7 +2483,7 @@ export default function SupplierManagementPage() {
                     <p className="text-slate-500 text-sm mb-6">
                       Google Maps API is currently unavailable. Please verify your billing and API credentials.
                     </p>
-                    <Button 
+                    <Button
                       onClick={() => window.location.reload()}
                       className="w-full rounded-xl bg-red-600 hover:bg-red-700 h-12 text-lg font-headline"
                       type="button"
@@ -2144,43 +2497,43 @@ export default function SupplierManagementPage() {
               {!isGoogleMapsLoaded && !authError && (
                 <div className="absolute inset-0 bg-slate-50 flex flex-col items-center justify-center z-[150]">
                   <div className="relative">
-                     <div className="h-24 w-24 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
+                    <div className="h-24 w-24 rounded-full border-4 border-slate-200 border-t-primary animate-spin" />
                   </div>
                   <p className="mt-6 text-lg font-bold text-slate-800 tracking-tight font-headline">Booting Logistics System...</p>
                 </div>
               )}
             </div>
           </div>
-          
+
           <DialogFooter className="p-6 bg-slate-50 border-t flex flex-row items-center justify-between gap-4">
-             <div className="flex items-center gap-4">
-                {newSupplier.location && (
-                  <div className="hidden sm:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm transition-all hover:shadow-md">
-                     <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
-                        <CheckCircle2 className="h-4 w-4" />
-                     </div>
-                     <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Location Calibrated</div>
-                     <div className="text-xs font-mono font-bold text-slate-800">
-                       {newSupplier.location.lat.toFixed(4)}, {newSupplier.location.lng.toFixed(4)}
-                     </div>
+            <div className="flex items-center gap-4">
+              {newSupplier.location && (
+                <div className="hidden sm:flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm transition-all hover:shadow-md">
+                  <div className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600">
+                    <CheckCircle2 className="h-4 w-4" />
                   </div>
-                )}
-             </div>
-             <div className="flex items-center gap-3">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Location Calibrated</div>
+                  <div className="text-xs font-mono font-bold text-slate-800">
+                    {newSupplier.location.lat.toFixed(4)}, {newSupplier.location.lng.toFixed(4)}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-3">
               <Button variant="ghost" onClick={() => setIsMapOpen(false)} className="rounded-xl h-12 px-6 font-bold text-slate-600 hover:bg-slate-200 transition-all font-headline">
                 Discard
               </Button>
-              <Button 
-                onClick={() => setIsMapOpen(false)} 
+              <Button
+                onClick={() => setIsMapOpen(false)}
                 disabled={!newSupplier.location}
                 className="rounded-xl h-12 px-8 font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all font-headline"
               >
                 Confirm Dispatch Point
               </Button>
-             </div>
+            </div>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
-    </div>
+      </Dialog >
+    </div >
   );
 }

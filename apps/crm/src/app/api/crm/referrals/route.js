@@ -1,5 +1,6 @@
 // crm/api/referrals/route.js
 
+import mongoose from "mongoose";
 import _db from "../../../../../../../packages/lib/src/db.js";
 import { ReferralModel, V2VSettingsModel, D2DSettingsModel, S2SSettingsModel } from "../../../../../../../packages/lib/src/models/admin/Reffer.model.js";
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
@@ -37,53 +38,95 @@ const getUserModel = (role) => {
 
 // Get Referrals for the logged-in user
 export const GET = authMiddlewareCrm(async (req) => {
-  const user = req.user;
+  const userId = req.user.userId || req.user._id;
   const userRole = req.user.role;
   
   try {
-    const url = new URL(req.url);
-    const requestedReferralType = url.searchParams.get('referralType');
-    
-    // Always use V2V referral type for all roles
-    const referralType = 'V2V';
-    
-    // Get user's business name/name for filtering
-    // First try to get it from the JWT payload directly
-    let referrerName = user.businessName || user.name || user.shopName;
-    
-    // If not in JWT payload, fetch from database
-    if (!referrerName) {
-      const UserModel = getUserModel(userRole);
-      // Use the userId from JWT payload (note: it's userId, not _id)
-      const userId = user.userId || user._id || user.id;
-      if (!userId) {
-        console.error("User ID not found in token", user);
-        return Response.json({ message: "User ID not found in token" }, { status: 400 });
-      }
-      
-      const userData = await UserModel.findById(userId);
-      
-      if (!userData) {
-        console.error("User not found in database", { userId, userRole });
-        return Response.json({ message: "User not found" }, { status: 404 });
-      }
-      
-      referrerName = userData.businessName || userData.name || userData.shopName || (userData.firstName + ' ' + userData.lastName);
+    const UserModel = getUserModel(userRole);
+    const userData = await UserModel.findById(userId).lean();
+    const possibleNames = [];
+    if (userData) {
+      if (userData.businessName) possibleNames.push(userData.businessName);
+      if (userData.shopName) possibleNames.push(userData.shopName);
+      if (userData.name) possibleNames.push(userData.name);
+      if (userData.firstName || userData.lastName) possibleNames.push(`${userData.firstName || ''} ${userData.lastName || ''}`.trim());
     }
-    
-    // Get referrals where this user is the referrer
-    const referrals = await ReferralModel.find({ 
-      referralType,
-      referrer: referrerName 
-    }).sort({ date: -1 });
 
-    return Response.json(referrals);
+    // Get referrals where this user is the referrer
+    // Search by ID or any of their names for legacy support
+    const referrals = await ReferralModel.find({ 
+      $or: [
+        { referrer: userId.toString() },
+        { referrer: { $in: possibleNames.filter(n => !!n) } }
+      ],
+      referralType: { $in: ['V2V', 'C2V', 'D2D', 'S2S', 'C2C'] }
+    }).sort({ date: -1 }).lean();
+
+    // Populate referee names
+    const { default: User } = await import("@repo/lib/models/user/User.model");
+    const { default: Vendor } = await import("@repo/lib/models/Vendor/Vendor.model");
+    const { default: Doctor } = await import("@repo/lib/models/Vendor/Docters.model");
+    const { default: Supplier } = await import("@repo/lib/models/Vendor/Supplier.model");
+
+    const getModel = (type) => {
+      switch (type) {
+          case 'Vendor': return Vendor;
+          case 'Doctor': return Doctor;
+          case 'Supplier': return Supplier;
+          default: return User;
+      }
+    };
+
+    const populatedReferrals = await Promise.all(referrals.map(async (ref) => {
+      try {
+          const refereeId = ref.referee;
+          let refereeName = refereeId || 'New Account';
+          
+          if (mongoose.Types.ObjectId.isValid(refereeId)) {
+            // Aggressive lookup: find this ID across ALL models to ensure we get a name
+            const allModels = [Vendor, Doctor, Supplier, User];
+            let doc = null;
+            
+            // Try the recorded type first for speed
+            const primaryType = ref.refereeType || 'User';
+            const PrimaryModel = getModel(primaryType);
+            doc = await PrimaryModel.findById(refereeId).select('firstName lastName businessName shopName name').lean();
+            
+            // If not found, search others
+            if (!doc) {
+              const others = allModels.filter(m => m !== PrimaryModel);
+              for (const M of others) {
+                doc = await M.findById(refereeId).select('firstName lastName businessName shopName name').lean();
+                if (doc) break;
+              }
+            }
+
+            if (doc) {
+              if (doc.businessName) refereeName = doc.businessName;
+              else if (doc.shopName) refereeName = doc.shopName;
+              else if (doc.name) refereeName = doc.name;
+              else if (doc.firstName || doc.lastName) refereeName = `${doc.firstName || ''} ${doc.lastName || ''}`.trim();
+              else refereeName = 'User Account';
+            }
+          }
+
+          return {
+              ...ref,
+              refereeName
+          };
+      } catch (err) {
+          console.error("[CRM] Populate err:", err);
+          return {
+            ...ref,
+            refereeName: ref.referee || 'New Account'
+          };
+      }
+    }));
+
+    return Response.json(populatedReferrals);
   } catch (error) {
     console.error("Error fetching referrals:", error);
-    return Response.json(
-      { message: "Failed to fetch referrals" },
-      { status: 500 }
-    );
+    return Response.json({ message: "Failed to fetch referrals" }, { status: 500 });
   }
 }, ['vendor', 'doctor', 'supplier']);
 

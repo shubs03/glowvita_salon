@@ -228,15 +228,11 @@ const vendorSchema = new mongoose.Schema({
       type: String, // URL to the uploaded document
       default: null,
     },
-    udyogAadhar: {
-      type: String,
-      default: null,
-    },
     udhayamCert: {
       type: String,
       default: null,
     },
-    shopLicense: {
+    shopAct: {
       type: String,
       default: null,
     },
@@ -256,17 +252,12 @@ const vendorSchema = new mongoose.Schema({
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
-    udyogAadharStatus: {
-      type: String,
-      enum: ["pending", "approved", "rejected"],
-      default: "pending",
-    },
     udhayamCertStatus: {
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
-    shopLicenseStatus: {
+    shopActStatus: {
       type: String,
       enum: ["pending", "approved", "rejected"],
       default: "pending",
@@ -281,15 +272,11 @@ const vendorSchema = new mongoose.Schema({
       type: String,
       default: null,
     },
-    udyogAadharRejectionReason: {
-      type: String,
-      default: null,
-    },
     udhayamCertRejectionReason: {
       type: String,
       default: null,
     },
-    shopLicenseRejectionReason: {
+    shopActRejectionReason: {
       type: String,
       default: null,
     },
@@ -302,15 +289,11 @@ const vendorSchema = new mongoose.Schema({
       type: String,
       default: null,
     },
-    udyogAadharAdminRejectionReason: {
-      type: String,
-      default: null,
-    },
     udhayamCertAdminRejectionReason: {
       type: String,
       default: null,
     },
-    shopLicenseAdminRejectionReason: {
+    shopActAdminRejectionReason: {
       type: String,
       default: null,
     },
@@ -324,6 +307,10 @@ const vendorSchema = new mongoose.Schema({
     trim: true,
     unique: true,
     sparse: true, // Allows multiple documents to have a null value for this field
+  },
+  gstNo: {
+    type: String,
+    trim: true,
   },
   smsBalance: {
     type: Number,
@@ -369,6 +356,45 @@ const vendorSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  wallet: {
+    type: Number,
+    default: 0,
+  },
+  razorpayContactId: {
+    type: String,
+    default: null,
+  },
+  savedAddresses: [{
+    fullName: {
+      type: String,
+      trim: true,
+    },
+    mobileNo: {
+      type: String,
+      trim: true,
+    },
+    address: String,
+    city: String,
+    state: String,
+    pincode: String,
+    landmark: String,
+    location: {
+      lat: Number,
+      lng: Number,
+    },
+    label: {
+      type: String,
+      default: 'Home',
+    },
+    isPrimary: {
+      type: Boolean,
+      default: false,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  }],
 });
 
 // Add validation to ensure rejection reasons are provided when status is rejected
@@ -381,19 +407,15 @@ vendorSchema.pre('validate', function (next) {
       return next(new Error('Rejection reason is required for rejected Aadhar Card'));
     }
 
-    // Check Udyog Aadhar
-    if (docs.udyogAadharStatus === 'rejected' && !docs.udyogAadharRejectionReason) {
-      return next(new Error('Rejection reason is required for rejected Udyog Aadhar'));
-    }
 
     // Check Udhayam Certificate
     if (docs.udhayamCertStatus === 'rejected' && !docs.udhayamCertRejectionReason) {
       return next(new Error('Rejection reason is required for rejected Udhayam Certificate'));
     }
 
-    // Check Shop License
-    if (docs.shopLicenseStatus === 'rejected' && !docs.shopLicenseRejectionReason) {
-      return next(new Error('Rejection reason is required for rejected Shop License'));
+    // Check Shop Act
+    if (docs.shopActStatus === 'rejected' && !docs.shopActRejectionReason) {
+      return next(new Error('Rejection reason is required for rejected Shop Act'));
     }
 
     // Check PAN Card
@@ -477,7 +499,32 @@ vendorSchema.index({ location: "2dsphere" }); // Geospatial index for location-b
 vendorSchema.index({ 'subscription.status': 1, 'subscription.endDate': 1 });
 // Email index removed as it is already defined in the schema with unique: true
 
-const VendorModel =
-  mongoose.models.Vendor || mongoose.model("Vendor", vendorSchema);
+// Ensure the model is registered correctly
+let VendorModel;
+if (mongoose.models.Vendor) {
+  VendorModel = mongoose.models.Vendor;
+  // If model exists but doesn't have gstNo in schema, we might be in a stale dev state
+  if (!VendorModel.schema.paths.gstNo) {
+    VendorModel.schema.add({
+      gstNo: {
+        type: String,
+        trim: true,
+      },
+    });
+  }
+  // Ensure referralCode is also present
+  if (!VendorModel.schema.paths.referralCode) {
+    VendorModel.schema.add({
+      referralCode: {
+        type: String,
+        trim: true,
+        unique: true,
+        sparse: true,
+      },
+    });
+  }
+} else {
+  VendorModel = mongoose.model("Vendor", vendorSchema);
+}
 
 export default VendorModel;

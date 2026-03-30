@@ -17,6 +17,7 @@ import { exportToExcel, exportToCSV, exportToPDF, copyToClipboard, printTable } 
 export const SellingServicesReportTable = () => {
   const {
     filters,
+    apiFilters,
     isFilterModalOpen,
     currentPage,
     itemsPerPage,
@@ -30,18 +31,17 @@ export const SellingServicesReportTable = () => {
     handleFilterChange,
     filterAndPaginateData
   } = useReport<SellingServiceData>(5);
-  
-  const apiFilters = filters;
+
   console.log("Selling Services API filters:", apiFilters);
-  
+
   const { data, isLoading, isError, error } = useGetSellingServicesReportQuery(apiFilters);
-  
+
   const sellingServicesData = data?.services || [];
   const cities = data?.cities || [];
   const vendors = data?.vendors || [];
   const servicesList = data?.servicesList || [];
   const uniqueVendors = data?.uniqueVendors || 0;
-  
+
   const {
     paginatedData,
     totalItems,
@@ -130,7 +130,7 @@ export const SellingServicesReportTable = () => {
       </div>
     );
   }
-  
+
   if (isError) {
     console.error("Error fetching selling services report:", error);
     return (
@@ -165,7 +165,7 @@ export const SellingServicesReportTable = () => {
       </div>
     );
   }
-  
+
   if (sellingServicesData.length === 0) {
     return (
       <div>
@@ -203,7 +203,7 @@ export const SellingServicesReportTable = () => {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="flex justify-between items-center mb-4 gap-2">
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -255,8 +255,8 @@ export const SellingServicesReportTable = () => {
             </DropdownMenu>
           </div>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -267,7 +267,7 @@ export const SellingServicesReportTable = () => {
           showServiceFilter={true}
           initialFilters={filters}
         />
-        
+
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -293,7 +293,7 @@ export const SellingServicesReportTable = () => {
       </div>
     );
   }
-  
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -347,7 +347,7 @@ export const SellingServicesReportTable = () => {
           </DropdownMenu>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
@@ -363,6 +363,14 @@ export const SellingServicesReportTable = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{(data?.aggregatedTotals?.totalServiceAmountFormatted || '₹0.00')}</div>
+            <div className="flex text-xs text-muted-foreground mt-1">
+              <span className="mr-3 font-medium text-primary/80 whitespace-nowrap">Vendor:
+                {(data?.aggregatedTotals?.vendorServiceAmountFormatted || '₹0.00')}
+              </span>
+              <span className="font-medium whitespace-nowrap">Supplier:
+                {(data?.aggregatedTotals?.supplierServiceAmountFormatted || '₹0.00')}
+              </span>
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -390,8 +398,8 @@ export const SellingServicesReportTable = () => {
           </CardContent>
         </Card>
       </div>
-      
-      <FilterModal 
+
+      <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         onApplyFilters={handleFilterChange}
@@ -402,7 +410,7 @@ export const SellingServicesReportTable = () => {
         showServiceFilter={true}
         initialFilters={filters}
       />
-      
+
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>

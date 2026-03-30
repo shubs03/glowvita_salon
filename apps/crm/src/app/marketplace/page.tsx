@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Input } from '@repo/ui/input';
@@ -15,6 +15,20 @@ import { Label } from '@repo/ui/label';
 import { Badge } from '@repo/ui/badge';
 import { useAddToCartMutation } from '@repo/store/api';
 import { ProductCard } from '@/components/marketplace/ProductCard';
+
+// Load Razorpay script dynamically
+const loadRazorpayScript = (): Promise<boolean> =>
+  new Promise((resolve) => {
+    if (typeof window !== 'undefined' && (window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
 
 // Import new components
 import { MarketplaceHeader } from './components/MarketplaceHeader';
@@ -45,6 +59,7 @@ type Product = {
   description: string;
   discount?: number;
   rating?: number;
+  minOrderValue?: number;
 };
 
 interface MarketplaceStats {
@@ -76,6 +91,7 @@ type ViewMode = 'suppliers' | 'products';
 export default function MarketplacePage() {
   const { data: productsData, isLoading, isError, refetch } = useGetSupplierProductsQuery(undefined);
   console.log("Products Data:", productsData);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [displayMode, setDisplayMode] = useState<'grid' | 'list'>('grid');
@@ -92,12 +108,13 @@ export default function MarketplacePage() {
   const [buyNowQuantity, setBuyNowQuantity] = useState(1);
   const { user } = useCrmAuth();
   const [shippingAddress, setShippingAddress] = useState(user?.address || '');
-  
+
   const { data: supplierData, isLoading: isSupplierLoading } = useGetSupplierProfileQuery(selectedSupplierId, { skip: !selectedSupplierId });
 
   const [addToCart, { isLoading: isAddingToCart }] = useAddToCartMutation();
-  const [createOrder, { isLoading: isCreatingOrder }] = useCreateCrmOrderMutation();
-  
+  const [createOrder] = useCreateCrmOrderMutation();
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
   // Extract the products array from the API response
   const productsArray = useMemo(() => {
     if (!productsData) return [];
@@ -106,41 +123,57 @@ export default function MarketplacePage() {
     return [];
   }, [productsData]);
 
-  // Derive unique suppliers from products
+  // Derive unique suppliers from products - ensure no duplicates
   const suppliers = useMemo(() => {
-    const supplierMap = new Map<string, Supplier>();
+    console.log("Deriving suppliers from products:", productsArray.length, "products");
+
+    // Group products by supplier identity (shopName + businessRegistrationNo)
+    const supplierIdentityMap = new Map<string, Product[]>();
+
     productsArray.forEach((product: Product) => {
-      if (!supplierMap.has(product.vendorId)) {
-        supplierMap.set(product.vendorId, {
-          _id: product.vendorId,
-          shopName: product.supplierName || 'Unknown Supplier',
-          email: product.supplierEmail || '',
-          city: product.supplierCity,
-          state: product.supplierState,
-          country: product.supplierCountry,
-          productCount: 1,
-          totalStock: product.stock,
-          products: [product],
-          rating: 4.5,
-          businessRegistrationNo: product.supplierBusinessRegistrationNo,
-        });
-      } else {
-        const supplier = supplierMap.get(product.vendorId)!;
-        supplier.productCount++;
-        supplier.totalStock += product.stock;
-        supplier.products?.push(product);
+      console.log("Processing product:", product.productName, "vendorId:", product.vendorId, "shopName:", product.supplierName);
+
+      // Create a unique identity key for the supplier
+      const identityKey = `${product.supplierName || 'Unknown'}_${product.supplierBusinessRegistrationNo || 'no-reg'}`;
+
+      if (!supplierIdentityMap.has(identityKey)) {
+        supplierIdentityMap.set(identityKey, []);
       }
+      supplierIdentityMap.get(identityKey)!.push(product);
     });
-    
-    // Calculate average price for each supplier
-    Array.from(supplierMap.values()).forEach(supplier => {
-      if (supplier.products && supplier.products.length > 0) {
-        const totalPrice = supplier.products.reduce((sum, p) => sum + (p.salePrice || p.price), 0);
-        supplier.averagePrice = totalPrice / supplier.products.length;
-      }
+
+    console.log("Grouped by identity:", Array.from(supplierIdentityMap.keys()));
+
+    // Create supplier objects from grouped products
+    const suppliers: Supplier[] = [];
+    supplierIdentityMap.forEach((products, identityKey) => {
+      const firstProduct = products[0];
+      const totalStock = products.reduce((sum: number, p: Product) => sum + p.stock, 0);
+      const totalPrice = products.reduce((sum: number, p: Product) => sum + (p.salePrice || p.price), 0);
+
+      // For display purposes, we'll use the first product's vendorId as the identifier
+      // This allows the supplier card to work with the existing click handler
+      suppliers.push({
+        _id: firstProduct.vendorId, // Use first product's vendorId for UI interaction
+        shopName: firstProduct.supplierName || 'Unknown Supplier',
+        email: firstProduct.supplierEmail || '',
+        city: firstProduct.supplierCity,
+        state: firstProduct.supplierState,
+        country: firstProduct.supplierCountry,
+        productCount: products.length,
+        totalStock: totalStock,
+        products: products,
+        rating: 4.5,
+        averagePrice: products.length > 0 ? totalPrice / products.length : 0,
+        businessRegistrationNo: firstProduct.supplierBusinessRegistrationNo,
+      });
     });
-    
-    return Array.from(supplierMap.values());
+
+    console.log("Derived suppliers:", suppliers.length, "suppliers");
+    suppliers.forEach(supplier => {
+      console.log("Supplier:", supplier.shopName, "ID:", supplier._id, "Products:", supplier.products?.length);
+    });
+    return suppliers;
   }, [productsArray]);
 
   // Filter suppliers based on search
@@ -156,8 +189,12 @@ export default function MarketplacePage() {
   // Filter products when a supplier is selected
   const supplierProducts = useMemo(() => {
     if (!selectedSupplier) return [];
-    return productsArray.filter((product: Product) => 
-      product.vendorId === selectedSupplier._id
+
+    // Filter by supplier identity (shopName + businessRegistrationNo) instead of just vendorId
+    // This ensures we show all products from the same supplier business
+    return productsArray.filter((product: Product) =>
+      product.supplierName === selectedSupplier.shopName &&
+      product.supplierBusinessRegistrationNo === selectedSupplier.businessRegistrationNo
     );
   }, [selectedSupplier, productsArray]);
 
@@ -165,11 +202,11 @@ export default function MarketplacePage() {
     const baseProducts = viewMode === 'suppliers' ? productsArray : supplierProducts;
     return baseProducts.filter((product: any) =>
       (product.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       product.supplierName?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (statusFilter === 'all' || 
-       (statusFilter === 'in_stock' && product.stock > 10) ||
-       (statusFilter === 'low_stock' && product.stock > 0 && product.stock <= 10) ||
-       (statusFilter === 'out_of_stock' && product.stock === 0))
+        product.supplierName?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+      (statusFilter === 'all' ||
+        (statusFilter === 'in_stock' && product.stock > 10) ||
+        (statusFilter === 'low_stock' && product.stock > 0 && product.stock <= 10) ||
+        (statusFilter === 'out_of_stock' && product.stock === 0))
     );
   }, [viewMode, productsArray, supplierProducts, searchTerm, statusFilter]);
 
@@ -242,13 +279,13 @@ export default function MarketplacePage() {
     setQuantity(1);
     setIsDetailModalOpen(true);
   };
-  
+
   const handleViewSupplier = (e: React.MouseEvent, supplierId: string) => {
     e.stopPropagation();
     setSelectedSupplierId(supplierId);
     setIsSupplierModalOpen(true);
   };
-  
+
   const handleAddToCart = async (product: Product, qty: number) => {
     try {
       await addToCart({
@@ -259,6 +296,7 @@ export default function MarketplacePage() {
         productImage: product.productImage,
         vendorId: product.vendorId, // This is the supplier's ID
         supplierName: product.supplierName,
+        minOrderValue: product.minOrderValue || 0,
       }).unwrap();
       toast.success(`${qty} x ${product.productName} added to cart.`);
       setIsDetailModalOpen(false);
@@ -285,122 +323,234 @@ export default function MarketplacePage() {
         productImage: product.productImage,
         vendorId: product.vendorId,
         supplierName: product.supplierName,
+        minOrderValue: product.minOrderValue || 0,
       }).unwrap();
       toast.success(`${product.productName} added to cart!`);
     } catch (error) {
-       toast.error("Failed to add to cart.");
+      toast.error("Failed to add to cart.");
     }
   };
 
   const handlePlaceOrder = async () => {
     if (!shippingAddress.trim()) {
-        toast.error("Shipping address is required.");
-        return;
+      toast.error("Shipping address is required.");
+      return;
     }
-
     if (!selectedProduct) return;
 
-    const orderData = {
-      items: [{
-        productId: selectedProduct._id,
-        productName: selectedProduct.productName,
-        quantity: buyNowQuantity,
-        price: selectedProduct.salePrice || selectedProduct.price,
-      }],
-      supplierId: selectedProduct.vendorId,
-      totalAmount: (selectedProduct.salePrice || selectedProduct.price) * buyNowQuantity,
-      shippingAddress
-    };
+    const finalPrice = selectedProduct.salePrice || selectedProduct.price;
+    const totalAmount = finalPrice * buyNowQuantity;
 
+    const minOrder = selectedProduct.minOrderValue || 1000;
+    // Minimum order validation (from supplier)
+    if (totalAmount < minOrder) {
+      toast.error(`Minimum order amount for this supplier is ₹${minOrder.toLocaleString()}.`, {
+        description: `Current total: ₹${totalAmount.toLocaleString()}. Please increase the quantity to proceed.`,
+      });
+      return;
+    }
+
+    const supplierId = typeof selectedProduct.vendorId === 'object' && (selectedProduct.vendorId as any)._id
+      ? (selectedProduct.vendorId as any)._id
+      : selectedProduct.vendorId;
+
+    setIsProcessingPayment(true);
     try {
-        await createOrder(orderData).unwrap();
-        toast.success("Order placed successfully!");
-        setIsBuyNowModalOpen(false);
-    } catch (error) {
-        toast.error("Failed to place order. Please try again.");
+      // Step 1: Load Razorpay script
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        toast.error('Payment gateway failed to load. Please refresh and try again.');
+        return;
+      }
+
+      // Step 2: Create Razorpay order on the CRM server
+      const orderRes = await fetch('/api/payments/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: totalAmount,
+          currency: 'INR',
+          receipt: `mrkt_${selectedProduct._id}_${Date.now()}`,
+        }),
+      });
+
+      const orderData = await orderRes.json();
+      if (!orderRes.ok || !orderData.id) {
+        throw new Error(orderData.message || 'Failed to initiate payment');
+      }
+
+      // **CRITICAL FIX: Close BuyNowModal to escape focus trap**
+      setIsBuyNowModalOpen(false);
+
+      // Step 3: Open Razorpay checkout
+      await new Promise<void>((resolve, reject) => {
+        const rzp = new (window as any).Razorpay({
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+          amount: Math.round(totalAmount * 100),
+          currency: 'INR',
+          order_id: orderData.id,
+          name: 'GlowVita Marketplace',
+          description: `${selectedProduct.productName} × ${buyNowQuantity}`,
+          image: 'https://glowvita.com/logo.png',
+          theme: { color: '#7c3aed' },
+          prefill: {
+            name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
+            email: user?.emailAddress || '',
+            contact: user?.mobileNo || '',
+          },
+          retry: { enabled: true, max_count: 3 },
+          config: {
+            display: {
+              blocks: {
+                upi: {
+                  name: 'UPI / QR',
+                  instruments: [
+                    { method: 'upi', vpa: true }, // UPI ID entry
+                    { method: 'upi', qr: true }   // QR Code
+                  ],
+                },
+              },
+              sequence: ['block.upi', 'block.card', 'block.netbanking'],
+            },
+          },
+          modal: { 
+            ondismiss: () => {
+              setIsBuyNowModalOpen(true);
+              reject(new Error('Payment cancelled by user'));
+            },
+            escape: true,
+            backdropClose: false,
+          },
+          handler: async (response: any) => {
+            try {
+              // Step 4: Verify payment signature
+              const verifyRes = await fetch('/api/payments/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(response),
+              });
+              const verifyData = await verifyRes.json();
+              if (!verifyData.success) throw new Error('Payment verification failed. Please contact support.');
+
+              // Step 5: Create the CRM order with payment proof
+              await createOrder({
+                items: [{
+                  productId: selectedProduct._id,
+                  productName: selectedProduct.productName,
+                  quantity: buyNowQuantity,
+                  price: finalPrice,
+                }],
+                supplierId,
+                totalAmount,
+                shippingAddress,
+                paymentId: response.razorpay_payment_id,
+                paymentOrderId: response.razorpay_order_id,
+                paymentMethod: 'online',
+                paymentStatus: 'completed',
+              }).unwrap();
+
+              toast.success('Order placed successfully! Payment received.');
+              setIsBuyNowModalOpen(false);
+              resolve();
+            } catch (err: any) {
+              reject(err);
+            }
+          },
+        });
+        rzp.open();
+      });
+    } catch (error: any) {
+      if (error?.message !== 'Payment cancelled by user') {
+        console.error('Order payment error:', error);
+        toast.error(error?.data?.message || error?.message || 'Failed to place order. Please try again.');
+      } else {
+        toast.info('Payment cancelled.');
+      }
+    } finally {
+      setIsProcessingPayment(false);
     }
   };
 
-  if(isLoading) {
+  if (isLoading) {
     return (
-        <div className="min-h-screen bg-background">
-            
-            <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
-                <div className="mb-6">
-                    <div className="flex items-center gap-4 mb-6">
-                        <Skeleton className="h-20 w-20 rounded-2xl" />
-                        <div className="space-y-3">
-                            <Skeleton className="h-10 w-64" />
-                            <Skeleton className="h-5 w-96" />
-                        </div>
-                    </div>
-                </div>
-                
-                <Card className="bg-card border border-border rounded-lg">
-                    <CardContent className="p-6">
-                        <div className="flex flex-col lg:flex-row gap-4">
-                            <div className="relative flex-1">
-                                <Skeleton className="w-full h-12 rounded-lg" />
-                            </div>
-                            <div className="flex gap-3">
-                                <Skeleton className="w-32 h-12 rounded-lg" />
-                                <Skeleton className="w-32 h-12 rounded-lg" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+      <div className="min-h-screen bg-background">
 
-                <Card className="bg-card border border-border rounded-lg">
-                    <CardHeader className="pb-6 border-b border-border">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <div className="flex items-center gap-3">
-                                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                                        <Skeleton className="h-6 w-6 rounded" />
-                                    </div>
-                                    <Skeleton className="h-8 w-48" />
-                                </div>
-                                <div className="space-y-3 mt-2">
-                                    <Skeleton className="h-4 w-80" />
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <Skeleton className="h-8 w-32 rounded-full" />
-                            </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {[...Array(8)].map((_, i) => (
-                                <Card key={i} className="overflow-hidden rounded-2xl bg-card border border-border/30">
-                                    <div className="relative aspect-[4/3]">
-                                        <Skeleton className="h-full w-full rounded-t-2xl" />
-                                    </div>
-                                    <div className="p-5 space-y-4">
-                                        <Skeleton className="h-6 w-3/4" />
-                                        <div className="flex items-center gap-2">
-                                            <Skeleton className="h-4 w-4 rounded" />
-                                            <Skeleton className="h-4 w-1/2" />
-                                        </div>
-                                        <div className="flex items-center justify-between p-3 bg-muted/20 rounded-xl">
-                                            <Skeleton className="h-6 w-1/3" />
-                                            <div className="flex gap-2">
-                                                <Skeleton className="h-5 w-12 rounded-full" />
-                                                <Skeleton className="h-5 w-12 rounded-full" />
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Skeleton className="h-10 flex-1 rounded-xl" />
-                                            <Skeleton className="h-10 flex-1 rounded-xl" />
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
+        <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
+          <div className="mb-6">
+            <div className="flex items-center gap-4 mb-6">
+              <Skeleton className="h-20 w-20 rounded-2xl" />
+              <div className="space-y-3">
+                <Skeleton className="h-10 w-64" />
+                <Skeleton className="h-5 w-96" />
+              </div>
             </div>
+          </div>
+
+          <Card className="bg-card border border-border rounded-lg">
+            <CardContent className="p-6">
+              <div className="flex flex-col lg:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Skeleton className="w-full h-12 rounded-lg" />
+                </div>
+                <div className="flex gap-3">
+                  <Skeleton className="w-32 h-12 rounded-lg" />
+                  <Skeleton className="w-32 h-12 rounded-lg" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card border border-border rounded-lg">
+            <CardHeader className="pb-6 border-b border-border">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                      <Skeleton className="h-6 w-6 rounded" />
+                    </div>
+                    <Skeleton className="h-8 w-48" />
+                  </div>
+                  <div className="space-y-3 mt-2">
+                    <Skeleton className="h-4 w-80" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-8 w-32 rounded-full" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[...Array(8)].map((_, i) => (
+                  <Card key={i} className="overflow-hidden rounded-2xl bg-card border border-border/30">
+                    <div className="relative aspect-[4/3]">
+                      <Skeleton className="h-full w-full rounded-t-2xl" />
+                    </div>
+                    <div className="p-5 space-y-4">
+                      <Skeleton className="h-6 w-3/4" />
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-4 w-4 rounded" />
+                        <Skeleton className="h-4 w-1/2" />
+                      </div>
+                      <div className="flex items-center justify-between p-3 bg-muted/20 rounded-xl">
+                        <Skeleton className="h-6 w-1/3" />
+                        <div className="flex gap-2">
+                          <Skeleton className="h-5 w-12 rounded-full" />
+                          <Skeleton className="h-5 w-12 rounded-full" />
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Skeleton className="h-10 flex-1 rounded-xl" />
+                        <Skeleton className="h-10 flex-1 rounded-xl" />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
+      </div>
     );
   }
 
@@ -410,37 +560,37 @@ export default function MarketplacePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      
+
       <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
         {viewMode === 'suppliers' && (
           <>
-            <MarketplaceHeader 
+            <MarketplaceHeader
               viewMode={viewMode}
               selectedSupplier={selectedSupplier}
               onBack={handleBackToSuppliers}
             />
-            
-            <MarketplaceStatsCards 
-              stats={productStats} 
+
+            <MarketplaceStatsCards
+              stats={productStats}
               viewMode={viewMode}
               selectedSupplier={selectedSupplier}
             />
           </>
         )}
 
-            <MarketplaceFiltersToolbar 
-              searchTerm={searchTerm}
-              statusFilter={statusFilter}
-              viewMode={displayMode}
-              onSearchChange={setSearchTerm}
-              onStatusChange={setStatusFilter}
-              onViewModeChange={setDisplayMode}
-              pageViewMode={viewMode}
-              onBack={handleBackToSuppliers}
-            />
-        
+        <MarketplaceFiltersToolbar
+          searchTerm={searchTerm}
+          statusFilter={statusFilter}
+          viewMode={displayMode}
+          onSearchChange={setSearchTerm}
+          onStatusChange={setStatusFilter}
+          onViewModeChange={setDisplayMode}
+          pageViewMode={viewMode}
+          onBack={handleBackToSuppliers}
+        />
+
         {viewMode === 'suppliers' ? (
-          <MarketplaceSuppliersSection 
+          <MarketplaceSuppliersSection
             filteredSuppliers={paginatedSuppliers}
             isLoading={isLoading}
             searchTerm={searchTerm}
@@ -448,7 +598,7 @@ export default function MarketplacePage() {
             onSupplierClick={handleSupplierClick}
           />
         ) : (
-          <MarketplaceProductsSection 
+          <MarketplaceProductsSection
             filteredProducts={paginatedProducts}
             isLoading={isLoading}
             searchTerm={searchTerm}
@@ -483,7 +633,7 @@ export default function MarketplacePage() {
         isAddingToCart={isAddingToCart}
         onBuyNow={(product) => handleBuyNow(product)}
       />
-      
+
       <BuyNowModal
         isOpen={isBuyNowModalOpen}
         onClose={() => setIsBuyNowModalOpen(false)}
@@ -493,9 +643,9 @@ export default function MarketplacePage() {
         shippingAddress={shippingAddress}
         onShippingAddressChange={setShippingAddress}
         onPlaceOrder={handlePlaceOrder}
-        isCreatingOrder={isCreatingOrder}
+        isCreatingOrder={isProcessingPayment}
       />
-      
+
       <SupplierModal
         isOpen={isSupplierModalOpen}
         onClose={() => setIsSupplierModalOpen(false)}

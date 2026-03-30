@@ -51,6 +51,19 @@ export const CancelledAppointmentsTable = ({ startDate, endDate, client, service
     bookingType: bookingType && bookingType !== 'all' ? bookingType : undefined
   });
 
+  // Sync local filters state with props from parent
+  useEffect(() => {
+    setFilters({
+      startDate,
+      endDate,
+      client,
+      service,
+      staff,
+      status,
+      bookingType
+    });
+  }, [startDate, endDate, client, service, staff, status, bookingType]);
+
   const handleFilterChange = (newFilters: FilterParams) => {
     setFilters(newFilters);
     setCurrentPage(1); // Reset to first page when filters change
@@ -88,7 +101,7 @@ export const CancelledAppointmentsTable = ({ startDate, endDate, client, service
     if (!tableRef.current) return;
 
     // Use html2canvas to capture the table
-    const canvas = await html2canvas(tableRef.current);
+    const canvas = await html2canvas(tableRef.current as HTMLElement);
     const imgData = canvas.toDataURL('image/png');
 
     // Create PDF
@@ -162,23 +175,52 @@ export const CancelledAppointmentsTable = ({ startDate, endDate, client, service
   // Extract appointments from the API response
   const filteredAppointments = data?.data?.cancellations?.cancellations || data?.data || [];
 
-  // Filter data based on search term
-  const searchedAppointments = useMemo(() => {
-    if (!searchTerm) return filteredAppointments;
+  // Filter data based on search term and filter props
+  const finalFilteredAppointments = useMemo(() => {
+    let result = filteredAppointments;
 
-    return filteredAppointments.filter((appointment: any) =>
-      Object.values(appointment).some(value =>
-        value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [filteredAppointments, searchTerm]);
+    // 1. Filter by specific client if selected
+    if (client && client !== 'all') {
+      result = result.filter((a: any) => 
+        (a.clientName === client) || 
+        (a.client?.fullName === client)
+      );
+    }
+
+    // 2. Filter by specific service if selected
+    if (service && service !== 'all') {
+      result = result.filter((a: any) => 
+        (a.serviceName === service) || 
+        (a.service?.name === service)
+      );
+    }
+
+    // 3. Filter by specific staff if selected
+    if (staff && staff !== 'all') {
+      result = result.filter((a: any) => 
+        (a.staffName === staff) || 
+        (a.staff?.fullName === staff)
+      );
+    }
+
+    // 4. Filter by search term
+    if (searchTerm) {
+      result = result.filter((appointment: any) =>
+        Object.values(appointment).some(value =>
+          value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+    }
+
+    return result;
+  }, [filteredAppointments, searchTerm, client, service, staff]);
 
   // Pagination logic
-  const totalItems = searchedAppointments.length;
+  const totalItems = finalFilteredAppointments.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedAppointments = searchedAppointments.slice(startIndex, endIndex);
+  const paginatedAppointments = finalFilteredAppointments.slice(startIndex, endIndex);
 
   // Calculate counts for online/offline appointments
   const onlineAppointmentIds = new Set();
@@ -295,47 +337,6 @@ export const CancelledAppointmentsTable = ({ startDate, endDate, client, service
     );
   }
 
-  if (paginatedAppointments.length === 0) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-gray-500">
-          No cancelled appointments data available.
-        </div>
-        <FilterModal
-          isOpen={isFilterModalOpen}
-          onClose={() => setIsFilterModalOpen(false)}
-          onApplyFilters={handleFilterChange}
-          cities={[]}
-          initialFilters={filters}
-          showStatusFilter={true}
-          hideClientFilter={false}
-          hideServiceFilter={false}
-          hideStaffFilter={false}
-          hideBookingTypeFilter={false}
-        />
-      </div>
-    );
-  }
-
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -396,166 +397,186 @@ export const CancelledAppointmentsTable = ({ startDate, endDate, client, service
         onApplyFilters={handleFilterChange}
         cities={[]}
         initialFilters={filters}
+        showStatusFilter={true}
+        hideClientFilter={false}
+        hideServiceFilter={false}
+        hideStaffFilter={false}
+        hideBookingTypeFilter={false}
       />
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="border rounded-lg p-4 bg-primary/10">
-          <p className="text-sm text-gray-600">Total Cancelled</p>
-          <p className="text-2xl font-bold">{totalCancelled}</p>
+      {paginatedAppointments.length === 0 ? (
+        <div className="text-center py-12 border rounded-md bg-muted/10">
+          <p className="text-muted-foreground">No cancelled appointments data available for the selected filters.</p>
+          <Button 
+            variant="link" 
+            onClick={() => handleFilterChange({})}
+            className="mt-2"
+          >
+            Clear all filters
+          </Button>
         </div>
-        <div className="border rounded-lg p-4 bg-primary/5">
-          <p className="text-sm text-gray-600">Online Cancelled</p>
-          <p className="text-2xl font-bold">{onlineCancelled}</p>
-        </div>
-        <div className="border rounded-lg p-4 bg-secondary/20">
-          <p className="text-sm text-gray-600">Offline Cancelled</p>
-          <p className="text-2xl font-bold">{offlineCancelled}</p>
-        </div>
-        <div className="border rounded-lg p-4 bg-secondary/10">
-          <p className="text-sm text-gray-600">Revenue Loss</p>
-          <p className="text-2xl font-bold">₹{totalRevenueLoss.toFixed(2)}</p>
-        </div>
-      </div>
+      ) : (
+        <>
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="border rounded-lg p-4 bg-primary/10">
+              <p className="text-sm text-gray-600">Total Cancelled</p>
+              <p className="text-2xl font-bold">{totalCancelled}</p>
+            </div>
+            <div className="border rounded-lg p-4 bg-primary/5">
+              <p className="text-sm text-gray-600">Online Cancelled</p>
+              <p className="text-2xl font-bold">{onlineCancelled}</p>
+            </div>
+            <div className="border rounded-lg p-4 bg-secondary/20">
+              <p className="text-sm text-gray-600">Offline Cancelled</p>
+              <p className="text-2xl font-bold">{offlineCancelled}</p>
+            </div>
+            <div className="border rounded-lg p-4 bg-secondary/10">
+              <p className="text-sm text-gray-600">Revenue Loss</p>
+              <p className="text-2xl font-bold">₹{totalRevenueLoss.toFixed(2)}</p>
+            </div>
+          </div>
 
-      <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Client</TableHead>
-              <TableHead>Service</TableHead>
-              <TableHead>Staff</TableHead>
-              <TableHead>Scheduled On</TableHead>
-              <TableHead>Created On</TableHead>
-              <TableHead>Time</TableHead>
-              <TableHead>Cancelled By</TableHead>
-              <TableHead>Cancelled On</TableHead>
-              <TableHead>Base Amount</TableHead>
-              <TableHead>Platform Fee</TableHead>
-              <TableHead>Service Tax</TableHead>
-              <TableHead>Final Amount</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginatedAppointments.map((item: any) => {
-              // Helper function to convert MongoDB date objects to JavaScript Date
-              const convertToDate = (dateValue: any): Date | null => {
-                if (!dateValue) return null;
-
-                if (dateValue instanceof Date) {
-                  return dateValue;
-                }
-
-                // Check if it's a MongoDB date object format: {"$date": "..."}
-                if (typeof dateValue === 'object' && dateValue.$date) {
-                  return new Date(dateValue.$date);
-                }
-
-                // Check if it's already an ISO string
-                if (typeof dateValue === 'string') {
-                  return new Date(dateValue);
-                }
-
-                // If it's a timestamp number
-                if (typeof dateValue === 'number') {
-                  return new Date(dateValue);
-                }
-
-                return null;
-              };
-
-              // Format dates
-              const scheduledDateValue = convertToDate(item.scheduledDate);
-              const scheduledDate = scheduledDateValue ? scheduledDateValue.toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric'
-              }) : 'N/A';
-
-              const createdDateValue = convertToDate(item.createdAt);
-              const createdDate = createdDateValue ? createdDateValue.toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric'
-              }) : 'N/A';
-
-              // Format time range
-              const timeRange = item.startTime ?
-                `${item.startTime} - ${item.endTime || item.startTime}` : 'N/A';
-
-              // Format cancellation information
-              const cancelledOnValue = convertToDate(item.cancelledDate);
-              const cancelledOn = cancelledOnValue ? cancelledOnValue.toLocaleDateString('en-GB', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric'
-              }) : 'N/A';
-
-              // Determine who cancelled the appointment based on reason
-              let cancelledBy = 'N/A';
-              if (item.reason && item.reason.toLowerCase().includes('automatically cancelled')) {
-                cancelledBy = 'Not Attended';
-              } else if (item.mode === 'online' && item.clientName) {
-                cancelledBy = 'User';
-              } else {
-                cancelledBy = 'Vendor';
-              }
-
-              // Format service name for multi-service appointments
-              let serviceName = item.serviceName || item.service?.name || 'N/A';
-              if (item.isMultiService && item.multiServiceTotal) {
-                serviceName = `${serviceName}(${item.multiServiceIndex + 1}/${item.multiServiceTotal})`;
-              }
-
-              // Format status with asterisk for multi-service appointments
-              const statusText = item.isMultiService ? `${item.status}*` : item.status || 'N/A';
-
-              return (
-                <TableRow key={`${item.id}-${item.multiServiceIndex || 0}`}>
-                  <TableCell>{item.clientName || 'N/A'}</TableCell>
-                  <TableCell>{serviceName}</TableCell>
-                  <TableCell>{item.staffName || item.staff?.fullName || 'N/A'}</TableCell>
-                  <TableCell>{scheduledDate}</TableCell>
-                  <TableCell>{createdDate}</TableCell>
-                  <TableCell>{timeRange}</TableCell>
-                  <TableCell>{cancelledBy}</TableCell>
-                  <TableCell>{cancelledOn}</TableCell>
-                  <TableCell>₹{item.amount || 0}</TableCell>
-                  <TableCell>₹{item.platformFee || 0}</TableCell>
-                  <TableCell>₹{item.serviceTax || 0}</TableCell>
-                  <TableCell>₹{item.finalAmount || item.totalAmount || 0}</TableCell>
+          <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Service</TableHead>
+                  <TableHead>Staff</TableHead>
+                  <TableHead>Scheduled On</TableHead>
+                  <TableHead>Created On</TableHead>
+                  <TableHead>Time</TableHead>
+                  <TableHead>Cancelled By</TableHead>
+                  <TableHead>Cancelled On</TableHead>
+                  <TableHead>Base Amount</TableHead>
+                  <TableHead>Platform Fee</TableHead>
+                  <TableHead>Service Tax</TableHead>
+                  <TableHead>Final Amount</TableHead>
                 </TableRow>
-              );
-            })}
-            {/* Total Row */}
-            <TableRow className="font-bold bg-gray-50">
-              <TableCell>Total</TableCell>
-              <TableCell colSpan={7}></TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.amount || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.platformFee || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.serviceTax || 0), 0).toFixed(2)}
-              </TableCell>
-              <TableCell>
-                ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.finalAmount || item.totalAmount || 0), 0).toFixed(2)}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-      <Pagination
-        className="mt-4"
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={setItemsPerPage}
-        totalItems={totalItems}
-      />
+              </TableHeader>
+              <TableBody>
+                {paginatedAppointments.map((item: any) => {
+                  // Helper function to convert MongoDB date objects to JavaScript Date
+                  const convertToDate = (dateValue: any): Date | null => {
+                    if (!dateValue) return null;
+
+                    if (dateValue instanceof Date) {
+                      return dateValue;
+                    }
+
+                    // Check if it's a MongoDB date object format: {"$date": "..."}
+                    if (typeof dateValue === 'object' && dateValue.$date) {
+                      return new Date(dateValue.$date);
+                    }
+
+                    // Check if it's already an ISO string
+                    if (typeof dateValue === 'string') {
+                      return new Date(dateValue);
+                    }
+
+                    // If it's a timestamp number
+                    if (typeof dateValue === 'number') {
+                      return new Date(dateValue);
+                    }
+
+                    return null;
+                  };
+
+                  // Format dates
+                  const scheduledDateValue = convertToDate(item.scheduledDate);
+                  const scheduledDate = scheduledDateValue ? scheduledDateValue.toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                  }) : 'N/A';
+
+                  const createdDateValue = convertToDate(item.createdAt);
+                  const createdDate = createdDateValue ? createdDateValue.toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                  }) : 'N/A';
+
+                  // Format time range
+                  const timeRange = item.startTime ?
+                    `${item.startTime} - ${item.endTime || item.startTime}` : 'N/A';
+
+                  // Format cancellation information
+                  const cancelledOnValue = convertToDate(item.cancelledDate);
+                  const cancelledOn = cancelledOnValue ? cancelledOnValue.toLocaleDateString('en-GB', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                  }) : 'N/A';
+
+                  // Determine who cancelled the appointment based on reason
+                  let cancelledBy = 'N/A';
+                  if (item.reason && item.reason.toLowerCase().includes('automatically cancelled')) {
+                    cancelledBy = 'Not Attended';
+                  } else if (item.mode === 'online' && item.clientName) {
+                    cancelledBy = 'User';
+                  } else {
+                    cancelledBy = 'Vendor';
+                  }
+
+                  // Format service name for multi-service appointments
+                  let serviceName = item.serviceName || item.service?.name || 'N/A';
+                  if (item.isMultiService && item.multiServiceTotal) {
+                    serviceName = `${serviceName}(${item.multiServiceIndex + 1}/${item.multiServiceTotal})`;
+                  }
+
+                  // Format status with asterisk for multi-service appointments
+                  const statusText = item.isMultiService ? `${item.status}*` : item.status || 'N/A';
+
+                  return (
+                    <TableRow key={`${item.id}-${item.multiServiceIndex || 0}`}>
+                      <TableCell>{item.clientName || 'N/A'}</TableCell>
+                      <TableCell>{serviceName}</TableCell>
+                      <TableCell>{item.staffName || item.staff?.fullName || 'N/A'}</TableCell>
+                      <TableCell>{scheduledDate}</TableCell>
+                      <TableCell>{createdDate}</TableCell>
+                      <TableCell>{timeRange}</TableCell>
+                      <TableCell>{cancelledBy}</TableCell>
+                      <TableCell>{cancelledOn}</TableCell>
+                      <TableCell>₹{item.amount || 0}</TableCell>
+                      <TableCell>₹{item.platformFee || 0}</TableCell>
+                      <TableCell>₹{item.serviceTax || 0}</TableCell>
+                      <TableCell>₹{item.finalAmount || item.totalAmount || 0}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                {/* Total Row */}
+                <TableRow className="font-bold bg-gray-50">
+                  <TableCell>Total</TableCell>
+                  <TableCell colSpan={7}></TableCell>
+                  <TableCell>
+                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.amount || 0), 0).toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.platformFee || 0), 0).toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.serviceTax || 0), 0).toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.finalAmount || item.totalAmount || 0), 0).toFixed(2)}
+                  </TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+          <Pagination
+            className="mt-4"
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            onItemsPerPageChange={setItemsPerPage}
+            totalItems={totalItems}
+          />
+        </>
+      )}
     </div>
   );
 };

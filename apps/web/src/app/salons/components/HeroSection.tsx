@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ArrowRight, Download } from "lucide-react";
+import { GlobalSearchBar } from "@/components/GlobalSearchBar";
 
 const HeroSection = () => {
   const scrollToSection = (id: string) => {
@@ -41,11 +42,16 @@ const HeroSection = () => {
         </h1>
 
         {/* Description */}
-        <p className="text-gray-200 text-base md:text-lg mb-10 max-w-xl leading-relaxed">
+        <p className="text-gray-200 text-base md:text-lg mb-8 max-w-xl leading-relaxed">
           Choose from top-rated salons where experienced artists, modern
           techniques, and exceptional care come together to transform your look.
         </p>
-        
+
+        {/* Search Bar */}
+        <div className="mb-10 w-full max-w-4xl relative z-40">
+           <GlobalSearchBar variant="compact" className="shadow-2xl !max-w-4xl mx-0" />
+        </div>
+
         {/* Buttons */}
         <div className="flex flex-col sm:flex-row gap-4">
           <button 

@@ -33,7 +33,7 @@ export default function PatientTestimonials() {
             <div key={testimonial.id} className="bg-background rounded-lg p-5 border border-border/50 hover:shadow-md transition-all duration-200 hover:border-primary/30">
               <div className="flex items-center gap-1 mb-4">
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <Star key={star} className="h-4 w-4 fill-primary text-primary" />
+                  <Star key={star} className="h-4 w-4 text-yellow-500 fill-current" />
                 ))}
               </div>
               <p className="text-sm text-muted-foreground mb-4 leading-relaxed">

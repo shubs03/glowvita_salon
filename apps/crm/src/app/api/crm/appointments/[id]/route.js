@@ -7,6 +7,7 @@ import UserModel from "../../../../../../../../packages/lib/src/models/user/User
 import { sendEmail } from "../../../../../../../../packages/lib/src/emailService";
 import { getConfirmationTemplate, getCompletionTemplate, getInvoiceTemplate, getCancellationTemplate } from "../../../../../../../../packages/lib/src/emailTemplates";
 import VendorModel from "../../../../../../../../packages/lib/src/models/Vendor/Vendor.model";
+import { checkAndCreditReferralBonus } from "../../../../../../../../packages/lib/src/utils/referralWalletCredit";
 import pdf from 'html-pdf';
 
 await _db();
@@ -101,6 +102,59 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                 }
             } catch (invoiceError) {
                 console.error("Error in centralized invoice generation:", invoiceError);
+            }
+
+            // Check and credit referral bonus if user was referred (triggers on first completed appointment)
+            console.log(`[CRM ID Route] ===== STARTING REFERRAL BONUS CHECK =====`);
+            console.log(`[CRM ID Route] Appointment ID: ${appointmentId}`);
+            console.log(`[CRM ID Route] Update status: ${updateObject.status}`);
+            console.log(`[CRM ID Route] existingAppointment.client:`, existingAppointment.client);
+
+            // LOGIC FIX: Handle both online (User ID) and offline (Client ID) modes
+            let targetUserId = null;
+
+            if (existingAppointment.mode === 'online') {
+                // For online appointments, client field IS the User ID
+                targetUserId = existingAppointment.client?.toString();
+                console.log(`[CRM ID Route] Online appointment detected. Using client field as User ID: ${targetUserId}`);
+            } else {
+                // For offline appointments, client field is Client ID. We need to find if this Client is linked to a User.
+                // Note: existingAppointment.client is an ObjectId (not populated yet in this scope)
+                if (existingAppointment.client) {
+                    try {
+                        const ClientModel = (await import('@repo/lib/models/Vendor/Client.model')).default;
+                        const clientDoc = await ClientModel.findById(existingAppointment.client).select('userId');
+                        if (clientDoc && clientDoc.userId) {
+                            targetUserId = clientDoc.userId.toString();
+                            console.log(`[CRM ID Route] Offline appointment linked to User ID: ${targetUserId}`);
+                        } else {
+                            console.log(`[CRM ID Route] Offline appointment client not linked to any User`);
+                        }
+                    } catch (clientErr) {
+                        console.error(`[CRM ID Route] Error fetching client details:`, clientErr);
+                    }
+                }
+            }
+
+            if (targetUserId) {
+                try {
+                    console.log(`[CRM ID Route] ===== TRIGGERING REFERRAL BONUS CHECK =====`);
+                    const referralResult = await checkAndCreditReferralBonus(targetUserId, 'appointment');
+                    console.log(`[CRM ID Route] ===== REFERRAL BONUS RESULT =====`);
+                    console.log(`[CRM ID Route] Success: ${referralResult.success}`);
+                    console.log(`[CRM ID Route] Message: ${referralResult.message}`);
+
+                    if (referralResult.success) {
+                        console.log(`[CRM ID Route] ✅ Referral bonus credited successfully!`);
+                    } else {
+                        console.warn(`[CRM ID Route] ⚠️ Referral bonus not credited: ${referralResult.message}`);
+                    }
+                } catch (referralError) {
+                    // Don't fail the appointment update if referral crediting fails, just log the error
+                    console.error('[CRM ID Route] ❌ ERROR crediting referral bonus:', referralError);
+                }
+            } else {
+                console.log(`[CRM ID Route] ❌ No valid User ID found for referral bonus check`);
             }
         }
 
@@ -288,7 +342,13 @@ export const PUT = authMiddlewareCrm(async (req, { params }) => {
                         const completionHtml = getCompletionTemplate({
                             clientName,
                             businessName,
-                            serviceName: updatedAppointment.serviceName
+                            serviceName: updatedAppointment.serviceName,
+                            appointmentId: updatedAppointment.invoiceNumber || updatedAppointment._id.toString(),
+                            completedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
+                            orderTotal: updatedAppointment.totalAmount,
+                            location: updatedAppointment.homeServiceLocation?.address || businessName,
+                            businessAddress,
+                            businessPhone
                         });
 
                         await sendEmail({

@@ -6,7 +6,7 @@ import { Textarea } from '@repo/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { Button } from '@repo/ui/button';
 import { Trash2, Plus } from 'lucide-react';
-import { useGetProductMastersQuery } from '@repo/store/api';
+import { useGetCrmProductMastersQuery } from '@repo/store/api';
 import { Badge } from '@repo/ui/badge';
 
 interface Category {
@@ -71,7 +71,7 @@ const ProductFormFields = ({
   const [gstAmount, setGstAmount] = useState<number>(0);
 
   // Fetch product masters
-  const { data: productMastersData, isLoading: productMastersLoading, error: productMastersError } = useGetProductMastersQuery(undefined);
+  const { data: productMastersData, isLoading: productMastersLoading, error: productMastersError } = useGetCrmProductMastersQuery(undefined);
   const productMasters = productMastersData || [];
 
   // Debug logging
@@ -91,7 +91,7 @@ const ProductFormFields = ({
   // Calculate GST and final price whenever sale price or category changes
   useEffect(() => {
     const salePrice = Number(formData.salePrice) || 0;
-    
+
     if (!selectedCategory || !selectedCategory.gstType || selectedCategory.gstType === 'none') {
       setGstAmount(0);
       setCalculatedFinalPrice(salePrice);
@@ -131,7 +131,7 @@ const ProductFormFields = ({
     if (productName === 'manual-entry') {
       return; // Don't update, let user type
     }
-    
+
     onFieldChange('productName', productName);
 
     // Find the selected product master and auto-fill fields
@@ -356,7 +356,7 @@ const ProductFormFields = ({
       </div>
 
       {/* GST and Final Price Display */}
-      {selectedCategory && selectedCategory.gstType !== 'none' && formData.salePrice && (
+      {selectedCategory && selectedCategory.gstType !== 'none' && (formData.salePrice || formData.price) && (
         <div className="bg-muted/30 rounded-xl p-4 border border-border/30">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
@@ -379,7 +379,7 @@ const ProductFormFields = ({
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-2">
-            Calculation: Sale Price (₹{Number(formData.salePrice).toFixed(2)}) + GST (₹{gstAmount.toFixed(2)}) = Final Price (₹{calculatedFinalPrice.toFixed(2)})
+            Calculation: {formData.salePrice && formData.salePrice < (formData.price || 0) ? `Sale Price (₹${Number(formData.salePrice).toFixed(2)})` : `Regular Price (₹${Number(formData.price).toFixed(2)})`} + GST (₹{gstAmount.toFixed(2)}) = Final Price (₹{calculatedFinalPrice.toFixed(2)})
           </p>
         </div>
       )}

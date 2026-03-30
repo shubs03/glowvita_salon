@@ -39,13 +39,13 @@ export default function AppointmentListSection({
           <CardTitle className="flex items-center text-xl font-bold text-foreground">
             Appointments
           </CardTitle>
-          <Badge variant="outline" className="bg-primary/10 text-primary font-bold px-3 py-1.5 rounded-full">
+          <Badge variant="outline" className="bg-primary-100 text-primary-700 border-primary-200 font-bold px-3 py-1.5 rounded-full">
             {appointments.length} {appointments.length === 1 ? 'appointment' : 'appointments'}
           </Badge>
         </div>
 
         <p className="text-sm text-muted-foreground font-medium mt-2">
-          {currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
+          {currentDate.toLocaleDateString('default', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
         </p>
       </CardHeader>
       <CardContent className="p-0 flex-1 flex flex-col min-h-0">

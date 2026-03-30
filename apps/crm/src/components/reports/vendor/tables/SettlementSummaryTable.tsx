@@ -22,7 +22,9 @@ interface SettlementSummaryTableProps {
 const exportToExcel = (tableRef: React.RefObject<HTMLDivElement>, fileName: string) => {
   if (!tableRef.current) return;
 
-  const table = tableRef.current.querySelector('table');
+  const table = tableRef.current.querySelector('.settlements-table table') || 
+                tableRef.current.querySelector('.transfers-table table') || 
+                tableRef.current.querySelector('table');
   if (!table) return;
 
   const wb = XLSX.utils.table_to_book(table, { sheet: 'Sheet1' });
@@ -32,7 +34,9 @@ const exportToExcel = (tableRef: React.RefObject<HTMLDivElement>, fileName: stri
 const exportToCSV = (tableRef: React.RefObject<HTMLDivElement>, fileName: string) => {
   if (!tableRef.current) return;
 
-  const table = tableRef.current.querySelector('table');
+  const table = tableRef.current.querySelector('.settlements-table table') || 
+                tableRef.current.querySelector('.transfers-table table') || 
+                tableRef.current.querySelector('table');
   if (!table) return;
 
   const wb = XLSX.utils.table_to_book(table, { sheet: 'Sheet1' });
@@ -43,11 +47,13 @@ const exportToPDF = async (tableRef: React.RefObject<HTMLDivElement>, fileName: 
   if (!tableRef.current) return;
 
   // Get only the table element, not the entire container
-  const table = tableRef.current.querySelector('table');
+  const table = tableRef.current.querySelector('.settlements-table table') || 
+                tableRef.current.querySelector('.transfers-table table') || 
+                tableRef.current.querySelector('table');
   if (!table) return;
 
   // Use html2canvas to capture only the table
-  const canvas = await html2canvas(table);
+  const canvas = await html2canvas(table as HTMLElement);
   const imgData = canvas.toDataURL('image/png');
 
   // Create PDF
@@ -62,7 +68,9 @@ const exportToPDF = async (tableRef: React.RefObject<HTMLDivElement>, fileName: 
 const copyToClipboard = (tableRef: React.RefObject<HTMLDivElement>) => {
   if (!tableRef.current) return;
 
-  const table = tableRef.current.querySelector('table');
+  const table = tableRef.current.querySelector('.settlements-table table') || 
+                tableRef.current.querySelector('.transfers-table table') || 
+                tableRef.current.querySelector('table');
   if (!table) return;
 
   // Get table HTML
@@ -81,7 +89,9 @@ const printTable = (tableRef: React.RefObject<HTMLDivElement>) => {
   if (!tableRef.current) return;
 
   // Get only the table element, not the entire container
-  const table = tableRef.current.querySelector('table');
+  const table = tableRef.current.querySelector('.settlements-table table') || 
+                tableRef.current.querySelector('.transfers-table table') || 
+                tableRef.current.querySelector('table');
   if (!table) return;
 
   const printWindow = window.open('', '', 'height=600,width=800');
@@ -258,7 +268,7 @@ export const SettlementSummaryTable = ({ startDate, endDate, triggerRefresh }: S
   }
 
   return (
-    <div>
+    <div ref={tableRef}>
       <div className="flex justify-between items-center mb-4 gap-2">
         <div className="relative w-64">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -350,7 +360,7 @@ export const SettlementSummaryTable = ({ startDate, endDate, triggerRefresh }: S
           Actual Money Transfers
         </div>
 
-        <div className="rounded-md border">
+        <div className="rounded-md border transfers-table">
           <Table>
             <TableHeader>
               <TableRow>
@@ -408,7 +418,7 @@ export const SettlementSummaryTable = ({ startDate, endDate, triggerRefresh }: S
         </Button>
 
         {showAppointmentDetails && (
-          <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300 settlements-table">
             <div className="flex items-center gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />

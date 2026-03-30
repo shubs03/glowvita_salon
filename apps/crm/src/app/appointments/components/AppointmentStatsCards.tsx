@@ -9,67 +9,67 @@ interface AppointmentStatsCardsProps {
 const AppointmentStatsCards = ({ appointments }: AppointmentStatsCardsProps) => {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:shadow-md hover:shadow-primary/10 dark:bg-secondary/10 dark:border-secondary/30 dark:hover:border-secondary/50 dark:hover:shadow-secondary/20">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-primary mb-1">Total Appointments</p>
-              <p className="text-2xl font-bold text-primary">{appointments.length}</p>
-              <p className="text-xs text-primary/70 mt-1">All scheduled appointments</p>
+              <p className="text-sm font-medium text-secondary-foreground mb-1 dark:text-secondary-foreground">Total Appointments</p>
+              <p className="text-2xl font-bold text-secondary-foreground dark:text-secondary-foreground">{appointments.length}</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">All scheduled appointments</p>
             </div>
-            <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <CalendarCheck className="h-6 w-6 text-primary" />
+            <div className="p-3 bg-secondary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-secondary/20 dark:group-hover:bg-secondary/30">
+              <CalendarCheck className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
             </div>
           </div>
         </CardContent>
       </Card>
       
-      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:shadow-md hover:shadow-primary/10 dark:bg-secondary/10 dark:border-secondary/30 dark:hover:border-secondary/50 dark:hover:shadow-secondary/20">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-secondary-foreground mb-1">Confirmed</p>
-              <p className="text-2xl font-bold text-secondary-foreground">
+              <p className="text-sm font-medium text-secondary-foreground mb-1 dark:text-secondary-foreground">Confirmed</p>
+              <p className="text-2xl font-bold text-secondary-foreground dark:text-secondary-foreground">
                 {appointments.filter(a => a.status === 'confirmed').length}
               </p>
-              <p className="text-xs text-secondary-foreground/70 mt-1">Upcoming confirmed bookings</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">Upcoming confirmed bookings</p>
             </div>
-            <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <UserCheck className="h-6 w-6 text-secondary-foreground" />
+            <div className="p-3 bg-primary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-primary/20 dark:group-hover:bg-secondary/30">
+              <UserCheck className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
             </div>
           </div>
         </CardContent>
       </Card>
       
-      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:shadow-md hover:shadow-primary/10 dark:bg-secondary/10 dark:border-secondary/30 dark:hover:border-secondary/50 dark:hover:shadow-secondary/20">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-primary mb-1">Completed</p>
-              <p className="text-2xl font-bold text-primary">
+              <p className="text-sm font-medium text-secondary-foreground mb-1 dark:text-secondary-foreground">Completed</p>
+              <p className="text-2xl font-bold text-secondary-foreground dark:text-secondary-foreground">
                 {appointments.filter(a => a.status === 'completed' || a.status === 'completed without payment').length}
               </p>
-              <p className="text-xs text-primary/70 mt-1">Successfully completed</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">Successfully completed</p>
             </div>
-            <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <CheckCircle className="h-6 w-6 text-primary" />
+            <div className="p-3 bg-primary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-primary/20 dark:group-hover:bg-secondary/30">
+              <CheckCircle className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
             </div>
           </div>
         </CardContent>
       </Card>
       
-      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
+      <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 hover:border-primary/40 transition-all duration-300 hover:shadow-md hover:shadow-primary/10 dark:bg-secondary/10 dark:border-secondary/30 dark:hover:border-secondary/50 dark:hover:shadow-secondary/20">
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-secondary-foreground mb-1">Cancelled</p>
-              <p className="text-2xl font-bold text-secondary-foreground">
+              <p className="text-sm font-medium text-secondary-foreground mb-1 dark:text-secondary-foreground">Cancelled</p>
+              <p className="text-2xl font-bold text-secondary-foreground dark:text-secondary-foreground">
                 {appointments.filter(a => a.status === 'cancelled').length}
               </p>
-              <p className="text-xs text-secondary-foreground/70 mt-1">Cancelled by client or staff</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">Cancelled by client or staff</p>
             </div>
-            <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <CalendarX className="h-6 w-6 text-secondary-foreground" />
+            <div className="p-3 bg-primary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-primary/20 dark:group-hover:bg-secondary/30">
+              <CalendarX className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
             </div>
           </div>
         </CardContent>

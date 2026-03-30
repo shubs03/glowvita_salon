@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Clock, IndianRupee, ChevronDown, Loader2, AlertCircle } from 'lucide-react';
+import { Clock, IndianRupee, ChevronDown, Loader2, AlertCircle, Home, Heart, Plus } from 'lucide-react';
 import { useGetPublicVendorServicesQuery } from "@repo/store/services/api";
 
 interface ServicesOfferedProps {
@@ -27,11 +27,13 @@ const ServicesOffered: React.FC<ServicesOfferedProps> = ({
         id: service._id || service.id,
         name: service.name || "",
         price: service.price || 0,
+        discountedPrice: service.discountedPrice,
         duration: service.duration || 60,
         category: service.category?.name || service.category || "Other",
         description: service.description || "",
         image: service.image || "",
-        discount: service.discount || null,
+        homeService: service.homeService || service.serviceHomeService,
+        weddingService: service.weddingService || service.serviceWeddingService,
       }));
     }
     return [];
@@ -55,12 +57,18 @@ const ServicesOffered: React.FC<ServicesOfferedProps> = ({
   }, [services, selectedCategory]);
 
   // Format duration display
-  const formatDuration = (duration: number) => {
-    if (duration < 60) {
-      return `${duration} mins`;
+  const formatDuration = (duration: any) => {
+    const durStr = String(duration);
+    if (durStr.includes('min') || durStr.includes('h')) return durStr;
+
+    const durNum = parseInt(durStr);
+    if (isNaN(durNum)) return duration;
+
+    if (durNum < 60) {
+      return `${durNum} min`;
     }
-    const hours = Math.floor(duration / 60);
-    const mins = duration % 60;
+    const hours = Math.floor(durNum / 60);
+    const mins = durNum % 60;
     return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
   };
 
@@ -162,75 +170,122 @@ const ServicesOffered: React.FC<ServicesOfferedProps> = ({
           {filteredServices.map((service: any, index: number) => (
             <div
               key={`${service.id}-${index}`}
-              className="bg-card border border-border rounded-2xl p-5 hover:shadow-md transition-all duration-300 relative"
+              className="bg-card border border-border rounded-xl p-4 hover:shadow-md transition-all duration-300 relative group cursor-pointer"
+              onClick={() => {
+                if (!isSubscriptionExpired) {
+                  const serviceData = {
+                    id: service.id,
+                    name: service.name,
+                    price: service.price,
+                    discountedPrice: service.discountedPrice,
+                    duration: service.duration,
+                    category: service.category,
+                    description: service.description,
+                    image: service.image,
+                  };
+                  sessionStorage.setItem("selectedService", JSON.stringify(serviceData));
+                  onBookNow(service);
+                }
+              }}
             >
-              {/* Discount Badge */}
-              {service.discount && (
-                <div className="absolute top-4 right-4 bg-foreground text-background px-3 py-1 rounded-full text-xs font-bold">
-                  Save {service.discount}
-                </div>
-              )}
+              <div className="flex flex-col h-full">
+                <div className="flex-1">
+                  {/* Service Name */}
+                  <h3 className="font-bold text-foreground text-base mb-1 pr-4 group-hover:text-primary transition-colors">
+                    {service.name}
+                  </h3>
 
-              {/* Service Name */}
-              <h3 className="font-bold text-foreground text-base mb-3 pr-20">
-                {service.name}
-              </h3>
-
-              {/* Description (if available) */}
-              {service.description && (
-                <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
-                  {service.description}
-                </p>
-              )}
-
-              {/* Duration and Price */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-2">
-                  {/* Duration */}
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-primary" />
-                    <span className="text-sm text-muted-foreground">
-                      {formatDuration(service.duration)}
-                    </span>
-                  </div>
-
-                  {isSubscriptionExpired && (
-                    <p className="text-[10px] text-red-600 font-medium">
-                      This service is temporarily closed
+                  {/* Description (if available) */}
+                  {service.description && (
+                    <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                      {service.description}
                     </p>
                   )}
 
-                  {/* Price */}
-                  <div className="flex items-center gap-2">
-                    <IndianRupee className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-semibold text-foreground">
-                      From ₹ {service.price.toFixed(2)}/-
-                    </span>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-2.5">
+                    {/* Duration */}
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-secondary/50 rounded-md">
+                      <Clock className="w-3 h-3 text-primary" />
+                      <span className="text-[10px] font-medium text-foreground">
+                        {formatDuration(service.duration)}
+                      </span>
+                    </div>
+
+                    {isSubscriptionExpired && (
+                      <p className="text-[9px] text-red-600 font-bold uppercase tracking-wider">
+                        Closed
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Service Badges */}
+                  <div className="flex flex-wrap gap-1.5 mb-3">
+                    {service.homeService?.available && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-primary text-secondary uppercase tracking-wider">
+                        <Home className="h-2.5 w-2.5 mr-1" />
+                        Home Service
+                      </span>
+                    )}
+                    {service.weddingService?.available && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-100 text-rose-800 uppercase tracking-wider border border-rose-200">
+                        <Heart className="h-2.5 w-2.5 mr-1" />
+                        Wedding Service
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {/* Book Now Button */}
-                <button
-                  className={`bg-background border border-border hover:bg-primary hover:text-primary-foreground hover:border-primary px-5 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${isSubscriptionExpired ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                  disabled={isSubscriptionExpired}
-                  onClick={() => {
-                    // Store complete service data in sessionStorage
-                    const serviceData = {
-                      id: service.id,
-                      name: service.name,
-                      price: service.price,
-                      duration: service.duration,
-                      category: service.category,
-                      description: service.description,
-                      image: service.image,
-                    };
-                    sessionStorage.setItem("selectedService", JSON.stringify(serviceData));
-                    onBookNow(service);
-                  }}
-                >
-                  {isSubscriptionExpired ? 'Unavailable' : 'Book Now'}
-                </button>
+                {/* Footer: Price and Button */}
+                <div className="flex items-end justify-between mt-auto pt-2 border-t border-border/50">
+                  {/* Price Section */}
+                  <div className="space-y-0.5">
+                    {service.discountedPrice !== null && service.discountedPrice !== undefined && service.discountedPrice !== 0 && service.discountedPrice < service.price ? (
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground line-through text-[10px] italic">
+                            ₹{service.price}
+                          </span>
+                          <span className="font-black text-lg text-primary tracking-tight">
+                            ₹{service.discountedPrice}
+                          </span>
+                        </div>
+                        <div className="text-[9px] font-black text-green-600 uppercase tracking-wider">
+                          {Math.round(((parseFloat(String(service.price)) - parseFloat(String(service.discountedPrice))) / parseFloat(String(service.price))) * 100)}% OFF
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <span className="font-black text-lg text-primary tracking-tight">
+                          ₹{service.price}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Book Now Button */}
+                  <button
+                    className={`bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-md shadow-primary/10 transition-all duration-300 ${isSubscriptionExpired ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:-translate-y-0.5'
+                      }`}
+                    disabled={isSubscriptionExpired}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const serviceData = {
+                        id: service.id,
+                        name: service.name,
+                        price: service.price,
+                        discountedPrice: service.discountedPrice,
+                        duration: service.duration,
+                        category: service.category,
+                        description: service.description,
+                        image: service.image,
+                      };
+                      sessionStorage.setItem("selectedService", JSON.stringify(serviceData));
+                      onBookNow(service);
+                    }}
+                  >
+                    {isSubscriptionExpired ? 'Unavailable' : 'Book'}
+                  </button>
+                </div>
               </div>
             </div>
           ))}

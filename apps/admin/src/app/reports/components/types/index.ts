@@ -6,3 +6,5 @@ export * from './booking.types';
 export * from './vendor.types';
 export * from './campaign.types';
 export * from './referral.types';
+export * from './settlement.types';
+export * from './platform-collections.types';

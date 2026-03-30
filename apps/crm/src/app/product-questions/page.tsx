@@ -87,7 +87,7 @@ export default function ProductQuestionsPage() {
   const handleOpenAnswerDialog = (question: ProductQuestion) => {
     setSelectedQuestion(question);
     setAnswerText(question.answer || '');
-    setPublishAnswer(question.isPublished);
+    setPublishAnswer(question.isAnswered ? question.isPublished : true);
     setIsAnswerDialogOpen(true);
   };
 
@@ -151,21 +151,7 @@ export default function ProductQuestionsPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="relative p-4 sm:p-6 lg:p-8 space-y-6">
-        {/* Enhanced Header Section matching staff page design */}
-        <div className="mb-6">
-          <div className="flex items-center gap-4 mb-6">
-            <div>
-              <h1 className="text-3xl font-bold font-headline mb-1 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
-                Product Questions
-              </h1>
-              <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl">
-                Manage and respond to customer questions about your products
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <ProductQuestionsHeader questions={questions} />
+        <ProductQuestionsHeader questions={filteredQuestions} />
         
         <ProductQuestionsFilters
           searchTerm={searchTerm}

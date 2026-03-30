@@ -28,12 +28,22 @@ export default function LoginPage() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isCrmAuthenticated) {
-      router.push('/dashboard');
+      router.replace('/dashboard');
     }
   }, [isCrmAuthenticated, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Basic email validation
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(email)) {
+      toast.error('Invalid email', {
+        description: 'Please enter a valid email address',
+        duration: 4000,
+      });
+      return;
+    }
 
     try {
       const response = await vendorLogin({ email, password }).unwrap();
@@ -88,8 +98,9 @@ export default function LoginPage() {
           <div className="text-center mb-6">
             <div className="flex justify-center mb-4">
               <img
-                src="/favicon.jpeg"
-                className="w-16 h-16 object-contain rounded-full border-4 border-white shadow-lg"
+                src="/images/GlowVita%20Salon%20PNG.png"
+                alt="GlowVita Salon"
+                className="h-16 w-auto object-contain drop-shadow-md"
               />
             </div>
             <h1 className="text-2xl font-extrabold text-gray-900 md:text-xl">Glowvita Salon for professionals</h1>

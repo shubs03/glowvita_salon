@@ -107,6 +107,10 @@ const productSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
   },
+  showOnWebsite: {
+    type: Boolean,
+    default: true,
+  },
 }, {
   timestamps: true,
 });

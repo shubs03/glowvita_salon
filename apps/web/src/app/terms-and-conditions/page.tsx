@@ -127,7 +127,7 @@ export default function TermsAndConditionsPage() {
         `}</style>
         
         <div className="terms-content">
-        <p className="lead-text">Last updated: April 1, 2025</p>
+        <p className="lead-text">Last updated: January 01, 2026</p>
 
         <h2>AGREEMENT TO OUR LEGAL TERMS</h2>
         
@@ -143,7 +143,7 @@ export default function TermsAndConditionsPage() {
 
         <div className="info-box">
           <p style={{ marginBottom: 0 }}>
-            You can contact us by phone at <strong>80874 35747</strong>, email at <a href="mailto:support@glowvitasalon.com">support@glowvitasalon.com</a>, 
+            You can contact us by phone at <strong>90752 01035</strong>, email at <a href="mailto:support@glowvitasalon.com">support@glowvitasalon.com</a>, 
             or by mail to Nashik, Nashik, Maharashtra 422009.
           </p>
         </div>
@@ -502,7 +502,7 @@ export default function TermsAndConditionsPage() {
           <p style={{ marginBottom: '0.5rem' }}>Nashik, Nashik</p>
           <p style={{ marginBottom: '0.5rem' }}>Maharashtra 422009</p>
           <p style={{ marginBottom: '0.5rem' }}>India</p>
-          <p style={{ marginBottom: '0.5rem' }}>Phone: <strong>80874 35747</strong></p>
+          <p style={{ marginBottom: '0.5rem' }}>Phone: <strong>90752 01035</strong></p>
           <p style={{ marginBottom: 0 }}>Email: <a href="mailto:support@glowvitasalon.com">support@glowvitasalon.com</a></p>
         </div>
         </div>

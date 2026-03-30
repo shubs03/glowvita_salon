@@ -550,7 +550,7 @@ export function BookingFlow({ salonId, onBookingComplete }: BookingFlowProps) {
             <Step3_LocationSelection
               currentStep={currentStep}
               setCurrentStep={setCurrentStep}
-              homeServiceLocation={homeServiceLocation}
+              serviceLocation={homeServiceLocation}
               onLocationConfirm={(location) => {
                 setHomeServiceLocation(location);
                 // Don't auto-advance - let user review and use summary button

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model";
 import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import UserModel from "@repo/lib/models/user/User.model";
+import CRMOfferModel from "@repo/lib/models/Vendor/CRMOffer.model";
 import _db from '@repo/lib/db';
 import { NotificationService, SmsService } from "@repo/lib";
 
@@ -24,7 +25,7 @@ export const GET = async (req) => {
 
         // Base query - either vendorId or userId is required
         const query = {
-            status: { $in: ['confirmed', 'pending', 'scheduled', 'cancelled', 'completed'] } // Only include active appointments
+            status: { $in: ['confirmed', 'pending', 'scheduled', 'cancelled', 'completed', 'completed without payment', 'partially-completed'] } // Include all relevant appointments
         };
 
         // If userId is provided, filter by userId/clientId and include ALL statuses
@@ -36,12 +37,15 @@ export const GET = async (req) => {
 
             // Try to fetch user details to also search by name/phone for unlinked appointments
             try {
-                const user = await UserModel.findById(userId).select('firstName lastName mobileNo');
+                const user = await UserModel.findById(userId).select('firstName lastName mobileNo emailAddress');
                 if (user) {
                     const firstName = user.firstName || '';
                     const lastName = user.lastName || '';
                     const fullName = `${firstName} ${lastName}`.trim();
                     console.log('Found user for expanded search:', fullName, user.mobileNo);
+
+                    // Store found user for transformation fallback
+                    req.foundUser = user;
 
                     // Add name match (case-insensitive)
                     if (fullName) {
@@ -49,9 +53,6 @@ export const GET = async (req) => {
                             clientName: { $regex: new RegExp(`^${fullName}$`, 'i') }
                         });
                     }
-
-                    // Note: Appointment model doesn't strictly have phone at root level based on schema provided, 
-                    // but if it did, we would add it here.
                 }
             } catch (err) {
                 console.error('Error fetching user for appointment search:', err);
@@ -104,7 +105,7 @@ export const GET = async (req) => {
 
         // Fetch appointments with populated vendor data
         const appointments = await AppointmentModel.find(query)
-            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId amount addOnsAmount totalAmount finalAmount platformFee serviceTax discountAmount vendorId cancellationReason notes isHomeService homeServiceLocation travelTime travelDistance distanceMeters blockedTravelWindows isWeddingService weddingPackageDetails')
+            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId clientName clientEmail clientPhone amount addOnsAmount totalAmount finalAmount platformFee serviceTax discountAmount vendorId cancellationReason notes isHomeService homeServiceLocation travelTime travelDistance distanceMeters blockedTravelWindows isWeddingService weddingPackageDetails')
             .populate('vendorId', 'businessName address')
             .lean(); // Use lean() to get plain JavaScript objects with raw ObjectIds
 
@@ -124,6 +125,18 @@ export const GET = async (req) => {
                         cancellationReason = altMatch[1].trim();
                     }
                 }
+            }
+
+            // Client data fallback
+            let clientName = apt.clientName;
+            let clientEmail = apt.clientEmail;
+            let clientPhone = apt.clientPhone;
+
+            if (req.foundUser && (!clientName || !clientEmail || !clientPhone)) {
+                const fullName = `${req.foundUser.firstName || ''} ${req.foundUser.lastName || ''}`.trim();
+                if (!clientName) clientName = fullName;
+                if (!clientEmail) clientEmail = req.foundUser.emailAddress;
+                if (!clientPhone) clientPhone = req.foundUser.mobileNo;
             }
 
             // For multi-service appointments, use the first service as the main service
@@ -158,8 +171,12 @@ export const GET = async (req) => {
                 const lowerStatus = status.toLowerCase();
 
                 // Map common DB statuses to Frontend statuses
-                if (lowerStatus === 'completed' || lowerStatus === 'partially-completed') {
+                if (lowerStatus === 'completed') {
                     status = 'Completed';
+                } else if (lowerStatus === 'completed without payment') {
+                    status = 'Completed without payment';
+                } else if (lowerStatus === 'partially-completed') {
+                    status = 'Partially completed';
                 } else if (lowerStatus === 'cancelled' || lowerStatus === 'no-show') {
                     status = 'Cancelled';
                 } else if (lowerStatus === 'scheduled') {
@@ -202,6 +219,9 @@ export const GET = async (req) => {
                 date: apt.date,
                 staff: apt.staff, // ✅ Keep the actual staff ID for comparison
                 staffName: staff, // Also include the name for display
+                clientName: clientName,
+                clientEmail: clientEmail,
+                clientPhone: clientPhone,
                 startTime: startTime, // ✅ Include startTime at top level
                 endTime: endTime, // ✅ Include endTime at top level
                 status: status,
@@ -403,7 +423,7 @@ export const POST = async (req) => {
 
         // Calculate total add-ons amount from all service items
         const addOnsAmount = serviceItems.reduce((sum, item) => {
-            return sum + (item.addOns?.reduce((addonSum, addon) => 
+            return sum + (item.addOns?.reduce((addonSum, addon) =>
                 addonSum + (Number(addon.price) || 0), 0) || 0);
         }, 0);
 
@@ -428,7 +448,8 @@ export const POST = async (req) => {
             totalAmount: Number(body.totalAmount) || 0,
             platformFee: Number(body.platformFee) || 0,
             serviceTax: Number(body.serviceTax) || 0,
-            discountAmount: Number(body.discountAmount) || 0,
+            discountAmount: Number(body.discountAmount || body.discount) || 0,
+            couponCode: body.couponCode || null,
             finalAmount: Number(body.finalAmount) || Number(body.totalAmount) || 0,
             paymentMethod: body.paymentMethod || 'Pay at Salon',
             paymentStatus: body.paymentStatus || 'pending',
@@ -488,7 +509,7 @@ export const POST = async (req) => {
 
         // Check for conflicts before creating
         const { checkMultiServiceConflict } = await import('@repo/lib/modules/scheduling/ConflictChecker');
-        
+
         // Prepare verification items
         let verificationItems = appointmentData.serviceItems;
         if (!verificationItems || verificationItems.length === 0) {
@@ -508,7 +529,7 @@ export const POST = async (req) => {
         if (conflict) {
             console.warn('Conflict detected during appointment creation:', conflict);
             const response = NextResponse.json(
-                { 
+                {
                     message: "The selected time slot is no longer available. Please choose another time.",
                     conflict: {
                         startTime: conflict.startTime,
@@ -528,6 +549,16 @@ export const POST = async (req) => {
 
         const newAppointment = await AppointmentModel.create(appointmentData);
         console.log('Appointment created successfully with ID:', newAppointment._id);
+
+        // Increment coupon redemption count and total discount if applicable
+        if (appointmentData.couponCode) {
+            try {
+                await CRMOfferModel.incrementRedemption(appointmentData.couponCode, appointmentData.discountAmount || 0);
+                console.log(`Incremented redemption count and discount for public booking coupon: ${appointmentData.couponCode}`);
+            } catch (offerErr) {
+                console.error(`Error incrementing public coupon redemption for ${appointmentData.couponCode}:`, offerErr);
+            }
+        }
         console.log('Saved appointment data:', {
             isHomeService: newAppointment.isHomeService,
             homeServiceLocation: newAppointment.homeServiceLocation,

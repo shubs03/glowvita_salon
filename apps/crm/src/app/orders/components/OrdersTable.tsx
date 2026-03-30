@@ -7,8 +7,15 @@ import {
   TableRow,
 } from "@repo/ui/table";
 import { Button } from "@repo/ui/button";
-import { Eye, Edit } from "lucide-react";
+import { Eye, ChevronDown } from "lucide-react";
 import { Order, OrderStatus } from "../types";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@repo/ui/dropdown-menu";
+import { cn } from "@repo/ui/cn";
 
 interface OrdersTableProps {
   currentItems: Order[];
@@ -42,6 +49,8 @@ const OrdersTable = ({
   getNextStatus,
   isOnlineOrder,
 }: OrdersTableProps) => {
+  const allStatuses: OrderStatus[] = ['Pending', 'Processing', 'Packed', 'Shipped', 'Delivered', 'Cancelled'];
+
   return (
     <div className="flex-1 flex flex-col min-h-0">
       <div className="flex-1 overflow-auto">
@@ -62,7 +71,7 @@ const OrdersTable = ({
               {currentItems.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="text-center py-8 text-muted-foreground"
                   >
                     {searchTerm
@@ -83,62 +92,86 @@ const OrdersTable = ({
                       </div>
                     </TableCell>
                     <TableCell className="min-w-[150px] max-w-[180px] truncate">
-                      {order.customerName ||
-                        (role === "supplier" && order.vendorId) ||
-                        "N/A"}
+                      {(() => {
+                        // My Purchases tab (vendor): show supplier info
+                        if (activeTab === 'my-purchases' && order.supplierId && typeof order.supplierId === 'object') {
+                          return order.supplierId.shopName || order.supplierId.businessName ||
+                            `${order.supplierId.firstName || ''} ${order.supplierId.lastName || ''}`.trim() || 'N/A';
+                        }
+                        // Received Orders tab (supplier): show vendor info
+                        if (role === 'supplier' && order.vendorId && typeof order.vendorId === 'object') {
+                          return order.vendorId.businessName ||
+                            `${order.vendorId.firstName || ''} ${order.vendorId.lastName || ''}`.trim() || 'N/A';
+                        }
+                        // Customer Orders tab: show customerName
+                        return order.customerName || 'N/A';
+                      })()}
                     </TableCell>
                     <TableCell className="min-w-[120px] max-w-[150px] truncate">
                       {order.items?.map((item, idx) => (
-                        <div key={idx}>
+                        <div key={idx} className="text-xs">
                           {item.productName}
                         </div>
                       ))}
                     </TableCell>
-                    <TableCell className="min-w-[120px] max-w-[150px] truncate">
+                    <TableCell className="min-w-[80px]">
                       {order.items?.reduce((acc, item) => acc + item.quantity, 0) || 0}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       ₹{order.totalAmount?.toFixed(2) || "0.00"}
                     </TableCell>
                     <TableCell>
-                      <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          order.status === "Delivered"
-                            ? "bg-green-100 text-green-800"
-                            : "bg-gray-100 text-gray-800"
-                        }`}
-                      >
+                      <div className={cn(
+                        "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border shadow-sm",
+                        getStatusColor(order.status)
+                      )}>
+                        {getStatusIcon(order.status)}
                         {order.status}
-                      </span>
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
+                      <div className="flex justify-end gap-2">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
                           onClick={() => handleViewDetails(order)}
-                          className="h-8 w-8 p-0"
+                          className="h-8 gap-1"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Eye className="h-4 w-4" />
+                          <span>View</span>
                         </Button>
-                        {(role === "supplier" || role === "vendor") &&
-                          order.status &&
-                          getNextStatus(order.status, order) && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                handleUpdateStatus(
-                                  order._id,
-                                  getNextStatus(order.status, order)!
-                                )
-                              }
-                              disabled={isUpdatingStatus}
-                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          )}
+
+                        {(role === "supplier" || role === "vendor") && activeTab !== 'my-purchases' && order.status !== 'Delivered' && order.status !== 'Cancelled' && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={isUpdatingStatus}
+                                className="h-8 gap-1 border-primary/20 hover:border-primary/50 text-primary"
+                              >
+                                <span>Update</span>
+                                <ChevronDown className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-40">
+                              {allStatuses
+                                .filter(s => s !== order.status)
+                                .map((status) => (
+                                  <DropdownMenuItem
+                                    key={status}
+                                    onClick={() => handleUpdateStatus(order._id, status)}
+                                    className="cursor-pointer"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      {getStatusIcon(status)}
+                                      <span>{status}</span>
+                                    </div>
+                                  </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -153,3 +186,4 @@ const OrdersTable = ({
 };
 
 export default OrdersTable;
+

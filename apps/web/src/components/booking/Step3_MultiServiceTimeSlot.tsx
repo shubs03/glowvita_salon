@@ -9,15 +9,15 @@ import { StaffMember, WorkingHours, Service, ServiceStaffAssignment, calculateTo
 import { useGetMultiServiceSlotsMutation } from '@repo/store/api';
 import { toast } from 'react-toastify';
 
-const Breadcrumb = ({ currentStep, setCurrentStep, isHomeService }: { 
-  currentStep: number; 
+const Breadcrumb = ({ currentStep, setCurrentStep, isHomeService }: {
+  currentStep: number;
   setCurrentStep: (step: number) => void;
   isHomeService?: boolean;
 }) => {
-  const steps = isHomeService 
+  const steps = isHomeService
     ? ['Services', 'Select Professionals', 'Select Location', 'Select Date & Time']
     : ['Services', 'Select Professionals', 'Select Date & Time'];
-  
+
   return (
     <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
       {steps.map((step, index) => (
@@ -123,8 +123,8 @@ const SlotCard = React.memo<{
 
       {/* Duration Info */}
       <div className="text-sm text-gray-600 mb-3">
-        {slot.totalDuration} min total
-        {slot.travelTime && slot.travelTime > 0 && (
+        {slot.totalDuration} min
+        {Boolean(slot.travelTime && slot.travelTime > 0) && (
           <span className="text-blue-600 ml-2">
             (+{slot.travelTime} min travel)
           </span>
@@ -190,6 +190,30 @@ export function Step3_MultiServiceTimeSlot({
 }: Step3MultiServiceTimeSlotProps) {
   // RTK Query mutation hook
   const [getMultiServiceSlots, { data: slotsData, isLoading: isLoadingSlots, error: slotsError }] = useGetMultiServiceSlotsMutation();
+
+  // Get day name helper
+  const getDayName = useCallback((date: Date): string => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[getDay(date)];
+  }, []);
+
+  // Check if a date is available based on working hours
+  const isDateAvailable = useCallback((date: Date): boolean => {
+    if (!workingHours || workingHours.length === 0) return true;
+
+    const dayName = getDayName(date);
+    const dayWorkingHours = workingHours.find((wh: WorkingHours) =>
+      wh.dayOfWeek.toLowerCase() === dayName.toLowerCase()
+    );
+
+    return dayWorkingHours ? dayWorkingHours.isAvailable : false;
+  }, [workingHours, getDayName]);
+
+  // Check if salon is closed every day
+  const isSalonClosedEveryDay = useMemo(() => {
+    if (!workingHours || workingHours.length === 0) return false;
+    return workingHours.every(wh => !wh.isAvailable);
+  }, [workingHours]);
 
   const [selectedSlot, setSelectedSlot] = useState<MultiServiceSlot | null>(null);
   const [isLocking, setIsLocking] = useState(false);
@@ -308,6 +332,21 @@ export function Step3_MultiServiceTimeSlot({
     return () => clearInterval(refreshInterval);
   }, [vendorId, selectedDate, isAssignmentsValid, fetchMultiServiceSlots]);
 
+  // [NEW] Auto-select first available date if current date is closed
+  useEffect(() => {
+    if (workingHours && workingHours.length > 0 && !isDateAvailable(selectedDate)) {
+      const firstAvailableDate = dates.find(date => {
+        const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+        return !isPast && isDateAvailable(date);
+      });
+
+      if (firstAvailableDate) {
+        console.log('Current date is closed, auto-selecting first available:', firstAvailableDate);
+        onSelectDate(firstAvailableDate);
+      }
+    }
+  }, [workingHours, dates, selectedDate, isDateAvailable, onSelectDate]);
+
   // Release lock manually
   const handleReleaseLock = async () => {
     if (!lockedSlot) return;
@@ -403,7 +442,7 @@ export function Step3_MultiServiceTimeSlot({
         isWeddingService,
         // Client Info
         clientId: user?._id || user?.id || 'temp-client-id',
-        clientName: user ? `${user.firstName} ${user.lastName}` : 'Customer',
+        clientName: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : 'Customer',
         clientEmail: user?.emailAddress || user?.email || '',
         clientPhone: user?.mobileNo || user?.phone || '',
         // Financials (if provided)
@@ -486,24 +525,6 @@ export function Step3_MultiServiceTimeSlot({
       const scrollAmount = direction === 'left' ? -200 : 200;
       container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
     }
-  };
-
-  // Check if a date is available based on working hours
-  const isDateAvailable = (date: Date): boolean => {
-    if (!workingHours || workingHours.length === 0) return true;
-
-    const dayName = getDayName(date);
-    const dayWorkingHours = workingHours.find((wh: WorkingHours) =>
-      wh.dayOfWeek.toLowerCase() === dayName.toLowerCase()
-    );
-
-    return dayWorkingHours ? dayWorkingHours.isAvailable : false;
-  };
-
-  // Get day name helper
-  const getDayName = (date: Date): string => {
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return days[getDay(date)];
   };
 
   // Format error message from RTK Query error
@@ -678,11 +699,26 @@ export function Step3_MultiServiceTimeSlot({
             <Loader2 className="h-8 w-8 animate-spin text-primary mr-3" />
             <span className="text-muted-foreground">Checking availability...</span>
           </div>
+        ) : isSalonClosedEveryDay ? (
+          <div className="text-center py-12 bg-red-50 rounded-xl border border-red-100 p-8">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-red-800 mb-2">Salon is Currently Closed</h3>
+
+          </div>
+        ) : !isDateAvailable(selectedDate) ? (
+          <div className="text-center py-12 bg-amber-50 rounded-xl border border-amber-100 p-8 shadow-sm">
+            <Clock className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+            <h3 className="text-lg font-bold text-amber-800 mb-2">Salon is Closed Today</h3>
+            <p className="text-amber-600 mb-4">
+              The salon is closed on this particular day ({format(selectedDate, 'EEEE')}). Please select another date from the calendar above to see available times.
+            </p>
+          </div>
         ) : slots.length === 0 ? (
           <div className="text-center py-12">
             <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">No available slots for this date</p>
-            <p className="text-sm text-muted-foreground mt-2">Try selecting a different date</p>
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">No available slots</h3>
+            <p className="text-muted-foreground">We couldn't find any available time slots for {format(selectedDate, 'MMMM d')}.</p>
+            <p className="text-sm text-muted-foreground mt-2">Try selecting a different date or different professional combinations.</p>
           </div>
         ) : (
           <div className="max-h-96 overflow-y-auto pr-2 no-scrollbar">

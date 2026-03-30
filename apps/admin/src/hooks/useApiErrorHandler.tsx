@@ -29,7 +29,7 @@ export function useApiErrorHandler() {
         response = await originalFetch(...args);
       } catch (error) {
         // ACTUAL Network error (connection refused, timeout, etc.)
-        if (error.name !== 'AbortError') {
+        if (error instanceof Error && error.name !== 'AbortError') {
           console.error('Fetch network error:', error);
           toast.error('Connection Error', {
             description: 'Please check your internet connection and try again.',
@@ -46,7 +46,7 @@ export function useApiErrorHandler() {
           const clonedResponse = response.clone();
           const contentType = response.headers.get('content-type');
           
-          let data = {};
+          let data: any = {};
           if (contentType && contentType.includes('application/json')) {
             try {
               data = await clonedResponse.json();

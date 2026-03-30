@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
-import { Search, History, Package, AlertTriangle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Search, Package, AlertTriangle } from 'lucide-react';
 import { useGetCrmProductsQuery, useGetInventoryTransactionsQuery, useGetLowStockProductsQuery } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import AdjustStockModal from './components/AdjustStockModal';
@@ -21,12 +21,20 @@ import {
 } from "@repo/ui/table";
 import { Badge } from "@repo/ui/badge";
 
+// Minimum stock level before a product is considered low-stock
+const LOW_STOCK_THRESHOLD = 10;
+
 export default function InventoryPage() {
     const { user } = useCrmAuth();
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('stock');
     const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
-    const [selectedProduct, setSelectedProduct] = useState<any>(null); // Type this properly later
+    const [selectedProduct, setSelectedProduct] = useState<{
+        _id: string;
+        productName: string;
+        stock: number;
+        [key: string]: any;
+    } | null>(null);
 
     // Pagination state for history
     const [historyPage, setHistoryPage] = useState(1);
@@ -38,12 +46,12 @@ export default function InventoryPage() {
         { skip: !user?._id }
     );
 
-    const { data: lowStockData, isLoading: isLowStockLoading } = useGetLowStockProductsQuery(10); // threshold 10
+    const { data: lowStockData, isLoading: isLowStockLoading } = useGetLowStockProductsQuery(LOW_STOCK_THRESHOLD);
 
     const { data: historyData, isLoading: isHistoryLoading, refetch: refetchHistory } = useGetInventoryTransactionsQuery({
         page: historyPage,
         limit: historyLimit
-    }, { skip: !user?._id });
+    }, { skip: !user });
 
     const lowStockCount = lowStockData?.count || 0;
 
@@ -77,7 +85,7 @@ export default function InventoryPage() {
             </div>
 
             {/* Stats Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Products</CardTitle>

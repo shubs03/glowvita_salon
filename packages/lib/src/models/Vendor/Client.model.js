@@ -14,6 +14,13 @@ const clientSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    // Link to User model for logged-in users who book appointments
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      index: true,
+    },
     fullName: {
       type: String,
       required: true,

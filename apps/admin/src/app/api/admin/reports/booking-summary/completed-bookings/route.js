@@ -172,7 +172,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // 3. Payment Status for Completed Bookings
     const paidCompletedBookingsPipeline = [
       ...filterPipeline,
-      { $match: { paymentStatus: 'paid' } }
+      { $match: { paymentStatus: { $in: ['paid', 'completed'] } } }
     ];
     
     const paidCompletedBookingsResult = await AppointmentModel.aggregate([

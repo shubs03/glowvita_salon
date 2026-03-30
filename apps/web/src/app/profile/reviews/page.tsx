@@ -39,7 +39,7 @@ export default function ReviewsPage() {
         setLoading(true);
         const response = await fetch(`/api/client/reviews`);
         const result = await response.json();
-        
+
         if (result.success) {
           setReviews(result.reviews);
         } else {
@@ -76,7 +76,7 @@ export default function ReviewsPage() {
   const firstItemIndex = lastItemIndex - itemsPerPage;
   const currentItems = filteredReviews.slice(firstItemIndex, lastItemIndex);
   const totalPages = Math.ceil(filteredReviews.length / itemsPerPage);
-  
+
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     setCurrentPage(1); // Reset to first page on tab change
@@ -185,7 +185,7 @@ const ReviewItem = ({ review }: ReviewItemProps) => (
       </div>
       <div className="flex items-center">
         {[...Array(5)].map((_, i) => (
-          <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-blue-400 fill-current' : 'text-gray-300'}`} />
+          <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-current' : 'text-gray-300'}`} />
         ))}
       </div>
     </div>

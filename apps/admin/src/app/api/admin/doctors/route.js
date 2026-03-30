@@ -1,14 +1,52 @@
 
-
 import _db from "@repo/lib/db";
 import DoctorModel from "@repo/lib/models/Vendor/Docters.model";
-import { ReferralModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer";
-import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan";
+import { ReferralModel, V2VSettingsModel } from "@repo/lib/models/admin/Reffer.model";
+import SubscriptionPlan from "@repo/lib/models/admin/SubscriptionPlan.model";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import { NotificationService } from "@repo/lib";
 import bcrypt from "bcryptjs";
+import { NextResponse } from "next/server";
+import { uploadBase64, deleteFile } from "@repo/lib/utils/upload";
 
-await _db();
+// Utility function to process base64 image and upload it
+// Also deletes the old image if a new one is uploaded
+const processBase64Image = async (base64String, fileName, oldImageUrl = null) => {
+  if (!base64String) return null;
+
+  // Check if it's already a URL (not base64)
+  if (base64String.startsWith('http')) {
+    return base64String; // Already uploaded, return as is
+  }
+
+  // Upload the base64 image and return the URL
+  const imageUrl = await uploadBase64(base64String, fileName);
+
+  // If upload was successful and there's an old image, delete the old one
+  if (imageUrl && oldImageUrl && oldImageUrl.startsWith('http')) {
+    try {
+      // Attempt to delete the old file
+      // We don't await this as we don't want to fail the whole operation if deletion fails
+      deleteFile(oldImageUrl).catch(err => {
+        console.warn('Failed to delete old image:', err);
+      });
+    } catch (err) {
+      console.warn('Error deleting old image:', err);
+    }
+  }
+
+  return imageUrl;
+};
+
+// Initialize database connection
+const initDb = async () => {
+  try {
+    await _db();
+  } catch (error) {
+    console.error("Database connection error:", error);
+    throw new Error("Failed to connect to database");
+  }
+};
 
 // Function to generate a unique referral code for a doctor
 const generateDoctorReferralCode = async (name) => {
@@ -27,85 +65,116 @@ const generateDoctorReferralCode = async (name) => {
   }
   return referralCode;
 };
-
-
-export const POST = authMiddlewareAdmin(async (req) => {
-  const body = await req.json();
-  const {
-    name,
-    // ... other fields
-    regionId
-  } = body;
-
-  // ... (keeping existing validation)
-
-  // Validate and lock region
-  const { validateAndLockRegion } = await import("@repo/lib");
-  const finalRegionId = validateAndLockRegion(req.user, regionId);
-
-  // 1️⃣ Validate required fields (Simplified for diff, but I'll keep them all in actual replacement)
-  if (
-    !body.name || !body.email || !body.phone || !body.password // and others...
-  ) {
-    // I will use the actual body object to avoid destructuring issues in this replacement
-  }
-
-  // ... (keeping existing logic)
-
-  // Fetch trial plan and set subscription end date
-  let trialPlan = await SubscriptionPlan.findOne({ name: 'Trial Plan' });
-
-  // If no trial plan, try to create one or fallback (though creating one is safer if logic allows)
-  if (!trialPlan) {
-    // For now, let's create a dummy object if missing to prevent crash, 
-    // but ideally this should be seeded or created.
-    // Or we can throw an error. 
-    // Let's create a default one for now to be safe as done in Supplier route
-    trialPlan = await SubscriptionPlan.create({
-      name: 'Trial Plan',
-      description: 'Default trial plan',
-      price: 0,
-      duration: 30,
-      features: ['Basic features'],
-      userType: 'doctor',
-      status: 'active'
-    });
-  }
-
-  const subscriptionEndDate = new Date();
-  subscriptionEndDate.setDate(subscriptionEndDate.getDate() + (trialPlan?.duration || 30));
-
-  // 6️⃣ Create doctor
-  const newDoctor = await DoctorModel.create({
-    ...body,
-    password: await bcrypt.hash(body.password, 10),
-    referralCode: await generateDoctorReferralCode(body.name),
-    regionId: finalRegionId,
-    subscription: {
-      plan: trialPlan._id,
-      status: 'Active',
-      endDate: subscriptionEndDate,
-      history: [],
-    }
-  });
-
-  // Trigger Registration Notification
-  (async () => {
+export const POST = authMiddlewareAdmin(
+  async (req) => {
     try {
-      await NotificationService.sendRegistrationAlert(newDoctor._id.toString(), 'doctor', {
-        name: newDoctor.name,
-        role: 'Doctor'
+      await initDb();
+      const body = await req.json();
+
+      // Validate required fields
+      const requiredFields = [
+        "name", "email", "phone", "gender", "password",
+        "registrationNumber", "doctorType", "specialties",
+        "experience", "clinicName", "clinicAddress",
+        "state", "city", "pincode", "location",
+        "physicalConsultationStartTime", "physicalConsultationEndTime",
+        "assistantName", "assistantContact", "doctorAvailability"
+      ];
+
+      for (const field of requiredFields) {
+        if (!body[field]) {
+          return NextResponse.json({ message: `Missing required field: ${field}` }, { status: 400 });
+        }
+      }
+
+      // Check existence
+      const existing = await DoctorModel.findOne({ $or: [{ email: body.email }, { phone: body.phone }, { registrationNumber: body.registrationNumber }] });
+      if (existing) {
+        return NextResponse.json({ message: "Doctor with this email, phone, or reg number already exists" }, { status: 409 });
+      }
+
+      // Hash password
+      const hashedPassword = await bcrypt.hash(body.password, 10);
+
+      // Generate referral code
+      const referralCode = await generateDoctorReferralCode(body.name);
+
+      // Assign region
+      const { assignRegion } = await import("@repo/lib/utils/assignRegion.js");
+      const regionId = await assignRegion(body.city, body.state, body.location);
+
+      // Create doctor
+      const newDoctor = await DoctorModel.create({
+        ...body,
+        password: hashedPassword,
+        referralCode,
+        regionId
       });
-      // Notify Admin
-      await NotificationService.sendAdminAlert('Doctor Registration', `New doctor registered: ${newDoctor.name} (${newDoctor.email})`);
-    } catch (err) {
-      console.error('Registration Notification Error:', err);
+
+      // Handle referral if provided
+      if (body.referredByCode) {
+        try {
+          const referringDoctor = await DoctorModel.findOne({ referralCode: body.referredByCode.trim().toUpperCase() });
+          if (referringDoctor) {
+            const settings = await V2VSettingsModel.findOne({
+                $or: [
+                  { regionId: newDoctor.regionId },
+                  { regionId: null }
+                ]
+              }).sort({ regionId: -1 });
+
+            const bonusValue = settings?.referrerBonus?.bonusValue || 0;
+            const referralId = `REF_D_${Date.now()}`;
+
+            const referral = await ReferralModel.create({
+              referralId,
+              referralType: 'D2D',
+              referrer: referringDoctor._id.toString(),
+              referrerType: 'Doctor',
+              referee: newDoctor._id.toString(),
+              refereeType: 'Doctor',
+              regionId: newDoctor.regionId,
+              date: new Date(),
+              status: 'Pending',
+              bonus: `₹${bonusValue}`,
+            });
+
+            console.log(`D2D Referral created (Pending): ${referringDoctor.name} refers ${newDoctor.name}`);
+          }
+        } catch (err) {
+          console.error("D2D Referral error:", err);
+        }
+      }
+
+      // Trigger Registration Notification
+      (async () => {
+        try {
+          await NotificationService.sendRegistrationAlert(newDoctor._id.toString(), 'doctor', {
+            name: newDoctor.name,
+            role: 'Doctor'
+          });
+          // Notify Admin
+          await NotificationService.sendAdminAlert('Doctor Registration', `New doctor registered: ${newDoctor.name} (${newDoctor.email})`);
+        } catch (err) {
+          console.error('Registration Notification Error:', err);
+        }
+      })();
+
+      return NextResponse.json({ message: "Doctor created successfully", doctor: newDoctor }, { status: 201 });
+
+    } catch (error) {
+      console.error("Error creating doctor:", error);
+      return NextResponse.json(
+        { message: "Error creating doctor", error: error.message },
+        { status: 500 }
+      );
     }
-  })();
+  },
+  ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
+  "doctors:edit"
+);
 
-  // ... (rest of the code)
-}, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "doctors:edit");
-
+// GET - List doctors with regional scoping
 export const GET = authMiddlewareAdmin(async (req) => {
   const { buildRegionQueryFromRequest } = await import("@repo/lib");
   const query = buildRegionQueryFromRequest(req);
@@ -113,24 +182,42 @@ export const GET = authMiddlewareAdmin(async (req) => {
   return Response.json(doctors);
 }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"], "doctors:view");
 
-export const PUT = authMiddlewareAdmin(
-  async (req) => {
-    const { id, password, ...body } = await req.json();
+// PUT - Update doctor details
+export const PUT = authMiddlewareAdmin(async (req) => {
+  try {
+    await initDb();
+    const { id, profileImage, password, ...updateData } = await req.json();
 
-    // If password is provided, hash it
-    if (password) {
-      body.password = await bcrypt.hash(password, 10);
+    if (!id) {
+      return NextResponse.json({ message: "ID is required to update a doctor" }, { status: 400 });
     }
 
-    // Legacy support for single specialization (can be removed if no longer needed)
-    if (body.specialization && !body.specialties) {
-      body.specialties = [body.specialization];
-      delete body.specialization;
+    const existingDoctor = await DoctorModel.findById(id);
+    if (!existingDoctor) {
+      return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
+    }
+
+    // Process profile image if provided
+    let finalProfileImage = existingDoctor.profileImage;
+    if (profileImage !== undefined) {
+      if (profileImage && !profileImage.startsWith('http')) {
+        const imageUrl = await processBase64Image(profileImage, `doctor-${id}-profile`, existingDoctor.profileImage);
+        if (imageUrl) {
+          finalProfileImage = imageUrl;
+        }
+      } else {
+        finalProfileImage = profileImage;
+      }
+    }
+
+    // If password is provided, hash it
+    if (password && password.trim() !== '') {
+      updateData.password = await bcrypt.hash(password, 10);
     }
 
     const updatedDoctor = await DoctorModel.findByIdAndUpdate(
       id,
-      { ...body, updatedAt: Date.now() },
+      updateData,
       { new: true }
     ).populate("subscription.plan", "name").select("-password");
 
@@ -149,23 +236,142 @@ export const PUT = authMiddlewareAdmin(
       })();
     }
 
-    return Response.json(updatedDoctor);
-  },
-  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
-  "doctors:edit"
-);
+    return NextResponse.json(updatedDoctor);
+  } catch (error) {
+    console.error("Error updating doctor:", error);
+    return NextResponse.json({ message: "Error updating doctor", error: error.message }, { status: 500 });
+  }
+}, ["SUPER_ADMIN", "REGIONAL_ADMIN"]);
 
+// DELETE - Remove a doctor
 export const DELETE = authMiddlewareAdmin(
   async (req) => {
     const { id } = await req.json();
     const deleted = await DoctorModel.findByIdAndDelete(id);
 
     if (!deleted) {
-      return Response.json({ message: "Doctor not found" }, { status: 404 });
+      return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
     }
 
     return Response.json({ message: "Doctor deleted successfully" });
   },
   ["SUPER_ADMIN", "REGIONAL_ADMIN"],
   "doctors:delete"
+);
+
+// PATCH - Update doctor status or document status
+export const PATCH = authMiddlewareAdmin(
+  async (req) => {
+    try {
+      await initDb();
+      const body = await req.json();
+      const { id, status, doctorId, documentType, rejectionReason } = body;
+
+      // Check if this is a doctor status update
+      if (id && status && !documentType) {
+        if (!id || !status) {
+          return NextResponse.json(
+            { message: "Doctor ID and status are required" },
+            { status: 400 }
+          );
+        }
+
+        // If status is "Approved", check mandatory documents
+        if (status === "Approved") {
+          const doctor = await DoctorModel.findById(id);
+          if (!doctor) {
+            return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
+          }
+
+          const documents = doctor.documents || {};
+          const mandatoryDocs = [
+            { key: "aadharCard", label: "Aadhar Card" },
+            { key: "panCard", label: "PAN Card" },
+          ];
+
+          const pendingOrRejectedDocs = mandatoryDocs.filter((doc) => {
+            const isUploaded = documents[doc.key] && documents[doc.key] !== "";
+            const docStatus = documents[`${doc.key}Status`];
+            return !isUploaded || docStatus !== "approved";
+          });
+
+          if (pendingOrRejectedDocs.length > 0) {
+            const docLabels = pendingOrRejectedDocs.map((doc) => doc.label).join(", ");
+            return NextResponse.json(
+              {
+                message: `Cannot approve doctor. The following mandatory documents are missing or not approved: ${docLabels}`,
+              },
+              { status: 400 }
+            );
+          }
+        }
+
+        const updatedDoctor = await DoctorModel.findByIdAndUpdate(
+          id,
+          { $set: { status } },
+          { new: true }
+        ).populate("subscription.plan", "name").select("-password");
+
+        if (!updatedDoctor) {
+          return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({
+          message: `Doctor ${status} successfully`,
+          doctor: updatedDoctor,
+        });
+      }
+
+      // Check if this is a document status update
+      else if (doctorId && documentType && status) {
+        const validDocumentTypes = [
+          'aadharCard', 'panCard', 'udhayamCert', 'shopAct'
+        ];
+
+        if (!validDocumentTypes.includes(documentType)) {
+          return NextResponse.json({ message: "Invalid document type" }, { status: 400 });
+        }
+
+        if (!['pending', 'approved', 'rejected'].includes(status)) {
+          return NextResponse.json({ message: "Invalid status" }, { status: 400 });
+        }
+
+        if (status === 'rejected' && (!rejectionReason || rejectionReason.trim() === '')) {
+          return NextResponse.json({ message: "Rejection reason is required" }, { status: 400 });
+        }
+
+        const updateData = {
+          [`documents.${documentType}Status`]: status,
+        };
+
+        if (status === 'rejected') {
+          updateData[`documents.${documentType}AdminRejectionReason`] = rejectionReason;
+        } else {
+          updateData[`documents.${documentType}AdminRejectionReason`] = null;
+        }
+
+        const updatedDoctor = await DoctorModel.findByIdAndUpdate(
+          doctorId,
+          { $set: updateData },
+          { new: true }
+        ).select("-password");
+
+        if (!updatedDoctor) {
+          return NextResponse.json({ message: "Doctor not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({
+          message: `Document ${status} successfully`,
+          doctor: updatedDoctor,
+        });
+      }
+
+      return NextResponse.json({ message: "Invalid request parameters" }, { status: 400 });
+    } catch (error) {
+      console.error("Error in doctor PATCH:", error);
+      return NextResponse.json({ message: "Error updating doctor", error: error.message }, { status: 500 });
+    }
+  },
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"],
+  "doctors:edit"
 );

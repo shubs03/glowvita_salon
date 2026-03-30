@@ -29,14 +29,14 @@ const ReferralTable = ({ currentItems, getStatusColor }: ReferralTableProps) => 
             ) : (
               currentItems.map((referral) => (
                 <TableRow key={referral._id}>
-                  <TableCell className="font-medium py-3 min-w-[120px] max-w-[150px]">
+                  <TableCell className="font-medium py-3 min-w-[120px] max-w-[200px]">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                         <span className="font-semibold text-primary">
-                          {referral.referee.charAt(0).toUpperCase()}
+                          {(referral.refereeName || 'U').charAt(0).toUpperCase()}
                         </span>
                       </div>
-                      <span className="font-semibold truncate max-w-[80px]">{referral.referee}</span>
+                      <span className="font-semibold truncate max-w-[120px]">{referral.refereeName || referral.referee}</span>
                     </div>
                   </TableCell>
                   <TableCell className="min-w-[120px] max-w-[150px]">
@@ -47,7 +47,9 @@ const ReferralTable = ({ currentItems, getStatusColor }: ReferralTableProps) => 
                       {referral.status}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right">₹{referral.bonus}</TableCell>
+                  <TableCell className="text-right">
+                    {referral.bonus?.startsWith('₹') ? referral.bonus : `₹${referral.bonus}`}
+                  </TableCell>
                 </TableRow>
               ))
             )}

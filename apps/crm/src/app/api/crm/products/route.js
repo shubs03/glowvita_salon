@@ -101,6 +101,7 @@ const getProducts = async (req) => {
     try {
       products = await ProductModel.find(query)
         .populate('category', 'name description')
+        .populate('vendorId', 'shopName name email') // Populate supplier/vendor details
         .sort({ createdAt: -1 })
         .lean();
     } catch (dbError) {
@@ -116,6 +117,7 @@ const getProducts = async (req) => {
       category: product.category?.name || '',
       categoryDescription: product.category?.description || product.categoryDescription || '',
       status: product.status === 'rejected' ? 'disapproved' : product.status,
+      supplierName: product.vendorId?.shopName || product.vendorId?.name || 'N/A',
     }));
 
     return NextResponse.json({
@@ -136,27 +138,28 @@ export const GET = authMiddlewareCrm(getProducts, ["vendor", "supplier"]);
 
 // POST - Create new product
 const createProduct = async (req, body) => {
-    try {
-        const { 
-            productName, 
-            description, 
-            category, 
-            categoryDescription, 
-            price, 
-            salePrice, 
-            stock, 
-            productImages, // Now expecting an array
-            isActive, 
-            status,
-            size,
-            sizeMetric,
-            keyIngredients,
-            forBodyPart,
-            bodyPartType,
-            productForm,
-            brand
-        } = body;
-        const userRole = req.user?.role;
+  try {
+    const {
+      productName,
+      description,
+      category,
+      categoryDescription,
+      price,
+      salePrice,
+      stock,
+      productImages, // Now expecting an array
+      isActive,
+      status,
+      size,
+      sizeMetric,
+      keyIngredients,
+      forBodyPart,
+      bodyPartType,
+      productForm,
+      brand,
+      showOnWebsite
+    } = body;
+    const userRole = req.user?.role;
 
     if (!productName || !category || price === undefined || stock === undefined) {
       return NextResponse.json(
@@ -242,6 +245,7 @@ const createProduct = async (req, body) => {
       bodyPartType: bodyPartType?.trim() || '',
       productForm: productForm?.trim() || '',
       brand: brand?.trim() || '',
+      showOnWebsite: showOnWebsite !== undefined ? Boolean(showOnWebsite) : true,
       createdBy: vendorId,
       updatedBy: vendorId,
     });
@@ -271,133 +275,134 @@ const createProduct = async (req, body) => {
 
 // Bulk create products
 const bulkCreateProducts = async (req, body) => {
-    try {
-        const { products } = body;
-        
-        if (!Array.isArray(products) || products.length === 0) {
-            return NextResponse.json(
-                { success: false, message: "Products array is required and cannot be empty" },
-                { status: 400 }
-            );
-        }
-        
-        const userRole = req.user?.role;
-        
-        // Make sure we have a valid vendor ID (either from _id or userId field in the JWT payload)
-        const vendorId = req.user._id || req.user.userId;
-        
-        if (!vendorId) {
-            return NextResponse.json(
-                { success: false, message: "Unable to determine vendor ID from authentication" },
-                { status: 400 }
-            );
-        }
-        
-        // Validate all products first
-        for (const product of products) {
-            if (!product.productName || !product.category || product.price === undefined || product.stock === undefined) {
-                return NextResponse.json(
-                    { success: false, message: `Missing required fields for product: ${product.productName || 'unknown'}. Required: productName, category, price, and stock` },
-                    { status: 400 }
-                );
-            }
-            
-            if (product.price < 0 || product.stock < 0 || (product.salePrice && product.salePrice < 0)) {
-                return NextResponse.json(
-                    { success: false, message: `Price, stock, and sale price cannot be negative for product: ${product.productName}` },
-                    { status: 400 }
-                );
-            }
-            
-            // Check if category exists
-            let categoryDoc = await ProductCategoryModel.findOne({ name: product.category });
-            if (!categoryDoc) {
-                return NextResponse.json(
-                    { success: false, message: `Category '${product.category}' not found for product: ${product.productName}` },
-                    { status: 400 }
-                );
-            }
-        }
-        
-        // Process all products
-        const createdProducts = [];
-        const errors = [];
-        
-        for (const product of products) {
-            try {
-                // Find the category again (since we validated earlier)
-                let categoryDoc = await ProductCategoryModel.findOne({ name: product.category });
-                
-                // Process keyIngredients - convert comma-separated string to array
-                let processedKeyIngredients = [];
-                if (product.keyIngredients) {
-                    if (typeof product.keyIngredients === 'string') {
-                        processedKeyIngredients = product.keyIngredients.split(',').map(i => i.trim()).filter(i => i.length > 0);
-                    } else if (Array.isArray(product.keyIngredients)) {
-                        processedKeyIngredients = product.keyIngredients;
-                    }
-                }
-                
-                const newProduct = new ProductModel({
-                    vendorId: vendorId,
-                    origin: userRole.charAt(0).toUpperCase() + userRole.slice(1),
-                    productName: product.productName.trim(),
-                    description: product.description?.trim() || '',
-                    category: categoryDoc._id,
-                    categoryDescription: product.categoryDescription?.trim() || '',
-                    price: Number(product.price),
-                    salePrice: Number(product.salePrice) || 0,
-                    stock: Number(product.stock),
-                    productImages: product.productImages || [],
-                    isActive: product.isActive !== undefined ? Boolean(product.isActive) : true,
-                    status: product.status === 'disapproved' ? 'rejected' : (product.status || 'pending'),
-                    size: product.size?.trim() || '',
-                    sizeMetric: product.sizeMetric?.trim() || '',
-                    keyIngredients: processedKeyIngredients,
-                    forBodyPart: product.forBodyPart?.trim() || '',
-                    bodyPartType: product.bodyPartType?.trim() || '',
-                    productForm: product.productForm?.trim() || '',
-                    brand: product.brand?.trim() || '',
-                    createdBy: vendorId,
-                    updatedBy: vendorId,
-                });
-                
-                const savedProduct = await newProduct.save();
-                
-                const responseProduct = {
-                    ...savedProduct.toObject(),
-                    status: savedProduct.status === 'rejected' ? 'disapproved' : savedProduct.status,
-                    category: categoryDoc.name
-                };
-                
-                createdProducts.push(responseProduct);
-            } catch (error) {
-                errors.push({
-                    productName: product.productName,
-                    error: error.message
-                });
-            }
-        }
-        
-        return NextResponse.json({
-            success: true,
-            message: `Bulk creation completed: ${createdProducts.length} created, ${errors.length} failed`,
-            data: {
-                created: createdProducts,
-                errors: errors,
-                totalProcessed: products.length,
-                successCount: createdProducts.length,
-                errorCount: errors.length
-            }
-        });
-        
-    } catch (error) {
-        console.error('Error in bulk product creation:', error);
-        return NextResponse.json(
-            { success: false, message: 'Error in bulk product creation', error: error.message },
-            { status: 500 }
-        );
+  try {
+    const { products } = body;
+
+    if (!Array.isArray(products) || products.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "Products array is required and cannot be empty" },
+        { status: 400 }
+      );
     }
+
+    const userRole = req.user?.role;
+
+    // Make sure we have a valid vendor ID (either from _id or userId field in the JWT payload)
+    const vendorId = req.user._id || req.user.userId;
+
+    if (!vendorId) {
+      return NextResponse.json(
+        { success: false, message: "Unable to determine vendor ID from authentication" },
+        { status: 400 }
+      );
+    }
+
+    // Validate all products first
+    for (const product of products) {
+      if (!product.productName || !product.category || product.price === undefined || product.stock === undefined) {
+        return NextResponse.json(
+          { success: false, message: `Missing required fields for product: ${product.productName || 'unknown'}. Required: productName, category, price, and stock` },
+          { status: 400 }
+        );
+      }
+
+      if (product.price < 0 || product.stock < 0 || (product.salePrice && product.salePrice < 0)) {
+        return NextResponse.json(
+          { success: false, message: `Price, stock, and sale price cannot be negative for product: ${product.productName}` },
+          { status: 400 }
+        );
+      }
+
+      // Check if category exists
+      let categoryDoc = await ProductCategoryModel.findOne({ name: product.category });
+      if (!categoryDoc) {
+        return NextResponse.json(
+          { success: false, message: `Category '${product.category}' not found for product: ${product.productName}` },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Process all products
+    const createdProducts = [];
+    const errors = [];
+
+    for (const product of products) {
+      try {
+        // Find the category again (since we validated earlier)
+        let categoryDoc = await ProductCategoryModel.findOne({ name: product.category });
+
+        // Process keyIngredients - convert comma-separated string to array
+        let processedKeyIngredients = [];
+        if (product.keyIngredients) {
+          if (typeof product.keyIngredients === 'string') {
+            processedKeyIngredients = product.keyIngredients.split(',').map(i => i.trim()).filter(i => i.length > 0);
+          } else if (Array.isArray(product.keyIngredients)) {
+            processedKeyIngredients = product.keyIngredients;
+          }
+        }
+
+        const newProduct = new ProductModel({
+          vendorId: vendorId,
+          origin: userRole.charAt(0).toUpperCase() + userRole.slice(1),
+          productName: product.productName.trim(),
+          description: product.description?.trim() || '',
+          category: categoryDoc._id,
+          categoryDescription: product.categoryDescription?.trim() || '',
+          price: Number(product.price),
+          salePrice: Number(product.salePrice) || 0,
+          stock: Number(product.stock),
+          productImages: product.productImages || [],
+          isActive: product.isActive !== undefined ? Boolean(product.isActive) : true,
+          status: product.status === 'disapproved' ? 'rejected' : (product.status || 'pending'),
+          size: product.size?.trim() || '',
+          sizeMetric: product.sizeMetric?.trim() || '',
+          keyIngredients: processedKeyIngredients,
+          forBodyPart: product.forBodyPart?.trim() || '',
+          bodyPartType: product.bodyPartType?.trim() || '',
+          productForm: product.productForm?.trim() || '',
+          brand: product.brand?.trim() || '',
+          showOnWebsite: product.showOnWebsite !== undefined ? Boolean(product.showOnWebsite) : true,
+          createdBy: vendorId,
+          updatedBy: vendorId,
+        });
+
+        const savedProduct = await newProduct.save();
+
+        const responseProduct = {
+          ...savedProduct.toObject(),
+          status: savedProduct.status === 'rejected' ? 'disapproved' : savedProduct.status,
+          category: categoryDoc.name
+        };
+
+        createdProducts.push(responseProduct);
+      } catch (error) {
+        errors.push({
+          productName: product.productName,
+          error: error.message
+        });
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `Bulk creation completed: ${createdProducts.length} created, ${errors.length} failed`,
+      data: {
+        created: createdProducts,
+        errors: errors,
+        totalProcessed: products.length,
+        successCount: createdProducts.length,
+        errorCount: errors.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in bulk product creation:', error);
+    return NextResponse.json(
+      { success: false, message: 'Error in bulk product creation', error: error.message },
+      { status: 500 }
+    );
+  }
 };
 
 // POST - Create single product or multiple products (bulk)
@@ -436,6 +441,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
       bodyPartType,
       productForm,
       brand,
+      showOnWebsite,
       ...updateData
     } = await req.json();
 
@@ -551,6 +557,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
     if (bodyPartType !== undefined) finalUpdateData.bodyPartType = bodyPartType?.trim() || '';
     if (productForm !== undefined) finalUpdateData.productForm = productForm?.trim() || '';
     if (brand !== undefined) finalUpdateData.brand = brand?.trim() || '';
+    if (showOnWebsite !== undefined) finalUpdateData.showOnWebsite = Boolean(showOnWebsite);
 
     if (categoryId) finalUpdateData.category = categoryId;
     if (status) finalUpdateData.status = status === 'disapproved' ? 'rejected' : status;

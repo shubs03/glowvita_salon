@@ -4,7 +4,7 @@
 import { Button } from "@repo/ui/button";
 import Link from 'next/link';
 import { ThemeToggle } from "./ThemeToggle";
-import { Bell, Menu, LogOut, User, CheckCircle, XCircle, Search, ChevronRight, Calendar, Clock, TrendingUp, ShoppingCart } from "lucide-react";
+import { Bell, Menu, LogOut, User, CheckCircle, XCircle, Search, ChevronRight, Calendar, Clock, TrendingUp, ShoppingCart, Wallet } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAppDispatch } from "@repo/store/hooks";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
@@ -24,8 +24,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/avatar";
 import { LogoutConfirmationModal } from "@repo/ui/logout-confirmation-modal";
 import { useState } from "react";
 import { Cart } from "./cart/Cart";
-import { useGetCartQuery } from "@repo/store/api";
 import { NotificationDropdown } from "./NotificationDropdown";
+import { useGetCartQuery, useGetCrmWalletQuery } from "@repo/store/api";
+import { SearchDialog } from "./SearchDialog";
 
 export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSidebar: () => void, subscription: any, isSubExpired: boolean }) {
   const router = useRouter();
@@ -35,11 +36,17 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const { data: cartData } = useGetCartQuery(user?._id, {
     skip: !isCrmAuthenticated || !user?._id,
   });
 
+  const { data: walletData } = useGetCrmWalletQuery({}, {
+    skip: !isCrmAuthenticated || role === 'staff',
+  });
+
+  const walletBalance = walletData?.data?.balance || 0;
   const cartItemCount = cartData?.data?.items?.reduce((total: number, item: any) => total + item.quantity, 0) || 0;
 
   const getNavItemsForRole = () => {
@@ -149,12 +156,28 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
           variant="ghost"
           size="icon"
           className="hidden md:flex flex-shrink-0 rounded-lg hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-105"
+          onClick={() => setIsSearchOpen(true)}
         >
           <Search className="h-5 w-5" />
           <span className="sr-only">Search</span>
         </Button>
 
         <ThemeToggle />
+
+        {/* Wallet for Professionals */}
+        {(role === 'vendor' || role === 'doctor' || role === 'supplier') && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1.5 h-9 md:h-10 rounded-full hover:bg-primary/20 hover:text-primary transition-all duration-300 hover:scale-105 border border-primary/20 bg-gradient-to-r from-primary/10 to-transparent shadow-sm"
+            onClick={() => router.push('/profile/wallet')}
+          >
+            <div className="bg-primary/20 p-1 rounded-full">
+              <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
+            </div>
+            <span className="font-bold text-xs md:text-sm text-primary">₹{walletBalance.toFixed(2)}</span>
+          </Button>
+        )}
 
         {/* Cart for Vendors */}
         {role === 'vendor' && (
@@ -214,6 +237,16 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
                   <span className="font-semibold">Profile Settings</span>
                 </Link>
               </DropdownMenuItem>
+              {(role === 'vendor' || role === 'doctor' || role === 'supplier') && (
+                <DropdownMenuItem asChild className="rounded-md hover:bg-muted/50 transition-all duration-300">
+                  <Link href="/profile/wallet" className="flex items-center gap-3 p-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <Wallet className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="font-semibold">My Wallet</span>
+                  </Link>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => setShowLogoutModal(true)} className="hover:bg-gradient-to-r hover:from-red-50/50 hover:to-red-100/50 dark:hover:from-red-900/20 dark:hover:to-red-800/20 p-3 text-red-600 dark:text-red-400 transition-all duration-300 group">
@@ -234,6 +267,7 @@ export function Header({ toggleSidebar, subscription, isSubExpired }: { toggleSi
           isLoading={isLoggingOut}
         />
         <Cart isOpen={isCartOpen} onOpenChange={setIsCartOpen} />
+        <SearchDialog isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       </div>
     </header>
   );

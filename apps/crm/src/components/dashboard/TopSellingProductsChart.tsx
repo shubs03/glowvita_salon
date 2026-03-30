@@ -26,17 +26,17 @@ interface TopSellingProductsChartProps {
 const formatDateDisplay = (dateString: string): string => {
   if (!dateString) return '';
   const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', { 
-    year: 'numeric', 
-    month: 'short', 
-    day: 'numeric' 
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
   });
 };
 
-export function TopSellingProductsChart({ 
-  filterType = 'preset', 
-  presetPeriod = 'all', 
-  startDate = '', 
+export function TopSellingProductsChart({
+  filterType = 'preset',
+  presetPeriod = 'all',
+  startDate = '',
   endDate = '',
   selectedYear,
   selectedMonth,
@@ -82,7 +82,7 @@ export function TopSellingProductsChart({
 
   // Process the data to get top 5 products
   let topProducts: TopProductData[] = [];
-  
+
   if (apiResponse?.success && apiResponse.data?.salesByProduct) {
     topProducts = [...apiResponse.data.salesByProduct]
       .sort((a: any, b: any) => b.quantitySold - a.quantitySold)
@@ -151,11 +151,11 @@ export function TopSellingProductsChart({
       <CardHeader>
         <CardTitle>Top Selling Products</CardTitle>
         <CardDescription>
-          {filterType === 'custom' 
+          {filterType === 'custom'
             ? `Top selling products from ${formatDateDisplay(startDate)} to ${formatDateDisplay(endDate)}.`
-            : presetPeriod === 'day' 
+            : presetPeriod === 'day'
               ? "Top selling products today."
-              : presetPeriod === 'month' 
+              : presetPeriod === 'month'
                 ? "Top selling products this month."
                 : presetPeriod === 'year' ? "Top selling products this year."
                   : "Top selling products. All time."}
@@ -174,23 +174,23 @@ export function TopSellingProductsChart({
               }}
             >
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="productName" 
-                angle={-45} 
-                textAnchor="end" 
+              <XAxis
+                dataKey="productName"
+                angle={-45}
+                textAnchor="end"
                 height={70}
                 tick={{ fontSize: 12 }}
               />
-              <YAxis 
-                dataKey="quantitySold" 
-                label={{ value: 'Quantity Sold', angle: -90, position: 'insideLeft' }} 
+              <YAxis
+                dataKey="quantitySold"
+                label={{ value: 'Quantity Sold', angle: -90, position: 'insideLeft' }}
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend />
-              <Bar 
-                dataKey="quantitySold" 
-                name="Quantity Sold" 
-                fill="hsl(var(--primary))" 
+              <Bar
+                dataKey="quantitySold"
+                name="Quantity Sold"
+                fill="hsl(var(--primary))"
               />
             </BarChart>
           </ResponsiveContainer>

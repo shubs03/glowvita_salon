@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -31,20 +32,21 @@ import {
   Eye,
   Trash2,
   User,
-  ThumbsUp,
+  CheckCircle2,
   Hourglass,
-  BarChart,
+  TrendingUp,
   Plus,
   FileDown,
   X,
-  Stethoscope,
-  CheckCircle,
+  Pencil,
   XCircle,
+  DollarSign,
 } from "lucide-react";
 import { Badge } from "@repo/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { Input } from "@repo/ui/input";
 import { Skeleton } from "@repo/ui/skeleton";
+import { Tooltip } from "@repo/ui/tooltip";
 import { DoctorForm, Doctor } from "@/components/DoctorForm";
 import {
   useGetDoctorsQuery,
@@ -65,20 +67,44 @@ export default function DoctorsDermatsPage() {
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [actionType, setActionType] = useState<ActionType | null>(null);
 
+  // Filter state
+  const [filterName, setFilterName] = useState("");
+  const [filterClinic, setFilterClinic] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
+  const [filterAgent, setFilterAgent] = useState("");
+
+  const searchParams = useSearchParams();
+  const regionId = searchParams.get("regionId") || "";
+
   // Fetch doctors using RTK Query
   const {
     data: doctors = [],
     isLoading,
     error,
-  } = useGetDoctorsQuery(undefined);
+  } = useGetDoctorsQuery({ regionId });
   const [createDoctor] = useCreateDoctorMutation();
   const [updateDoctor] = useUpdateDoctorMutation();
   const [deleteDoctor] = useDeleteDoctorMutation();
 
+  // Apply filters
+  const filteredDoctors = useMemo(() => {
+    return doctors.filter((d: Doctor) => {
+      const matchName = filterName === "" || d.name?.toLowerCase().includes(filterName.toLowerCase());
+      const matchClinic = filterClinic === "" || (d.clinicName || "").toLowerCase().includes(filterClinic.toLowerCase());
+      const matchCategory = filterCategory === "" || (d.specialties || []).join(", ").toLowerCase().includes(filterCategory.toLowerCase());
+      // Agent filter – all are "Admin" for now, so filter by that string
+      const matchAgent = filterAgent === "" || "admin".includes(filterAgent.toLowerCase());
+      return matchName && matchClinic && matchCategory && matchAgent;
+    });
+  }, [doctors, filterName, filterClinic, filterCategory, filterAgent]);
+
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
-  const currentItems = doctors.slice(firstItemIndex, lastItemIndex);
-  const totalPages = Math.ceil(doctors.length / itemsPerPage);
+  const currentItems = filteredDoctors.slice(firstItemIndex, lastItemIndex);
+  const totalPages = Math.ceil(filteredDoctors.length / itemsPerPage);
+
+  const approvedCount = doctors.filter((d: Doctor) => d.status === "Approved").length;
+  const pendingCount = doctors.filter((d: Doctor) => d.status === "Pending").length;
 
   const handleActionClick = (doctor: Doctor, action: ActionType) => {
     setSelectedDoctor(doctor);
@@ -98,7 +124,7 @@ export default function DoctorsDermatsPage() {
     >
   ) => {
     try {
-      await createDoctor(newDoctor).unwrap();
+      await createDoctor({ ...newDoctor, regionId }).unwrap();
       setIsNewDoctorModalOpen(false);
     } catch (err) {
       console.error("Failed to add doctor:", err);
@@ -115,7 +141,7 @@ export default function DoctorsDermatsPage() {
         return;
       }
       const { _id, ...updateData } = updatedDoctor;
-      await updateDoctor({ id: _id, ...updateData }).unwrap();
+      await updateDoctor({ id: _id, ...updateData, regionId }).unwrap();
       setIsNewDoctorModalOpen(false);
       setSelectedDoctor(null);
     } catch (err) {
@@ -282,11 +308,11 @@ export default function DoctorsDermatsPage() {
             <CardTitle className="text-sm font-medium">
               Approved Doctors
             </CardTitle>
-            <ThumbsUp className="h-4 w-4 text-muted-foreground" />
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {doctors.filter((d: Doctor) => d.status === "Approved").length}
+              {approvedCount}
             </div>
             <p className="text-xs text-muted-foreground">
               Ready for consultations
@@ -298,15 +324,11 @@ export default function DoctorsDermatsPage() {
             <CardTitle className="text-sm font-medium">
               Pending Verifications
             </CardTitle>
-            <Hourglass className="h-4 w-4 text-muted-foreground" />
+            <Hourglass className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-yellow-600">
-              {
-                doctors.filter(
-                  (d: { status: string }) => d.status === "Pending"
-                ).length
-              }
+              {pendingCount}
             </div>
             <p className="text-xs text-muted-foreground">Awaiting review</p>
           </CardContent>
@@ -316,12 +338,12 @@ export default function DoctorsDermatsPage() {
             <CardTitle className="text-sm font-medium">
               Total Business
             </CardTitle>
-            <BarChart className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-emerald-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$15,231.89</div>
+            <div className="text-2xl font-bold">₹0</div>
             <p className="text-xs text-muted-foreground">
-              +12.1% from last month
+              Based on completed appointments
             </p>
           </CardContent>
         </Card>
@@ -363,16 +385,46 @@ export default function DoctorsDermatsPage() {
               <div className="mb-6 p-4 rounded-lg bg-secondary">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold">Filters</h3>
-                  <Button variant="ghost" size="sm">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setFilterName("");
+                      setFilterClinic("");
+                      setFilterCategory("");
+                      setFilterAgent("");
+                      setCurrentPage(1);
+                    }}
+                  >
                     <X className="mr-2 h-4 w-4" />
                     Clear Filters
                   </Button>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <Input type="text" placeholder="Filter by Doctor Name..." />
-                  <Input type="text" placeholder="Filter by Clinic Name..." />
-                  <Input type="text" placeholder="Filter by Category..." />
-                  <Input type="text" placeholder="Filter by Agent..." />
+                  <Input
+                    type="text"
+                    placeholder="Filter by Doctor Name..."
+                    value={filterName}
+                    onChange={(e) => { setFilterName(e.target.value); setCurrentPage(1); }}
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Filter by Clinic Name..."
+                    value={filterClinic}
+                    onChange={(e) => { setFilterClinic(e.target.value); setCurrentPage(1); }}
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Filter by Category..."
+                    value={filterCategory}
+                    onChange={(e) => { setFilterCategory(e.target.value); setCurrentPage(1); }}
+                  />
+                  <Input
+                    type="text"
+                    placeholder="Filter by Agent..."
+                    value={filterAgent}
+                    onChange={(e) => { setFilterAgent(e.target.value); setCurrentPage(1); }}
+                  />
                 </div>
               </div>
 
@@ -419,57 +471,65 @@ export default function DoctorsDermatsPage() {
                         <TableCell>{(doctor.specialties || []).join(', ')}</TableCell>
                         <TableCell>
                           <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              doctor.status === "Approved"
-                                ? "bg-green-100 text-green-800"
-                                : doctor.status === "Pending"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
-                            }`}
+                            className={`px-2 py-1 rounded-full text-xs font-semibold ${doctor.status === "Approved"
+                              ? "bg-green-100 text-green-800"
+                              : doctor.status === "Pending"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
+                              }`}
                           >
                             {doctor.status}
                           </span>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewClick(doctor)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedDoctor(doctor);
-                              setIsNewDoctorModalOpen(true);
-                            }}
-                            title="Edit"
-                          >
-                            <Stethoscope className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleActionClick(doctor, "approve")}
-                          >
-                            <ThumbsUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleActionClick(doctor, "reject")}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleActionClick(doctor, "delete")}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <Tooltip content="View Details">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewClick(doctor)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip content="Edit Doctor">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setSelectedDoctor(doctor);
+                                setIsNewDoctorModalOpen(true);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4 text-blue-500" />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip content="Approve">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleActionClick(doctor, "approve")}
+                            >
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip content="Reject">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleActionClick(doctor, "reject")}
+                            >
+                              <XCircle className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </Tooltip>
+                          <Tooltip content="Delete Doctor">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleActionClick(doctor, "delete")}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </Tooltip>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -483,7 +543,7 @@ export default function DoctorsDermatsPage() {
                 onPageChange={setCurrentPage}
                 itemsPerPage={itemsPerPage}
                 onItemsPerPageChange={setItemsPerPage}
-                totalItems={doctors.length}
+                totalItems={filteredDoctors.length}
               />
             </CardContent>
           </Card>

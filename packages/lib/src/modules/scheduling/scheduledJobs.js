@@ -19,7 +19,7 @@ const JOB_CONFIG = {
     autoCancellation: {
         schedule: '*/15 * * * *', // Every 15 minutes
         enabled: true,
-        gracePeriodMinutes: 30, // Cancel appointments 30 minutes after end time
+        gracePeriodMinutes: 15, // Cancel appointments 15 minutes after end time
         notifyClients: true,  // Send email to clients
         notifyVendors: true   // Send email to vendors
     },

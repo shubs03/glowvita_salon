@@ -55,21 +55,19 @@ const AppointmentsSection = ({
           <nav className="flex" aria-label="Tabs">
             <button
               onClick={() => setActiveTab('upcoming')}
-              className={`flex-1 py-3 text-sm font-medium px-2 min-w-0 ${
-                activeTab === 'upcoming'
+              className={`flex-1 py-3 text-sm font-medium px-2 min-w-0 ${activeTab === 'upcoming'
                   ? 'text-primary border-b-2 border-primary'
                   : 'text-muted-foreground hover:text-foreground'
-              }`}
+                }`}
             >
               <span className="truncate">Upcoming ({upcoming.length})</span>
             </button>
             <button
               onClick={() => setActiveTab('past')}
-              className={`flex-1 py-3 text-sm font-medium px-2 min-w-0 ${
-                activeTab === 'past'
+              className={`flex-1 py-3 text-sm font-medium px-2 min-w-0 ${activeTab === 'past'
                   ? 'text-primary border-b-2 border-primary'
                   : 'text-muted-foreground hover:text-foreground'
-              }`}
+                }`}
             >
               <span className="truncate">Past ({past.length})</span>
             </button>
@@ -137,13 +135,12 @@ const AppointmentsSection = ({
                             ₹{Number(appt?.totalAmount ?? appt?.amount ?? 0).toFixed(2)}
                           </p>
                           <span
-                            className={`inline-block mt-1 text-xs px-2 py-1 rounded capitalize ${
-                              appt.status === 'completed'
+                            className={`inline-block mt-1 text-xs px-2 py-1 rounded capitalize ${appt.status === 'completed'
                                 ? 'bg-green-500/10 text-green-700'
                                 : appt.status === 'cancelled'
-                                ? 'bg-destructive/10 text-destructive'
-                                : 'bg-muted text-muted-foreground'
-                            }`}
+                                  ? 'bg-destructive/10 text-destructive'
+                                  : 'bg-muted text-muted-foreground'
+                              }`}
                           >
                             {appt.status || 'Completed'}
                           </span>
@@ -239,7 +236,7 @@ export default function ClientProfileModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto hide-scrollbar sm:max-h-[85vh]">
+      <DialogContent className="max-w-5xl h-[90vh] sm:h-[85vh] p-0 overflow-hidden flex flex-col">
         <div className="flex flex-col h-full">
           <DialogHeader className="p-4 border-b sm:p-6">
             <div className="flex items-center justify-between">
@@ -265,8 +262,8 @@ export default function ClientProfileModal({
           {/* Main Content */}
           <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
             {/* Sidebar */}
-            <div className="w-full md:w-16 lg:w-24 xl:w-32 bg-gray-50 border-r md:border-r-0 md:border-b overflow-y-auto flex-shrink-0 flex md:flex-col">
-              <div className="p-2 md:p-3 flex md:flex-col overflow-x-auto md:overflow-x-visible scrollbar-hide">
+            <div className="w-full md:w-32 lg:w-36 xl:w-40 bg-gray-50 border-b md:border-b-0 md:border-r overflow-y-auto flex-shrink-0 flex md:flex-col">
+              <div className="p-2 md:p-3 flex md:flex-col overflow-x-auto md:overflow-x-visible scrollbar-hide w-full">
                 <div className="flex md:flex-col space-x-1 md:space-x-0 md:space-y-1 min-w-max md:min-w-0">
                   {[
                     { id: 'overview' as const, label: 'Overview', icon: PieChart },
@@ -281,15 +278,17 @@ export default function ClientProfileModal({
                       <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex flex-col items-center justify-center py-3 px-4 rounded-md text-xs font-medium transition-colors md:w-full ${
-                          activeTab === tab.id
+                        className={`flex flex-col items-center justify-center py-3 px-4 rounded-md text-xs font-medium transition-colors md:w-full ${activeTab === tab.id
                             ? 'bg-primary text-primary-foreground'
                             : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                        }`}
+                          }`}
                       >
                         <IconComponent className="h-5 w-5 mb-1" />
                         <span className="text-xs text-center whitespace-nowrap">
-                          {tab.label.split(' ')[0]}
+                          {tab.label}
+                          {tab.id === 'orders' && ` (${profileClientOrders.length})`}
+                          {tab.id === 'appointments' && ` (${profileClientAppointments.length})`}
+                          {tab.id === 'reviews' && ` (${clientReviews.length})`}
                         </span>
                       </button>
                     );
@@ -335,6 +334,12 @@ export default function ClientProfileModal({
                       <p className="text-sm text-muted-foreground">Total Reviews</p>
                       <p className="text-2xl font-bold text-primary">{clientReviews.length}</p>
                     </div>
+                    <div className="bg-card p-4 rounded-lg border min-h-[100px]">
+                      <p className="text-sm text-muted-foreground">Completed Orders</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {(profileClientOrders || []).filter((o: any) => o.status === 'Delivered').length}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -368,18 +373,22 @@ export default function ClientProfileModal({
                           {profileClient.gender || 'Not specified'}
                         </p>
                       </div>
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Country</Label>
-                        <p className="text-base font-medium text-foreground mt-1">
-                          {profileClient.country || 'Not provided'}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium text-muted-foreground">Occupation</Label>
-                        <p className="text-base font-medium text-foreground mt-1">
-                          {profileClient.occupation || 'Not provided'}
-                        </p>
-                      </div>
+                      {profileClient.source !== 'online' && (
+                        <>
+                          <div>
+                            <Label className="text-sm font-medium text-muted-foreground">Country</Label>
+                            <p className="text-base font-medium text-foreground mt-1">
+                              {profileClient.country || 'Not provided'}
+                            </p>
+                          </div>
+                          <div>
+                            <Label className="text-sm font-medium text-muted-foreground">Occupation</Label>
+                            <p className="text-base font-medium text-foreground mt-1">
+                              {profileClient.occupation || 'Not provided'}
+                            </p>
+                          </div>
+                        </>
+                      )}
                       <div>
                         <Label className="text-sm font-medium text-muted-foreground">
                           Online Booking
@@ -402,14 +411,16 @@ export default function ClientProfileModal({
                           {profileClient.address || 'Not provided'}
                         </p>
                       </div>
-                      <div className="col-span-2">
-                        <Label className="text-sm font-medium text-muted-foreground">
-                          Preferences
-                        </Label>
-                        <p className="text-base font-medium text-foreground mt-1">
-                          {profileClient.preferences || 'No preferences recorded.'}
-                        </p>
-                      </div>
+                      {profileClient.source !== 'online' && (
+                        <div className="col-span-2">
+                          <Label className="text-sm font-medium text-muted-foreground">
+                            Preferences
+                          </Label>
+                          <p className="text-base font-medium text-foreground mt-1">
+                            {profileClient.preferences || 'No preferences recorded.'}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -452,15 +463,14 @@ export default function ClientProfileModal({
                             </div>
                             <div className="flex items-center gap-2 sm:flex-col sm:items-end">
                               <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${
-                                  order.status === 'Delivered'
+                                className={`px-2 py-1 rounded text-xs font-medium ${order.status === 'Delivered'
                                     ? 'bg-green-500/10 text-green-700'
                                     : order.status === 'Cancelled'
-                                    ? 'bg-destructive/10 text-destructive'
-                                    : order.status === 'Shipped'
-                                    ? 'bg-blue-500/10 text-blue-700'
-                                    : 'bg-muted text-muted-foreground'
-                                }`}
+                                      ? 'bg-destructive/10 text-destructive'
+                                      : order.status === 'Shipped'
+                                        ? 'bg-blue-500/10 text-blue-700'
+                                        : 'bg-muted text-muted-foreground'
+                                  }`}
                               >
                                 {order.status || 'Pending'}
                               </span>
@@ -561,11 +571,10 @@ export default function ClientProfileModal({
                                   {[...Array(5)].map((_, i) => (
                                     <Star
                                       key={i}
-                                      className={`w-4 h-4 ${
-                                        i < review.rating
+                                      className={`w-4 h-4 ${i < review.rating
                                           ? 'text-yellow-500 fill-yellow-500'
                                           : 'text-muted-foreground'
-                                      }`}
+                                        }`}
                                     />
                                   ))}
                                 </div>
@@ -584,15 +593,14 @@ export default function ClientProfileModal({
 
                             <div className="flex items-center gap-2 mb-3">
                               <div
-                                className={`p-1 rounded flex-shrink-0 ${
-                                  review.entityType === 'product'
+                                className={`p-1 rounded flex-shrink-0 ${review.entityType === 'product'
                                     ? 'bg-primary/10 text-primary'
                                     : review.entityType === 'service'
-                                    ? 'bg-primary/10 text-primary'
-                                    : review.entityType === 'doctor'
-                                    ? 'bg-primary/10 text-primary'
-                                    : 'bg-primary/10 text-primary'
-                                }`}
+                                      ? 'bg-primary/10 text-primary'
+                                      : review.entityType === 'doctor'
+                                        ? 'bg-primary/10 text-primary'
+                                        : 'bg-primary/10 text-primary'
+                                  }`}
                               >
                                 {review.entityType === 'product' ? (
                                   <Package className="w-4 h-4" />
@@ -681,10 +689,10 @@ export default function ClientProfileModal({
                           const d = rawDate ? new Date(rawDate) : null;
                           const dateStr = d
                             ? d.toLocaleDateString(undefined, {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })
                             : '';
                           const timeStr =
                             appt?.startTime || (d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
@@ -728,14 +736,16 @@ export default function ClientProfileModal({
               <Button variant="outline" onClick={onClose} className="order-2 sm:order-2">
                 Close
               </Button>
-              <Button
-                variant="default"
-                onClick={() => handleAddAppointment(profileClient)}
-                className="order-1 sm:order-1"
-              >
-                <Calendar className="w-4 h-4 mr-2" />
-                Schedule Appointment
-              </Button>
+              {activeTab === 'appointments' && (
+                <Button
+                  variant="default"
+                  onClick={() => handleAddAppointment(profileClient)}
+                  className="order-1 sm:order-1"
+                >
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Schedule Appointment
+                </Button>
+              )}
             </div>
           </DialogFooter>
         </div>

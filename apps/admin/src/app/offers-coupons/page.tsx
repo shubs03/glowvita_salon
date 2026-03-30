@@ -14,18 +14,28 @@ import { Skeleton } from '@repo/ui/skeleton';
 import { Edit2, Eye, Trash2, Plus, Percent, Tag, CheckSquare, IndianRupee, Upload, X, Power } from "lucide-react";
 import { Switch } from '@repo/ui/switch';
 import { useAppDispatch, useAppSelector } from '@repo/store/hooks';
-import { closeModal, openModal } from '../../../../../packages/store/src/slices/modalSlice.js';
+import { closeModal, openModal } from '@repo/store/slices/modalSlice';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@repo/ui/dropdown-menu";
+import { ChevronDown, Filter } from "lucide-react";
 import { useForm } from 'react-hook-form';
-import { 
-  useGetAdminOffersQuery, 
-  useCreateAdminOfferMutation, 
-  useUpdateAdminOfferMutation, 
+import {
+  useGetAdminOffersQuery,
+  useCreateAdminOfferMutation,
+  useUpdateAdminOfferMutation,
   useDeleteAdminOfferMutation,
-  useGetSuperDataQuery,
-  useGetRegionsQuery
+  useGetServicesQuery,
+  useGetRegionsQuery,
+  useGetCategoriesQuery
 } from '@repo/store/api';
-import { setSelectedRegion, selectSelectedRegion } from '../../../../../packages/store/src/slices/Admin/adminAuthSlice';
+import { setSelectedRegion, selectSelectedRegion } from '@repo/store/slices/adminAuthSlice';
 
 import { toast } from 'sonner';
 
@@ -61,18 +71,22 @@ type CouponForm = {
   regionId?: string | null;
 };
 
-// Predefined options for categories
-const categoryOptions = ['Men', 'Women', 'Unisex'];
+// Predefined options for target audience
+const genderOptions = ['Men', 'Women', 'Unisex'];
 
 export default function OffersCouponsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [useCustomCode, setUseCustomCode] = useState(false);
+  const [serviceFilters, setServiceFilters] = useState<string[]>([]);
+  const [serviceSearchTerm, setServiceSearchTerm] = useState('');
+  const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { token, admin } = useAppSelector((state: any) => state.adminAuth);
@@ -82,7 +96,7 @@ export default function OffersCouponsPage() {
 
   const dispatch = useAppDispatch();
   const { isOpen, modalType, data } = useAppSelector(
-    (state : any) => state.modal
+    (state: any) => state.modal
   );
 
   const { data: regionsResponse } = useGetRegionsQuery(undefined);
@@ -99,7 +113,7 @@ export default function OffersCouponsPage() {
   };
 
 
-   
+
   const { register, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm<CouponForm>({
     defaultValues: {
       code: '',
@@ -115,17 +129,21 @@ export default function OffersCouponsPage() {
     }
   });
 
-  // RTK Query hooks
-  const { data: couponsData = [], isLoading, isError, refetch } = useGetAdminOffersQuery(selectedRegion || undefined);
-  const { data: superData = [] } = useGetSuperDataQuery(undefined);
+  const { data: couponsData = [], isLoading, isError, refetch } = useGetAdminOffersQuery({ regionId: selectedRegion || undefined });
+  const { data: servicesResponse = [] } = useGetServicesQuery(undefined);
+  const { data: categoriesResponse = [] } = useGetCategoriesQuery(undefined);
 
   const [createOffer, { isLoading: isCreating }] = useCreateAdminOfferMutation();
   const [updateOffer, { isLoading: isUpdating }] = useUpdateAdminOfferMutation();
   const [deleteOffer, { isLoading: isDeleting }] = useDeleteAdminOfferMutation();
 
+  const categoryOptions = useMemo(() => {
+    return Array.isArray(categoriesResponse) ? categoriesResponse.map((cat: any) => cat.name) : [];
+  }, [categoriesResponse]);
+
   const specialtyOptions = useMemo(() => {
-    return superData.filter((item: any) => item.type === 'service').map((item: any) => item.name);
-  }, [superData]);
+    return Array.isArray(servicesResponse) ? servicesResponse.map((item: any) => item.name) : [];
+  }, [servicesResponse]);
 
   // Convert file to base64
   const convertToBase64 = (file: File): Promise<string> => {
@@ -170,20 +188,46 @@ export default function OffersCouponsPage() {
 
   // Handle specialty selection
   const handleSpecialtyChange = (specialty: string, checked: boolean) => {
-    const updated = checked 
+    const updated = checked
       ? [...selectedSpecialties, specialty]
-      : selectedSpecialties.filter(s => s !== specialty);
+      : selectedSpecialties.filter((s: string) => s !== specialty);
     setSelectedSpecialties(updated);
     setValue('applicableSpecialties', updated);
   };
 
   // Handle category selection
   const handleCategoryChange = (category: string, checked: boolean) => {
-    const updated = checked 
+    const updated = checked
       ? [...selectedCategories, category]
-      : selectedCategories.filter(c => c !== category);
+      : selectedCategories.filter((c: string) => c !== category);
     setSelectedCategories(updated);
     setValue('applicableCategories', updated);
+
+    // Auto-select/deselect services that belong to this category
+    if (Array.isArray(servicesResponse)) {
+      const servicesInCategory = servicesResponse
+        .filter((s: any) => {
+          const serviceCatName = s.category?.name || s.category;
+          return serviceCatName === category;
+        })
+        .map((s: any) => s.name);
+
+      let updatedSpecialties = [...selectedSpecialties];
+      if (checked) {
+        // When category is checked, add all its services
+        servicesInCategory.forEach(sName => {
+          if (!updatedSpecialties.includes(sName)) {
+            updatedSpecialties.push(sName);
+          }
+        });
+      } else {
+        // When category is unchecked, remove all its services
+        updatedSpecialties = updatedSpecialties.filter((sName: string) => !servicesInCategory.includes(sName));
+      }
+
+      setSelectedSpecialties(updatedSpecialties);
+      setValue('applicableSpecialties', updatedSpecialties);
+    }
   };
 
   // Update form values when editing
@@ -195,10 +239,10 @@ export default function OffersCouponsPage() {
       setValue('value', coupon.value || 0);
       setValue('startDate', coupon.startDate ? coupon.startDate.split('T')[0] : '');
       setValue('expires', coupon.expires ? coupon.expires.split('T')[0] : '');
-      
+
       const specialties = Array.isArray(coupon.applicableSpecialties) ? coupon.applicableSpecialties : [];
       const categories = Array.isArray(coupon.applicableCategories) ? coupon.applicableCategories : [];
-      
+
       setSelectedSpecialties(specialties);
       setSelectedCategories(categories);
       setValue('applicableSpecialties', specialties);
@@ -218,11 +262,35 @@ export default function OffersCouponsPage() {
     }
   }, [modalType, data, setValue, reset]);
 
+  const filteredCoupons = useMemo(() => {
+    if (!Array.isArray(couponsData)) return [];
+    
+    let filtered = couponsData;
+
+    // Status Filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((coupon: Coupon) => coupon.status === statusFilter);
+    }
+
+    // Service Filter
+    if (serviceFilters.length > 0) {
+      filtered = filtered.filter((coupon) => {
+        // If coupon applies to all services (specialties list is empty or undefined)
+        const isGlobalOffer = !coupon.applicableSpecialties || coupon.applicableSpecialties.length === 0;
+        
+        // Show if it's global OR if it matches any of the selected service filters
+        return isGlobalOffer || coupon.applicableSpecialties.some((s: string) => serviceFilters.includes(s));
+      });
+    }
+
+    return filtered;
+  }, [couponsData, statusFilter, serviceFilters]);
+
   const lastItemIndex = currentPage * itemsPerPage;
   const firstItemIndex = lastItemIndex - itemsPerPage;
-  const currentItems = Array.isArray(couponsData) ? couponsData.slice(firstItemIndex, lastItemIndex) : [];
+  const currentItems = [...filteredCoupons].reverse().slice(firstItemIndex, lastItemIndex);
 
-  const totalPages = Array.isArray(couponsData) ? Math.ceil(couponsData.length / itemsPerPage) : 1;
+  const totalPages = Math.ceil(filteredCoupons.length / itemsPerPage) || 1;
 
   const handleOpenModal = (type: 'addCoupon' | 'editCoupon' | 'viewCoupon', coupon?: Coupon) => {
     dispatch(openModal({ modalType: type, data: coupon }));
@@ -378,23 +446,8 @@ export default function OffersCouponsPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold font-headline">Offers & Coupons</h1>
-        {(userRole === 'SUPER_ADMIN' || userRole === 'superadmin') && (
-          <div className="flex items-center gap-2">
-            <Label>Region:</Label>
-            <Select value={selectedRegion || "all"} onValueChange={(val) => handleRegionChange(val === "all" ? "" : val)}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Global" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Global</SelectItem>
-                {regions.map((region: any) => (
-                  <SelectItem key={region._id} value={region._id}>{region.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
       </div>
+
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
         <Card>
@@ -447,15 +500,69 @@ export default function OffersCouponsPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
             <div>
               <CardTitle>Manage Coupons</CardTitle>
               <CardDescription>Manage and create new promotional coupons.</CardDescription>
             </div>
-            <Button onClick={() => handleOpenModal('addCoupon')} disabled={isCreating}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create New Coupon
-            </Button>
+            <div className="flex flex-col sm:flex-row items-center gap-2">
+              <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}>
+                <SelectTrigger className="w-[150px] lg:w-[180px]">
+                  <SelectValue placeholder="Filter by Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Expired">Expired</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-[150px] lg:w-[180px] justify-between">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                      <Filter className="h-4 w-4 shrink-0" />
+                      <span className="truncate">
+                        {serviceFilters.length === 0 ? "All Services" : `${serviceFilters.length} Services`}
+                      </span>
+                    </div>
+                    <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 max-h-80 overflow-y-auto">
+                  <DropdownMenuLabel>Filter by Service</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={serviceFilters.length === 0}
+                    onCheckedChange={() => setServiceFilters([])}
+                  >
+                    All Services
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuSeparator />
+                  {specialtyOptions.map((service: string) => (
+                    <DropdownMenuCheckboxItem
+                      key={service}
+                      checked={serviceFilters.includes(service)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setServiceFilters([...serviceFilters, service]);
+                        } else {
+                          setServiceFilters(serviceFilters.filter((s: string) => s !== service));
+                        }
+                        setCurrentPage(1);
+                      }}
+                    >
+                      {service}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Button onClick={() => handleOpenModal('addCoupon')} disabled={isCreating} className="w-full sm:w-auto">
+                <Plus className="mr-2 h-4 w-4" />
+                Create New Coupon
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -499,8 +606,8 @@ export default function OffersCouponsPage() {
                           // Regional Admin looking at a Global Offer: Toggle for THEIR region
                           const isRegionallyDisabled = coupon.disabledRegions?.some((r: any) => r.toString() === currentRegionId);
                           return (
-                            <Switch 
-                              checked={!isRegionallyDisabled} 
+                            <Switch
+                              checked={!isRegionallyDisabled}
                               onCheckedChange={async () => {
                                 try {
                                   const action = isRegionallyDisabled ? 'enable_global' : 'disable_global';
@@ -516,8 +623,8 @@ export default function OffersCouponsPage() {
                         } else {
                           // Super Admin OR Regional Admin looking at their OWN regional offer: Toggle global isActive
                           return (
-                            <Switch 
-                              checked={coupon.isActive !== false} 
+                            <Switch
+                              checked={coupon.isActive !== false}
                               onCheckedChange={async () => {
                                 try {
                                   await updateOffer({ id: coupon._id, action: 'toggle_active' }).unwrap();
@@ -547,14 +654,13 @@ export default function OffersCouponsPage() {
                         }
 
                         return (
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                            coupon.isActive === false ? "bg-red-50 text-red-700 border border-red-100" :
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold ${coupon.isActive === false ? "bg-red-50 text-red-700 border border-red-100" :
                             coupon.status === "Active"
                               ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
                               : coupon.status === "Scheduled"
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                          }`}>
+                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                                : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                            }`}>
                             {coupon.isActive === false ? "Deactivated" : coupon.status}
                           </span>
                         );
@@ -566,9 +672,9 @@ export default function OffersCouponsPage() {
                     <TableCell>{formatList(coupon.applicableCategories)}</TableCell>
                     <TableCell>
                       {coupon.offerImage ? (
-                        <img 
-                          src={coupon.offerImage} 
-                          alt="Offer" 
+                        <img
+                          src={coupon.offerImage}
+                          alt="Offer"
                           className="w-10 h-10 object-cover rounded"
                         />
                       ) : (
@@ -602,10 +708,10 @@ export default function OffersCouponsPage() {
                           <Edit2 className="h-4 w-4" />
                           <span className="sr-only">Edit</span>
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={() => handleDeleteClick(coupon)}
                           disabled={isDeleting}
                         >
@@ -626,7 +732,7 @@ export default function OffersCouponsPage() {
             onPageChange={setCurrentPage}
             itemsPerPage={itemsPerPage}
             onItemsPerPageChange={setItemsPerPage}
-            totalItems={Array.isArray(couponsData) ? couponsData.length : 0}
+            totalItems={filteredCoupons.length}
           />
         </CardContent>
       </Card>
@@ -645,7 +751,7 @@ export default function OffersCouponsPage() {
               {modalType === 'viewCoupon' && "Viewing details for this coupon."}
             </DialogDescription>
           </DialogHeader>
-          
+
           {modalType === 'viewCoupon' ? (
             <div className="grid gap-4 py-4 text-sm">
               {(() => {
@@ -689,9 +795,9 @@ export default function OffersCouponsPage() {
                       <span className="font-semibold text-muted-foreground">Image</span>
                       <div className="col-span-2">
                         {couponData?.offerImage ? (
-                          <img 
-                            src={couponData.offerImage} 
-                            alt="Offer" 
+                          <img
+                            src={couponData.offerImage}
+                            alt="Offer"
                             className="w-20 h-20 object-cover rounded border"
                           />
                         ) : (
@@ -702,7 +808,7 @@ export default function OffersCouponsPage() {
                     <div className="grid grid-cols-3 items-center gap-4">
                       <span className="font-semibold text-muted-foreground">Region</span>
                       <span className="col-span-2">
-                         {couponData?.regionId 
+                        {couponData?.regionId
                           ? regions.find((r: any) => r._id === couponData.regionId)?.name || 'Regional'
                           : 'Global'}
                       </span>
@@ -718,8 +824,8 @@ export default function OffersCouponsPage() {
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
               <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="useCustomCode" 
+                <Checkbox
+                  id="useCustomCode"
                   checked={useCustomCode}
                   onCheckedChange={(checked) => {
                     setUseCustomCode(!!checked);
@@ -735,16 +841,16 @@ export default function OffersCouponsPage() {
               {useCustomCode && (
                 <div className="space-y-2">
                   <Label htmlFor="code">Custom Coupon Code</Label>
-                  <Input 
-                    id="code" 
+                  <Input
+                    id="code"
                     placeholder="Enter custom code (e.g., SAVE20)"
-                    {...register('code', { 
+                    {...register('code', {
                       required: useCustomCode ? 'Custom coupon code is required' : false,
                       pattern: {
                         value: /^[A-Z0-9]+$/,
                         message: 'Code must contain only uppercase letters and numbers'
                       }
-                    })} 
+                    })}
                   />
                   {errors.code && <p className="text-red-500 text-sm">{errors.code.message}</p>}
                   <p className="text-sm text-muted-foreground">
@@ -755,8 +861,8 @@ export default function OffersCouponsPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="type">Discount Type</Label>
-                <Select 
-                  defaultValue={data ? (data as Coupon).type || 'percentage' : 'percentage'} 
+                <Select
+                  defaultValue={data ? (data as Coupon).type || 'percentage' : 'percentage'}
                   onValueChange={(value) => setValue('type', value as 'percentage' | 'fixed')}
                 >
                   <SelectTrigger id="type">
@@ -772,8 +878,8 @@ export default function OffersCouponsPage() {
               {(userRole === 'SUPER_ADMIN' || userRole === 'superadmin') && (
                 <div className="space-y-2">
                   <Label htmlFor="regionId">Region</Label>
-                  <Select 
-                    value={watch('regionId') || "global"} 
+                  <Select
+                    value={watch('regionId') || "global"}
                     onValueChange={(value) => setValue('regionId', value === "global" ? null : value)}
                   >
                     <SelectTrigger id="regionId">
@@ -793,13 +899,13 @@ export default function OffersCouponsPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="value">Discount Value</Label>
-                <Input 
-                  id="value" 
-                  type="number" 
-                  {...register('value', { 
+                <Input
+                  id="value"
+                  type="number"
+                  {...register('value', {
                     required: 'Discount value is required',
                     min: { value: 1, message: 'Value must be greater than 0' }
-                  })} 
+                  })}
                 />
                 {errors.value && <p className="text-red-500 text-sm">{errors.value.message}</p>}
               </div>
@@ -807,47 +913,44 @@ export default function OffersCouponsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="startDate">Starts On</Label>
-                  <Input 
-                    id="startDate" 
-                    type="date" 
-                    {...register('startDate', { required: 'Start date is required' })} 
+                  <Input
+                    id="startDate"
+                    type="date"
+                    {...register('startDate', { required: 'Start date is required' })}
                   />
                   {errors.startDate && <p className="text-red-500 text-sm">{errors.startDate.message}</p>}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="expires">Expires On</Label>
-                  <Input 
-                    id="expires" 
-                    type="date" 
-                    {...register('expires')} 
+                  <Input
+                    id="expires"
+                    type="date"
+                    {...register('expires')}
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Applicable Services (Select multiple or none for all)</Label>
-                <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-40 overflow-y-auto">
-                  {specialtyOptions.map((specialty: any) => (
-                    <div key={specialty} className="flex items-center space-x-2">
+                <Label>1. Category (Target Audience - select multiple or none for all)</Label>
+                <div className="grid grid-cols-3 gap-2 p-3 border rounded-md">
+                  {genderOptions.map((gender) => (
+                    <div key={gender} className="flex items-center space-x-2">
                       <Checkbox
-                        id={`specialty-${specialty}`}
-                        checked={selectedSpecialties.includes(specialty)}
-                        onCheckedChange={(checked) => handleSpecialtyChange(specialty, !!checked)}
+                        id={`gender-${gender}`}
+                        checked={selectedCategories.includes(gender)}
+                        onCheckedChange={(checked) => handleCategoryChange(gender, !!checked)}
                       />
-                      <Label htmlFor={`specialty-${specialty}`} className="text-sm">
-                        {specialty}
+                      <Label htmlFor={`gender-${gender}`} className="text-sm">
+                        {gender}
                       </Label>
                     </div>
                   ))}
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {selectedSpecialties.length === 0 ? 'Will apply to all services' : `Selected: ${selectedSpecialties.length}`}
-                </p>
               </div>
 
               <div className="space-y-2">
-                <Label>Applicable Categories (Select multiple or none for all)</Label>
-                <div className="grid grid-cols-3 gap-2 p-3 border rounded-md">
+                <Label>2. Sub-Category (Service Groups - Auto-selects services)</Label>
+                <div className="grid grid-cols-2 gap-2 p-3 border rounded-md max-h-40 overflow-y-auto">
                   {categoryOptions.map((category) => (
                     <div key={category} className="flex items-center space-x-2">
                       <Checkbox
@@ -862,7 +965,62 @@ export default function OffersCouponsPage() {
                   ))}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {selectedCategories.length === 0 ? 'Will apply to all categories' : `Selected: ${selectedCategories.length}`}
+                  {selectedCategories.filter(c => !genderOptions.includes(c)).length === 0 ? 'No sub-categories selected' : `Selected categories: ${selectedCategories.filter(c => !genderOptions.includes(c)).length}`}
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>3. Individual Services (Select specific services if needed)</Label>
+                <DropdownMenu open={isServiceDropdownOpen} onOpenChange={setIsServiceDropdownOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between">
+                      <span className="truncate">
+                        {selectedSpecialties.length === 0 
+                          ? "Apply to all services" 
+                          : `Selected ${selectedSpecialties.length} services`}
+                      </span>
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-[calc(100vw-3rem)] sm:w-[500px] max-h-60 overflow-y-auto">
+                    <div className="p-2 sticky top-0 bg-popover z-10">
+                      <Input
+                        placeholder="Search services..."
+                        value={serviceSearchTerm}
+                        onChange={(e) => setServiceSearchTerm(e.target.value)}
+                        className="h-8"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                      checked={selectedSpecialties.length === 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedSpecialties([]);
+                          setValue('applicableSpecialties', []);
+                        }
+                      }}
+                    >
+                      Apply to All Services
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuSeparator />
+                    {specialtyOptions
+                      .filter((s: string) => s.toLowerCase().includes(serviceSearchTerm.toLowerCase()))
+                      .map((specialty: string) => (
+                        <DropdownMenuCheckboxItem
+                          key={specialty}
+                          checked={selectedSpecialties.includes(specialty)}
+                          onCheckedChange={(checked) => handleSpecialtyChange(specialty, !!checked)}
+                        >
+                          {specialty}
+                        </DropdownMenuCheckboxItem>
+                      ))
+                    }
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <p className="text-sm text-muted-foreground">
+                  {selectedSpecialties.length === 0 ? 'Will apply to all services' : `Active filters: ${selectedSpecialties.length}`}
                 </p>
               </div>
 
@@ -876,12 +1034,12 @@ export default function OffersCouponsPage() {
                     onChange={handleImageUpload}
                     className="hidden"
                   />
-                  
+
                   {previewImage ? (
                     <div className="relative">
-                      <img 
-                        src={previewImage} 
-                        alt="Preview" 
+                      <img
+                        src={previewImage}
+                        alt="Preview"
                         className="w-32 h-32 object-cover rounded border"
                       />
                       <Button
@@ -907,7 +1065,7 @@ export default function OffersCouponsPage() {
                       </div>
                     </Button>
                   )}
-                  
+
                   <p className="text-sm text-muted-foreground">
                     Supports JPG, PNG, GIF, WebP. Max size: 5MB
                   </p>

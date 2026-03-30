@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAppDispatch } from "@repo/store/hooks";
 import { addToCart } from "@repo/store/slices/cartSlice";
 import Image from "next/image";
+import { cn } from "@repo/ui/cn";
 import { useAddToClientCartMutation } from "@repo/store/services/api";
 
 interface ProductCardProps {
@@ -145,12 +146,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <Button
           size="icon"
           variant="ghost"
-          className="absolute top-1 left-1 h-8 w-8 rounded-full bg-white/20 text-primary backdrop-blur-sm hover:bg-white/30 transition-all"
+          className="absolute top-1 left-1 h-8 w-8 rounded-full bg-white/20 text-red-500 backdrop-blur-sm hover:bg-white/30 transition-all"
           onClick={handleWishlistToggle}
           disabled={isLoading}
         >
           <Heart
-            className={`h-4 w-4 ${isLiked ? "fill-current text-primary" : ""}`}
+            className={cn("h-4 w-4", isLiked && "fill-red-500 text-red-500")}
           />
         </Button>
       </div>
@@ -164,12 +165,26 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <p className="text-xs text-muted-foreground line-clamp-2">
           {product.description}
         </p>
-        <div className="flex justify-between items-center mt-auto">
-          <p className="font-bold text-primary">
-            ₹{product.price.toFixed(2)}
-          </p>
-          <div className="flex items-center gap-1">
-            <Star className="h-3 w-3 text-primary fill-current" />
+        <div className="flex flex-col gap-0.5 mt-auto">
+          {product.salePrice > 0 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-bold text-primary">
+                ₹{product.salePrice.toFixed(2)}
+              </p>
+              <p className="text-xs text-muted-foreground line-through">
+                ₹{product.price.toFixed(2)}
+              </p>
+              <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 h-4 hover:bg-green-100">
+                {Math.round(((product.price - product.salePrice) / product.price) * 100)}% OFF
+              </Badge>
+            </div>
+          ) : (
+            <p className="font-bold text-primary">
+              ₹{product.price.toFixed(2)}
+            </p>
+          )}
+          <div className="flex items-center gap-1 text-primary">
+            <Star className="h-3 w-3 text-yellow-400 fill-current" />
             <span className="text-xs text-muted-foreground font-medium">
               {product.rating}
             </span>

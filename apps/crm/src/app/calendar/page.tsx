@@ -277,20 +277,6 @@ export default function CalendarPage() {
     }));
   }, [appointmentsData]);
 
-  // Filter appointments based on active tab
-  const filteredAppointments = useMemo(() => {
-    if (!Array.isArray(appointments)) return [];
-
-    if (activeTab === 'wedding') {
-      return appointments.filter(a => a.isWeddingService === true);
-    }
-    if (activeTab === 'home') {
-      // Exclude wedding services from the home service tab to prevent duplication,
-      // as wedding services are a specific category even if done at home.
-      return appointments.filter(a => a.isHomeService === true && !a.isWeddingService);
-    }
-    return appointments;
-  }, [appointments, activeTab]);
 
   const daysInMonth = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -304,16 +290,6 @@ export default function CalendarPage() {
     return new Date(year, month, 1).getDay();
   }, [currentDate]);
 
-  const todaysAppointments = useMemo(() => {
-    return filteredAppointments
-      .filter(
-        (a) =>
-          isSameDay(a.date, today) &&
-          (selectedStaff === "All Staff" || a.staffName === selectedStaff)
-      )
-      .sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [filteredAppointments, selectedStaff, today]);
-
   const selectedDateAppointments = useMemo(() => {
     return appointments
       .filter(
@@ -323,6 +299,32 @@ export default function CalendarPage() {
       )
       .sort((a, b) => a.startTime.localeCompare(b.startTime));
   }, [appointments, selectedDate, selectedStaff]);
+
+  // Filter appointments based on active tab and selected date
+  const filteredAppointments = useMemo(() => {
+    if (!Array.isArray(selectedDateAppointments)) return [];
+
+    let filtered = selectedDateAppointments;
+
+    if (activeTab === 'wedding') {
+      filtered = filtered.filter((a) => a.isWeddingService === true);
+    } else if (activeTab === 'home') {
+      filtered = filtered.filter(
+        (a) => a.isHomeService === true && !a.isWeddingService
+      );
+    }
+    return filtered;
+  }, [selectedDateAppointments, activeTab]);
+
+  const todaysAppointments = useMemo(() => {
+    return appointments
+      .filter(
+        (a) =>
+          isSameDay(a.date, today) &&
+          (selectedStaff === "All Staff" || a.staffName === selectedStaff)
+      )
+      .sort((a, b) => a.startTime.localeCompare(b.startTime));
+  }, [appointments, selectedStaff, today]);
 
   const handlePrev = () => {
     setCurrentDate(
@@ -346,11 +348,7 @@ export default function CalendarPage() {
       handleOpenBlockTimeModal(clickedDate);
       return;
     }
-    const year = clickedDate.getFullYear();
-    const month = String(clickedDate.getMonth() + 1).padStart(2, "0");
-    const dayStr = String(day).padStart(2, "0");
-    const dateString = `${year}-${month}-${dayStr}`;
-    router.push(`/calendar/${dateString}`);
+    setSelectedDate(clickedDate);
   };
 
   const handleNewAppointment = useCallback(() => {
@@ -768,13 +766,9 @@ export default function CalendarPage() {
         (appointment: any) => {
           // Skip if already marked as completed, cancelled, or missed
           // Also skip 'partially-completed' as it indicates a payment has started
+          // Only auto-cancel appointments that are 'scheduled' or 'confirmed'
           if (
-            [
-              "completed",
-              "cancelled",
-              "missed",
-              "partially-completed",
-            ].includes(appointment.status)
+            !["scheduled", "confirmed"].includes(appointment.status)
           ) {
             return false;
           }
@@ -782,14 +776,14 @@ export default function CalendarPage() {
           const appointmentDate = new Date(appointment.date);
           const isToday = isSameDay(appointmentDate, now);
 
-          if (isToday && appointment.startTime) {
-            const [hours, minutes] = appointment.startTime
+          if (isToday && appointment.endTime) {
+            const [hours, minutes] = appointment.endTime
               .split(":")
               .map(Number);
-            const startTimeInMinutes = hours * 60 + minutes;
+            const endTimeInMinutes = hours * 60 + minutes;
 
-            // Check if more than 30 minutes past start time
-            if (currentTimeInMinutes > startTimeInMinutes + 30) {
+            // Check if more than 15 minutes past end time
+            if (currentTimeInMinutes > endTimeInMinutes + 15) {
               return true;
             }
           }
@@ -815,7 +809,7 @@ export default function CalendarPage() {
                 id: appointment._id || appointment.id,
                 status: isToday ? "cancelled" : "missed",
                 cancellationReason: isToday
-                  ? "Automatically cancelled - 30 minutes past start time without completion"
+                  ? "Your appointment has been automatically cancelled as it was not marked as completed after the scheduled end time."
                   : "Automatically marked as missed - appointment date has passed",
               }).unwrap();
             })
@@ -914,7 +908,7 @@ export default function CalendarPage() {
           <div className="flex-1 flex flex-col min-h-0">
             <AppointmentListSection
               appointments={filteredAppointments}
-              currentDate={currentDate}
+              currentDate={selectedDate}
               isLoadingAppointments={isLoadingAppointments}
               handleEditAppointment={handleEditAppointment}
               handleDeleteAppointment={handleDeleteAppointment}
@@ -955,7 +949,11 @@ export default function CalendarPage() {
                         </div>
                         <Button
                           variant="outline"
-                          onClick={() => setCurrentDate(new Date())}
+                          onClick={() => {
+                            const today = new Date();
+                            setCurrentDate(today);
+                            setSelectedDate(today);
+                          }}
                           className="h-8 px-3 text-sm"
                         >
                           Today

@@ -30,18 +30,18 @@ const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage, isHomeServi
       { name: 'Confirm Booking', step: 4 }
     ]
     : isHomeService
-    ? [
-      { name: 'Select Service', step: 1 },
-      { name: 'Select Professional', step: 2 },
-      { name: 'Select Location', step: 3 },
-      { name: 'Select Date & Time', step: 4 }
-    ]
-    : [
-      { name: 'Select Service', step: 1 },
-      { name: 'Select Professional', step: 2 },
-      { name: 'Select Date & Time', step: 3 },
-      { name: 'Confirm Booking', step: 4 }
-    ];
+      ? [
+        { name: 'Select Service', step: 1 },
+        { name: 'Select Professional', step: 2 },
+        { name: 'Select Location', step: 3 },
+        { name: 'Select Date & Time', step: 4 }
+      ]
+      : [
+        { name: 'Select Service', step: 1 },
+        { name: 'Select Professional', step: 2 },
+        { name: 'Select Date & Time', step: 3 },
+        { name: 'Confirm Booking', step: 4 }
+      ];
 
   return (
     <nav className="flex items-center text-sm font-medium text-muted-foreground mb-6">
@@ -166,6 +166,31 @@ export const Step3_TimeSlot = memo(({
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [isStale, setIsStale] = useState(false);
   const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
+
+  // [NEW] Get day name helper
+  const getDayName = useCallback((date: Date): string => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    return days[date.getDay()];
+  }, []);
+
+  // [NEW] Check if a date is available based on working hours
+  const isDateAvailable = useCallback((date: Date): boolean => {
+    if (!workingHours || workingHours.length === 0) return true;
+
+    const dayName = getDayName(date);
+    const dayWorkingHours = workingHours.find((wh: any) =>
+      wh.dayOfWeek.toLowerCase() === dayName.toLowerCase()
+    );
+
+    return dayWorkingHours ? dayWorkingHours.isAvailable : false;
+  }, [workingHours, getDayName]);
+
+  // [NEW] Check if salon is closed every day
+  const isSalonClosedEveryDay = useMemo(() => {
+    if (!workingHours || workingHours.length === 0) return false;
+    return workingHours.every((wh: any) => !wh.isAvailable);
+  }, [workingHours]);
+
   const dateScrollerRef = useRef<HTMLDivElement>(null);
   const previousSlotsRef = useRef<TimeSlot[]>([]);
 
@@ -232,15 +257,15 @@ export const Step3_TimeSlot = memo(({
 
       const data = await response.json();
       const newSlots = data.slots || [];
-      
+
       // Only update if slots actually changed (prevents unnecessary re-renders)
       const slotsChanged = JSON.stringify(previousSlotsRef.current) !== JSON.stringify(newSlots);
-      
+
       if (slotsChanged || !isBackgroundFetch) {
         setSlots(newSlots);
         previousSlotsRef.current = newSlots;
       }
-      
+
       setLastRefresh(new Date());
     } catch (error: any) {
       console.error('Error fetching slots:', error);
@@ -272,6 +297,24 @@ export const Step3_TimeSlot = memo(({
 
     return () => clearInterval(refreshInterval);
   }, [effectiveVendorId, selectedDate, fetchSlots]);
+
+  // [NEW] Auto-select first available date if current date is closed
+  useEffect(() => {
+    if (workingHours && Object.keys(workingHours).length > 0 && !isDateAvailable(selectedDate)) {
+      // Create dates array for searching (same logic as in useMemo below)
+      const searchDates = Array.from({ length: 60 }, (_, i) => addDays(new Date(), i));
+
+      const firstAvailableDate = searchDates.find(date => {
+        const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+        return !isPast && isDateAvailable(date);
+      });
+
+      if (firstAvailableDate) {
+        console.log('Current date is closed, auto-selecting first available:', firstAvailableDate);
+        onSelectDate(firstAvailableDate);
+      }
+    }
+  }, [workingHours, selectedDate, isDateAvailable, onSelectDate]);
 
   // Check if data is stale (> 60 seconds)
   useEffect(() => {
@@ -461,7 +504,7 @@ export const Step3_TimeSlot = memo(({
         startTime: slot.startTime,
         endTime: slot.endTime,
         clientId: user?._id || user?.id || (effectiveService as any)?.clientId || 'temp-client-id',
-        clientName: user ? `${user.firstName} ${user.lastName}` : 'Customer',
+        clientName: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : 'Customer',
         clientEmail: user?.emailAddress || user?.email || '',
         clientPhone: user?.mobileNo || user?.phone || '',
         staffName: selectedStaff?.name || 'Any Professional',
@@ -729,18 +772,21 @@ export const Step3_TimeSlot = memo(({
             {dates.map((date: Date) => {
               const isToday = date.toDateString() === new Date().toDateString();
               const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+              const isAvailable = isDateAvailable(date);
+              const isSelected = selectedDate.toDateString() === date.toDateString();
+
               return (
                 <Button
                   key={date.toISOString()}
                   id={`date-${format(date, 'yyyy-MM-dd')}`}
-                  variant={selectedDate.toDateString() === date.toDateString() ? 'default' : 'outline'}
+                  variant={isSelected ? 'default' : 'outline'}
                   className={cn(
                     'flex-shrink-0 flex flex-col items-center justify-center h-20 w-16 rounded-lg',
-                    selectedDate.toDateString() === date.toDateString() && 'ring-2 ring-primary ring-offset-2',
-                    isPast && 'opacity-50 cursor-not-allowed'
+                    isSelected && 'ring-2 ring-primary ring-offset-2',
+                    (isPast || !isAvailable) && 'opacity-50 cursor-not-allowed'
                   )}
-                  onClick={() => !isPast && onSelectDate(date)}
-                  disabled={isPast}
+                  onClick={() => !isPast && isAvailable && onSelectDate(date)}
+                  disabled={isPast || !isAvailable}
                 >
                   <span className="text-xs font-medium">
                     {isToday ? 'Today' : format(date, 'EEE')}
@@ -765,11 +811,31 @@ export const Step3_TimeSlot = memo(({
             </Button>
           </div>
 
-          {displaySlots.length === 0 ? (
+          {isLoadingSlots ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary mr-3" />
+              <span className="text-muted-foreground">Checking availability...</span>
+            </div>
+          ) : isSalonClosedEveryDay ? (
+            <div className="text-center py-12 bg-red-50 rounded-xl border border-red-100 p-8 shadow-sm">
+              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-red-800 mb-2">Salon is Currently Closed</h3>
+
+            </div>
+          ) : !isDateAvailable(selectedDate) ? (
+            <div className="text-center py-12 bg-amber-50 rounded-xl border border-amber-100 p-8 shadow-sm">
+              <Clock className="h-12 w-12 text-amber-500 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-amber-800 mb-2">Salon is Closed Today ({format(selectedDate, 'EEEE')})</h3>
+              <p className="text-amber-600 mb-4">
+                The salon is closed on this particular day. Please select another date from the calendar above to see available times.
+              </p>
+            </div>
+          ) : displaySlots.length === 0 ? (
             <div className="text-center py-12">
               <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No available slots for this date</p>
-              <p className="text-sm text-muted-foreground mt-2">Try selecting a different date</p>
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">No available slots</h3>
+              <p className="text-muted-foreground">We couldn't find any available time slots for {format(selectedDate, 'MMMM d')}.</p>
+              <p className="text-sm text-muted-foreground mt-2">Try selecting a different date or another professional.</p>
             </div>
           ) : (
             <div className="max-h-96 overflow-y-auto pr-2 no-scrollbar">
@@ -799,7 +865,7 @@ export const Step3_TimeSlot = memo(({
                       <div className="text-xs text-gray-500 mt-0.5">
                         {slot.duration} min
                       </div>
-                      {slot.travelTime && slot.travelTime > 0 && (
+                      {Boolean(slot.travelTime && slot.travelTime > 0) && (
                         <div className="text-xs text-blue-600 mt-1">
                           +{slot.travelTime} min travel
                         </div>

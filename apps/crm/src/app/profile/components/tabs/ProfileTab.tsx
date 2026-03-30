@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@repo/ui/checkbox";
 import { useUpdateVendorProfileMutation } from '@repo/store/api';
 import { toast } from 'sonner';
+import { Upload, User } from 'lucide-react';
+import { cn } from "@repo/ui/cn";
 
 interface ProfileTabProps {
   vendor: any;
@@ -26,6 +28,8 @@ export const ProfileTab = ({ vendor, setVendor }: ProfileTabProps) => {
         category: vendor.category,
         subCategories: vendor.subCategories,
         website: vendor.website,
+        gstNo: vendor.gstNo,
+        profileImage: vendor.profileImage,
       }).unwrap();
 
       if (result.success) {
@@ -45,6 +49,41 @@ export const ProfileTab = ({ vendor, setVendor }: ProfileTabProps) => {
         <CardDescription className="text-sm sm:text-base">Update your salon's public information.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+        <div className="flex flex-col items-center mb-6">
+          <div className="relative group w-24 h-24 sm:w-32 sm:h-32 rounded-full overflow-hidden border-2 border-primary/20 bg-muted">
+            {vendor.profileImage ? (
+              <img
+                src={vendor.profileImage}
+                alt="Profile"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <User className="h-8 w-8 sm:h-12 sm:w-12 text-muted-foreground" />
+              </div>
+            )}
+            <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+              <Upload className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              <input
+                type="file"
+                className="hidden"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      setVendor({ ...vendor, profileImage: reader.result as string });
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              />
+            </label>
+          </div>
+          <p className="mt-2 text-[10px] sm:text-xs text-muted-foreground">Click to upload business profile image</p>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="businessName" className="text-sm sm:text-base">Salon Name</Label>
           <Input
@@ -82,6 +121,18 @@ export const ProfileTab = ({ vendor, setVendor }: ProfileTabProps) => {
               <SelectItem value="women">Women</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="gstNo" className="text-sm sm:text-base">GST Number</Label>
+          <Input
+            id="gstNo"
+            value={vendor.gstNo || ''}
+            onChange={(e) =>
+              setVendor({ ...vendor, gstNo: e.target.value })
+            }
+            placeholder="Enter GST Number (Optional)"
+            className="h-10 sm:h-12 rounded-lg border border-border focus:border-primary text-sm sm:text-base"
+          />
         </div>
         <div className="space-y-2">
           <Label className="text-sm sm:text-base">Sub Categories</Label>

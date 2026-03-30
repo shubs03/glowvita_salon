@@ -83,7 +83,7 @@ const billingItemSchema = new mongoose.Schema({
   staffMember: {
     id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Staff'
+      ref: 'Staffs'
     },
     name: {
       type: String,

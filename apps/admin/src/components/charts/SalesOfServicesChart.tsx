@@ -2,7 +2,18 @@
 
 import { BarChart, Bar, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from 'recharts';
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d', '#ffc658', '#ff7300'];
+const COLORS = [
+  "#3b82f6", // blue-500
+  "#10b981", // emerald-500
+  "#f59e0b", // amber-500
+  "#ef4444", // red-500
+  "#8b5cf6", // violet-500
+  "#ec4899", // pink-500
+  "#06b6d4", // cyan-500
+  "#84cc16", // lime-500
+  "#f97316", // orange-500
+  "#14b8a6", // teal-500
+];
 
 interface ServiceData {
   service: string;
@@ -61,17 +72,19 @@ export function SalesOfServicesChart({ servicesData, filterType, filterValue }: 
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (
-        <div className="bg-background border border-border p-4 rounded-md shadow-md">
-          <p className="font-bold text-lg">{data.name}</p>
-          <p className="text-sm">
-            <span className="font-medium">Total Service Amount:</span> ₹{data.value.toLocaleString('en-IN')}
-          </p>
-          <p className="text-sm">
-            <span className="font-medium">Service Platform Fee:</span> ₹{data.platformFee?.toLocaleString('en-IN') || '0.00'}
-          </p>
-          <p className="text-sm">
-            <span className="font-medium">Total Bookings:</span> {data.bookings}
-          </p>
+        <div className="bg-background border border-border p-3 rounded-lg shadow-lg">
+          <p className="font-semibold text-foreground mb-1">{data.name}</p>
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Sale:</span> ₹{data.value.toLocaleString('en-IN')}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Platform Fee:</span> ₹{data.platformFee?.toLocaleString('en-IN') || '0.00'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Bookings:</span> {data.bookings}
+            </p>
+          </div>
         </div>
       );
     }
@@ -85,38 +98,35 @@ export function SalesOfServicesChart({ servicesData, filterType, filterValue }: 
   };
 
   return (
-    <ResponsiveContainer width="100%" height={350} className="min-w-max">
+    <ResponsiveContainer width="100%" height={350}>
       <BarChart
         data={chartData}
         margin={{
           top: 20,
           right: 30,
           left: 20,
-          bottom: 60,
+          bottom: 20,
         }}
       >
-        <CartesianGrid strokeDasharray="3 3" />
+        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
         <XAxis
           dataKey="name"
-          stroke="#888888"
+          stroke="hsl(var(--muted-foreground))"
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          angle={-45}
-          textAnchor="end"
-          height={60}
           tickFormatter={(value) => truncateName(value, 15)}
-          interval={0}
         />
         <YAxis
-          stroke="#888888"
+          stroke="hsl(var(--muted-foreground))"
           fontSize={12}
           tickLine={false}
           axisLine={false}
+          width={80}
           tickFormatter={(value) => `₹${value.toLocaleString()}`}
         />
         <Tooltip content={<CustomTooltip />} />
-        <Legend />
+        <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: '30px' }} />
         <Bar 
           dataKey="value" 
           name="Sale (₹)"

@@ -2,7 +2,7 @@
 import {
   FaTachometerAlt, FaUsers, FaCalendarAlt, FaCut,
   FaClipboardList, FaBoxOpen, FaFileAlt, FaBullhorn,
-  FaBell, FaGift, FaHeart, FaUserFriends, FaUserCircle, FaStethoscope, FaDollarSign, FaClock, FaTruck, FaShoppingCart, FaShippingFast, FaMoneyCheckAlt, FaStore, FaReceipt, FaQuestionCircle, FaStar, FaPlusSquare, FaWarehouse
+  FaBell, FaGift, FaHeart, FaUserFriends, FaUserCircle, FaStethoscope, FaDollarSign, FaClock, FaTruck, FaShoppingCart, FaShippingFast, FaMoneyCheckAlt, FaStore, FaReceipt, FaQuestionCircle, FaStar, FaPlusSquare, FaWarehouse, FaWallet
 } from "react-icons/fa";
 import { IconType } from "react-icons";
 
@@ -38,6 +38,7 @@ export const vendorNavItems: NavItem[] = [
   { title: "Marketing", href: "/marketing", Icon: FaBullhorn, permission: 'marketing_view' },
   { title: "Notifications", href: "/push-notifications", Icon: FaBell, permission: 'notifications_view' },
   { title: "Reports", href: "/reports", Icon: FaFileAlt, permission: 'reports_view' },
+  { title: "Wallet", href: "/profile/wallet", Icon: FaWallet, permission: 'all' },
 ];
 
 export const doctorNavItems: NavItem[] = [
@@ -55,6 +56,7 @@ export const doctorNavItems: NavItem[] = [
   { title: "Notifications", href: "/push-notifications", Icon: FaBell, permission: 'notifications_view' },
   { title: "Referrals", href: "/doctor-referrals", Icon: FaUserFriends, permission: 'doctor_referrals_view' },
   { title: "Reports", href: "/doctor-reports", Icon: FaFileAlt, permission: 'doctor_reports_view' },
+  { title: "Wallet", href: "/profile/wallet", Icon: FaWallet, permission: 'all' },
 ];
 
 export const supplierNavItems: NavItem[] = [
@@ -72,4 +74,5 @@ export const supplierNavItems: NavItem[] = [
   { title: "Marketing", href: "/marketing", Icon: FaBullhorn, permission: 'marketing_view' },
   { title: "Notifications", href: "/push-notifications", Icon: FaBell, permission: 'notifications_view' },
   { title: "Reports", href: "/reports", Icon: FaFileAlt, permission: 'reports_view' },
+  { title: "Wallet", href: "/profile/wallet", Icon: FaWallet, permission: 'all' },
 ];

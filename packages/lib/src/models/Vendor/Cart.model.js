@@ -27,6 +27,10 @@ const cartItemSchema = new mongoose.Schema({
   supplierName: {
     type: String,
   },
+  minOrderValue: {
+    type: Number,
+    default: 0
+  },
 }, { _id: false });
 
 const cartSchema = new mongoose.Schema({

@@ -17,8 +17,8 @@ type Referral = {
     _id: string;
     referee: string;
     date: string;
-    status: 'Pending' | 'Completed' | 'Bonus Paid';
-    bonus: string;
+    status: 'Pending' | 'Completed';
+    bonus?: number | string;
 };
 
 const SkeletonLoader = () => (
@@ -107,8 +107,7 @@ export default function DoctorReferralsPage() {
     
     const getStatusColor = (status: Referral['status']) => {
         switch (status) {
-          case 'Completed': return 'bg-blue-100 text-blue-800';
-          case 'Bonus Paid': return 'bg-green-100 text-green-800';
+          case 'Completed': return 'bg-green-100 text-green-800';
           case 'Pending': return 'bg-yellow-100 text-yellow-800';
           default: return 'bg-gray-100 text-gray-800';
         }
@@ -122,7 +121,7 @@ export default function DoctorReferralsPage() {
         return <div className="p-8 text-center text-destructive">Failed to load referral data. Please try again.</div>
     }
 
-    const totalBonusEarned = referrals.filter((r: Referral) => r.status === 'Bonus Paid').reduce((acc, r) => acc + (Number(r.bonus) || 0), 0);
+    const totalBonusEarned = referrals.filter((r: Referral) => r.status === 'Completed').reduce((acc, r) => acc + (Number(r.bonus) || 0), 0);
     const successfulReferrals = referrals.filter(r => r.status !== 'Pending').length;
 
     return (

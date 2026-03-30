@@ -8,11 +8,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@repo
 import { Badge } from '@repo/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@repo/ui/dialog';
 import { Textarea } from '@repo/ui/textarea';
-import { 
-  Upload, 
-  Download, 
-  X, 
-  PackagePlus, 
+import {
+  Upload,
+  Download,
+  X,
+  PackagePlus,
   FileText,
   AlertCircle,
   CheckCircle,
@@ -44,8 +44,8 @@ type ValidationResult = {
   errors: string[];
 };
 
-const BulkProductAddition = ({ 
-  isOpen, 
+const BulkProductAddition = ({
+  isOpen,
   onOpenChange,
   onProductsAdded
 }: {
@@ -58,7 +58,7 @@ const BulkProductAddition = ({
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const [processingResults, setProcessingResults] = useState<{success: number; failed: number; errors: string[]}>({success: 0, failed: 0, errors: []});
+  const [processingResults, setProcessingResults] = useState<{ success: number; failed: number; errors: string[] }>({ success: 0, failed: 0, errors: [] });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Sample CSV template
@@ -73,11 +73,11 @@ const BulkProductAddition = ({
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    
+
     link.setAttribute('href', url);
     link.setAttribute('download', 'product_template.csv');
     link.style.visibility = 'hidden';
-    
+
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -90,7 +90,7 @@ const BulkProductAddition = ({
         toast.error('Please upload a CSV file');
         return;
       }
-      
+
       setFile(selectedFile);
       setFileName(selectedFile.name);
     }
@@ -123,7 +123,7 @@ const BulkProductAddition = ({
 
   const processCSVData = (csvText: string): BulkProductData[] => {
     const lines = csvText.split(/\r?\n/).filter(line => line.trim() !== '');
-    
+
     if (lines.length < 2) {
       throw new Error('CSV file must contain at least one data row');
     }
@@ -141,7 +141,7 @@ const BulkProductAddition = ({
       const product: any = {};
       headers.forEach((header, index) => {
         const value = values[index]?.trim();
-        
+
         // Convert numeric values
         if (['Price', 'SalePrice', 'Stock'].includes(header)) {
           product[header.toLowerCase()] = value ? parseFloat(value) || 0 : 0;
@@ -176,7 +176,7 @@ const BulkProductAddition = ({
     try {
       const text = await file.text();
       const products = processCSVData(text);
-      
+
       if (products.length === 0) {
         toast.error('No valid products found in the CSV file');
         setIsProcessing(false);
@@ -191,7 +191,7 @@ const BulkProductAddition = ({
         products: products.map(product => {
           // Validate the product data
           const validation = validateProductData(product);
-          
+
           // Prepare the product payload
           const payload: any = {
             productName: product.productName,
@@ -214,11 +214,11 @@ const BulkProductAddition = ({
             const ingredients = product.keyIngredients.split(',').map(i => i.trim()).filter(Boolean);
             payload.keyIngredients = ingredients;
           }
-          
+
           return payload;
         })
       };
-      
+
       // Make a single API call to create all products
       const response = await fetch('/api/crm/products', {
         method: 'POST',
@@ -228,12 +228,12 @@ const BulkProductAddition = ({
         },
         body: JSON.stringify(bulkPayload)
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         successCount = result.data?.successCount || result.data?.created?.length || 0;
-        
+
         // Add any errors to the errors array
         const resultErrors = result.data?.errors || [];
         if (resultErrors && resultErrors.length > 0) {
@@ -244,7 +244,7 @@ const BulkProductAddition = ({
       } else {
         throw new Error(result.message || 'Bulk creation failed');
       }
-      
+
       setProcessingResults({
         success: successCount,
         failed: products.length - successCount,
@@ -336,8 +336,8 @@ const BulkProductAddition = ({
                     id="csv-upload"
                     aria-label="Upload CSV or ZIP file" />
                   <Upload className="mx-auto h-12 w-12 text-muted-foreground mb-3" />
-                  <Label 
-                    htmlFor="csv-upload" 
+                  <Label
+                    htmlFor="csv-upload"
                     className="cursor-pointer block text-sm font-medium text-foreground mb-1"
                   >
                     {fileName ? fileName : 'Click to upload CSV or ZIP file'}
@@ -497,16 +497,16 @@ const BulkProductAddition = ({
         {/* Enhanced Footer */}
         <div className="sticky bottom-0 -mx-6 -mb-6 px-6 pb-6 pt-4 bg-gradient-to-t from-background via-background/95 to-transparent border-t border-border/20">
           <DialogFooter className="gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={handleClose}
               disabled={isProcessing}
               className="rounded-xl border-border/40 hover:border-border/60 px-6"
             >
               Cancel
             </Button>
-            <Button 
-              onClick={handleUpload} 
+            <Button
+              onClick={handleUpload}
               disabled={!file || isProcessing}
               className="rounded-xl bg-primary hover:bg-primary/90 px-6"
             >

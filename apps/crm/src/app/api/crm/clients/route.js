@@ -12,7 +12,7 @@ await _db();
 // GET - Fetch all clients for a vendor (both offline and online)
 export const GET = withSubscriptionCheck(async (req) => {
     try {
-        const vendorId = req.user.userId.toString();
+        const vendorId = (req.user.vendorId || req.user.userId).toString();
         const url = new URL(req.url);
         const clientId = url.searchParams.get('id');
 
@@ -112,7 +112,7 @@ export const GET = withSubscriptionCheck(async (req) => {
                     .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(limit)
-                    .select('firstName lastName emailAddress mobileNo createdAt')
+                    .select('firstName lastName emailAddress mobileNo gender birthdayDate address createdAt')
                     .lean();
 
                 const total = await UserModel.countDocuments(query);
@@ -123,12 +123,12 @@ export const GET = withSubscriptionCheck(async (req) => {
                     fullName: `${user.firstName} ${user.lastName}`,
                     email: user.emailAddress,
                     phone: user.mobileNo,
-                    birthdayDate: null,
-                    gender: 'Other',
+                    birthdayDate: user.birthdayDate,
+                    gender: user.gender || 'Other',
                     country: '',
                     occupation: '',
                     profilePicture: '',
-                    address: '',
+                    address: user.address || '',
                     lastVisit: user.createdAt,
                     totalBookings: 0, // Will be calculated in frontend
                     totalSpent: 0,    // Will be calculated in frontend
@@ -175,7 +175,7 @@ export const GET = withSubscriptionCheck(async (req) => {
 // POST - Create a new client
 export const POST = withSubscriptionCheck(async (req) => {
     try {
-        const vendorId = (req.user.userId || req.user._id).toString();
+        const vendorId = (req.user.vendorId || req.user.userId).toString();
         const body = await req.json();
 
         // Validate required fields
@@ -292,7 +292,7 @@ export const POST = withSubscriptionCheck(async (req) => {
 // PUT - Update an existing client
 export const PUT = withSubscriptionCheck(async (req) => {
     try {
-        const vendorId = (req.user.userId || req.user._id).toString();
+        const vendorId = (req.user.vendorId || req.user.userId).toString();
         const body = await req.json();
         const { _id: clientId, ...updateData } = body;
 
@@ -361,7 +361,6 @@ export const PUT = withSubscriptionCheck(async (req) => {
             }
         });
 
-        // Handle profile picture upload if provided
         if (updateData.profilePicture !== undefined) {
             if (updateData.profilePicture && updateData.profilePicture.startsWith('data:image')) {
                 // Upload new image to VPS
@@ -381,8 +380,8 @@ export const PUT = withSubscriptionCheck(async (req) => {
                 }
 
                 sanitizedUpdateData.profilePicture = imageUrl;
-            } else {
-                // If image is null/empty, remove it
+            } else if (updateData.profilePicture === '' || updateData.profilePicture === null) {
+                // If image is explicitly cleared
                 sanitizedUpdateData.profilePicture = '';
 
                 // Delete old image from VPS if it exists
@@ -390,6 +389,7 @@ export const PUT = withSubscriptionCheck(async (req) => {
                     await deleteFile(client.profilePicture);
                 }
             }
+            // If it's an existing URL, we don't update this field, keeping the current value
         }
 
         if (updateData.birthdayDate) {
@@ -437,7 +437,7 @@ export const PUT = withSubscriptionCheck(async (req) => {
 // DELETE - Delete a client
 export const DELETE = withSubscriptionCheck(async (req) => {
     try {
-        const vendorId = (req.user.userId || req.user._id).toString();
+        const vendorId = (req.user.vendorId || req.user.userId).toString();
         const body = await req.json();
         const { id: clientId } = body;
 

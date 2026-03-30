@@ -32,9 +32,9 @@ interface FilterModalProps {
   showBrandFilter?: boolean;
 }
 
-export const FilterModal = ({ 
-  isOpen, 
-  onClose, 
+export const FilterModal = ({
+  isOpen,
+  onClose,
   onApplyFilters,
   cities = [],
   vendors = [],
@@ -112,13 +112,13 @@ export const FilterModal = ({
   // Limit displayed filter options to 5 with scroll for the rest
   const renderFilterOptions = (options: string[], showAll: boolean = false) => {
     const validOptions = Array.isArray(options) ? options.filter(opt => typeof opt === 'string' && opt) : [];
-    
+
     if (showAll || validOptions.length <= 5) {
       return validOptions.map((option, index) => (
         <SelectItem key={index} value={option}>{option}</SelectItem>
       ));
     }
-    
+
     return (
       <div className="max-h-40 overflow-y-auto">
         {validOptions.map((option, index) => (
@@ -148,7 +148,7 @@ export const FilterModal = ({
                 className="w-full"
               />
             </div>
-            
+
             <div className="flex flex-col">
               <label className="text-sm font-medium mb-1">Filter by End Date</label>
               <Input
@@ -158,7 +158,7 @@ export const FilterModal = ({
                 className="w-full"
               />
             </div>
-            
+
             {showVendorFilter && (
               <div className="flex flex-col">
                 <label className="text-sm font-medium mb-1">Filter by Vendor</label>
@@ -173,7 +173,7 @@ export const FilterModal = ({
                 </Select>
               </div>
             )}
-            
+
             <div className="flex flex-col">
               <label className="text-sm font-medium mb-1">Filter by City</label>
               <Select value={city} onValueChange={setCity}>
@@ -186,7 +186,7 @@ export const FilterModal = ({
                 </SelectContent>
               </Select>
             </div>
-            
+
             {showBookingTypeFilter && (
               <div className="flex flex-col">
                 <label className="text-sm font-medium mb-1">Filter by Booking Type</label>
@@ -202,7 +202,7 @@ export const FilterModal = ({
                 </Select>
               </div>
             )}
-            
+
             {showServiceFilter && (
               <div className="flex flex-col">
                 <label className="text-sm font-medium mb-1">Filter by Service</label>
@@ -217,7 +217,7 @@ export const FilterModal = ({
                 </Select>
               </div>
             )}
-            
+
             {showUserTypeFilter && (
               <div className="flex flex-col">
                 <label className="text-sm font-medium mb-1">Filter by User Type</label>
@@ -229,11 +229,12 @@ export const FilterModal = ({
                     <SelectItem value="all">All Types</SelectItem>
                     <SelectItem value="vendor">Vendor</SelectItem>
                     <SelectItem value="supplier">Supplier</SelectItem>
+                    <SelectItem value="doctor">Doctor</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             )}
-            
+
             {showBusinessNameFilter && (
               <div className="flex flex-col">
                 <label className="text-sm font-medium mb-1">Filter by Business Name</label>
@@ -248,7 +249,7 @@ export const FilterModal = ({
                 </Select>
               </div>
             )}
-            
+
             {showPackageNameFilter && (
               <div className="flex flex-col">
                 <label className="text-sm font-medium mb-1">Filter by Package Name</label>
@@ -263,7 +264,7 @@ export const FilterModal = ({
                 </Select>
               </div>
             )}
-            
+
             {showStatusFilter && (
               <div className="flex flex-col">
                 <label className="text-sm font-medium mb-1">Filter by Status</label>
@@ -278,7 +279,7 @@ export const FilterModal = ({
                 </Select>
               </div>
             )}
-            
+
             {showPlanStatusFilter && (
               <div className="flex flex-col">
                 <label className="text-sm font-medium mb-1">Filter by Plan Status</label>
@@ -293,7 +294,7 @@ export const FilterModal = ({
                 </Select>
               </div>
             )}
-            
+
             {showCategoryFilter && (
               <div className="flex flex-col">
                 <label className="text-sm font-medium mb-1">Filter by Category</label>
@@ -308,7 +309,7 @@ export const FilterModal = ({
                 </Select>
               </div>
             )}
-            
+
             {showBrandFilter && (
               <div className="flex flex-col">
                 <label className="text-sm font-medium mb-1">Filter by Brand</label>

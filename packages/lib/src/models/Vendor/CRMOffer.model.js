@@ -44,6 +44,11 @@ if (isServer && mongoose && mongoose.model) {
       default: 0,
       min: 0,
     },
+    totalDiscount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     applicableSpecialties: {
       type: [String],
       enum: ['Hair Cut', 'Spa', 'Massage', 'Facial', 'Manicure', 'Pedicure', ''], // Allow empty string for backward compatibility
@@ -175,8 +180,27 @@ if (isServer && mongoose && mongoose.model) {
         return true;
       }
     }
-    
     return false;
+  };
+
+  // Add a static method to increment redemption count and total discount
+  crmOfferSchema.statics.incrementRedemption = async function(code, discountAmount = 0) {
+    if (!code) return null;
+    try {
+      const update = { $inc: { redeemed: 1 } };
+      if (discountAmount > 0) {
+        update.$inc.totalDiscount = Math.round(discountAmount);
+      }
+      
+      return await this.findOneAndUpdate(
+        { code: code.toUpperCase() },
+        update,
+        { new: true }
+      );
+    } catch (error) {
+      console.error(`Error incrementing redemption for code ${code}:`, error);
+      return null;
+    }
   };
 
   // Create the model only on the server side

@@ -10,47 +10,50 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Input } from '@repo/ui/input';
 import { Skeleton } from '@repo/ui/skeleton';
 import { useGetSalesByProductsReportQuery } from '@repo/store/api';
+import { useReport } from '../hooks/useReport';
 import { FilterModal } from '../common/FilterModal';
-import type { FilterParams } from '../types';
+import { FilterParams, SalesByProductData } from '../types';
 import { exportToExcel, exportToCSV, exportToPDF, copyToClipboard, printTable } from '../utils/exportFunctions';
 
 export const SalesByProductReportTable = () => {
-  const [filters, setFilters] = useState<FilterParams>({});
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
-  const [searchTerm, setSearchTerm] = useState('');
-  const tableRef = useRef<HTMLDivElement>(null);
-  
-  const apiFilters = filters;
-  
+  const {
+    apiFilters,
+    filters,
+    handleFilterChange,
+    isFilterModalOpen,
+    setIsFilterModalOpen,
+    searchTerm,
+    setSearchTerm,
+    currentPage,
+    setCurrentPage,
+    itemsPerPage,
+    setItemsPerPage,
+    tableRef,
+    filterAndPaginateData
+  } = useReport<SalesByProductData>();
+
   const { data, isLoading, isError, error } = useGetSalesByProductsReportQuery(apiFilters);
-  
-  const handleFilterChange = (newFilters: FilterParams) => {
-    setFilters(newFilters);
-    setCurrentPage(1);
-  };
-  
+
   const salesData = data?.salesBySalon || data?.salesByProducts || [];
   const cities = data?.cities || [];
   const categories = data?.categories || [];
   const brands = data?.brands || [];
   const aggregatedTotals = data?.aggregatedTotals;
-  
+
   const [allBusinessNames, setAllBusinessNames] = useState<string[]>([]);
   const [allCities, setAllCities] = useState<string[]>([]);
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [allBrands, setAllBrands] = useState<string[]>([]);
-  
+
   useEffect(() => {
     setAllCities(cities);
     setAllCategories(categories);
     setAllBrands(brands);
-    
+
     if (salesData.length > 0 && allBusinessNames.length === 0) {
       const nameMap: { [key: string]: boolean } = {};
       const names: string[] = [];
-      
+
       salesData.forEach((item: any) => {
         const name = item.businessName || item.vendorName || item.vendor;
         if (name && name !== 'N/A' && !nameMap[name]) {
@@ -61,9 +64,9 @@ export const SalesByProductReportTable = () => {
       setAllBusinessNames(names);
     }
   }, [salesData, cities, categories, brands, allBusinessNames.length]);
-  
+
   const businessNames = allBusinessNames;
-  
+
   const formattedData = salesData.map((item: any) => ({
     product: item.productName || item.product || item.businessName || item._id,
     category: item.category || 'Unknown Category',
@@ -78,22 +81,15 @@ export const SalesByProductReportTable = () => {
     offlineSales: item.offlineSales || 0,
     type: item.type || 'Vendor'
   }));
-  
-  const filteredData = useMemo(() => {
-    if (!searchTerm) return formattedData;
-    
-    return formattedData.filter((product: any) =>
-      Object.values(product).some((value: any) => 
-        value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    );
-  }, [formattedData, searchTerm]);
-  
-  const totalItems = filteredData.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedData = filteredData.slice(startIndex, endIndex);
+
+  const {
+    paginatedData,
+    totalItems,
+    totalPages,
+    startIndex
+  } = filterAndPaginateData(formattedData, (product: SalesByProductData) =>
+    Object.values(product).map(v => v?.toString() || '')
+  );
 
   if (isLoading) {
     return (
@@ -110,14 +106,14 @@ export const SalesByProductReportTable = () => {
             </Card>
           ))}
         </div>
-        
+
         <div className="flex justify-end mb-4">
           <Button onClick={() => setIsFilterModalOpen(true)}>
             <Filter className="mr-2 h-4 w-4" />
             Filters
           </Button>
         </div>
-        
+
         <div className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -147,7 +143,7 @@ export const SalesByProductReportTable = () => {
       </div>
     );
   }
-  
+
   if (isError) {
     return (
       <div>
@@ -168,7 +164,7 @@ export const SalesByProductReportTable = () => {
       </div>
     );
   }
-  
+
   if (formattedData.length === 0) {
     return (
       <div>
@@ -182,7 +178,7 @@ export const SalesByProductReportTable = () => {
               <div className="text-2xl font-bold">₹0.00</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Sales (₹)</CardTitle>
@@ -192,7 +188,7 @@ export const SalesByProductReportTable = () => {
               <div className="text-2xl font-bold">₹0.00</div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Products Sold</CardTitle>
@@ -203,7 +199,7 @@ export const SalesByProductReportTable = () => {
             </CardContent>
           </Card>
         </div>
-        
+
         <div className="flex justify-between items-center mb-4 gap-2">
           <div className="relative w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -240,8 +236,8 @@ export const SalesByProductReportTable = () => {
             </DropdownMenu>
           </div>
         </div>
-        
-        <FilterModal 
+
+        <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilters={handleFilterChange}
@@ -256,7 +252,7 @@ export const SalesByProductReportTable = () => {
           showCategoryFilter={true}
           showBrandFilter={true}
         />
-        
+
         <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
           <Table>
             <TableHeader>
@@ -281,7 +277,7 @@ export const SalesByProductReportTable = () => {
       </div>
     );
   }
-  
+
   return (
     <div>
       <div className="flex justify-between items-center mb-4 gap-2">
@@ -320,8 +316,8 @@ export const SalesByProductReportTable = () => {
           </DropdownMenu>
         </div>
       </div>
-      
-      <FilterModal 
+
+      <FilterModal
         isOpen={isFilterModalOpen}
         onClose={() => setIsFilterModalOpen(false)}
         onApplyFilters={handleFilterChange}
@@ -336,7 +332,7 @@ export const SalesByProductReportTable = () => {
         showCategoryFilter={true}
         showBrandFilter={true}
       />
-      
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -349,7 +345,7 @@ export const SalesByProductReportTable = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Products Sold</CardTitle>
@@ -361,7 +357,7 @@ export const SalesByProductReportTable = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Product Platform Fee (₹)</CardTitle>
@@ -373,7 +369,7 @@ export const SalesByProductReportTable = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Product GST (₹)</CardTitle>
@@ -385,7 +381,7 @@ export const SalesByProductReportTable = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Product Amount (₹)</CardTitle>
@@ -398,7 +394,7 @@ export const SalesByProductReportTable = () => {
           </CardContent>
         </Card>
       </div>
-      
+
       <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
         <Table>
           <TableHeader>

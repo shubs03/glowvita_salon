@@ -29,6 +29,7 @@ const supplierSchema = new mongoose.Schema({
   },
   address: { type: String, required: true, trim: true },
   businessRegistrationNo: { type: String, trim: true },
+  gstNo: { type: String, trim: true },
   supplierType: { type: String, required: true },
   profileImage: { type: String }, // URL to the uploaded image
   gallery: [{ type: String }], // Array of gallery image URLs
@@ -47,28 +48,24 @@ const supplierSchema = new mongoose.Schema({
   },
   documents: {
     aadharCard: { type: String, default: null },
-    udyogAadhar: { type: String, default: null },
     udhayamCert: { type: String, default: null },
-    shopLicense: { type: String, default: null },
+    shopAct: { type: String, default: null },
     panCard: { type: String, default: null },
     otherDocs: [{ type: String, default: null }],
     // Status fields
     aadharCardStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
-    udyogAadharStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     udhayamCertStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
-    shopLicenseStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+    shopActStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     panCardStatus: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
     // Rejection reasons
     aadharCardRejectionReason: { type: String, default: null },
-    udyogAadharRejectionReason: { type: String, default: null },
     udhayamCertRejectionReason: { type: String, default: null },
-    shopLicenseRejectionReason: { type: String, default: null },
+    shopActRejectionReason: { type: String, default: null },
     panCardRejectionReason: { type: String, default: null },
     // Admin rejection reasons
     aadharCardAdminRejectionReason: { type: String, default: null },
-    udyogAadharAdminRejectionReason: { type: String, default: null },
     udhayamCertAdminRejectionReason: { type: String, default: null },
-    shopLicenseAdminRejectionReason: { type: String, default: null },
+    shopActAdminRejectionReason: { type: String, default: null },
     panCardAdminRejectionReason: { type: String, default: null },
   },
   password: { type: String, required: true, select: false },
@@ -149,6 +146,11 @@ const supplierSchema = new mongoose.Schema({
     taxValue: { type: Number, default: 0 },
     taxType: { type: String, enum: ["percentage", "fixed"], default: "percentage" },
   },
+  minOrderValue: {
+    type: Number,
+    default: 0,
+    min: [0, "Minimum order value cannot be negative"]
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
   fcmTokens: {
@@ -169,6 +171,13 @@ const supplierSchema = new mongoose.Schema({
   inactivityReminderSent: {
     type: Boolean,
     default: false,
+  wallet: {
+    type: Number,
+    default: 0,
+  },
+  razorpayContactId: {
+    type: String,
+    default: null,
   },
 });
 
@@ -182,14 +191,11 @@ supplierSchema.pre("validate", function (next) {
     if (docs.aadharCardStatus === "rejected" && !docs.aadharCardRejectionReason) {
       return next(new Error("Rejection reason is required for rejected Aadhar Card"));
     }
-    if (docs.udyogAadharStatus === "rejected" && !docs.udyogAadharRejectionReason) {
-      return next(new Error("Rejection reason is required for rejected Udyog Aadhar"));
-    }
     if (docs.udhayamCertStatus === "rejected" && !docs.udhayamCertRejectionReason) {
       return next(new Error("Rejection reason is required for rejected Udhayam Certificate"));
     }
-    if (docs.shopLicenseStatus === "rejected" && !docs.shopLicenseRejectionReason) {
-      return next(new Error("Rejection reason is required for rejected Shop License"));
+    if (docs.shopActStatus === "rejected" && !docs.shopActRejectionReason) {
+      return next(new Error("Rejection reason is required for rejected Shop Act"));
     }
     if (docs.panCardStatus === "rejected" && !docs.panCardRejectionReason) {
       return next(new Error("Rejection reason is required for rejected PAN Card"));

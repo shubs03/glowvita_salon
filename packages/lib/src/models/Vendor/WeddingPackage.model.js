@@ -87,7 +87,7 @@ const weddingPackageSchema = new mongoose.Schema({
   assignedStaff: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Staff",
+      ref: "Staffs",
     },
   ],
   // Customization options (from Enhanced)
@@ -161,50 +161,50 @@ weddingPackageSchema.pre("save", function (next) {
 });
 
 // Add method to calculate package price with customizations
-weddingPackageSchema.methods.calculateCustomizedPrice = function(customizedServices = null) {
+weddingPackageSchema.methods.calculateCustomizedPrice = function (customizedServices = null) {
   const servicesToCalculate = customizedServices || this.services;
-  
+
   const totalPrice = servicesToCalculate.reduce((total, pkgService) => {
     const quantity = pkgService.quantity || 1;
     let servicePrice = pkgService.servicePrice || 0;
-    
+
     // Use discounted price if available
     if (pkgService.serviceDiscountedPrice !== null && pkgService.serviceDiscountedPrice !== undefined) {
       servicePrice = pkgService.serviceDiscountedPrice;
     }
-    
+
     return total + (servicePrice * quantity);
   }, 0);
-  
+
   return totalPrice;
 };
 
 // Add method to calculate package duration with all services
-weddingPackageSchema.methods.calculateCustomizedDuration = function(customizedServices = null) {
+weddingPackageSchema.methods.calculateCustomizedDuration = function (customizedServices = null) {
   const servicesToCalculate = customizedServices || this.services;
-  
+
   const totalDuration = servicesToCalculate.reduce((total, pkgService) => {
     const quantity = pkgService.quantity || 1;
     const serviceDuration = pkgService.serviceDuration || 60;
     const prepTime = pkgService.prepTime || 0;
     const setupCleanupTime = pkgService.setupCleanupTime || 0;
-    
+
     return total + ((serviceDuration + prepTime + setupCleanupTime) * quantity);
   }, 0);
-  
+
   return totalDuration;
 };
 
 // Add method to validate customization constraints
-weddingPackageSchema.methods.validateCustomization = function(customizedServices) {
+weddingPackageSchema.methods.validateCustomization = function (customizedServices) {
   if (!this.allowCustomization) {
     throw new Error("Customization is not allowed for this package");
   }
-  
+
   if (customizedServices.length > this.maxCustomizations) {
     throw new Error(`Maximum ${this.maxCustomizations} services allowed in this package`);
   }
-  
+
   // Check if all services belong to the same vendor or are properly multi-vendor
   const vendorIds = [...new Set(customizedServices.map(s => s.vendorId?.toString()).filter(Boolean))];
   if (vendorIds.length > 1) {
@@ -214,46 +214,46 @@ weddingPackageSchema.methods.validateCustomization = function(customizedServices
       throw new Error("All services in multi-vendor packages must specify a vendorId");
     }
   }
-  
+
   return true;
 };
 
 // Add method to apply customizations to the package
-weddingPackageSchema.methods.applyCustomizations = function(customizedServices) {
+weddingPackageSchema.methods.applyCustomizations = function (customizedServices) {
   // Validate customizations
   this.validateCustomization(customizedServices);
-  
+
   // Update services
   this.services = customizedServices.map(service => ({
     ...service,
     isCustomized: true
   }));
-  
+
   // Recalculate totals
   this.totalPrice = this.calculateCustomizedPrice(customizedServices);
   this.duration = this.calculateCustomizedDuration(customizedServices);
-  
+
   // Apply discount if applicable
   if (this.discountedPrice !== null && this.discountedPrice !== undefined && this.totalPrice < this.originalTotalPrice) {
     this.discountedPrice = this.totalPrice;
   }
-  
+
   return this;
 };
 
 // Add method to get deposit amount
-weddingPackageSchema.methods.getDepositAmount = function() {
+weddingPackageSchema.methods.getDepositAmount = function () {
   if (this.depositAmount > 0) {
     return this.depositAmount;
   }
-  
+
   if (this.depositPercentage > 0) {
-    const price = this.discountedPrice !== null && this.discountedPrice !== undefined 
-      ? this.discountedPrice 
+    const price = this.discountedPrice !== null && this.discountedPrice !== undefined
+      ? this.discountedPrice
       : this.totalPrice;
     return price * (this.depositPercentage / 100);
   }
-  
+
   return 0;
 };
 
@@ -296,7 +296,7 @@ weddingPackageSchema.methods.populateServiceDetails = async function () {
 
       // Ensure we have the correct service data structure
       const baseServiceData = pkgService.toObject ? pkgService.toObject() : pkgService;
-      
+
       // Extract category name properly
       let categoryName = 'General';
       if (serviceDetails) {

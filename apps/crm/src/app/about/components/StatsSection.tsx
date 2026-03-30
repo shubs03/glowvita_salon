@@ -14,10 +14,6 @@ const StatsSection = () => {
       number: '24/7',
       label: 'Support Available',
     },
-    {
-      number: '10x',
-      label: 'Faster Operations',
-    },
   ];
 
   return (

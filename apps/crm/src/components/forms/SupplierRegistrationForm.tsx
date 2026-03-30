@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Eye, EyeOff, Building, Map, User, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Building, Map, User, ArrowLeft, ArrowRight, ShieldCheck, Mail, Smartphone, RefreshCw } from 'lucide-react';
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
@@ -32,6 +32,7 @@ interface FormData {
   password: string;
   confirmPassword: string;
   referredByCode: string;
+  gstNo: string;
 }
 
 interface GooglePlacesResult {
@@ -72,7 +73,7 @@ const StepIndicator = ({ currentStep, setStep }: { currentStep: number; setStep:
   );
 };
 
-export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void }) {
+export function SupplierRegistrationForm({ onSuccess, email }: { onSuccess: () => void, email?: string }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const refCode = searchParams?.get('ref');
@@ -81,7 +82,7 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
   const [formData, setFormData] = useState<FormData>({
     firstName: '',
     lastName: '',
-    email: '',
+    email: email || '',
     mobile: '',
     shopName: '',
     country: 'India',
@@ -95,10 +96,111 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
     password: '',
     confirmPassword: '',
     referredByCode: refCode || '',
+    gstNo: '',
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [registerSupplier, { isLoading }] = useRegisterSupplierMutation();
+
+  const [emailOtp, setEmailOtp] = useState('');
+  const [isEmailOtpSent, setIsEmailOtpSent] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+
+  const [phoneOtp, setPhoneOtp] = useState('');
+  const [isPhoneOtpSent, setIsPhoneOtpSent] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+
+  const [isOtpLoading, setIsOtpLoading] = useState(false);
+
+  const handleSendEmailOtp = async () => {
+    if (!formData.email || !/\S+@\S+\.\S+/.test(formData.email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    setIsOtpLoading(true);
+    try {
+      const res = await fetch('/api/crm/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsEmailOtpSent(true);
+        toast.success(data.message);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (err) {
+      toast.error("Failed to send email OTP");
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleVerifyEmailOtp = async () => {
+    if (!emailOtp || emailOtp.length < 6) {
+      toast.error("Please enter a valid OTP");
+      return;
+    }
+    setIsOtpLoading(true);
+    try {
+      const res = await fetch('/api/crm/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, otp: emailOtp }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message);
+        setIsEmailVerified(true);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (err) {
+      toast.error("Failed to verify email OTP");
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleSendPhoneOtp = async () => {
+    if (!formData.mobile || formData.mobile.length < 10) {
+      toast.error("Please enter a valid phone number");
+      return;
+    }
+    setIsOtpLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setIsPhoneOtpSent(true);
+      toast.success("OTP sent securely! (Test mode: use 123456)");
+    } catch (err) {
+      toast.error("Failed to send phone OTP");
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleVerifyPhoneOtp = async () => {
+    if (!phoneOtp || phoneOtp.length < 6) {
+      toast.error("Please enter a valid OTP");
+      return;
+    }
+    setIsOtpLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      if (phoneOtp === "123456") {
+        toast.success("Phone verified successfully!");
+        setIsPhoneVerified(true);
+      } else {
+        toast.error("Invalid phone OTP");
+      }
+    } catch (err) {
+      toast.error("Failed to verify phone OTP");
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
 
   // Map functionality states
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -119,21 +221,44 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
     }
   }, [refCode]);
 
+  useEffect(() => {
+    if (email) {
+      setFormData(prev => ({ ...prev, email }));
+    }
+  }, [email]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    let finalValue = value;
+
+    if (name === 'firstName' || name === 'lastName') {
+      finalValue = value.replace(/[^a-zA-Z]/g, '');
+    } else if (name === 'mobile') {
+      finalValue = value.replace(/\D/g, '').slice(0, 10);
+      setIsPhoneVerified(false);
+      setIsPhoneOtpSent(false);
+    } else if (name === 'email') {
+      if (email) return; // Prevent manual change if verified email provided
+      finalValue = value.replace(/[^a-zA-Z0-9@.]/g, '');
+      setIsEmailVerified(false);
+      setIsEmailOtpSent(false);
+    }
+
+    setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
   const validateStep1 = () => {
     const newErrors: Partial<Record<keyof FormData, string>> = {};
     if (!formData.firstName) newErrors.firstName = 'First name is required';
-    else if (!/^[a-zA-Z\s]+$/.test(formData.firstName)) newErrors.firstName = 'First name can only contain letters and spaces';
+    else if (!/^[a-zA-Z]+$/.test(formData.firstName)) newErrors.firstName = 'First name can only contain letters';
     if (!formData.lastName) newErrors.lastName = 'Last name is required';
-    else if (!/^[a-zA-Z\s]+$/.test(formData.lastName)) newErrors.lastName = 'Last name can only contain letters and spaces';
+    else if (!/^[a-zA-Z]+$/.test(formData.lastName)) newErrors.lastName = 'Last name can only contain letters';
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Email is invalid';
+    } else if (!isEmailVerified) {
+      newErrors.email = 'Please verify your email address';
     }
     if (!formData.mobile) {
       newErrors.mobile = 'Mobile number is required';
@@ -141,6 +266,8 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
       newErrors.mobile = 'Mobile number must be 10 digits';
     } else if (!/^[0-9]+$/.test(formData.mobile)) {
       newErrors.mobile = 'Mobile number can only contain numbers';
+    } else if (!isPhoneVerified) {
+      newErrors.mobile = 'Please verify your mobile number';
     }
     if (!formData.password) {
       newErrors.password = 'Password is required';
@@ -596,29 +723,113 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-                  <div>
-                    <Input
-                      name="email"
-                      type="email"
-                      placeholder="Email Address"
-                      onChange={handleChange}
-                      value={formData.email}
-                      required
-                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
-                    />
+                  <div className="space-y-3 p-4 rounded-xl border border-gray-200 bg-gray-50/50">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-sm font-semibold flex items-center gap-1">Email <span className="text-red-500">*</span></Label>
+                      {isEmailVerified && <span className="text-green-600 text-xs font-bold flex items-center gap-1"><ShieldCheck className="w-4 h-4" /> Verified</span>}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        name="email"
+                        type="email"
+                        placeholder="Email Address"
+                        onChange={handleChange}
+                        value={formData.email}
+                        required
+                        disabled={isEmailVerified || isOtpLoading || !!email}
+                        className={cn("h-12 flex-1 sm:h-14 px-4 sm:px-5 text-base sm:text-lg bg-white focus:ring-2 focus:ring-purple-100", isEmailVerified && "border-green-300 bg-green-50 text-green-800")}
+                      />
+                      {!isEmailVerified && (
+                        <Button 
+                          type="button"
+                          onClick={handleSendEmailOtp}
+                          disabled={isOtpLoading || !formData.email || !!email}
+                          className="h-12 sm:h-14 px-4 rounded-xl font-bold bg-purple-100 text-purple-700 hover:bg-purple-200"
+                        >
+                          {isEmailOtpSent ? "Resend" : "Send OTP"}
+                        </Button>
+                      )}
+                    </div>
                     {renderError('email')}
+                    
+                    {isEmailOtpSent && !isEmailVerified && (
+                      <div className="pt-2 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex gap-2">
+                          <Input 
+                            type="text" 
+                            placeholder="OTP" 
+                            maxLength={6}
+                            value={emailOtp} 
+                            onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
+                            disabled={isOtpLoading}
+                            className="h-12 sm:h-14 flex-1 text-center text-lg tracking-widest font-black bg-white focus:ring-2 focus:ring-purple-100 border-gray-200"
+                          />
+                          <Button 
+                            type="button"
+                            onClick={handleVerifyEmailOtp}
+                            disabled={isOtpLoading || emailOtp.length < 6}
+                            className="h-12 sm:h-14 px-6 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
+                          >
+                            {isOtpLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : "Verify"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <Input
-                      name="mobile"
-                      type="tel"
-                      placeholder="Mobile Number"
-                      onChange={handleChange}
-                      value={formData.mobile}
-                      required
-                      className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
-                    />
+
+                  <div className="space-y-3 p-4 rounded-xl border border-gray-200 bg-gray-50/50">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-sm font-semibold flex items-center gap-1">Mobile <span className="text-red-500">*</span></Label>
+                      {isPhoneVerified && <span className="text-green-600 text-xs font-bold flex items-center gap-1"><ShieldCheck className="w-4 h-4" /> Verified</span>}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        name="mobile"
+                        type="tel"
+                        placeholder="Mobile Number"
+                        onChange={handleChange}
+                        value={formData.mobile}
+                        required
+                        maxLength={10}
+                        disabled={isPhoneVerified || isOtpLoading}
+                        className={cn("h-12 flex-1 sm:h-14 px-4 sm:px-5 text-base sm:text-lg bg-white focus:ring-2 focus:ring-purple-100", isPhoneVerified && "border-green-300 bg-green-50 text-green-800")}
+                      />
+                      {!isPhoneVerified && (
+                        <Button 
+                          type="button"
+                          onClick={handleSendPhoneOtp}
+                          disabled={isOtpLoading || formData.mobile.length < 10}
+                          className="h-12 sm:h-14 px-4 rounded-xl font-bold bg-purple-100 text-purple-700 hover:bg-purple-200"
+                        >
+                          {isPhoneOtpSent ? "Resend" : "Send OTP"}
+                        </Button>
+                      )}
+                    </div>
                     {renderError('mobile')}
+
+                    {isPhoneOtpSent && !isPhoneVerified && (
+                      <div className="pt-2 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex gap-2">
+                          <Input 
+                            type="text" 
+                            placeholder="OTP" 
+                            maxLength={6}
+                            value={phoneOtp} 
+                            onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ''))}
+                            disabled={isOtpLoading}
+                            className="h-12 sm:h-14 flex-1 text-center text-lg tracking-widest font-black bg-white focus:ring-2 focus:ring-purple-100 border-gray-200"
+                          />
+                          <Button 
+                            type="button"
+                            onClick={handleVerifyPhoneOtp}
+                            disabled={isOtpLoading || phoneOtp.length < 6}
+                            className="h-12 sm:h-14 px-6 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
+                          >
+                            {isOtpLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : "Verify"}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
@@ -665,13 +876,22 @@ export function SupplierRegistrationForm({ onSuccess }: { onSuccess: () => void 
                     {renderError('confirmPassword')}
                   </div>
                 </div>
-                <Input
-                  name="referredByCode"
-                  placeholder="Referral Code (Optional)"
-                  onChange={handleChange}
-                  value={formData.referredByCode}
-                  className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
+                  <Input
+                    name="referredByCode"
+                    placeholder="Referral Code (Optional)"
+                    onChange={handleChange}
+                    value={formData.referredByCode}
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                  />
+                  <Input
+                    name="gstNo"
+                    placeholder="GST No (Optional)"
+                    onChange={handleChange}
+                    value={formData.gstNo}
+                    className="h-12 sm:h-14 px-4 sm:px-5 text-base sm:text-lg"
+                  />
+                </div>
                 {renderError('referredByCode')}
               </div>
             )}

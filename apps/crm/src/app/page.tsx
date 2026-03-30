@@ -3,11 +3,7 @@
 import { useEffect } from "react";
 import HeroSection from "@/components/landing/HeroSection";
 import CoreFeatures from "@/components/landing/CoreFeatures";
-import RealResults from "@/components/landing/RealResults";
-import HowItWorks from "@/components/landing/HowItWorks";
-import TestimonialsCRM from "@/components/landing/TestimonialsCRM";
 import OverviewPreview from "@/components/landing/OverviewPreview";
-import CTACRM from "@/components/landing/CTACRM";
 
 export default function CrmHomePage() {
   useEffect(() => {
@@ -25,11 +21,7 @@ export default function CrmHomePage() {
       <main className="flex-grow">
         <HeroSection />
         <CoreFeatures />
-        <HowItWorks />
         <OverviewPreview />
-        <TestimonialsCRM />
-        <RealResults />
-        <CTACRM />
       </main>
     </div>
   );

@@ -113,6 +113,14 @@ export const POST = authMiddlewareCrm(async (req) => {
 
     await user.save();
 
+    // Check for referral credit if regular plan
+    try {
+      const { checkAndCreditSubscriptionReferral } = await import("@repo/lib/utils/referralWalletCredit");
+      await checkAndCreditSubscriptionReferral(userId, newPlan);
+    } catch (err) {
+      console.error("[Referral Bonus] Check failed on renewal:", err);
+    }
+
     return NextResponse.json({
       success: true,
       message: "Subscription renewed successfully",

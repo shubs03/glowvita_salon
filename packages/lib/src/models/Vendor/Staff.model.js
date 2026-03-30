@@ -256,6 +256,29 @@ const staffSchema = new mongoose.Schema(
       smsEnabled: { type: Boolean, default: true },
       appointments: { type: Boolean, default: true },
       promotional: { type: Boolean, default: true },
+
+    // CONSOLIDATED EARNINGS FIELDS
+    accumulatedEarnings: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalPaidOut: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    netBalance: {
+      type: Number,
+      default: 0,
+    },
+    commissionCount: {
+      type: Number,
+      default: 0,
+    },
+    lastTransactionDate: {
+      type: Date,
+      default: Date.now,
     },
   },
   {
@@ -556,6 +579,18 @@ staffSchema.statics.updateStaffAvailabilityForDay = async function (vendorId, da
 };
 
 const StaffModel =
-  mongoose.models.Staff || mongoose.model("Staff", staffSchema);
+  mongoose.models.Staffs || mongoose.model("Staffs", staffSchema);
+
+// If the model was already registered (e.g. in Next.js dev), 
+// ensure it has the new consolidated earnings fields
+if (mongoose.models.Staffs && StaffModel.schema && !StaffModel.schema.paths.accumulatedEarnings) {
+  StaffModel.schema.add({
+    accumulatedEarnings: { type: Number, default: 0, min: 0 },
+    totalPaidOut: { type: Number, default: 0, min: 0 },
+    netBalance: { type: Number, default: 0 },
+    commissionCount: { type: Number, default: 0 },
+    lastTransactionDate: { type: Date, default: Date.now }
+  });
+}
 
 export default StaffModel;

@@ -263,7 +263,7 @@ export function PackageModal({
                         const staffMember = staff.find((s: any) => (s.id || s._id) === staffId);
                         return staffMember ? (
                           <Badge key={staffId} variant="secondary">
-                            {staffMember.name}
+                            {staffMember.fullName || staffMember.name}
                           </Badge>
                         ) : null;
                       })
@@ -308,7 +308,7 @@ export function PackageModal({
                               value={staffMember.id || staffMember._id}
                               disabled={formData.assignedStaff.includes(staffMember.id || staffMember._id)}
                             >
-                              {staffMember.name} {formData.assignedStaff.includes(staffMember.id || staffMember._id) ? '(Selected)' : ''}
+                              {staffMember.fullName || staffMember.name} {formData.assignedStaff.includes(staffMember.id || staffMember._id) ? '(Selected)' : ''}
                             </SelectItem>
                           ))
                         ) : (
@@ -323,7 +323,7 @@ export function PackageModal({
                         const staffMember = staff.find((s: any) => (s.id || s._id) === staffId);
                         return staffMember ? (
                           <Badge key={staffId} variant="secondary" className="flex items-center gap-1">
-                            {staffMember.name}
+                            {staffMember.fullName || staffMember.name}
                             <button
                               type="button"
                               onClick={() => {
@@ -447,6 +447,7 @@ export function PackageModal({
                         {modalType !== "view" && (
                           <div className="flex items-center border rounded-lg">
                             <Button
+                              type="button"
                               size="sm"
                               variant="ghost"
                               className="h-8 w-8 p-0"
@@ -457,6 +458,7 @@ export function PackageModal({
                             </Button>
                             <span className="px-2 text-sm font-medium min-w-[30px] text-center">{pkgService.quantity}</span>
                             <Button
+                              type="button"
                               size="sm"
                               variant="ghost"
                               className="h-8 w-8 p-0"
@@ -468,6 +470,7 @@ export function PackageModal({
                         )}
                         {modalType !== "view" && (
                           <Button
+                            type="button"
                             size="sm"
                             variant="ghost"
                             className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"

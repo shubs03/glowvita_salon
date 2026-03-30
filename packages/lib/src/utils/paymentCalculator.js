@@ -26,6 +26,50 @@ const roundToTwo = (num) => {
 };
 
 /**
+ * Checks if an offer is applicable to the selected services
+ * @param {Object} offer - The offer object
+ * @param {Array} selectedServices - Array of selected service objects
+ * @returns {Boolean} - True if at least one service is eligible
+ */
+export function isOfferApplicable(offer, selectedServices = []) {
+  if (!offer) return false;
+  
+  // If no specific restrictions, it's globally applicable to all services
+  const hasRestrictions = 
+    (offer.applicableServices && offer.applicableServices.length > 0) ||
+    (offer.applicableServiceCategories && offer.applicableServiceCategories.length > 0) ||
+    (offer.applicableSpecialties && offer.applicableSpecialties.length > 0) ||
+    (offer.applicableCategories && offer.applicableCategories.length > 0);
+
+  if (!hasRestrictions) return true;
+
+  // Check if any selected service matches the restrictions
+  return selectedServices.some(service => {
+    // Check direct service ID match
+    if (offer.applicableServices?.some(id => id.toString() === (service.id || service._id)?.toString())) {
+      return true;
+    }
+
+    // Check category matches
+    if (offer.applicableServiceCategories?.some(id => id.toString() === (service.categoryId || service.category?._id || service.category)?.toString())) {
+      return true;
+    }
+
+    // Check specialty/name matches (Legacy or Admin offer fields)
+    if (offer.applicableSpecialties?.some(specialty => specialty.toLowerCase() === (service.specialty || service.name)?.toLowerCase())) {
+      return true;
+    }
+
+    // Check category matches (Men/Women/Unisex - Legacy or Admin offer fields)
+    if (offer.applicableCategories?.some(cat => cat.toLowerCase() === (service.categoryName || service.targetGender)?.toLowerCase())) {
+      return true;
+    }
+
+    return false;
+  });
+}
+
+/**
  * Calculate the final booking amount including platform fees, taxes, and discounts
  * @param {Array} services - Array of service objects with price and tax information
  * @param {Object} offer - Offer object (if applicable)
@@ -63,8 +107,11 @@ export async function calculateBookingAmount(
       };
     }
 
-    // Calculate subtotal using discounted price if available, otherwise regular price
-    const subtotal = services.reduce((sum, service) => {
+    // Calculate subtotal and eligible subtotal
+    let subtotal = 0;
+    let eligibleSubtotal = 0;
+
+    services.forEach(service => {
       // Use discounted price if available, otherwise regular price
       const price = service.discountedPrice !== null && service.discountedPrice !== undefined ?
         parseFloat(service.discountedPrice) :
@@ -75,21 +122,34 @@ export async function calculateBookingAmount(
         return acc + parseFloat(addon.price || 0);
       }, 0);
 
-      return sum + price + addOnsPrice;
-    }, 0);
+      const totalServicePrice = price + addOnsPrice;
+      subtotal += totalServicePrice;
+
+      // Check if this specific service is eligible for the offer
+      if (offer && isOfferApplicable(offer, [service])) {
+        eligibleSubtotal += totalServicePrice;
+      } else if (!offer) {
+        eligibleSubtotal = subtotal; // No offer, no restriction
+      }
+    });
+
+    // If offer exists but no services are eligible, the offer cannot be applied
+    if (offer && eligibleSubtotal === 0) {
+      console.log('Offer exists but no selected services are eligible');
+    }
 
     // Calculate discount amount from offer (applied only to subtotal, not to platform fees or taxes)
     let discountAmount = 0;
     // Handle both raw offer data and offer objects with methods
     if (offer && (offer.type && offer.value)) {
       // Handle direct offer properties (raw data from API)
-      console.log('Applying offer to subtotal:', { offer, subtotal });
+      console.log('Applying offer to eligible subtotal:', { offer, eligibleSubtotal });
       if (offer.type === 'percentage') {
-        discountAmount = (subtotal * offer.value) / 100;
+        discountAmount = (eligibleSubtotal * offer.value) / 100;
       } else if (offer.type === 'fixed') {
-        discountAmount = Math.min(offer.value, subtotal); // Can't discount more than subtotal
+        discountAmount = Math.min(offer.value, eligibleSubtotal); // Can't discount more than eligible amount
       }
-      console.log('Calculated discount amount:', discountAmount);
+      console.log('Calculated discount amount on eligible items:', discountAmount);
     } else if (offer && typeof offer.isApplicable === 'function' && offer.isApplicable()) {
       // Use the offer's calculateDiscount method if available (for Mongoose objects)
       if (typeof offer.calculateDiscount === 'function') {
@@ -97,9 +157,9 @@ export async function calculateBookingAmount(
       } else if (offer.type && offer.value) {
         // Handle direct offer properties
         if (offer.type === 'percentage') {
-          discountAmount = (subtotal * offer.value) / 100;
+          discountAmount = (eligibleSubtotal * offer.value) / 100;
         } else if (offer.type === 'fixed') {
-          discountAmount = Math.min(offer.value, subtotal); // Can't discount more than subtotal
+          discountAmount = Math.min(offer.value, eligibleSubtotal);
         }
       }
     }

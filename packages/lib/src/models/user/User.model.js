@@ -24,6 +24,15 @@ const userSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
+  gender: {
+    type: String,
+    enum: ['Male', 'Female', 'Other', ''],
+    default: '',
+  },
+  birthdayDate: {
+    type: String,
+    default: null,
+  },
   location: {
     lat: {
       type: Number,
@@ -63,6 +72,14 @@ const userSchema = new mongoose.Schema({
     default: '',
   },
   savedAddresses: [{
+    fullName: {
+      type: String,
+      trim: true,
+    },
+    mobileNo: {
+      type: String,
+      trim: true,
+    },
     address: String,
     city: String,
     state: String,
@@ -148,6 +165,10 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpires: {
     type: Date,
     required: false,
+  },
+  razorpayContactId: {
+    type: String,
+    default: null,
   },
 });
 

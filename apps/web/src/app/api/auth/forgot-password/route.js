@@ -75,7 +75,26 @@ export async function POST(request) {
     }
 
     // Send email with reset link
-    const baseUrl = NEXT_PUBLIC_WEB_URL;
+    // Support reverse proxy headers for correct live domain
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
+    
+    let baseUrl;
+    if (forwardedHost) {
+      // Use the first host if it's a comma-separated list
+      const host = forwardedHost.split(',')[0].trim();
+      baseUrl = `${forwardedProto}://${host}`;
+    } else {
+      const url = new URL(request.url);
+      baseUrl = `${url.protocol}//${url.host}`;
+    }
+    
+    // In case there is an env var override like NEXT_PUBLIC_WEB_URL
+    const overrideUrl = NEXT_PUBLIC_WEB_URL || process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_WEB_URL;
+    if (overrideUrl) {
+      baseUrl = overrideUrl.endsWith('/') ? overrideUrl.slice(0, -1) : overrideUrl;
+    }
+
     const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${email}`;
     console.log('Reset URL:', resetUrl);
     

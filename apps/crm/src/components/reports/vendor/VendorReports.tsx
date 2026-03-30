@@ -21,6 +21,7 @@ import { CategoryWiseProductTable } from './tables/CategoryWiseProductTable';
 import { SalesByProductTable } from './tables/SalesByProductTable';
 import { AllAppointmentsByStaffTable } from './tables/AllAppointmentsByStaffTable';
 import { SettlementSummaryTable } from './tables/SettlementSummaryTable';
+import { StaffCommissionTable } from './tables/StaffCommissionTable';
 
 // Import constants, hooks, and modal wrapper
 import { VENDOR_REPORTS_DATA } from './constants';
@@ -30,7 +31,7 @@ import { ReportModal } from './modals/ReportModal';
 export default function VendorReports() {
   // Use the custom hook for managing all filter states
   const { filters, updateFilter } = useVendorFilters();
-  
+
   // Single modal state - tracks which report is currently open
   const [openReportTitle, setOpenReportTitle] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -134,6 +135,18 @@ export default function VendorReports() {
           bookingType={filters.allAppointments.bookingType || undefined}
           triggerRefresh={allAppointmentsRefresh}
           onFiltersChange={(newFilters: any) => updateFilter('allAppointments', newFilters)}
+        />
+      )
+    },
+    "Staff Commission Report": {
+      title: "Staff Commission Report",
+      description: "Detailed report showing commission earned by staff members for services provided.",
+      component: (
+        <StaffCommissionTable
+          startDate={filters.staffCommission.startDate || undefined}
+          endDate={filters.staffCommission.endDate || undefined}
+          staff={filters.staffCommission.staff || undefined}
+          onFiltersChange={(newFilters: any) => updateFilter('staffCommission', newFilters)}
         />
       )
     },
@@ -305,7 +318,6 @@ export default function VendorReports() {
                     <CardFooter className="pt-0">
                       <div className="flex gap-2 w-full">
                         <Skeleton className="h-10 flex-1" />
-                        <Skeleton className="h-10 flex-1" />
                       </div>
                     </CardFooter>
                   </Card>
@@ -378,10 +390,6 @@ export default function VendorReports() {
                           <Eye className="mr-2 h-4 w-4" />
                           View
                         </Button>
-                        <Button size="sm">
-                          <Download className="mr-2 h-4 w-4" />
-                          Download
-                        </Button>
                       </CardFooter>
                     </Card>
                   ))}
@@ -398,7 +406,44 @@ export default function VendorReports() {
       {openReportTitle && reportRegistry[openReportTitle] && (
         <ReportModal
           isOpen={true}
-          onClose={() => setOpenReportTitle(null)}
+          onClose={() => {
+            if (openReportTitle) {
+              // Map report titles to their filter keys for resetting
+              const reportKeys: Record<string, string> = {
+                "All Appointments Report": 'allAppointments',
+                "Appointment Summary by Service": 'summaryByService',
+                "Completed Appointments Report": 'completedAppointments',
+                "Cancelled Appointments Report": 'cancelledAppointments',
+                "All Appointments by Staff": 'allAppointments',
+                "Sales by Service": 'salesByService',
+                "Sales by Customer": 'salesByCustomer',
+                "Sales by Product": 'salesByProduct',
+                "All Products Report": 'productSummary',
+                "Inventory / Stock Report": 'productSummary',
+                "Category-wise Product Report": 'productSummary',
+                "Settlement Summary Report": 'settlementSummary',
+              };
+              
+              const key = reportKeys[openReportTitle];
+              if (key) {
+                // Reset common filters to empty strings
+                updateFilter(key as any, {
+                  startDate: '',
+                  endDate: '',
+                  client: '',
+                  service: '',
+                  staff: '',
+                  status: '',
+                  bookingType: '',
+                  product: '',
+                  category: '',
+                  brand: '',
+                  isActive: undefined
+                });
+              }
+            }
+            setOpenReportTitle(null);
+          }}
           title={reportRegistry[openReportTitle].title}
           description={reportRegistry[openReportTitle].description}
         >

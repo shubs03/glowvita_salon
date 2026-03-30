@@ -33,9 +33,25 @@ const vendorSettlementPaymentSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    verified: {
+        type: Boolean,
+        default: false,
+    },
+    verifiedAt: {
+        type: Date,
+    },
+    verifiedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+    },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
+    },
+    createdByType: {
+        type: String,
+        enum: ["admin", "vendor"],
+        default: "admin",
     },
 }, {
     timestamps: true,

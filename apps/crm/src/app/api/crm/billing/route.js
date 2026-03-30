@@ -30,15 +30,7 @@ export const POST = withSubscriptionCheck(async (req) => {
                 const staff = await StaffModel.findById(item.staffMember.id);
                 if (staff && staff.commission) {
                     // Calculate effective amount after item-level discount
-                    let effectiveAmount = item.totalPrice;
-                    if (item.discount > 0) {
-                        if (item.discountType === 'percentage') {
-                            effectiveAmount = Math.max(0, item.totalPrice * (1 - item.discount / 100));
-                        } else if (item.discountType === 'flat') {
-                            effectiveAmount = Math.max(0, item.totalPrice - item.discount);
-                        }
-                    }
-
+                    const effectiveAmount = item.totalPrice;
                     const rate = staff.commissionRate || 0;
                     const amount = (effectiveAmount * rate) / 100;
 
@@ -86,6 +78,14 @@ export const POST = withSubscriptionCheck(async (req) => {
         } catch (stockError) {
             console.error('Error updating product stock:', stockError);
             // We don't want to fail the whole billing if stock update fails, but we log it
+        }
+
+        // Sync staff commissions
+        try {
+            const { syncBillingCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
+            await syncBillingCommission(savedRecord._id);
+        } catch (syncError) {
+            console.error('Error syncing staff commissions for billing:', syncError);
         }
 
         return NextResponse.json(
@@ -194,6 +194,16 @@ export const PUT = withSubscriptionCheck(async (req) => {
                 { success: false, message: 'Billing record not found' },
                 { status: 404 }
             );
+        }
+
+        // Sync staff commissions if status might have changed to Completed
+        if (updatedRecord.paymentStatus === 'Completed') {
+            try {
+                const { syncBillingCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
+                await syncBillingCommission(updatedRecord._id);
+            } catch (syncError) {
+                console.error('Error syncing staff commissions for billing update:', syncError);
+            }
         }
 
         return NextResponse.json(

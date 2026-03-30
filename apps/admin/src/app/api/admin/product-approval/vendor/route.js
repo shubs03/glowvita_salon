@@ -22,7 +22,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
     }
 
     const products = await ProductModel.find(query)
-      .populate('vendorId', 'name email') // Populate vendor details
+      .populate('vendorId', 'businessName firstName lastName email') // Populate vendor details
       .populate('category', 'name') // Populate category details
       .select('-__v'); // Exclude version key
 
@@ -78,7 +78,7 @@ export const PATCH = authMiddlewareAdmin(async (req) => {
       { $set: updateData },
       { new: true, runValidators: false }
     )
-      .populate('vendorId', 'name email')
+      .populate('vendorId', 'businessName firstName lastName email')
       .populate('category', 'name')
       .select('-__v');
 

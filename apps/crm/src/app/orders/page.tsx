@@ -15,50 +15,28 @@ import OrdersFiltersToolbar from './components/OrdersFiltersToolbar';
 import OrdersTable from './components/OrdersTable';
 import OrdersPaginationControls from './components/OrdersPaginationControls';
 
-type OrderItem = {
-  productId: string;
-  productName: string;
-  productImage: string;
-  quantity: number;
-  price: number;
-};
-
-type Order = {
-  _id: string;
-  orderId?: string;
-  items: OrderItem[];
-  customerName?: string; 
-  customerEmail?: string;
-  vendorId?: string;
-  supplierId?: string;
-  totalAmount: number;
-  status: 'Pending' | 'Processing' | 'Packed' | 'Shipped' | 'Delivered' | 'Cancelled';
-  shippingAddress: string;
-  createdAt: string;
-  trackingNumber?: string;
-  courier?: string;
-  cancellationReason?: string;
-  userId?: string;
-};
+import { Order, OrderItem } from './types';
 
 export default function OrdersPage() {
   const { user, role } = useCrmAuth();
   const defaultTab = role === 'supplier' ? 'received-orders' : (role === 'vendor' ? 'customer-orders' : 'my-purchases');
   const [activeTab, setActiveTab] = useState(defaultTab);
-  
+
   const { data: ordersData = [], isLoading, isError, refetch } = useGetCrmOrdersQuery(
-    user?._id, 
-    { 
+    undefined,
+    {
       skip: !user,
-      refetchOnMountOrArgChange: true
+      refetchOnMountOrArgChange: true,
+      pollingInterval: 5000 // Poll every 5 seconds for real-time updates
     }
   );
-  
+
   const { data: clientOrdersData = [], isLoading: isClientOrdersLoading, isError: isClientOrdersError } = useGetCrmClientOrdersQuery(
-    undefined, 
-    { 
+    undefined,
+    {
       skip: role !== 'vendor' && role !== 'supplier',
-      refetchOnMountOrArgChange: true
+      refetchOnMountOrArgChange: true,
+      pollingInterval: 5000 // Poll every 5 seconds for real-time updates
     }
   );
 
@@ -74,19 +52,14 @@ export default function OrdersPage() {
   const [isShipModalOpen, setIsShipModalOpen] = useState(false);
   const [orderToShip, setOrderToShip] = useState<Order | null>(null);
 
-  useEffect(() => {
-    if (user) {
-      refetch();
-    }
-  }, [user, refetch]);
 
   const { customerOrders, myPurchases, receivedOrders, onlineCustomerOrders } = useMemo(() => {
     if (!ordersData) return { customerOrders: [], myPurchases: [], receivedOrders: [], onlineCustomerOrders: [] };
-    
-    const customerOrders = ordersData.filter((o: Order) => o.vendorId?.toString() === user?._id && o.customerName);
-    const myPurchases = ordersData.filter((o: Order) => o.vendorId?.toString() === user?._id && o.supplierId);
-    const receivedOrders = ordersData.filter((o: Order) => o.supplierId?.toString() === user?._id);
-    
+
+    const customerOrders = ordersData.filter((o: Order) => o.vendorId?._id?.toString() === user?._id || o.vendorId?.toString() === user?._id).filter((o: Order) => o.customerName);
+    const myPurchases = ordersData.filter((o: Order) => (o.vendorId?._id?.toString() === user?._id || o.vendorId?.toString() === user?._id) && o.supplierId);
+    const receivedOrders = ordersData.filter((o: Order) => o.supplierId?._id?.toString() === user?._id || o.supplierId?.toString() === user?._id);
+
     const transformedOnlineOrders = (clientOrdersData || [])
       .map((clientOrder: any) => {
         const transformedItems = (clientOrder.items || []).map((item: any) => ({
@@ -96,20 +69,36 @@ export default function OrdersPage() {
           quantity: item.quantity || 0,
           price: item.price || 0
         }));
-        
+
         if (!clientOrder._id) {
           return null;
         }
-        
+
+        // Extract real customer info from populated userId object
+        const userObj = clientOrder.userId;
+        const customerName = userObj && typeof userObj === 'object'
+          ? `${userObj.firstName || ''} ${userObj.lastName || ''}`.trim() || 'Online Customer'
+          : 'Online Customer';
+        const customerEmail = userObj && typeof userObj === 'object'
+          ? userObj.emailAddress || undefined
+          : undefined;
+        const customerPhone = userObj && typeof userObj === 'object'
+          ? userObj.mobileNo || undefined
+          : undefined;
+
         return {
           _id: clientOrder._id,
           orderId: undefined,
           items: transformedItems,
-          customerName: 'Online Customer',
-          customerEmail: undefined,
+          customerName,
+          customerEmail,
+          customerPhone,
           vendorId: clientOrder.vendorId || '',
           supplierId: undefined,
           totalAmount: clientOrder.totalAmount || 0,
+          shippingAmount: clientOrder.shippingAmount || 0,
+          gstAmount: clientOrder.gstAmount || 0,
+          platformFeeAmount: clientOrder.platformFeeAmount || 0,
           status: clientOrder.status || 'Pending',
           shippingAddress: clientOrder.shippingAddress || '',
           createdAt: clientOrder.createdAt || new Date().toISOString(),
@@ -120,18 +109,18 @@ export default function OrdersPage() {
         };
       })
       .filter((order: any) => order !== null);
-    
-    return { 
-      customerOrders, 
-      myPurchases, 
-      receivedOrders, 
-      onlineCustomerOrders: transformedOnlineOrders 
+
+    return {
+      customerOrders,
+      myPurchases,
+      receivedOrders,
+      onlineCustomerOrders: transformedOnlineOrders
     };
   }, [ordersData, clientOrdersData, user]);
 
   const filteredOrders = useMemo(() => {
     let dataToFilter: Order[] = [];
-    
+
     // Determine data to filter based on viewMode first, then fall back to activeTab
     // Suppliers should never see purchases view
     if (viewMode === 'purchases' && role !== 'supplier') {
@@ -149,13 +138,13 @@ export default function OrdersPage() {
         }
       }
     }
-    
+
     return dataToFilter.filter((order: Order) =>
       ((order.orderId && order.orderId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.customerName && order.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.items && order.items.some((item: OrderItem) => 
-        item.productName && item.productName.toLowerCase().includes(searchTerm.toLowerCase())
-      ))) &&
+        (order.customerName && order.customerName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (order.items && order.items.some((item: OrderItem) =>
+          item.productName && item.productName.toLowerCase().includes(searchTerm.toLowerCase())
+        ))) &&
       (statusFilter === 'all' || (order.status && order.status === statusFilter))
     );
   }, [searchTerm, statusFilter, activeTab, viewMode, customerOrders, myPurchases, receivedOrders, onlineCustomerOrders]);
@@ -164,7 +153,7 @@ export default function OrdersPage() {
   const firstItemIndex = lastItemIndex - itemsPerPage;
   const currentItems = filteredOrders.slice(firstItemIndex, lastItemIndex);
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  
+
   const getStatusColor = (status: Order['status']) => {
     switch (status) {
       case 'Delivered': return 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border-green-300';
@@ -188,7 +177,7 @@ export default function OrdersPage() {
       default: return <Clock className="h-4 w-4" />;
     }
   };
-  
+
   const handleViewDetails = (order: Order) => {
     setSelectedOrder(order);
     setIsDetailModalOpen(true);
@@ -198,43 +187,43 @@ export default function OrdersPage() {
     const orderExists = [...receivedOrders, ...customerOrders, ...myPurchases, ...onlineCustomerOrders].some(
       (o: Order) => o._id === orderId
     );
-    
+
     if (!orderExists) {
       toast.error("Order not found. Please refresh the page and try again.");
       refetch();
       return;
     }
-    
+
     const isOnlineOrder = onlineCustomerOrders.some((o: Order) => o._id === orderId);
-    
+
     if (status === 'Shipped') {
-        const order = [...receivedOrders, ...customerOrders, ...myPurchases, ...onlineCustomerOrders].find(
-            (o: Order) => o._id === orderId
-        );
-        setOrderToShip(order || null);
-        setIsShipModalOpen(true);
+      const order = [...receivedOrders, ...customerOrders, ...myPurchases, ...onlineCustomerOrders].find(
+        (o: Order) => o._id === orderId
+      );
+      setOrderToShip(order || null);
+      setIsShipModalOpen(true);
     } else {
-        try {
-            if (isOnlineOrder) {
-                await updateClientOrder({ orderId, status }).unwrap();
-            } else {
-                await updateOrder({ orderId, status }).unwrap();
-            }
-            toast.success(`Order status updated to ${status}.`);
-            refetch();
-        } catch (error) {
-            toast.error("Failed to update order status.");
+      try {
+        if (isOnlineOrder) {
+          await updateClientOrder({ orderId, status }).unwrap();
+        } else {
+          await updateOrder({ orderId, status }).unwrap();
         }
+        toast.success(`Order status updated to ${status}.`);
+        refetch();
+      } catch (error) {
+        toast.error("Failed to update order status.");
+      }
     }
   };
 
   const handleShipOrder = async (trackingInfo: { trackingNumber: string; courier: string }) => {
     if (!orderToShip) return;
-    
+
     const orderExists = [...receivedOrders, ...customerOrders, ...myPurchases, ...onlineCustomerOrders].some(
       (o: Order) => o._id === orderToShip._id
     );
-    
+
     if (!orderExists) {
       toast.error("Order not found. Please refresh the page and try again.");
       refetch();
@@ -242,31 +231,31 @@ export default function OrdersPage() {
       setOrderToShip(null);
       return;
     }
-    
+
     const isOnlineOrder = onlineCustomerOrders.some((o: Order) => o._id === orderToShip._id);
-    
+
     try {
-        if (isOnlineOrder) {
-            await updateClientOrder({ 
-                orderId: orderToShip._id, 
-                status: 'Shipped',
-                trackingNumber: trackingInfo.trackingNumber,
-                courier: trackingInfo.courier
-            }).unwrap();
-        } else {
-            await updateOrder({ 
-                orderId: orderToShip._id, 
-                status: 'Shipped',
-                trackingNumber: trackingInfo.trackingNumber,
-                courier: trackingInfo.courier
-            }).unwrap();
-        }
-        toast.success(`Order ${orderToShip.orderId} marked as shipped.`);
-        refetch();
-        setIsShipModalOpen(false);
-        setOrderToShip(null);
+      if (isOnlineOrder) {
+        await updateClientOrder({
+          orderId: orderToShip._id,
+          status: 'Shipped',
+          trackingNumber: trackingInfo.trackingNumber,
+          courier: trackingInfo.courier
+        }).unwrap();
+      } else {
+        await updateOrder({
+          orderId: orderToShip._id,
+          status: 'Shipped',
+          trackingNumber: trackingInfo.trackingNumber,
+          courier: trackingInfo.courier
+        }).unwrap();
+      }
+      toast.success(`Order ${orderToShip.orderId} marked as shipped.`);
+      refetch();
+      setIsShipModalOpen(false);
+      setOrderToShip(null);
     } catch (error) {
-        toast.error("Failed to ship order.");
+      toast.error("Failed to ship order.");
     }
   };
 
@@ -280,7 +269,7 @@ export default function OrdersPage() {
   const getNextStatus = (currentStatus: Order['status'], order: Order) => {
     const vendorOrderStatuses: Order['status'][] = ['Pending', 'Processing', 'Packed', 'Shipped', 'Delivered'];
     const clientOrderStatuses: Order['status'][] = ['Pending', 'Processing', 'Shipped', 'Delivered'];
-    
+
     const statuses = isOnlineOrder(order) ? clientOrderStatuses : vendorOrderStatuses;
     const currentIndex = statuses.indexOf(currentStatus);
     return currentIndex < statuses.length - 1 ? statuses[currentIndex + 1] : null;
@@ -315,8 +304,10 @@ export default function OrdersPage() {
           exportData={filteredOrders}
           role={role}
           activeTab={activeTab}
-          onViewMode={viewMode}
-          onViewModeChange={setViewMode}
+          onViewMode={activeTab === 'my-purchases' ? 'purchases' : 'orders'}
+          onViewModeChange={(mode) => setActiveTab(mode === 'purchases' ? 'my-purchases' : 'customer-orders')}
+          onRefetch={() => refetch()}
+          isRefreshing={isLoading || isClientOrdersLoading}
         />
 
         {/* Orders Table */}
@@ -354,8 +345,10 @@ export default function OrdersPage() {
           isOpen={isDetailModalOpen}
           onClose={() => setIsDetailModalOpen(false)}
           selectedOrder={selectedOrder}
+          role={role}
+          activeTab={activeTab}
         />
-        
+
         <ShipOrderModal
           isOpen={isShipModalOpen}
           onClose={() => setIsShipModalOpen(false)}

@@ -4,7 +4,10 @@ import React, { useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@repo/ui/button';
-import { User, Building, Stethoscope, ArrowLeft } from 'lucide-react';
+import { Label } from '@repo/ui/label';
+import { Input } from '@repo/ui/input';
+import { toast } from 'sonner';
+import { User, Building, Stethoscope, ArrowLeft, Mail, ShieldCheck, RefreshCw, ChevronRight, Smartphone } from 'lucide-react';
 import { VendorRegistrationForm } from '@/components/forms/VendorRegistrationForm';
 import { DoctorRegistrationForm } from '@/components/forms/DoctorRegistrationForm';
 import { SupplierRegistrationForm } from '@/components/forms/SupplierRegistrationForm';
@@ -83,8 +86,9 @@ const RoleSelectionScreen = ({ onSelectRole }: RoleSelectionScreenProps) => (
       <div className="inline-block mb-3 sm:mb-5">
         <div className="flex justify-center mb-6">
           <img
-            src="/favicon.jpeg"
-            className="w-20 h-20 object-contain rounded-full border-4 border-white shadow-xl animate-fade-in"
+            src="/images/GlowVita%20Salon%20PNG.png"
+            alt="GlowVita Salon"
+            className="h-16 w-auto object-contain drop-shadow-lg animate-fade-in"
           />
         </div>
         <h1 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-2 sm:mb-4 tracking-tight bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-800 bg-clip-text text-transparent animate-fade-in">
@@ -142,29 +146,34 @@ const RoleSelectionScreen = ({ onSelectRole }: RoleSelectionScreenProps) => (
 );
 
 const RegistrationFlow = () => {
+  const [step, setStep] = useState<'role' | 'form'>('role');
   const [selectedRole, setSelectedRole] = useState<Role>(null);
   const router = useRouter();
+
+  const handleRoleSelect = (role: Role) => {
+    setSelectedRole(role);
+    setStep('form');
+  };
 
   const handleSuccess = () => {
     router.push('/dashboard');
   };
 
-  const renderForm = () => {
-    switch (selectedRole) {
-      case 'vendor':
-        return (
-          <VendorRegistrationForm onSuccess={handleSuccess} />
-        );
-      case 'doctor':
-        return (
-          <DoctorRegistrationForm onSuccess={handleSuccess} />
-        );
-      case 'supplier':
-        return (
-          <SupplierRegistrationForm onSuccess={handleSuccess} />
-        );
-      default:
-        return null;
+  const renderContent = () => {
+    switch (step) {
+      case 'role':
+        return <RoleSelectionScreen onSelectRole={handleRoleSelect} />;
+      case 'form':
+        switch (selectedRole) {
+          case 'vendor':
+            return <VendorRegistrationForm onSuccess={handleSuccess} />;
+          case 'doctor':
+            return <DoctorRegistrationForm onSuccess={handleSuccess} />;
+          case 'supplier':
+            return <SupplierRegistrationForm onSuccess={handleSuccess} />;
+          default:
+            return null;
+        }
     }
   };
 
@@ -176,16 +185,17 @@ const RegistrationFlow = () => {
         <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-pink-50/20 via-transparent to-purple-50/20 transform -rotate-12 animate-drift-reverse" />
       </div>
 
-      {!selectedRole ? (
-        <RoleSelectionScreen onSelectRole={setSelectedRole} />
-      ) : (
-        // Added responsive classes for proper scrolling on mobile
-        <div className="relative z-10 w-full max-h-full overflow-y-auto sm:overflow-y-scroll md:overflow-y-auto">
-          <div className="max-w-4xl mx-auto w-full">
-            {renderForm()}
-          </div>
+      <div className={cn(
+        "relative z-10 w-full max-h-full",
+        step === 'form' ? "overflow-y-auto sm:overflow-y-scroll md:overflow-y-auto" : ""
+      )}>
+        <div className={cn(
+          "mx-auto w-full",
+          step === 'form' ? "max-w-4xl" : "max-w-6xl"
+        )}>
+          {renderContent()}
         </div>
-      )}
+      </div>
     </div>
   );
 };
@@ -194,6 +204,32 @@ export default function RegisterPage() {
   return (
     <>
       <style jsx global>{`
+        @keyframes shimmer {
+          100% { transform: translateX(100%); }
+        }
+
+        @keyframes bounce-slow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+        }
+
+        @keyframes scale-in {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+
+        .animate-shimmer {
+          animation: shimmer 1.5s infinite;
+        }
+
+        .animate-bounce-slow {
+          animation: bounce-slow 3s ease-in-out infinite;
+        }
+
+        .animate-scale-in {
+          animation: scale-in 0.4s ease-out;
+        }
+
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }

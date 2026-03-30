@@ -32,7 +32,7 @@ const floatingActionButtonVariants = cva(
 
 export interface FloatingActionButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof floatingActionButtonVariants> {
+  VariantProps<typeof floatingActionButtonVariants> {
   asChild?: boolean
 }
 
@@ -50,7 +50,7 @@ const FloatingActionButton = React.forwardRef<HTMLButtonElement, FloatingActionB
         </div>
         {/* Rotating border effect */}
         <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/0 via-primary/30 to-primary/0 opacity-0 group-hover:opacity-100 transition-all duration-500 group-hover:animate-spin" />
-        
+
         {/* Pulse effect for glow variant */}
         {variant === "glow" && (
           <div className="absolute -inset-1 bg-gradient-to-r from-primary to-primary/80 rounded-full opacity-30 group-hover:opacity-60 animate-pulse blur-sm" />

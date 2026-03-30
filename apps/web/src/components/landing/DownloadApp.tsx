@@ -48,15 +48,13 @@ const DownloadApp = () => {
               {/* Google Play Button */}
               <a
                 href="#"
-                className="bg-foreground hover:bg-foreground/90 text-background px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl transition-all duration-300 flex items-center gap-2 sm:gap-3 shadow-lg hover:shadow-xl group"
+                className="transition-transform duration-300 hover:scale-105"
               >
-                <svg className="w-6 h-6 sm:w-8 sm:h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3,20.5V3.5C3,2.91 3.34,2.39 3.84,2.15L13.69,12L3.84,21.85C3.34,21.6 3,21.09 3,20.5M16.81,15.12L6.05,21.34L14.54,12.85L16.81,15.12M20.16,10.81C20.5,11.08 20.75,11.5 20.75,12C20.75,12.5 20.53,12.9 20.18,13.18L17.89,14.5L15.39,12L17.89,9.5L20.16,10.81M6.05,2.66L16.81,8.88L14.54,11.15L6.05,2.66Z" />
-                </svg>
-                <div className="text-left">
-                  <p className="text-[10px] sm:text-xs opacity-90">Get it on</p>
-                  <p className="text-base sm:text-lg font-semibold">Google Play</p>
-                </div>
+                <img
+                  src="/icons/Group 1000002487.png"
+                  alt="Get it on Google Play"
+                  className="h-12 w-auto sm:h-14 lg:h-16"
+                />
               </a>
             </div>
             
@@ -77,81 +75,14 @@ const DownloadApp = () => {
             </div>
           </div>
 
-          {/* Right Multiple Device Mockups */}
-          <div className="order-1 lg:order-2 flex justify-center lg:justify-end relative h-[350px] sm:h-[450px] md:h-[500px] lg:h-[550px] mb-4 sm:mb-0">
-            <div className="relative w-full max-w-[500px] sm:max-w-[550px] lg:max-w-[600px]">
-              
-              {/* Desktop/Laptop Mockup - Back Layer */}
-              <div className="hidden lg:block absolute top-0 left-0 z-10 transform -rotate-3 origin-bottom-left">
-                <div className="relative w-[380px] xl:w-[420px]">
-                  {/* Laptop Screen Container */}
-                  <div className="relative bg-foreground rounded-t-xl p-1.5 shadow-2xl">
-                    {/* Screen Bezel */}
-                    <div className="bg-gray-900 rounded-t-lg p-0.5">
-                      {/* Webcam */}
-                      <div className="absolute top-0.5 left-1/2 -translate-x-1/2 w-0.5 h-0.5 bg-gray-700 rounded-full ring-1 ring-gray-600"></div>
-                      
-                      {/* Screen Display */}
-                      <div className="w-full h-[240px] xl:h-[260px] bg-white rounded-sm overflow-hidden shadow-inner">
-                        <img
-                          src="https://images.unsplash.com/photo-1633681926022-84c23e8cb2d6?w=800"
-                          alt="GlowVita Desktop"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Laptop Base/Keyboard */}
-                  <div className="relative">
-                    {/* Hinge */}
-                    <div className="w-full h-1 bg-gradient-to-b from-gray-700 to-gray-800"></div>
-                    
-                    {/* Keyboard Base */}
-                    <div className="w-[105%] -ml-[2.5%] h-3 bg-gradient-to-b from-gray-800 to-gray-900 rounded-b-2xl shadow-lg relative">
-                      {/* Trackpad indication */}
-                      <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-16 h-1 bg-gray-700/50 rounded-full"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tablet Mockup - Middle Layer */}
-              <div className="hidden md:block absolute top-8 md:top-12 lg:top-16 left-1/2 md:left-[38%] lg:left-[45%] -translate-x-1/2 z-20 transform rotate-2">
-                <div className="relative w-[200px] md:w-[240px] lg:w-[280px] h-[280px] md:h-[340px] lg:h-[380px] bg-foreground rounded-[1.75rem] md:rounded-[2rem] p-2 shadow-2xl">
-                  {/* Tablet Screen */}
-                  <div className="w-full h-full bg-background rounded-[1.5rem] overflow-hidden relative">
-                    {/* Camera */}
-                    <div className="absolute top-3 left-1/2 -translate-x-1/2 w-2 h-2 bg-foreground/30 rounded-full z-10"></div>
-                    
-                    {/* Screen Content */}
-                    <img
-                      src="https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=600"
-                      alt="GlowVita Tablet"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Phone Mockup - Front Layer */}
-              <div className="absolute top-12 sm:top-16 md:top-20 lg:top-32 right-2 sm:right-4 md:right-8 lg:right-8 z-30 transform -rotate-1">
-                <div className="relative w-[160px] sm:w-[180px] md:w-[200px] lg:w-[220px] h-[300px] sm:h-[340px] md:h-[380px] lg:h-[420px] bg-foreground rounded-[1.75rem] sm:rounded-[2rem] lg:rounded-[2.5rem] p-1.5 sm:p-2 shadow-2xl">
-                  {/* Phone Screen */}
-                  <div className="w-full h-full bg-background rounded-[1.5rem] sm:rounded-[1.75rem] lg:rounded-[2rem] overflow-hidden relative">
-                    {/* Notch */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-14 sm:w-16 lg:w-20 h-3 sm:h-3.5 lg:h-4 bg-foreground rounded-b-xl sm:rounded-b-2xl z-10"></div>
-                    
-                    {/* Screen Content */}
-                    <img
-                      src="https://images.unsplash.com/photo-1560066984-138dadb4c035?w=600"
-                      alt="GlowVita Mobile"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                </div>
-              </div>
-
+          {/* Right Image Container */}
+          <div className="order-1 lg:order-2 flex justify-center lg:justify-end relative h-[300px] sm:h-[400px] md:h-[450px] lg:h-[500px] mb-4 sm:mb-0">
+            <div className="relative w-[90%] lg:w-[85%] h-full">
+              <img
+                src="/images/close-up-hand-holding-phone (1) (2) 1.svg"
+                alt="Download App"
+                className="w-full h-full object-contain lg:object-right"
+              />
             </div>
           </div>
         </div>

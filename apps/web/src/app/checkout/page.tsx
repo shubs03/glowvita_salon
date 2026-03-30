@@ -5,11 +5,12 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
+import { Badge } from '@repo/ui/badge';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
-import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet } from 'lucide-react';
+import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet, Plus, Minus, MapPin, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCreateClientOrderMutation, useCreatePaymentOrderMutation, useVerifyPaymentMutation, useGetPublicTaxFeeSettingsQuery, useGetPublicShippingConfigQuery } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,18 +23,42 @@ interface Product {
   quantity: number;
   vendorName: string;
   vendorId: string;
+  originalPrice: number;
+  hasSale: boolean;
+  isCartOrder?: boolean;
 }
 
 export default function CheckoutPage() {
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
+  const [cartItems, setCartItems] = useState<any[]>([]);
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [showAddressForm, setShowAddressForm] = useState(false);
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  
+  // New Address Form State
+  const [newAddress, setNewAddress] = useState({
+    fullName: '',
+    mobileNo: '',
+    pincode: '',
+    houseNo: '',
+    area: '',
+    landmark: '',
+    city: '',
+    state: '',
+    isPrimary: false
+  });
+
   const [shippingAddress, setShippingAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('credit-card');
-  
+  const [addressError, setAddressError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+
   const { user } = useAuth();
   const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
-  const { data: shippingConfig } = useGetPublicShippingConfigQuery(undefined);
+  const { data: shippingConfig } = useGetPublicShippingConfigQuery(product?.vendorId);
   const [createOrder, { isLoading }] = useCreateClientOrderMutation();
   const [createPaymentOrder] = useCreatePaymentOrderMutation();
   const [verifyPayment] = useVerifyPaymentMutation();
@@ -54,9 +79,39 @@ export default function CheckoutPage() {
     };
   }, []);
 
+  // Fetch saved addresses
+  const fetchAddresses = async () => {
+    try {
+      const res = await fetch('/api/client/addresses');
+      const data = await res.json();
+      if (data.savedAddresses && data.savedAddresses.length > 0) {
+        setSavedAddresses(data.savedAddresses);
+        // Set default address if exists
+        const primary = data.savedAddresses.find((addr: any) => addr.isPrimary);
+        if (primary) {
+          setSelectedAddressId(primary._id);
+          setShippingAddress(`${primary.address}, ${primary.landmark ? primary.landmark + ', ' : ''}${primary.city}, ${primary.state} - ${primary.pincode}`);
+          setContactNumber(primary.mobileNo || '');
+        } else {
+          const first = data.savedAddresses[0];
+          setSelectedAddressId(first._id);
+          setShippingAddress(`${first.address}, ${first.landmark ? first.landmark + ', ' : ''}${first.city}, ${first.state} - ${first.pincode}`);
+          setContactNumber(first.mobileNo || '');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching addresses:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAddresses();
+  }, []);
+
   useEffect(() => {
     try {
       const storedProduct = localStorage.getItem('buyNowProduct');
+      const storedCartItems = localStorage.getItem('cartItems');
       console.log('Stored product from localStorage:', storedProduct);
       if (storedProduct) {
         const parsedProduct = JSON.parse(storedProduct);
@@ -69,8 +124,16 @@ export default function CheckoutPage() {
           parsedProduct.vendorId = 'unknown-vendor';
         }
         setProduct(parsedProduct);
-        setShippingAddress(user?.address || '');
-        setContactNumber(user?.mobileNo || '');
+
+        if (storedCartItems) {
+          setCartItems(JSON.parse(storedCartItems));
+        }
+
+        // Only set default from user profile if no saved addresses are available
+        if (savedAddresses.length === 0) {
+          setShippingAddress(user?.address || '');
+          setContactNumber(user?.mobileNo || '');
+        }
       } else {
         console.log('No product found in localStorage, redirecting to home');
         router.push('/');
@@ -79,23 +142,172 @@ export default function CheckoutPage() {
       console.error('Failed to parse product from localStorage', e);
       router.push('/');
     }
-  }, [router, user]);
+  }, [router, user, savedAddresses.length]);
 
-  const handlePlaceOrder = async () => {
-    if (!shippingAddress.trim() || !contactNumber.trim()) {
-      toast.error('Please fill in all shipping details.');
+  const handleAddressSelect = (addr: any) => {
+    setSelectedAddressId(addr._id);
+    setShippingAddress(`${addr.address}, ${addr.landmark ? addr.landmark + ', ' : ''}${addr.city}, ${addr.state} - ${addr.pincode}`);
+    setContactNumber(addr.mobileNo || '');
+    setAddressError('');
+    setPhoneError('');
+  };
+
+  const handleEditAddress = (addr: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingAddressId(addr._id);
+    const parts = addr.address.split(', ');
+    const houseNo = parts[0] || '';
+    const area = parts.slice(1).join(', ') || '';
+    
+    setNewAddress({
+      fullName: addr.fullName || '',
+      mobileNo: addr.mobileNo || '',
+      pincode: addr.pincode || '',
+      houseNo: houseNo,
+      area: area,
+      landmark: addr.landmark || '',
+      city: addr.city || '',
+      state: addr.state || '',
+      isPrimary: addr.isPrimary || false
+    });
+    setShowAddressForm(true);
+  };
+
+  const handleSaveNewAddress = async () => {
+    // Basic validation
+    if (!newAddress.fullName || !newAddress.mobileNo || !newAddress.pincode || !newAddress.houseNo || !newAddress.area || !newAddress.city || !newAddress.state) {
+      toast.error('Please fill all required fields');
       return;
     }
+
+    const mobileRegex = /^[0-9]{10}$/;
+    const pincodeRegex = /^[0-9]{6}$/;
+    const nameRegex = /^[a-zA-Z\s]+$/;
+
+    if (!nameRegex.test(newAddress.fullName)) {
+      toast.error('Full Name should only contain letters');
+      return;
+    }
+    if (!mobileRegex.test(newAddress.mobileNo)) {
+      toast.error('Mobile Number must be exactly 10 digits');
+      return;
+    }
+    if (!pincodeRegex.test(newAddress.pincode)) {
+      toast.error('Pincode must be exactly 6 digits');
+      return;
+    }
+    if (!nameRegex.test(newAddress.city)) {
+      toast.error('City should only contain letters');
+      return;
+    }
+    if (!nameRegex.test(newAddress.state)) {
+      toast.error('State should only contain letters');
+      return;
+    }
+
+    try {
+      const fullAddress = `${newAddress.houseNo}, ${newAddress.area}`;
+      const url = editingAddressId 
+        ? `/api/client/addresses/${editingAddressId}`
+        : '/api/client/addresses';
+      const method = editingAddressId ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: newAddress.fullName,
+          mobileNo: newAddress.mobileNo,
+          address: fullAddress,
+          city: newAddress.city,
+          state: newAddress.state,
+          pincode: newAddress.pincode,
+          landmark: newAddress.landmark,
+          lat: 1, 
+          lng: 1,
+          isPrimary: newAddress.isPrimary
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        toast.success(editingAddressId ? 'Address updated successfully' : 'Address saved successfully');
+        await fetchAddresses();
+        setShowAddressForm(false);
+        setEditingAddressId(null);
+        // Reset form
+        setNewAddress({
+          fullName: '',
+          mobileNo: '',
+          pincode: '',
+          houseNo: '',
+          area: '',
+          landmark: '',
+          city: '',
+          state: '',
+          isPrimary: false
+        });
+      } else {
+        toast.error(data.message || (editingAddressId ? 'Failed to update address' : 'Failed to save address'));
+      }
+    } catch (error) {
+      console.error('Error saving address:', error);
+      toast.error('An error occurred while saving the address');
+    }
+  };
+  const handleQuantityChange = (delta: number) => {
+    if (!product) return;
+
+    const newQuantity = Math.max(1, (product.quantity || 1) + delta);
+    if (newQuantity === product.quantity) return;
+
+    const updatedProduct = { ...product, quantity: newQuantity };
+    setProduct(updatedProduct);
+
+    // Persist to localStorage
+    try {
+      localStorage.setItem('buyNowProduct', JSON.stringify(updatedProduct));
+    } catch (e) {
+      console.error('Failed to update product in localStorage', e);
+    }
+  };
+
+  const handlePlaceOrder = async () => {
+    let isValid = true;
+
+    if (!shippingAddress.trim()) {
+      setAddressError('Shipping address is required');
+      isValid = false;
+    } else {
+      setAddressError('');
+    }
+
+    if (!contactNumber.trim()) {
+      setPhoneError('Contact number is required');
+      isValid = false;
+    } else if (contactNumber.length !== 10) {
+      setPhoneError('Phone number must be exactly 10 digits');
+      isValid = false;
+    } else {
+      setPhoneError('');
+    }
+
+    if (!isValid) {
+      toast.error('Please correct the errors in the form.');
+      return;
+    }
+
     if (!product) return;
 
     // Use the correct calculation for totalAmount that matches the checkout page display
-    const subtotal = product.price * product.quantity;
+    const subtotal = Number(product.price) * Number(product.quantity);
+    const shippingAmount = Number(shippingConfig?.amount || 0);
     const shipping = subtotal > 0 && shippingConfig?.isEnabled
-      ? shippingConfig.chargeType === 'percentage'
-        ? (subtotal * shippingConfig.amount) / 100
-        : shippingConfig.amount
+      ? (shippingConfig.chargeType === 'percentage'
+        ? (subtotal * shippingAmount) / 100
+        : shippingAmount)
       : 0;
-    
+
     // Calculate tax based on dynamic tax settings from API
     const productGST = taxSettings?.productGST || 18;
     const productGSTType = taxSettings?.productGSTType || 'percentage';
@@ -103,15 +315,15 @@ export default function CheckoutPage() {
     const productPlatformFeeType = taxSettings?.productPlatformFeeType || 'percentage';
     const productGSTEnabled = taxSettings?.productGSTEnabled ?? true;
     const productPlatformFeeEnabled = taxSettings?.productPlatformFeeEnabled ?? true;
-    
-    const gst = productGSTEnabled 
-      ? (productGSTType === 'percentage' ? subtotal * (productGST / 100) : productGST)
+
+    const gst = productGSTEnabled
+      ? (productGSTType === 'percentage' ? subtotal * (Number(productGST) / 100) : Number(productGST))
       : 0;
     const platformFee = productPlatformFeeEnabled
-      ? (productPlatformFeeType === 'percentage' ? subtotal * (productPlatformFee / 100) : productPlatformFee)
+      ? (productPlatformFeeType === 'percentage' ? subtotal * (Number(productPlatformFee) / 100) : Number(productPlatformFee))
       : 0;
     const tax = gst + platformFee;
-    
+
     const totalAmount = subtotal + shipping + tax;
 
     try {
@@ -126,7 +338,7 @@ export default function CheckoutPage() {
             toast.error('Cart is empty. Cannot place order.');
             return;
           }
-          
+
           orderData = {
             items: cartItems.map((item: any) => ({
               productId: item.productId || item._id,
@@ -166,7 +378,7 @@ export default function CheckoutPage() {
             paymentMethod,
           };
         }
-        
+
         await createOrder(orderData).unwrap();
         toast.success('Order placed successfully!', {
           description: 'You will be redirected to your orders page.',
@@ -179,7 +391,7 @@ export default function CheckoutPage() {
         }, 2000);
         return;
       }
-      
+
       // For UPI, Credit/Debit Card, and Net Banking payments, use Razorpay
       if (paymentMethod === 'upi' || paymentMethod === 'credit-card' || paymentMethod === 'netbanking') {
         // Create Razorpay payment order
@@ -226,14 +438,29 @@ export default function CheckoutPage() {
 
         // Initialize Razorpay payment
         const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
           amount: razorpayOrder.amount,
           currency: razorpayOrder.currency,
           name: 'GlowVita Salon',
           description: `Order for ${product.name}`,
           image: '/images/logo.png', // Add your logo here
           order_id: razorpayOrder.id,
-          method: paymentMethods,
+          retry: { enabled: true, max_count: 3 },
+          // Simplified config to prevent interaction lag
+          config: {
+            display: {
+              blocks: {
+                upi: {
+                  name: 'UPI / QR',
+                  instruments: [
+                    { method: 'upi', vpa: true }, // UPI ID entry
+                    { method: 'upi', qr: true }   // QR Code
+                  ],
+                },
+              },
+              sequence: ['block.upi', 'block.card', 'block.netbanking'],
+            },
+          },
           handler: async function (response: any) {
             try {
               // Verify payment
@@ -253,7 +480,7 @@ export default function CheckoutPage() {
                     toast.error('Cart is empty. Cannot place order.');
                     return;
                   }
-                  
+
                   orderData = {
                     items: cartItems.map((item: any) => ({
                       productId: item.productId || item._id,
@@ -299,7 +526,7 @@ export default function CheckoutPage() {
                     razorpaySignature: response.razorpay_signature,
                   };
                 }
-                
+
                 await createOrder(orderData).unwrap();
                 toast.success('Payment successful! Order placed successfully!', {
                   description: 'You will be redirected to your orders page.',
@@ -319,17 +546,19 @@ export default function CheckoutPage() {
             }
           },
           prefill: {
-            name: user?.firstName + ' ' + user?.lastName || '',
+            name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
             email: user?.emailAddress || '',
-            contact: contactNumber,
+            contact: contactNumber || user?.mobileNo || '',
           },
           theme: {
-            color: '#3B82F6',
+            color: '#7c3aed',
           },
           modal: {
-            ondismiss: function() {
+            ondismiss: function () {
               toast.error('Payment cancelled by user');
-            }
+            },
+            escape: true,
+            backdropClose: false,
           }
         };
 
@@ -358,15 +587,16 @@ export default function CheckoutPage() {
     );
   }
 
-  const subtotal = product.price * product.quantity;
-  
+  const subtotal = Number(product.price) * Number(product.quantity);
+
   // Calculate dynamic shipping based on config
+  const shippingAmount = Number(shippingConfig?.amount || 0);
   const shipping = subtotal > 0 && shippingConfig?.isEnabled
-    ? shippingConfig.chargeType === 'percentage'
-      ? (subtotal * shippingConfig.amount) / 100
-      : shippingConfig.amount
+    ? (shippingConfig.chargeType === 'percentage'
+      ? (subtotal * shippingAmount) / 100
+      : shippingAmount)
     : 0;
-  
+
   // Calculate tax based on dynamic tax settings from API
   const productGST = taxSettings?.productGST || 18;
   const productGSTType = taxSettings?.productGSTType || 'percentage';
@@ -374,23 +604,32 @@ export default function CheckoutPage() {
   const productPlatformFeeType = taxSettings?.productPlatformFeeType || 'percentage';
   const productGSTEnabled = taxSettings?.productGSTEnabled ?? true;
   const productPlatformFeeEnabled = taxSettings?.productPlatformFeeEnabled ?? true;
-  
-  const gst = productGSTEnabled 
-    ? (productGSTType === 'percentage' ? subtotal * (productGST / 100) : productGST)
+
+  const gst = productGSTEnabled
+    ? (productGSTType === 'percentage' ? subtotal * (Number(productGST) / 100) : Number(productGST))
     : 0;
   const platformFee = productPlatformFeeEnabled
-    ? (productPlatformFeeType === 'percentage' ? subtotal * (productPlatformFee / 100) : productPlatformFee)
+    ? (productPlatformFeeType === 'percentage' ? subtotal * (Number(productPlatformFee) / 100) : Number(productPlatformFee))
     : 0;
   const tax = gst + platformFee;
-  
+
   const total = subtotal + shipping + tax;
+
+  // Calculate total savings
+  let originalSubtotal = 0;
+  if (product.id.startsWith('cart-') && cartItems.length > 0) {
+    originalSubtotal = cartItems.reduce((acc, item) => acc + (item.originalPrice || item.price) * item.quantity, 0);
+  } else {
+    originalSubtotal = (product.originalPrice || product.price) * product.quantity;
+  }
+  const totalSavings = originalSubtotal - subtotal;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto px-4 py-8">
         <Button variant="ghost" onClick={() => router.back()} className="mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Product
+          {product?.isCartOrder ? 'Back to Cart' : 'Back to Product'}
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -401,23 +640,124 @@ export default function CheckoutPage() {
                 <CardDescription>Review your order details and costs.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center gap-6">
-                  <Image 
-                    src={product.image} 
-                    alt={product.name} 
-                    width={100} 
-                    height={100} 
-                    className="rounded-lg object-cover" 
-                  />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg">{product.name}</h3>
-                    <p className="text-sm text-muted-foreground">Sold by: {product.vendorName}</p>
-                    <p className="text-sm text-muted-foreground">Quantity: {product.quantity}</p>
+                {product.id.startsWith('cart-') && cartItems.length > 0 ? (
+                  <div className="space-y-6">
+                    {cartItems.map((item, index) => (
+                      <div key={item.productId || item._id || index} className={`flex items-center gap-6 ${index !== 0 ? 'pt-6 border-t border-gray-100' : ''}`}>
+                        <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border">
+                          <Image
+                            src={item.productImage || item.image || "/images/placeholder.jpg"}
+                            alt={item.productName || item.name}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-base">{item.productName || item.name}</h3>
+                          <p className="text-sm text-muted-foreground">Sold by: {item.vendorName || product.vendorName}</p>
+                          <div className="flex flex-col gap-1 mt-1">
+                            <div className="flex items-center gap-3">
+                              <span className="text-xs text-muted-foreground">Quantity: {item.quantity}</span>
+                              <span className="text-xs text-muted-foreground">Price: ₹{item.price.toFixed(2)}</span>
+                            </div>
+                            {item.hasSale && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground line-through">₹{item.originalPrice.toFixed(2)}</span>
+                                <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 h-4 hover:bg-green-100">
+                                  {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% OFF
+                                </Badge>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="flex flex-wrap items-center justify-end gap-2 text-right">
+                            {(item.hasSale || (item.originalPrice && item.originalPrice > item.price)) ? (
+                              <>
+                                <span className="text-muted-foreground line-through text-xs sm:text-sm">
+                                  ₹{(item.originalPrice * item.quantity).toFixed(2)}
+                                </span>
+                                <span className="font-semibold text-foreground">
+                                  ₹{(item.price * item.quantity).toFixed(2)}
+                                </span>
+                                <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 h-4 hover:bg-green-100 flex-shrink-0">
+                                  {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% OFF
+                                </Badge>
+                              </>
+                            ) : (
+                              <p className="font-semibold text-foreground text-right">
+                                ₹{(item.price * item.quantity).toFixed(2)}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-lg">₹{subtotal.toFixed(2)}</p>
+                ) : (
+                  <div className="flex items-center gap-6">
+                    <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border">
+                      <Image
+                        src={product.image}
+                        alt={product.name}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg">{product.name}</h3>
+                      <p className="text-sm text-muted-foreground">Sold by: {product.vendorName}</p>
+                      <div className="flex items-center gap-3 mt-2">
+                        <span className="text-sm text-muted-foreground">Quantity:</span>
+                        {product.isCartOrder ? (
+                          <span className="font-medium text-sm">{product.quantity}</span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => handleQuantityChange(-1)}
+                              disabled={product.quantity <= 1}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="font-medium text-sm w-4 text-center">{product.quantity}</span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => handleQuantityChange(1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex flex-wrap items-center justify-end gap-2 text-right">
+                        {(product.hasSale || (product.originalPrice && product.originalPrice > product.price)) ? (
+                          <>
+                            <span className="text-muted-foreground line-through text-sm sm:text-base">
+                              ₹{(product.originalPrice * product.quantity).toFixed(2)}
+                            </span>
+                            <span className="font-semibold text-lg text-foreground">
+                              ₹{subtotal.toFixed(2)}
+                            </span>
+                            <Badge variant="secondary" className="bg-green-100 text-green-700 text-[10px] px-1 py-0 h-4 hover:bg-green-100 flex-shrink-0">
+                              {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+                            </Badge>
+                          </>
+                        ) : (
+                          <p className="font-semibold text-lg text-foreground text-right w-full">
+                            ₹{subtotal.toFixed(2)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
 
@@ -427,23 +767,191 @@ export default function CheckoutPage() {
                 <CardDescription>Please confirm where we should send your order.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label htmlFor="shippingAddress">Shipping Address</Label>
-                  <Input 
-                    id="shippingAddress"
-                    value={shippingAddress} 
-                    onChange={(e) => setShippingAddress(e.target.value)} 
-                    placeholder="Enter your full shipping address"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="contactNumber">Contact Number</Label>
-                  <Input 
-                    id="contactNumber"
-                    value={contactNumber} 
-                    onChange={(e) => setContactNumber(e.target.value)} 
-                    placeholder="Enter your contact number"
-                  />
+                <div className="space-y-6">
+                  {savedAddresses.length > 0 && !showAddressForm && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {savedAddresses.map((addr) => (
+                        <div
+                          key={addr._id}
+                          className={`relative p-4 border rounded-lg cursor-pointer transition-all ${selectedAddressId === addr._id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-gray-200 hover:border-gray-300'}`}
+                          onClick={() => handleAddressSelect(addr)}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="space-y-1">
+                              <p className="font-bold text-sm">{addr.fullName || user?.firstName + ' ' + user?.lastName}</p>
+                              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{addr.address}</p>
+                              <p className="text-sm text-muted-foreground">{addr.city}, {addr.state} - {addr.pincode}</p>
+                              <p className="text-sm text-muted-foreground">Phone: {addr.mobileNo || contactNumber}</p>
+                              <div className="pt-2">
+                                <Button 
+                                  variant="link" 
+                                  size="sm" 
+                                  className="h-auto p-0 text-sky-600 hover:text-sky-700 font-normal"
+                                  onClick={(e) => handleEditAddress(addr, e)}
+                                >
+                                  Edit address
+                                </Button>
+                              </div>
+                            </div>
+                            {selectedAddressId === addr._id && (
+                              <CheckCircle2 className="h-5 w-5 text-primary" />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 rounded-lg hover:border-primary hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary group"
+                        onClick={() => setShowAddressForm(true)}
+                      >
+                        <Plus className="h-8 w-8 mb-2 group-hover:scale-110 transition-transform" />
+                        <span className="font-medium">Add New Address</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {(savedAddresses.length === 0 || showAddressForm) && (
+                    <div className="space-y-4 border p-4 rounded-lg bg-white dark:bg-gray-800">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold text-lg">{editingAddressId ? 'Edit shipping address' : 'Enter a new shipping address'}</h3>
+                        {savedAddresses.length > 0 && (
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => {
+                              setShowAddressForm(false);
+                              setEditingAddressId(null);
+                              setNewAddress({
+                                fullName: '', mobileNo: '', pincode: '', houseNo: '',
+                                area: '', landmark: '', city: '', state: '', isPrimary: false
+                              });
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="fullName">Full Name (First and Last name)</Label>
+                          <Input
+                            id="fullName"
+                            value={newAddress.fullName}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || /^[a-zA-Z\s]+$/.test(val)) {
+                                setNewAddress({ ...newAddress, fullName: val });
+                              }
+                            }}
+                            placeholder="e.g. John Doe"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="newMobileNo">Mobile Number</Label>
+                          <Input
+                            id="newMobileNo"
+                            value={newAddress.mobileNo}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if ((val === '' || /^[0-9]+$/.test(val)) && val.length <= 10) {
+                                setNewAddress({ ...newAddress, mobileNo: val });
+                              }
+                            }}
+                            placeholder="10-digit mobile number"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="pincode">Pincode</Label>
+                          <Input
+                            id="pincode"
+                            value={newAddress.pincode}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if ((val === '' || /^[0-9]+$/.test(val)) && val.length <= 6) {
+                                setNewAddress({ ...newAddress, pincode: val });
+                              }
+                            }}
+                            placeholder="6-digit [0-9] PIN code"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="houseNo">Flat, House no., Building, Company, Apartment</Label>
+                          <Input
+                            id="houseNo"
+                            value={newAddress.houseNo}
+                            onChange={(e) => setNewAddress({ ...newAddress, houseNo: e.target.value })}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="area">Area, Street, Sector, Village</Label>
+                        <Input
+                          id="area"
+                          value={newAddress.area}
+                          onChange={(e) => setNewAddress({ ...newAddress, area: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="landmark">Landmark</Label>
+                          <Input
+                            id="landmark"
+                            value={newAddress.landmark}
+                            onChange={(e) => setNewAddress({ ...newAddress, landmark: e.target.value })}
+                            placeholder="e.g. near Apollo Hospital"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="city">Town/City</Label>
+                          <Input
+                            id="city"
+                            value={newAddress.city}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || /^[a-zA-Z\s]+$/.test(val)) {
+                                setNewAddress({ ...newAddress, city: val });
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="state">State</Label>
+                          <Input
+                            id="state"
+                            value={newAddress.state}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || /^[a-zA-Z\s]+$/.test(val)) {
+                                setNewAddress({ ...newAddress, state: val });
+                              }
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2 pt-2">
+                        <input
+                          type="checkbox"
+                          id="isPrimary"
+                          checked={newAddress.isPrimary}
+                          onChange={(e) => setNewAddress({ ...newAddress, isPrimary: e.target.checked })}
+                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        />
+                        <Label htmlFor="isPrimary">Make this my default address</Label>
+                      </div>
+
+                      <div className="pt-4">
+                        <Button className="w-full md:w-auto px-8" onClick={handleSaveNewAddress}>
+                          {editingAddressId ? 'Save changes' : 'Use this address'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -456,10 +964,27 @@ export default function CheckoutPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Subtotal</span>
-                    <span>₹{subtotal.toFixed(2)}</span>
-                  </div>
+                  {totalSavings > 0 ? (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Original Price</span>
+                        <span className="text-muted-foreground line-through">₹{originalSubtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-green-600 font-medium">
+                        <span>Discount</span>
+                        <span>-₹{totalSavings.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-medium">
+                        <span>Subtotal</span>
+                        <span>₹{subtotal.toFixed(2)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between">
+                      <span>Subtotal</span>
+                      <span>₹{subtotal.toFixed(2)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span>Shipping</span>
                     <span>₹{shipping.toFixed(2)}</span>
@@ -509,18 +1034,18 @@ export default function CheckoutPage() {
                 </div>
               </CardContent>
               <CardFooter className="flex-col gap-4">
-                <Button 
-                  size="lg" 
+                <Button
+                  size="lg"
                   className="w-full"
                   onClick={handlePlaceOrder}
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Processing...' : 
-                   paymentMethod === 'cash-on-delivery' ? 'Place Order' :
-                   paymentMethod === 'credit-card' ? 'Pay with Card' :
-                   paymentMethod === 'upi' ? 'Pay with UPI' :
-                   paymentMethod === 'netbanking' ? 'Pay with Net Banking' :
-                   'Place Order'
+                  {isLoading ? 'Processing...' :
+                    paymentMethod === 'cash-on-delivery' ? 'Place Order' :
+                      paymentMethod === 'credit-card' ? 'Pay with Card' :
+                        paymentMethod === 'upi' ? 'Pay with UPI' :
+                          paymentMethod === 'netbanking' ? 'Pay with Net Banking' :
+                            'Place Order'
                   }
                 </Button>
                 <div className="flex items-center text-xs text-muted-foreground">

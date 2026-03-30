@@ -534,7 +534,7 @@ export const POST = authMiddlewareCrm(async (req) => {
                   platformFee: appointment.platformFee || 0,
                   discount: appointment.discountAmount || appointment.discount || 0,
                   totalAmount: totalAmount,
-                  paymentStatus: 'paid',
+                  paymentStatus: 'completed',
                   invoiceNumber: updatedAppointment.invoiceNumber || appointment._id.toString(),
                   paymentMethod: paymentMethod
                 });
@@ -603,7 +603,13 @@ export const POST = authMiddlewareCrm(async (req) => {
             const completionHtml = getCompletionTemplate({
               clientName,
               businessName,
-              serviceName: appointment.serviceName
+              serviceName: appointment.serviceName,
+              appointmentId: updatedAppointment?.invoiceNumber || appointment.invoiceNumber || appointment._id.toString(),
+              completedDate: new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', weekday: 'short' }),
+              orderTotal: updatedAppointment?.totalAmount || appointment.totalAmount,
+              location: appointment.homeServiceLocation?.address || businessName,
+              businessAddress,
+              businessPhone
             });
 
             logToFile('Sending email via transporter...');
@@ -639,6 +645,41 @@ export const POST = authMiddlewareCrm(async (req) => {
       } else {
         console.log('⚠️ Email condition not met - emails not sent');
         console.log('Reason: appointmentStatus !== "completed" OR appointment was already completed');
+      }
+
+      // Check and credit referral bonus if user was referred (triggers on first completed appointment)
+      // This is crucial for offline/pay-at-salon appointments handled via Collect Payment
+      if (appointmentStatus === 'completed') {
+          console.log(`[Collect Payment Referral] ===== STARTING REFERRAL BONUS CHECK =====`);
+          let targetUserId = null;
+          
+          if (finalAppointment.mode === 'online') {
+              targetUserId = finalAppointment.client?.toString();
+          } else {
+              // For offline, check if client is linked to a system user
+              const clientId = finalAppointment.client;
+              if (clientId) {
+                  try {
+                      // Import dynamically to avoid issues
+                      const { default: ClientModelLib } = await import('../../../../../../../../packages/lib/src/models/Vendor/Client.model');
+                      const clientDoc = await ClientModelLib.findById(clientId).select('userId');
+                      if (clientDoc && clientDoc.userId) {
+                          targetUserId = clientDoc.userId.toString();
+                      }
+                  } catch (err) {
+                      console.error(`[Collect Payment Referral] Error fetching client:`, err);
+                  }
+              }
+          }
+
+          if (targetUserId) {
+              try {
+                  const { checkAndCreditReferralBonus } = await import('../../../../../../../../packages/lib/src/utils/referralWalletCredit');
+                  await checkAndCreditReferralBonus(targetUserId, 'appointment');
+              } catch (referralError) {
+                  console.error('[Collect Payment Referral] Error crediting bonus:', referralError);
+              }
+          }
       }
 
 

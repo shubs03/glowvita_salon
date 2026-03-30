@@ -1,25 +1,18 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
   VendorDashboard,
   SupplierDashboard,
   DoctorDashboard
 } from '@/components/dashboard/role-specific';
 import { useRoleSpecificDashboardMetrics } from '@/hooks/useRoleSpecificDashboardMetrics';
-import { useCrmAuth } from '@/hooks/useCrmAuth';
 
 export default function DashboardPage() {
-  const { role } = useCrmAuth();
   const [filterType, setFilterType] = useState<'preset' | 'custom'>('preset');
   const [presetPeriod, setPresetPeriod] = useState<'day' | 'month' | 'year' | 'all'>('all');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
-  const { metrics, loading, error, refresh, role: userRole } = useRoleSpecificDashboardMetrics(filterType, presetPeriod, startDate, endDate);
-
-  // Safe type assertion to handle union types
-  const vendorMetrics = metrics as any;
-  const supplierMetrics = metrics as any;
-  const doctorMetrics = metrics as any;
+  const { metrics, loading, error, role: userRole } = useRoleSpecificDashboardMetrics(filterType, presetPeriod, startDate, endDate);
 
   // Handle filter change from DynamicDateFilter component
   const handleFilterChange = (
@@ -32,13 +25,15 @@ export default function DashboardPage() {
     if (newPresetPeriod) {
       setPresetPeriod(newPresetPeriod);
     }
-    if (newStartDate) {
+    if (newStartDate !== undefined) {
       setStartDate(newStartDate);
     }
-    if (newEndDate) {
+    if (newEndDate !== undefined) {
       setEndDate(newEndDate);
     }
-    refresh();
+    // Note: no manual refresh() call here — the hook's internal useEffect
+    // already watches filterType/presetPeriod/startDate/endDate and will
+    // re-fetch automatically with the correct updated values.
   };
 
   // Determine which dashboard to render based on user role
@@ -50,7 +45,7 @@ export default function DashboardPage() {
       case 'vendor':
         return (
           <VendorDashboard
-            metrics={vendorMetrics}
+            metrics={metrics as any}
             loading={loading}
             error={error}
             filterType={filterType}
@@ -63,7 +58,7 @@ export default function DashboardPage() {
       case 'supplier':
         return (
           <SupplierDashboard
-            metrics={supplierMetrics}
+            metrics={metrics as any}
             loading={loading}
             error={error}
             filterType={filterType}
@@ -77,7 +72,7 @@ export default function DashboardPage() {
       case 'dermatologist':
         return (
           <DoctorDashboard
-            metrics={doctorMetrics}
+            metrics={metrics as any}
             loading={loading}
             error={error}
             filterType={filterType}
@@ -88,10 +83,10 @@ export default function DashboardPage() {
           />
         );
       default:
-        // Default to vendor dashboard if role is not recognized
+        // Default to vendor dashboard for unrecognized roles
         return (
           <VendorDashboard
-            metrics={vendorMetrics}
+            metrics={metrics as any}
             loading={loading}
             error={error}
             filterType={filterType}
@@ -103,6 +98,16 @@ export default function DashboardPage() {
         );
     }
   };
+
+  // While auth is still resolving and we don't yet know the user's role,
+  // show a neutral loading state to prevent a flash of the wrong dashboard.
+  if (!userRole && loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground animate-pulse">Loading dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

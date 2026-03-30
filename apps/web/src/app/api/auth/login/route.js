@@ -6,9 +6,10 @@ import { comparePassword } from '@repo/lib/hashing';
 import { cookies } from 'next/headers';
 
 export async function POST(req) {
-  await dbConnect();
-
+  console.log("LOGIN POST INITIATED...");
   try {
+    await dbConnect();
+    console.log("DB CONNECTED SUCCESSFULLY IN WEB...");
     const { email, password } = await req.json();
 
     if (!email || !password) {
@@ -56,7 +57,7 @@ export async function POST(req) {
     }, { status: 200 });
 
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ message: 'Internal server error' }, { status: 500 });
+    console.error("WEB LOGIN ERROR_DETAIL:", error);
+    return NextResponse.json({ message: error.message || 'Internal server error' }, { status: 500 });
   }
 }

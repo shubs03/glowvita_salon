@@ -118,7 +118,7 @@ export default function ReturnPolicyPage() {
         `}</style>
         
         <div className="return-content">
-        <p className="lead-text">Last updated: April 1, 2025</p>
+        <p className="lead-text">Last updated: January 01, 2026</p>
         
         <div className="summary-box">
           <p style={{ marginBottom: 0 }}>
@@ -178,7 +178,7 @@ export default function ReturnPolicyPage() {
         
         <div className="info-box">
           <p style={{ marginBottom: '0.5rem' }}>
-            <strong>Phone:</strong> <a href="tel:8087435747">80874 35747</a>
+            <strong>Phone:</strong> <a href="tel:9075201035">90752 01035</a>
           </p>
           <p style={{ marginBottom: 0 }}>
             <strong>Email:</strong> <a href="mailto:support@glowvitasalon.com">support@glowvitasalon.com</a>

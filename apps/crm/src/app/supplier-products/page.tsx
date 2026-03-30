@@ -8,8 +8,8 @@ import { Skeleton } from '@repo/ui/skeleton';
 import { Plus, Package, Store } from 'lucide-react';
 import { toast } from 'sonner';
 import {
-  useGetAdminProductCategoriesQuery,
-  useCreateAdminProductCategoryMutation,
+  useGetProductCategoriesQuery,
+  useCreateProductCategoryMutation,
   useGetCrmProductsQuery,
   useCreateCrmProductMutation,
   useUpdateCrmProductMutation,
@@ -53,6 +53,8 @@ interface Product {
   productForm?: string;
   brand?: string;
   vendorId?: { name: string };
+  showOnWebsite?: boolean;
+  supplierName?: string;
 }
 
 interface Category {
@@ -72,9 +74,9 @@ export default function SupplierProductsPage() {
   const [updateProduct, { isLoading: isUpdatingProduct }] = useUpdateCrmProductMutation();
   const [deleteProduct, { isLoading: isDeletingProduct }] = useDeleteCrmProductMutation();
 
-  const { data: categoriesDatas = { data: [] }, isLoading: isCategoriesLoading, refetch: refetchCategories } = useGetAdminProductCategoriesQuery({});
+  const { data: categoriesDatas, isLoading: isCategoriesLoading, refetch: refetchCategories } = useGetProductCategoriesQuery({});
   const categoriesData = categoriesDatas?.data || [];
-  const [createCategory, { isLoading: isCreatingCategory }] = useCreateAdminProductCategoryMutation();
+  const [createCategory, { isLoading: isCreatingCategory }] = useCreateProductCategoryMutation();
 
   // Component State
   const [currentPage, setCurrentPage] = useState(1);
@@ -95,11 +97,12 @@ export default function SupplierProductsPage() {
 
   // Filtered products
   const filteredProducts = useMemo(() => {
-    if (!Array.isArray(productsData)) return [];
-    return productsData.filter(p =>
-      p.productName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (statusFilter === 'all' || p.status === statusFilter)
-    );
+    return [...productsData]
+      .filter(p =>
+        p.productName.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        (statusFilter === 'all' || p.status === statusFilter)
+      )
+      .sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
   }, [productsData, searchTerm, statusFilter]);
 
   // Paginated products
@@ -120,7 +123,10 @@ export default function SupplierProductsPage() {
     const uniqueCategories = [...new Set(productsData.map(p => p.category))];
     const categories = uniqueCategories.length;
 
-    const totalValue = productsData.reduce((sum, p) => sum + p.salePrice * p.stock, 0);
+    const totalValue = productsData.reduce((sum, p) => {
+      const price = p.salePrice > 0 ? p.salePrice : p.price;
+      return sum + (price * p.stock);
+    }, 0);
 
     return { totalProducts, pendingProducts, categories, totalValue };
   }, [productsData]);
@@ -129,7 +135,10 @@ export default function SupplierProductsPage() {
   const filteredProductStats = useMemo(() => {
     if (!Array.isArray(filteredProducts)) return { filteredTotalValue: 0, filteredCategories: 0 };
 
-    const filteredTotalValue = filteredProducts.reduce((sum, p) => sum + p.salePrice * p.stock, 0);
+    const filteredTotalValue = filteredProducts.reduce((sum, p) => {
+      const price = p.salePrice > 0 ? p.salePrice : p.price;
+      return sum + (price * p.stock);
+    }, 0);
     const uniqueFilteredCategories = [...new Set(filteredProducts.map(p => p.category))];
     const filteredCategories = uniqueFilteredCategories.length;
 
@@ -156,8 +165,14 @@ export default function SupplierProductsPage() {
       return;
     }
 
+    const mutationData = {
+      ...formData,
+      price: Number(formData.price) || 0,
+      salePrice: Number(formData.salePrice) || 0
+    };
+
     const mutation = selectedProduct ? updateProduct : createProduct;
-    let payload = selectedProduct ? { id: selectedProduct._id, ...formData } : formData;
+    let payload = selectedProduct ? { id: selectedProduct._id, ...mutationData } : mutationData;
 
     if (
       selectedProduct &&
@@ -204,6 +219,16 @@ export default function SupplierProductsPage() {
       refetchCategories();
     } catch (error: any) {
       toast.error(error.data?.message || 'Failed to create category.');
+    }
+  };
+
+  const handleToggleActive = async (product: Product) => {
+    try {
+      await updateProduct({ id: product._id, isActive: !product.isActive }).unwrap();
+      toast.success(`Product ${!product.isActive ? 'enabled' : 'disabled'} successfully!`);
+      refetchProducts();
+    } catch (error: any) {
+      toast.error(error.data?.message || `Failed to update product status.`);
     }
   };
 
@@ -321,22 +346,25 @@ export default function SupplierProductsPage() {
                     onView={handleViewProduct}
                     onEdit={(p) => handleOpenProductModal(p)}
                     onDelete={(p) => { setSelectedProduct(p); setIsDeleteModalOpen(true); }}
+                    onToggleActive={handleToggleActive}
                   />
                 ))}
               </div>
             ) : (
               <div className="space-y-4">
-                {paginatedProducts.map((product) => (
+                {paginatedProducts.map((product: Product) => (
                   <ProductListItem
                     key={product._id}
                     product={product}
                     onView={handleViewProduct}
                     onEdit={(p) => handleOpenProductModal(p)}
                     onDelete={(p) => { setSelectedProduct(p); setIsDeleteModalOpen(true); }}
+                    onToggleActive={handleToggleActive}
                   />
                 ))}
               </div>
             )}
+
 
             {paginatedProducts.length > 0 && (
               <div className="mt-8">

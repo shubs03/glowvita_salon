@@ -34,6 +34,7 @@ export type Client = {
     totalBookings: number;
     totalSpent: number;
     status: 'Active' | 'Inactive' | 'New';
+    source?: 'online' | 'offline';
     createdAt?: string;
     updatedAt?: string;
 };

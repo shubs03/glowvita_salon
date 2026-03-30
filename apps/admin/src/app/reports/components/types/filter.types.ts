@@ -12,4 +12,5 @@ export interface FilterParams {
   service?: string;
   category?: string;
   brand?: string;
+  regionId?: string;
 }

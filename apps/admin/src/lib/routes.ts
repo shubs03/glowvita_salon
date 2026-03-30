@@ -3,7 +3,7 @@ import {
   FaTachometerAlt, FaUsers, FaUserCog, FaFileAlt, FaBox, FaUserMd,
   FaCheckCircle, FaMoneyBillWave, FaBullhorn, FaUserShield, FaTags,
   FaQuestionCircle, FaUserFriends, FaTruck, FaMoneyCheckAlt, FaSync,
-  FaMapMarkedAlt, FaBell
+  FaMapMarkedAlt, FaBell, FaWallet, FaEnvelopeOpen, FaCreditCard
 } from "react-icons/fa";
 import { FaListUl } from "react-icons/fa";
 import { IconType } from "react-icons";
@@ -90,6 +90,12 @@ export const sidebarNavItems: NavItem[] = [
     permission: "referral-management",
   },
   {
+    title: "Wallet Management",
+    href: "/wallet-management",
+    Icon: FaWallet,
+    permission: "wallet-management",
+  },
+  {
     title: "Superdata",
     href: "/dropdown-management",
     Icon: FaListUl,
@@ -126,9 +132,21 @@ export const sidebarNavItems: NavItem[] = [
     permission: "reports",
   },
   {
+    title: "Online Transactions",
+    href: "/online-transactions",
+    Icon: FaCreditCard,
+    permission: "reports",
+  },
+  {
     title: "FAQ Management",
     href: "/faq-management",
     Icon: FaQuestionCircle,
     permission: "faq-management",
+  },
+  {
+    title: "Contact Messages",
+    href: "/contact-messages",
+    Icon: FaEnvelopeOpen,
+    permission: "contact-messages",
   },
 ];

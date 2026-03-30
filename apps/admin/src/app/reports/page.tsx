@@ -19,7 +19,9 @@ import {
   VendorPayoutSettlementReportProductTable,
   VendorPayableReportTable,
   VendorPayableReportProductTable,
-  ReferralReportTable
+  ReferralReportTable,
+  SettlementHistoryReportTable,
+  PlatformCollectionsReportTable
 } from './components/tables';
 
 // Import all dialog components
@@ -36,7 +38,9 @@ import {
   VendorPayoutSettlementReportProductDialog,
   VendorPayableReportDialog,
   VendorPayableReportProductDialog,
-  ReferralReportDialog
+  ReferralReportDialog,
+  SettlementHistoryReportDialog,
+  PlatformCollectionsReportDialog
 } from './components/dialogs';
 
 // Import shared components and data
@@ -48,7 +52,7 @@ export default function ReportsPage() {
   // Dialog state management for all reports
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  
+
   // Individual dialog states
   const [showSellingServices, setShowSellingServices] = useState(false);
   const [showCancellation, setShowCancellation] = useState(false);
@@ -63,6 +67,8 @@ export default function ReportsPage() {
   const [showVendorPayable, setShowVendorPayable] = useState(false);
   const [showVendorPayableProduct, setShowVendorPayableProduct] = useState(false);
   const [showReferralReport, setShowReferralReport] = useState(false);
+  const [showSettlementHistory, setShowSettlementHistory] = useState(false);
+  const [showPlatformCollections, setShowPlatformCollections] = useState(false);
 
   // Map report titles to dialog open functions
   const openReportDialog = (reportTitle: string) => {
@@ -105,6 +111,12 @@ export default function ReportsPage() {
         break;
       case "Referral Report":
         setShowReferralReport(true);
+        break;
+      case "Settlement Payment History":
+        setShowSettlementHistory(true);
+        break;
+      case "Platform Collections":
+        setShowPlatformCollections(true);
         break;
       default:
         break;
@@ -169,61 +181,69 @@ export default function ReportsPage() {
       </div>
 
       {/* All Dialog Components */}
-      <SellingServicesReportDialog 
-        isOpen={showSellingServices} 
-        onClose={() => setShowSellingServices(false)} 
+      <SellingServicesReportDialog
+        isOpen={showSellingServices}
+        onClose={() => setShowSellingServices(false)}
       />
-      <CancellationReportDialog 
-        isOpen={showCancellation} 
-        onClose={() => setShowCancellation(false)} 
+      <CancellationReportDialog
+        isOpen={showCancellation}
+        onClose={() => setShowCancellation(false)}
       />
-      <TotalBookingsReportDialog 
-        isOpen={showTotalBookings} 
-        onClose={() => setShowTotalBookings(false)} 
+      <TotalBookingsReportDialog
+        isOpen={showTotalBookings}
+        onClose={() => setShowTotalBookings(false)}
       />
-      <CompletedBookingsReportDialog 
-        isOpen={showCompletedBookings} 
-        onClose={() => setShowCompletedBookings(false)} 
+      <CompletedBookingsReportDialog
+        isOpen={showCompletedBookings}
+        onClose={() => setShowCompletedBookings(false)}
       />
-      <ConsolidatedSalesReportDialog 
-        isOpen={showConsolidatedSales} 
-        onClose={() => setShowConsolidatedSales(false)} 
+      <ConsolidatedSalesReportDialog
+        isOpen={showConsolidatedSales}
+        onClose={() => setShowConsolidatedSales(false)}
       />
-      <SalesByProductReportDialog 
-        isOpen={showSalesByProduct} 
-        onClose={() => setShowSalesByProduct(false)} 
+      <SalesByProductReportDialog
+        isOpen={showSalesByProduct}
+        onClose={() => setShowSalesByProduct(false)}
       />
-      <SubscriptionReportDialog 
-        isOpen={showSubscription} 
-        onClose={() => setShowSubscription(false)} 
+      <SubscriptionReportDialog
+        isOpen={showSubscription}
+        onClose={() => setShowSubscription(false)}
       />
-      <MarketingCampaignReportDialog 
-        isOpen={showMarketingCampaign} 
-        onClose={() => setShowMarketingCampaign(false)} 
+      <MarketingCampaignReportDialog
+        isOpen={showMarketingCampaign}
+        onClose={() => setShowMarketingCampaign(false)}
       />
-      <VendorPayoutSettlementReportDialog 
-        isOpen={showVendorPayoutSettlement} 
-        onClose={() => setShowVendorPayoutSettlement(false)} 
+      <VendorPayoutSettlementReportDialog
+        isOpen={showVendorPayoutSettlement}
+        onClose={() => setShowVendorPayoutSettlement(false)}
       />
-      <VendorPayoutSettlementReportProductDialog 
-        isOpen={showVendorPayoutSettlementProduct} 
-        onClose={() => setShowVendorPayoutSettlementProduct(false)} 
+      <VendorPayoutSettlementReportProductDialog
+        isOpen={showVendorPayoutSettlementProduct}
+        onClose={() => setShowVendorPayoutSettlementProduct(false)}
       />
-      <VendorPayableReportDialog 
-        isOpen={showVendorPayable} 
-        onClose={() => setShowVendorPayable(false)} 
+      <VendorPayableReportDialog
+        isOpen={showVendorPayable}
+        onClose={() => setShowVendorPayable(false)}
       />
-      <VendorPayableReportProductDialog 
-        isOpen={showVendorPayableProduct} 
-        onClose={() => setShowVendorPayableProduct(false)} 
+      <VendorPayableReportProductDialog
+        isOpen={showVendorPayableProduct}
+        onClose={() => setShowVendorPayableProduct(false)}
       />
-      <ReferralReportDialog 
-        isOpen={showReferralReport} 
-        onClose={() => setShowReferralReport(false)} 
+      <ReferralReportDialog
+        isOpen={showReferralReport}
+        onClose={() => setShowReferralReport(false)}
+      />
+      <SettlementHistoryReportDialog
+        isOpen={showSettlementHistory}
+        onClose={() => setShowSettlementHistory(false)}
+      />
+      <PlatformCollectionsReportDialog
+        isOpen={showPlatformCollections}
+        onClose={() => setShowPlatformCollections(false)}
       />
 
       {/* Report Detail Modal */}
-      <ReportDetailModal 
+      <ReportDetailModal
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         report={selectedReport}

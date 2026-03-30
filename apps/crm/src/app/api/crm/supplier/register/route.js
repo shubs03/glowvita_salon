@@ -54,7 +54,7 @@ export async function POST(req) {
     try {
         await initDb();
         const body = await req.json();
-        const { password, referredByCode, location, ...supplierData } = body;
+        const { password, referredByCode, location, gstNo, ...supplierData } = body;
 
         const validationError = validateSupplierData({ password, ...supplierData });
         if (validationError) {
@@ -106,6 +106,7 @@ export async function POST(req) {
 
         const newSupplier = await SupplierModel.create({
             ...supplierData,
+            gstNo,
             password: hashedPassword,
             location: finalLocation ? { type: 'Point', coordinates: [finalLocation.lng, finalLocation.lat] } : undefined,
             referralCode: await generateReferralCode(supplierData.shopName),
@@ -138,20 +139,28 @@ export async function POST(req) {
             try {
                 const referringSupplier = await SupplierModel.findOne({ referralCode: referredByCode.trim().toUpperCase() });
                 if (referringSupplier) {
-                    const v2vSettings = await V2VSettingsModel.findOne({});
-                    const bonusValue = v2vSettings?.referrerBonus?.bonusValue || 0;
-                    const referralType = 'S2S'; // Supplier to Supplier
-                    const count = await ReferralModel.countDocuments({ referralType });
-                    const referralId = `${referralType}-${String(count + 1).padStart(3, '0')}`;
+                    const settings = await V2VSettingsModel.findOne({
+                        $or: [
+                            { regionId: newSupplier.regionId },
+                            { regionId: null }
+                        ]
+                    }).sort({ regionId: -1 });
 
-                    await ReferralModel.create({
+                    const bonusValue = settings?.referrerBonus?.bonusValue || 0;
+                    const referralType = 'S2S';
+                    const referralId = `REF_S_${Date.now()}`;
+
+                    const referral = await ReferralModel.create({
                         referralId,
                         referralType,
-                        referrer: referringSupplier.shopName || referringSupplier.firstName,
-                        referee: newSupplier.shopName || newSupplier.firstName,
+                        referrer: referringSupplier._id.toString(),
+                        referrerType: 'Supplier',
+                        referee: newSupplier._id.toString(),
+                        refereeType: 'Supplier',
+                        regionId: newSupplier.regionId,
                         date: new Date(),
-                        status: 'Completed',
-                        bonus: String(bonusValue),
+                        status: 'Pending',
+                        bonus: `₹${bonusValue}`,
                     });
 
                     // Trigger Referral Notifications

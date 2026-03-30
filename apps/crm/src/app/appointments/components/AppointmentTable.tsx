@@ -159,10 +159,10 @@ const AppointmentTable = ({
                     </TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${((appointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'completed'
-                          ? 'bg-green-100 text-green-800' :
-                          ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'pending'
-                            ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
+                        ? 'bg-green-100 text-green-800' :
+                        ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) === 'pending'
+                          ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
                         }`}>
                         {(() => {
                           // Map the backend payment status to more user-friendly terms
@@ -185,12 +185,12 @@ const AppointmentTable = ({
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${appointment.status === 'completed' ? 'bg-green-100 text-green-800' :
-                            appointment.status === 'completed without payment' ? 'bg-orange-100 text-orange-800' :
-                              appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                appointment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
-                                  appointment.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
-                                    appointment.status === 'no_show' ? 'bg-orange-100 text-orange-800' :
-                                      'bg-yellow-100 text-yellow-800'
+                          appointment.status === 'completed without payment' ? 'bg-orange-100 text-orange-800' :
+                            appointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                              appointment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
+                                appointment.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
+                                  appointment.status === 'no_show' ? 'bg-orange-100 text-orange-800' :
+                                    'bg-yellow-100 text-yellow-800'
                           }`}>
                           {formatStatus(appointment.status)}
                         </span>
@@ -208,19 +208,21 @@ const AppointmentTable = ({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
-                        {remainingAmount > 0 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onOpenPaymentModal(appointment)}
-                            className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
-                            title="Collect Payment"
-                          >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                            </svg>
-                          </Button>
-                        )}
+                        {remainingAmount > 0 &&
+                          appointment.status !== 'cancelled' &&
+                          ((appointment as any).paymentStatus || appointment.payment?.paymentStatus) !== 'completed' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onOpenPaymentModal(appointment)}
+                              className="h-8 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
+                              title="Collect Payment"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                              </svg>
+                            </Button>
+                          )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -229,14 +231,19 @@ const AppointmentTable = ({
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onOpenModal('edit', appointment)}
-                          className="h-8 w-8 p-0"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        {(appointment.status !== 'completed' && appointment.status !== 'completed without payment') && !(
+                          ((appointment as any).mode === 'online' || (appointment as any).payment?.bookingSource === 'web') &&
+                          ((appointment as any).paymentStatus === 'completed' || (appointment as any).paymentStatus === 'paid' || (appointment as any).payment?.paymentStatus === 'completed' || (appointment as any).payment?.paymentStatus === 'paid')
+                        ) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onOpenModal('edit', appointment)}
+                              className="h-8 w-8 p-0"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
                         <Button
                           variant="ghost"
                           size="sm"

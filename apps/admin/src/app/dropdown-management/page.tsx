@@ -94,6 +94,7 @@ interface ProductMaster {
     productForm?: string;
     keyIngredients?: string[];
     productImage?: string;
+    productImages?: string[];
 }
 
 const DropdownManager = ({
@@ -310,7 +311,8 @@ const DropdownManager = ({
 };
 
 const ServiceCategoryManager = () => {
-    const { data: categories = [], isLoading, isError } = useGetCategoriesQuery(undefined);
+    const { data: categoriesRaw = [], isLoading, isError } = useGetCategoriesQuery(undefined);
+    const categories = useMemo(() => [...categoriesRaw].reverse(), [categoriesRaw]);
     const [createCategory] = useCreateCategoryMutation();
     const [updateCategory] = useUpdateCategoryMutation();
     const [deleteCategory] = useDeleteCategoryMutation();
@@ -554,7 +556,8 @@ const ServiceCategoryManager = () => {
 };
 
 const ServiceManager = () => {
-    const { data: services = [], isLoading, isError } = useGetServicesQuery(undefined);
+    const { data: servicesRaw = [], isLoading, isError } = useGetServicesQuery(undefined);
+    const services = useMemo(() => [...servicesRaw].reverse(), [servicesRaw]);
     const { data: categories = [] } = useGetCategoriesQuery(undefined);
     const [createService] = useCreateServiceMutation();
     const [updateService] = useUpdateServiceMutation();
@@ -823,7 +826,10 @@ const ServiceManager = () => {
 };
 
 const ProductMasterManager = () => {
-    const { data: productMasters = [], isLoading, isError } = useGetProductMastersQuery(undefined);
+    const { data: productMastersRaw = [], isLoading, isError } = useGetProductMastersQuery(undefined);
+    const productMasters = useMemo(() => {
+        return [...productMastersRaw].reverse();
+    }, [productMastersRaw]);
     const { data: productCategoriesResponse } = useGetAdminProductCategoriesQuery(undefined);
     const [createProductMaster] = useCreateProductMasterMutation();
     const [updateProductMaster] = useUpdateProductMasterMutation();
@@ -839,25 +845,30 @@ const ProductMasterManager = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState<Partial<ProductMaster> | null>(null);
-    const [imageBase64, setImageBase64] = useState<string | null>(null);
+    const [images, setImages] = useState<string[]>([]);
 
     const handleOpenModal = (item: Partial<ProductMaster> | null = null) => {
         setCurrentItem(item);
-        setImageBase64(item?.productImage || null);
+        const existingImages = item?.productImages || (item?.productImage ? [item.productImage] : []);
+        setImages(existingImages);
         setIsModalOpen(true);
     };
 
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImageBase64(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        } else {
-            setImageBase64(null);
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setImages(prev => [...prev, reader.result as string]);
+                };
+                reader.readAsDataURL(file);
+            });
         }
+    };
+
+    const removeImage = (index: number) => {
+        setImages(images.filter((_, i) => i !== index));
     };
 
     const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -885,7 +896,7 @@ const ProductMasterManager = () => {
             brand,
             productForm,
             keyIngredients,
-            image: imageBase64,
+            image: images, // This is now an array
         };
 
         try {
@@ -897,7 +908,7 @@ const ProductMasterManager = () => {
             toast.success('Success', { description: `Product master ${action}ed successfully.` });
             setIsModalOpen(false);
             setCurrentItem(null);
-            setImageBase64(null);
+            setImages([]);
         } catch (error: any) {
             console.error(`Failed to ${action} product master:`, error);
         }
@@ -1096,17 +1107,30 @@ const ProductMasterManager = () => {
                                     <p className="text-xs text-muted-foreground">Separate multiple ingredients with commas</p>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label htmlFor="image">Product Image</Label>
+                                    <Label htmlFor="image">Product Images</Label>
                                     <Input
                                         id="image"
                                         name="image"
                                         type="file"
                                         accept="image/*"
+                                        multiple
                                         onChange={handleImageChange}
                                     />
-                                    {imageBase64 && (
-                                        <img src={imageBase64} alt="Preview" className="mt-2 h-24 w-24 object-cover rounded" />
-                                    )}
+                                    <div className="flex flex-wrap gap-2 mt-2">
+                                        {images.map((img, index) => (
+                                            <div key={index} className="relative group">
+                                                <img src={img} alt={`Preview ${index}`} className="h-20 w-20 object-cover rounded border" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeImage(index)}
+                                                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <Trash2 className="h-3 w-3" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-1">First image will be the primary image shown in lists. You can upload multiple.</p>
                                 </div>
                             </div>
                             <DialogFooter>
@@ -1136,7 +1160,7 @@ const ProductMasterManager = () => {
     );
 };
 
-const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: { title: string; description: string; data: DropdownItem[]; onUpdate: (item: Partial<DropdownItem>, action: 'add' | 'edit' | 'delete') => void; isLoading: boolean; }) => {
+const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: { title: string; description: string; data: DropdownItem[]; onUpdate: (item: Partial<DropdownItem> & { newIndex?: number }, action: 'add' | 'edit' | 'delete' | 'move') => void; isLoading: boolean; }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [currentItem, setCurrentItem] = useState<Partial<DropdownItem> | null>(null);
@@ -1145,10 +1169,10 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
 
     const [selectedDoctorType, setSelectedDoctorType] = useState<'Physician' | 'Surgeon'>();
 
-    const specializations = useMemo(() => data.filter(item => item.type === 'specialization'), [data]);
+    const specializations = useMemo(() => [...data.filter(item => item.type === 'specialization')].reverse(), [data]);
 
     const getChildren = (parentId: string) => {
-        return data.filter(item => item.type === 'disease' && item.parentId === parentId);
+        return [...data.filter(item => item.type === 'disease' && item.parentId === parentId)].reverse();
     }
 
     const handleOpenModal = (action: 'add' | 'edit', type: string, item?: Partial<DropdownItem>, parentId?: string, parentName?: string) => {
@@ -1229,23 +1253,23 @@ const HierarchicalManager = ({ title, description, data, onUpdate, isLoading }: 
                         </button>
                     )}
                     <span className="flex-grow font-medium">{item.name} {item.doctorType && <Badge variant="outline">{item.doctorType}</Badge>}</span>
-                    
+
                     {/* Move buttons */}
                     <div className="flex items-center gap-1 mr-2 border-r pr-2 shadow-sm">
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7" 
-                            disabled={isFirst} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={isFirst}
                             onClick={() => handleMove(siblings, index, 'up')}
                         >
                             <ArrowUp className="h-3.5 w-3.5" />
                         </Button>
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-7 w-7" 
-                            disabled={isLast} 
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            disabled={isLast}
                             onClick={() => handleMove(siblings, index, 'down')}
                         >
                             <ArrowDown className="h-3.5 w-3.5" />
@@ -1530,7 +1554,7 @@ export default function DropdownManagementPage() {
                                 key={d.key}
                                 listTitle={d.title}
                                 listDescription={d.description}
-                                items={data.filter((item: DropdownItem) => item.type === d.key)}
+                                items={[...data.filter((item: DropdownItem) => item.type === d.key)].reverse()}
                                 type={d.key}
                                 onUpdate={handleUpdate}
                                 isLoading={isLoading}
@@ -1564,7 +1588,7 @@ export default function DropdownManagementPage() {
                                 key={d.key}
                                 listTitle={d.title}
                                 listDescription={d.description}
-                                items={data.filter((item: DropdownItem) => item.type === d.key)}
+                                items={[...data.filter((item: DropdownItem) => item.type === d.key)].reverse()}
                                 type={d.key}
                                 onUpdate={handleUpdate}
                                 isLoading={isLoading}
@@ -1585,7 +1609,7 @@ export default function DropdownManagementPage() {
                                 key={d.key}
                                 listTitle={d.title}
                                 listDescription={d.description}
-                                items={data.filter((item: DropdownItem) => item.type === d.key)}
+                                items={[...data.filter((item: DropdownItem) => item.type === d.key)].reverse()}
                                 type={d.key}
                                 onUpdate={handleUpdate}
                                 isLoading={isLoading}

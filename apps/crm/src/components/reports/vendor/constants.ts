@@ -58,6 +58,17 @@ export const VENDOR_REPORTS_DATA: ReportCategory[] = [
           "Total Sales, Average Sale",
           "Performance Metrics"
         ]
+      },
+      {
+        title: "Staff Commission Report",
+        description: "Detailed report showing commission earned by staff members for services provided.",
+        details: "Includes staff name, commission rate, total commission earned, amount paid out, and net balance. Also includes a detailed transaction history for each staff member.",
+        points: [
+          "Staff Name, Commission Rate",
+          "Total Commission Earned, Total Paid Out",
+          "Net Balance, Commission Count",
+          "Detailed Transaction History"
+        ]
       }
     ]
   },

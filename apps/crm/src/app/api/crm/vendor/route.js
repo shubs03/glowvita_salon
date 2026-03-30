@@ -135,26 +135,26 @@ export const GET = authMiddlewareCrm(async (req) => {
             } else {
                 // Default working hours if none found
                 vendor.openingHours = [
-                    { day: 'Monday', open: '09:00', close: '18:00', isOpen: true },
-                    { day: 'Tuesday', open: '09:00', close: '18:00', isOpen: true },
-                    { day: 'Wednesday', open: '09:00', close: '18:00', isOpen: true },
-                    { day: 'Thursday', open: '09:00', close: '18:00', isOpen: true },
-                    { day: 'Friday', open: '09:00', close: '18:00', isOpen: true },
-                    { day: 'Saturday', open: '10:00', close: '15:00', isOpen: true },
-                    { day: 'Sunday', open: '', close: '', isOpen: false }
+                    { day: 'Monday', open: '09:00', close: '20:00', isOpen: true },
+                    { day: 'Tuesday', open: '09:00', close: '20:00', isOpen: true },
+                    { day: 'Wednesday', open: '09:00', close: '20:00', isOpen: true },
+                    { day: 'Thursday', open: '09:00', close: '20:00', isOpen: true },
+                    { day: 'Friday', open: '09:00', close: '20:00', isOpen: true },
+                    { day: 'Saturday', open: '09:00', close: '20:00', isOpen: true },
+                    { day: 'Sunday', open: '09:00', close: '20:00', isOpen: true }
                 ];
             }
         } catch (workingHoursError) {
             console.error('Error fetching working hours:', workingHoursError);
             // Set default working hours if there's an error
             vendor.openingHours = [
-                { day: 'Monday', open: '09:00', close: '18:00', isOpen: true },
-                { day: 'Tuesday', open: '09:00', close: '18:00', isOpen: true },
-                { day: 'Wednesday', open: '09:00', close: '18:00', isOpen: true },
-                { day: 'Thursday', open: '09:00', close: '18:00', isOpen: true },
-                { day: 'Friday', open: '09:00', close: '18:00', isOpen: true },
-                { day: 'Saturday', open: '10:00', close: '15:00', isOpen: true },
-                { day: 'Sunday', open: '', close: '', isOpen: false }
+                { day: 'Monday', open: '09:00', close: '20:00', isOpen: true },
+                { day: 'Tuesday', open: '09:00', close: '20:00', isOpen: true },
+                { day: 'Wednesday', open: '09:00', close: '20:00', isOpen: true },
+                { day: 'Thursday', open: '09:00', close: '20:00', isOpen: true },
+                { day: 'Friday', open: '09:00', close: '20:00', isOpen: true },
+                { day: 'Saturday', open: '09:00', close: '20:00', isOpen: true },
+                { day: 'Sunday', open: '09:00', close: '20:00', isOpen: true }
             ];
         }
 
@@ -199,7 +199,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
             'firstName', 'lastName', 'businessName', 'email', 'phone',
             'state', 'city', 'pincode', 'address', 'category', 'subCategories',
             'website', 'description', 'profileImage', 'gallery', 'bankDetails', 'documents',
-            'vendorType', 'travelRadius', 'travelSpeed', 'baseLocation', 'taxes', 'notificationPreferences'
+            'vendorType', 'travelRadius', 'travelSpeed', 'baseLocation', 'taxes', 'gstNo','notificationPreferences'
         ];
 
         // Keep existing subscription data unless specifically provided in the update
@@ -257,7 +257,7 @@ export const PUT = authMiddlewareCrm(async (req) => {
                 } else if (field === 'documents' && typeof body[field] === 'object') {
                     // For documents, we'll handle the specific document types
                     // Process each document field if it contains base64 data
-                    const documentFields = ['aadharCard', 'udyogAadhar', 'udhayamCert', 'shopLicense', 'panCard'];
+                    const documentFields = ['aadharCard', 'udhayamCert', 'shopAct', 'panCard'];
                     for (const docField of documentFields) {
                         if (body[field][docField] !== undefined) {
                             // If document is a base64 string, upload it and store the URL

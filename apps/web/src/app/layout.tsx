@@ -11,6 +11,7 @@ import { Footer } from '@/components/Footer';
 import { useState, useEffect } from 'react';
 import NotificationManager from '@/utils/NotificationManager';
 import { toast } from 'sonner';
+import { SalonFilterProvider } from '@/components/landing/SalonFilterContext';
 
 export default function RootLayout({
   children,
@@ -99,11 +100,15 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Roboto:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Montserrat:wght@400..900&family=Roboto:wght@300..700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
         <style dangerouslySetInnerHTML={{
           __html: `
             @font-face {
-              font-family: 'Playfair Display';
+              font-family: 'Manrope';
+              font-display: swap;
+            }
+            @font-face {
+              font-family: 'Montserrat';
               font-display: swap;
             }
             @font-face {
@@ -116,20 +121,22 @@ export default function RootLayout({
       </head>
       <body>
         <StoreProvider>
-          <div className="flex flex-col min-h-screen bg-background text-foreground">
-            {showHeader && (
-              <MarketingHeader
-                isMobileMenuOpen={isMobileMenuOpen}
-                toggleMobileMenu={toggleMobileMenu}
-                isHomePage={pathname === '/'}
-              />
-            )}
-            <main className="flex-grow">
-              {children}
-            </main>
-            {showFooter && <Footer />}
-          </div>
-          <Toaster />
+          <SalonFilterProvider>
+            <div className="flex flex-col min-h-screen bg-background text-foreground">
+              {showHeader && (
+                <MarketingHeader
+                  isMobileMenuOpen={isMobileMenuOpen}
+                  toggleMobileMenu={toggleMobileMenu}
+                  isHomePage={pathname === '/'}
+                />
+              )}
+              <main className="flex-grow">
+                {children}
+              </main>
+              {showFooter && <Footer />}
+            </div>
+            <Toaster />
+          </SalonFilterProvider>
         </StoreProvider>
       </body>
     </html>

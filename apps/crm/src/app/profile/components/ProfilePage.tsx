@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@repo/ui/tabs";
+import { useRouter } from 'next/navigation';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { 
   useGetVendorProfileQuery, 
@@ -41,6 +42,7 @@ interface VendorProfile {
   category: SalonCategory;
   subCategories: SubCategory[];
   website?: string;
+  gstNo?: string;
   address?: string;
   profileImage?: string;
   gallery?: string[];
@@ -115,6 +117,7 @@ interface SupplierProfile {
   address: string;
   supplierType: string;
   businessRegistrationNo?: string;
+  gstNo?: string;
   profileImage?: string;
   gallery?: string[];
   documents?: Record<string, any>;
@@ -127,6 +130,7 @@ interface SupplierProfile {
     taxValue: number;
     taxType: "percentage" | "fixed";
   };
+  minOrderValue?: number;
 }
 
 interface DoctorProfile {
@@ -165,9 +169,11 @@ interface DoctorProfile {
   physicalConsultation?: Record<string, Array<{ startTime: string, endTime: string }>>;
   videoConsultationEnabled?: boolean;
   videoConsultation?: Record<string, Array<{ startTime: string, endTime: string }>>;
+  documents?: Record<string, any>;
 }
 
 export default function ProfilePage() {
+  const router = useRouter();
   const { user, role } = useCrmAuth();
 
   // Vendor profile data
@@ -195,6 +201,11 @@ export default function ProfilePage() {
     skip: !user?._id || role !== 'vendor'
   });
 
+  // Update mutations for auto-saving the profile image
+  const [updateVendorProfile] = useUpdateVendorProfileMutation();
+  const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
+  const [updateDoctorProfile] = useUpdateDoctorProfileMutation();
+
   const [localVendor, setLocalVendor] = useState<VendorProfile | null>(null);
   const [localSupplier, setLocalSupplier] = useState<SupplierProfile | null>(null);
   const [localDoctor, setLocalDoctor] = useState<DoctorProfile | null>(null);
@@ -211,7 +222,8 @@ export default function ProfilePage() {
       const vendorWithBankDetails = {
         ...vendorData.data,
         bankDetails: vendorData.data.bankDetails || {},
-        taxes: vendorData.data.taxes || { taxValue: 0, taxType: 'percentage' }
+        taxes: vendorData.data.taxes || { taxValue: 0, taxType: 'percentage' },
+        gstNo: vendorData.data.gstNo || '',
       };
       setLocalVendor(vendorWithBankDetails);
     }
@@ -246,6 +258,8 @@ export default function ProfilePage() {
         referralCode: supplierInfo.referralCode || '',
         licenseFiles: supplierInfo.licenseFiles || [],
         taxes: supplierInfo.taxes || { taxValue: 0, taxType: 'percentage' },
+        gstNo: supplierInfo.gstNo || '',
+        minOrderValue: supplierInfo.minOrderValue || 0,
       });
     }
   }, [supplierData]);
@@ -292,7 +306,8 @@ export default function ProfilePage() {
           startTime: '',
           endTime: '',
           days: []
-        }
+        },
+        documents: doctorData.data.documents || {}
       });
     }
   }, [doctorData]);
@@ -303,13 +318,13 @@ export default function ProfilePage() {
     } else {
       // Initialize with default opening hours if none exist
       setOpeningHours([
-        { day: 'Monday', open: '09:00', close: '18:00', isOpen: true },
-        { day: 'Tuesday', open: '09:00', close: '18:00', isOpen: true },
-        { day: 'Wednesday', open: '09:00', close: '18:00', isOpen: true },
-        { day: 'Thursday', open: '09:00', close: '18:00', isOpen: true },
-        { day: 'Friday', open: '09:00', close: '18:00', isOpen: true },
-        { day: 'Saturday', open: '10:00', close: '15:00', isOpen: true },
-        { day: 'Sunday', open: '', close: '', isOpen: false },
+        { day: 'Monday', open: '09:00', close: '20:00', isOpen: true },
+        { day: 'Tuesday', open: '09:00', close: '20:00', isOpen: true },
+        { day: 'Wednesday', open: '09:00', close: '20:00', isOpen: true },
+        { day: 'Thursday', open: '09:00', close: '20:00', isOpen: true },
+        { day: 'Friday', open: '09:00', close: '20:00', isOpen: true },
+        { day: 'Saturday', open: '09:00', close: '20:00', isOpen: true },
+        { day: 'Sunday', open: '09:00', close: '20:00', isOpen: true },
       ]);
     }
   }, [workingHoursData]);
@@ -363,13 +378,19 @@ export default function ProfilePage() {
         reader.onerror = (error) => reject(error);
       });
 
-      // This would be handled by the ProfileHeader component, but we need to update the state here
+      // Update state and call the API mutation immediately to auto-save
       if (role === 'vendor' && localVendor) {
-        setLocalVendor({ ...localVendor, profileImage: base64 });
+        const updatedVendor = { ...localVendor, profileImage: base64 };
+        setLocalVendor(updatedVendor);
+        await updateVendorProfile(updatedVendor).unwrap();
       } else if (role === 'supplier' && localSupplier) {
-        setLocalSupplier({ ...localSupplier, profileImage: base64 });
+        const updatedSupplier = { ...localSupplier, profileImage: base64 };
+        setLocalSupplier(updatedSupplier);
+        await updateSupplierProfile(updatedSupplier).unwrap();
       } else if (role === 'doctor' && localDoctor) {
-        setLocalDoctor({ ...localDoctor, profileImage: base64 });
+        const updatedDoctor = { ...localDoctor, profileImage: base64 };
+        setLocalDoctor(updatedDoctor);
+        await updateDoctorProfile(updatedDoctor).unwrap();
       }
 
       toast.success('Profile image updated successfully');
@@ -389,10 +410,10 @@ export default function ProfilePage() {
           <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold font-headline mb-1 bg-gradient-to-r from-foreground via-primary to-primary/80 bg-clip-text text-transparent">
-                Salon Profile
+                {role === 'supplier' ? 'Supplier Profile' : role === 'doctor' ? 'Doctor Profile' : 'Salon Profile'}
               </h1>
               <p className="text-muted-foreground text-sm sm:text-base md:text-lg leading-relaxed max-w-2xl">
-                Manage your salon profile and settings
+                Manage your {role === 'supplier' ? 'supplier' : role === 'doctor' ? 'doctor' : 'salon'} profile and settings
               </p>
             </div>
           </div>
@@ -419,6 +440,13 @@ export default function ProfilePage() {
                   className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
                 >
                   Profile
+                </TabsTrigger>
+                <TabsTrigger
+                  value="wallet"
+                  className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                  onClick={() => router.push('/profile/wallet')}
+                >
+                  Wallet
                 </TabsTrigger>
                 {role === 'vendor' && (
                   <>
@@ -543,6 +571,12 @@ export default function ProfilePage() {
                     >
                       Notifications
                     </TabsTrigger>
+                    <TabsTrigger
+                      value="documents"
+                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
+                    >
+                      Documents
+                    </TabsTrigger>
                   </>
                 )}
               </TabsList>
@@ -633,9 +667,14 @@ export default function ProfilePage() {
           )}
 
           {role === 'doctor' && (
-            <TabsContent value="subscription">
-              <SubscriptionTab subscription={localDoctor?.subscription} userType="doctor" />
-            </TabsContent>
+            <>
+              <TabsContent value="subscription">
+                <SubscriptionTab subscription={localDoctor?.subscription} userType="doctor" />
+              </TabsContent>
+              <TabsContent value="documents">
+                <DocumentsTab documents={localDoctor?.documents} setVendor={setLocalDoctor} />
+              </TabsContent>
+            </>
           )}
 
           <TabsContent value="notifications">

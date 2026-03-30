@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import _db from '@repo/lib/db';
-import { authMiddlewareCrm } from '@/middlewareCrm.js';
+import { withSubscriptionCheck } from '@/middlewareCrm';
 import { parseDate } from '../../../../../../utils/dateParser';
 
 await _db();
@@ -9,9 +9,9 @@ await _db();
 // Helper function to calculate date ranges based on filter period
 const getDateRanges = (period) => {
   const now = new Date();
-  
+
   let startDate, endDate;
-  
+
   if (period === 'day' || period === 'today') {
     // Today only
     startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -28,7 +28,7 @@ const getDateRanges = (period) => {
     startDate = new Date(now);
     startDate.setDate(now.getDate() - dayOfWeek);
     startDate.setHours(0, 0, 0, 0);
-    
+
     endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 6);
     endDate.setHours(23, 59, 59, 999);
@@ -45,16 +45,16 @@ const getDateRanges = (period) => {
     startDate = new Date(2020, 0, 1); // Default to beginning of 2020
     endDate = new Date(now.getFullYear() + 1, 0, 1, 23, 59, 59, 999);
   }
-  
+
   return { startDate, endDate };
 };
 
 // GET - Fetch all appointments report
-export const GET = authMiddlewareCrm(async (req) => {
+export const GET = withSubscriptionCheck(async (req) => {
   try {
-    const vendorId = req.user.userId.toString();
+    const vendorId = (req.user.vendorId || req.user.userId).toString();
     const { searchParams } = new URL(req.url);
-    
+
     // Get filter parameters
     const period = searchParams.get('period') || 'all';
     const startDateParam = searchParams.get('startDate');
@@ -64,10 +64,10 @@ export const GET = authMiddlewareCrm(async (req) => {
     const staffFilter = searchParams.get('staff');
     const statusFilter = searchParams.get('status');
     const bookingTypeFilter = searchParams.get('bookingType');
-    
+
     // Determine date range
     let startDate, endDate;
-    
+
     // Handle special periods (today, yesterday) with proper date range
     if (period === 'today' || period === 'yesterday') {
       const dateRange = getDateRanges(period);
@@ -77,7 +77,7 @@ export const GET = authMiddlewareCrm(async (req) => {
       // Handle ISO string dates from frontend for custom ranges
       startDate = parseDate(startDateParam);
       endDate = parseDate(endDateParam);
-      
+
       // Ensure we're working with proper date objects
       if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
         // Fallback to period-based dates if parsing fails
@@ -85,7 +85,7 @@ export const GET = authMiddlewareCrm(async (req) => {
         startDate = dateRange.startDate;
         endDate = dateRange.endDate;
       }
-      
+
       // For same-day custom ranges (like today/yesterday sent from frontend),
       // ensure we capture the full day
       if (startDate.toDateString() === endDate.toDateString()) {
@@ -97,26 +97,26 @@ export const GET = authMiddlewareCrm(async (req) => {
       startDate = dateRange.startDate;
       endDate = dateRange.endDate;
     }
-    
+
     // Base query for appointments
     const baseQuery = {
       vendorId: vendorId,
       date: { $gte: startDate, $lte: endDate }
     };
-    
+
     // Apply additional filters if provided
     if (clientFilter && clientFilter !== '') {
       baseQuery.clientName = clientFilter;
     }
-    
+
     if (statusFilter && statusFilter !== '') {
       baseQuery.status = statusFilter;
     }
-    
+
     if (bookingTypeFilter && bookingTypeFilter !== '') {
       baseQuery.mode = bookingTypeFilter;
     }
-    
+
     // Fetch all appointments within date range
     let allAppointments = await AppointmentModel.find(baseQuery)
       .populate({
@@ -140,13 +140,13 @@ export const GET = authMiddlewareCrm(async (req) => {
         strictPopulate: false // Prevent errors if population fails
       })
       .sort({ date: 1 });
-    
+
     // Apply service filter if provided
     if (serviceFilter && serviceFilter !== '') {
       allAppointments = allAppointments.filter(appt => {
         if (appt.isMultiService && appt.serviceItems && appt.serviceItems.length > 0) {
           // For multi-service appointments, check if any service matches
-          return appt.serviceItems.some(item => 
+          return appt.serviceItems.some(item =>
             (item.service?.name || item.serviceName) === serviceFilter
           );
         } else {
@@ -155,13 +155,13 @@ export const GET = authMiddlewareCrm(async (req) => {
         }
       });
     }
-    
+
     // Apply staff filter if provided
     if (staffFilter && staffFilter !== '') {
       allAppointments = allAppointments.filter(appt => {
         if (appt.isMultiService && appt.serviceItems && appt.serviceItems.length > 0) {
           // For multi-service appointments, check if any staff matches
-          return appt.serviceItems.some(item => 
+          return appt.serviceItems.some(item =>
             (item.staff?.fullName || item.staffName) === staffFilter
           );
         } else {
@@ -170,10 +170,10 @@ export const GET = authMiddlewareCrm(async (req) => {
         }
       });
     }
-    
+
     // All appointments report
     const formattedAppointments = [];
-    
+
     allAppointments.forEach(appt => {
       // Handle multi-service appointments
       if (appt.isMultiService && appt.serviceItems && appt.serviceItems.length > 0) {
@@ -182,11 +182,11 @@ export const GET = authMiddlewareCrm(async (req) => {
         appt.serviceItems.forEach((item, index) => {
           const serviceName = item.service?.name || item.serviceName || 'Unknown Service';
           const staffName = item.staff?.fullName || item.staffName || 'Any Staff';
-          
+
           // If service or staff filters are applied, only include matching items
           const matchesService = !serviceFilter || serviceFilter === '' || serviceName === serviceFilter;
           const matchesStaff = !staffFilter || staffFilter === '' || staffName === staffFilter;
-          
+
           if (matchesService && matchesStaff) {
             formattedAppointments.push({
               id: appt._id,
@@ -216,11 +216,11 @@ export const GET = authMiddlewareCrm(async (req) => {
         // Handle single-service appointments
         const serviceName = appt.service?.name || appt.serviceName || 'Unknown Service';
         const staffName = appt.staff?.fullName || appt.staffName || 'Any Staff';
-        
+
         // If service or staff filters are applied, only include matching appointments
         const matchesService = !serviceFilter || serviceFilter === '' || serviceName === serviceFilter;
         const matchesStaff = !staffFilter || staffFilter === '' || staffName === staffFilter;
-        
+
         if (matchesService && matchesStaff) {
           formattedAppointments.push({
             id: appt._id,
@@ -245,14 +245,14 @@ export const GET = authMiddlewareCrm(async (req) => {
         }
       }
     });
-    
+
     const responseData = {
       allAppointments: {
         total: allAppointments.length,
         appointments: formattedAppointments
       }
     };
-    
+
     return NextResponse.json({
       success: true,
       data: responseData,
@@ -267,7 +267,7 @@ export const GET = authMiddlewareCrm(async (req) => {
         bookingType: bookingTypeFilter || null
       }
     });
-    
+
   } catch (error) {
     console.error("Error fetching all appointments report:", error);
     return NextResponse.json(

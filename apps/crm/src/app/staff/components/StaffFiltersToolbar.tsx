@@ -10,6 +10,8 @@ interface StaffFiltersToolbarProps {
   positionFilter: string;
   onSearchChange: (value: string) => void;
   onPositionChange: (value: string) => void;
+  commissionStatus: string;
+  onCommissionStatusChange: (value: string) => void;
   onAddStaff: () => void;
   exportData?: Staff[];
   positions: string[];
@@ -20,6 +22,8 @@ const StaffFiltersToolbar = ({
   positionFilter,
   onSearchChange,
   onPositionChange,
+  commissionStatus,
+  onCommissionStatusChange,
   onAddStaff,
   exportData,
   positions
@@ -39,14 +43,25 @@ const StaffFiltersToolbar = ({
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <Select value={positionFilter} onValueChange={onPositionChange}>
-            <SelectTrigger className="w-full sm:w-[180px] h-12 rounded-lg border-border hover:border-primary">
-              <SelectValue placeholder="Filter by position" />
+            <SelectTrigger className="w-full sm:w-[160px] h-12 rounded-lg border-border hover:border-primary">
+              <SelectValue placeholder="Position" />
             </SelectTrigger>
             <SelectContent className="rounded-lg border border-border/40">
               <SelectItem value="all">All Positions</SelectItem>
               {positions.map((position, index) => (
                 <SelectItem key={index} value={position}>{position}</SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+          <Select value={commissionStatus} onValueChange={onCommissionStatusChange}>
+            <SelectTrigger className="w-full sm:w-[160px] h-12 rounded-lg border-border hover:border-primary">
+              <SelectValue placeholder="Commission" />
+            </SelectTrigger>
+            <SelectContent className="rounded-lg border border-border/40">
+              <SelectItem value="all">All Commission</SelectItem>
+              <SelectItem value="enabled">Enabled</SelectItem>
+              <SelectItem value="disabled">Disabled</SelectItem>
+              <SelectItem value="has_balance">Has Balance</SelectItem>
             </SelectContent>
           </Select>
           {exportData && (
@@ -59,12 +74,14 @@ const StaffFiltersToolbar = ({
                 { header: 'Email', key: 'emailAddress' },
                 { header: 'Phone', key: 'mobileNo' },
                 { header: 'Position', key: 'position' },
+                { header: 'Commission', key: 'commission' },
+                { header: 'Commission Rate (%)', key: 'commissionRate' },
                 { header: 'Status', key: 'status' }
               ]}
               className="h-12"
             />
           )}
-          <Button 
+          <Button
             onClick={onAddStaff}
             className="h-12 px-6 rounded-lg bg-primary hover:bg-primary/90 flex-1"
           >

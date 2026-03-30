@@ -1,5 +1,8 @@
 import _db from "@repo/lib/db";
 import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
+import RegionModel from "@repo/lib/models/admin/Region.model";
+import ReviewModel from "@repo/lib/models/Review/Review.model";
+import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model.js";
 import mongoose from "mongoose";
 
 const setCorsHeaders = (response) => {
@@ -28,12 +31,68 @@ export const GET = async (request) => {
     const { searchParams } = new URL(request.url);
 
     const serviceName = searchParams.get("serviceName")?.trim() || "";
-    const city = searchParams.get("city")?.trim();
     const categoryIdsStr = searchParams.get("categoryIds");
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
 
-    /* ---------------- Parse Category IDs safely ---------------- */
+    // ── Coordinate-based location filtering (primary) ──────────────────────
+    const latStr = searchParams.get("lat");
+    const lngStr = searchParams.get("lng");
+    const lat = latStr ? parseFloat(latStr) : NaN;
+    const lng = lngStr ? parseFloat(lngStr) : NaN;
+
+    // ── Legacy city-name fallback ──────────────────────────────────────────
+    const city = searchParams.get("city")?.trim();
+
+    /* ── Determine region filter ─────────────────────────────────────────── */
+    let regionId = null;
+    let useCityFallback = false;
+    let cityLegacy = null;
+
+    if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+      try {
+        const region = await RegionModel.findOne({
+          geometry: {
+            $geoIntersects: {
+              $geometry: {
+                type: "Point",
+                coordinates: [lng, lat], // GeoJSON: [lng, lat]
+              },
+            },
+          },
+          isActive: true,
+        });
+
+        if (region) {
+          regionId = region._id;
+          console.log(`[SearchAPI] Region matched: ${region.name} for [${lat}, ${lng}]`);
+        } else if (city && city !== "Current Location" && city !== "") {
+          // Fallback to city-based matching if coordinates are outside any region
+          useCityFallback = true;
+          cityLegacy = city;
+          console.log(`[SearchAPI] No region for [${lat}, ${lng}] – Falling back to city: ${city}`);
+        } else {
+          // Coordinates given but outside any defined service area and no city provided
+          console.log(`[SearchAPI] No region for [${lat}, ${lng}] and no city fallback – returning noServiceArea`);
+          return setCorsHeaders(
+            Response.json({
+              success: true,
+              vendors: [],
+              count: 0,
+              noServiceArea: true,
+              message: "We're not available in this area yet",
+            })
+          );
+        }
+      } catch (err) {
+        console.error("[SearchAPI] Region lookup error:", err);
+      }
+    } else if (city && city !== "Current Location" && city !== "") {
+      useCityFallback = true;
+      cityLegacy = city;
+    }
+
+    /* ── Parse Category IDs safely ───────────────────────────────────────── */
     let categoryIds = [];
     if (categoryIdsStr) {
       categoryIds = categoryIdsStr
@@ -43,7 +102,7 @@ export const GET = async (request) => {
         .map((id) => new mongoose.Types.ObjectId(id));
     }
 
-    /* ---------------- Aggregation Pipeline ---------------- */
+    /* ── Aggregation Pipeline ────────────────────────────────────────────── */
     const pipeline = [];
 
     /* 1️⃣ Join vendors */
@@ -58,15 +117,19 @@ export const GET = async (request) => {
 
     pipeline.push({ $unwind: "$vendorData" });
 
-    /* 2️⃣ Vendor-level filtering (STRICT) */
-    pipeline.push({
-      $match: {
-        "vendorData.status": "Approved",
-        ...(city && city !== "Current Location" && {
-          "vendorData.city": city, // EXACT match (no regex leakage)
-        }),
-      },
-    });
+    /* 2️⃣ Vendor-level filtering */
+    const vendorMatch = { "vendorData.status": "Approved" };
+
+    if (regionId) {
+      // Coordinate-based: filter by regionId on the vendor document
+      vendorMatch["vendorData.regionId"] = regionId;
+    } else if (useCityFallback && cityLegacy) {
+      // Legacy: case-insensitive city match
+      vendorMatch["vendorData.city"] = { $regex: new RegExp(`^${cityLegacy}$`, "i") };
+    }
+    // If neither, no location filter → show all
+
+    pipeline.push({ $match: vendorMatch });
 
     /* 3️⃣ Unwind services */
     pipeline.push({ $unwind: "$services" });
@@ -81,7 +144,11 @@ export const GET = async (request) => {
         ...(serviceName && {
           $or: [
             { "services.name": { $regex: new RegExp(serviceName, "i") } },
-            { "vendorData.businessName": { $regex: new RegExp(serviceName, "i") } },
+            {
+              "vendorData.businessName": {
+                $regex: new RegExp(serviceName, "i"),
+              },
+            },
           ],
         }),
       },
@@ -111,6 +178,7 @@ export const GET = async (request) => {
         businessName: { $first: "$vendorData.businessName" },
         firstName: { $first: "$vendorData.firstName" },
         lastName: { $first: "$vendorData.lastName" },
+        phone: { $first: "$vendorData.phone" },
         city: { $first: "$vendorData.city" },
         state: { $first: "$vendorData.state" },
         category: { $first: "$vendorData.category" },
@@ -118,6 +186,7 @@ export const GET = async (request) => {
         profileImage: { $first: "$vendorData.profileImage" },
         description: { $first: "$vendorData.description" },
         location: { $first: "$vendorData.location" },
+        regionId: { $first: "$vendorData.regionId" },
         createdAt: { $first: "$vendorData.createdAt" },
         subscription: { $first: "$vendorData.subscription" },
         services: { $push: "$services" },
@@ -125,10 +194,27 @@ export const GET = async (request) => {
     });
 
     /* 7️⃣ Safety net: remove vendors with NO services */
+    pipeline.push({ $match: { services: { $ne: [] } } });
+
+    /* Fetch active CRM offers for vendors */
     pipeline.push({
-      $match: {
-        services: { $ne: [] },
-      },
+      $lookup: {
+        from: "crmoffers",
+        let: { vendorId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$businessId", "$$vendorId"] },
+                  { $eq: ["$status", "Active"] }
+                ]
+              }
+            }
+          }
+        ],
+        as: "offers"
+      }
     });
 
     /* 8️⃣ Sort + Pagination */
@@ -138,11 +224,67 @@ export const GET = async (request) => {
 
     const vendors = await VendorServicesModel.aggregate(pipeline).exec();
 
+    const vendorsWithStats = await Promise.all(
+      vendors.map(async (vendor) => {
+        const ratingStats = await ReviewModel.aggregate([
+          {
+            $match: {
+              entityId: vendor._id,
+              entityType: "salon",
+              isApproved: true,
+            },
+          },
+          {
+            $group: {
+              _id: "$entityId",
+              averageRating: { $avg: "$rating" },
+              reviewCount: { $sum: 1 },
+            },
+          },
+        ]);
+
+        const clientCountStats = await AppointmentModel.aggregate([
+          {
+            $match: {
+              vendorId: vendor._id,
+              status: { $in: ["confirmed", "completed", "scheduled"] },
+            },
+          },
+          {
+            $group: {
+              _id: "$vendorId",
+              uniqueClients: { $addToSet: "$clientPhone" },
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              clientCount: { $size: "$uniqueClients" },
+            },
+          },
+        ]);
+
+        return {
+          ...vendor,
+          rating:
+            ratingStats.length > 0
+              ? ratingStats[0].averageRating.toFixed(1)
+              : "0.0",
+          reviewCount:
+            ratingStats.length > 0 ? ratingStats[0].reviewCount : 0,
+          clientCount:
+            clientCountStats.length > 0
+              ? clientCountStats[0].clientCount
+              : 0,
+        };
+      })
+    );
+
     return setCorsHeaders(
       Response.json({
         success: true,
-        vendors,
-        count: vendors.length,
+        vendors: vendorsWithStats,
+        count: vendorsWithStats.length,
       })
     );
   } catch (error) {

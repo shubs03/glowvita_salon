@@ -15,23 +15,19 @@ import {
   Grid3X3,
   List,
   Package,
-  Boxes,
-  Tag,
-  DollarSign,
   Loader2,
   Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  useGetAdminProductCategoriesQuery,
-  useCreateAdminProductCategoryMutation,
+  useGetProductCategoriesQuery,
+  useCreateProductCategoryMutation,
   useGetCrmProductsQuery,
   useCreateCrmProductMutation,
   useUpdateCrmProductMutation,
   useDeleteCrmProductMutation,
 } from "@repo/store/api";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
-import BulkProductAddition from "@/components/BulkProductAddition";
 
 // Import components
 import StatusBadge from "./components/StatusBadge";
@@ -87,7 +83,7 @@ export default function ProductsPage() {
     data: productsData = [],
     isLoading: isProductsLoading,
     refetch: refetchProducts,
-  } = useGetCrmProductsQuery(user?._id, { skip: !user });
+  } = useGetCrmProductsQuery({ vendorId: user?._id }, { skip: !user });
   const [createProduct, { isLoading: isCreatingProduct }] =
     useCreateCrmProductMutation();
   const [updateProduct, { isLoading: isUpdatingProduct }] =
@@ -96,15 +92,15 @@ export default function ProductsPage() {
     useDeleteCrmProductMutation();
 
   const {
-    data: categoriesDatas = { data: [] },
+    data: categoriesDatas,
     isLoading: isCategoriesLoading,
     refetch: refetchCategories,
-  } = useGetAdminProductCategoriesQuery({});
+  } = useGetProductCategoriesQuery({});
 
   const categoriesData = categoriesDatas?.data || [];
 
   const [createCategory, { isLoading: isCreatingCategory }] =
-    useCreateAdminProductCategoryMutation();
+    useCreateProductCategoryMutation();
 
   // Component State
   const [currentPage, setCurrentPage] = useState(1);
@@ -117,7 +113,6 @@ export default function ProductsPage() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [newCategory, setNewCategory] = useState({ name: "", description: "" });
@@ -159,12 +154,15 @@ export default function ProductsPage() {
   };
 
   const filteredProducts = useMemo(() => {
-    if (!Array.isArray(productsData)) return [];
-    return productsData.filter(
-      (p) =>
-        p.productName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (statusFilter === "all" || p.status === statusFilter),
-    );
+    return [...productsData]
+      .filter(
+        (p) =>
+          p.productName.toLowerCase().includes(searchTerm.toLowerCase()) &&
+          (statusFilter === "all" || p.status === statusFilter),
+      )
+      .sort((a, b) => {
+        return new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime();
+      });
   }, [productsData, searchTerm, statusFilter]);
 
   // Calculate product statistics
@@ -521,12 +519,6 @@ export default function ProductsPage() {
           product={selectedProduct}
         />
 
-        {/* Bulk Product Addition Modal */}
-        <BulkProductAddition
-          isOpen={isBulkModalOpen}
-          onOpenChange={setIsBulkModalOpen}
-          onProductsAdded={refetchProducts}
-        />
       </div>
     </div>
   );

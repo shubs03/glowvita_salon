@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import _db from '@repo/lib/db';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
@@ -14,7 +15,7 @@ export async function POST(req) {
 
   try {
     // Find all vendors without regionId
-    const vendorsWithoutRegion = await VendorModel.find({ 
+    const vendorsWithoutRegion = await VendorModel.find({
       $or: [
         { regionId: null },
         { regionId: { $exists: false } }
@@ -22,7 +23,7 @@ export async function POST(req) {
     }).select('_id businessName city state location regionId');
 
     // Find all suppliers without regionId
-    const suppliersWithoutRegion = await SupplierModel.find({ 
+    const suppliersWithoutRegion = await SupplierModel.find({
       $or: [
         { regionId: null },
         { regionId: { $exists: false } }
@@ -175,14 +176,14 @@ export async function GET(req) {
   await _db();
 
   try {
-    const vendorsWithoutRegion = await VendorModel.find({ 
+    const vendorsWithoutRegion = await VendorModel.find({
       $or: [
         { regionId: null },
         { regionId: { $exists: false } }
       ]
     }).select('_id businessName city state location regionId email phone');
 
-    const suppliersWithoutRegion = await SupplierModel.find({ 
+    const suppliersWithoutRegion = await SupplierModel.find({
       $or: [
         { regionId: null },
         { regionId: { $exists: false } }

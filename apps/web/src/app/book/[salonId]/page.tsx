@@ -52,17 +52,31 @@ import DatePicker from 'react-datepicker';
 import { format } from 'date-fns';
 import { useBookingData, Service, StaffMember, ServiceStaffAssignment, calculateTotalDuration, convertDurationToMinutes, WeddingPackage } from '@/hooks/useBookingData';
 import {
-  useCreatePublicAppointmentMutation, useGetPublicVendorOffersQuery,
+  useCreatePublicAppointmentMutation, useGetPublicVendorOffersQuery, useGetPublicAllOffersQuery,
   useAcquireSlotLockMutation, useConfirmBookingMutation,
   useLockWeddingPackageMutation
 } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
 // Add import for payment calculator - use cleaner @repo alias
-import { calculateBookingAmount, validateOfferCode } from '@repo/lib/utils';
+import { calculateBookingAmount, validateOfferCode, isOfferApplicable } from '@repo/lib/utils';
 import { toast } from 'sonner';
 import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
 import { GoogleMapSelector } from '@/components/GoogleMapSelector';
 import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from "@repo/config/config";
+
+// Load Razorpay checkout.js dynamically
+const loadRazorpayScript = (): Promise<boolean> =>
+  new Promise((resolve) => {
+    if (typeof window !== 'undefined' && (window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
 
 // Add a custom hook to fetch tax fee settings
 const useTaxFeeSettings = () => {
@@ -96,7 +110,7 @@ const useTaxFeeSettings = () => {
 
 // Add interface for home service location
 interface HomeServiceLocation {
-  address: string;
+  address?: string;
   city?: string;
   state?: string;
   pincode?: string;
@@ -162,7 +176,7 @@ function BookingPageContent() {
 
   // Payment method state
   const [paymentMethod, setPaymentMethod] = useState<string>('Pay at Salon');
-  
+
   // Booking confirmation loading state to prevent double-clicks
   const [isConfirmingBooking, setIsConfirmingBooking] = useState(false);
 
@@ -218,9 +232,25 @@ function BookingPageContent() {
     error
   } = useBookingData(salonId as string);
 
-  // Fetch vendor offers
-  const { data: vendorOffersData, isLoading: isOffersLoading } = useGetPublicVendorOffersQuery(salonId as string);
+  // Fetch all offers (Admin + CRM)
+  const { data: vendorOffersData, isLoading: isOffersLoading } = useGetPublicAllOffersQuery({ 
+    vendorId: salonId as string,
+    regionId: (salonInfo as any)?.regionId 
+  }, { 
+    skip: !salonId 
+  });
   const vendorOffers = vendorOffersData?.data || [];
+
+  // Debug log for offers
+  useEffect(() => {
+    if (vendorOffers.length > 0) {
+      console.log('✅ Fetched Offers:', {
+        count: vendorOffers.length,
+        adminOffers: vendorOffers.filter((o: any) => o.businessType === 'admin').length,
+        crmOffers: vendorOffers.filter((o: any) => o.businessType === 'vendor' || o.businessType === 'salon').length
+      });
+    }
+  }, [vendorOffers]);
 
   // Fetch tax fee settings using our custom hook
   const { taxFeeSettings, isLoading: isTaxFeeSettingsLoading } = useTaxFeeSettings();
@@ -248,26 +278,29 @@ function BookingPageContent() {
     };
   }, []);
 
-  // Filter offers based on search term
+  // Filter offers based on search term and service applicability
   const filteredOffers = useMemo(() => {
     if (!vendorOffers || vendorOffers.length === 0) {
-      console.log('No vendor offers available');
       return [];
     }
+
+    // First filter by service applicability
+    const applicableOffers = vendorOffers.filter((offer: any) => 
+      isOfferApplicable(offer, selectedServices)
+    );
+
     if (!offerSearchTerm) {
-      console.log('Returning all vendor offers:', vendorOffers);
-      return vendorOffers;
+      return applicableOffers;
     }
 
-    const filtered = vendorOffers.filter((offer: { code: string; type: string; value: number }) =>
+    const filtered = applicableOffers.filter((offer: { code: string; type: string; value: number }) =>
       offer.code.toLowerCase().includes(offerSearchTerm.toLowerCase()) ||
       (offer.type === 'percentage' && `${offer.value}%`.includes(offerSearchTerm)) ||
       (offer.type === 'fixed' && `₹${offer.value}`.includes(offerSearchTerm))
     );
 
-    console.log('Filtered offers:', filtered);
     return filtered;
-  }, [vendorOffers, offerSearchTerm]);
+  }, [vendorOffers, offerSearchTerm, selectedServices]);
 
   // Fetch service-specific staff data when a service is selected
   const serviceStaffData = useBookingData(salonId as string, selectedService?.id || (selectedServices.length > 0 ? selectedServices[0]?.id : undefined));
@@ -337,8 +370,8 @@ function BookingPageContent() {
     if (selectedWeddingPackage) {
       const packagePrice = selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice || 0;
       setTotalAmount(packagePrice);
-    } else if (priceBreakdown?.finalTotal) {
-      setTotalAmount(priceBreakdown.finalTotal);
+    } else if (priceBreakdown?.subtotal) {
+      setTotalAmount(priceBreakdown.subtotal);
     } else {
       const amount = selectedServices.reduce((sum, service) => {
         const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
@@ -362,6 +395,40 @@ function BookingPageContent() {
       setWeddingVenueType(null);
     }
   }, [selectedWeddingPackage]);
+
+  // Auto-apply offer code from URL search params
+  useEffect(() => {
+    const codeFromUrl = searchParams.get('offerCode');
+    if (codeFromUrl && !appliedOffer && !isOffersLoading) {
+      console.log('Detected offerCode in URL:', codeFromUrl);
+      setOfferCode(codeFromUrl);
+
+      // We need to wait for salonId to be available for validation
+      if (salonId) {
+        const validateAndApply = async () => {
+          try {
+            const response = await fetch('/api/validate-offer', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                offerCode: codeFromUrl.toUpperCase().trim(),
+                vendorId: salonId
+              }),
+            });
+            const result = await response.json();
+            if (result.success) {
+              setOffer(result.data);
+              setAppliedOffer(result.data);
+              toast.success(`Offer ${result.data.code} applied automatically!`);
+            }
+          } catch (err) {
+            console.error('Error auto-applying offer:', err);
+          }
+        };
+        validateAndApply();
+      }
+    }
+  }, [searchParams, salonId, isOffersLoading, appliedOffer]);
 
   // Handle map click to select location
   const handleMapClick = () => {
@@ -527,7 +594,16 @@ function BookingPageContent() {
           selectedDate: selectedDate.toISOString(),
           selectedTime,
           salonId,
-          serviceLocation: locationData
+          serviceLocation: locationData,
+          bookingMode,
+          currentStep,
+          appliedOffer,
+          slotLockToken,
+          pendingAppointmentId,
+          weddingVenueType,
+          weddingPackageMode,
+          customizedPackageServices,
+          selectedWeddingPackage
         };
         sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
         router.push(`/client-login?redirect=/book/${salonId}`);
@@ -570,7 +646,16 @@ function BookingPageContent() {
           selectedDate: selectedDate.toISOString(),
           selectedTime,
           salonId,
-          serviceLocation: finalLocation
+          serviceLocation: finalLocation,
+          bookingMode,
+          currentStep,
+          appliedOffer,
+          slotLockToken,
+          pendingAppointmentId,
+          weddingVenueType,
+          weddingPackageMode,
+          customizedPackageServices,
+          selectedWeddingPackage
         };
         sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
         router.push(`/client-login?redirect=/book/${salonId}`);
@@ -657,7 +742,16 @@ function BookingPageContent() {
                 selectedDate: selectedDate.toISOString(),
                 selectedTime,
                 salonId,
-                serviceLocation: locationData
+                serviceLocation: locationData,
+                bookingMode,
+                currentStep,
+                appliedOffer,
+                slotLockToken,
+                pendingAppointmentId,
+                weddingVenueType,
+                weddingPackageMode,
+                customizedPackageServices,
+                selectedWeddingPackage
               };
               sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
               router.push(`/client-login?redirect=/book/${salonId}`);
@@ -712,6 +806,12 @@ function BookingPageContent() {
       const result = await response.json();
 
       if (result.success) {
+        // Validate applicability for selected services
+        if (!isOfferApplicable(result.data, selectedServices)) {
+          toast.error(`Offer ${result.data.code} is not applicable for your selected services.`);
+          return;
+        }
+
         setOffer(result.data); // Set the offer data directly
         setAppliedOffer(result.data); // Also set the applied offer
 
@@ -733,14 +833,25 @@ function BookingPageContent() {
   };
 
   // Handle offer selection from dropdown
-  const handleSelectOffer = (selectedOffer: { code: string; type: string; value: number }) => {
+  const handleSelectOffer = (selectedOffer: any) => {
+    // Double check applicability
+    if (!isOfferApplicable(selectedOffer, selectedServices)) {
+      toast.error(`Offer ${selectedOffer.code} is not applicable for the selected services.`);
+      return;
+    }
+
     setOfferCode(selectedOffer.code);
     setOffer(selectedOffer);
     setAppliedOffer(selectedOffer);
     setShowOfferDropdown(false);
     setOfferSearchTerm('');
-    const savings = selectedOffer.type === 'percentage' ? Math.round(totalAmount * selectedOffer.value / 100) : Math.round(selectedOffer.value);
-    toast.success(`Offer ${selectedOffer.code} applied successfully! You saved ₹${savings}.`);
+    
+    // Calculate preview savings
+    const savings = selectedOffer.type === 'percentage' 
+      ? Math.round(totalAmount * selectedOffer.value / 100) 
+      : Math.round(selectedOffer.value);
+    
+    toast.success(`Offer ${selectedOffer.code} applied successfully!`);
   };
 
   // Clear applied offer
@@ -762,10 +873,10 @@ function BookingPageContent() {
 
     try {
       // Determine label based on context
-      const label = selectedWeddingPackage && weddingVenueType === 'venue' 
-        ? 'Wedding Venue' 
+      const label = selectedWeddingPackage && weddingVenueType === 'venue'
+        ? 'Wedding Venue'
         : 'Home Service';
-      
+
       await fetch('/api/client/addresses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -778,6 +889,8 @@ function BookingPageContent() {
           landmark: location.landmark || '',
           lat,
           lng,
+          fullName: user ? `${user.firstName} ${user.lastName}`.trim() : 'Guest User',
+          mobileNo: user?.mobileNo || '0000000000',
           label: label,
           isPrimary: false
         })
@@ -809,6 +922,34 @@ function BookingPageContent() {
         if (!weddingPackageMode) {
           setWeddingPackageMode('default');
         }
+
+        // Logic check: Require login BEFORE selecting time slot
+        if (!isAuthenticated) {
+          console.log("Wedding Package: Redirecting to login before Step 3");
+          toast.info("Please login to choose a date and time");
+          const bookingData = {
+            selectedServices,
+            serviceStaffAssignments,
+            selectedStaff,
+            selectedDate: selectedDate.toISOString(),
+            selectedTime,
+            salonId,
+            serviceLocation,
+            bookingMode,
+            currentStep: 3, // Set to 3 so they return to time selection
+            appliedOffer,
+            slotLockToken,
+            pendingAppointmentId,
+            weddingVenueType,
+            weddingPackageMode,
+            customizedPackageServices,
+            selectedWeddingPackage
+          };
+          sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+          router.push(`/client-login?redirect=/book/${salonId}`);
+          return;
+        }
+
         setCurrentStep(3); // Skip staff selection, go directly to time/date
         return;
       }
@@ -846,29 +987,55 @@ function BookingPageContent() {
 
     console.log("hasHomeService", hasHomeService)
     if (currentStep < 3) {
-      // For step 2 in multi-service flow, validate assignments
-      if (currentStep === 2 && isMultiService) {
-        // Check if all services have staff assigned (or "Any Professional" is acceptable)
-        const allAssigned = serviceStaffAssignments.every(assignment => assignment.staff !== undefined);
-        if (allAssigned) {
-          setCurrentStep(currentStep + 1);
-        } else {
-          toast.error('Please assign staff to all services or select "Any Professional".');
+      // For step 2, we validate and check for authentication before going to Step 3
+      if (currentStep === 2) {
+        if (isMultiService) {
+          // Check if all services have staff assigned
+          const allAssigned = serviceStaffAssignments.every(assignment => assignment.staff !== undefined);
+          if (!allAssigned) {
+            toast.error('Please assign staff to all services or select "Any Professional".');
+            return;
+          }
+        }
+
+        // AUTH CHECK: Before moving from Step 2 (Professional) to Step 3 (Date/Time)
+        if (!isAuthenticated) {
+          console.log("Step 2: Redirecting to login before Step 3");
+          toast.info("Please login to choose a date and time");
+          const bookingData = {
+            selectedServices,
+            serviceStaffAssignments,
+            selectedStaff,
+            selectedDate: selectedDate.toISOString(),
+            selectedTime,
+            salonId,
+            serviceLocation,
+            bookingMode,
+            currentStep: 3, // Set to 3 so they return to time selection
+            appliedOffer,
+            slotLockToken,
+            pendingAppointmentId,
+            weddingVenueType,
+            weddingPackageMode,
+            customizedPackageServices,
+            selectedWeddingPackage
+          };
+          sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+          router.push(`/client-login?redirect=/book/${salonId}`);
           return;
         }
-      } else {
-        // For single service or non-multi-service flow, just proceed to next step
-        // Home service location collection will be handled in the useEffect when we reach step 3
-        setCurrentStep(currentStep + 1);
       }
+
+      // Proceed to next step
+      setCurrentStep(currentStep + 1);
     } else {
       // We're at step 3 or higher
       // For home services: Step 3 is location, Step 4 is time slot
       // For salon services: Step 3 is time slot
-      
+
       if (currentStep === 3) {
         // At step 3
-        
+
         // WEDDING PACKAGE LOCATION VALIDATION
         if (selectedWeddingPackage) {
           // Check if venue type is selected
@@ -876,7 +1043,7 @@ function BookingPageContent() {
             toast.error('Please select whether wedding will be at salon or venue');
             return;
           }
-          
+
           // If venue selected, validate address
           if (weddingVenueType === 'venue') {
             if (!serviceLocation || !serviceLocation.address || !serviceLocation.city) {
@@ -884,12 +1051,12 @@ function BookingPageContent() {
               return;
             }
           }
-          
+
           // Proceed to Step 4 (time slot selection)
           setCurrentStep(4);
           return;
         }
-        
+
         if (bookingMode === 'home' && !selectedWeddingPackage) {
           // For home services (non-wedding), step 3 is location selection
           // Validate location and proceed to step 4 (time slot)
@@ -925,7 +1092,16 @@ function BookingPageContent() {
               selectedDate: selectedDate.toISOString(),
               selectedTime,
               salonId,
-              serviceLocation
+              serviceLocation,
+              bookingMode,
+              currentStep,
+              appliedOffer,
+              slotLockToken,
+              pendingAppointmentId,
+              weddingVenueType,
+              weddingPackageMode,
+              customizedPackageServices,
+              selectedWeddingPackage
             };
             sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
             router.push(`/client-login?redirect=/book/${salonId}`);
@@ -933,7 +1109,7 @@ function BookingPageContent() {
           return;
         }
       }
-      
+
       if (currentStep === 4) {
         // At step 4
         if (bookingMode === 'home' && !selectedWeddingPackage) {
@@ -959,7 +1135,16 @@ function BookingPageContent() {
               selectedDate: selectedDate.toISOString(),
               selectedTime,
               salonId,
-              serviceLocation
+              serviceLocation,
+              bookingMode,
+              currentStep,
+              appliedOffer,
+              slotLockToken,
+              pendingAppointmentId,
+              weddingVenueType,
+              weddingPackageMode,
+              customizedPackageServices,
+              selectedWeddingPackage
             };
             sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
             router.push(`/client-login?redirect=/book/${salonId}`);
@@ -997,7 +1182,16 @@ function BookingPageContent() {
           selectedDate: selectedDate.toISOString(),
           selectedTime,
           salonId,
-          serviceLocation
+          serviceLocation,
+          bookingMode,
+          currentStep,
+          appliedOffer,
+          slotLockToken,
+          pendingAppointmentId,
+          weddingVenueType,
+          weddingPackageMode,
+          customizedPackageServices,
+          selectedWeddingPackage
         };
         sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
         router.push(`/client-login?redirect=/book/${salonId}`);
@@ -1039,16 +1233,36 @@ function BookingPageContent() {
           const bookingData = JSON.parse(pendingBooking);
           // Only restore if it's for the current salon
           if (bookingData.salonId === salonId) {
-            setSelectedServices(bookingData.selectedServices);
-            setServiceStaffAssignments(bookingData.serviceStaffAssignments);
-            setSelectedStaff(bookingData.selectedStaff);
+            setSelectedServices(bookingData.selectedServices || []);
+            setServiceStaffAssignments(bookingData.serviceStaffAssignments || []);
+            setSelectedStaff(bookingData.selectedStaff || null);
             setSelectedDate(new Date(bookingData.selectedDate));
-            setSelectedTime(bookingData.selectedTime);
+            setSelectedTime(bookingData.selectedTime || null);
             setServiceLocation(bookingData.serviceLocation || null);
+
+            // Restore missing state fields
+            if (bookingData.bookingMode) setBookingMode(bookingData.bookingMode);
+            if (bookingData.currentStep) setCurrentStep(bookingData.currentStep);
+            if (bookingData.appliedOffer) {
+              setAppliedOffer(bookingData.appliedOffer);
+              setOffer(bookingData.appliedOffer);
+              if (bookingData.appliedOffer.code) setOfferCode(bookingData.appliedOffer.code);
+            }
+            if (bookingData.slotLockToken) setSlotLockToken(bookingData.slotLockToken);
+            if (bookingData.pendingAppointmentId) setPendingAppointmentId(bookingData.pendingAppointmentId);
+            if (bookingData.weddingVenueType) setWeddingVenueType(bookingData.weddingVenueType);
+            if (bookingData.weddingPackageMode) setWeddingPackageMode(bookingData.weddingPackageMode);
+            if (bookingData.customizedPackageServices) setCustomizedPackageServices(bookingData.customizedPackageServices);
+            if (bookingData.selectedWeddingPackage) setSelectedWeddingPackage(bookingData.selectedWeddingPackage);
+            if (bookingData.paymentMethod) setPaymentMethod(bookingData.paymentMethod);
+
             // Clear the pending booking data
             sessionStorage.removeItem('pendingBooking');
-            // Set current step to confirmation
-            setIsConfirmationModalOpen(true);
+
+            // Re-open confirmation modal only if we already have a time slot selected
+            if (bookingData.currentStep >= 3 && bookingData.selectedTime) {
+              setIsConfirmationModalOpen(true);
+            }
           }
         } catch (error) {
           console.error('Failed to restore pending booking data:', error);
@@ -1259,11 +1473,18 @@ function BookingPageContent() {
         weddingPackageMode,
         customizedPackageServices,
         selectedStaff,
-        selectedDate,
+        selectedDate: selectedDate.toISOString(),
         selectedTime,
         bookingMode,
         serviceLocation,
-        paymentMethod
+        paymentMethod,
+        currentStep,
+        appliedOffer,
+        slotLockToken,
+        pendingAppointmentId,
+        weddingVenueType,
+        selectedServices,
+        serviceStaffAssignments
       };
       sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
 
@@ -1287,7 +1508,9 @@ function BookingPageContent() {
       const appointmentData = {
         vendorId: salonId,
         client: user?._id || user?.id,
-        clientName: `${user?.firstName} ${user?.lastName}`,
+        clientName: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : 'Customer',
+        clientEmail: user?.emailAddress || user?.email || '',
+        clientPhone: user?.mobileNo || user?.phone || '',
         // For wedding package, use the first service as primary
         service: firstServiceId,
         serviceName: selectedWeddingPackage.name,
@@ -1403,14 +1626,23 @@ function BookingPageContent() {
         selectedServices,
         serviceStaffAssignments,
         selectedStaff,
-        selectedDate,
+        selectedDate: selectedDate.toISOString(),
         selectedTime,
-        serviceLocation
+        serviceLocation,
+        bookingMode,
+        currentStep,
+        appliedOffer,
+        slotLockToken,
+        pendingAppointmentId,
+        weddingVenueType,
+        weddingPackageMode,
+        customizedPackageServices,
+        selectedWeddingPackage
       };
       sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
 
       // Redirect to login
-      router.push(`/login?redirect=/book/${salonId}`);
+      router.push(`/client-login?redirect=/book/${salonId}`);
       return;
     }
 
@@ -1518,7 +1750,9 @@ function BookingPageContent() {
     const appointmentData = {
       vendorId: salonId,
       client: user?._id || user?.id, // Try both _id and id
-      clientName: `${user?.firstName} ${user?.lastName}`,
+      clientName: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : (customerInfo?.name || 'Customer'),
+      clientEmail: user?.emailAddress || user?.email || customerInfo?.email || '',
+      clientPhone: user?.mobileNo || user?.phone || customerInfo?.phone || '',
       service: primaryService.id,
       serviceName: primaryService.name,
       staff: staffId, // Use the properly determined staffId
@@ -1673,39 +1907,39 @@ function BookingPageContent() {
     console.log("serviceLocation in data:", appointmentData.serviceLocation);
     console.log("================================");
     try {
-        // CRITICAL FIX: Recalculate price breakdown right before appointment creation
-        // This ensures we have the latest fees and taxes
-        let finalPriceBreakdown = priceBreakdown;
-        
-        if (!finalPriceBreakdown || finalPriceBreakdown.platformFee === 0) {
-          console.log('⚠️ Price breakdown missing or incomplete, recalculating...');
-          
-          // Determine services to calculate
-          let servicesToCalculate = [];
-          if (selectedWeddingPackage) {
-            servicesToCalculate = [{
-              id: selectedWeddingPackage.id || selectedWeddingPackage._id,
-              name: selectedWeddingPackage.name,
-              price: selectedWeddingPackage.totalPrice,
-              discountedPrice: selectedWeddingPackage.discountedPrice || null,
-              selectedAddons: []
-            }];
-          } else {
-            servicesToCalculate = selectedServices;
-          }
-          
-          // Recalculate with current offer and tax settings
-          finalPriceBreakdown = await calculateBookingAmount(servicesToCalculate, appliedOffer || offer, taxFeeSettings);
-          console.log('✅ Recalculated price breakdown:', finalPriceBreakdown);
+      // CRITICAL FIX: Recalculate price breakdown right before appointment creation
+      // This ensures we have the latest fees and taxes
+      let finalPriceBreakdown = priceBreakdown;
+
+      if (!finalPriceBreakdown || finalPriceBreakdown.platformFee === 0) {
+        console.log('⚠️ Price breakdown missing or incomplete, recalculating...');
+
+        // Determine services to calculate
+        let servicesToCalculate = [];
+        if (selectedWeddingPackage) {
+          servicesToCalculate = [{
+            id: selectedWeddingPackage.id || selectedWeddingPackage._id,
+            name: selectedWeddingPackage.name,
+            price: selectedWeddingPackage.totalPrice,
+            discountedPrice: selectedWeddingPackage.discountedPrice || null,
+            selectedAddons: []
+          }];
+        } else {
+          servicesToCalculate = selectedServices;
         }
-        
-        console.log('=== PRICE BREAKDOWN VALIDATION ===');
-        console.log('Platform Fee:', finalPriceBreakdown?.platformFee);
-        console.log('Service Tax (GST):', finalPriceBreakdown?.serviceTax);
-        console.log('Tax Rate:', finalPriceBreakdown?.taxFeeSettings?.serviceTax);
-        console.log('Discount Amount:', finalPriceBreakdown?.discountAmount);
-        console.log('Final Total:', finalPriceBreakdown?.finalTotal);
-        console.log('==================================');
+
+        // Recalculate with current offer and tax settings
+        finalPriceBreakdown = await calculateBookingAmount(servicesToCalculate, appliedOffer || offer, taxFeeSettings);
+        console.log('✅ Recalculated price breakdown:', finalPriceBreakdown);
+      }
+
+      console.log('=== PRICE BREAKDOWN VALIDATION ===');
+      console.log('Platform Fee:', finalPriceBreakdown?.platformFee);
+      console.log('Service Tax (GST):', finalPriceBreakdown?.serviceTax);
+      console.log('Tax Rate:', finalPriceBreakdown?.taxFeeSettings?.serviceTax);
+      console.log('Discount Amount:', finalPriceBreakdown?.discountAmount);
+      console.log('Final Total:', finalPriceBreakdown?.finalTotal);
+      console.log('==================================');
 
       // Payment method should NOT affect whether it's a home service or not
       const finalIsHomeService = isHomeService;
@@ -1881,24 +2115,140 @@ function BookingPageContent() {
         }
 
         if (appointmentIdToConfirm) {
-          // Confirm the booking
-          const confirmResult = await confirmBooking({
+          // --- For 'Pay Online': collect payment via Razorpay BEFORE confirming ---
+          let razorpayPaymentId: string | undefined;
+          let razorpayOrderId_: string | undefined;
+
+          if (paymentMethod === 'Pay Online' && (finalPriceBreakdown?.finalTotal ?? 0) > 0) {
+            const paymentAmount = finalPriceBreakdown!.finalTotal;
+            const loaded = await loadRazorpayScript();
+            if (!loaded) {
+              toast.error('Payment gateway failed to load. Please try again.');
+              setIsConfirmingBooking(false);
+              return;
+            }
+
+            // Create Razorpay order
+            const orderRes = await fetch('/api/payments/create-order', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                amount: paymentAmount,
+                currency: 'INR',
+                receipt: `salon_${appointmentIdToConfirm}_${Date.now()}`,
+              }),
+            });
+
+            if (!orderRes.ok) {
+              const err = await orderRes.json().catch(() => ({}));
+              throw new Error(err.message || 'Failed to create payment order');
+            }
+
+            const rzpOrder = await orderRes.json();
+            const rzpOrderId = rzpOrder.id || rzpOrder.order?.id;
+            if (!rzpOrderId) throw new Error('Invalid payment order response');
+
+            // **CRITICAL FIX: Close parent modals to escape focus trap**
+            // Store current states to restore on cancellation
+            const wasPaymentOpen = isPaymentModalOpen;
+            const wasConfirmationOpen = isConfirmationModalOpen;
+            setIsPaymentModalOpen(false);
+            setIsConfirmationModalOpen(false);
+
+            // Open Razorpay checkout — wait for success before confirming booking
+            try {
+              await new Promise<void>((resolve, reject) => {
+                const rzp = new (window as any).Razorpay({
+                  key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+                  amount: Math.round(paymentAmount * 100),
+                  currency: 'INR',
+                  order_id: rzpOrderId,
+                  name: 'GlowVita Salon',
+                  description: `Booking – ${appointmentData.serviceName || 'Service'}`,
+                  image: 'https://glowvita.com/logo.png', // Fallback logo
+                  theme: { color: '#7c3aed' },
+                  prefill: {
+                    name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
+                    email: user?.emailAddress || '',
+                    contact: user?.mobileNo || user?.phone || '',
+                  },
+                  retry: { enabled: true, max_count: 3 },
+                  // Simplified config to prevent interaction lag
+                  config: {
+                    display: {
+                      blocks: {
+                        upi: {
+                          name: 'UPI / QR',
+                          instruments: [
+                            { method: 'upi', vpa: true }, // UPI ID entry
+                            { method: 'upi', qr: true }   // QR Code
+                          ],
+                        },
+                      },
+                      sequence: ['block.upi', 'block.card', 'block.netbanking'],
+                    },
+                  },
+                  modal: {
+                    ondismiss: () => {
+                      // Restore modals if user cancels
+                      if (wasPaymentOpen) setIsPaymentModalOpen(true);
+                      if (wasConfirmationOpen) setIsConfirmationModalOpen(true);
+                      reject(new Error('Payment cancelled by user'));
+                    },
+                    escape: true,
+                    backdropClose: false, // Prevent accidental exit
+                  },
+                  handler: async (response: any) => {
+                    try {
+                      const verifyRes = await fetch('/api/payments/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(response),
+                      });
+                      const verifyData = await verifyRes.json();
+                      if (!verifyData.success) throw new Error('Payment verification failed. Contact support.');
+                      razorpayPaymentId = response.razorpay_payment_id;
+                      razorpayOrderId_ = response.razorpay_order_id;
+                      resolve();
+                    } catch (err: any) { reject(err); }
+                  },
+                });
+                rzp.open();
+              });
+            } catch (payErr: any) {
+              if (payErr?.message === 'Payment cancelled by user') {
+                toast.info('Payment cancelled.');
+              } else {
+                toast.error(payErr?.message || 'Payment failed. Please try again.');
+              }
+              setIsConfirmingBooking(false);
+              return;
+            }
+          }
+
+          // Confirm the booking (payment already collected, or pay-at-salon)
+          await confirmBooking({
             appointmentId: appointmentIdToConfirm,
             lockId: currentLockId,
             paymentMethod: paymentMethod,
-            paymentStatus: paymentMethod === 'Pay at Salon' ? 'pending' : 'paid',
+            paymentStatus: paymentMethod === 'Pay at Salon' ? 'pending' : 'completed',
             couponCode: appliedOffer?.code || offerCode,
             discountAmount: finalPriceBreakdown?.discountAmount || 0,
             finalAmount: finalPriceBreakdown?.finalTotal || 0,
             platformFee: finalPriceBreakdown?.platformFee || 0,
             serviceTax: finalPriceBreakdown?.serviceTax || 0,
-            taxRate: finalPriceBreakdown?.taxFeeSettings?.serviceTax || 0
+            taxRate: finalPriceBreakdown?.taxFeeSettings?.serviceTax || 0,
+            ...(razorpayPaymentId && { razorpayPaymentId }),
+            ...(razorpayOrderId_ && { razorpayOrderId: razorpayOrderId_ }),
           }).unwrap();
 
           toast.success("Booking confirmed!");
           setIsConfirmationModalOpen(false);
           setIsPaymentModalOpen(false);
           await persistServiceLocation(finalIsHomeService ? serviceLocation : null);
+          if (typeof window !== 'undefined' && appointmentIdToConfirm) {
+            sessionStorage.setItem('newlyBookedAppointmentId', appointmentIdToConfirm);
+          }
           router.push('/profile/appointments');
         } else {
           throw new Error("Failed to acquire slot lock or session expired.");
@@ -2009,24 +2359,78 @@ function BookingPageContent() {
             finalAmount: priceBreakdown?.finalTotal || 0
           }).unwrap();
 
-          // Handle online payment if selected
-          if (method === 'Pay Online' && confirmResult.appointment.finalAmount > 0) {
+          // Handle online payment via Razorpay
+          if (method === 'Pay Online' && (confirmResult.appointment?.finalAmount ?? 0) > 0) {
+            const paymentAmount = confirmResult.appointment.finalAmount;
             try {
-              // In a real implementation, you would integrate with Razorpay or another payment gateway here
-              // For now, we'll simulate this
-              console.log("Processing online payment...");
+              const loaded = await loadRazorpayScript();
+              if (!loaded) {
+                toast.error('Payment gateway failed to load. Please try again.');
+                return;
+              }
 
-              // Simulate payment processing
-              await new Promise(resolve => setTimeout(resolve, 2000));
+              // Create Razorpay order on the server
+              const orderRes = await fetch('/api/payments/create-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  amount: paymentAmount,
+                  currency: 'INR',
+                  receipt: `booking_${confirmResult.appointment._id || Date.now()}`,
+                }),
+              });
 
-              // Update payment status to completed
-              // In a real implementation, you would call an API to update the appointment
-              console.log("Payment processed successfully");
-            } catch (paymentError) {
-              console.error("Payment processing error:", paymentError);
-              // Update payment status to failed
-              // In a real implementation, you would call an API to update the appointment
-              toast.error("Payment failed. Please try again or pay at the salon.");
+              if (!orderRes.ok) {
+                const err = await orderRes.json().catch(() => ({}));
+                throw new Error(err.message || 'Failed to create payment order');
+              }
+
+              const razorpayOrder = await orderRes.json();
+              // Support both { id } and { order: { id } } response shapes
+              const razorpayOrderId = razorpayOrder.id || razorpayOrder.order?.id;
+              if (!razorpayOrderId) throw new Error('Invalid payment order response');
+
+              // Open Razorpay checkout
+              await new Promise<void>((resolve, reject) => {
+                const rzp = new (window as any).Razorpay({
+                  key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                  amount: Math.round(paymentAmount * 100),
+                  currency: 'INR',
+                  order_id: razorpayOrderId,
+                  name: 'GlowVita Salon',
+                  description: `Booking - ${primaryService.name}`,
+                  theme: { color: '#7c3aed' },
+                  modal: {
+                    ondismiss: () => reject(new Error('Payment cancelled by user')),
+                  },
+                  handler: async (response: any) => {
+                    try {
+                      // Verify payment signature
+                      const verifyRes = await fetch('/api/payments/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(response),
+                      });
+                      const verifyData = await verifyRes.json();
+                      if (!verifyData.success) {
+                        throw new Error('Payment verification failed. Please contact support.');
+                      }
+                      console.log('Booking payment verified:', response.razorpay_payment_id);
+                      resolve();
+                    } catch (err: any) {
+                      reject(err);
+                    }
+                  },
+                });
+                rzp.open();
+              });
+            } catch (paymentError: any) {
+              if (paymentError?.message === 'Payment cancelled by user') {
+                toast.info('Payment cancelled. Your booking is saved but unpaid.');
+              } else {
+                console.error('Payment processing error:', paymentError);
+                toast.error(paymentError?.message || 'Payment failed. Please try again or pay at the salon.');
+              }
               return;
             }
           }
@@ -2688,6 +3092,34 @@ function BookingPageContent() {
     if (selectedWeddingPackage) {
       setWeddingPackageMode('default');
       setIsCustomizingPackage(false);
+
+      // Skip staff selection and enforce login before time slot
+      if (!isAuthenticated) {
+        console.log("Wedding Package Default: Redirecting to login before Step 3");
+        toast.info("Please login to choose a date and time");
+        const bookingData = {
+          selectedServices,
+          serviceStaffAssignments,
+          selectedStaff,
+          selectedDate: selectedDate.toISOString(),
+          selectedTime,
+          salonId,
+          serviceLocation,
+          bookingMode,
+          currentStep: 3, // Set to 3 so they return to time selection
+          appliedOffer,
+          slotLockToken,
+          pendingAppointmentId,
+          weddingVenueType,
+          weddingPackageMode: 'default',
+          customizedPackageServices,
+          selectedWeddingPackage
+        };
+        sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+        router.push(`/client-login?redirect=/book/${salonId}`);
+        return;
+      }
+
       // Skip staff selection for wedding packages - go directly to time slots
       setCurrentStep(3);
     }
@@ -2697,6 +3129,34 @@ function BookingPageContent() {
   const handleCustomizationComplete = (customServices: Service[]) => {
     setCustomizedPackageServices(customServices);
     setIsCustomizingPackage(false);
+
+    // Skip staff selection and enforce login before time slot
+    if (!isAuthenticated) {
+      console.log("Wedding Package Customized: Redirecting to login before Step 3");
+      toast.info("Please login to choose a date and time");
+      const bookingData = {
+        selectedServices,
+        serviceStaffAssignments,
+        selectedStaff,
+        selectedDate: selectedDate.toISOString(),
+        selectedTime,
+        salonId,
+        serviceLocation,
+        bookingMode,
+        currentStep: 3, // Set to 3 so they return to time selection
+        appliedOffer,
+        slotLockToken,
+        pendingAppointmentId,
+        weddingVenueType,
+        weddingPackageMode: 'customized',
+        customizedPackageServices: customServices,
+        selectedWeddingPackage
+      };
+      sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+      router.push(`/client-login?redirect=/book/${salonId}`);
+      return;
+    }
+
     // Skip staff selection for wedding packages - go directly to time slots
     setCurrentStep(3);
   };
@@ -2923,7 +3383,7 @@ function BookingPageContent() {
                 staff={staff}
                 isLoading={false}
                 error={null}
-                onNext={() => setCurrentStep(3)}
+                onNext={handleNextStep}
               />
             );
           } else {
@@ -2995,6 +3455,7 @@ function BookingPageContent() {
                 error={serviceStaffData.error}
                 selectedService={selectedService}
                 onStaffSelect={setSelectedStaff}
+                onNext={handleNextStep}
               />
             );
           }
@@ -3389,11 +3850,22 @@ function BookingPageContent() {
 
   // Calculate price breakdown when selected services or wedding package changes
   useEffect(() => {
+    // If an offer is applied, check if it's still valid for the current selection
+    if (appliedOffer && selectedServices.length > 0) {
+      if (!isOfferApplicable(appliedOffer, selectedServices)) {
+        toast.info(`Offer ${appliedOffer.code} is no longer applicable for the current selection.`);
+        setAppliedOffer(null);
+        setOffer(null);
+        setOfferCode('');
+        return;
+      }
+    }
+
     const calculatePrices = async () => {
       // Handle wedding package pricing with offer code support
       if (selectedWeddingPackage) {
         const packagePrice = selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice || 0;
-        
+
         // Create a service-like object for calculateBookingAmount to enable offer code support
         const packageAsService = [{
           id: selectedWeddingPackage.id || selectedWeddingPackage._id,
@@ -3402,7 +3874,7 @@ function BookingPageContent() {
           discountedPrice: selectedWeddingPackage.discountedPrice || null,
           selectedAddons: []
         }];
-        
+
         try {
           // Call calculateBookingAmount WITH offer support (pass offer and taxFeeSettings)
           const breakdown = await calculateBookingAmount(packageAsService, offer, taxFeeSettings);
@@ -3834,14 +4306,18 @@ function BookingPageContent() {
                     <div className="flex items-center gap-2 p-2 border-b">
                       <UserCircle className="h-4 w-4 text-primary flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-xs truncate">{customerInfo?.name || 'Guest'}</div>
+                        <div className="font-semibold text-xs truncate">
+                          {user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : (customerInfo?.name || 'Guest')}
+                        </div>
                         <div className="text-[10px] text-muted-foreground">Name</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 p-2 border-b">
                       <Phone className="h-4 w-4 text-primary flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-xs truncate">{customerInfo?.phone || 'N/A'}</div>
+                        <div className="font-semibold text-xs truncate">
+                          {user?.mobileNo || user?.phone || customerInfo?.phone || 'N/A'}
+                        </div>
                         <div className="text-[10px] text-muted-foreground">Phone</div>
                       </div>
                     </div>
@@ -3908,53 +4384,53 @@ function BookingPageContent() {
                     <span className="text-xs font-normal text-muted-foreground">({selectedServices.length})</span>
                   </CardTitle>
                 </CardHeader>
-              <CardContent className="pt-3">
-                <div className="space-y-2">
-                  {selectedServices.map((service) => (
-                    <div key={service.id} className="space-y-2">
-                      <div className="flex items-center justify-between p-2 border-b">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm flex items-center gap-2">
-                            <Scissors className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                            <span className="truncate">{service.name}</span>
-                          </div>
-                          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                            <Clock className="h-3 w-3 flex-shrink-0" />
-                            <span>{service.duration}</span>
-                          </div>
-                        </div>
-                        <div className="font-semibold text-sm text-primary ml-2 flex-shrink-0">₹{service.price}</div>
-                      </div>
-
-                      {/* Display Add-ons */}
-                      {service.selectedAddons && service.selectedAddons.length > 0 && (
-                        <div className="pl-4 ml-2 border-l-2 border-primary/20 space-y-1.5">
-                          {service.selectedAddons.map((addon) => (
-                            <div key={addon._id} className="flex items-center justify-between p-2 border-b">
-                              <div className="flex items-center gap-2 text-xs flex-1 min-w-0">
-                                <Plus className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                <span className="truncate">{addon.name}</span>
-                              </div>
-                              <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                                <div className="text-xs text-muted-foreground">₹{addon.price}</div>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                  onClick={() => handleRemoveAddon(service.id, addon._id)}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </div>
+                <CardContent className="pt-3">
+                  <div className="space-y-2">
+                    {selectedServices.map((service) => (
+                      <div key={service.id} className="space-y-2">
+                        <div className="flex items-center justify-between p-2 border-b">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-sm flex items-center gap-2">
+                              <Scissors className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                              <span className="truncate">{service.name}</span>
                             </div>
-                          ))}
+                            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                              <Clock className="h-3 w-3 flex-shrink-0" />
+                              <span>{service.duration}</span>
+                            </div>
+                          </div>
+                          <div className="font-semibold text-sm text-primary ml-2 flex-shrink-0">₹{service.discountedPrice || service.price}</div>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+
+                        {/* Display Add-ons */}
+                        {service.selectedAddons && service.selectedAddons.length > 0 && (
+                          <div className="pl-4 ml-2 border-l-2 border-primary/20 space-y-1.5">
+                            {service.selectedAddons.map((addon) => (
+                              <div key={addon._id} className="flex items-center justify-between p-2 border-b">
+                                <div className="flex items-center gap-2 text-xs flex-1 min-w-0">
+                                  <Plus className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                  <span className="truncate">{addon.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                                  <div className="text-xs text-muted-foreground">₹{addon.price}</div>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => handleRemoveAddon(service.id, addon._id)}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Offer Code Section - Full Width */}
               <Card className="border">
@@ -3975,21 +4451,21 @@ function BookingPageContent() {
                         placeholder="Enter code or select from offers"
                         value={offerCode}
                         onChange={(e) => setOfferCode(e.target.value.toUpperCase())}
-                        onFocus={() => vendorOffers && vendorOffers.length > 0 && setShowOfferDropdown(true)}
+                        onFocus={() => filteredOffers && filteredOffers.length > 0 && setShowOfferDropdown(true)}
                         className="w-full px-3 py-2 border rounded-md text-sm focus:ring-2 focus:ring-primary focus:border-primary"
                       />
-                      
+
                       {/* Offer Dropdown */}
-                      {showOfferDropdown && vendorOffers && vendorOffers.length > 0 && (
+                      {showOfferDropdown && filteredOffers && filteredOffers.length > 0 && (
                         <div className="absolute z-50 w-full mt-1 bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto no-scrollbar">
                           {isOffersLoading ? (
                             <div className="p-4 text-center text-xs text-muted-foreground">
                               <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
                               Loading offers...
                             </div>
-                          ) : vendorOffers.length > 0 ? (
+                          ) : filteredOffers.length > 0 ? (
                             <div className="py-1">
-                              {vendorOffers.map((offer: { _id: string; code: string; type: string; value: number }) => (
+                              {filteredOffers.map((offer: { _id: string; code: string; type: string; value: number; businessType?: string; isAdminGlobal?: boolean }) => (
                                 <div
                                   key={offer._id}
                                   className="px-3 py-2 hover:bg-primary/5 cursor-pointer border-b last:border-b-0 flex justify-between items-center"
@@ -3998,10 +4474,20 @@ function BookingPageContent() {
                                     setShowOfferDropdown(false);
                                   }}
                                 >
-                                  <div>
-                                    <div className="font-semibold text-xs text-primary">{offer.code}</div>
-                                    <div className="text-[10px] text-muted-foreground">
-                                      {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
+                                  <div className="flex items-center gap-2">
+                                    <div className="bg-primary/5 p-1 rounded">
+                                      <Tag className="h-3 w-3 text-primary" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-semibold text-xs text-primary">{offer.code}</div>
+                                      <div className="text-[10px] text-muted-foreground">
+                                        {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
+                                        {offer.businessType === 'admin' && (
+                                          <span className={`ml-1 text-[8px] px-1 rounded ${offer.isAdminGlobal ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                                            {offer.isAdminGlobal ? 'Global' : 'Region'}
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
                                   <div className="text-[10px] text-primary">Select</div>
@@ -4033,6 +4519,11 @@ function BookingPageContent() {
                           <div className="font-semibold text-primary text-xs">{appliedOffer.code}</div>
                           <div className="text-primary text-[10px]">
                             {appliedOffer.type === 'percentage' ? `${appliedOffer.value}% off` : `₹${appliedOffer.value} off`}
+                            {appliedOffer.businessType === 'admin' && (
+                              <span className={`ml-1 px-1 rounded ${appliedOffer.isAdminGlobal ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'} text-[8px]`}>
+                                {appliedOffer.isAdminGlobal ? 'Global' : 'Region'}
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -4579,7 +5070,7 @@ function BookingPageContent() {
         </DialogContent>
       </Dialog>
 
-{/* Payment Method Selection Modal */}
+      {/* Payment Method Selection Modal */}
       <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader className="text-center pb-4">
@@ -4668,7 +5159,7 @@ function BookingPageContent() {
         </DialogContent>
       </Dialog>
 
-      
+
       {/* Empty placeholder - modals are already defined above */}
     </div>
   );

@@ -579,6 +579,16 @@ export async function confirmAppointment(appointmentId, lockToken, paymentDetail
     // Update coupon data if provided in confirmation request
     if (couponData.couponCode) {
       appointment.couponCode = couponData.couponCode;
+      
+      // Increment redemption count and total discount in CRMOfferModel
+      try {
+        const CRMOfferModel = (await import('../../models/Vendor/CRMOffer.model.js')).default;
+        const discountToTrack = couponData.discountAmount || couponData.discount || 0;
+        await CRMOfferModel.incrementRedemption(couponData.couponCode, discountToTrack);
+        console.log(`Incremented redemption count and discount value for coupon: ${couponData.couponCode} (Value: ${discountToTrack})`);
+      } catch (offerErr) {
+        console.error(`Error incrementing coupon redemption for ${couponData.couponCode}:`, offerErr);
+      }
     }
     if (couponData.discountAmount !== undefined) {
       appointment.discountAmount = Math.round(couponData.discountAmount);

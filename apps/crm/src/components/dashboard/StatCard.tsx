@@ -6,14 +6,16 @@ import { cn } from "@repo/ui/cn";
 interface StatCardProps {
   title: string;
   value: string;
-  change: string;
-  subtitle: string;
-  icon: IconType;
+  change?: string;
+  subtitle?: string;
+  description?: string;
+  icon: any;
   iconColor?: string;
 }
 
-export function StatCard({ title, value, change, subtitle, icon: Icon, iconColor }: StatCardProps) {
-  const isPositive = change.startsWith('+');
+export function StatCard({ title, value, change, subtitle, description, icon: Icon, iconColor }: StatCardProps) {
+  const isPositive = change?.startsWith('+');
+  const displaySubtitle = subtitle || description;
   
   return (
     <Card className="group relative overflow-hidden bg-primary/5 border border-primary/20 transition-all duration-300">
@@ -22,10 +24,16 @@ export function StatCard({ title, value, change, subtitle, icon: Icon, iconColor
           <div>
             <p className="text-sm font-medium text-secondary-foreground mb-1">{title}</p>
             <p className="text-2xl font-bold text-secondary-foreground">{value}</p>
-            <p className="text-xs text-secondary-foreground/70 mt-1">{subtitle}</p>
+            {displaySubtitle && (
+              <p className="text-xs text-secondary-foreground/70 mt-1">{displaySubtitle}</p>
+            )}
           </div>
           <div className="p-3 bg-primary/10 rounded-full transition-colors">
-            <Icon className={cn("h-6 w-6", iconColor || "text-secondary-foreground")} />
+            {typeof Icon === 'function' || (typeof Icon === 'object' && Icon?.displayName) ? (
+              <Icon className={cn("h-6 w-6", iconColor || "text-secondary-foreground")} />
+            ) : (
+              <div className={cn("h-6 w-6", iconColor || "text-secondary-foreground")}>{Icon}</div>
+            )}
           </div>
         </div>
       </CardContent>

@@ -12,8 +12,10 @@ const _db = async () => {
   // Don't connect during build time
   if (process.env.NEXT_PHASE === 'phase-production-build') {
     console.log("Skipping MongoDB connection during build phase");
+    mongoose.set('bufferCommands', false); // Disable buffering to prevent hanging
     return null;
   }
+
 
   // If already connected, return the existing connection
   if (cached.conn) {
@@ -26,6 +28,7 @@ const _db = async () => {
     console.warn("MONGODB_URI is not defined, skipping database connection");
     return null;
   }
+  console.log("Connecting with MONGODB_URI:", MONGODB_URI.substring(0, 20) + "...");
 
   if (!cached.promise) {
     const opts = {

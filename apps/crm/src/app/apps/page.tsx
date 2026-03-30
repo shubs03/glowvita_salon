@@ -44,14 +44,14 @@ export default function AppsPage() {
       <FeaturesGridSection />
       <TestimonialsSection />
       <FeatureComparisonSection />
-      <HowItWorks />
+      <HowItWorksSection />
       <SecuritySection />
       <AppPromotionSection
         title="Vendor CRM App (For Your Business)"
         description="Manage your entire salon from the palm of your hand. Our vendor app gives you the power to run your business from anywhere, at any time."
         images={[
           {
-            src: "https://placehold.co/375x812.png",
+            src: "/icons/close-up-hand-holding-phone (1) (1) 1 (1).png",
             hint: "app dashboard screen",
           },
           {

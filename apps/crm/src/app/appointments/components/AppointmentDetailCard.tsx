@@ -14,10 +14,11 @@ interface AppointmentDetailCardProps {
   appointment: Appointment;
   onEdit: () => void;
   onDelete: () => void;
+  onPaymentCollect?: () => void;
   onClose: () => void;
 }
 
-export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }: AppointmentDetailCardProps) {
+export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPaymentCollect, onClose }: AppointmentDetailCardProps) {
   const [showInvoice, setShowInvoice] = useState(false);
   const { data: vendorProfile, isLoading: isVendorLoading } = useGetVendorProfileQuery({});
 
@@ -251,9 +252,14 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
               Invoice
             </Button>
           )}
-          <Button variant="outline" size="icon" onClick={onEdit}>
-            <Edit className="h-4 w-4" />
-          </Button>
+          {appointment.status !== 'completed' && appointment.status !== 'completed without payment' && !(
+            ((appointment as any).mode === 'online' || (appointment as any).payment?.bookingSource === 'web' || (appointment as any).bookingSource === 'web' || String((appointment as any).paymentMethod).toLowerCase() === 'pay online' || String((appointment as any).payment?.paymentMethod).toLowerCase() === 'pay online') &&
+            (String((appointment as any).paymentStatus).toLowerCase() === 'completed' || String((appointment as any).paymentStatus).toLowerCase() === 'paid' || String((appointment as any).payment?.paymentStatus).toLowerCase() === 'completed' || String((appointment as any).payment?.paymentStatus).toLowerCase() === 'paid')
+          ) && (
+              <Button variant="outline" size="icon" onClick={onEdit}>
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
           <Button variant="outline" size="icon" onClick={onDelete}>
             <Trash2 className="h-4 w-4 text-red-500" />
           </Button>
@@ -413,6 +419,14 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onClose }
                 <span>Method: {paymentMethod ?? '—'}</span>
                 <span>Status: {paymentStatus ? String(paymentStatus).toUpperCase() : '—'}</span>
               </div>
+            )}
+            {remainingAmount > 0 && appointment.status !== 'cancelled' && onPaymentCollect && (
+              <Button 
+                onClick={onPaymentCollect}
+                className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white gap-2"
+              >
+                 <DollarSign className="h-4 w-4" /> Collect Remaining ₹{remainingAmount.toFixed(2)}
+              </Button>
             )}
           </CardContent>
         </Card>

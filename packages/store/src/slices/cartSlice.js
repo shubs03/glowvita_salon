@@ -36,11 +36,11 @@ const migrateGuestCartToUser = (userId) => {
     if (typeof window !== 'undefined') {
       const guestCart = loadCartFromStorage('guest');
       const userCart = loadCartFromStorage(userId);
-      
+
       if (guestCart.length > 0) {
         // Merge guest cart with user cart (user cart items take precedence)
         const mergedCart = [...userCart];
-        
+
         guestCart.forEach(guestItem => {
           const existingItem = mergedCart.find(item => item._id === guestItem._id);
           if (existingItem) {
@@ -51,16 +51,16 @@ const migrateGuestCartToUser = (userId) => {
             mergedCart.push(guestItem);
           }
         });
-        
+
         // Save merged cart to user's storage
         saveCartToStorage(mergedCart, userId);
-        
+
         // Clear guest cart
         localStorage.removeItem('glowvita_cart_guest');
-        
+
         return mergedCart;
       }
-      
+
       return userCart;
     }
   } catch (err) {
@@ -83,7 +83,7 @@ const cartSlice = createSlice({
     // Set the current user and load their cart
     setCurrentUser(state, action) {
       const userId = action.payload || 'guest';
-      
+
       if (userId !== state.currentUserId) {
         // If switching from guest to logged-in user, migrate cart
         if (state.currentUserId === 'guest' && userId !== 'guest') {
@@ -99,12 +99,12 @@ const cartSlice = createSlice({
     // Sync local cart items with API cart (for when user logs in)
     syncWithAPICart(state, action) {
       const { apiCartItems, userId } = action.payload;
-      
+
       if (userId !== 'guest') {
         // Replace local items with API items
         state.items = apiCartItems || [];
         state.currentUserId = userId;
-        
+
         // Save the synced cart to localStorage
         saveCartToStorage(state.items, userId);
       }
@@ -116,9 +116,22 @@ const cartSlice = createSlice({
       state.currentUserId = 'guest';
       saveCartToStorage([], 'guest');
     },
-    
+
     addToCart(state, action) {
       const newItem = action.payload;
+
+      // Check if cart already has items from a different vendor
+      if (state.items.length > 0) {
+        const firstItem = state.items[0];
+        const currentVendorId = firstItem.vendorId;
+
+        if (newItem.vendorId && currentVendorId && newItem.vendorId !== currentVendorId) {
+          // If vendor doesn't match, we don't add the item in the reducer
+          // The component should handle showing the error toast
+          return;
+        }
+      }
+
       const existingItem = state.items.find(item => item._id === newItem._id);
 
       if (existingItem) {
@@ -126,60 +139,60 @@ const cartSlice = createSlice({
       } else {
         state.items.push({ ...newItem, quantity: newItem.quantity || 1 });
       }
-      
+
       // Save to localStorage for current user
       saveCartToStorage(state.items, state.currentUserId);
     },
-    
+
     updateQuantity(state, action) {
       const { _id, quantity } = action.payload;
       const item = state.items.find(item => item._id === _id);
       if (item) {
         item.quantity = Math.max(1, quantity);
       }
-      
+
       // Save to localStorage for current user
       saveCartToStorage(state.items, state.currentUserId);
     },
-    
+
     removeFromCart(state, action) {
       const idToRemove = action.payload;
       state.items = state.items.filter(item => item._id !== idToRemove);
-      
+
       // Save to localStorage for current user
       saveCartToStorage(state.items, state.currentUserId);
     },
-    
+
     clearCart(state) {
       state.items = [];
-      
+
       // Save to localStorage for current user
       saveCartToStorage(state.items, state.currentUserId);
     },
-    
+
     setCartOpen(state, action) {
       state.isOpen = action.payload;
     },
   },
 });
 
-export const { 
-    setCurrentUser,
-    syncWithAPICart,
-    resetToGuest,
-    addToCart, 
-    updateQuantity, 
-    removeFromCart, 
-    clearCart,
-    setCartOpen
+export const {
+  setCurrentUser,
+  syncWithAPICart,
+  resetToGuest,
+  addToCart,
+  updateQuantity,
+  removeFromCart,
+  clearCart,
+  setCartOpen
 } = cartSlice.actions;
 
 // Selector to get cart items count
-export const selectCartItemsCount = (state) => 
+export const selectCartItemsCount = (state) =>
   state.cart.items.reduce((total, item) => total + item.quantity, 0);
 
 // Selector to get cart total
-export const selectCartTotal = (state) => 
+export const selectCartTotal = (state) =>
   state.cart.items.reduce((total, item) => total + (item.price * item.quantity), 0);
 
 export default cartSlice.reducer;

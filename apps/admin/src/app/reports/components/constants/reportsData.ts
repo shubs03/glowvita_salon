@@ -88,6 +88,16 @@ export const reportsData: ReportCategory[] = [
         title: "Vendor Payable to Admin Report - Product",
         description: "Amount vendor pays to admin for products",
         details: "Track platform fees, taxes, and other revenues from vendors for products with Payee Type, Payee Name, product Platform Fee, product Tax/gst, and Total amounts."
+      },
+      {
+        title: "Settlement Payment History",
+        description: "Actual money transfer history between Admin and Vendors",
+        details: "Track who paid how much and when, including transaction IDs and methods."
+      },
+      {
+        title: "Platform Collections",
+        description: "Revenue from product orders including platform fees and taxes",
+        details: "Track total collections from product orders with breakdown of platform fees and GST."
       }
     ]
   }

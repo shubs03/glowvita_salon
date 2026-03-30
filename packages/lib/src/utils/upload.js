@@ -7,7 +7,7 @@ const VPS_UPLOAD_DIR = "/home/glowvita/uploads";
 
 // Define base URLs
 const LOCAL_BASE_URL = "http://localhost:3001/uploads/";
-const VPS_BASE_URL = "https://v2winonline.com/glowvita/uploads/";
+const VPS_BASE_URL = "https://glowvitasalon.com/glowvita/uploads/";
 
 // Set current configuration dynamically
 // Check if we are in a VPS environment (Linux) or local (Windows/Mac)

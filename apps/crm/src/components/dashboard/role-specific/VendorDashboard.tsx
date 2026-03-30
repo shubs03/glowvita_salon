@@ -283,7 +283,7 @@ export default function VendorDashboard({
             subtitle="Recorded expenses"
             change={hasNoData ? "No data" : "-2.3%"}
             icon={FaTags}
-            iconColor="text-destructive"
+            iconColor="text-primary"
           />
           <StatCard
             title="Total Counter Sale"

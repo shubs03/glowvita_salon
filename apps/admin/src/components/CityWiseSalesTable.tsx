@@ -24,9 +24,10 @@ interface CityWiseSalesTableProps {
   isLoading?: boolean;
   filterType?: string;
   filterValue?: string;
+  className?: string;
 }
 
-export function CityWiseSalesTable({ data, isLoading, filterType, filterValue }: CityWiseSalesTableProps) {
+export function CityWiseSalesTable({ data, isLoading, filterType, filterValue, className }: CityWiseSalesTableProps) {
   const [showAll, setShowAll] = useState(false);
   const itemsPerPage = 5;
   
@@ -79,11 +80,11 @@ export function CityWiseSalesTable({ data, isLoading, filterType, filterValue }:
     : data || [];
 
   return (
-    <Card>
+    <Card className={`bg-primary/5 border border-primary/20 transition-all duration-300 ${className || ''}`}>
       <CardHeader>
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle>CityWise Sales</CardTitle>
+            <CardTitle className="font-headline text-xl">CityWise Sales</CardTitle>
             <CardDescription>Detailed breakdown of sales by city</CardDescription>
           </div>
           {data && data.length > itemsPerPage && (
@@ -91,6 +92,7 @@ export function CityWiseSalesTable({ data, isLoading, filterType, filterValue }:
               variant="outline" 
               size="sm"
               onClick={() => setShowAll(!showAll)}
+              className="bg-background"
             >
               {showAll ? 'Show Less' : 'View All'}
             </Button>
