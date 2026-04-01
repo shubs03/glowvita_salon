@@ -106,7 +106,15 @@ const RecentlyJoinedSalon = () => {
         mostRecentSalon.profileImage ||
         `https://placehold.co/600x400/gradient?text=${encodeURIComponent(mostRecentSalon.businessName || "Salon")}`,
       isNew: true, // Always true since it's the most recent
-      hasOffer: mostRecentSalon.offers && Array.isArray(mostRecentSalon.offers) && mostRecentSalon.offers.length > 0,
+      hasOffer:
+        mostRecentSalon.offers &&
+        Array.isArray(mostRecentSalon.offers) &&
+        mostRecentSalon.offers.some((offer: any) => {
+          const now = new Date();
+          const startDate = offer.startDate ? new Date(offer.startDate) : null;
+          const expires = offer.expires ? new Date(offer.expires) : null;
+          return (!startDate || now >= startDate) && (!expires || now <= expires);
+        }),
       description: mostRecentSalon.description ||
         "Experience luxury and relaxation at our newest salon location. We offer premium hair styling, coloring, and beauty services with the latest techniques and products. Our skilled professionals are dedicated to making you look and feel your best.",
     };

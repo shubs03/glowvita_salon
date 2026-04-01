@@ -299,7 +299,12 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
       const hasOffer =
         vendor.offers &&
         Array.isArray(vendor.offers) &&
-        vendor.offers.length > 0;
+        vendor.offers.some((offer: any) => {
+          const now = new Date();
+          const startDate = offer.startDate ? new Date(offer.startDate) : null;
+          const expires = offer.expires ? new Date(offer.expires) : null;
+          return (!startDate || now >= startDate) && (!expires || now <= expires);
+        });
 
       return {
         id: vendor._id,
