@@ -380,37 +380,46 @@ export async function POST(req) {
             ]
           }).sort({ regionId: -1 });
 
-        await ReferralModel.create({
-          referralId,
-          referralType,
-          referrer: referringVendor.businessName,
-          referee: newVendor.businessName,
-          date: new Date(),
-          status: 'Completed',
-          bonus: String(bonusValue), // Use the dynamic bonus value
-        });
+          const bonusValue = settings?.referrerBonus?.bonusValue || 0;
+          const referralId = `REF_REG_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+          const referringName = entityType === 'Vendor' 
+            ? (referringEntity.businessName || `${referringEntity.firstName} ${referringEntity.lastName}`)
+            : `${referringEntity.firstName} ${referringEntity.lastName}`;
 
-        // Trigger Referral Notifications
-        (async () => {
-          try {
-            // Notify Referee
-            await NotificationService.sendReferralAlert(newVendor._id.toString(), 'vendor', {
-              referrerName: referringVendor.businessName,
-              rewardAmount: bonusValue,
-              status: 'completed'
-            });
+          await ReferralModel.create({
+            referralId,
+            referralType,
+            referrer: referringEntity._id.toString(),
+            referrerType: entityType,
+            referee: newVendor._id.toString(),
+            refereeType: 'Vendor',
+            date: new Date(),
+            status: 'Pending', // Set to pending initially, will be completed after subscription purchase
+            bonus: `₹${bonusValue}`,
+            regionId: newVendor.regionId
+          });
 
-            // Notify Referrer
-            await NotificationService.sendReferralAlert(referringVendor._id.toString(), 'vendor', {
-              referrerName: newVendor.businessName,
-              rewardAmount: bonusValue,
-              status: 'completed'
-            });
-          } catch (err) {
-            console.error('Referral Notification Error:', err);
-          }
-        })();
-      }
+          // Trigger Referral Notifications
+          (async () => {
+            try {
+              // Notify Referee (New Vendor)
+              await NotificationService.sendReferralAlert(newVendor._id.toString(), 'vendor', {
+                referrerName: referringName,
+                rewardAmount: bonusValue,
+                status: 'pending'
+              });
+
+              // Notify Referrer (User or Vendor)
+              await NotificationService.sendReferralAlert(referringEntity._id.toString(), entityType.toLowerCase(), {
+                referrerName: newVendor.businessName,
+                rewardAmount: bonusValue,
+                status: 'pending'
+              });
+            } catch (err) {
+              console.error('Referral Notification Error:', err);
+            }
+          })();
+        }
     }
 
     // 9️⃣ Remove password before returning

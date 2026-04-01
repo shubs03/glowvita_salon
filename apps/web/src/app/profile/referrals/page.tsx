@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@repo
 import { Button } from '@repo/ui/button';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
-import { Copy, Gift, UserPlus, Users, Search, Mail, MessageCircle } from 'lucide-react';
+import { Copy, Gift, UserPlus, Users, Search, Mail, MessageCircle, Building } from 'lucide-react';
 import { toast } from 'sonner';
 import { StatCard } from '../../../components/profile/StatCard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
@@ -15,6 +15,7 @@ import { Pagination } from '@repo/ui/pagination';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@repo/ui/select';
 import { useGetClientReferralsQuery, useClaimReferralBonusMutation } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
+import { NEXT_PUBLIC_CRM_URL, NEXT_PUBLIC_WEB_URL } from '@repo/config/config';
 
 const HowItWorksStep = ({ step, title, description }: { step: number, title: string, description: string }) => (
   <div className="flex items-start gap-4">
@@ -45,17 +46,22 @@ export default function ReferralsPage() {
 
   const referralCode = referralData?.data?.referralCode || 'LOADING';
   const isValidCode = referralCode !== 'N/A' && referralCode !== 'LOADING' && referralCode !== 'NOTAVAILABLE';
-  const referralLink = `${typeof window !== 'undefined' ? window.location.origin : 'https://glowvita.com'}/client-register?ref=${referralCode}`;
+  const clientReferralLink = `${NEXT_PUBLIC_WEB_URL}/client-register?ref=${referralCode}`;
+  
+
+    
+  const partnerReferralLink = `${NEXT_PUBLIC_CRM_URL}/auth/register?ref=${referralCode}`;
+  
   const referralHistory = referralData?.data?.referralHistory || [];
   const stats = referralData?.data?.stats || { totalEarnings: 0, successfulReferrals: 0, totalReferrals: 0 };
 
-  const handleCopy = (textToCopy: string) => {
+  const handleCopy = (textToCopy: string, type: string = 'Link') => {
     if (!isValidCode) {
       toast.error('Referral code not available yet. Please refresh the page.');
       return;
     }
     navigator.clipboard.writeText(textToCopy);
-    toast.success(`${textToCopy === referralLink ? 'Link' : 'Code'} copied to clipboard!`);
+    toast.success(`${type} copied to clipboard!`);
   };
 
   // Refetch if referral code is not available
@@ -130,6 +136,26 @@ export default function ReferralsPage() {
     }, 0);
   const successfulReferralsCount = referralHistory.filter((r: any) => r.status === 'Completed' || r.status === 'Bonus Paid').length;
 
+  const bonuses = referralData?.data?.settings || {
+    c2c: { referrerBonus: 100, refereeBonus: 50 }, // Default fallback values
+    c2v: { referrerBonus: 500, refereeBonus: 0 }
+  };
+
+  const handleWhatsAppShare = (link: string, type: 'friend' | 'partner') => {
+    const reward = type === 'friend' ? bonuses.c2c.referrerBonus : bonuses.c2v.referrerBonus;
+    const friendReward = bonuses.c2c.refereeBonus;
+    
+    let message = '';
+    if (type === 'friend') {
+      message = `Hey! Join GlowVita using my referral link and get ₹${friendReward} off on your first salon booking! 🧖‍♀️💅\n\nRegister here: ${link}`;
+    } else {
+      message = `Hey! Register your Salon or Spa on GlowVita and manage your business easily! 🏢✂️\n\nRegister here: ${link}`;
+    }
+    
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -139,29 +165,77 @@ export default function ReferralsPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>How It Works</CardTitle>
-            <CardDescription>Follow these simple steps to invite friends and earn rewards.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <HowItWorksStep
-              step={1}
-              title="Share Your Link"
-              description="Copy your unique referral link or code and share it with your friends via social media, email, or messaging apps."
-            />
-            <HowItWorksStep
-              step={2}
-              title="Friend Signs Up"
-              description="Your friend signs up using your link and makes their first booking. We'll automatically track the referral."
-            />
-            <HowItWorksStep
-              step={3}
-              title="Earn Rewards"
-              description="Once their first appointment is completed, you'll both receive a reward in your wallet. It's that simple!"
-            />
-          </CardContent>
-        </Card>
+        <div className="lg:col-span-2 space-y-6">
+          {/* Friend Referral Program */}
+          <Card className="border-blue-100 overflow-hidden">
+            <CardHeader className="bg-blue-50/50 border-b border-blue-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-blue-900">
+                    <UserPlus className="w-5 h-5" /> 
+                    Friend Referral Program
+                  </CardTitle>
+                  <CardDescription className="text-blue-700/70">Invite friends to book salon & spa services</CardDescription>
+                </div>
+                <Badge className="bg-blue-600">Earn ₹{bonuses.c2c.referrerBonus}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-6">
+                <HowItWorksStep
+                  step={1}
+                  title="Share your Friend Link"
+                  description="Share your unique client referral link with friends via WhatsApp or social media."
+                />
+                <HowItWorksStep
+                  step={2}
+                  title="Friend Joins & Books"
+                  description={`Your friend registers and receives ₹${bonuses.c2c.refereeBonus} in their wallet for their first booking.`}
+                />
+                <HowItWorksStep
+                  step={3}
+                  title="Receive Your Reward"
+                  description={`Once your friend completes their first salon service, ₹${bonuses.c2c.referrerBonus} will be credited to your wallet!`}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Partner Referral Program */}
+          <Card className="border-purple-100 overflow-hidden">
+            <CardHeader className="bg-purple-50/50 border-b border-purple-100">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-purple-900">
+                    <Building className="w-5 h-5" /> 
+                    Partner Referral Program
+                  </CardTitle>
+                  <CardDescription className="text-purple-700/70">Invite Salons, Doctors, or Suppliers to GlowVita</CardDescription>
+                </div>
+                <Badge className="bg-purple-600">Earn ₹{bonuses.c2v.referrerBonus}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="space-y-6">
+                <HowItWorksStep
+                  step={1}
+                  title="Share partner Link"
+                  description="Invite business owners (Salon, Spa, Clinic) to join GlowVita's business community."
+                />
+                <HowItWorksStep
+                  step={2}
+                  title="Partner Registers & Subscribes"
+                  description="The partner registers their business and chooses a subscription plan that fits their needs."
+                />
+                <HowItWorksStep
+                  step={3}
+                  title="Earn High Reward"
+                  description={`Once the partner purchases their first subscription, you receive a massive ₹${bonuses.c2v.referrerBonus} reward!`}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         <Card>
           <CardHeader>
@@ -180,34 +254,91 @@ export default function ReferralsPage() {
                 <Button
                   variant="outline"
                   size="icon"
-                  onClick={() => handleCopy(referralCode)}
+                  onClick={() => handleCopy(referralCode, 'Code')}
                   disabled={!isValidCode}
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-            <div>
-              <Label className="text-xs font-semibold">Your Referral Link</Label>
-              <div className="flex items-center space-x-2">
-                <Input
-                  value={!isValidCode ? 'Generating link...' : referralLink}
-                  readOnly
-                  className="text-xs bg-secondary"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleCopy(referralLink)}
-                  disabled={!isValidCode}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
+            
+            <div className="space-y-4 pt-2 border-t">
+              <div>
+                <Label className="text-xs font-semibold flex items-center gap-1">
+                  <UserPlus className="w-3 h-3" /> Refer a Friend
+                </Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    value={!isValidCode ? 'Generating link...' : clientReferralLink}
+                    readOnly
+                    className="text-xs bg-secondary"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleCopy(clientReferralLink, 'Client Join Link')}
+                    disabled={!isValidCode}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs font-semibold flex items-center gap-1">
+                  <Building className="w-3 h-3" /> Refer a Partner (Salons/Doctors)
+                </Label>
+                <div className="flex items-center space-x-2">
+                  <Input
+                    value={!isValidCode ? 'Generating link...' : partnerReferralLink}
+                    readOnly
+                    className="text-xs bg-secondary"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => handleCopy(partnerReferralLink, 'Partner Join Link')}
+                    disabled={!isValidCode}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1 italic">
+                  Earn bonuses when a business (vendor, doctor, supplier) joins using your code.
+                </p>
               </div>
             </div>
-            <div className="pt-2 flex justify-center gap-2">
-              <Button variant="outline" size="icon"><Mail className="h-4 w-4" /></Button>
-              <Button variant="outline" size="icon"><MessageCircle className="h-4 w-4" /></Button>
+            
+            <div className="pt-4 flex flex-col gap-2">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start text-[#25D366] hover:text-[#25D366] hover:bg-[#25D366]/10 border-[#25D366]/20"
+                onClick={() => handleWhatsAppShare(clientReferralLink, 'friend')}
+              >
+                <MessageCircle className="h-4 w-4 mr-2 fill-current" />
+                Share Friend Link on WhatsApp
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start text-primary hover:bg-primary/5"
+                onClick={() => handleWhatsAppShare(partnerReferralLink, 'partner')}
+              >
+                <Building className="h-4 w-4 mr-2" />
+                Share Partner Link on WhatsApp
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-xs text-muted-foreground hover:bg-transparent"
+                onClick={() => {
+                  const subject = encodeURIComponent("Join GlowVita - Your Premium Salon Booking Platform");
+                  const body = encodeURIComponent(`Hi!\n\nI'm using GlowVita to book my salon and spa appointments. You should try it too! Use my link to join and get ₹${bonuses.c2c.refereeBonus} in your wallet: ${clientReferralLink}\n\nCheers!`);
+                  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+                }}
+              >
+                <Mail className="h-3 w-3 mr-2" />
+                Invite via Email
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -249,7 +380,8 @@ export default function ReferralsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Friend</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Friend / Partner</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Reward</TableHead>
@@ -258,13 +390,19 @@ export default function ReferralsPage() {
               <TableBody>
                 {currentItems.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                       No referrals yet. Share your code to start earning!
                     </TableCell>
                   </TableRow>
                 ) : (
                   currentItems.map((referral: any) => (
                     <TableRow key={referral.id}>
+                      <TableCell>
+                        <Badge variant="outline" className={referral.type === 'Partner' ? "border-purple-200 text-purple-700 bg-purple-50" : "border-blue-200 text-blue-700 bg-blue-50"}>
+                          {referral.type === 'Client' ? <UserPlus className="w-3 h-3 mr-1" /> : <Building className="w-3 h-3 mr-1" />}
+                          {referral.type}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="font-medium">{referral.friend}</TableCell>
                       <TableCell>{new Date(referral.date).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</TableCell>
                       <TableCell>
