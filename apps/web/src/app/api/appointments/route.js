@@ -104,7 +104,7 @@ export const GET = async (req) => {
 
         // Fetch appointments with populated vendor data
         const appointments = await AppointmentModel.find(query)
-            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId clientName clientEmail clientPhone amount addOnsAmount totalAmount finalAmount platformFee serviceTax discountAmount vendorId cancellationReason notes isHomeService homeServiceLocation travelTime travelDistance distanceMeters blockedTravelWindows isWeddingService weddingPackageDetails')
+            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId clientName clientEmail clientPhone amount addOnsAmount totalAmount finalAmount platformFee serviceTax discountAmount vendorId cancellationReason notes isHomeService homeServiceLocation travelTime travelDistance distanceMeters blockedTravelWindows isWeddingService weddingPackageDetails invoiceNumber')
             .populate('vendorId', 'businessName address')
             .lean(); // Use lean() to get plain JavaScript objects with raw ObjectIds
 
@@ -250,7 +250,8 @@ export const GET = async (req) => {
                 distanceMeters: apt.distanceMeters || 0,
                 blockedTravelWindows: apt.blockedTravelWindows || [],
                 isWeddingService: apt.isWeddingService || false,
-                weddingPackageDetails: apt.weddingPackageDetails || null
+                weddingPackageDetails: apt.weddingPackageDetails || null,
+                invoiceNumber: apt.invoiceNumber || null
             };
         });
 
