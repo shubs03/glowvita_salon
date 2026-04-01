@@ -85,8 +85,10 @@ const OffersTable = ({
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                       coupon.status === "Active"
-                        ? "bg-primary/10 text-primary"
-                        : "bg-secondary/10 text-secondary-foreground"
+                        ? "bg-green-100 text-green-700"
+                        : coupon.status === "Expired"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-yellow-100 text-yellow-700"
                     }`}>
                       {coupon.status}
                     </span>
