@@ -13,6 +13,7 @@ import { cn } from "@repo/ui/cn";
 import { Heart, ShoppingCart, Star } from "lucide-react";
 import { Badge } from "@repo/ui/badge";
 import { useGetPublicVendorProductsQuery, useGetPublicProductsQuery } from "@repo/store/api";
+import { useSalonFilter } from "@/components/landing/SalonFilterContext";
 
 interface Product {
   id: string;
@@ -55,6 +56,8 @@ const RelevantProducts: React.FC<RelevantProductsProps> = ({
   const dispatch = useAppDispatch();
   const [addToCartAPI] = useAddToClientCartMutation();
 
+  const { userLat, userLng } = useSalonFilter();
+
   // 1. Fetch products by vendor
   const {
     data: vendorProductsResponse,
@@ -67,7 +70,11 @@ const RelevantProducts: React.FC<RelevantProductsProps> = ({
   const {
     data: categoryProductsResponse,
     isLoading: categoryProductsLoading,
-  } = useGetPublicProductsQuery({ categoryId }, {
+  } = useGetPublicProductsQuery({ 
+    categoryId,
+    lat: userLat || undefined,
+    lng: userLng || undefined,
+  }, {
     skip: !categoryId,
   });
 

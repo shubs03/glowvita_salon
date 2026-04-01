@@ -196,6 +196,7 @@ export const GET = async (request) => {
     /* 7️⃣ Safety net: remove vendors with NO services */
     pipeline.push({ $match: { services: { $ne: [] } } });
 
+    const now = new Date();
     /* Fetch active CRM offers for vendors */
     pipeline.push({
       $lookup: {
@@ -207,7 +208,13 @@ export const GET = async (request) => {
               $expr: {
                 $and: [
                   { $eq: ["$businessId", "$$vendorId"] },
-                  { $eq: ["$status", "Active"] }
+                  { $lte: ["$startDate", now] },
+                  {
+                    $or: [
+                      { $eq: ["$expires", null] },
+                      { $gte: ["$expires", now] }
+                    ]
+                  }
                 ]
               }
             }

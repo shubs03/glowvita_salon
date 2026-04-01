@@ -184,6 +184,7 @@ export const GET = async (request) => {
       }
     ];
 
+    const now = new Date();
     const lookupOffers = {
       $lookup: {
         from: "crmoffers",
@@ -194,7 +195,13 @@ export const GET = async (request) => {
               $expr: {
                 $and: [
                   { $eq: ["$businessId", "$$vendorId"] },
-                  { $eq: ["$status", "Active"] }
+                  { $lte: ["$startDate", now] },
+                  {
+                    $or: [
+                      { $eq: ["$expires", null] },
+                      { $gte: ["$expires", now] }
+                    ]
+                  }
                 ]
               }
             }

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, Suspense } from "react";
 import { Button } from "@repo/ui/button";
 import { Input } from "@repo/ui/input";
 import { useGetPublicProductsQuery } from "@repo/store/api";
+import { useSalonFilter } from "@/components/landing/SalonFilterContext";
 import {
   Select,
   SelectContent,
@@ -224,12 +225,17 @@ const ProductHighlightCard = ({
 };
 
 export default function AllProductsPage() {
+  const { userLat, userLng, locationLabel } = useSalonFilter();
+
   // Fetch approved products from API
   const {
     data: productsApiData,
     isLoading,
     error: apiError,
-  } = useGetPublicProductsQuery(undefined);
+  } = useGetPublicProductsQuery({
+    lat: userLat || undefined,
+    lng: userLng || undefined,
+  });
 
   console.log("Products on all products page : ", productsApiData);
 
@@ -416,6 +422,7 @@ export default function AllProductsPage() {
             setViewMode={setViewMode}
             filteblueProducts={filteblueProducts}
             setIsFilterModalOpen={setIsFilterModalOpen}
+            noServiceArea={productsApiData?.noServiceArea}
           />
         </div>
 
