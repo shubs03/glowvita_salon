@@ -231,6 +231,15 @@ export const glowvitaApi = createApi({
       providesTags: ["ClientWithdrawals"],
     }),
 
+    updateWithdrawalStatus: builder.mutation({
+      query: (data) => ({
+        url: "/admin/wallet-withdrawals",
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: ["ClientWithdrawals"],
+    }),
+
     getAdminTransactions: builder.query({
       query: (params = {}) => {
         const queryParams = new URLSearchParams();
@@ -3622,6 +3631,7 @@ export const {
 
   // Admin Wallet Monitoring Hooks
   useGetAdminWithdrawalsQuery,
+  useUpdateWithdrawalStatusMutation,
   useGetAdminTransactionsQuery,
   useGetAdminOnlineTransactionsQuery,
 } = glowvitaApi;

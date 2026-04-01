@@ -7,7 +7,8 @@ import { Input } from "@repo/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Pagination } from "@repo/ui/pagination";
 import { Badge } from "@repo/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@repo/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@repo/ui/dialog";
+import { Label } from "@repo/ui/label";
 import { 
   Search, 
   RefreshCw, 
@@ -24,6 +25,7 @@ import { toast } from "sonner";
 
 import { 
   useGetAdminWithdrawalsQuery,
+  useUpdateWithdrawalStatusMutation,
   useGetRegionsQuery
 } from "@repo/store/services/api";
 import { useSelector } from "react-redux";
@@ -66,8 +68,11 @@ export function WalletWithdrawalsTab() {
   const [filterUserType, setFilterUserType] = useState<string>("all");
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<WalletWithdrawal | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [showRejectionInput, setShowRejectionInput] = useState(false);
 
   // RTK Query hook
+  const [updateStatus, { isLoading: isUpdating }] = useUpdateWithdrawalStatusMutation();
   const { data: withdrawalResp, isLoading, isError, refetch } = useGetAdminWithdrawalsQuery({
     page: currentPage,
     limit: itemsPerPage,
@@ -139,7 +144,35 @@ export function WalletWithdrawalsTab() {
 
   const handleViewDetails = (withdrawal: WalletWithdrawal) => {
     setSelectedWithdrawal(withdrawal);
+    setRejectionReason("");
+    setShowRejectionInput(false);
     setShowDetailModal(true);
+  };
+
+  const handleUpdateStatus = async (action: "approve" | "reject") => {
+    if (!selectedWithdrawal) return;
+
+    if (action === "reject" && !showRejectionInput) {
+      setShowRejectionInput(true);
+      return;
+    }
+
+    try {
+      const result = await updateStatus({
+        id: selectedWithdrawal._id,
+        action,
+        rejectionReason: action === "reject" ? rejectionReason : undefined
+      }).unwrap();
+
+      if (result.success) {
+        toast.success(result.message || `Withdrawal ${action}d successfully`);
+        setShowDetailModal(false);
+      } else {
+        toast.error(result.message || `Failed to ${action} withdrawal`);
+      }
+    } catch (err: any) {
+      toast.error(err.data?.message || err.message || `Error ${action}ing withdrawal`);
+    }
   };
 
   // No need to recalculate stats as they come from the API response
@@ -420,17 +453,26 @@ export function WalletWithdrawalsTab() {
                 <p className="text-sm text-muted-foreground">Bank/UPI Details</p>
                 <div className="bg-secondary p-3 rounded-lg mt-1">
                   <p className="font-medium">{selectedWithdrawal.bankDetails.accountHolderName}</p>
-                  {selectedWithdrawal.bankDetails.upiId ? (
-                     <>
-                        <p className="text-sm">UPI Payment</p>
-                        <p className="text-sm text-muted-foreground">{selectedWithdrawal.bankDetails.upiId}</p>
-                     </>
-                  ) : (
+                  {selectedWithdrawal.bankDetails?.accountNumber ? (
                     <>
-                        <p className="text-sm">{selectedWithdrawal.bankDetails.bankName}</p>
-                        <p className="text-sm text-muted-foreground">{selectedWithdrawal.bankDetails.accountNumber}</p>
-                        <p className="text-sm text-muted-foreground">IFSC: {selectedWithdrawal.bankDetails.ifsc}</p>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Bank:</span>
+                        <span>{selectedWithdrawal.bankDetails?.bankName || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Account Number:</span>
+                        <span className="font-semibold">{selectedWithdrawal.bankDetails?.accountNumber}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">IFSC:</span>
+                        <span className="font-semibold">{selectedWithdrawal.bankDetails?.ifsc}</span>
+                      </div>
                     </>
+                  ) : (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">UPI ID:</span>
+                      <span className="font-semibold">{selectedWithdrawal.bankDetails?.upiId || 'N/A'}</span>
+                    </div>
                   )}
                 </div>
               </div>
@@ -479,6 +521,79 @@ export function WalletWithdrawalsTab() {
                 <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
                   <p className="text-sm text-red-600 font-medium">Failure Reason</p>
                   <p className="text-sm text-red-600">{selectedWithdrawal.failureReason}</p>
+                </div>
+              )}
+
+              {/* Action Buttons for Pending Status */}
+              {selectedWithdrawal.status === "pending" && (
+                <div className="space-y-4 pt-4 border-t">
+                  {showRejectionInput && (
+                    <div className="space-y-2">
+                      <Label htmlFor="rejection-reason">Rejection Reason</Label>
+                      <Input
+                        id="rejection-reason"
+                        placeholder="Enter reason for rejection..."
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                      />
+                    </div>
+                  )}
+                  
+                  <div className="flex flex-col gap-2">
+                    {showRejectionInput ? (
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setShowRejectionInput(false)}
+                                disabled={isUpdating}
+                            >
+                                Back
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                className="flex-1"
+                                onClick={() => handleUpdateStatus("reject")}
+                                disabled={isUpdating || !rejectionReason.trim()}
+                            >
+                                {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
+                                Confirm Reject
+                            </Button>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="destructive"
+                                    className="flex-1"
+                                    onClick={() => setShowRejectionInput(true)}
+                                    disabled={isUpdating}
+                                >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Reject
+                                </Button>
+                                <Button
+                                    variant="default"
+                                    className="flex-1"
+                                    onClick={() => handleUpdateStatus("approve")}
+                                    disabled={isUpdating}
+                                >
+                                    {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                                    Approve & Payout
+                                </Button>
+                            </div>
+                            <Button
+                                variant="outline"
+                                className="w-full text-green-600 border-green-600 hover:bg-green-600 hover:text-white transition-colors"
+                                onClick={() => handleUpdateStatus("approve_manual")}
+                                disabled={isUpdating}
+                            >
+                                <CheckCircle className="mr-2 h-4 w-4" />
+                                Mark as Paid Manually
+                            </Button>
+                        </>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

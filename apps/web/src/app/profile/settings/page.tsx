@@ -496,17 +496,6 @@ export default function SettingsPage() {
                             />
                         </div>
                     </div>
-
-                    <div className="pt-2">
-                        <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={handleTestNotification} 
-                            disabled={isTestLoading}
-                        >
-                            {isTestLoading ? "Firing..." : "🚀 Fire Test Notification"}
-                        </Button>
-                    </div>
                 </div>
             </CardContent>
         </Card>

@@ -167,8 +167,8 @@ walletTransactionSchema.index({ userId: 1, status: 1, createdAt: -1 });
 walletTransactionSchema.index({ regionId: 1, createdAt: -1 });
 walletTransactionSchema.index({ regionId: 1, transactionType: 1, createdAt: -1 });
 
-// Pre-save middleware to generate transactionId
-walletTransactionSchema.pre('save', function(next) {
+// Pre-validate middleware to generate transactionId
+walletTransactionSchema.pre('validate', function(next) {
   if (!this.transactionId) {
     const timestamp = Date.now();
     const random = Math.floor(Math.random() * 10000);

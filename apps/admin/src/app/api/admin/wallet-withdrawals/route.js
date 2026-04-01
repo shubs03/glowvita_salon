@@ -1,5 +1,16 @@
 import _db from "@repo/lib/db";
 import WalletWithdrawalModel from "@repo/lib/models/Payment/WalletWithdrawal.model";
+import WalletTransactionModel from "@repo/lib/models/Payment/WalletTransaction.model";
+import UserModel from "@repo/lib/models/user/User.model";
+import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
+import DoctorModel from "@repo/lib/models/Vendor/Docters.model"; // Note: filename typo preserved
+import SupplierModel from "@repo/lib/models/Vendor/Supplier.model";
+import { 
+    createRazorpayContact, 
+    createRazorpayFundAccount, 
+    initiateRazorpayPayout 
+} from "@repo/lib/utils/razorpayPayout";
+import { RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_ACCOUNT_NUMBER } from "@repo/config/config";
 import { authMiddlewareAdmin } from "../../../../middlewareAdmin.js";
 import mongoose from "mongoose";
 
@@ -114,6 +125,191 @@ export const GET = authMiddlewareAdmin(
         },
         { status: 500 }
       );
+    }
+  },
+  ["SUPER_ADMIN", "REGIONAL_ADMIN"]
+);
+
+// PATCH: Approve or Reject a withdrawal request
+export const PATCH = authMiddlewareAdmin(
+  async (req) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      const { id, action, rejectionReason } = await req.json();
+
+      if (!id || !action) {
+        return Response.json({ success: false, message: "ID and Action are required" }, { status: 400 });
+      }
+
+      const withdrawal = await WalletWithdrawalModel.findById(id).session(session);
+
+      if (!withdrawal) {
+        return Response.json({ success: false, message: "Withdrawal not found" }, { status: 404 });
+      }
+
+      if (withdrawal.status !== "pending") {
+        return Response.json({ success: false, message: "Only pending withdrawals can be processed" }, { status: 400 });
+      }
+
+      // Get user to handle refund or razorpay payout
+      let user;
+      let Model;
+      if (withdrawal.userType === 'Vendor') Model = VendorModel;
+      else if (withdrawal.userType === 'Doctor') Model = DoctorModel;
+      else if (withdrawal.userType === 'Supplier') Model = SupplierModel;
+      else Model = UserModel;
+
+      user = await Model.findById(withdrawal.userId).session(session);
+      if (!user) {
+        return Response.json({ success: false, message: "User not found" }, { status: 404 });
+      }
+
+      if (action === "approve") {
+        // Razorpay payout logic here (copied from the original flow)
+        const keyId = (RAZORPAY_KEY_ID || "").trim();
+        const keySecret = (RAZORPAY_KEY_SECRET || "").trim();
+        const razorpayAccountNumber = (RAZORPAY_ACCOUNT_NUMBER || "").trim();
+
+        if (!keyId || !keySecret || !razorpayAccountNumber) {
+          throw new Error("Razorpay payout system not fully configured.");
+        }
+
+        // 1. Get/Create Contact
+        let contactId = user.razorpayContactId;
+        if (!contactId) {
+          const displayName = (withdrawal.userType === 'User') 
+            ? `${user.firstName} ${user.lastName || ''}`.trim()
+            : user.businessName || user.shopName || user.clinicName || user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim();
+
+          contactId = await createRazorpayContact({
+            name: displayName || 'Glowvita Recipient',
+            email: user.emailAddress || user.email,
+            phone: user.mobileNumber || user.phone || '9999999999',
+            userId: user._id
+          }, keyId, keySecret);
+
+          if (!contactId) throw new Error("Failed to create Razorpay identity.");
+          user.razorpayContactId = contactId;
+          await user.save({ session });
+        }
+
+        // 2. Create Fund Account
+        const fundAccountId = await createRazorpayFundAccount(contactId, {
+            accountHolderName: withdrawal.bankDetails.accountHolderName,
+            accountNumber: withdrawal.bankDetails.accountNumber,
+            ifsc: withdrawal.bankDetails.ifsc,
+            upiId: withdrawal.bankDetails.upiId
+        }, keyId, keySecret);
+
+        if (!fundAccountId) throw new Error("Failed to create fund account in Razorpay.");
+
+        // 3. Initiate Payout
+        const payoutData = await initiateRazorpayPayout({
+            razorpayAccountNumber,
+            fundAccountId,
+            amount: withdrawal.netAmount,
+            mode: withdrawal.bankDetails.upiId ? "UPI" : "IMPS",
+            referenceId: withdrawal.withdrawalId,
+            narration: `Approved: ${withdrawal.withdrawalId}`
+        }, keyId, keySecret);
+
+        if (payoutData.error) {
+            throw new Error(`Razorpay Error: ${payoutData.error.description}`);
+        }
+
+        // 4. Update Records
+        withdrawal.status = "processing"; // Move to processing while Razorpay handles it
+        withdrawal.razorpayPayoutId = payoutData.id;
+        withdrawal.razorpayResponse = payoutData;
+        withdrawal.processedAt = new Date();
+        
+        if (payoutData.status === "processed" || payoutData.status === "completed") {
+            withdrawal.status = "completed";
+            withdrawal.completedAt = new Date();
+        }
+
+        await withdrawal.save({ session });
+
+        // Update transaction status
+        if (withdrawal.transactionId) {
+            await WalletTransactionModel.findByIdAndUpdate(withdrawal.transactionId, { 
+                status: (payoutData.status === "processed" || payoutData.status === "completed") ? "completed" : "processing" 
+            }).session(session);
+        }
+
+        await session.commitTransaction();
+
+        return Response.json({
+          success: true,
+          message: "Withdrawal approved and payment initiated",
+          data: { withdrawalId: withdrawal.withdrawalId, status: withdrawal.status }
+        });
+
+      } else if (action === "approve_manual") {
+        // Manual approval logic (Mark as paid without Razorpay)
+        withdrawal.status = "completed";
+        withdrawal.completedAt = new Date();
+        withdrawal.processedAt = new Date();
+        withdrawal.adminNotes = rejectionReason || "Approved manually by administrator";
+        await withdrawal.save({ session });
+
+        // Update transaction status
+        if (withdrawal.transactionId) {
+            await WalletTransactionModel.findByIdAndUpdate(withdrawal.transactionId, { 
+                status: "completed",
+                description: `Manual Payout: ${withdrawal.adminNotes}`
+            }).session(session);
+        }
+
+        await session.commitTransaction();
+
+        return Response.json({
+          success: true,
+          message: "Withdrawal marked as completed manually",
+          data: { withdrawalId: withdrawal.withdrawalId, status: withdrawal.status }
+        });
+
+      } else if (action === "reject") {
+        // Rejection logic: Refund wallet
+        user.wallet = (user.wallet || 0) + withdrawal.amount;
+        await user.save({ session });
+
+        withdrawal.status = "cancelled"; // or 'rejected'
+        withdrawal.rejectionReason = rejectionReason || "Rejected by administrator";
+        withdrawal.processedAt = new Date();
+        await withdrawal.save({ session });
+
+        // Update/Cancel transaction
+        if (withdrawal.transactionId) {
+            await WalletTransactionModel.findByIdAndUpdate(withdrawal.transactionId, { 
+                status: "failed",
+                description: `Rejected: ${withdrawal.rejectionReason}`
+            }).session(session);
+        }
+
+        await session.commitTransaction();
+
+        return Response.json({
+          success: true,
+          message: "Withdrawal request rejected and funds returned to wallet",
+          data: { withdrawalId: withdrawal.withdrawalId, status: withdrawal.status }
+        });
+
+      } else {
+        return Response.json({ success: false, message: "Invalid action" }, { status: 400 });
+      }
+
+    } catch (error) {
+      if (session.inTransaction()) await session.abortTransaction();
+      console.error("Error processing admin withdrawal (PATCH):", error);
+      return Response.json({
+        success: false,
+        message: error.message || "Failed to process withdrawal action"
+      }, { status: 500 });
+    } finally {
+      session.endSession();
     }
   },
   ["SUPER_ADMIN", "REGIONAL_ADMIN"]

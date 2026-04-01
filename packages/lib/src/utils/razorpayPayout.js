@@ -1,6 +1,3 @@
-import fetch from 'node-fetch';
-import crypto from 'crypto';
-
 /**
  * Get Razorpay Auth Header
  */
@@ -106,9 +103,24 @@ export const initiateRazorpayPayout = async (payoutData, keyId, keySecret) => {
         });
 
         const data = await response.json();
+        
+        if (!response.ok) {
+            console.error('Razorpay Payout API Error:', {
+                status: response.status,
+                url: response.url,
+                data
+            });
+            return { 
+                error: { 
+                    description: data.error?.description || `Razorpay API Error (${response.status}): ${response.statusText}`,
+                    code: data.error?.code 
+                } 
+            };
+        }
+
         return data;
     } catch (error) {
         console.error('Error initiating Razorpay payout:', error);
-        return { error: { description: 'Network error or internal server error' } };
+        return { error: { description: error.message || 'Payment Service Unavailable' } };
     }
 };

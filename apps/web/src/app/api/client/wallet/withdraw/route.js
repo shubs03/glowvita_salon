@@ -123,25 +123,8 @@ export async function POST(req) {
       }, { status: 401 });
     }
 
-    const keyId = (RAZORPAY_KEY_ID || '').trim();
-    const keySecret = (RAZORPAY_KEY_SECRET || '').trim();
-    const razorpayAccountNumber = (RAZORPAY_ACCOUNT_NUMBER || '').trim();
-
-    if (!keyId || !keySecret) {
-        await session.abortTransaction();
-        return NextResponse.json({
-          success: false,
-          message: 'Razorpay API keys (ID or Secret) are missing in server configuration.'
-        }, { status: 500 });
-    }
-
-    if (!razorpayAccountNumber) {
-        await session.abortTransaction();
-        return NextResponse.json({
-          success: false,
-          message: 'Razorpay Account Number (RAZORPAY_ACCOUNT_NUMBER) is missing. This is required for payouts.'
-        }, { status: 500 });
-    }
+    // Note: Razorpay keys and account number are now only required for Admin approval/payout flow.
+    // They are not needed for submitting a pending request.
 
     // Parse request body
     const { amount, bankDetails, withdrawalMethod = 'bank_transfer' } = await req.json();
@@ -165,13 +148,13 @@ export async function POST(req) {
         }, { status: 400 });
       }
 
-      // Basic UPI ID validation
-      const upiRegex = /^[\w.-]+@[\w.-]+$/;
-      if (!upiRegex.test(bankDetails.upiId)) {
+      // Standard UPI ID validation: username@bank
+      const upiRegex = /^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/;
+      if (!bankDetails.upiId || !upiRegex.test(bankDetails.upiId)) {
         await session.abortTransaction();
         return NextResponse.json({
           success: false,
-          message: 'Invalid UPI ID format'
+          message: 'Invalid UPI ID format. Example: username@upi'
         }, { status: 400 });
       }
     } else {
@@ -185,20 +168,20 @@ export async function POST(req) {
       }
 
       // Validate IFSC code
-      if (!validateIFSC(bankDetails.ifsc.toUpperCase())) {
+      if (!bankDetails.ifsc || !validateIFSC(bankDetails.ifsc.toUpperCase())) {
         await session.abortTransaction();
         return NextResponse.json({
           success: false,
-          message: 'Invalid IFSC code format'
+          message: 'Invalid IFSC code format. Example: ABCD0123456'
         }, { status: 400 });
       }
 
       // Validate account number
-      if (!validateAccountNumber(bankDetails.accountNumber)) {
+      if (!bankDetails.accountNumber || !validateAccountNumber(bankDetails.accountNumber)) {
         await session.abortTransaction();
         return NextResponse.json({
           success: false,
-          message: 'Invalid account number. Must be 9-18 digits.'
+          message: 'Invalid bank account number. Must be 9-18 digits.'
         }, { status: 400 });
       }
     }
@@ -229,30 +212,21 @@ export async function POST(req) {
     // Check withdrawal limit (dynamic from settings)
     const maxWithdrawalPercentage = settings.maxWithdrawablePercentage || 50;
     const maxAllowedByPercentage = (user.wallet || 0) * (maxWithdrawalPercentage / 100);
-    
+
     if (amount > maxAllowedByPercentage) {
       await session.abortTransaction();
       return NextResponse.json({
         success: false,
-        message: `You can only withdraw up to ${maxWithdrawalPercentage}% of your current wallet balance (₹${maxAllowedByPercentage.toFixed(2)})`
+        message: `You can only withdraw up to ${maxWithdrawalPercentage}% of your current wallet balance (Your limit: ₹${maxAllowedByPercentage.toFixed(2)})`
       }, { status: 400 });
     }
 
-    // Check minimum amount
-    if (amount < settings.minWithdrawalAmount) {
-      await session.abortTransaction();
-      return NextResponse.json({
-        success: false,
-        message: `Minimum withdrawal amount is ₹${settings.minWithdrawalAmount}`
-      }, { status: 400 });
-    }
-
-    // Check maximum amount
+    // Check absolute maximum amount from settings
     if (amount > settings.maxWithdrawalAmount) {
       await session.abortTransaction();
       return NextResponse.json({
         success: false,
-        message: `Maximum withdrawal amount is ₹${settings.maxWithdrawalAmount}`
+        message: `Amount exceeds the maximum allowed withdrawal of ₹${settings.maxWithdrawalAmount} per transaction.`
       }, { status: 400 });
     }
 
@@ -383,102 +357,56 @@ export async function POST(req) {
       }, { status: 400 });
     }
 
-    // RAZORPAY PAYOUT INTEGRATION
-    let contactId = user.razorpayContactId;
-    if (!contactId) {
-      contactId = await createRazorpayContact({
-        name: `${user.firstName} ${user.lastName || ''}`.trim(),
-        email: user.emailAddress,
-        phone: user.mobileNumber || user.phone || '9999999999',
-        userId: user._id
-      }, keyId, keySecret);
-      
-      if (!contactId) {
-        await session.abortTransaction();
-        return NextResponse.json({ success: false, message: 'Failed to create Razorpay contact. Reach support.' }, { status: 500 });
-      }
-      
-      user.razorpayContactId = contactId;
-      await user.save({ session });
-    }
+    // Manual generation of IDs to ensure validation passes during session
+    const timestamp = Date.now();
+    const random = Math.floor(Math.random() * 10000);
+    const generatedWithdrawalId = `WD_${timestamp}_${random}`;
+    const generatedTransactionId = `WTX_${timestamp}_${random}`;
 
-    const fundAccountId = await createRazorpayFundAccount(contactId, {
-      accountHolderName: bankDetails.accountHolderName,
-      accountNumber: bankDetails.accountNumber,
-      ifsc: bankDetails.ifsc,
-      upiId: bankDetails.upiId
-    }, keyId, keySecret);
-    
-    if (!fundAccountId) {
-        await session.abortTransaction();
-        return NextResponse.json({ success: false, message: 'Failed to link fund account with Razorpay.' }, { status: 400 });
-    }
-
-    // Initial withdrawal record in 'processing' status
+    // Create initial withdrawal record in 'pending' status
     const withdrawal = await WalletWithdrawalModel.create([{
       userId: user._id,
       userType: 'User',
       regionId: user.regionId,
+      withdrawalId: generatedWithdrawalId,
       amount,
       withdrawalFee,
       netAmount,
       bankDetails: {
-        accountNumber: bankDetails.accountNumber || null,
-        ifsc: bankDetails.ifsc ? bankDetails.ifsc.toUpperCase() : null,
         accountHolderName: bankDetails.accountHolderName,
-        bankName: bankDetails.bankName || '',
-        upiId: bankDetails.upiId || null
+        // Only save details relevant to the method
+        accountNumber: withdrawalMethod === 'bank_transfer' ? (bankDetails.accountNumber || null) : null,
+        ifsc: withdrawalMethod === 'bank_transfer' ? (bankDetails.ifsc ? bankDetails.ifsc.toUpperCase() : null) : null,
+        bankName: withdrawalMethod === 'bank_transfer' ? (bankDetails.bankName || '') : '',
+        upiId: withdrawalMethod === 'upi' ? (bankDetails.upiId || null) : null
       },
-      status: 'processing',
+      status: 'pending',
       riskScore,
       riskFlags,
-      autoProcessed: true,
-      processedAt: new Date()
+      autoProcessed: false,
+      requestedAt: new Date()
     }], { session });
 
-    // Deduct from user wallet before calling Razorpay to prevent double spending
+    // Deduct from user wallet to reserve the funds
     user.wallet = user.wallet - amount;
     await user.save({ session });
 
-    // Create Payout in Razorpay
-    const payoutData = await initiateRazorpayPayout({
-      razorpayAccountNumber,
-      fundAccountId,
-      amount: netAmount,
-      mode: withdrawalMethod === 'upi' ? 'UPI' : 'IMPS',
-      referenceId: withdrawal[0].withdrawalId,
-      narration: `Withdrawal for ${user.firstName}`
-    }, keyId, keySecret);
-    
-    if (payoutData.error) {
-        // Rollback wallet if Razorpay fails immediately
-        user.wallet = user.wallet + amount;
-        await user.save({ session });
-        
-        await session.abortTransaction();
-        console.error('Razorpay Payout Error:', payoutData.error);
-        return NextResponse.json({
-            success: false,
-            message: payoutData.error.description || 'Failed to initiate Razorpay payout'
-        }, { status: 400 });
-    }
-
-    // Create debit transaction record
+    // Create transaction record for the reservation
     const transaction = await WalletTransactionModel.create([{
       userId: user._id,
       userType: 'User',
       regionId: user.regionId,
+      transactionId: generatedTransactionId,
       transactionType: 'debit',
       amount: -amount,
       balanceBefore: user.wallet + amount,
       balanceAfter: user.wallet,
       source: 'withdrawal',
-      status: 'completed',
-      description: `Withdrawal via ${withdrawalMethod === 'upi' ? 'UPI' : 'Bank Transfer'} - ₹${amount}`,
+      status: 'pending', // Transaction is also pending
+      description: `Withdrawal Request (${generatedWithdrawalId}) - ₹${amount}`,
       withdrawalId: withdrawal[0]._id,
       metadata: {
-        withdrawalId: withdrawal[0].withdrawalId,
-        razorpayPayoutId: payoutData.id,
+        withdrawalId: generatedWithdrawalId,
         withdrawalMethod,
         bankDetails: {
           ifsc: bankDetails.ifsc ? bankDetails.ifsc.toUpperCase() : null,
@@ -489,23 +417,8 @@ export async function POST(req) {
       }
     }], { session });
 
-    // Update withdrawal with Razorpay details
-    withdrawal[0].razorpayPayoutId = payoutData.id;
+    // Update withdrawal with transaction reference
     withdrawal[0].transactionId = transaction[0]._id;
-    withdrawal[0].razorpayResponse = payoutData;
-    
-    // Status depends on Razorpay initial response
-    if (payoutData.status === 'processed' || payoutData.status === 'completed') {
-        withdrawal[0].status = 'completed';
-        withdrawal[0].completedAt = new Date();
-    } else if (payoutData.status === 'failed' || payoutData.status === 'rejected') {
-        withdrawal[0].status = 'failed';
-        withdrawal[0].failureReason = payoutData.status_details?.reason || 'Razorpay payout failed';
-        // Refund wallet
-        user.wallet = user.wallet + amount;
-        await user.save({ session });
-    }
-
     await withdrawal[0].save({ session });
 
     // Commit transaction
@@ -513,15 +426,14 @@ export async function POST(req) {
 
     return NextResponse.json({
       success: true,
-      message: 'Withdrawal request processed successfully. Money will be credited to your account shortly.',
+      message: 'Withdrawal request submitted successfully and is pending admin approval.',
       data: {
         withdrawalId: withdrawal[0].withdrawalId,
         amount,
         withdrawalFee,
         netAmount,
         status: withdrawal[0].status,
-        newBalance: user.wallet,
-        razorpayPayoutId: payoutData.id
+        newBalance: user.wallet
       }
     });
 

@@ -206,9 +206,16 @@ export default function WalletPage() {
         }
 
         const maxPercentage = withdrawalLimits.maxWithdrawablePercentage || 50;
-        const maxAllowed = (balance * maxPercentage) / 100;
-        if (amount > maxAllowed) {
-            toast.error(`You can only withdraw up to ${maxPercentage}% of your wallet balance (₹${maxAllowed.toFixed(2)})`);
+        const maxAllowedByPercentage = (balance * maxPercentage) / 100;
+        const maxAbsolute = withdrawalLimits.maxWithdrawal || 50000;
+        const finalMax = Math.min(maxAllowedByPercentage, maxAbsolute);
+
+        if (amount > finalMax) {
+            if (amount > maxAllowedByPercentage) {
+                toast.error(`You can only withdraw up to ${maxPercentage}% of your wallet balance (Max: ₹${maxAllowedByPercentage.toFixed(2)})`);
+            } else {
+                toast.error(`Maximum withdrawal limit per transaction is ₹${maxAbsolute}`);
+            }
             return;
         }
         
@@ -404,10 +411,9 @@ export default function WalletPage() {
                                         <div className="font-medium mb-1 text-primary">Withdrawal Rules:</div>
                                         <ul className="list-disc pl-4 space-y-0.5 opacity-90 text-[12px]">
                                             <li>Minimum wallet balance to withdraw: <strong>₹{withdrawalLimits.minWalletBalanceForWithdrawal || 50}</strong></li>
-                                            <li>Maximum withdrawal: <strong>{withdrawalLimits.maxWithdrawablePercentage || 50}% of your balance</strong></li>
-                                            {withdrawalLimits && (
-                                                <li>Min request: ₹{withdrawalLimits.minWithdrawal} | Max: ₹{withdrawalLimits.maxWithdrawal}</li>
-                                            )}
+                                            <li>Min per request: <strong>₹{withdrawalLimits.minWithdrawal || 100}</strong></li>
+                                            <li>Maximum per request: <strong>₹{withdrawalLimits.maxWithdrawal || 50000}</strong></li>
+                                            <li>Limit by balance: <strong>{withdrawalLimits.maxWithdrawablePercentage || 50}% of your balance</strong></li>
                                         </ul>
                                         {balance < (withdrawalLimits.minWalletBalanceForWithdrawal || 50) && (
                                             <span className="block text-red-600 mt-2 font-medium">
@@ -575,10 +581,10 @@ export default function WalletPage() {
                                 value={withdrawalAmount}
                                 onChange={(e) => setWithdrawalAmount(e.target.value)}
                                 min={withdrawalLimits.minWithdrawal || 100}
-                                max={Math.min(balance * 0.5, withdrawalLimits.maxWithdrawal || 50000)}
+                                max={Math.min(balance * ((withdrawalLimits.maxWithdrawablePercentage || 50) / 100), withdrawalLimits.maxWithdrawal || 50000)}
                             />
                             <p className="text-xs text-muted-foreground mt-1">
-                                Available balance: ₹{balance.toFixed(2)} (Max withdrawable: ₹{(balance * 0.5).toFixed(2)})
+                                Available balance: ₹{balance.toFixed(2)} (Withdrawable: ₹{Math.min(balance * ((withdrawalLimits.maxWithdrawablePercentage || 50) / 100), withdrawalLimits.maxWithdrawal || 50000).toFixed(2)})
                             </p>
                         </div>
 
