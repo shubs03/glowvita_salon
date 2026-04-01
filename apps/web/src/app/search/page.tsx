@@ -129,11 +129,7 @@ const SearchResults = () => {
                     ? `${activeTab === "salons" ? "Salons" : "Products"} near ${locationLabel}`
                     : `Explore ${activeTab === "salons" ? "Salons" : "Products"}`}
                 </h1>
-                <div className="flex items-center gap-3">
-                  <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-100 rounded-full text-xs font-bold text-gray-600 hover:shadow-md transition-all">
-                    Recommended <ChevronDown className="w-3 h-3" />
-                  </button>
-                </div>
+
               </div>
 
               {/* Tabs */}
