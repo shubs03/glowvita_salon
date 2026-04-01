@@ -21,12 +21,12 @@ const AppPromotionSection = ({
   ];
 
   return (
-    <section className="pt-2 pb-16 px-6 lg:px-8 bg-background">
+    <section className="pt-8 pb-16 px-6 lg:px-8 bg-[#F9F9F9]">
       <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-8 items-stretch">
+        <div className="grid grid-cols-1 lg:grid-cols-[45%_55%] gap-12 lg:gap-8 items-stretch">
           <div className="lg:pl-8 lg:order-1 order-1 flex flex-col justify-center">
             {/* Vendor CRM App Header with Lines */}
-            <div className="flex items-center gap-4 mb-8">
+            <div className="flex items-center gap-4 mb-2 mt-6">
               <div className="h-px bg-gray-400 flex-1"></div>
               <span className="text-[#51364d] tracking-widest text-sm md:text-base font-serif uppercase">
                 Vendor CRM App
@@ -40,7 +40,7 @@ const AppPromotionSection = ({
             </h2>
 
             {/* Description */}
-            <p className="mb-10 text-gray-500 max-w-xl text-lg leading-relaxed">
+            <p className="mb-4 text-gray-500 max-w-xl text-lg leading-relaxed">
               {description}
             </p>
 
@@ -84,12 +84,12 @@ const AppPromotionSection = ({
             </div>
           </div>
           {/* Right Side Image */}
-          <div className="flex justify-center lg:justify-end lg:order-2 order-2 mt-8 lg:mt-0 lg:pl-10 h-full min-h-[400px]">
-            <div className="relative w-full h-full overflow-hidden">
+          <div className="flex justify-center lg:justify-end lg:order-2 order-2 mt-8 lg:mt-0 lg:pl-2 h-full min-h-[550px]">
+            <div className="relative w-full h-full">
               <img
                 src={images?.[0]?.src || "/icons/mobile-8560599_1920 (3) 1.png"}
                 alt={images?.[0]?.hint || `${title} showcase`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
             </div>
           </div>
