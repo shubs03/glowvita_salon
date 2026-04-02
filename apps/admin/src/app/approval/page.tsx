@@ -61,6 +61,7 @@ import {
 } from '@repo/store/api';
 import { toast } from 'sonner';
 import DocumentStatusManager from '../../components/DocumentStatusManager';
+import RegionSelector from '../../components/RegionSelector';
 import { useAppSelector } from "@repo/store/hooks";
 import { selectSelectedRegion } from "@repo/store/slices/adminAuthSlice";
 
@@ -131,17 +132,20 @@ type WeddingPackage = {
   discountedPrice: number | null;
   status: "pending" | "approved" | "disapproved";
   description: string;
+  services?: { serviceName: string; quantity: number }[];
+  inclusions?: string; // Some data might use this
   createdAt?: string;
   updatedAt?: string;
 };
 
 type Product = {
   _id: string;
-  productImage: string;
-  productName: string; // Changed to match data
+  productImages?: string[]; // Actual model field
+  productImage?: string; // Fallback
+  productName: string;
   price: number;
   salePrice: number;
-  category: { _id: string; name: string }; // Updated to match data
+  category: { _id: string; name: string };
   description: string;
   stock: number;
   status: 'pending' | 'approved' | 'disapproved';
@@ -362,13 +366,41 @@ export default function VendorApprovalPage() {
         vendorFilter === "all" || service.vendorId === vendorFilter || service.vendorName === vendorFilter
       )
       .slice()
-      .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort((a: any, b: any) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      });
   }, [pendingServices, vendorFilter]);
 
-  const sortedPendingVendors = [...pendingVendors].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  const sortedPendingDoctors = [...pendingDoctors].sort((a: Doctor, b: Doctor) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
-  const sortedPendingSuppliers = [...pendingSuppliers].sort((a: Supplier, b: Supplier) => new Date((b as any).createdAt ?? 0).getTime() - new Date((a as any).createdAt ?? 0).getTime());
-  const sortedPendingWeddingPackages = [...pendingWeddingPackages].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const sortedPendingVendors = [...pendingVendors].sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return dateB - dateA;
+  });
+
+  const sortedPendingDoctors = [...pendingDoctors].sort((a: Doctor, b: Doctor) => {
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return dateB - dateA;
+  });
+
+  const sortedPendingSuppliers = [...pendingSuppliers].sort((a: Supplier, b: Supplier) => {
+    const dateA = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
+    const dateB = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+    return dateB - dateA;
+  });
+
+  const sortedPendingWeddingPackages = [...pendingWeddingPackages].sort((a: any, b: any) => {
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+    // If dates are valid and different, use them
+    if (dateA !== dateB) return dateB - dateA;
+
+    // Fallback to _id sorting (MongoDB _ids are generally chronological)
+    return (b._id || "").localeCompare(a._id || "");
+  });
 
   const currentVendors = sortedPendingVendors.slice(firstItemIndex, lastItemIndex);
   const currentServices = filteredPendingServices.slice(firstItemIndex, lastItemIndex);
@@ -568,11 +600,19 @@ export default function VendorApprovalPage() {
   const pendingVendorProducts = vendorProducts
     .filter((p: Product) => p.status === 'pending')
     .slice()
-    .sort((a: Product, b: Product) => new Date((b as any).createdAt ?? 0).getTime() - new Date((a as any).createdAt ?? 0).getTime());
+    .sort((a: Product, b: Product) => {
+      const dateA = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
+      const dateB = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
   const pendingSupplierProducts = supplierProducts
     .filter((p: Product) => p.status === 'pending')
     .slice()
-    .sort((a: Product, b: Product) => new Date((b as any).createdAt ?? 0).getTime() - new Date((a as any).createdAt ?? 0).getTime());
+    .sort((a: Product, b: Product) => {
+      const dateA = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 0;
+      const dateB = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 0;
+      return dateB - dateA;
+    });
 
   const totalVendorProductPages = Math.ceil(pendingVendorProducts.length / itemsPerPage);
   const totalSupplierProductPages = Math.ceil(pendingSupplierProducts.length / itemsPerPage);
@@ -641,13 +681,20 @@ export default function VendorApprovalPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="flex items-center gap-4 mb-6">
-        <h1 className="text-2xl font-bold font-headline">Approvals</h1>
-        {selectedRegion && selectedRegion !== 'all' && (
-          <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
-            Region Filtered
-          </Badge>
-        )}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold font-headline">Approvals</h1>
+          {selectedRegion && selectedRegion !== 'all' && (
+            <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-200">
+              Region Filtered
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-muted-foreground mr-1">Filter by Region:</span>
+          {/* @ts-ignore */}
+          <RegionSelector />
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
@@ -861,9 +908,9 @@ export default function VendorApprovalPage() {
                     ) : (
                       currentServices.map((service: Service) => (
                         <TableRow key={service._id}>
-                          <TableCell className="font-medium text-xs max-w-[120px] truncate">{service.name || 'N/A'}</TableCell>
+                          <TableCell className="font-normal text-xs max-w-[120px] truncate">{service.name || 'N/A'}</TableCell>
                           <TableCell className="text-xs max-w-[100px] truncate">{service.vendorName || 'N/A'}</TableCell>
-                          <TableCell className="text-xs">{service.price ? `₹${service.price.toFixed(2)}` : 'N/A'}</TableCell>
+                          <TableCell className="text-xs">{typeof service.price === 'number' ? `₹${service.price.toFixed(2)}` : 'N/A'}</TableCell>
                           <TableCell>
                             <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
                               {service.status || 'pending'}
@@ -937,9 +984,20 @@ export default function VendorApprovalPage() {
                     ) : (
                       currentWeddingPackages.map((pkg: WeddingPackage) => (
                         <TableRow key={pkg._id}>
-                          <TableCell className="font-medium text-xs max-w-[120px] truncate">{pkg.name || 'N/A'}</TableCell>
+                          <TableCell className="font-normal text-xs max-w-[120px] truncate">{pkg.name || 'N/A'}</TableCell>
                           <TableCell className="text-xs max-w-[100px] truncate">{pkg.vendorName || 'N/A'}</TableCell>
-                          <TableCell className="text-xs">{pkg.totalPrice ? `₹${pkg.totalPrice.toFixed(2)}` : 'N/A'}</TableCell>
+                          <TableCell className="text-xs">
+                            <div className="flex flex-col">
+                              {pkg.discountedPrice && pkg.discountedPrice < pkg.totalPrice ? (
+                                <>
+                                  <span className="font-medium text-primary">₹{pkg.discountedPrice.toFixed(2)}</span>
+                                  <span className="line-through text-muted-foreground">₹{pkg.totalPrice.toFixed(2)}</span>
+                                </>
+                              ) : (
+                                <span>₹{typeof pkg.totalPrice === 'number' ? pkg.totalPrice.toFixed(2) : 'N/A'}</span>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
                               {pkg.status || 'pending'}
@@ -1021,26 +1079,26 @@ export default function VendorApprovalPage() {
                           <TableCell className="max-w-[150px]">
                             <div className="flex items-center gap-2">
                               <Image
-                                src={product.productImage || 'https://placehold.co/400x400.png'}
+                                src={product.productImages?.[0] || product.productImage || 'https://placehold.co/400x400?text=No+Image'}
                                 alt={product.productName || 'Product'}
-                                width={30}
-                                height={30}
-                                className="rounded-md cursor-pointer object-cover"
-                                onClick={() => handleImageClick(product.productImage || 'https://placehold.co/400x400.png')}
+                                width={32}
+                                height={32}
+                                className="rounded-md cursor-pointer object-cover aspect-square bg-muted"
+                                onClick={() => handleImageClick(product.productImages?.[0] || product.productImage || 'https://placehold.co/400x400?text=No+Image')}
                               />
-                              <span className="font-medium text-xs truncate">{product.productName || 'N/A'}</span>
+                              <span className="font-normal text-xs truncate">{product.productName || 'N/A'}</span>
                             </div>
                           </TableCell>
                           <TableCell className="text-xs">
                             <div>
-                              <span className={product.salePrice < product.price ? "line-through text-muted-foreground" : ""}>
-                                {product.price ? `₹${product.price.toFixed(2)}` : 'N/A'}
-                              </span>
-                              {product.salePrice < product.price && (
-                                <div className="text-green-600 font-semibold">
-                                  {product.salePrice ? `₹${product.salePrice.toFixed(2)}` : 'N/A'}
+                              {typeof product.salePrice === 'number' && product.salePrice >= 0 && product.salePrice < product.price && (
+                                <div className="text-green-600 font-normal">
+                                  ₹{product.salePrice.toFixed(2)}
                                 </div>
                               )}
+                              <span className={typeof product.salePrice === 'number' && product.salePrice >= 0 && product.salePrice < product.price ? "line-through text-muted-foreground" : ""}>
+                                {typeof product.price === 'number' ? `₹${product.price.toFixed(2)}` : 'N/A'}
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell className="text-xs max-w-[80px] truncate">{product.category?.name || 'N/A'}</TableCell>
@@ -1131,26 +1189,26 @@ export default function VendorApprovalPage() {
                           <TableCell className="max-w-[150px]">
                             <div className="flex items-center gap-2">
                               <Image
-                                src={product.productImage || 'https://placehold.co/400x400.png'}
+                                src={product.productImages?.[0] || product.productImage || 'https://placehold.co/400x400?text=No+Image'}
                                 alt={product.productName || 'Product'}
-                                width={30}
-                                height={30}
-                                className="rounded-md cursor-pointer object-cover"
-                                onClick={() => handleImageClick(product.productImage || 'https://placehold.co/400x400.png')}
+                                width={32}
+                                height={32}
+                                className="rounded-md cursor-pointer object-cover aspect-square bg-muted"
+                                onClick={() => handleImageClick(product.productImages?.[0] || product.productImage || 'https://placehold.co/400x400?text=No+Image')}
                               />
-                              <span className="font-medium text-xs truncate">{product.productName || 'N/A'}</span>
+                              <span className="font-normal text-xs truncate">{product.productName || 'N/A'}</span>
                             </div>
                           </TableCell>
                           <TableCell className="text-xs">
                             <div>
-                              <span className={product.salePrice < product.price ? "line-through text-muted-foreground" : ""}>
-                                {product.price ? `₹${product.price.toFixed(2)}` : 'N/A'}
-                              </span>
-                              {product.salePrice < product.price && (
-                                <div className="text-green-600 font-semibold">
-                                  {product.salePrice ? `₹${product.salePrice.toFixed(2)}` : 'N/A'}
+                              {typeof product.salePrice === 'number' && product.salePrice >= 0 && product.salePrice < product.price && (
+                                <div className="text-green-600 font-normal">
+                                  ₹{product.salePrice.toFixed(2)}
                                 </div>
                               )}
+                              <span className={typeof product.salePrice === 'number' && product.salePrice >= 0 && product.salePrice < product.price ? "line-through text-muted-foreground" : ""}>
+                                {typeof product.price === 'number' ? `₹${product.price.toFixed(2)}` : 'N/A'}
+                              </span>
                             </div>
                           </TableCell>
                           <TableCell className="text-xs max-w-[80px] truncate">{product.category?.name || 'N/A'}</TableCell>
@@ -1775,7 +1833,7 @@ export default function VendorApprovalPage() {
                             <Mail className="h-4 w-4 text-primary/60" />
                             <div className="flex flex-col">
                               <span className="text-[10px] text-muted-foreground uppercase font-semibold">Email</span>
-                              <span className="text-sm font-medium uppercase text-xs">{supplier.email || 'N/A'}</span>
+                              <span className="text-sm font-medium text-xs lowercase">{supplier.email ? supplier.email.toLowerCase() : 'N/A'}</span>
                             </div>
                           </div>
                         </div>
@@ -1840,12 +1898,12 @@ export default function VendorApprovalPage() {
                     <div className="pb-6 border-b flex justify-between items-start">
                       <div>
                         <h3 className="text-2xl font-bold font-headline">{service.name || 'N/A'}</h3>
-                        <p className="text-muted-foreground flex items-center gap-1.5 mt-1 font-medium italic">
+                        <p className="text-muted-foreground flex items-center gap-1.5 mt-1 font-medium">
                           By {service.vendorName || 'Independent Vendor'}
                         </p>
                       </div>
                       <div className="text-right">
-                        <div className="text-3xl font-black text-primary">₹{service.price?.toFixed(2)}</div>
+                        <div className="text-lg font-medium text-primary">₹{service.price?.toFixed(2)}</div>
                         <Badge variant="outline" className="uppercase font-bold tracking-tighter text-[10px] mt-1">
                           Base Price
                         </Badge>
@@ -1855,7 +1913,7 @@ export default function VendorApprovalPage() {
                       <h4 className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                         <Info className="h-4 w-4" /> Description
                       </h4>
-                      <p className="text-muted-foreground leading-relaxed italic border-l-4 border-primary/20 pl-4 py-1">
+                      <p className="text-muted-foreground leading-relaxed border-l-4 border-primary/20 pl-4 py-1">
                         {service.description || 'No description provided for this service.'}
                       </p>
                     </div>
@@ -1875,8 +1933,8 @@ export default function VendorApprovalPage() {
                         </p>
                       </div>
                       <div className="text-right space-y-1">
-                        <div className="text-xs text-muted-foreground font-bold uppercase line-through opacity-50">₹{pkg.totalPrice?.toFixed(2)}</div>
-                        <div className="text-4xl font-black text-primary">₹{pkg.discountedPrice?.toFixed(2)}</div>
+                        <div className="text-lg font-medium text-primary">₹{pkg.discountedPrice?.toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground font-normal uppercase line-through opacity-50">₹{pkg.totalPrice?.toFixed(2)}</div>
                         <Badge className="bg-green-100 text-green-700 border-none font-black text-[10px] uppercase tracking-tighter">
                           Package Discount Applied
                         </Badge>
@@ -1888,7 +1946,23 @@ export default function VendorApprovalPage() {
                         <FileText className="h-4 w-4" /> Package Inclusions & Details
                       </h4>
                       <div className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                        {pkg.description || 'No specific inclusions listed for this package.'}
+                        {pkg.description && pkg.description !== 'hi' && (
+                          <div className="mb-4 pb-4 border-b border-primary/10">
+                            {pkg.description}
+                          </div>
+                        )}
+                        {pkg.services && pkg.services.length > 0 ? (
+                          <div className="space-y-2">
+                            {pkg.services.map((svc, idx) => (
+                              <div key={idx} className="flex justify-between items-center bg-background/50 p-2 rounded-lg border border-primary/5">
+                                <span className="font-medium text-foreground">{svc.serviceName}</span>
+                                <Badge variant="secondary" className="text-[10px] uppercase font-bold">Qty: {svc.quantity}</Badge>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="opacity-60">No specific inclusions listed for this package.</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1900,37 +1974,39 @@ export default function VendorApprovalPage() {
                 return (
                   <div className="space-y-8">
                     <div className="flex flex-col md:flex-row gap-8 pb-6 border-b">
-                      <div className="relative group mx-auto md:mx-0">
-                        <Image
-                          src={product.productImage || 'https://placehold.co/200x200.png'}
-                          alt={product.productName || 'Product'}
-                          width={240}
-                          height={240}
-                          className="rounded-3xl object-cover shadow-xl border-4 border-background transition-transform duration-500 group-hover:scale-105"
-                          onClick={() => handleImageClick(product.productImage || 'https://placehold.co/200x200.png')}
-                        />
-                        <div className="absolute inset-4 rounded-2xl bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
+                      <div className="mx-auto md:mx-0">
+                        <Card className="overflow-hidden border-none shadow-xl w-fit bg-muted">
+                          <Image
+                            src={product.productImages?.[0] || product.productImage || 'https://placehold.co/400x400?text=Product+Image'}
+                            alt={product.productName || 'Product'}
+                            width={300}
+                            height={300}
+                            className="object-cover rounded-2xl aspect-square"
+                          />
+                        </Card>
                       </div>
                       <div className="flex-1 space-y-6">
                         <div className="space-y-2">
                           <Badge variant="outline" className="bg-secondary/50 text-xs font-bold px-3 py-1">
                             {product.category?.name || 'Uncategorized'}
                           </Badge>
-                          <h3 className="text-3xl font-black font-headline leading-tight">{product.productName || 'N/A'}</h3>
+                          <h3 className="text-xl font-semibold font-headline leading-tight">{product.productName || 'N/A'}</h3>
                         </div>
 
                         <div className="flex items-end gap-4 p-4 bg-primary/5 rounded-2xl border border-primary/10 w-fit">
                           <div className="space-y-1">
-                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Pricing</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pricing</p>
                             <div className="flex items-center gap-3">
-                              <span className="text-4xl font-black text-primary">₹{product.salePrice?.toFixed(2)}</span>
-                              <span className="text-lg text-muted-foreground line-through opacity-50 font-bold">₹{product.price?.toFixed(2)}</span>
+                              <span className="text-lg font-bold text-primary">₹{product.salePrice > 0 && product.salePrice < product.price ? product.salePrice.toFixed(2) : product.price.toFixed(2)}</span>
+                              {product.salePrice > 0 && product.salePrice < product.price && (
+                                <span className="text-sm text-muted-foreground line-through opacity-50 font-normal">₹{product.price?.toFixed(2)}</span>
+                              )}
                             </div>
                           </div>
                           <div className="pl-4 border-l border-primary/20 space-y-1">
-                            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Availability</p>
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Availability</p>
                             <span className={cn(
-                              "text-sm font-black px-3 py-1 rounded-full",
+                              "text-xs font-semibold px-3 py-1 rounded-full",
                               product.stock > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
                             )}>
                               {product.stock > 0 ? `${product.stock} IN STOCK` : 'OUT OF STOCK'}
@@ -1939,10 +2015,10 @@ export default function VendorApprovalPage() {
                         </div>
 
                         <div className="space-y-3">
-                          <h4 className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                          <h4 className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-2">
                             <Info className="h-4 w-4" /> Product Details
                           </h4>
-                          <p className="text-muted-foreground leading-relaxed italic">
+                          <p className="text-sm text-muted-foreground leading-relaxed">
                             "{product.description || 'No description available.'}"
                           </p>
                         </div>

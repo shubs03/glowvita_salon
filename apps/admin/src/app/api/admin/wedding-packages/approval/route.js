@@ -39,6 +39,8 @@ export const GET = authMiddlewareAdmin(async (req) => {
                     name: 1,
                     totalPrice: 1,
                     discountedPrice: 1,
+                    description: 1,
+                    services: 1,
                     status: 1,
                     vendorName: "$vendorDetails.businessName",
                     vendorId: "$vendorDetails._id"
