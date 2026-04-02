@@ -3,7 +3,7 @@ import { Apple, Smartphone, Zap, ShieldCheck, Lock, Bell } from 'lucide-react';
 
 const DownloadApp = () => {
   return (
-    <section id="download-app" className="py-12 sm:py-16 lg:py-20 px-4 sm:px-6 lg:px-8 bg-background overflow-hidden">
+    <section id="download-app" className="pt-6 sm:pt-8 lg:pt-10 pb-0 m-0 px-4 sm:px-6 lg:px-8 bg-[#FAFAFA] overflow-hidden">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
           {/* Left Content */}
@@ -57,7 +57,7 @@ const DownloadApp = () => {
                 />
               </a>
             </div>
-            
+
             {/* Trust Indicators */}
             <div className="mt-5 sm:mt-6 lg:mt-8 flex flex-wrap items-center justify-center lg:justify-start gap-3 sm:gap-4 lg:gap-6 text-xs sm:text-sm text-gray-600">
               <div className="flex items-center gap-1">
@@ -76,12 +76,12 @@ const DownloadApp = () => {
           </div>
 
           {/* Right Image Container */}
-          <div className="order-1 lg:order-2 flex justify-center lg:justify-end relative h-[300px] sm:h-[400px] md:h-[450px] lg:h-[500px] mb-4 sm:mb-0">
+          <div className="order-1 lg:order-2 flex justify-center lg:justify-end relative h-[300px] sm:h-[400px] md:h-[450px] lg:h-[500px]">
             <div className="relative w-[90%] lg:w-[85%] h-full">
               <img
-                src="/images/close-up-hand-holding-phone (1) (2) 1.svg"
+                src="/images/close-up-hand-holding-phone (1) (2) 1.png"
                 alt="Download App"
-                className="w-full h-full object-contain lg:object-right"
+                className="w-full h-full object-contain"
               />
             </div>
           </div>

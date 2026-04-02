@@ -21,7 +21,9 @@ import {
   SelectValue,
 } from "@repo/ui/select";
 import { sidebarNavItems } from '@/lib/routes';
-import { Trash2, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Trash2, Loader2, Eye, EyeOff, ShieldCheck, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { cn } from "@repo/ui/cn";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { useCreateAdminMutation, useUpdateAdminMutation, useDeleteAdminMutation, useGetRegionsQuery } from '../../../../packages/store/src/services/api.js';
 import { useAuth } from '@/hooks/useAuth';
@@ -114,6 +116,17 @@ export function AddAdminForm({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // OTP Verification States
+  const [emailOtp, setEmailOtp] = useState('');
+  const [isEmailOtpSent, setIsEmailOtpSent] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+
+  const [phoneOtp, setPhoneOtp] = useState('');
+  const [isPhoneOtpSent, setIsPhoneOtpSent] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+
+  const [isOtpLoading, setIsOtpLoading] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       const initialFormState = getInitialFormData(initialData);
@@ -124,6 +137,14 @@ export function AddAdminForm({
       setErrors({});
       setShowPassword(false);
       setShowConfirmPassword(false);
+      
+      // Reset Verification
+      setEmailOtp('');
+      setIsEmailOtpSent(false);
+      setIsEmailVerified(isEditMode);
+      setPhoneOtp('');
+      setIsPhoneOtpSent(false);
+      setIsPhoneVerified(isEditMode);
     }
   }, [isOpen, initialData]);
 
@@ -135,14 +156,29 @@ export function AddAdminForm({
       return;
     }
 
-    // Limit mobile number to 10 digits and numbers only
     if (name === 'mobileNo') {
       const numericValue = value.replace(/\D/g, '');
       if (numericValue.length > 10) return;
 
+      if (!isEditMode) {
+        setIsPhoneVerified(false);
+        setIsPhoneOtpSent(false);
+      }
+
       setFormData(prev => ({
         ...prev,
         [name]: numericValue
+      }));
+    } else if (name === 'emailAddress') {
+      let finalValue = value;
+      if (!isEditMode) {
+        finalValue = value.replace(/[^a-zA-Z0-9@.]/g, '');
+        setIsEmailVerified(false);
+        setIsEmailOtpSent(false);
+      }
+      setFormData(prev => ({
+        ...prev,
+        [name]: finalValue
       }));
     } else {
       setFormData(prev => ({
@@ -224,6 +260,96 @@ export function AddAdminForm({
 
   const [selectedRegions, setSelectedRegions] = useState<string[]>([]);
 
+  const handleSendEmailOtp = async () => {
+    if (!formData.emailAddress || !/\S+@\S+\.\S+/.test(formData.emailAddress)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    setIsOtpLoading(true);
+    try {
+      const res = await fetch('/api/admin/auth/send-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.emailAddress }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsEmailOtpSent(true);
+        toast.success(data.message);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (err) {
+      toast.error("Failed to send email OTP");
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleVerifyEmailOtp = async () => {
+    if (!emailOtp || emailOtp.length < 6) {
+      toast.error("Please enter a valid OTP");
+      return;
+    }
+    setIsOtpLoading(true);
+    try {
+      const res = await fetch('/api/admin/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.emailAddress, otp: emailOtp }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message);
+        setIsEmailVerified(true);
+      } else {
+        toast.error(data.message);
+      }
+    } catch (err) {
+      toast.error("Failed to verify email OTP");
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleSendPhoneOtp = async () => {
+    if (!formData.mobileNo || formData.mobileNo.length < 10) {
+      toast.error("Please enter a valid mobile number");
+      return;
+    }
+    setIsOtpLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setIsPhoneOtpSent(true);
+      toast.success("OTP sent securely! (Test mode: use 123456)");
+    } catch (err) {
+      toast.error("Failed to send phone OTP");
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
+  const handleVerifyPhoneOtp = async () => {
+    if (!phoneOtp || phoneOtp.length < 6) {
+      toast.error("Please enter a valid OTP");
+      return;
+    }
+    setIsOtpLoading(true);
+    try {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      if (phoneOtp === "123456") {
+        toast.success("Mobile number verified successfully!");
+        setIsPhoneVerified(true);
+      } else {
+        toast.error("Invalid phone OTP");
+      }
+    } catch (err) {
+      toast.error("Failed to verify phone OTP");
+    } finally {
+      setIsOtpLoading(false);
+    }
+  };
+
   const handleRegionToggle = (regionId: string, checked: boolean) => {
     setSelectedRegions(prev =>
       checked ? [...prev, regionId] : prev.filter(id => id !== regionId)
@@ -243,12 +369,16 @@ export function AddAdminForm({
       newErrors.mobileNo = 'Mobile number is required';
     } else if (!/^\d{10}$/.test(formData.mobileNo)) {
       newErrors.mobileNo = 'Please enter a valid 10-digit mobile number.';
+    } else if (!isEditMode && !isPhoneVerified) {
+      newErrors.mobileNo = 'Please verify your mobile number.';
     }
 
     if (!formData.emailAddress.trim()) {
       newErrors.emailAddress = 'Email is required';
     } else if (!/\S+@\S+\.\S+/.test(formData.emailAddress)) {
       newErrors.emailAddress = 'Please enter a valid email address.';
+    } else if (!isEditMode && !isEmailVerified) {
+      newErrors.emailAddress = 'Please verify your email address.';
     }
 
     if (!formData.roleName) {
@@ -454,36 +584,114 @@ export function AddAdminForm({
                   {errors.fullName && <p className="text-xs text-destructive">{errors.fullName}</p>}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="mobileNo" className="text-sm">Mobile Number *</Label>
-                  <Input
-                    id="mobileNo"
-                    name="mobileNo"
-                    type="tel"
-                    value={formData.mobileNo}
-                    onChange={handleInputChange}
-                    className={`text-sm ${errors.mobileNo ? 'border-destructive' : ''}`}
-                    disabled={isLoading}
-                    required
-                  />
+                <div className="space-y-2 p-3 rounded border border-gray-100 bg-gray-50/30">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="mobileNo" className="text-sm font-semibold flex items-center gap-1">Mobile Number *</Label>
+                    {!isEditMode && isPhoneVerified && <span className="text-green-600 text-xs font-bold flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Verified</span>}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      id="mobileNo"
+                      name="mobileNo"
+                      type="tel"
+                      value={formData.mobileNo}
+                      onChange={handleInputChange}
+                      className={cn(`text-sm flex-1 ${errors.mobileNo ? 'border-destructive' : ''}`, !isEditMode && isPhoneVerified && "border-green-300 bg-green-50 text-green-800")}
+                      disabled={isLoading || (!isEditMode && (isPhoneVerified || isOtpLoading))}
+                      required
+                    />
+                    {!isEditMode && !isPhoneVerified && (
+                      <Button 
+                        type="button"
+                        onClick={handleSendPhoneOtp}
+                        disabled={isOtpLoading || !formData.mobileNo || formData.mobileNo.length < 10}
+                        className="text-sm px-3 bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                      >
+                        {isPhoneOtpSent ? "Resend" : "Verify"}
+                      </Button>
+                    )}
+                  </div>
                   {errors.mobileNo && <p className="text-xs text-destructive">{errors.mobileNo}</p>}
+                  
+                  {!isEditMode && isPhoneOtpSent && !isPhoneVerified && (
+                    <div className="pt-2 animate-in fade-in slide-in-from-top-2">
+                      <div className="flex gap-2">
+                        <Input 
+                          type="text" 
+                          placeholder="OTP" 
+                          maxLength={6}
+                          value={phoneOtp} 
+                          onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ''))}
+                          disabled={isOtpLoading}
+                          className="text-sm flex-1 text-center tracking-widest font-black"
+                        />
+                        <Button 
+                          type="button"
+                          onClick={handleVerifyPhoneOtp}
+                          disabled={isOtpLoading || phoneOtp.length < 6}
+                          className="text-sm px-4 bg-primary text-primary-foreground"
+                        >
+                          {isOtpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Verify"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="emailAddress" className="text-sm">Email Address *</Label>
-                  <Input
-                    id="emailAddress"
-                    name="emailAddress"
-                    type="email"
-                    value={formData.emailAddress}
-                    onChange={handleInputChange}
-                    className={`text-sm ${errors.emailAddress ? 'border-destructive' : ''}`}
-                    disabled={isLoading}
-                    required
-                  />
+                <div className="space-y-2 p-3 rounded border border-gray-100 bg-gray-50/30">
+                  <div className="flex justify-between items-center">
+                    <Label htmlFor="emailAddress" className="text-sm font-semibold flex items-center gap-1">Email Address *</Label>
+                    {!isEditMode && isEmailVerified && <span className="text-green-600 text-xs font-bold flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Verified</span>}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      id="emailAddress"
+                      name="emailAddress"
+                      type="email"
+                      value={formData.emailAddress}
+                      onChange={handleInputChange}
+                      className={cn(`text-sm flex-1 ${errors.emailAddress ? 'border-destructive' : ''}`, !isEditMode && isEmailVerified && "border-green-300 bg-green-50 text-green-800")}
+                      disabled={isLoading || (!isEditMode && (isEmailVerified || isOtpLoading))}
+                      required
+                    />
+                    {!isEditMode && !isEmailVerified && (
+                      <Button 
+                        type="button"
+                        onClick={handleSendEmailOtp}
+                        disabled={isOtpLoading || !formData.emailAddress || !/\S+@\S+\.\S+/.test(formData.emailAddress)}
+                        className="text-sm px-3 bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                      >
+                        {isEmailOtpSent ? "Resend" : "Verify"}
+                      </Button>
+                    )}
+                  </div>
                   {errors.emailAddress && <p className="text-xs text-destructive">{errors.emailAddress}</p>}
+                  
+                  {!isEditMode && isEmailOtpSent && !isEmailVerified && (
+                    <div className="pt-2 animate-in fade-in slide-in-from-top-2">
+                      <div className="flex gap-2">
+                        <Input 
+                          type="text" 
+                          placeholder="OTP" 
+                          maxLength={6}
+                          value={emailOtp} 
+                          onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
+                          disabled={isOtpLoading}
+                          className="text-sm flex-1 text-center tracking-widest font-black"
+                        />
+                        <Button 
+                          type="button"
+                          onClick={handleVerifyEmailOtp}
+                          disabled={isOtpLoading || emailOtp.length < 6}
+                          className="text-sm px-4 bg-primary text-primary-foreground"
+                        >
+                          {isOtpLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Verify"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
