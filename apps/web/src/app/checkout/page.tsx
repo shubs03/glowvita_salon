@@ -404,41 +404,24 @@ export default function CheckoutPage() {
           throw new Error('Failed to create payment order');
         }
 
-        const razorpayOrder = paymentOrderResponse.order;
+        const razorpayOrder = paymentOrderResponse;
 
         // Check if Razorpay is loaded
         if (!(window as any).Razorpay) {
           throw new Error('Razorpay SDK not loaded');
         }
 
-        // Configure payment methods based on selection
-        let paymentMethods = {};
-        if (paymentMethod === 'credit-card') {
-          paymentMethods = {
-            card: true,
-            upi: false,
-            netbanking: false,
-            wallet: false,
-          };
-        } else if (paymentMethod === 'upi') {
-          paymentMethods = {
-            card: false,
-            upi: true,
-            netbanking: false,
-            wallet: false,
-          };
-        } else if (paymentMethod === 'netbanking') {
-          paymentMethods = {
-            card: false,
-            upi: false,
-            netbanking: true,
-            wallet: false,
-          };
-        }
+
+
+        // Determine method sequence based on selection
+        let displaySequence = ['block.upi', 'card', 'netbanking'];
+        if (paymentMethod === 'upi') displaySequence = ['block.upi'];
+        else if (paymentMethod === 'credit-card') displaySequence = ['card'];
+        else if (paymentMethod === 'netbanking') displaySequence = ['netbanking'];
 
         // Initialize Razorpay payment
         const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+          key: razorpayOrder.key_id || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
           amount: razorpayOrder.amount,
           currency: razorpayOrder.currency,
           name: 'GlowVita Salon',
@@ -458,7 +441,7 @@ export default function CheckoutPage() {
                   ],
                 },
               },
-              sequence: ['block.upi', 'block.card', 'block.netbanking'],
+              sequence: displaySequence,
             },
           },
           handler: async function (response: any) {
