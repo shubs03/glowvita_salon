@@ -41,9 +41,9 @@ interface WeddingPackageCustomizerProps {
     setCurrentStep: (step: number) => void;
 }
 
-export function Step1_WeddingPackageCustomizer({ 
-    weddingPackage, 
-    allServices, 
+export function Step1_WeddingPackageCustomizer({
+    weddingPackage,
+    allServices,
     onPackageUpdate,
     onBack,
     currentStep,
@@ -77,8 +77,8 @@ export function Step1_WeddingPackageCustomizer({
     const calculateTotalPrice = () => {
         return selectedServices.reduce((total, service) => {
             const quantity = serviceQuantities[service.id] || 1;
-            const price = service.discountedPrice !== null && service.discountedPrice !== undefined 
-                ? parseFloat(service.discountedPrice) 
+            const price = service.discountedPrice !== null && service.discountedPrice !== undefined
+                ? parseFloat(service.discountedPrice)
                 : parseFloat(service.price);
             return total + (price * quantity);
         }, 0);
@@ -143,17 +143,17 @@ export function Step1_WeddingPackageCustomizer({
             })),
             totalPrice: totalPrice,
             duration: totalDuration,
-            discountedPrice: weddingPackage.discountedPrice && totalPrice < weddingPackage.totalPrice 
-                ? totalPrice 
+            discountedPrice: weddingPackage.discountedPrice && totalPrice < weddingPackage.totalPrice
+                ? totalPrice
                 : weddingPackage.discountedPrice
         };
-        
+
         // Create updated services array with quantity information
         const updatedServices = selectedServices.map(service => ({
             ...service,
             quantity: serviceQuantities[service.id] || 1
         }));
-        
+
         onPackageUpdate(updatedPackage, updatedServices);
         // Move to next step after customization
         setTimeout(() => {
@@ -195,11 +195,11 @@ export function Step1_WeddingPackageCustomizer({
             <Card className="mb-6 p-4 bg-gradient-to-r from-rose-50 to-pink-50 border-rose-200">
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="relative w-full md:w-32 h-32 rounded-md overflow-hidden flex-shrink-0">
-                        <Image 
-                            src={weddingPackage.image || `https://placehold.co/200x200/png?text=${encodeURIComponent(weddingPackage.name)}`} 
-                            alt={weddingPackage.name} 
-                            fill 
-                            className="object-cover" 
+                        <Image
+                            src={weddingPackage.image || `https://placehold.co/200x200/png?text=${encodeURIComponent(weddingPackage.name)}`}
+                            alt={weddingPackage.name}
+                            fill
+                            className="object-cover"
                             onError={(e) => {
                                 const target = e.target as HTMLImageElement;
                                 target.src = `https://placehold.co/200x200/png?text=Package`;
@@ -247,15 +247,15 @@ export function Step1_WeddingPackageCustomizer({
                             const isHomeService = service.homeService?.available || service.serviceHomeService?.available;
                             const isWeddingService = service.weddingService?.available || service.serviceWeddingService?.available;
                             const isAddon = service.isAddon || service.serviceIsAddon;
-                            
+
                             return (
                                 <Card key={service.id} className="p-4 flex flex-col sm:flex-row items-center gap-4 border-primary/20">
                                     <div className="relative w-full sm:w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
-                                        <Image 
-                                            src={service.image || `https://picsum.photos/seed/${service.name}/200/200.png`} 
-                                            alt={service.name} 
-                                            fill 
-                                            className="object-cover" 
+                                        <Image
+                                            src={service.image || `https://picsum.photos/seed/${service.name}/200/200.png`}
+                                            alt={service.name}
+                                            fill
+                                            className="object-cover"
                                             onError={(e) => {
                                                 const target = e.target as HTMLImageElement;
                                                 target.src = `https://picsum.photos/seed/${service.name}/200/200.png`;
@@ -286,9 +286,9 @@ export function Step1_WeddingPackageCustomizer({
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <div className="flex items-center border rounded-lg">
-                                            <Button 
-                                                size="sm" 
-                                                variant="ghost" 
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
                                                 className="h-8 w-8 p-0"
                                                 onClick={() => handleQuantityChange(service.id, -1)}
                                                 disabled={quantity <= 1}
@@ -296,18 +296,18 @@ export function Step1_WeddingPackageCustomizer({
                                                 <Minus className="h-4 w-4" />
                                             </Button>
                                             <span className="px-2 text-sm font-medium">{quantity}</span>
-                                            <Button 
-                                                size="sm" 
-                                                variant="ghost" 
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
                                                 className="h-8 w-8 p-0"
                                                 onClick={() => handleQuantityChange(service.id, 1)}
                                             >
                                                 <Plus className="h-4 w-4" />
                                             </Button>
                                         </div>
-                                        <Button 
-                                            size="sm" 
-                                            variant="ghost" 
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
                                             className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
                                             onClick={() => handleRemoveService(service.id)}
                                         >
@@ -316,8 +316,8 @@ export function Step1_WeddingPackageCustomizer({
                                     </div>
                                     <div className="text-right">
                                         <div className="font-semibold">
-                                            ₹{((service.discountedPrice !== null && service.discountedPrice !== undefined 
-                                                ? parseFloat(service.discountedPrice) 
+                                            ₹{((service.discountedPrice !== null && service.discountedPrice !== undefined
+                                                ? parseFloat(service.discountedPrice)
                                                 : parseFloat(service.price)) * quantity).toFixed(2)}
                                         </div>
                                     </div>
@@ -342,22 +342,22 @@ export function Step1_WeddingPackageCustomizer({
                                     const isHomeService = service.homeService?.available || service.serviceHomeService?.available;
                                     const isWeddingService = service.weddingService?.available || service.serviceWeddingService?.available;
                                     const isAddon = service.isAddon || service.serviceIsAddon;
-                                    
+
                                     return (
-                                        <Card 
-                                            key={service.id} 
+                                        <Card
+                                            key={service.id}
                                             className="p-3 flex items-center gap-3 cursor-pointer hover:border-primary/50 transition-colors"
                                             onClick={() => handleAddService(service)}
                                         >
                                             <div className="relative w-12 h-12 rounded-md overflow-hidden flex-shrink-0">
-                                                <Image 
-                                                    src={service.image || `https://picsum.photos/seed/${service.name}/200/200.png`} 
-                                                    alt={service.name} 
-                                                    fill 
-                                                    className="object-cover" 
+                                                <Image
+                                                    src={service.image || `https://picsum.photos/seed/${service.name}/200/200.png`}
+                                                    alt={service.name}
+                                                    fill
+                                                    className="object-cover"
                                                     onError={(e) => {
-                                                      const target = e.target as HTMLImageElement;
-                                                      target.src = `https://picsum.photos/seed/${service.name}/200/200.png`;
+                                                        const target = e.target as HTMLImageElement;
+                                                        target.src = `https://picsum.photos/seed/${service.name}/200/200.png`;
                                                     }}
                                                 />
                                             </div>
@@ -385,8 +385,8 @@ export function Step1_WeddingPackageCustomizer({
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-sm font-semibold">
-                                                    ₹{service.discountedPrice !== null && service.discountedPrice !== undefined 
-                                                        ? service.discountedPrice 
+                                                    ₹{service.discountedPrice !== null && service.discountedPrice !== undefined
+                                                        ? service.discountedPrice
                                                         : service.price}
                                                 </div>
                                                 <Button size="sm" variant="ghost" className="h-6 w-6 p-0 mt-1">

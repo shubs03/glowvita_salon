@@ -645,11 +645,11 @@ export default function CheckoutPage() {
                     {cartItems.map((item, index) => (
                       <div key={item.productId || item._id || index} className={`flex items-center gap-6 ${index !== 0 ? 'pt-6 border-t border-gray-100' : ''}`}>
                         <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border">
-                          <Image
-                            src={item.productImage || item.image || "/images/placeholder.jpg"}
+                          <img
+                            src={item.productImage || item.image || "/images/product-placeholder.png"}
                             alt={item.productName || item.name}
-                            fill
-                            className="object-cover"
+                            onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
+                            className="w-full h-full object-cover"
                           />
                         </div>
                         <div className="flex-1">
@@ -697,11 +697,11 @@ export default function CheckoutPage() {
                 ) : (
                   <div className="flex items-center gap-6">
                     <div className="relative w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border">
-                      <Image
-                        src={product.image}
+                      <img
+                        src={(product.image && product.image.trim()) ? product.image : "/images/product-placeholder.png"}
                         alt={product.name}
-                        fill
-                        className="object-cover"
+                        onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
+                        className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="flex-1">

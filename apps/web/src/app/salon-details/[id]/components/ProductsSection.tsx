@@ -372,7 +372,7 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
       p.image ||
       p.productImages?.[0] ||
       p.productImage ||
-      "https://placehold.co/320x224/png?text=Product",
+      "/images/product-placeholder.png",
     vendorId: vendorId,
     vendorName: vendorData?.businessName || "Unknown Vendor",
     category: p.category || "Beauty Products",

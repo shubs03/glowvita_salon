@@ -95,7 +95,7 @@ const RelevantProducts: React.FC<RelevantProductsProps> = ({
       product.image ||
       (Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : null) ||
       product.productImage ||
-      "https://placehold.co/320x224/e2e8f0/64748b?text=Product",
+      "/images/product-placeholder.png",
     vendorId: product.vendorId || vendorId,
     vendorName: product.vendorName || vendorName,
     category: product.category || category,
@@ -289,11 +289,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
       onClick={() => router.push(`/product-details/${product.id}`)}
     >
       <div className="relative aspect-square overflow-hidden rounded-md m-2">
-        <Image
-          src={product.image}
+        <img
+          src={product.image || "/images/product-placeholder.png"}
           alt={product.name}
-          fill
-          className="group-hover:scale-105 transition-transform duration-300 object-cover"
+          onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           data-ai-hint={product.hint}
         />
         <Badge

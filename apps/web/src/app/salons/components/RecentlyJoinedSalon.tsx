@@ -104,7 +104,7 @@ const RecentlyJoinedSalon = () => {
               : "Beauty Services",
       image:
         mostRecentSalon.profileImage ||
-        `https://placehold.co/600x400/gradient?text=${encodeURIComponent(mostRecentSalon.businessName || "Salon")}`,
+        "/images/salon-placeholder.png",
       isNew: true, // Always true since it's the most recent
       hasOffer:
         mostRecentSalon.offers &&
@@ -208,6 +208,7 @@ const RecentlyJoinedSalon = () => {
               src={salon.image}
               alt={salon.name}
               className="w-full h-full object-cover rounded-2xl"
+              onError={(e) => { (e.target as HTMLImageElement).src = "/images/salon-placeholder.png"; }}
             />
           </div>
 

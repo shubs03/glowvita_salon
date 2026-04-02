@@ -294,7 +294,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
     const transformVendor = (vendor: any) => {
       const imageUrl =
         vendor.profileImage ||
-        `https://placehold.co/600x400/gradient?text=${encodeURIComponent(vendor.businessName || "Salon")}`;
+        "/images/salon-placeholder.png";
 
       const hasOffer =
         vendor.offers &&
@@ -407,6 +407,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
                 src={salon.image}
                 alt={salon.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                onError={(e) => { (e.target as HTMLImageElement).src = "/images/salon-placeholder.png"; }}
               />
               {/* Badge */}
               {salon.badge && (
