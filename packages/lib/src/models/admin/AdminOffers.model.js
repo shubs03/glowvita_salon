@@ -96,8 +96,8 @@ if (isServer && mongoose && mongoose.model) {
 
   // Add a method to check if offer is applicable
   adminOfferSchema.methods.isApplicable = function () {
-    // Check if offer is active
-    if (this.status !== "Active") {
+    // Check if offer is active and not manually disabled
+    if (this.status !== "Active" || this.isActive === false) {
       return false;
     }
 
