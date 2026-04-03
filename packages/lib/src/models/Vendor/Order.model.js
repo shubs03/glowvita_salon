@@ -11,7 +11,7 @@ const orderItemSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema({
   orderId: { type: String, required: true, unique: true },
-  
+
   // For B2C: Customer buying from Vendor
   customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   customerName: { type: String },
@@ -24,13 +24,13 @@ const orderSchema = new mongoose.Schema({
 
   items: [orderItemSchema],
   totalAmount: { type: Number, required: true },
-  
+
   status: {
     type: String,
     enum: ['Pending', 'Processing', 'Packed', 'Shipped', 'Delivered', 'Cancelled'],
     default: 'Pending',
   },
-  
+
   shippingAddress: { type: String, required: true },
   shippingCharge: { type: Number, default: 0 },
 
@@ -45,7 +45,7 @@ const orderSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Add initial status to history before saving and inherit regionId
-orderSchema.pre('save', async function(next) {
+orderSchema.pre('save', async function (next) {
   if (this.isNew) {
     this.statusHistory.push({ status: 'Pending', notes: 'Order placed.' });
   }

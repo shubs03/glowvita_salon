@@ -54,6 +54,7 @@ import {
   useGetAppointmentsQuery,
   useGetCrmReviewsQuery,
   useGetCrmClientOrdersQuery,
+  useGetBillingRecordsQuery,
 } from "@repo/store/api";
 import { toast } from "sonner";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
@@ -69,7 +70,7 @@ import { formatDateForDisplay, getStatusColor } from "./utils";
 import { ExportButtons } from "@/components/ExportButtons";
 
 export default function ClientsPage() {
-  const { user } = useCrmAuth();
+  const { user, role } = useCrmAuth();
 
   // Fetch offline clients
   const {
@@ -170,6 +171,18 @@ export default function ClientsPage() {
   // Fetch client orders
   const { data: clientOrdersResponse, isLoading: isLoadingOrders } =
     useGetCrmClientOrdersQuery({});
+
+  // Fetch billing records for the vendor/supplier
+  const { data: billingResponse, isLoading: isLoadingBillings } =
+    useGetBillingRecordsQuery({ vendorId }, { skip: !vendorId });
+
+  const billings = useMemo(() => {
+    const r: any = billingResponse;
+    if (Array.isArray(r)) return r;
+    if (Array.isArray(r?.data)) return r.data;
+    if (Array.isArray(r?.billings)) return r.billings;
+    return [];
+  }, [billingResponse]);
 
   // Normalize reviews into an array
   const allReviews: Review[] = useMemo(() => {
@@ -274,6 +287,50 @@ export default function ClientsPage() {
         }
       });
 
+      (billings || []).forEach((bill: any) => {
+        const rawClientId = bill?.clientId?._id || bill?.clientId;
+        let clientId = rawClientId != null ? String(rawClientId) : "";
+
+        // If no ID match with known clients, try matching by email, phone, or name from clientInfo
+        if (!clientId || !allClientIds.has(clientId)) {
+          const billEmail = (bill?.clientInfo?.email || "").toLowerCase().trim();
+          const billPhone = (bill?.clientInfo?.phone || "").replace(/\D/g, "");
+          const billName = (bill?.clientInfo?.fullName || "").toLowerCase().trim();
+
+          if (billEmail && emailToClientId.has(billEmail)) {
+            clientId = emailToClientId.get(billEmail)!;
+          } else if (billPhone && phoneToClientId.has(billPhone)) {
+            clientId = phoneToClientId.get(billPhone)!;
+          } else if (billName && nameToClientId.has(billName)) {
+            clientId = nameToClientId.get(billName)!;
+          }
+        }
+
+        if (!clientId) return;
+
+        const amount = Number(bill?.totalAmount ?? 0);
+        const status = String(bill?.paymentStatus || "").toLowerCase();
+        const date = bill?.createdAt || bill?.updatedAt;
+
+        // Record a "booking" for each billing record if it's not already counted via appointment
+        // We'll count it if it's a "Counter Bill" (manual sale) or if there's no associated appointment
+        if (bill.billingType === "Counter Bill" || !bill.appointmentId) {
+          countsById.set(clientId, (countsById.get(clientId) || 0) + 1);
+          
+          if (status === "completed") {
+            totalsById.set(clientId, (totalsById.get(clientId) || 0) + amount);
+            completedCountById.set(clientId, (completedCountById.get(clientId) || 0) + 1);
+
+            if (date) {
+              const currentLastVisit = lastVisitByClientId.get(clientId);
+              if (!currentLastVisit || new Date(date) > new Date(currentLastVisit)) {
+                lastVisitByClientId.set(clientId, date);
+              }
+            }
+          }
+        }
+      });
+
       return {
         bookingsById: countsById,
         totalsById,
@@ -281,7 +338,7 @@ export default function ClientsPage() {
         cancelledById: cancelledCountById,
         lastVisitDateById: lastVisitByClientId,
       };
-    }, [appointments, offlineClients, onlineClients]);
+    }, [appointments, billings, offlineClients, onlineClients]);
 
   // Normalize orders into an array
   const allClientOrders: any[] = useMemo(() => {
@@ -363,6 +420,34 @@ export default function ClientsPage() {
       return false;
     });
   }, [profileClient, allClientOrders]);
+
+  // Get billings for the selected profile client with robust matching
+  const profileClientBillings = useMemo(() => {
+    if (!profileClient || !billings) return [];
+
+    return billings.filter((bill: any) => {
+      const rawClientId = bill?.clientId?._id || bill?.clientId;
+      const billClientId = rawClientId != null ? String(rawClientId) : "";
+      const targetId = String(profileClient._id);
+
+      if (billClientId === targetId) return true;
+
+      // Fallback: match by email, phone, or name from clientInfo
+      const billEmail = (bill?.clientInfo?.email || "").toLowerCase().trim();
+      const clientEmail = (profileClient.email || "").toLowerCase().trim();
+      if (billEmail && clientEmail && billEmail === clientEmail) return true;
+
+      const billPhone = (bill?.clientInfo?.phone || "").replace(/\D/g, "");
+      const clientPhone = (profileClient.phone || "").replace(/\D/g, "");
+      if (billPhone && clientPhone && billPhone === clientPhone) return true;
+
+      const billName = (bill?.clientInfo?.fullName || "").toLowerCase().trim();
+      const clientName = (profileClient.fullName || "").toLowerCase().trim();
+      if (billName && clientName && billName === clientName) return true;
+
+      return false;
+    });
+  }, [profileClient, billings]);
 
   const inactiveClients = useMemo(() => {
     return [...offlineClients, ...onlineClients].filter(
@@ -635,6 +720,7 @@ export default function ClientsPage() {
           totalsById={totalsById}
           bookingsById={bookingsById}
           currentSegment={clientSegment}
+          role={role}
         />
 
         {/* Search and Action Buttons Section */}
@@ -750,7 +836,9 @@ export default function ClientsPage() {
           cancelledById={cancelledById}
           profileClientAppointments={profileClientAppointments}
           profileClientOrders={profileClientOrders}
+          profileClientBillings={profileClientBillings}
           allReviews={allReviews}
+          role={role}
           handleAddAppointment={handleAddAppointment}
         />
 

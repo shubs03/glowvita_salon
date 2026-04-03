@@ -177,7 +177,9 @@ interface ClientProfileModalProps {
   cancelledById: Map<string, number>;
   profileClientAppointments: any[];
   profileClientOrders: any[];
+  profileClientBillings: any[];
   allReviews: Review[];
+  role?: string;
   handleAddAppointment: (client: Client) => void;
 }
 
@@ -193,7 +195,9 @@ export default function ClientProfileModal({
   cancelledById,
   profileClientAppointments,
   profileClientOrders,
+  profileClientBillings,
   allReviews,
+  role,
   handleAddAppointment,
 }: ClientProfileModalProps) {
   const [appointmentTab, setAppointmentTab] = useState('upcoming');
@@ -268,11 +272,11 @@ export default function ClientProfileModal({
                   {[
                     { id: 'overview' as const, label: 'Overview', icon: PieChart },
                     { id: 'client-details' as const, label: 'Client Details', icon: User },
-                    { id: 'appointments' as const, label: 'Appointments', icon: Calendar },
+                    { id: 'appointments' as const, label: 'Appointments', icon: Calendar, hide: role === 'supplier' },
                     { id: 'orders' as const, label: 'Orders', icon: Package },
                     { id: 'reviews' as const, label: 'Reviews', icon: Star },
                     { id: 'payment-history' as const, label: 'Payment History', icon: CreditCard },
-                  ].map((tab) => {
+                  ].filter(tab => !tab.hide).map((tab) => {
                     const IconComponent = tab.icon;
                     return (
                       <button
@@ -286,7 +290,7 @@ export default function ClientProfileModal({
                         <IconComponent className="h-5 w-5 mb-1" />
                         <span className="text-xs text-center whitespace-nowrap">
                           {tab.label}
-                          {tab.id === 'orders' && ` (${profileClientOrders.length})`}
+                          {tab.id === 'orders' && ` (${(profileClientOrders?.length || 0) + (profileClientBillings?.length || 0)})`}
                           {tab.id === 'appointments' && ` (${profileClientAppointments.length})`}
                           {tab.id === 'reviews' && ` (${clientReviews.length})`}
                         </span>
@@ -441,20 +445,26 @@ export default function ClientProfileModal({
                     <h3 className="text-lg font-semibold text-gray-900 truncate">Orders</h3>
                   </div>
 
-                  {profileClientOrders.length > 0 ? (
+                  {profileClientOrders.length > 0 || profileClientBillings.length > 0 ? (
                     <div className="space-y-4">
-                      {profileClientOrders.map((order: any, i: number) => (
-                        <div key={order._id || i} className="bg-card p-4 rounded-lg border">
+                      {/* Combine Online Orders and CRM Billings */}
+                      {[
+                        ...(profileClientOrders || []).map(o => ({ ...o, _type: 'order' })),
+                        ...(profileClientBillings || []).map(b => ({ ...b, _type: 'billing' }))
+                      ]
+                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                        .map((item: any, i: number) => (
+                        <div key={item._id || i} className="bg-card p-4 rounded-lg border hover:shadow-sm transition-shadow">
                           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
                                 <Package className="w-4 h-4 text-primary flex-shrink-0" />
                                 <p className="font-medium text-foreground truncate">
-                                  Order #{String(order._id || '').slice(-6).toUpperCase()}
+                                  {item._type === 'billing' ? "Sale" : "Order"} #{String(item.invoiceNumber || item._id || '').slice(-6).toUpperCase()}
                                 </p>
                               </div>
                               <p className="text-sm text-muted-foreground mt-1">
-                                {new Date(order.createdAt).toLocaleDateString(undefined, {
+                                {new Date(item.createdAt).toLocaleDateString(undefined, {
                                   year: 'numeric',
                                   month: 'short',
                                   day: 'numeric',
@@ -463,35 +473,34 @@ export default function ClientProfileModal({
                             </div>
                             <div className="flex items-center gap-2 sm:flex-col sm:items-end">
                               <span
-                                className={`px-2 py-1 rounded text-xs font-medium ${order.status === 'Delivered'
+                                className={`px-2 py-1 rounded text-xs font-medium ${
+                                  (item.status === 'Delivered' || item.paymentStatus === 'Completed')
                                     ? 'bg-green-500/10 text-green-700'
-                                    : order.status === 'Cancelled'
+                                    : (item.status === 'Cancelled' || item.paymentStatus === 'Cancelled')
                                       ? 'bg-destructive/10 text-destructive'
-                                      : order.status === 'Shipped'
-                                        ? 'bg-blue-500/10 text-blue-700'
-                                        : 'bg-muted text-muted-foreground'
+                                      : 'bg-muted text-muted-foreground'
                                   }`}
                               >
-                                {order.status || 'Pending'}
+                                {item.status || item.paymentStatus || 'Pending'}
                               </span>
                               <p className="font-medium text-foreground">
-                                ₹{Number(order.totalAmount || 0).toFixed(2)}
+                                ₹{Number(item.totalAmount || 0).toFixed(2)}
                               </p>
                             </div>
                           </div>
 
                           <div className="space-y-2">
-                            {(order.items || []).map((item: any, idx: number) => (
+                            {(item.items || []).map((prod: any, idx: number) => (
                               <div
                                 key={idx}
                                 className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2 border-b last:border-b-0 gap-2"
                               >
                                 <div className="flex items-center gap-3">
                                   <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground flex-shrink-0">
-                                    {item.image ? (
+                                    {prod.image || prod.productImage ? (
                                       <img
-                                        src={item.image}
-                                        alt={item.name}
+                                        src={prod.image || prod.productImage}
+                                        alt={prod.name}
                                         className="w-full h-full object-cover rounded"
                                       />
                                     ) : (
@@ -500,23 +509,23 @@ export default function ClientProfileModal({
                                   </div>
                                   <div className="min-w-0">
                                     <p className="text-sm font-medium text-foreground truncate">
-                                      {item.name}
+                                      {prod.name}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                      Qty: {item.quantity}
+                                      Qty: {prod.quantity} {prod.price ? `@ ₹${prod.price}` : ''}
                                     </p>
                                   </div>
                                 </div>
                                 <p className="text-sm font-medium text-foreground sm:text-right">
-                                  ₹{Number(item.price || 0).toFixed(2)}
+                                  ₹{Number(prod.totalPrice || (prod.price * prod.quantity) || 0).toFixed(2)}
                                 </p>
                               </div>
                             ))}
                           </div>
-
-                          {order.shippingAddress && (
-                            <div className="mt-4 pt-4 border-t">
-                              <p className="text-sm text-muted-foreground">{order.shippingAddress}</p>
+                          {item.billingType && (
+                            <div className="mt-4 pt-2 flex justify-between items-center text-xs text-muted-foreground">
+                              <span>Type: {item.billingType}</span>
+                              <span>Method: {item.paymentMethod}</span>
                             </div>
                           )}
                         </div>
@@ -527,9 +536,9 @@ export default function ClientProfileModal({
                       <div className="mx-auto w-12 h-12 bg-muted rounded-full flex items-center justify-center mb-3">
                         <Package className="h-6 w-6 text-muted-foreground" />
                       </div>
-                      <p className="text-muted-foreground font-medium">No orders yet</p>
+                      <p className="text-muted-foreground font-medium">No sales or orders yet</p>
                       <p className="text-sm text-muted-foreground/70 mt-1">
-                        Orders will appear here once the client makes a purchase from your store.
+                        Records will appear here once the client makes a purchase.
                       </p>
                     </div>
                   )}
@@ -662,8 +671,15 @@ export default function ClientProfileModal({
 
                     <div className="p-3 space-y-3">
                       {(() => {
-                        const items = profileClientAppointments
+                        const apptItems = profileClientAppointments
                           .filter((appt: any) => String(appt?.status || '').toLowerCase() === 'completed')
+                          .map(i => ({ ...i, _type: 'appointment' }));
+                        
+                        const billItems = profileClientBillings
+                          .filter((bill: any) => String(bill?.paymentStatus || '').toLowerCase() === 'completed')
+                          .map(i => ({ ...i, _type: 'billing' }));
+
+                        const items = [...apptItems, ...billItems]
                           .sort((a: any, b: any) => {
                             const ad = new Date(a?.date || a?.createdAt || 0).getTime();
                             const bd = new Date(b?.date || b?.createdAt || 0).getTime();
@@ -678,14 +694,14 @@ export default function ClientProfileModal({
                               </div>
                               <p className="text-muted-foreground font-medium">No payment history</p>
                               <p className="text-sm text-muted-foreground/70 mt-1">
-                                Transactions for completed appointments will be listed here.
+                                Completed transaction records will be listed here.
                               </p>
                             </div>
                           );
                         }
 
-                        return items.map((appt: any, idx: number) => {
-                          const rawDate = appt?.date || appt?.createdAt || '';
+                        return items.map((item: any, idx: number) => {
+                          const rawDate = item?.date || item?.createdAt || '';
                           const d = rawDate ? new Date(rawDate) : null;
                           const dateStr = d
                             ? d.toLocaleDateString(undefined, {
@@ -695,26 +711,34 @@ export default function ClientProfileModal({
                             })
                             : '';
                           const timeStr =
-                            appt?.startTime || (d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
+                            item?.startTime || (d ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
                           const amount =
-                            Number(appt?.finalAmount ?? appt?.totalAmount ?? appt?.amount ?? appt?.price ?? 0) || 0;
-                          const serviceName = appt?.serviceName || appt?.service?.name || 'Appointment';
+                            Number(item?.finalAmount ?? item?.totalAmount ?? item?.amount ?? item?.price ?? 0) || 0;
+                          const title = item?._type === 'billing' ? (item.billingType || 'Sale') : (item?.serviceName || item?.service?.name || 'Appointment');
 
                           return (
-                            <div key={appt?._id || appt?.id || idx} className="p-4 bg-background rounded-lg border">
+                            <div key={item?._id || item?.id || idx} className="p-4 bg-background rounded-lg border">
                               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                                 <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-foreground truncate">{serviceName}</p>
+                                  <p className="font-medium text-foreground truncate">
+                                    {title} {item.invoiceNumber && `(#${item.invoiceNumber})`}
+                                  </p>
                                   <div className="flex flex-wrap items-center gap-2 mt-1 text-sm text-muted-foreground">
                                     <p>{dateStr}</p>
                                     <span>•</span>
                                     <p>{timeStr}</p>
+                                    {item.paymentMethod && (
+                                      <>
+                                        <span>•</span>
+                                        <p>{item.paymentMethod}</p>
+                                      </>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="text-right">
                                   <div className="flex items-center gap-2 sm:flex-col sm:items-end">
                                     <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded font-medium">
-                                      Paid
+                                      {item?._type === 'billing' ? "Paid" : "Completed"}
                                     </span>
                                     <p className="font-medium text-foreground">₹{amount.toFixed(2)}</p>
                                   </div>
@@ -736,7 +760,7 @@ export default function ClientProfileModal({
               <Button variant="outline" onClick={onClose} className="order-2 sm:order-2">
                 Close
               </Button>
-              {activeTab === 'appointments' && (
+              {activeTab === 'appointments' && role !== 'supplier' && (
                 <Button
                   variant="default"
                   onClick={() => handleAddAppointment(profileClient)}
