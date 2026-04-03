@@ -47,7 +47,7 @@ const RecentlyAddedProducts = () => {
     }
 
     // Filter by stock first
-    const availableProducts = productsData.products.filter(p => (p.stock || 0) > 0);
+    const availableProducts = productsData.products.filter((p: ProductData) => (p.stock || 0) > 0);
     if (availableProducts.length === 0) return null;
 
     // Sort products by creation date to find the most recent
