@@ -175,7 +175,7 @@ export const GET = async (request) => {
         salePrice: product.salePrice > 0 ? product.salePrice : null,
         image: product.productImages && product.productImages.length > 0
           ? product.productImages[0]
-          : 'https://placehold.co/320x224/e2e8f0/64748b?text=Product',
+          : '/images/product-placeholder.png',
         vendorId: vendorData?._id || product.vendorId,
         vendorName: product.origin === 'Vendor'
           ? (vendorData?.businessName || 'Unknown Vendor')

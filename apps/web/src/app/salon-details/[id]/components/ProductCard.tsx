@@ -8,9 +8,10 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppDispatch } from "@repo/store/hooks";
 import { addToCart } from "@repo/store/slices/cartSlice";
-import Image from "next/image";
 import { cn } from "@repo/ui/cn";
 import { useAddToClientCartMutation } from "@repo/store/services/api";
+
+const PRODUCT_PLACEHOLDER = "/images/product-placeholder.png";
 
 interface ProductCardProps {
   product: any;
@@ -31,6 +32,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [imgSrc, setImgSrc] = useState<string>(
+    (product.image && product.image.trim()) ? product.image : PRODUCT_PLACEHOLDER
+  );
   const router = useRouter();
   const { user, isAuthenticated } = useAuth();
   const dispatch = useAppDispatch();
@@ -128,11 +132,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
       onClick={() => router.push(`/product-details/${product.id}`)}
     >
       <div className="relative aspect-square overflow-hidden rounded-md m-2">
-        <Image
-          src={product.image}
+        <img
+          src={imgSrc}
           alt={product.name}
-          fill
-          className="group-hover:scale-105 transition-transform duration-300 object-cover"
+          onError={() => setImgSrc(PRODUCT_PLACEHOLDER)}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           data-ai-hint={product.hint}
         />
         <Badge

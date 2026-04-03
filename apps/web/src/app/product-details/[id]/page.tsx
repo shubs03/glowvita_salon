@@ -381,7 +381,7 @@ export default function ProductDetailsPage() {
         hasSale: prod.salePrice > 0,
         image: Array.isArray(prod.images) && prod.images.length > 0
           ? prod.images[0]
-          : "https://placehold.co/320x224/e2e8f0/64748b?text=Product",
+          : "/images/product-placeholder.png",
         vendorId: prod.vendorId,
         vendorName: prod.vendorName || "Unknown Vendor",
         quantity: selectedProduct ? 1 : quantity, // Use 1 for related products
@@ -578,11 +578,11 @@ export default function ProductDetailsPage() {
                   className={`relative w-20 h-20 rounded-md overflow-hidden cursor-pointer border-2 transition-all ${mainImage === img ? 'border-primary shadow-md' : 'border-transparent hover:border-primary/50'}`}
                   onClick={() => setMainImage(img)}
                 >
-                  <Image
+                  <img
                     src={img}
                     alt={`${product.name} thumbnail ${index + 1}`}
-                    layout="fill"
-                    objectFit="cover"
+                    onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
+                    className="w-full h-full object-cover"
                     data-ai-hint="product photo"
                   />
                 </div>
@@ -591,12 +591,11 @@ export default function ProductDetailsPage() {
 
             {/* Main Image */}
             <div className="flex w-full h-96 relative rounded-lg overflow-hidden shadow-lg">
-              <Image
-                src={mainImage}
+              <img
+                src={mainImage || "/images/product-placeholder.png"}
                 alt={product.name}
-                layout="fill"
-                objectFit="cover"
-                className="w-full h-full"
+                onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
+                className="w-full h-full object-cover"
                 data-ai-hint="skincare product"
               />
             </div>
@@ -629,8 +628,9 @@ export default function ProductDetailsPage() {
                       <Image
                         src={Array.isArray(prod.images) && prod.images.length > 0
                           ? prod.images[0]
-                          : prod.image || "https://placehold.co/80x80/e2e8f0/64748b?text=Product"}
+                          : prod.image || "/images/product-placeholder.png"}
                         alt={prod.name}
+                        onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
                         width={80}
                         height={80}
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
