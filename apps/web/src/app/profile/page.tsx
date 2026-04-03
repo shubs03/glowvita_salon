@@ -152,8 +152,12 @@ function OverviewContent() {
 
     if (!Array.isArray(productsArray) || productsArray.length === 0) return [];
 
+    // Filter available products (stock > 0)
+    const availableProducts = productsArray.filter((p: any) => (p.stock || 0) > 0);
+    if (availableProducts.length === 0) return [];
+
     // Sort by creation date and get the newest 2 products
-    const sortedProducts = [...productsArray].sort((a: any, b: any) => {
+    const sortedProducts = [...availableProducts].sort((a: any, b: any) => {
       const dateA = new Date(a.createdAt || 0).getTime();
       const dateB = new Date(b.createdAt || 0).getTime();
       return dateB - dateA;

@@ -139,14 +139,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           data-ai-hint={product.hint}
         />
-        <Badge
-          variant={
-            product.stock > 0 ? "secondary" : "default"
-          }
-          className="absolute top-2 right-2 text-xs"
-        >
-          {product.stock > 0 ? `In Stock` : "Out of Stock"}
-        </Badge>
+
         <Button
           size="icon"
           variant="ghost"

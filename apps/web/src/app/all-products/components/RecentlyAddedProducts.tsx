@@ -46,8 +46,12 @@ const RecentlyAddedProducts = () => {
       return null;
     }
 
+    // Filter by stock first
+    const availableProducts = productsData.products.filter(p => (p.stock || 0) > 0);
+    if (availableProducts.length === 0) return null;
+
     // Sort products by creation date to find the most recent
-    const sortedProducts = [...productsData.products].sort((a, b) => {
+    const sortedProducts = [...availableProducts].sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA; // Sort in descending order (most recent first)

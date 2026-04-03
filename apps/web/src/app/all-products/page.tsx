@@ -285,7 +285,8 @@ export default function AllProductsPage() {
 
   // Filter and sort products
   useEffect(() => {
-    let result = [...products];
+    // Global filter: Only show products with stock > 0
+    let result = products.filter(p => (p.stock || 0) > 0);
 
     // Apply search filter
     if (searchTerm) {
