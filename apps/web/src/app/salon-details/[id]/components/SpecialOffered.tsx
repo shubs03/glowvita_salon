@@ -32,28 +32,28 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
     offersData?.data
       ?.filter((offer: any) => offer.status === "Active")
       .map((offer: any) => ({
-        code: offer.code, // include offer code
-        title: offer.code || "Special Offer",
+        code: offer.code,
+        title: offer.type === "percentage" ? `${offer.value}% Special Discount` : `₹${offer.value} Exclusive Off`,
         originalPrice:
           offer.type === "percentage"
-            ? String(Math.round(offer.value / (1 - offer.value / 100)))
-            : String(offer.value * 2), // Calculate original price based on percentage discount
+            ? "100"
+            : String(offer.value * 2), // Mock 2x for fixed
         discountedPrice:
           offer.type === "percentage"
-            ? String(Math.round(offer.value * (1 - offer.value / 100)))
-            : String(offer.value), // Calculate discounted price
+            ? String(Math.round(100 - (100 * (offer.value / 100))))
+            : String(offer.value), // Actual price after fixed discount
         discount:
           offer.type === "percentage" ? `${offer.value}%` : `₹${offer.value}`,
         description:
           offer.type === "percentage"
-            ? `${offer.value}% discount on selected services`
-            : `₹${offer.value} off on selected services`,
+            ? `Get ${offer.value}% off on select services when you apply this code at checkout.`
+            : `Enjoy a flat ₹${offer.value} discount on your next service booking.`,
         validity: offer.expires
           ? `Valid until: ${new Date(offer.expires).toLocaleDateString()}`
           : "No expiration date",
         image:
           offer.offerImage ||
-          "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=600", // Use offer image if available
+          "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=600",
       })) || [];
 
   // Use fetched offers
@@ -218,34 +218,34 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
           </div>
 
           {/* Description Card with discount badge */}
-          <div className="flex-1 w-full bg-card border rounded-2xl p-4 relative">
+          <div className="flex-1 w-full bg-card border rounded-2xl p-5 relative">
             {/* Title */}
-            <h3 className="text-lg font-bold text-foreground mb-1">
+            <h4 className="text-2xl font-bold text-foreground mb-3">
               {currentOffer.title}
-            </h3>
+            </h4>
+
+            {/* Promo Code Tag */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                Use Code:
+              </span>
+              <span className="bg-primary/10 text-primary text-xs font-mono font-bold px-3 py-1 rounded-md border border-primary/20 shadow-sm">
+                {currentOffer.code}
+              </span>
+            </div>
+
             {/* Discount Badge - Circle at top right corner of card */}
             <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground w-14 h-14 rounded-full flex items-center justify-center text-sm font-bold shadow-lg">
               {currentOffer.discount}
             </div>
 
-            {/* Mock Description */}
-            <p className="text-muted-foreground text-sm mb-2">
-              Enjoy premium services with exclusive discounts. Limited time
-              offer for our valued customers.
+            {/* Description */}
+            <p className="text-muted-foreground text-sm mb-4 leading-relaxed max-w-[90%]">
+              {currentOffer.description}
             </p>
 
-            {/* Pricing */}
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-muted-foreground line-through text-xs">
-                ₹{currentOffer.originalPrice}
-              </span>
-              <span className="font-bold text-base">
-                ₹{currentOffer.discountedPrice}
-              </span>
-            </div>
-
             {/* Validity and Button */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-4 pt-4 border-t border-dashed">
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">
                   {currentOffer.validity}
