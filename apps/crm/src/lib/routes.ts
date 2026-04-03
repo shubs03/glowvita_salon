@@ -63,6 +63,7 @@ export const supplierNavItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", Icon: FaTachometerAlt, permission: 'dashboard_view' },
   { title: "Inventory", href: "/inventory", Icon: FaWarehouse, permission: 'products_view' },
   { title: "Products", href: "/supplier-products", Icon: FaBoxOpen, permission: 'products_view' },
+  { title: "Clients", href: "/clients", Icon: FaUsers, permission: 'clients_view' },
   { title: "Product Questions", href: "/product-questions", Icon: FaQuestionCircle, permission: 'product_questions_view' },
   { title: "Reviews", href: "/reviews", Icon: FaStar, permission: 'reviews_view' },
   { title: "Orders", href: "/orders", Icon: FaShoppingCart, permission: 'orders_view' },

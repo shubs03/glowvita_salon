@@ -121,13 +121,30 @@ const OrdersTable = ({
                       ₹{order.totalAmount?.toFixed(2) || "0.00"}
                     </TableCell>
                     <TableCell>
-                      <div className={cn(
-                        "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border shadow-sm",
-                        getStatusColor(order.status)
-                      )}>
-                        {getStatusIcon(order.status)}
-                        {order.status}
-                      </div>
+                      {(() => {
+                        const nextStatus = getNextStatus(order.status, order);
+                        const canUpdate = nextStatus && !isUpdatingStatus && (role === "supplier" || role === "vendor");
+                        
+                        return (
+                          <div 
+                            className={cn(
+                              "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border shadow-sm transition-all",
+                              getStatusColor(order.status),
+                              canUpdate && "cursor-pointer hover:scale-105 active:scale-95 hover:shadow-md group"
+                            )}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (canUpdate) {
+                                handleUpdateStatus(order._id, nextStatus);
+                              }
+                            }}
+                            title={canUpdate ? `Click to mark as ${nextStatus}` : undefined}
+                          >
+                            {getStatusIcon(order.status)}
+                            {order.status}
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
