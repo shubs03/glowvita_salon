@@ -229,13 +229,13 @@ export function NewProductCard({
       {/* Upper Half: Image */}
       <div className="aspect-[4/3] relative w-full overflow-hidden">
         <Image
-          src={imgSrc || 'https://placehold.co/400x300?text=No+Image'}
+          src={imgSrc || '/images/product-placeholder.png'}
           alt={name}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
           data-ai-hint={hint}
-          onError={() => setImgSrc('https://placehold.co/400x300?text=No+Image')}
+          onError={() => setImgSrc('/images/product-placeholder.png')}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity"></div>
         {isNew && (

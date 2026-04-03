@@ -85,7 +85,7 @@ export const GET = async (request, { params }) => {
       salePrice: product.salePrice > 0 ? product.salePrice : null,
       images: product.productImages && product.productImages.length > 0
         ? product.productImages
-        : ['https://placehold.co/800x800/e2e8f0/64748b?text=Product'],
+        : ['/images/product-placeholder.png'],
       vendorId: vendorData._id,
       vendorName: product.origin === 'Supplier' ? vendorData.shopName : vendorData.businessName || 'Unknown Vendor',
       vendorLocation: `${vendorData.city || ''}, ${vendorData.state || ''}`.trim(),

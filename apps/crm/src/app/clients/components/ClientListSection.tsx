@@ -29,6 +29,7 @@ interface ClientListSectionProps {
   onlineClients: Client[];
   appointments: any[];
   inactiveClients: Client[];
+  role?: string;
 }
 
 export default function ClientListSection({
@@ -44,7 +45,8 @@ export default function ClientListSection({
   offlineClients,
   onlineClients,
   appointments,
-  inactiveClients
+  inactiveClients,
+  role
 }: ClientListSectionProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -155,7 +157,7 @@ export default function ClientListSection({
                     <TableHead className="min-w-[120px]">Phone</TableHead>
                     <TableHead className="min-w-[100px]">Birthday</TableHead>
                     <TableHead className="min-w-[100px]">Last Visit</TableHead>
-                    <TableHead className="min-w-[100px]">Bookings</TableHead>
+                    <TableHead className="min-w-[100px]">{role === 'supplier' ? 'Sales' : 'Bookings'}</TableHead>
                     <TableHead className="min-w-[100px]">Total Spent</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>

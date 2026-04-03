@@ -60,13 +60,15 @@ const RecentlyAddedProducts = () => {
   const product = React.useMemo(() => {
     if (!mostRecentProduct) return null;
 
+    const defaultProductImage = "/images/product-placeholder.png";
+    const mainImage = (mostRecentProduct.image && mostRecentProduct.image.trim()) ? mostRecentProduct.image : defaultProductImage;
     // Use all product images if available, otherwise use the main image
-    const allImages = mostRecentProduct.productImages || [mostRecentProduct.image];
+    const allImages = mostRecentProduct.productImages?.length ? mostRecentProduct.productImages : [mainImage];
 
     // Ensure we have 4 images for the grid (duplicate if needed)
     const gridImages = [];
     for (let i = 0; i < 4; i++) {
-      gridImages.push(allImages[i % allImages.length] || mostRecentProduct.image);
+      gridImages.push(allImages[i % allImages.length] || mainImage);
     }
 
     return {
@@ -198,6 +200,7 @@ const RecentlyAddedProducts = () => {
                     src={image}
                     alt={`${product.name} ${index + 1}`}
                     className="w-full h-full object-cover rounded-2xl"
+                    onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
                   />
                 </div>
               ))}

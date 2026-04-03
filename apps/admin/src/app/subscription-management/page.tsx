@@ -77,7 +77,11 @@ export default function SubscriptionManagementPage() {
 
   const { data: regionsResponse } = useGetRegionsQuery(undefined);
   const regions: any[] = (regionsResponse as any)?.data || (Array.isArray(regionsResponse) ? regionsResponse : []);
-  const { data: plans = [], isLoading, error, refetch } = useGetSubscriptionPlansQuery(selectedRegion || undefined);
+  
+  // Fetch ALL plans to handle Global/Regional filtering on frontend
+  const { data: allPlansRaw = [], isLoading, error, refetch } = useGetSubscriptionPlansQuery(undefined);
+  const allPlans: Plan[] = Array.isArray(allPlansRaw) ? allPlansRaw : (allPlansRaw as any)?.data || [];
+  
   const { data: vendors = [], isLoading: vendorsLoading, refetch: refetchVendors } = useGetVendorsQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
   const { data: suppliers = [], isLoading: suppliersLoading, refetch: refetchSuppliers } = useGetSuppliersQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
   const { data: doctors = [], isLoading: doctorsLoading, refetch: refetchDoctors } = useGetDoctorsQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
@@ -85,16 +89,30 @@ export default function SubscriptionManagementPage() {
   const [updateExistingPlan] = useUpdateSubscriptionPlanMutation();
   const [deletePlan] = useDeleteSubscriptionPlanMutation();
 
+  // Filter plans based on selected region (including Global plans)
+  const plans = allPlans.filter(p => 
+    !selectedRegion || 
+    !(p as any).regionId || 
+    (p as any).regionId === selectedRegion
+  );
+
   // Derived subscribers from vendors, suppliers, and doctors (live data)
-  const subscribers: Subscription[] = [
+  const subscribers: (Subscription & { planPrice?: number })[] = [
     ...(Array.isArray(vendors) ? vendors : []).map((v: any) => {
       const plan = v.subscription?.plan;
+      const planId = typeof plan === 'object' && plan !== null ? (plan as any)._id : (typeof plan === 'string' ? plan : undefined);
       const planName = typeof plan === 'object' && plan !== null ? (plan as any).name : undefined;
+      
+      // Lookup plan details for revenue calculation
+      const planDetails = allPlans.find(p => p._id === planId || p.name === planName);
+
       return {
         id: v._id,
         subscriberId: v._id,
         subscriberName: v.businessName || 'Vendor',
         planName: planName || (typeof plan === 'string' ? plan : '-'),
+        planId,
+        planPrice: (planDetails?.discountedPrice && planDetails.discountedPrice > 0) ? planDetails.discountedPrice : planDetails?.price,
         startDate: v.subscription?.startDate || '',
         endDate: v.subscription?.endDate || '',
         status: v.subscription?.status || 'Pending',
@@ -104,12 +122,18 @@ export default function SubscriptionManagementPage() {
     }),
     ...(Array.isArray(suppliers) ? suppliers : []).map((s: any) => {
       const plan = s.subscription?.plan;
+      const planId = typeof plan === 'object' && plan !== null ? (plan as any)._id : (typeof plan === 'string' ? plan : undefined);
       const planName = typeof plan === 'object' && plan !== null ? (plan as any).name : undefined;
+      
+      const planDetails = allPlans.find(p => p._id === planId || p.name === planName);
+
       return {
         id: s._id,
         subscriberId: s._id,
         subscriberName: s.shopName || (s.firstName + ' ' + s.lastName) || 'Supplier',
         planName: planName || (typeof plan === 'string' ? plan : '-'),
+        planId,
+        planPrice: (planDetails?.discountedPrice && planDetails.discountedPrice > 0) ? planDetails.discountedPrice : planDetails?.price,
         startDate: s.subscription?.startDate || '',
         endDate: s.subscription?.endDate || '',
         status: s.subscription?.status || 'Pending',
@@ -119,12 +143,18 @@ export default function SubscriptionManagementPage() {
     }),
     ...(Array.isArray(doctors) ? doctors : []).map((d: any) => {
       const plan = d.subscription?.plan;
+      const planId = typeof plan === 'object' && plan !== null ? (plan as any)._id : (typeof plan === 'string' ? plan : undefined);
       const planName = typeof plan === 'object' && plan !== null ? (plan as any).name : undefined;
+      
+      const planDetails = allPlans.find(p => p._id === planId || p.name === planName);
+
       return {
         id: d._id,
         subscriberId: d._id,
         subscriberName: d.clinicName ? `${d.name} (${d.clinicName})` : d.name || 'Doctor',
         planName: planName || (typeof plan === 'string' ? plan : '-'),
+        planId,
+        planPrice: (planDetails?.discountedPrice && planDetails.discountedPrice > 0) ? planDetails.discountedPrice : planDetails?.price,
         startDate: d.subscription?.startDate || '',
         endDate: d.subscription?.endDate || '',
         status: d.subscription?.status || 'Pending',
@@ -352,8 +382,14 @@ export default function SubscriptionManagementPage() {
 
 
   // Active count derived from live data
+  const subscriptionsCount = subscribers.filter((s) => s.status !== 'Pending').length;
   const activeSubscribersCount = subscribers.filter((s) => s.status === 'Active').length;
   const expiredSubscribersCount = subscribers.filter((s) => s.status === 'Expired').length;
+
+  // Dynamic Total Revenue calculation from Active subscribers
+  const totalRevenue = subscribers
+    .filter((s) => s.status === 'Active')
+    .reduce((acc, sub) => acc + (sub.planPrice || 0), 0);
 
   // Pagination logic with safeguards
   const totalPlanPages = Math.ceil(plans.length / (planItemsPerPage || 1)) || 1;
@@ -500,8 +536,8 @@ export default function SubscriptionManagementPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{subscribers.length}</div>
-            <p className="text-xs text-muted-foreground">Across all plans</p>
+            <div className="text-2xl font-bold">{subscriptionsCount}</div>
+            <p className="text-xs text-muted-foreground">Excluding pending</p>
           </CardContent>
         </Card>
         <Card>
@@ -530,8 +566,8 @@ export default function SubscriptionManagementPage() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹45,231</div>
-            <p className="text-xs text-muted-foreground">From all subscriptions</p>
+            <div className="text-2xl font-bold">₹{totalRevenue.toLocaleString('en-IN')}</div>
+            <p className="text-xs text-muted-foreground">From active subscriptions</p>
           </CardContent>
         </Card>
       </div>
@@ -680,7 +716,16 @@ export default function SubscriptionManagementPage() {
                             <TableCell>
                               {plan.duration} {plan.durationType}
                             </TableCell>
-                            <TableCell>₹{plan.price} {plan.discountedPrice ? <span className="text-xs text-muted-foreground line-through ml-1">₹{plan.discountedPrice}</span> : ''}</TableCell>
+                            <TableCell>
+                              {plan.discountedPrice && plan.discountedPrice > 0 ? (
+                                <>
+                                  <span className="font-bold">₹{plan.discountedPrice}</span>
+                                  <span className="text-xs text-muted-foreground line-through ml-1.5">₹{plan.price}</span>
+                                </>
+                              ) : (
+                                <span>₹{plan.price}</span>
+                              )}
+                            </TableCell>
 
                             {/* Toggle cell */}
                             <TableCell>
@@ -1282,9 +1327,13 @@ export default function SubscriptionManagementPage() {
                     <div className="text-center">
                       <h3 className="text-lg font-bold mb-2">{plan.name}</h3>
                       <div className="flex items-baseline justify-center gap-2 mb-1">
-                        <span className="text-3xl font-bold">₹{plan.discountedPrice || plan.price}</span>
-                        {plan.discountedPrice && (
-                          <span className="text-sm text-muted-foreground line-through">₹{plan.price}</span>
+                        {plan.discountedPrice && plan.discountedPrice > 0 ? (
+                          <>
+                            <span className="text-3xl font-bold">₹{plan.discountedPrice}</span>
+                            <span className="text-sm text-muted-foreground line-through">₹{plan.price}</span>
+                          </>
+                        ) : (
+                          <span className="text-3xl font-bold">₹{plan.price}</span>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground mb-4">

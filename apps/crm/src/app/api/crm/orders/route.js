@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import OrderModel from '@repo/lib/models/Vendor/Order.model';
+import mongoose from 'mongoose';
+if (mongoose.models.Order) {
+  delete mongoose.models.Order;
+}
 import ProductModel from '@repo/lib/models/Vendor/Product.model';
 import InventoryTransactionModel from '@repo/lib/models/Vendor/InventoryTransaction.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
 import { authMiddlewareCrm } from '@/middlewareCrm';
-import mongoose from 'mongoose';
 import { NotificationService } from '@repo/lib';
 
 await _db();

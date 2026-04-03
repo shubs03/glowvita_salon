@@ -1305,26 +1305,28 @@ export default function ProductsTab({
                             <div className="cursor-pointer text-green-600 p-2 rounded -ml-2 hover:bg-muted/50 transition-colors" onClick={() => handleEditItemClick(item)}>
                               <div className="font-medium line-clamp-2">{item.productName}</div>
                             </div>
-                            {/* Per-item Staff Selector */}
-                            <div className="mt-1">
-                              <Select
-                                value={item.staffMember?.id || 'none'}
-                                onValueChange={(value) => updateStaffMember(item._id, value)}
-                              >
-                                <SelectTrigger className="h-7 text-xs w-fit min-w-[120px] px-2 bg-transparent border-gray-200 hover:bg-gray-50 focus:ring-0 focus:ring-offset-0 gap-1">
-                                  <UserCircle className="h-3 w-3 text-gray-500" />
-                                  <SelectValue placeholder="Select Staff" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none" className="text-xs">No Staff</SelectItem>
-                                  {staffData.map((staff: any) => (
-                                    <SelectItem key={staff._id} value={staff._id} className="text-xs">
-                                      {staff.fullName}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
+                            {/* Per-item Staff Selector - Hidden for suppliers */}
+                            {!isSupplier && (
+                              <div className="mt-1">
+                                <Select
+                                  value={item.staffMember?.id || 'none'}
+                                  onValueChange={(value) => updateStaffMember(item._id, value)}
+                                >
+                                  <SelectTrigger className="h-7 text-xs w-fit min-w-[120px] px-2 bg-transparent border-gray-200 hover:bg-gray-50 focus:ring-0 focus:ring-offset-0 gap-1">
+                                    <UserCircle className="h-3 w-3 text-gray-500" />
+                                    <SelectValue placeholder="Select Staff" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none" className="text-xs">No Staff</SelectItem>
+                                    {staffData.map((staff: any) => (
+                                      <SelectItem key={staff._id} value={staff._id} className="text-xs">
+                                        {staff.fullName}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -1814,25 +1816,27 @@ export default function ProductsTab({
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="staffMember">Staff Member</Label>
-                <Select
-                  value={editFormData.staffMemberId}
-                  onValueChange={(value) => setEditFormData(prev => ({ ...prev, staffMemberId: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select staff member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None</SelectItem>
-                    {staffData.map((staff: any) => (
-                      <SelectItem key={staff._id} value={staff._id}>
-                        {staff.fullName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!isSupplier && (
+                <div>
+                  <Label htmlFor="staffMember">Staff Member</Label>
+                  <Select
+                    value={editFormData.staffMemberId}
+                    onValueChange={(value) => setEditFormData(prev => ({ ...prev, staffMemberId: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select staff member" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {staffData.map((staff: any) => (
+                        <SelectItem key={staff._id} value={staff._id}>
+                          {staff.fullName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
 

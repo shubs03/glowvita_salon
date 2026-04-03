@@ -213,7 +213,7 @@ export default function CartPage() {
         price: item.price, // Passing unit price
         originalPrice: item.originalPrice,
         hasSale: item.hasSale,
-        image: item.productImage || "https://placehold.co/100x100.png",
+        image: item.productImage || "/images/product-placeholder.png",
         quantity: item.quantity,
         vendorId: item.vendorId || "unknown",
         vendorName: item.vendorName || "Vendor",
@@ -228,7 +228,7 @@ export default function CartPage() {
         id: `cart-${Date.now()}`,
         name: `Order of ${cartItems.length} items`,
         price: subtotal, // Passing aggregated subtotal as price
-        image: cartItems[0]?.productImage || "https://placehold.co/100x100.png",
+        image: cartItems[0]?.productImage || "/images/product-placeholder.png",
         quantity: 1, // Treat the whole cart as 1 unit of "Order"
         vendorId: firstItem.vendorId || "unknown",
         vendorName: vendorName,
@@ -355,15 +355,11 @@ export default function CartPage() {
                       className="flex items-center p-4 lg:p-6 shadow-sm hover:shadow-md transition-shadow border border-border/50 hover:border-border"
                     >
                       <div className="relative w-20 h-20 lg:w-24 lg:h-24 rounded-md overflow-hidden flex-shrink-0">
-                        <Image
-                          src={
-                            item.productImage ||
-                            "https://placehold.co/100x100.png"
-                          }
+                        <img
+                          src={item.productImage || "/images/product-placeholder.png"}
                           alt={item.productName}
-                          layout="fill"
-                          objectFit="cover"
-                          data-ai-hint={item.productName}
+                          onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
+                          className="w-full h-full object-cover"
                         />
                       </div>
                       <div className="flex-grow ml-4 lg:ml-6">
@@ -713,13 +709,11 @@ export default function CartPage() {
                   return item ? (
                     <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
                       <div className="relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
-                        <Image
-                          src={
-                            item.productImage || "https://placehold.co/80x80.png"
-                          }
+                        <img
+                          src={item.productImage || "/images/product-placeholder.png"}
                           alt={item.productName}
-                          layout="fill"
-                          objectFit="cover"
+                          onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
+                          className="w-full h-full object-cover"
                         />
                       </div>
                       <div className="flex-grow">

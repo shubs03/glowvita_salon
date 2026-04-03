@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
+import mongoose from 'mongoose';
+if (mongoose.models.ClientOrder) {
+  delete mongoose.models.ClientOrder;
+}
 import ClientOrder from '@repo/lib/models/user/ClientOrder.model';
 import UserModel from '@repo/lib/models/user/User.model';
 import { withSubscriptionCheck } from '@/middlewareCrm';
@@ -51,7 +55,7 @@ export const PATCH = withSubscriptionCheck(async (req) => {
     }
 
     // Validate status is one of the allowed values
-    const validStatuses = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+    const validStatuses = ['Pending', 'Packed', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
     if (!validStatuses.includes(status)) {
       console.log("Invalid status provided:", status);
       return NextResponse.json({ message: "Invalid status value" }, { status: 400 });

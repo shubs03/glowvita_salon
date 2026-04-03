@@ -10,6 +10,7 @@ interface ClientStatsSectionProps {
   totalsById: Map<string, number>;
   bookingsById: Map<string, number>;
   currentSegment: "offline" | "online";
+  role?: string;
 }
 
 export default function ClientStatsSection({
@@ -19,7 +20,8 @@ export default function ClientStatsSection({
   inactiveClients,
   totalsById,
   bookingsById,
-  currentSegment
+  currentSegment,
+  role
 }: ClientStatsSectionProps) {
   const activeClientsArray = currentSegment === 'online' ? onlineClients : offlineClients;
   const activeClientIds = new Set(activeClientsArray.map(c => String(c._id)));
@@ -72,12 +74,20 @@ export default function ClientStatsSection({
         <CardContent className="p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-secondary-foreground mb-1">Total Bookings</p>
+              <p className="text-sm font-medium text-secondary-foreground mb-1">
+                {role === 'supplier' ? 'Total Sales' : 'Total Bookings'}
+              </p>
               <p className="text-2xl font-bold text-secondary-foreground">{totalBookings}</p>
-              <p className="text-xs text-secondary-foreground/70 mt-1">All time bookings</p>
+              <p className="text-xs text-secondary-foreground/70 mt-1">
+                {role === 'supplier' ? 'Total sales records' : 'All time bookings'}
+              </p>
             </div>
             <div className="p-3 bg-primary/10 rounded-full transition-colors">
-              <Calendar className="h-6 w-6 text-secondary-foreground" />
+              {role === 'supplier' ? (
+                <ShoppingBag className="h-6 w-6 text-secondary-foreground" />
+              ) : (
+                <Calendar className="h-6 w-6 text-secondary-foreground" />
+              )}
             </div>
           </div>
         </CardContent>
