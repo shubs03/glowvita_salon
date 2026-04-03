@@ -18,6 +18,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
         const search = url.searchParams.get('search') || '';
         const regionId = url.searchParams.get('regionId') || '';
         const status = url.searchParams.get('status') || '';
+        const paymentStatus = url.searchParams.get('paymentStatus') || '';
         const vendorId = url.searchParams.get('vendorId') || '';
         const serviceName = url.searchParams.get('serviceName') || '';
 
@@ -38,6 +39,10 @@ export const GET = authMiddlewareAdmin(async (req) => {
             query.status = status;
         }
 
+        if (paymentStatus && paymentStatus !== 'all') {
+            query.paymentStatus = paymentStatus;
+        }
+
         if (vendorId && vendorId !== 'all') {
             try {
                 query.vendorId = new mongoose.Types.ObjectId(vendorId);
@@ -55,7 +60,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
         if (search) {
             query.$or = [
                 { invoiceNumber: { $regex: search, $options: 'i' } },
-                { clientName: { $regex: search, $options: 'i' } }
+                { clientName: { $regex: search, $options: 'i' } },
+                { clientPhone: { $regex: search, $options: 'i' } },
+                { clientEmail: { $regex: search, $options: 'i' } }
             ];
         }
 

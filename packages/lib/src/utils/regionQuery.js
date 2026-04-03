@@ -46,7 +46,7 @@ export function getRegionQuery(user, selectedRegionId = null) {
     if (normalizedSelectedId) {
       return { regionId: normalizedSelectedId };
     }
-    return {}; 
+    return {};
   }
 
   // Regional Admin is scoped to their assigned regions
