@@ -409,12 +409,6 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 onError={(e) => { (e.target as HTMLImageElement).src = "/images/salon-placeholder.png"; }}
               />
-              {/* Badge */}
-              {salon.badge && (
-                <div className="absolute top-3 right-3 bg-primary text-destructive-foreground px-2.5 py-0.5 rounded-full text-xs font-bold shadow-lg">
-                  {salon.badge}
-                </div>
-              )}
               {/* Gradient Overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>

@@ -50,7 +50,7 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
             : `Enjoy a flat ₹${offer.value} discount on your next service booking.`,
         validity: offer.expires
           ? `Valid until: ${new Date(offer.expires).toLocaleDateString()}`
-          : "No expiration date",
+          : "",
         image:
           offer.offerImage ||
           "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=600",
@@ -247,9 +247,11 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
             {/* Validity and Button */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-4 pt-4 border-t border-dashed">
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">
-                  {currentOffer.validity}
-                </p>
+                {currentOffer.validity && (
+                  <p className="text-xs text-muted-foreground">
+                    {currentOffer.validity}
+                  </p>
+                )}
                 {isSubscriptionExpired && (
                   <p className="text-[10px] text-red-600 font-medium">
                     This service is temporarily closed
