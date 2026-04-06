@@ -59,6 +59,7 @@ interface SalonWishlistItem {
 
 export default function WishlistPage() {
   const [activeTab, setActiveTab] = useState('products');
+  const [previousTab, setPreviousTab] = useState('products');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(8);
@@ -168,8 +169,8 @@ export default function WishlistPage() {
 
   const filteredSalons = useMemo(() => {
     return salonWishlistItems.filter(salon =>
-      salon.salonName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      salon.specialty.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      salon.salonName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      salon.specialty?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       salon.location?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [searchTerm, salonWishlistItems]);
@@ -191,7 +192,21 @@ export default function WishlistPage() {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
+    setPreviousTab(tab);
     setCurrentPage(1); // Reset to first page on tab change
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    setCurrentPage(1);
+    if (value.trim()) {
+      // Switch to 'all' tab to show global results across all types
+      setActiveTab('all');
+    } else {
+      // Restore the previously active tab when search is cleared
+      setActiveTab(previousTab);
+    }
   };
 
   const removeFromWishlist = async (productId: string) => {
@@ -297,7 +312,7 @@ export default function WishlistPage() {
               placeholder="Search wishlist..."
               className="pl-8"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
             />
           </div>
         </div>
@@ -313,7 +328,7 @@ export default function WishlistPage() {
           <TabsContent value={activeTab} className="mt-4">
             {activeTab === 'doctors' ? (
               // Doctors tab content
-              doctorWishlistItems.length > 0 ? (
+              filteredDoctors.length > 0 ? (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {(currentItems as DoctorWishlistItem[]).map((doctor) => (
@@ -347,18 +362,16 @@ export default function WishlistPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Heart className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Your doctor wishlist is empty</h3>
+                  <h3 className="text-lg font-semibold mb-2">{searchTerm ? 'No doctors match your search' : 'Your doctor wishlist is empty'}</h3>
                   <p className="text-muted-foreground mb-4">
-                    Start adding doctors to your wishlist to save them for later
+                    {searchTerm ? 'Try a different search term' : 'Start adding doctors to your wishlist to save them for later'}
                   </p>
-                  <Button asChild>
-                    <a href="/doctors">Browse Doctors</a>
-                  </Button>
+                  {!searchTerm && <Button asChild><a href="/doctors">Browse Doctors</a></Button>}
                 </div>
               )
             ) : activeTab === 'salons' ? (
               // Salons tab content
-              salonWishlistItems.length > 0 ? (
+              filteredSalons.length > 0 ? (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {(currentItems as SalonWishlistItem[]).map((salon) => (
@@ -392,22 +405,24 @@ export default function WishlistPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Heart className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Your salon wishlist is empty</h3>
+                  <h3 className="text-lg font-semibold mb-2">{searchTerm ? 'No salons match your search' : 'Your salon wishlist is empty'}</h3>
                   <p className="text-muted-foreground mb-4">
-                    Start adding salons to your wishlist to save them for later
+                    {searchTerm ? 'Try a different search term' : 'Start adding salons to your wishlist to save them for later'}
                   </p>
-                  <Button asChild>
-                    <a href="/salons">Browse Salons</a>
-                  </Button>
+                  {!searchTerm && <Button asChild><a href="/salons">Browse Salons</a></Button>}
                 </div>
               )
             ) : activeTab === 'all' ? (
               // All items tab content
-              (wishlistItems.length + doctorWishlistItems.length + salonWishlistItems.length) > 0 ? (
-                <>
+              (() => {
+                const allFiltered = [
+                  ...filteredItems.map(item => ({ type: 'product' as const, item })),
+                  ...filteredDoctors.map(doc => ({ type: 'doctor' as const, item: doc })),
+                  ...filteredSalons.map(salon => ({ type: 'salon' as const, item: salon })),
+                ];
+                return allFiltered.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {/* Show products first */}
-                    {wishlistItems.map((item) => (
+                    {filteredItems.map((item) => (
                       <div key={item.productId} className="relative">
                         <NewProductCard
                           id={item.productId}
@@ -415,16 +430,15 @@ export default function WishlistPage() {
                           price={item.price}
                           image={item.productImage}
                           hint=""
-                          rating={4.5} // Placeholder rating
-                          reviewCount={100} // Placeholder review count
+                          rating={4.5}
+                          reviewCount={100}
                           vendorName={item.supplierName}
                           vendorId={item.vendorId}
-                          description="" // Placeholder description
+                          description=""
                         />
                       </div>
                     ))}
-                    {/* Then show doctors */}
-                    {doctorWishlistItems.map((doctor) => (
+                    {filteredDoctors.map((doctor) => (
                       <DoctorCard
                         key={doctor.doctorId}
                         id={doctor.doctorId}
@@ -439,8 +453,7 @@ export default function WishlistPage() {
                         state={doctor.state}
                       />
                     ))}
-                    {/* Then show salons */}
-                    {salonWishlistItems.map((salon) => (
+                    {filteredSalons.map((salon) => (
                       <SalonCard
                         key={salon.salonId}
                         id={salon.salonId}
@@ -456,30 +469,26 @@ export default function WishlistPage() {
                       />
                     ))}
                   </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <Heart className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Your wishlist is empty</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Start adding products, doctors, and salons to your wishlist to save them for later
-                  </p>
-                  <div className="flex flex-wrap justify-center gap-2">
-                    <Button asChild>
-                      <a href="/all-products">Browse Products</a>
-                    </Button>
-                    <Button asChild variant="outline">
-                      <a href="/doctors">Browse Doctors</a>
-                    </Button>
-                    <Button asChild variant="outline">
-                      <a href="/salons">Browse Salons</a>
-                    </Button>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Heart className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">{searchTerm ? 'No results match your search' : 'Your wishlist is empty'}</h3>
+                    <p className="text-muted-foreground mb-4">
+                      {searchTerm ? 'Try a different search term' : 'Start adding products, doctors, and salons to your wishlist to save them for later'}
+                    </p>
+                    {!searchTerm && (
+                      <div className="flex flex-wrap justify-center gap-2">
+                        <Button asChild><a href="/all-products">Browse Products</a></Button>
+                        <Button asChild variant="outline"><a href="/doctors">Browse Doctors</a></Button>
+                        <Button asChild variant="outline"><a href="/salons">Browse Salons</a></Button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )
+                );
+              })()
             ) : (
               // Products tab content (default)
-              wishlistItems.length > 0 ? (
+              filteredItems.length > 0 ? (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {(currentItems as WishlistItem[]).map((item) => (
@@ -514,13 +523,11 @@ export default function WishlistPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Heart className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Your product wishlist is empty</h3>
+                  <h3 className="text-lg font-semibold mb-2">{searchTerm ? 'No products match your search' : 'Your product wishlist is empty'}</h3>
                   <p className="text-muted-foreground mb-4">
-                    Start adding products to your wishlist to save them for later
+                    {searchTerm ? 'Try a different search term' : 'Start adding products to your wishlist to save them for later'}
                   </p>
-                  <Button asChild>
-                    <a href="/all-products">Browse Products</a>
-                  </Button>
+                  {!searchTerm && <Button asChild><a href="/all-products">Browse Products</a></Button>}
                 </div>
               )
             )}
