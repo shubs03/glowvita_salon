@@ -20,7 +20,7 @@ export async function middleware(request) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('admin_access_token')?.value;
 
-  const isLoginPage = pathname === '/login';
+  const isAuthPage = pathname === '/login' || pathname === '/forgot-password' || pathname.startsWith('/reset-password');
 
   // Allow static files and Next.js internal assets
   if (pathname.includes('.') || pathname.startsWith('/_next/')) {
@@ -29,8 +29,8 @@ export async function middleware(request) {
 
   const payload = await verifyJwt(token);
 
-  if (isLoginPage) {
-    // If the user is on the login page and has a valid token, redirect to dashboard
+  if (isAuthPage) {
+    // If the user is on an auth page and has a valid token, redirect to dashboard
     if (payload) {
       return NextResponse.redirect(new URL('/', request.url));
     }
