@@ -47,6 +47,14 @@ export async function POST(req) {
       return NextResponse.json({ message: 'All required fields must be filled' }, { status: 400 });
     }
 
+    // Birthday validation
+    if (birthdayDate) {
+      const today = new Date().toISOString().split('T')[0];
+      if (birthdayDate > today) {
+        return NextResponse.json({ message: 'Birthday cannot be in the future' }, { status: 400 });
+      }
+    }
+
     // Check for existing user with same email
     try {
       const existingUserByEmail = await User.findOne({ emailAddress: email });

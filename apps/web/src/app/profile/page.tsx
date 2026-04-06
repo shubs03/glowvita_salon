@@ -152,8 +152,12 @@ function OverviewContent() {
 
     if (!Array.isArray(productsArray) || productsArray.length === 0) return [];
 
+    // Filter available products (stock > 0)
+    const availableProducts = productsArray.filter((p: any) => (p.stock || 0) > 0);
+    if (availableProducts.length === 0) return [];
+
     // Sort by creation date and get the newest 2 products
-    const sortedProducts = [...productsArray].sort((a: any, b: any) => {
+    const sortedProducts = [...availableProducts].sort((a: any, b: any) => {
       const dateA = new Date(a.createdAt || 0).getTime();
       const dateB = new Date(b.createdAt || 0).getTime();
       return dateB - dateA;
@@ -197,12 +201,14 @@ function OverviewContent() {
     });
 
     return sortedOffers.slice(0, 2).map((offer: any) => ({
-      title: offer.code || 'Special Offer',
+      title: offer.type === 'percentage' ? `${offer.value}% Special Discount` : `₹${offer.value} Exclusive Off`,
       description: offer.type === 'percentage'
-        ? `Get ${offer.value}% off`
-        : `Get ₹${offer.value} off`,
+        ? `Get ${offer.value}% off on your next booking`
+        : `Get a flat ₹${offer.value} off on your next booking`,
       icon: offer.type === 'percentage' ? Tag : Gift,
       code: offer.code,
+      image: offer.offerImage || "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=600",
+      discount: offer.type === 'percentage' ? `${offer.value}%` : `₹${offer.value}`,
     }));
   }, [offersResponse]);
 
@@ -452,15 +458,31 @@ function OverviewContent() {
               <p className="text-muted-foreground text-center py-8">Loading offers...</p>
             ) : currentOffers.length > 0 ? (
               currentOffers.map((offer) => {
-                const Icon = offer.icon;
                 return (
-                  <div key={offer.title} className="flex items-center gap-4 p-3 bg-secondary rounded-lg">
-                    <div className="p-3 bg-primary/10 rounded-full text-primary"><Icon className="h-5 w-5" /></div>
-                    <div className="flex-1">
-                      <h4 className="font-semibold">{offer.title}</h4>
-                      <p className="text-sm text-muted-foreground">{offer.description}</p>
+                  <div key={offer.title} className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-secondary/50 border border-border/50 rounded-2xl relative">
+                    {/* Image */}
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 rounded-xl overflow-hidden shadow-sm">
+                      <img src={offer.image} alt={offer.title} className="w-full h-full object-cover" />
                     </div>
-                    <Button variant="outline" size="sm" className="ml-auto">Use Code</Button>
+
+                    <div className="flex-1">
+                      <h4 className="font-bold text-sm mb-1">{offer.title}</h4>
+                      
+                      {/* Promo Code Tag */}
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Code:</span>
+                        <span className="bg-primary/10 text-primary text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border border-primary/20">
+                          {offer.code}
+                        </span>
+                      </div>
+                      
+                      <p className="text-xs text-muted-foreground leading-tight">{offer.description}</p>
+                    </div>
+
+                    {/* Badge */}
+                    <div className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground w-11 h-11 rounded-full flex items-center justify-center text-[10px] font-bold shadow-md border-2 border-background">
+                      {offer.discount}
+                    </div>
                   </div>
                 );
               })

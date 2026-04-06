@@ -250,11 +250,11 @@ export default function CartPage() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <div className="relative w-12 h-12 rounded-md overflow-hidden flex-shrink-0">
-                            <Image
-                              src={item.productImage || "https://placehold.co/48x48.png"}
+                            <img
+                              src={item.productImage || "/images/product-placeholder.png"}
                               alt={item.productName}
-                              layout="fill"
-                              objectFit="cover"
+                              onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
+                              className="w-full h-full object-cover"
                             />
                           </div>
                           <div>
@@ -440,11 +440,11 @@ export default function CartPage() {
                 return item ? (
                   <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
                     <div className="relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
-                      <Image
-                        src={item.productImage || "https://placehold.co/80x80.png"}
+                      <img
+                        src={item.productImage || "/images/product-placeholder.png"}
                         alt={item.productName}
-                        layout="fill"
-                        objectFit="cover"
+                        onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
+                        className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="flex-grow">

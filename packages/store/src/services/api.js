@@ -661,6 +661,7 @@ export const glowvitaApi = createApi({
         if (params.limit) queryParams.append("limit", params.limit);
         if (params.search) queryParams.append("search", params.search);
         if (params.status && params.status !== 'all') queryParams.append("status", params.status);
+        if (params.paymentStatus && params.paymentStatus !== 'all') queryParams.append("paymentStatus", params.paymentStatus);
         if (params.vendorId && params.vendorId !== 'all') queryParams.append("vendorId", params.vendorId);
         if (params.serviceName && params.serviceName !== 'all') queryParams.append("serviceName", params.serviceName);
         if (params.regionId && params.regionId !== 'all') queryParams.append("regionId", params.regionId);

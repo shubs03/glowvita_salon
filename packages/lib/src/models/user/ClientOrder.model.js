@@ -1,5 +1,5 @@
 
-      
+
 import mongoose from 'mongoose';
 
 const OrderItemSchema = new mongoose.Schema({
@@ -74,7 +74,7 @@ const ClientOrderSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
+    enum: ['Pending', 'Processing', 'Packed', 'Shipped', 'Delivered', 'Cancelled'],
     default: 'Pending',
   },
   trackingNumber: {
@@ -117,4 +117,3 @@ const ClientOrderModel = mongoose.models.ClientOrder || mongoose.model('ClientOr
 
 export default ClientOrderModel;
 
-      

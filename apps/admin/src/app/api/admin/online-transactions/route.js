@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import ClientModel from '@repo/lib/models/Vendor/Client.model';
@@ -17,6 +18,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
         const search = url.searchParams.get('search') || '';
         const regionId = url.searchParams.get('regionId') || '';
         const status = url.searchParams.get('status') || '';
+        const paymentStatus = url.searchParams.get('paymentStatus') || '';
         const vendorId = url.searchParams.get('vendorId') || '';
         const serviceName = url.searchParams.get('serviceName') || '';
 
@@ -37,8 +39,16 @@ export const GET = authMiddlewareAdmin(async (req) => {
             query.status = status;
         }
 
+        if (paymentStatus && paymentStatus !== 'all') {
+            query.paymentStatus = paymentStatus;
+        }
+
         if (vendorId && vendorId !== 'all') {
-            query.vendorId = vendorId;
+            try {
+                query.vendorId = new mongoose.Types.ObjectId(vendorId);
+            } catch (e) {
+                query.vendorId = vendorId;
+            }
         }
 
         if (serviceName && serviceName !== 'all') {
@@ -50,8 +60,17 @@ export const GET = authMiddlewareAdmin(async (req) => {
         if (search) {
             query.$or = [
                 { invoiceNumber: { $regex: search, $options: 'i' } },
-                { clientName: { $regex: search, $options: 'i' } }
+                { clientName: { $regex: search, $options: 'i' } },
+                { clientPhone: { $regex: search, $options: 'i' } },
+                { clientEmail: { $regex: search, $options: 'i' } }
             ];
+        }
+
+        // Cast regionId if present
+        if (query.regionId && typeof query.regionId === 'string') {
+            try {
+                query.regionId = new mongoose.Types.ObjectId(query.regionId);
+            } catch (e) {}
         }
 
         const skip = (page - 1) * limit;

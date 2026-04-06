@@ -38,9 +38,10 @@ export async function GET(request) {
         $or: [
           { regionId: null },                     // global offers (filtered later by disabledRegions)
           { regionId: regionId.toString() }       // exact-match regional offers only
-        ]
+        ],
+        isActive: { $ne: false }                  // Only fetch active offers!
       }
-      : {}; // no region = show all offers to guest
+      : { isActive: { $ne: false } };             // guest: only active ones!
 
     const adminOffers = await AdminOfferModel.find(adminOffersQuery).lean();
 

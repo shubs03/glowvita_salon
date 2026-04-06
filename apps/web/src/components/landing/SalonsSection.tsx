@@ -78,7 +78,7 @@ const keyFeatures = [
     description:
       "Upscale salon specializing in color correction and luxury treatments",
     growth: "+42% revenue",
-    image: "https://placehold.co/400x200/7e22ce/ffffff?text=Luxe+Hair+Studio",
+    image: "/images/salon-placeholder.png",
   },
   {
     id: "2",
@@ -91,7 +91,7 @@ const keyFeatures = [
     description:
       "Award-winning spa offering premium skincare and wellness services",
     growth: "+38% bookings",
-    image: "https://placehold.co/400x200/db2777/ffffff?text=Bellezza+Spa",
+    image: "/images/salon-placeholder.png",
   },
   {
     id: "3",
@@ -104,7 +104,7 @@ const keyFeatures = [
     description:
       "Trendsetting barbershop with master stylists and premium products",
     growth: "+55% client retention",
-    image: "https://placehold.co/400x200/ea580c/ffffff?text=Urban+Barber",
+    image: "/images/salon-placeholder.png",
   },
   {
     id: "4",
@@ -117,7 +117,7 @@ const keyFeatures = [
     description:
       "Trendy nail salon featuring custom designs and gel treatments",
     growth: "+35% revenue",
-    image: "https://placehold.co/400x200/ec4899/ffffff?text=Glamour+Nails",
+    image: "/images/salon-placeholder.png",
   },
   {
     id: "5",
@@ -130,7 +130,7 @@ const keyFeatures = [
     description:
       "Holistic wellness center offering massage, yoga, and beauty services",
     growth: "+50% class bookings",
-    image: "https://placehold.co/400x200/059669/ffffff?text=Serenity+Wellness",
+    image: "/images/salon-placeholder.png",
   },
   {
     id: "6",
@@ -143,7 +143,7 @@ const keyFeatures = [
     description:
       "Advanced skincare clinic with dermatologist-approved treatments",
     growth: "+45% new clients",
-    image: "https://placehold.co/400x200/f97316/ffffff?text=Radiant+Skin",
+    image: "/images/salon-placeholder.png",
   },
 ];
 
@@ -203,8 +203,7 @@ export function SalonsSection() {
       const location = `${vendor.city || 'Unknown City'}, ${vendor.state || 'Unknown State'}`;
 
       // Generate placeholder image URL based on business name
-      const imageUrl = vendor.profileImage ||
-        `https://placehold.co/400x200/${Math.floor(Math.random() * 16777215).toString(16)}/ffffff?text=${encodeURIComponent(vendor.businessName || 'Salon')}`;
+      const imageUrl = vendor.profileImage || "/images/salon-placeholder.png";
 
       return {
         id: vendor._id,

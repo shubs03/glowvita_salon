@@ -213,7 +213,7 @@ export default function CartPage() {
         price: item.price, // Passing unit price
         originalPrice: item.originalPrice,
         hasSale: item.hasSale,
-        image: item.productImage || "https://placehold.co/100x100.png",
+        image: item.productImage || "/images/product-placeholder.png",
         quantity: item.quantity,
         vendorId: item.vendorId || "unknown",
         vendorName: item.vendorName || "Vendor",
@@ -228,7 +228,7 @@ export default function CartPage() {
         id: `cart-${Date.now()}`,
         name: `Order of ${cartItems.length} items`,
         price: subtotal, // Passing aggregated subtotal as price
-        image: cartItems[0]?.productImage || "https://placehold.co/100x100.png",
+        image: cartItems[0]?.productImage || "/images/product-placeholder.png",
         quantity: 1, // Treat the whole cart as 1 unit of "Order"
         vendorId: firstItem.vendorId || "unknown",
         vendorName: vendorName,
@@ -355,15 +355,11 @@ export default function CartPage() {
                       className="flex items-center p-4 lg:p-6 shadow-sm hover:shadow-md transition-shadow border border-border/50 hover:border-border"
                     >
                       <div className="relative w-20 h-20 lg:w-24 lg:h-24 rounded-md overflow-hidden flex-shrink-0">
-                        <Image
-                          src={
-                            item.productImage ||
-                            "https://placehold.co/100x100.png"
-                          }
+                        <img
+                          src={item.productImage || "/images/product-placeholder.png"}
                           alt={item.productName}
-                          layout="fill"
-                          objectFit="cover"
-                          data-ai-hint={item.productName}
+                          onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
+                          className="w-full h-full object-cover"
                         />
                       </div>
                       <div className="flex-grow ml-4 lg:ml-6">
@@ -514,32 +510,7 @@ export default function CartPage() {
                     </Card>
                   </div>
 
-                  {/* Additional Information */}
-                  <div className="mt-10 lg:mt-12 text-center">
-                    <Card className="bg-primary/5 border border-primary/20 p-6 lg:p-8">
-                      <div className="space-y-4">
-                        <h3 className="text-lg lg:text-xl font-semibold text-foreground">
-                          Need Help?
-                        </h3>
-                        <p className="text-sm lg:text-base text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-                          Our customer support team is available 24/7 to assist
-                          you with your order. Contact us via chat, email, or
-                          phone if you have any questions.
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-                          <Button variant="outline" size="sm">
-                            Live Chat
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            Email Support
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            Call: 1-800-BEAUTY
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  </div>
+
                 </div>
 
                 {/* Other sections can be added here if needed */}
@@ -713,13 +684,11 @@ export default function CartPage() {
                   return item ? (
                     <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border">
                       <div className="relative w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
-                        <Image
-                          src={
-                            item.productImage || "https://placehold.co/80x80.png"
-                          }
+                        <img
+                          src={item.productImage || "/images/product-placeholder.png"}
                           alt={item.productName}
-                          layout="fill"
-                          objectFit="cover"
+                          onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
+                          className="w-full h-full object-cover"
                         />
                       </div>
                       <div className="flex-grow">

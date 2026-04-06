@@ -35,7 +35,7 @@ const AllSalons: React.FC<AllSalonsProps> = ({ maxSalons = 8 }) => {
   const transformVendor = (vendor: any) => {
     const imageUrl =
       vendor.profileImage ||
-      `https://placehold.co/600x400/gradient?text=${encodeURIComponent(vendor.businessName || "Salon")}`;
+      "/images/salon-placeholder.png";
 
     const hasOffer =
       vendor.offers &&
@@ -130,6 +130,7 @@ const AllSalons: React.FC<AllSalonsProps> = ({ maxSalons = 8 }) => {
                 src={salon.image}
                 alt={salon.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                onError={(e) => { (e.target as HTMLImageElement).src = "/images/salon-placeholder.png"; }}
               />
               {salon.badge && (
                 <div className="absolute top-3 right-3 bg-primary text-destructive-foreground px-2.5 py-0.5 rounded-full text-xs font-bold shadow-lg">

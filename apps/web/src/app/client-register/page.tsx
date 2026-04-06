@@ -786,7 +786,16 @@ function ClientRegisterForm() {
                       id="birthdayDate"
                       type="date"
                       value={birthdayDate}
-                      onChange={(e) => setBirthdayDate(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const today = new Date().toLocaleDateString('en-CA');
+                        if (val > today) {
+                          toast.error("Birthday cannot be in the future");
+                          return;
+                        }
+                        setBirthdayDate(val);
+                      }}
+                      max={new Date().toLocaleDateString('en-CA')}
                       className="w-full h-11 px-4 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                     />
                   </div>

@@ -70,7 +70,7 @@ const FilterDropdown = ({
               filterBy.startsWith('category:') ? filterBy.split(':')[1] :
                 filterBy.startsWith('price:') ? filterBy.split(':')[1].replace('-', ' ') :
                   filterBy.startsWith('rating:') ? `${filterBy.split(':')[1]}+ Stars` :
-                    filterBy === 'availability' ? 'In Stock' : 'All'}
+                    filterBy === 'availability' ? '' : 'All'}
           </span>
         </span>
         <ChevronDown className={`ml-2 h-4 w-4 transition-transform ${showDropdown ? 'rotate-180' : ''}`} />
@@ -128,17 +128,7 @@ const FilterDropdown = ({
               <ChevronDown className="-rotate-90 h-3 w-3 opacity-50" />
             </button>
 
-            <button
-              className={`flex items-center justify-between w-full text-left px-4 py-3 text-sm hover:bg-gray-50 transition-colors ${filterBy === 'availability' || activeSub === 'stock' ? 'bg-primary/5 text-primary font-medium' : ''}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                setActiveSub(activeSub === 'stock' ? 'none' : 'stock');
-              }}
-              onMouseEnter={() => setActiveSub('stock')}
-            >
-              By Stock
-              <ChevronDown className="-rotate-90 h-3 w-3 opacity-50" />
-            </button>
+
           </div>
 
           {/* Dynamic Side Menu */}
@@ -227,26 +217,7 @@ const FilterDropdown = ({
                 </>
               )}
 
-              {/* Stock Submenu */}
-              {activeSub === 'stock' && (
-                <>
-                  <div className="px-4 py-2.5 text-[10px] font-bold text-primary uppercase tracking-wider bg-primary/5 border-b">
-                    Availability Status
-                  </div>
-                  <div className="py-1">
-                    <button
-                      className={`block w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 transition-colors ${filterBy === 'availability' ? 'bg-primary/5 text-primary font-medium' : ''}`}
-                      onClick={() => {
-                        setFilterBy('availability');
-                        setShowDropdown(false);
-                        setActiveSub('none');
-                      }}
-                    >
-                      In Stock Only
-                    </button>
-                  </div>
-                </>
-              )}
+
             </div>
           )}
         </div>
@@ -372,7 +343,7 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
       p.image ||
       p.productImages?.[0] ||
       p.productImage ||
-      "https://placehold.co/320x224/png?text=Product",
+      "/images/product-placeholder.png",
     vendorId: vendorId,
     vendorName: vendorData?.businessName || "Unknown Vendor",
     category: p.category || "Beauty Products",
@@ -389,7 +360,8 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
 
   // Filter and sort products based on filterBy and sortBy states
   const filteredAndSortedProducts = React.useMemo(() => {
-    let result = [...salonProducts];
+    // Global filter: Only show products with stock > 0
+    let result = salonProducts.filter(p => p.stock > 0);
 
     // Apply filtering
     if (filterBy.startsWith('category:')) {

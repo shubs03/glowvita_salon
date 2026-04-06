@@ -85,29 +85,33 @@ const RelevantProducts: React.FC<RelevantProductsProps> = ({
   const combinedProductsMap = new Map();
 
   // Helper to format product
-  const formatProduct = (product: any) => ({
-    id: product.id || product._id,
-    name: product.name,
-    description: product.description || "",
-    price: Number(product.price) || 0,
-    salePrice: product.salePrice && Number(product.salePrice) > 0 ? Number(product.salePrice) : 0,
-    image:
-      product.image ||
-      (Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : null) ||
-      product.productImage ||
-      "https://placehold.co/320x224/e2e8f0/64748b?text=Product",
-    vendorId: product.vendorId || vendorId,
-    vendorName: product.vendorName || vendorName,
-    category: product.category || category,
-    stock: product.stock || 0,
-    rating: product.rating || 0,
-    hint: product.hint || product.description || product.name,
-  });
+  const formatProduct = (product: any) => {
+    if ((product.stock || 0) <= 0) return null;
+
+    return {
+      id: product.id || product._id,
+      name: product.name,
+      description: product.description || "",
+      price: Number(product.price) || 0,
+      salePrice: product.salePrice && Number(product.salePrice) > 0 ? Number(product.salePrice) : 0,
+      image:
+        product.image ||
+        (Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : null) ||
+        product.productImage ||
+        "/images/product-placeholder.png",
+      vendorId: product.vendorId || vendorId,
+      vendorName: product.vendorName || vendorName,
+      category: product.category || category,
+      stock: product.stock || 0,
+      rating: product.rating || 0,
+      hint: product.hint || product.description || product.name,
+    };
+  };
 
   // Add vendor products first
   vendorProducts.forEach(p => {
     const formatted = formatProduct(p);
-    if (formatted.id !== currentProductId) {
+    if (formatted && formatted.id !== currentProductId) {
       combinedProductsMap.set(formatted.id, formatted);
     }
   });
@@ -115,7 +119,7 @@ const RelevantProducts: React.FC<RelevantProductsProps> = ({
   // Supplement with category products if needed
   categoryProducts.forEach(p => {
     const formatted = formatProduct(p);
-    if (formatted.id !== currentProductId && !combinedProductsMap.has(formatted.id)) {
+    if (formatted && formatted.id !== currentProductId && !combinedProductsMap.has(formatted.id)) {
       combinedProductsMap.set(formatted.id, formatted);
     }
   });
@@ -289,19 +293,14 @@ const ProductCard: React.FC<ProductCardProps> = ({
       onClick={() => router.push(`/product-details/${product.id}`)}
     >
       <div className="relative aspect-square overflow-hidden rounded-md m-2">
-        <Image
-          src={product.image}
+        <img
+          src={product.image || "/images/product-placeholder.png"}
           alt={product.name}
-          fill
-          className="group-hover:scale-105 transition-transform duration-300 object-cover"
+          onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           data-ai-hint={product.hint}
         />
-        <Badge
-          variant={product.stock > 0 ? "secondary" : "default"}
-          className="absolute top-2 right-2 text-xs"
-        >
-          {product.stock > 0 ? `In Stock` : "Out of Stock"}
-        </Badge>
+
         <Button
           size="icon"
           variant="ghost"

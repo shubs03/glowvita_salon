@@ -268,7 +268,7 @@ export default function OrdersPage() {
 
   const getNextStatus = (currentStatus: Order['status'], order: Order) => {
     const vendorOrderStatuses: Order['status'][] = ['Pending', 'Processing', 'Packed', 'Shipped', 'Delivered'];
-    const clientOrderStatuses: Order['status'][] = ['Pending', 'Processing', 'Shipped', 'Delivered'];
+    const clientOrderStatuses: Order['status'][] = ['Pending', 'Processing', 'Packed', 'Shipped', 'Delivered'];
 
     const statuses = isOnlineOrder(order) ? clientOrderStatuses : vendorOrderStatuses;
     const currentIndex = statuses.indexOf(currentStatus);
