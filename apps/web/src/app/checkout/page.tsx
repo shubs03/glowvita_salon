@@ -10,7 +10,7 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
-import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet, Plus, Minus, MapPin, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet, Plus, Minus, MapPin, CheckCircle2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCreateClientOrderMutation, useCreatePaymentOrderMutation, useVerifyPaymentMutation, useGetPublicTaxFeeSettingsQuery, useGetPublicShippingConfigQuery } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -271,6 +271,33 @@ export default function CheckoutPage() {
     } catch (error) {
       console.error('Error saving address:', error);
       toast.error('An error occurred while saving the address');
+    }
+  };
+
+  const handleDeleteAddress = async (addressId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this address?')) return;
+
+    try {
+      const res = await fetch(`/api/client/addresses/${addressId}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        toast.success('Address deleted successfully');
+        await fetchAddresses();
+        if (selectedAddressId === addressId) {
+          setSelectedAddressId(null);
+          setShippingAddress('');
+          setContactNumber('');
+        }
+      } else {
+        const data = await res.json();
+        toast.error(data.message || 'Failed to delete address');
+      }
+    } catch (error) {
+      console.error('Error deleting address:', error);
+      toast.error('An error occurred while deleting the address');
     }
   };
   const handleQuantityChange = (delta: number) => {
@@ -805,7 +832,7 @@ export default function CheckoutPage() {
                               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{addr.address}</p>
                               <p className="text-sm text-muted-foreground">{addr.city}, {addr.state} - {addr.pincode}</p>
                               <p className="text-sm text-muted-foreground">Phone: {addr.mobileNo || contactNumber}</p>
-                              <div className="pt-2">
+                              <div className="pt-2 flex items-center gap-4">
                                 <Button 
                                   variant="link" 
                                   size="sm" 
@@ -813,6 +840,15 @@ export default function CheckoutPage() {
                                   onClick={(e) => handleEditAddress(addr, e)}
                                 >
                                   Edit address
+                                </Button>
+                                <Button 
+                                  variant="link" 
+                                  size="sm" 
+                                  className="h-auto p-0 text-red-600 hover:text-red-700 font-normal flex items-center gap-1"
+                                  onClick={(e) => handleDeleteAddress(addr._id, e)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  Delete
                                 </Button>
                               </div>
                             </div>
