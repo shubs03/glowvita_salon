@@ -345,15 +345,14 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
       // Category Filter
       if (categoryFilter.length > 0) {
         filteredSalons = filteredSalons.filter((salon: TransformedSalon) => {
-          if (categoryFilter.includes("Unisex")) {
-            if (salon.type.includes("Full-Service")) return true;
-          }
-          if (categoryFilter.includes("Women")) {
-            if (salon.type.includes("Women's")) return true;
-          }
-          if (categoryFilter.includes("Men")) {
-            if (salon.type.includes("Men's")) return true;
-          }
+          const isUnisex = salon.type.includes("Full-Service");
+          const isWomen = salon.type.includes("Women's");
+          const isMen = salon.type.includes("Men's");
+
+          if (categoryFilter.includes("Unisex") && isUnisex) return true;
+          if (categoryFilter.includes("Women") && (isWomen || isUnisex)) return true;
+          if (categoryFilter.includes("Men") && (isMen || isUnisex)) return true;
+
           return false;
         });
       }
