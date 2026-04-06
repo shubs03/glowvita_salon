@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import salonImage from '../../../public/images/salon_image.jpg';
 import { useRouter } from 'next/navigation';
 import { Button } from '@repo/ui/button';
@@ -145,6 +146,15 @@ export default function LoginPage() {
                       <Eye className="h-4 w-4" />
                     )}
                   </button>
+                </div>
+                
+                <div className="flex justify-end mt-1 relative z-20">
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors cursor-pointer"
+                  >
+                    Forgot Password?
+                  </Link>
                 </div>
               </div>
 
