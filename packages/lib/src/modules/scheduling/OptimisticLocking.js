@@ -580,12 +580,22 @@ export async function confirmAppointment(appointmentId, lockToken, paymentDetail
     if (couponData.couponCode) {
       appointment.couponCode = couponData.couponCode;
       
-      // Increment redemption count and total discount in CRMOfferModel
+      // Increment redemption count and total discount in CRMOfferModel/AdminOfferModel
       try {
         const CRMOfferModel = (await import('../../models/Vendor/CRMOffer.model.js')).default;
         const discountToTrack = couponData.discountAmount || couponData.discount || 0;
-        await CRMOfferModel.incrementRedemption(couponData.couponCode, discountToTrack);
-        console.log(`Incremented redemption count and discount value for coupon: ${couponData.couponCode} (Value: ${discountToTrack})`);
+        
+        // Try CRM offer first
+        const crmResult = await CRMOfferModel.incrementRedemption(couponData.couponCode, discountToTrack);
+        
+        // If not found in CRM, try Admin offer (fallback)
+        if (!crmResult) {
+          const AdminOfferModel = (await import('../../models/admin/AdminOffers.model.js')).default;
+          await AdminOfferModel.incrementRedemption(couponData.couponCode, discountToTrack);
+          console.log(`Incremented redemption count and discount value for ADMIN coupon: ${couponData.couponCode} (Value: ${discountToTrack})`);
+        } else {
+          console.log(`Incremented redemption count and discount value for CRM coupon: ${couponData.couponCode} (Value: ${discountToTrack})`);
+        }
       } catch (offerErr) {
         console.error(`Error incrementing coupon redemption for ${couponData.couponCode}:`, offerErr);
       }

@@ -362,10 +362,7 @@ export default function OffersCouponsPage() {
   };
 
   const totalDiscountValue = Array.isArray(couponsData) ? couponsData.reduce((acc, coupon) => {
-    if (coupon.type === 'fixed') {
-      return acc + coupon.value * coupon.redeemed;
-    }
-    return acc + (1000 * (coupon.value / 100)) * coupon.redeemed;
+    return acc + (coupon.totalDiscount || 0);
   }, 0) : 0;
 
   if (isLoading) {
@@ -493,7 +490,7 @@ export default function OffersCouponsPage() {
             <div className="text-2xl font-bold">
               ₹{totalDiscountValue.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">Estimated value of discounts</p>
+            <p className="text-xs text-muted-foreground">Actual value of discounts</p>
           </CardContent>
         </Card>
       </div>

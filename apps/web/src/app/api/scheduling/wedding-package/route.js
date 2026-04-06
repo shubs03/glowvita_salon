@@ -254,7 +254,12 @@ export async function PUT(request) {
     if (selectedSlot.couponCode) {
       try {
         const discountToTrack = selectedSlot.discountAmount || selectedSlot.discount || 0;
-        await CRMOfferModel.incrementRedemption(selectedSlot.couponCode, discountToTrack);
+        const CRMOfferModel = (await import('@repo/lib/models/Vendor/CRMOffer.model')).default;
+        const crmResult = await CRMOfferModel.incrementRedemption(selectedSlot.couponCode, discountToTrack);
+        if (!crmResult) {
+          const AdminOfferModel = (await import('@repo/lib/models/admin/AdminOffers.model.js')).default;
+          await AdminOfferModel.incrementRedemption(selectedSlot.couponCode, discountToTrack);
+        }
         console.log(`Incremented redemption count and discount for wedding coupon: ${selectedSlot.couponCode}`);
       } catch (offerErr) {
         console.error(`Error incrementing wedding coupon redemption for ${selectedSlot.couponCode}:`, offerErr);
