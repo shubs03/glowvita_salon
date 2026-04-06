@@ -8,6 +8,7 @@ import {
 import {
   useGetPublicCategoriesQuery,
   useGetPublicServicesQuery,
+  useGetPublicVendorsQuery,
 } from "@repo/store/services/api";
 import { useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
@@ -39,6 +40,7 @@ const HeroSection2 = () => {
   const { data: categoriesData, isLoading: categoriesLoading } =
     useGetPublicCategoriesQuery(undefined);
   const { data: servicesData } = useGetPublicServicesQuery({ limit: 100 });
+  const { data: vendorsData } = useGetPublicVendorsQuery({ limit: 100 });
 
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
@@ -85,8 +87,15 @@ const HeroSection2 = () => {
       results.push(...cats.map((c: any) => ({ ...c, type: "category" })));
     }
 
+    if (vendorsData?.vendors) {
+      const vendors = vendorsData.vendors
+        .filter((v: any) => v.businessName?.toLowerCase().includes(input))
+        .slice(0, 10);
+      results.push(...vendors.map((v: any) => ({ ...v, type: "salon", name: v.businessName })));
+    }
+
     return results;
-  }, [serviceInput, categoriesData, servicesData]);
+  }, [serviceInput, categoriesData, servicesData, vendorsData]);
 
   // ── Google Places autocomplete (geocode = allows neighbourhoods too) ───────
   useEffect(() => {
@@ -230,6 +239,9 @@ const HeroSection2 = () => {
     if (item.type === "category") {
       setSelectedCategoryId(item._id);
       setServiceInput(item.name);
+    } else if (item.type === "salon") {
+      setServiceInput(item.name);
+      setSelectedCategoryId("");
     } else {
       setServiceInput(item.name);
       setSelectedCategoryId("");
@@ -329,6 +341,8 @@ const HeroSection2 = () => {
                       >
                         {item.type === "category" ? (
                           <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-600" />
+                        ) : item.type === "salon" ? (
+                          <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                         ) : (
                           <Scissors className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600" />
                         )}
