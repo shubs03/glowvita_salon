@@ -484,7 +484,11 @@ export const POST = withSubscriptionCheck(async (req) => {
             try {
                 const CRMOfferModel = (await import('../../../../../../../packages/lib/src/models/Vendor/CRMOffer.model')).default;
                 const discountToTrack = appointmentData.discountAmount || appointmentData.discount || 0;
-                await CRMOfferModel.incrementRedemption(appointmentData.couponCode, discountToTrack);
+                const crmResult = await CRMOfferModel.incrementRedemption(appointmentData.couponCode, discountToTrack);
+                if (!crmResult) {
+                    const AdminOfferModel = (await import('../../../../../../../packages/lib/src/models/admin/AdminOffers.model.js')).default;
+                    await AdminOfferModel.incrementRedemption(appointmentData.couponCode, discountToTrack);
+                }
                 console.log(`Incremented redemption count and discount for offline booking coupon: ${appointmentData.couponCode}`);
             } catch (offerErr) {
                 console.error(`Error incrementing offline coupon redemption for ${appointmentData.couponCode}:`, offerErr);
@@ -663,7 +667,11 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
                 const discountToTrack = updateData.discountAmount !== undefined ? updateData.discountAmount : 
                                        (updateData.discount !== undefined ? updateData.discount : 
                                        (existingAppointment.discountAmount || existingAppointment.discount || 0));
-                await CRMOfferModel.incrementRedemption(updateData.couponCode, discountToTrack);
+                const crmResult = await CRMOfferModel.incrementRedemption(updateData.couponCode, discountToTrack);
+                if (!crmResult) {
+                    const AdminOfferModel = (await import('../../../../../../../packages/lib/src/models/admin/AdminOffers.model.js')).default;
+                    await AdminOfferModel.incrementRedemption(updateData.couponCode, discountToTrack);
+                }
                 console.log(`Incremented redemption count and discount for updated coupon: ${updateData.couponCode}`);
             } catch (offerErr) {
                 console.error(`Error incrementing updated coupon redemption for ${updateData.couponCode}:`, offerErr);
