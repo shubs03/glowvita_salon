@@ -27,6 +27,8 @@ interface WishlistItem {
   vendorId: string;
   supplierName: string;
   addedAt: string;
+  rating?: number;
+  reviewCount?: number;
 }
 
 interface DoctorWishlistItem {
@@ -36,6 +38,7 @@ interface DoctorWishlistItem {
   specialty: string;
   experience: number;
   rating: number;
+  reviewCount?: number;
   consultationFee: number;
   clinicName: string;
   city: string;
@@ -51,6 +54,7 @@ interface SalonWishlistItem {
   state?: string;
   location: string;
   rating: number;
+  reviewCount?: number;
   specialty: string;
   description: string;
   clients?: string;
@@ -380,8 +384,8 @@ export default function WishlistPage() {
                         id={salon.salonId}
                         title={salon.salonName}
                         location={salon.location}
-                        rating={salon.rating}
-                        clients={salon.clients || "100+"}
+                        rating={salon.rating || 4.5}
+                        clients={salon.reviewCount?.toString() || salon.clients || "0"}
                         specialty={salon.specialty}
                         description={salon.description}
                         image={salon.salonImage}
@@ -430,11 +434,12 @@ export default function WishlistPage() {
                           price={item.price}
                           image={item.productImage}
                           hint=""
-                          rating={4.5}
-                          reviewCount={100}
+                          rating={item.rating || 4.5}
+                          reviewCount={item.reviewCount || 0}
                           vendorName={item.supplierName}
                           vendorId={item.vendorId}
                           description=""
+                          onWishlistRemove={(id) => setWishlistItems(prev => prev.filter(i => i.productId !== id))}
                         />
                       </div>
                     ))}
@@ -459,8 +464,8 @@ export default function WishlistPage() {
                         id={salon.salonId}
                         title={salon.salonName}
                         location={salon.location}
-                        rating={salon.rating}
-                        clients={salon.clients || "100+"}
+                        rating={salon.rating || 4.5}
+                        clients={salon.reviewCount?.toString() || salon.clients || "0"}
                         specialty={salon.specialty}
                         description={salon.description}
                         image={salon.salonImage}
@@ -499,11 +504,12 @@ export default function WishlistPage() {
                           price={item.price}
                           image={item.productImage}
                           hint=""
-                          rating={4.5} // Placeholder rating
-                          reviewCount={100} // Placeholder review count
+                          rating={item.rating || 4.5}
+                          reviewCount={item.reviewCount || 0}
                           vendorName={item.supplierName}
                           vendorId={item.vendorId}
                           description="" // Placeholder description
+                          onWishlistRemove={(id) => setWishlistItems(prev => prev.filter(i => i.productId !== id))}
                         />
                       </div>
                     ))}
