@@ -112,6 +112,14 @@ export default function SettingsPage() {
             return;
         }
 
+        if (name === 'birthdayDate') {
+            const today = new Date().toLocaleDateString('en-CA');
+            if (value > today) {
+                toast.error("Birthday cannot be in the future");
+                return;
+            }
+        }
+
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
@@ -295,6 +303,7 @@ export default function SettingsPage() {
                                 type="date"
                                 value={formData.birthdayDate}
                                 onChange={handleInputChange}
+                                max={new Date().toLocaleDateString('en-CA')}
                             />
                         </div>
                     </div>
