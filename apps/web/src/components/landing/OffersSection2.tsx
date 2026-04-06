@@ -45,7 +45,7 @@ const OffersSection2 = () => {
         image: offer.offerImage || 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400',
         validTill: offer.expires
           ? new Date(offer.expires).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
-          : 'N/A',
+          : '',
       }))
     : [];
 
@@ -135,9 +135,11 @@ const OffersSection2 = () => {
                   onMouseLeave={() => setHoveredIndex(null)}
                 >
                   {/* Valid Till Badge - Top Right */}
-                  <div className="absolute top-0 right-2 bg-white text-primary px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-bold shadow-lg z-20 border-2 border-primary">
-                    {offer.validTill}
-                  </div>
+                  {offer.validTill && (
+                    <div className="absolute top-0 right-2 bg-white text-primary px-2 py-1 sm:px-3 sm:py-1.5 rounded-full text-[9px] sm:text-[10px] font-bold shadow-lg z-20 border-2 border-primary">
+                      {offer.validTill}
+                    </div>
+                  )}
 
                   {/* Circle Container */}
                   <div className="relative w-24 h-24 sm:w-32 sm:h-32 lg:w-36 lg:h-36 rounded-full overflow-hidden shadow-xl cursor-pointer group">

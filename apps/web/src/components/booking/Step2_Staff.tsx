@@ -6,8 +6,8 @@ import { cn } from '@repo/ui/cn';
 import { User, Users, CheckCircle, ChevronRight, Loader2, AlertCircle, Star, Info } from 'lucide-react';
 import { StaffMember, Service } from '@/hooks/useBookingData';
 
-const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
-    const steps = ['Services', 'Select Professional', 'Time Slot'];
+const Breadcrumb = ({ currentStep, setCurrentStep, bookingMode }: { currentStep: number; setCurrentStep: (step: number) => void; bookingMode?: string; }) => {
+    const steps = ['Services', 'Select Professional', bookingMode === 'home' ? 'Location' : 'Time Slot'];
     return (
         <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
             {steps.map((step, index) => (
@@ -42,6 +42,7 @@ interface Step2StaffProps {
     isWeddingPackage?: boolean;
     weddingPackage?: any;
     onNext?: () => void;
+    bookingMode?: string;
 }
 
 export function Step2_Staff({
@@ -56,7 +57,8 @@ export function Step2_Staff({
     onStaffSelect,
     isWeddingPackage = false,
     weddingPackage,
-    onNext
+    onNext,
+    bookingMode
 }: Step2StaffProps): JSX.Element {
 
     // Log what we receive as props
@@ -125,7 +127,7 @@ export function Step2_Staff({
     if (isLoading) {
         return (
             <div className="w-full">
-                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} bookingMode={bookingMode} />
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -150,7 +152,7 @@ export function Step2_Staff({
     if (error) {
         return (
             <div className="w-full">
-                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} bookingMode={bookingMode} />
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -173,7 +175,7 @@ export function Step2_Staff({
 
     return (
         <div className="w-full">
-            <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+            <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} bookingMode={bookingMode} />
             <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
                     <div className="p-3 bg-primary/10 rounded-full text-primary">
