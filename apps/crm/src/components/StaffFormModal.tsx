@@ -689,6 +689,16 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
         }));
     };
 
+    const handleSelectAllPermissions = () => {
+        const allPermissions = navItems.map(item => item.permission);
+        const allSelected = allPermissions.every(p => (formData.permissions as string[]).includes(p));
+
+        setFormData((prev: any) => ({
+            ...prev,
+            permissions: allSelected ? [] : allPermissions
+        }));
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -1008,24 +1018,44 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
         </div>
     );
 
-    const renderPermissionsTab = () => (
-        <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 border p-4 rounded-md">
-                {navItems.map((item) => (
-                    <div key={item.permission} className="flex items-center space-x-2">
-                        <Checkbox
-                            id={item.permission}
-                            checked={(formData.permissions as string[]).includes(item.permission)}
-                            onCheckedChange={(checked) => handleCheckboxChange(item.permission, checked as boolean)}
-                        />
-                        <Label htmlFor={item.permission} className="text-sm font-medium">
-                            {item.title}
-                        </Label>
+    const renderPermissionsTab = () => {
+        const allPermissions = navItems.map(item => item.permission);
+        const allSelected = allPermissions.length > 0 && allPermissions.every(p => (formData.permissions as string[]).includes(p));
+
+        return (
+            <div className="space-y-4">
+                <div className="flex justify-between items-center px-1">
+                    <div className="space-y-0.5">
+                        <Label className="text-sm font-semibold">Enable Modules Access</Label>
+                        <p className="text-[11px] text-muted-foreground">Select which features this staff member can access.</p>
                     </div>
-                ))}
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSelectAllPermissions}
+                        className="h-8 text-xs font-bold uppercase tracking-wider"
+                    >
+                        {allSelected ? 'Deselect All' : 'Select All'}
+                    </Button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 border p-4 rounded-md bg-muted/20">
+                    {navItems.map((item) => (
+                        <div key={item.permission} className="flex items-center space-x-2 bg-white p-2 rounded border border-transparent hover:border-primary/20 transition-all">
+                            <Checkbox
+                                id={item.permission}
+                                checked={(formData.permissions as string[]).includes(item.permission)}
+                                onCheckedChange={(checked) => handleCheckboxChange(item.permission, checked as boolean)}
+                            />
+                            <Label htmlFor={item.permission} className="text-xs font-medium cursor-pointer flex-1">
+                                {item.title}
+                            </Label>
+                        </div>
+                    ))}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const renderTimingTab = () => {
         const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
