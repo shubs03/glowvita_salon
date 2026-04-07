@@ -218,6 +218,8 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
   const qCityRaw = searchParams?.get("city") || searchParams?.get("locationLabel") || selectedCity;
   const qCity = qCityRaw?.split(',')[0].trim();
   const qServiceName = searchParams?.get("serviceName") || serviceQuery;
+  const qOfferCode = searchParams?.get("offerCode") || "";
+  const qRegionId = searchParams?.get("regionId") || "";
 
   const {
     data: vendorsData,
@@ -228,6 +230,8 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
     lng: qLng || undefined,
     city: qCity || undefined,
     serviceName: qServiceName || undefined,
+    offerCode: qOfferCode || undefined,
+    regionId: qRegionId || undefined,
     limit: 1000
   }, { skip: !isSalonsPage });
 
@@ -551,6 +555,27 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
           </p>
         </div>
       </div>
+
+      {qOfferCode && (
+        <div className="mb-6 flex items-center gap-3 bg-primary/5 border border-primary/20 p-4 rounded-2xl w-fit">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-primary">Active Offer:</span>
+            <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{qOfferCode}</span>
+          </div>
+          <button 
+            onClick={() => {
+              const params = new URLSearchParams(window.location.search);
+              params.delete("offerCode");
+              const queryString = params.toString() ? `?${params.toString()}` : "";
+              router.push(`${pathname}${queryString}`);
+            }}
+            className="text-xs text-muted-foreground hover:text-destructive underline font-medium"
+          >
+            Clear offer filter
+          </button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

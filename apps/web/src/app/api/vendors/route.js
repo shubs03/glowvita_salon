@@ -1,6 +1,8 @@
 import _db from "@repo/lib/db";
 import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
 import RegionModel from "@repo/lib/models/admin/Region.model";
+import CRMOfferModel from "@repo/lib/models/Vendor/CRMOffer.model.js";
+import AdminOfferModel from "@repo/lib/models/admin/AdminOffers.model.js";
 import ReviewModel from "@repo/lib/models/Review/Review.model";
 import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model.js";
 import mongoose from "mongoose";
@@ -29,70 +31,76 @@ export const GET = async (request) => {
     }
 
     const { searchParams } = new URL(request.url);
-
     const serviceName = searchParams.get("serviceName")?.trim() || "";
-    const categoryIdsStr = searchParams.get("categoryIds");
+    const offerCode = searchParams.get("offerCode")?.trim() || "";
+    const urlRegionId = searchParams.get("regionId")?.trim();
     const limit = parseInt(searchParams.get("limit") || "20", 10);
     const offset = parseInt(searchParams.get("offset") || "0", 10);
 
-    // ── Coordinate-based location filtering (primary) ──────────────────────
     const latStr = searchParams.get("lat");
     const lngStr = searchParams.get("lng");
     const lat = latStr ? parseFloat(latStr) : NaN;
     const lng = lngStr ? parseFloat(lngStr) : NaN;
-
-    // ── Legacy city-name fallback ──────────────────────────────────────────
-    const city = searchParams.get("city")?.trim();
+    const city = searchParams.get("city")?.trim() || searchParams.get("locationLabel")?.trim() || "";
 
     /* ── Determine region filter ─────────────────────────────────────────── */
-    let regionId = null;
+    let regionId = urlRegionId && mongoose.Types.ObjectId.isValid(urlRegionId) ? new mongoose.Types.ObjectId(urlRegionId) : null;
     let useCityFallback = false;
     let cityLegacy = null;
 
-    if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-      try {
-        const region = await RegionModel.findOne({
-          geometry: {
-            $geoIntersects: {
-              $geometry: {
-                type: "Point",
-                coordinates: [lng, lat], // GeoJSON: [lng, lat]
-              },
-            },
-          },
-          isActive: true,
-        });
-
-        if (region) {
-          regionId = region._id;
-          console.log(`[SearchAPI] Region matched: ${region.name} for [${lat}, ${lng}]`);
-        } else if (city && city !== "Current Location" && city !== "") {
-          // Fallback to city-based matching if coordinates are outside any region
-          useCityFallback = true;
-          cityLegacy = city;
-          console.log(`[SearchAPI] No region for [${lat}, ${lng}] – Falling back to city: ${city}`);
-        } else {
-          // Coordinates given but outside any defined service area and no city provided
-          console.log(`[SearchAPI] No region for [${lat}, ${lng}] and no city fallback – returning noServiceArea`);
-          return setCorsHeaders(
-            Response.json({
-              success: true,
-              vendors: [],
-              count: 0,
-              noServiceArea: true,
-              message: "We're not available in this area yet",
-            })
-          );
-        }
-      } catch (err) {
-        console.error("[SearchAPI] Region lookup error:", err);
+    // Only detect region if not explicitly provided via regionId param
+    if (!regionId) {
+      const { assignRegion } = await import("@repo/lib/utils/assignRegion.js");
+      const detectedRegionId = await assignRegion(city, null, { lat, lng });
+      
+      if (detectedRegionId) {
+        regionId = detectedRegionId;
+      } else if (city && city !== "Current Location" && city !== "") {
+        useCityFallback = true;
+        cityLegacy = city.split(',')[0].trim();
       }
-    } else if (city && city !== "Current Location" && city !== "") {
-      useCityFallback = true;
-      cityLegacy = city;
+    }
+
+    /* ── Handle Offer Filtering ─────────────────────────────────────────── */
+    let offerVendorIds = null;
+    let offerRegionId = null;
+
+    if (offerCode) {
+      // 1. Try CRM Offers (Vendor Specific)
+      const crmOffer = await CRMOfferModel.findOne({ 
+        code: offerCode, 
+        isActive: { $ne: false },
+        startDate: { $lte: new Date() },
+        $or: [{ expires: null }, { expires: { $gte: new Date() } }]
+      }).lean();
+
+      if (crmOffer) {
+        offerVendorIds = [crmOffer.businessId];
+        console.log(`[SearchAPI] Filtering by CRM offer: ${offerCode} for vendor: ${crmOffer.businessId}`);
+      } else {
+        // 2. Try Admin Offers (Regional / Global)
+        const adminOffer = await AdminOfferModel.findOne({ 
+          code: offerCode, 
+          isActive: { $ne: false },
+          startDate: { $lte: new Date() },
+          $or: [{ expires: null }, { expires: { $gte: new Date() } }]
+        }).lean();
+
+        if (adminOffer) {
+          if (adminOffer.regionId) {
+            offerRegionId = adminOffer.regionId;
+            console.log(`[SearchAPI] Filtering by Admin Regional offer: ${offerCode} for region: ${offerRegionId}`);
+          } else {
+            // Global offer - check if any regions are excluded
+            console.log(`[SearchAPI] Global Admin offer: ${offerCode} applied.`);
+            // No strict region filter for global offers unless specified
+          }
+        }
+      }
     }
 
     /* ── Parse Category IDs safely ───────────────────────────────────────── */
+    const categoryIdsStr = searchParams.get("categoryIds");
     let categoryIds = [];
     if (categoryIdsStr) {
       categoryIds = categoryIdsStr
@@ -120,14 +128,27 @@ export const GET = async (request) => {
     /* 2️⃣ Vendor-level filtering */
     const vendorMatch = { "vendorData.status": "Approved" };
 
-    if (regionId) {
-      // Coordinate-based: filter by regionId on the vendor document
-      vendorMatch["vendorData.regionId"] = regionId;
-    } else if (useCityFallback && cityLegacy) {
-      // Legacy: case-insensitive city match
+    // Priority 1: Offer-based Vendor Filter
+    if (offerVendorIds && offerVendorIds.length > 0) {
+      vendorMatch["vendorData._id"] = { $in: offerVendorIds.map(id => new mongoose.Types.ObjectId(id)) };
+    } 
+    // Priority 2: Offer-based Region Filter OR Explicit Region Filter
+    else if (offerRegionId || regionId) {
+      const targetRegionId = new mongoose.Types.ObjectId(offerRegionId || regionId);
+      
+      // Look up region name for city-fallback
+      const region = await RegionModel.findById(targetRegionId).lean();
+      const regionName = region?.name || "";
+
+      vendorMatch.$or = [
+        { "vendorData.regionId": targetRegionId },
+        { "vendorData.city": { $regex: new RegExp(`^${regionName}$`, "i") } }
+      ];
+    } 
+    // Priority 3: City Fallback
+    else if (useCityFallback && cityLegacy) {
       vendorMatch["vendorData.city"] = { $regex: new RegExp(`^${cityLegacy}$`, "i") };
     }
-    // If neither, no location filter → show all
 
     pipeline.push({ $match: vendorMatch });
 
