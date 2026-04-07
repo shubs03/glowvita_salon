@@ -207,7 +207,7 @@ const ProductFormFields = ({
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="category" className="text-sm font-medium">Category</Label>
+          <Label htmlFor="category" className="text-sm font-medium">Category <span className="text-red-500">*</span></Label>
           <div className="flex gap-2">
             <Select value={formData.category} onValueChange={handleCategoryChange}>
               <SelectTrigger className="rounded-xl border-border/40">
@@ -230,7 +230,7 @@ const ProductFormFields = ({
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="productName" className="text-sm font-medium">Product Name</Label>
+          <Label htmlFor="productName" className="text-sm font-medium">Product Name <span className="text-red-500">*</span></Label>
           <div className="space-y-2">
             <Select
               value={formData.productName || ''}
@@ -321,7 +321,7 @@ const ProductFormFields = ({
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="price" className="text-sm font-medium">Regular Price (₹)</Label>
+          <Label htmlFor="price" className="text-sm font-medium">Regular Price (₹) <span className="text-red-500">*</span></Label>
           <Input
             placeholder="0.00"
             id="price"
@@ -329,6 +329,7 @@ const ProductFormFields = ({
             value={formData.price || ''}
             onChange={(e) => onFieldChange('price', Number(e.target.value))}
             className="rounded-xl border-border/40 focus:border-primary/50"
+            required
           />
         </div>
         <div className="space-y-2">
@@ -337,8 +338,13 @@ const ProductFormFields = ({
             placeholder="0.00"
             id="salePrice"
             type="number"
+            min="0"
             value={formData.salePrice || ''}
-            onChange={(e) => onFieldChange('salePrice', Number(e.target.value))}
+            onChange={(e) => {
+              const value = Number(e.target.value);
+              if (value < 0) return;
+              onFieldChange('salePrice', value);
+            }}
             className="rounded-xl border-border/40 focus:border-primary/50"
           />
         </div>
@@ -348,8 +354,13 @@ const ProductFormFields = ({
             placeholder="0"
             id="stock"
             type="number"
+            min="0"
             value={formData.stock || ''}
-            onChange={(e) => onFieldChange('stock', Number(e.target.value))}
+            onChange={(e) => {
+              const value = Number(e.target.value);
+              if (value < 0) return;
+              onFieldChange('stock', value);
+            }}
             className="rounded-xl border-border/40 focus:border-primary/50"
           />
         </div>
@@ -412,10 +423,14 @@ const ProductFormFields = ({
         <div className="space-y-2">
           <Label htmlFor="size" className="text-sm font-medium">Size</Label>
           <Input
-            placeholder="Enter size"
+            placeholder="Enter size (digits only)"
             id="size"
             value={formData.size || ''}
-            onChange={(e) => onFieldChange('size', e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value !== '' && !/^\d+$/.test(value)) return;
+              onFieldChange('size', value);
+            }}
             className="rounded-xl border-border/40 focus:border-primary/50"
           />
         </div>
