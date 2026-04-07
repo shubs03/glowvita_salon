@@ -205,7 +205,7 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="category" className="text-sm font-medium">Category</Label>
+          <Label htmlFor="category" className="text-sm font-medium">Category <span className="text-red-500">*</span></Label>
           <div className="flex gap-2">
             <Select value={formData.category} onValueChange={handleCategoryChange}>
               <SelectTrigger className="rounded-xl border-border/40">
@@ -228,7 +228,7 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="productName" className="text-sm font-medium">Product Name</Label>
+          <Label htmlFor="productName" className="text-sm font-medium">Product Name <span className="text-red-500">*</span></Label>
           <div className="space-y-2">
             <Select
               value={formData.productName || ''}
@@ -319,13 +319,19 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="price" className="text-sm font-medium">Regular Price (₹)</Label>
+          <Label htmlFor="price" className="text-sm font-medium">Regular Price (₹) <span className="text-red-500">*</span></Label>
           <Input
             placeholder="0.00"
             id="price"
             type="number"
+            min="0"
+            required
             value={formData.price || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, price: Number(e.target.value) }))}
+            onChange={(e) => {
+              const value = Number(e.target.value);
+              if (value < 0) return;
+              setFormData(prev => ({ ...prev, price: value }));
+            }}
             className="rounded-xl border-border/40 focus:border-primary/50"
           />
         </div>
@@ -335,8 +341,13 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
             placeholder="0.00"
             id="salePrice"
             type="number"
+            min="0"
             value={formData.salePrice || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, salePrice: Number(e.target.value) }))}
+            onChange={(e) => {
+              const value = Number(e.target.value);
+              if (value < 0) return;
+              setFormData(prev => ({ ...prev, salePrice: value }));
+            }}
             className="rounded-xl border-border/40 focus:border-primary/50"
           />
         </div>
@@ -346,8 +357,13 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
             placeholder="0"
             id="stock"
             type="number"
+            min="0"
             value={formData.stock || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, stock: Number(e.target.value) }))}
+            onChange={(e) => {
+              const value = Number(e.target.value);
+              if (value < 0) return;
+              setFormData(prev => ({ ...prev, stock: value }));
+            }}
             className="rounded-xl border-border/40 focus:border-primary/50"
           />
         </div>
@@ -409,10 +425,14 @@ const ProductFormFields = ({ formData, setFormData, categoriesData, onAddCategor
         <div className="space-y-2">
           <Label htmlFor="size" className="text-sm font-medium">Size</Label>
           <Input
-            placeholder="Enter size"
+            placeholder="Enter size (digits only)"
             id="size"
             value={formData.size || ''}
-            onChange={(e) => setFormData(prev => ({ ...prev, size: e.target.value }))}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value !== '' && !/^\d+$/.test(value)) return;
+              setFormData(prev => ({ ...prev, size: value }));
+            }}
             className="rounded-xl border-border/40 focus:border-primary/50"
           />
         </div>
