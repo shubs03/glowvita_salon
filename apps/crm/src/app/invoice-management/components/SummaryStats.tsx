@@ -13,9 +13,9 @@ interface SummaryStatsProps {
 
 export default function SummaryStats({ billings, appointments, activeTab, isSupplier }: SummaryStatsProps) {
   // Total revenue stays combined for both tabs (except for suppliers who don't have appointments)
-  const totalRevenue =
-    billings.reduce((sum, billing) => sum + billing.totalAmount, 0) +
-    (!isSupplier ? appointments.reduce((sum, app) => sum + (app.finalAmount || app.totalAmount || 0), 0) : 0);
+  const billingRevenue = billings.reduce((sum, billing) => sum + billing.totalAmount, 0);
+  const appointmentRevenue = !isSupplier ? appointments.reduce((sum, app) => sum + (app.finalAmount || app.totalAmount || 0), 0) : 0;
+  const totalRevenue = billingRevenue + appointmentRevenue;
 
   // Stats change based on active tab
   const totalInvoices = activeTab === 'billing' ? billings.length : appointments.length;
@@ -53,7 +53,15 @@ export default function SummaryStats({ billings, appointments, activeTab, isSupp
             <div>
               <p className="text-sm font-medium text-secondary-foreground mb-1 dark:text-secondary-foreground">Total Revenue</p>
               <p className="text-2xl font-bold text-secondary-foreground dark:text-secondary-foreground">₹{totalRevenue.toFixed(2)}</p>
-              <p className="text-xs text-secondary-foreground/70 mt-1 dark:text-secondary-foreground/70">From all transactions</p>
+              <div className="text-xs text-secondary-foreground/70 mt-1 flex flex-wrap gap-x-2 dark:text-secondary-foreground/70">
+                <span>Billing: ₹{billingRevenue.toFixed(2)}</span>
+                {!isSupplier && (
+                  <>
+                    <span>|</span>
+                    <span>Appointments: ₹{appointmentRevenue.toFixed(2)}</span>
+                  </>
+                )}
+              </div>
             </div>
             <div className="p-3 bg-primary/10 dark:bg-secondary/20 rounded-full transition-all duration-300 group-hover:bg-primary/20 dark:group-hover:bg-secondary/30">
               <DollarSign className="h-6 w-6 text-secondary-foreground dark:text-secondary-foreground" />
