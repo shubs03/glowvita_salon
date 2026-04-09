@@ -19,6 +19,7 @@ interface SupplierProfileTabProps {
 
 export const SupplierProfileTab = ({ supplier, setSupplier, handleProfileImageUpload }: SupplierProfileTabProps) => {
     const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
+    const dispatch = useAppDispatch();
 
     const handleSave = async () => {
         try {
