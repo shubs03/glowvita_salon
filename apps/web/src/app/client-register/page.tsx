@@ -739,7 +739,7 @@ function ClientRegisterForm() {
                       placeholder="First Name"
                       required
                       value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
+                      onChange={(e) => setFirstName(e.target.value.replace(/[^a-zA-Z]/g, ''))}
                       className="w-full h-11 p-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                     />
                   </div>
@@ -752,7 +752,7 @@ function ClientRegisterForm() {
                       placeholder="Last Name"
                       required
                       value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
+                      onChange={(e) => setLastName(e.target.value.replace(/[^a-zA-Z]/g, ''))}
                       className="w-full h-11 p-5 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                     />
                   </div>
@@ -786,7 +786,17 @@ function ClientRegisterForm() {
                       id="birthdayDate"
                       type="date"
                       value={birthdayDate}
-                      onChange={(e) => setBirthdayDate(e.target.value)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const tzOffset = new Date().getTimezoneOffset() * 60000;
+                        const today = new Date(Date.now() - tzOffset).toISOString().split('T')[0];
+                        if (val > today) {
+                          toast.error("Birthday cannot be in the future");
+                          return;
+                        }
+                        setBirthdayDate(val);
+                      }}
+                      max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]}
                       className="w-full h-11 px-4 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
                     />
                   </div>

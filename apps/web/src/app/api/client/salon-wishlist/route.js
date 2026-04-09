@@ -4,6 +4,7 @@ import { verifyJwt } from '@repo/lib/auth';
 import { cookies } from 'next/headers';
 import UserSalonWishlistModel from '@repo/lib/models/user/UserSalonWishlist.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
+import ReviewModel from '@repo/lib/models/Review/Review.model';
 import mongoose from 'mongoose';
 
 await _db();
@@ -37,7 +38,30 @@ export async function GET(req) {
         if (!wishlist) {
             // If no wishlist exists, create an empty one
             wishlist = { userId, items: [] };
+        } else if (wishlist.items && wishlist.items.length > 0) {
+            // Fetch dynamic reviews for salons
+            const itemIds = wishlist.items.map(item => new mongoose.Types.ObjectId(item.salonId));
+            
+            const reviews = await ReviewModel.aggregate([
+                { $match: { entityId: { $in: itemIds }, entityType: 'salon', isApproved: true } },
+                { $group: { _id: '$entityId', averageRating: { $avg: '$rating' }, reviewCount: { $sum: 1 } } }
+            ]);
+            
+            const reviewMap = {};
+            reviews.forEach(r => {
+                reviewMap[r._id.toString()] = { rating: r.averageRating, reviewCount: r.reviewCount };
+            });
+            
+            wishlist.items = wishlist.items.map(item => {
+                const reviewData = reviewMap[item.salonId.toString()] || { rating: 0, reviewCount: 0 };
+                return {
+                    ...item,
+                    rating: reviewData.rating ? parseFloat(reviewData.rating.toFixed(1)) : 4.5,
+                    reviewCount: reviewData.reviewCount
+                };
+            });
         }
+
 
         return NextResponse.json({ success: true, data: wishlist });
     } catch (error) {

@@ -55,7 +55,7 @@ type Coupon = {
   isCustomCode?: boolean;
   regionId?: string | null;
   disabledRegions?: string[];
-
+  isActive?: boolean;
 };
 
 type CouponForm = {
@@ -362,10 +362,7 @@ export default function OffersCouponsPage() {
   };
 
   const totalDiscountValue = Array.isArray(couponsData) ? couponsData.reduce((acc, coupon) => {
-    if (coupon.type === 'fixed') {
-      return acc + coupon.value * coupon.redeemed;
-    }
-    return acc + (1000 * (coupon.value / 100)) * coupon.redeemed;
+    return acc + (coupon.totalDiscount || 0);
   }, 0) : 0;
 
   if (isLoading) {
@@ -467,7 +464,7 @@ export default function OffersCouponsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {Array.isArray(couponsData) ? couponsData.filter(c => c.status === 'Active').length : 0}
+              {Array.isArray(couponsData) ? couponsData.filter(c => c.status === 'Active' && c.isActive !== false).length : 0}
             </div>
             <p className="text-xs text-muted-foreground">Currently usable by customers</p>
           </CardContent>
@@ -493,7 +490,7 @@ export default function OffersCouponsPage() {
             <div className="text-2xl font-bold">
               ₹{totalDiscountValue.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">Estimated value of discounts</p>
+            <p className="text-xs text-muted-foreground">Actual value of discounts</p>
           </CardContent>
         </Card>
       </div>
@@ -773,7 +770,18 @@ export default function OffersCouponsPage() {
                     </div>
                     <div className="grid grid-cols-3 items-center gap-4">
                       <span className="font-semibold text-muted-foreground">Status</span>
-                      <span className="col-span-2">{couponData?.status || 'N/A'}</span>
+                      <span className="col-span-2">
+                        {(() => {
+                          if (!couponData) return 'N/A';
+                          const isSuperAdmin = userRole?.toUpperCase() === 'SUPER_ADMIN' || userRole?.toUpperCase() === 'SUPERADMIN';
+                          const currentRegionId = typeof userRegion === 'string' ? userRegion : (userRegion as any)?._id?.toString() || userRegion?.toString();
+                          const isRegionallyDisabled = !isSuperAdmin && !couponData.regionId && currentRegionId && couponData.disabledRegions?.some((r: any) => r.toString() === currentRegionId);
+
+                          if (isRegionallyDisabled) return 'DISABLED (REGION)';
+                          if (couponData.isActive === false) return 'Deactivated';
+                          return couponData.status || 'N/A';
+                        })()}
+                      </span>
                     </div>
                     <div className="grid grid-cols-3 items-center gap-4">
                       <span className="font-semibold text-muted-foreground">Starts</span>

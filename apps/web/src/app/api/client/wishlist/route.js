@@ -4,6 +4,8 @@ import { verifyJwt } from '@repo/lib/auth';
 import { cookies } from 'next/headers';
 import UserWishlistModel from '@repo/lib/models/user/UserWishlist.model';
 import ProductModel from '@repo/lib/models/Vendor/Product.model';
+import ReviewModel from '@repo/lib/models/Review/Review.model';
+import mongoose from 'mongoose';
 
 await _db();
 
@@ -36,6 +38,28 @@ export async function GET(req) {
     if (!wishlist) {
       // If no wishlist exists, create an empty one
       wishlist = { userId, items: [] };
+    } else if (wishlist.items && wishlist.items.length > 0) {
+      // Fetch dynamic reviews for products
+      const itemIds = wishlist.items.map(item => new mongoose.Types.ObjectId(item.productId));
+      
+      const reviews = await ReviewModel.aggregate([
+        { $match: { entityId: { $in: itemIds }, entityType: 'product', isApproved: true } },
+        { $group: { _id: '$entityId', averageRating: { $avg: '$rating' }, reviewCount: { $sum: 1 } } }
+      ]);
+      
+      const reviewMap = {};
+      reviews.forEach(r => {
+        reviewMap[r._id.toString()] = { rating: r.averageRating, reviewCount: r.reviewCount };
+      });
+      
+      wishlist.items = wishlist.items.map(item => {
+        const reviewData = reviewMap[item.productId.toString()] || { rating: 0, reviewCount: 0 };
+        return {
+          ...item,
+          rating: reviewData.rating ? parseFloat(reviewData.rating.toFixed(1)) : 4.5, // Fallback to 4.5 if no reviews
+          reviewCount: reviewData.reviewCount
+        };
+      });
     }
     
     return NextResponse.json({ success: true, data: wishlist });

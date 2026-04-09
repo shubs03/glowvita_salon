@@ -96,6 +96,14 @@ export async function PUT(req) {
     const updateData = {};
     const allowedFields = ['firstName', 'lastName', 'mobileNo', 'state', 'city', 'pincode', 'gender', 'birthdayDate'];
     
+    // Server-side validation for birthdayDate
+    if (body.birthdayDate) {
+      const today = new Date().toISOString().split('T')[0];
+      if (body.birthdayDate > today) {
+        return NextResponse.json({ message: 'Birthday cannot be in the future' }, { status: 400 });
+      }
+    }
+
     allowedFields.forEach(field => {
       if (body[field] !== undefined) {
         updateData[field] = body[field];

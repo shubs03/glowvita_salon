@@ -465,7 +465,7 @@ export default function OrdersPage() {
       </Dialog>
 
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0">
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="p-6 pb-4 border-b">
             <DialogTitle className="text-2xl font-bold">
               Order Details: #{selectedOrder?._id.slice(-6)}
@@ -499,12 +499,9 @@ export default function OrdersPage() {
                       </p>
                     </div>
                     {selectedOrder.status === 'Cancelled' && selectedOrder.cancellationReason && (
-                      <div className="flex items-start gap-3">
-                        <X className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium">Cancellation Reason</p>
-                          <p className="text-muted-foreground">{selectedOrder.cancellationReason}</p>
-                        </div>
+                      <div className="mt-1 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="font-medium text-red-800 text-sm mb-1">Cancellation Reason</p>
+                        <p className="text-red-700 text-sm break-words whitespace-pre-wrap overflow-wrap-anywhere">{selectedOrder.cancellationReason}</p>
                       </div>
                     )}
                   </div>

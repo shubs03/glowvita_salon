@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Clock, IndianRupee, ChevronDown, Loader2, AlertCircle, Home, Heart, Plus } from 'lucide-react';
+import Image from 'next/image';
 import { useGetPublicVendorServicesQuery } from "@repo/store/services/api";
 
 interface ServicesOfferedProps {
@@ -188,103 +189,120 @@ const ServicesOffered: React.FC<ServicesOfferedProps> = ({
                 }
               }}
             >
-              <div className="flex flex-col h-full">
-                <div className="flex-1">
-                  {/* Service Name */}
-                  <h3 className="font-bold text-foreground text-base mb-1 pr-4 group-hover:text-primary transition-colors">
-                    {service.name}
-                  </h3>
-
-                  {/* Description (if available) */}
-                  {service.description && (
-                    <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                      {service.description}
-                    </p>
-                  )}
-
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-2.5">
-                    {/* Duration */}
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-secondary/50 rounded-md">
-                      <Clock className="w-3 h-3 text-primary" />
-                      <span className="text-[10px] font-medium text-foreground">
-                        {formatDuration(service.duration)}
-                      </span>
+              <div className="flex items-start gap-4 h-full">
+                {/* Service Image */}
+                <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-lg overflow-hidden flex-shrink-0 bg-secondary/30">
+                  <Image
+                    src={service.image || `https://placehold.co/400x400/png?text=${encodeURIComponent(service.name)}`}
+                    alt={service.name}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  {!service.image && (
+                    <div className="absolute inset-0 flex items-center justify-center text-muted-foreground/20">
+                      <Plus className="w-8 h-8" />
                     </div>
-
-                    {isSubscriptionExpired && (
-                      <p className="text-[9px] text-red-600 font-bold uppercase tracking-wider">
-                        Closed
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Service Badges */}
-                  <div className="flex flex-wrap gap-1.5 mb-3">
-                    {service.homeService?.available && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-primary text-secondary uppercase tracking-wider">
-                        <Home className="h-2.5 w-2.5 mr-1" />
-                        Home Service
-                      </span>
-                    )}
-                    {service.weddingService?.available && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-100 text-rose-800 uppercase tracking-wider border border-rose-200">
-                        <Heart className="h-2.5 w-2.5 mr-1" />
-                        Wedding Service
-                      </span>
-                    )}
-                  </div>
+                  )}
                 </div>
 
-                {/* Footer: Price and Button */}
-                <div className="flex items-end justify-between mt-auto pt-2 border-t border-border/50">
-                  {/* Price Section */}
-                  <div className="space-y-0.5">
-                    {service.discountedPrice !== null && service.discountedPrice !== undefined && service.discountedPrice !== 0 && service.discountedPrice < service.price ? (
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground line-through text-[10px] italic">
-                            ₹{service.price}
-                          </span>
-                          <span className="font-black text-lg text-primary tracking-tight">
-                            ₹{service.discountedPrice}
-                          </span>
-                        </div>
-                        <div className="text-[9px] font-black text-green-600 uppercase tracking-wider">
-                          {Math.round(((parseFloat(String(service.price)) - parseFloat(String(service.discountedPrice))) / parseFloat(String(service.price))) * 100)}% OFF
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <span className="font-black text-lg text-primary tracking-tight">
-                          ₹{service.price}
+                <div className="flex flex-col flex-1 h-full min-w-0">
+                  <div className="flex-1">
+                    {/* Service Name */}
+                    <h3 className="font-bold text-foreground text-base mb-1 pr-4 group-hover:text-primary transition-colors truncate">
+                      {service.name}
+                    </h3>
+
+                    {/* Description (if available) */}
+                    {service.description && (
+                      <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
+                        {service.description}
+                      </p>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-2.5">
+                      {/* Duration */}
+                      <div className="flex items-center gap-1.5 px-2 py-0.5 bg-secondary/50 rounded-md">
+                        <Clock className="w-3 h-3 text-primary" />
+                        <span className="text-[10px] font-medium text-foreground">
+                          {formatDuration(service.duration)}
                         </span>
                       </div>
-                    )}
+
+                      {isSubscriptionExpired && (
+                        <p className="text-[9px] text-red-600 font-bold uppercase tracking-wider">
+                          Closed
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Service Badges */}
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {(service.homeService?.available || service.homeService === true) && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-primary text-secondary uppercase tracking-wider">
+                          <Home className="h-2.5 w-2.5 mr-1" />
+                          Home Service
+                        </span>
+                      )}
+                      {(service.weddingService?.available || service.weddingService === true) && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-100 text-rose-800 uppercase tracking-wider border border-rose-200">
+                          <Heart className="h-2.5 w-2.5 mr-1" />
+                          Wedding Service
+                        </span>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Book Now Button */}
-                  <button
-                    className={`bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-md shadow-primary/10 transition-all duration-300 ${isSubscriptionExpired ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:-translate-y-0.5'
-                      }`}
-                    disabled={isSubscriptionExpired}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const serviceData = {
-                        id: service.id,
-                        name: service.name,
-                        price: service.price,
-                        discountedPrice: service.discountedPrice,
-                        duration: service.duration,
-                        category: service.category,
-                        description: service.description,
-                        image: service.image,
-                      };
-                      sessionStorage.setItem("selectedService", JSON.stringify(serviceData));
-                      onBookNow(service);
-                    }}
-                  >
-                    {isSubscriptionExpired ? 'Unavailable' : 'Book'}
-                  </button>
+                  {/* Footer: Price and Button */}
+                  <div className="flex items-end justify-between mt-auto pt-2 border-t border-border/50">
+                    {/* Price Section */}
+                    <div className="space-y-0.5">
+                      {service.discountedPrice !== null && service.discountedPrice !== undefined && service.discountedPrice !== 0 && service.discountedPrice < service.price ? (
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground line-through text-[10px] italic">
+                              ₹{service.price}
+                            </span>
+                            <span className="font-black text-lg text-primary tracking-tight">
+                              ₹{service.discountedPrice}
+                            </span>
+                          </div>
+                          <div className="text-[9px] font-black text-green-600 uppercase tracking-wider">
+                            {Math.round(((parseFloat(String(service.price)) - parseFloat(String(service.discountedPrice))) / parseFloat(String(service.price))) * 100)}% OFF
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <span className="font-black text-lg text-primary tracking-tight">
+                            ₹{service.price}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Book Now Button */}
+                    <button
+                      className={`bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-md shadow-primary/10 transition-all duration-300 ${isSubscriptionExpired ? 'opacity-50 cursor-not-allowed grayscale' : 'hover:-translate-y-0.5'
+                        }`}
+                      disabled={isSubscriptionExpired}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const serviceData = {
+                          id: service.id,
+                          name: service.name,
+                          price: service.price,
+                          discountedPrice: service.discountedPrice,
+                          duration: service.duration,
+                          category: service.category,
+                          description: service.description,
+                          image: service.image,
+                        };
+                        sessionStorage.setItem("selectedService", JSON.stringify(serviceData));
+                        onBookNow(service);
+                      }}
+                    >
+                      {isSubscriptionExpired ? 'Unavailable' : 'Book'}
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

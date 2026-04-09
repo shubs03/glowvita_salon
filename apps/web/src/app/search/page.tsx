@@ -200,11 +200,7 @@ const SearchResults = () => {
                           fill
                           className="object-cover rounded-[24px] group-hover:scale-105 transition-transform duration-700"
                         />
-                        <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center shadow-lg hover:bg-white text-gray-800">
-                            <Bookmark className="w-4 h-4" />
-                          </button>
-                        </div>
+                        {/* Removed Bookmark icon as per user request */}
                       </div>
 
                       {/* Content */}

@@ -846,7 +846,6 @@ export default function AppointmentsPage() {
                                                 <SelectItem value="all">All Status</SelectItem>
                                                 <SelectItem value="Completed">Completed</SelectItem>
                                                 <SelectItem value="Confirmed">Confirmed</SelectItem>
-                                                <SelectItem value="Pending">Pending</SelectItem>
                                                 <SelectItem value="Scheduled">Scheduled</SelectItem>
                                                 <SelectItem value="Cancelled">Cancelled</SelectItem>
                                             </SelectContent>

@@ -127,7 +127,12 @@ export const POST = async (req) => {
     if (body.couponCode) {
       try {
         const discountToTrack = body.discountAmount || body.discount || 0;
-        await CRMOfferModel.incrementRedemption(body.couponCode, discountToTrack);
+        const CRMOfferModel = (await import('@repo/lib/models/Vendor/CRMOffer.model')).default;
+        const crmResult = await CRMOfferModel.incrementRedemption(body.couponCode, discountToTrack);
+        if (!crmResult) {
+          const AdminOfferModel = (await import('@repo/lib/models/admin/AdminOffers.model.js')).default;
+          await AdminOfferModel.incrementRedemption(body.couponCode, discountToTrack);
+        }
         console.log(`Incremented redemption count and discount for consultation coupon: ${body.couponCode}`);
       } catch (offerErr) {
         console.error(`Error incrementing consultation coupon redemption for ${body.couponCode}:`, offerErr);

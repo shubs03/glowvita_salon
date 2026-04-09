@@ -7,6 +7,8 @@ import { Textarea } from "@repo/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { Checkbox } from "@repo/ui/checkbox";
 import { useUpdateVendorProfileMutation } from '@repo/store/api';
+import { useAppDispatch } from '@repo/store/hooks';
+import { updateUser } from '@repo/store/slices/crmAuthSlice';
 import { toast } from 'sonner';
 import { Upload, User, IndianRupee } from 'lucide-react';
 import { cn } from "@repo/ui/cn";
@@ -17,7 +19,8 @@ interface ProfileTabProps {
   handleProfileImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
 }
 
-export const ProfileTab = ({ vendor, setVendor, handleProfileImageUpload }: ProfileTabProps) => {
+export const ProfileTab = ({ vendor, setVendor }: ProfileTabProps) => {
+  const dispatch = useAppDispatch();
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
 
   const handleSave = async () => {
@@ -35,6 +38,11 @@ export const ProfileTab = ({ vendor, setVendor, handleProfileImageUpload }: Prof
 
       if (result.success) {
         toast.success(result.message);
+        // Sync with global auth state for sidebar/navbar
+        dispatch(updateUser({
+          businessName: vendor.businessName,
+          profileImage: vendor.profileImage
+        }));
       } else {
         toast.error(result.message);
       }
@@ -69,7 +77,22 @@ export const ProfileTab = ({ vendor, setVendor, handleProfileImageUpload }: Prof
                 type="file"
                 className="hidden"
                 accept="image/*"
-                onChange={handleProfileImageUpload}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                      const base64 = reader.result as string;
+                      setVendor({ ...vendor, profileImage: base64 });
+                      // Note: We don't dispatch updateUser here yet because 
+                      // we want to wait for the user to click "Save Changes" 
+                      // or use the auto-save from ProfileHeader.
+                      // But for consistency with ProfileHeader's auto-save:
+                      // If the user wants it instant, we could call handleSave() here.
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
               />
             </label>
           </div>

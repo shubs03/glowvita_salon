@@ -218,6 +218,8 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
   const qCityRaw = searchParams?.get("city") || searchParams?.get("locationLabel") || selectedCity;
   const qCity = qCityRaw?.split(',')[0].trim();
   const qServiceName = searchParams?.get("serviceName") || serviceQuery;
+  const qOfferCode = searchParams?.get("offerCode") || "";
+  const qRegionId = searchParams?.get("regionId") || "";
 
   const {
     data: vendorsData,
@@ -228,6 +230,8 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
     lng: qLng || undefined,
     city: qCity || undefined,
     serviceName: qServiceName || undefined,
+    offerCode: qOfferCode || undefined,
+    regionId: qRegionId || undefined,
     limit: 1000
   }, { skip: !isSalonsPage });
 
@@ -345,15 +349,14 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
       // Category Filter
       if (categoryFilter.length > 0) {
         filteredSalons = filteredSalons.filter((salon: TransformedSalon) => {
-          if (categoryFilter.includes("Unisex")) {
-            if (salon.type.includes("Full-Service")) return true;
-          }
-          if (categoryFilter.includes("Women")) {
-            if (salon.type.includes("Women's")) return true;
-          }
-          if (categoryFilter.includes("Men")) {
-            if (salon.type.includes("Men's")) return true;
-          }
+          const isUnisex = salon.type.includes("Full-Service");
+          const isWomen = salon.type.includes("Women's");
+          const isMen = salon.type.includes("Men's");
+
+          if (categoryFilter.includes("Unisex") && isUnisex) return true;
+          if (categoryFilter.includes("Women") && (isWomen || isUnisex)) return true;
+          if (categoryFilter.includes("Men") && (isMen || isUnisex)) return true;
+
           return false;
         });
       }
@@ -409,12 +412,6 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 onError={(e) => { (e.target as HTMLImageElement).src = "/images/salon-placeholder.png"; }}
               />
-              {/* Badge */}
-              {salon.badge && (
-                <div className="absolute top-3 right-3 bg-primary text-destructive-foreground px-2.5 py-0.5 rounded-full text-xs font-bold shadow-lg">
-                  {salon.badge}
-                </div>
-              )}
               {/* Gradient Overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </div>
@@ -558,6 +555,27 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
           </p>
         </div>
       </div>
+
+      {qOfferCode && (
+        <div className="mb-6 flex items-center gap-3 bg-primary/5 border border-primary/20 p-4 rounded-2xl w-fit">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-primary">Active Offer:</span>
+            <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{qOfferCode}</span>
+          </div>
+          <button 
+            onClick={() => {
+              const params = new URLSearchParams(window.location.search);
+              params.delete("offerCode");
+              const queryString = params.toString() ? `?${params.toString()}` : "";
+              router.push(`${pathname}${queryString}`);
+            }}
+            className="text-xs text-muted-foreground hover:text-destructive underline font-medium"
+          >
+            Clear offer filter
+          </button>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

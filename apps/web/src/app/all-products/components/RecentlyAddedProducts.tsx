@@ -46,8 +46,12 @@ const RecentlyAddedProducts = () => {
       return null;
     }
 
+    // Filter by stock first
+    const availableProducts = productsData.products.filter((p: ProductData) => (p.stock || 0) > 0);
+    if (availableProducts.length === 0) return null;
+
     // Sort products by creation date to find the most recent
-    const sortedProducts = [...productsData.products].sort((a, b) => {
+    const sortedProducts = [...availableProducts].sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA; // Sort in descending order (most recent first)
@@ -65,12 +69,6 @@ const RecentlyAddedProducts = () => {
     // Use all product images if available, otherwise use the main image
     const allImages = mostRecentProduct.productImages?.length ? mostRecentProduct.productImages : [mainImage];
 
-    // Ensure we have 4 images for the grid (duplicate if needed)
-    const gridImages = [];
-    for (let i = 0; i < 4; i++) {
-      gridImages.push(allImages[i % allImages.length] || mainImage);
-    }
-
     return {
       id: mostRecentProduct.id,
       name: mostRecentProduct.name || "Product Name",
@@ -78,7 +76,7 @@ const RecentlyAddedProducts = () => {
         "Experience premium quality and exceptional value with this amazing product. Crafted with attention to detail and designed for your satisfaction.",
       price: mostRecentProduct.price || 0,
       salePrice: mostRecentProduct.salePrice,
-      images: gridImages,
+      image: mainImage,
       vendorName: mostRecentProduct.vendorName || "Vendor",
       vendorLocation: mostRecentProduct.vendorLocation || "Location",
       category: mostRecentProduct.category || "Beauty Products",
@@ -92,11 +90,11 @@ const RecentlyAddedProducts = () => {
 
   if (isLoading) {
     return (
-      <section className="py-20 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+      <section className="py-6 px-6 lg:px-8 max-w-5xl mx-auto bg-background">
         {/* Section Header */}
-        <div className="mb-16">
-          <div className="flex items-center gap-4 mb-4">
-            <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-2">
+            <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-2">
               Recently Added Products
             </h2>
           </div>
@@ -108,14 +106,9 @@ const RecentlyAddedProducts = () => {
         {/* Loading Skeleton */}
         <div className="bg-card overflow-hidden duration-300">
           <div className="flex flex-col lg:flex-row-reverse"> {/* Reversed for right images */}
-            {/* Right - Image Grid Skeleton */}
-            <div className="w-full lg:w-1/2 p-6 md:p-8">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="aspect-square bg-gray-200 rounded-2xl animate-pulse"></div>
-                <div className="aspect-square bg-gray-200 rounded-2xl animate-pulse"></div>
-                <div className="aspect-square bg-gray-200 rounded-2xl animate-pulse"></div>
-                <div className="aspect-square bg-gray-200 rounded-2xl animate-pulse"></div>
-              </div>
+            {/* Right - Featured Image Skeleton */}
+            <div className="w-full lg:w-1/2 p-4 md:p-6 flex items-center justify-center lg:justify-end">
+              <div className="w-full max-w-[320px] aspect-[4/5] bg-gray-200 rounded-3xl animate-pulse shadow-sm"></div>
             </div>
 
             {/* Left - Details Skeleton */}
@@ -169,11 +162,11 @@ const RecentlyAddedProducts = () => {
   }
 
   return (
-    <section className="py-10 px-6 lg:px-8 max-w-7xl mx-auto bg-background">
+    <section className="py-6 px-6 lg:px-8 max-w-5xl mx-auto bg-background">
       {/* Section Header */}
-      <div className="mb-16">
-        <div className="flex items-center gap-4 mb-4">
-          <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-4">
+      <div className="mb-6">
+        <div className="flex items-center gap-4 mb-2">
+          <h2 className="text-3xl md:text-4xl font-serif font-bold text-primary border-b-2 border-foreground inline-block pb-2">
             Recently Added Products
           </h2>
         </div>
@@ -188,27 +181,20 @@ const RecentlyAddedProducts = () => {
         onClick={() => router.push(`/product-details/${product.id}`)}
       >
         <div className="flex flex-col lg:flex-row-reverse"> {/* Reversed for right images */}
-          {/* Right - Image Grid */}
-          <div className="w-full lg:w-1/2 p-6 md:p-8">
-            <div className="grid grid-cols-2 gap-4">
-              {product.images.map((image, index) => (
-                <div
-                  key={index}
-                  className="aspect-square rounded-2xl overflow-hidden group-hover:opacity-90 transition-opacity"
-                >
-                  <img
-                    src={image}
-                    alt={`${product.name} ${index + 1}`}
-                    className="w-full h-full object-cover rounded-2xl"
-                    onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
-                  />
-                </div>
-              ))}
+          {/* Right - Featured Image (Properly Sized) */}
+          <div className="w-full lg:w-1/2 p-4 md:p-6 flex items-center justify-center lg:justify-end">
+            <div className="w-full max-w-[320px] aspect-[4/5] rounded-3xl overflow-hidden group-hover:opacity-90 transition-opacity shadow-xl border border-border/50 bg-muted/30">
+              <img
+                src={product.image}
+                alt={product.name}
+                className="w-full h-full object-cover"
+                onError={(e) => { (e.target as HTMLImageElement).src = "/images/product-placeholder.png"; }}
+              />
             </div>
           </div>
 
           {/* Left - Details */}
-          <div className="w-full lg:w-1/2 p-6 md:p-8 flex flex-col justify-between">
+          <div className="w-full lg:w-1/2 p-4 md:p-6 flex flex-col justify-center">
             {/* Top Section */}
             <div>
               {/* New Badge */}

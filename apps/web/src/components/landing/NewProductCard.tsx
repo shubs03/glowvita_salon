@@ -7,8 +7,8 @@ import { ShoppingCart, Star, Heart } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@repo/ui/cn";
-import { useAddToClientCartMutation } from "@repo/store/api";
-import { useAppDispatch } from "@repo/store/hooks";
+import { useAddToClientCartMutation, useGetClientCartQuery } from "@repo/store/api";
+import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
 import { addToCart } from "@repo/store/slices/cartSlice";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -28,6 +28,7 @@ interface NewProductCardProps {
   category?: string;
   salePrice?: number;
   stock?: number;
+  onWishlistRemove?: (id: string) => void;
 }
 
 export function NewProductCard({
@@ -45,14 +46,21 @@ export function NewProductCard({
   description,
   category,
   stock,
+  onWishlistRemove,
 }: NewProductCardProps) {
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [imgSrc, setImgSrc] = useState(image);
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const localCartItems = useAppSelector((state: any) => state.cart.items);
   const { user, isAuthenticated } = useAuth();
   const [addToCartAPI] = useAddToClientCartMutation();
+  const { data: cartData } = useGetClientCartQuery(undefined, {
+    skip: !isAuthenticated || !user?._id,
+  });
+
+  const cartItems = isAuthenticated && user?._id ? (cartData?.data?.items || []) : localCartItems;
 
   // Sync imgSrc if image prop changes
   useEffect(() => {
@@ -87,6 +95,22 @@ export function NewProductCard({
 
   const handleBuyNow = (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    // Check if cart already has items from a different vendor
+    if (cartItems && cartItems.length > 0) {
+      const currentVendorId = cartItems[0].vendorId;
+      if (vendorId && currentVendorId && vendorId !== currentVendorId) {
+        toast.error("Cannot add product from different vendor", {
+          description: "Your cart contains products from another supplier. Please clear your cart first.",
+          action: {
+            label: "View Cart",
+            onClick: () => router.push("/cart"),
+          },
+        });
+        return;
+      }
+    }
+
     console.log('Buy Now clicked for product:', { id, name, vendorId });
     // Store product details in local storage
     try {
@@ -117,6 +141,21 @@ export function NewProductCard({
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    // Check if cart already has items from a different vendor
+    if (cartItems && cartItems.length > 0) {
+      const currentVendorId = cartItems[0].vendorId;
+      if (vendorId && currentVendorId && vendorId !== currentVendorId) {
+        toast.error("Cannot add product from different vendor", {
+          description: "Your cart contains products from another supplier. Please clear your cart first.",
+          action: {
+            label: "View Cart",
+            onClick: () => router.push("/cart"),
+          },
+        });
+        return;
+      }
+    }
 
     try {
       if (isAuthenticated && user?._id) {
@@ -205,6 +244,10 @@ export function NewProductCard({
         toast.success(isLiked ? "Removed from Wishlist" : "Added to Wishlist", {
           description: isLiked ? "Product removed from your wishlist" : "Product added to your wishlist"
         });
+        
+        if (isLiked && onWishlistRemove) {
+          onWishlistRemove(id);
+        }
       } else {
         const errorData = await response.json();
         toast.error("Wishlist Update Failed", {
@@ -223,11 +266,11 @@ export function NewProductCard({
 
   return (
     <div
-      className="group relative overflow-hidden rounded-md hover:shadow-md border bg-card transition-all duration-500 hover:-translate-y-2 cursor-pointer"
+      className="group bg-card border rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer h-full relative flex flex-col"
       onClick={handleCardClick}
     >
       {/* Upper Half: Image */}
-      <div className="aspect-[4/3] relative w-full overflow-hidden">
+      <div className="relative h-48 w-full flex-shrink-0 overflow-hidden">
         <Image
           src={imgSrc || '/images/product-placeholder.png'}
           alt={name}
@@ -260,7 +303,7 @@ export function NewProductCard({
       </div>
 
       {/* Lower Half: Details */}
-      <div className="p-4 flex flex-col justify-between h-fit bg-card">
+      <div className="p-4 flex flex-col justify-between flex-1 bg-card">
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">
             {vendorName}
@@ -279,7 +322,7 @@ export function NewProductCard({
             <div className="flex items-center gap-1">
               <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
               <span className="text-xs font-semibold text-foreground">
-                {rating}
+                {Number(rating).toFixed(1)}
               </span>
               <span className="text-xs text-muted-foreground">
                 ({reviewCount})

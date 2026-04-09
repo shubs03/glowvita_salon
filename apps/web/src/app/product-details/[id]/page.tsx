@@ -563,7 +563,9 @@ export default function ProductDetailsPage() {
   return (
     <PageContainer className='max-w-7xl'>
 
-      <DiscountBanner />
+      {product.salePrice && product.salePrice > 0 && product.salePrice < product.price ? (
+        <DiscountBanner discountPercentage={Math.round(((product.price - product.salePrice) / product.price) * 100)} />
+      ) : null}
 
       <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-start py-12">
         {/* Left Column: Image Gallery (Sticky) */}

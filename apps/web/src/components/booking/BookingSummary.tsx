@@ -195,20 +195,19 @@ export function BookingSummary({
         <div className="p-4 flex flex-col h-full">
           {isExpanded && (
             <div className="overflow-y-auto no-scrollbar flex-grow space-y-3 pb-4">
-              <div className="flex items-center gap-4">
-                <Image
-                  src={currentSalonInfo.image || "https://picsum.photos/seed/salon/400/400"}
-                  alt={currentSalonInfo.name}
-                  width={48}
-                  height={48}
-                  className="rounded-lg shadow-md"
-                  data-ai-hint="salon exterior"
-                />
+                <div className="relative w-12 h-12 flex-shrink-0">
+                  <Image
+                    src={currentSalonInfo.image || "https://picsum.photos/seed/salon/400/400"}
+                    alt={currentSalonInfo.name}
+                    fill
+                    className="rounded-lg shadow-md object-cover"
+                    data-ai-hint="salon exterior"
+                  />
+                </div>
                 <div>
                   <h4 className="font-bold text-base">{currentSalonInfo.name}</h4>
-                  <p className="text-sm text-muted-foreground">{currentSalonInfo.address}</p>
+                  <p className="text-sm text-muted-foreground line-clamp-1">{currentSalonInfo.address}</p>
                 </div>
-              </div>
               <Separator />
               {serviceStaffAssignments && serviceStaffAssignments.length > 0 ? (
                 serviceStaffAssignments.map((assignment: ServiceStaffAssignment) => (
@@ -288,13 +287,12 @@ export function BookingSummary({
     <Card className="shadow-2xl shadow-primary/10 border-border/50 bg-background rounded-2xl flex flex-col max-h-[calc(100vh-8rem)]">
       <CardHeader className="p-6 border-b flex-shrink-0">
         <div className="flex items-center gap-4">
-          <div className="relative">
+          <div className="relative w-16 h-16 flex-shrink-0">
             <Image
               src={currentSalonInfo.image || "https://picsum.photos/seed/salon/400/400"}
               alt={currentSalonInfo.name}
-              width={64}
-              height={64}
-              className="rounded-lg shadow-md border-2 border-background"
+              fill
+              className="rounded-lg shadow-md border-2 border-background object-cover"
               data-ai-hint="salon exterior"
             />
           </div>

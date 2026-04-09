@@ -36,8 +36,31 @@ export const assignRegion = async (city, state, coordinates) => {
       }
     }
 
+    // 2. Text-based Match (Fallback for imprecise coordinates or neighborhoods like "Baner, Pune")
+    if (city && typeof city === 'string' && city.trim() !== "" && city !== "Current Location") {
+      const cityParts = city.split(',').map(part => part.trim().toLowerCase());
+      const allRegions = await RegionModel.find({ isActive: true }).lean();
+      
+      for (const part of cityParts) {
+        if (!part || part.length < 3) continue;
+
+        // Find a region whose name or code overlaps with the search part
+        const matchedRegion = allRegions.find(r => {
+          const rName = r.name.toLowerCase();
+          const rCode = r.code.toLowerCase();
+          return part.includes(rName) || rName.includes(part) || 
+                 part.includes(rCode) || rCode.includes(part);
+        });
+
+        if (matchedRegion) {
+          console.log(`[RegionAssignment] Full-text match found: ${matchedRegion.name} for location part: ${part}`);
+          return matchedRegion._id;
+        }
+      }
+    }
+
     // No fallback, no default region as per requirements
-    console.warn(`[RegionAssignment] No region found for coordinates:`, coordinates);
+    console.warn(`[RegionAssignment] No region found for city: ${city}, coordinates:`, coordinates);
     return null;
 
   } catch (error) {

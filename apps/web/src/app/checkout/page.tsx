@@ -10,7 +10,7 @@ import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
-import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet, Plus, Minus, MapPin, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet, Plus, Minus, MapPin, CheckCircle2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCreateClientOrderMutation, useCreatePaymentOrderMutation, useVerifyPaymentMutation, useGetPublicTaxFeeSettingsQuery, useGetPublicShippingConfigQuery } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
@@ -37,7 +37,6 @@ export default function CheckoutPage() {
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   
-  // New Address Form State
   const [newAddress, setNewAddress] = useState({
     fullName: '',
     mobileNo: '',
@@ -49,6 +48,7 @@ export default function CheckoutPage() {
     state: '',
     isPrimary: false
   });
+  const [addressFormErrors, setAddressFormErrors] = useState<any>({});
 
   const [shippingAddress, setShippingAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
@@ -170,12 +170,23 @@ export default function CheckoutPage() {
       state: addr.state || '',
       isPrimary: addr.isPrimary || false
     });
+    setAddressFormErrors({});
     setShowAddressForm(true);
   };
 
   const handleSaveNewAddress = async () => {
     // Basic validation
-    if (!newAddress.fullName || !newAddress.mobileNo || !newAddress.pincode || !newAddress.houseNo || !newAddress.area || !newAddress.city || !newAddress.state) {
+    const errors: any = {};
+    if (!newAddress.fullName) errors.fullName = 'Full Name is required';
+    if (!newAddress.mobileNo) errors.mobileNo = 'Mobile Number is required';
+    if (!newAddress.pincode) errors.pincode = 'Pincode is required';
+    if (!newAddress.houseNo) errors.houseNo = 'House no. is required';
+    if (!newAddress.area) errors.area = 'Area is required';
+    if (!newAddress.city) errors.city = 'City is required';
+    if (!newAddress.state) errors.state = 'State is required';
+
+    if (Object.keys(errors).length > 0) {
+      setAddressFormErrors(errors);
       toast.error('Please fill all required fields');
       return;
     }
@@ -185,25 +196,32 @@ export default function CheckoutPage() {
     const nameRegex = /^[a-zA-Z\s]+$/;
 
     if (!nameRegex.test(newAddress.fullName)) {
+      setAddressFormErrors({ fullName: 'Full Name should only contain letters' });
       toast.error('Full Name should only contain letters');
       return;
     }
     if (!mobileRegex.test(newAddress.mobileNo)) {
+      setAddressFormErrors({ mobileNo: 'Mobile Number must be exactly 10 digits' });
       toast.error('Mobile Number must be exactly 10 digits');
       return;
     }
     if (!pincodeRegex.test(newAddress.pincode)) {
+      setAddressFormErrors({ pincode: 'Pincode must be exactly 6 digits' });
       toast.error('Pincode must be exactly 6 digits');
       return;
     }
     if (!nameRegex.test(newAddress.city)) {
+      setAddressFormErrors({ city: 'City should only contain letters' });
       toast.error('City should only contain letters');
       return;
     }
     if (!nameRegex.test(newAddress.state)) {
+      setAddressFormErrors({ state: 'State should only contain letters' });
       toast.error('State should only contain letters');
       return;
     }
+
+    setAddressFormErrors({});
 
     try {
       const fullAddress = `${newAddress.houseNo}, ${newAddress.area}`;
@@ -255,6 +273,33 @@ export default function CheckoutPage() {
       toast.error('An error occurred while saving the address');
     }
   };
+
+  const handleDeleteAddress = async (addressId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this address?')) return;
+
+    try {
+      const res = await fetch(`/api/client/addresses/${addressId}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        toast.success('Address deleted successfully');
+        await fetchAddresses();
+        if (selectedAddressId === addressId) {
+          setSelectedAddressId(null);
+          setShippingAddress('');
+          setContactNumber('');
+        }
+      } else {
+        const data = await res.json();
+        toast.error(data.message || 'Failed to delete address');
+      }
+    } catch (error) {
+      console.error('Error deleting address:', error);
+      toast.error('An error occurred while deleting the address');
+    }
+  };
   const handleQuantityChange = (delta: number) => {
     if (!product) return;
 
@@ -273,6 +318,11 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
+    if (showAddressForm) {
+      toast.error('Please save your address first before placing the order.');
+      return;
+    }
+
     let isValid = true;
 
     if (!shippingAddress.trim()) {
@@ -782,7 +832,7 @@ export default function CheckoutPage() {
                               <p className="text-sm text-muted-foreground whitespace-pre-wrap">{addr.address}</p>
                               <p className="text-sm text-muted-foreground">{addr.city}, {addr.state} - {addr.pincode}</p>
                               <p className="text-sm text-muted-foreground">Phone: {addr.mobileNo || contactNumber}</p>
-                              <div className="pt-2">
+                              <div className="pt-2 flex items-center gap-4">
                                 <Button 
                                   variant="link" 
                                   size="sm" 
@@ -790,6 +840,15 @@ export default function CheckoutPage() {
                                   onClick={(e) => handleEditAddress(addr, e)}
                                 >
                                   Edit address
+                                </Button>
+                                <Button 
+                                  variant="link" 
+                                  size="sm" 
+                                  className="h-auto p-0 text-red-600 hover:text-red-700 font-normal flex items-center gap-1"
+                                  onClick={(e) => handleDeleteAddress(addr._id, e)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                  Delete
                                 </Button>
                               </div>
                             </div>
@@ -801,7 +860,10 @@ export default function CheckoutPage() {
                       ))}
                       <button
                         className="flex flex-col items-center justify-center p-6 border-2 border-dashed border-gray-200 rounded-lg hover:border-primary hover:bg-primary/5 transition-all text-muted-foreground hover:text-primary group"
-                        onClick={() => setShowAddressForm(true)}
+                        onClick={() => {
+                          setShowAddressForm(true);
+                          setAddressFormErrors({});
+                        }}
                       >
                         <Plus className="h-8 w-8 mb-2 group-hover:scale-110 transition-transform" />
                         <span className="font-medium">Add New Address</span>
@@ -820,6 +882,7 @@ export default function CheckoutPage() {
                             onClick={() => {
                               setShowAddressForm(false);
                               setEditingAddressId(null);
+                              setAddressFormErrors({});
                               setNewAddress({
                                 fullName: '', mobileNo: '', pincode: '', houseNo: '',
                                 area: '', landmark: '', city: '', state: '', isPrimary: false
@@ -833,7 +896,7 @@ export default function CheckoutPage() {
                       
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="fullName">Full Name (First and Last name)</Label>
+                          <Label htmlFor="fullName">Full Name (First and Last name) <span className="text-red-500">*</span></Label>
                           <Input
                             id="fullName"
                             value={newAddress.fullName}
@@ -841,13 +904,18 @@ export default function CheckoutPage() {
                               const val = e.target.value;
                               if (val === '' || /^[a-zA-Z\s]+$/.test(val)) {
                                 setNewAddress({ ...newAddress, fullName: val });
+                                if (addressFormErrors.fullName) {
+                                  setAddressFormErrors({ ...addressFormErrors, fullName: '' });
+                                }
                               }
                             }}
                             placeholder="e.g. John Doe"
+                            className={addressFormErrors.fullName ? "border-red-500" : ""}
                           />
+                          {addressFormErrors.fullName && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.fullName}</span>}
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="newMobileNo">Mobile Number</Label>
+                          <Label htmlFor="newMobileNo">Mobile Number <span className="text-red-500">*</span></Label>
                           <Input
                             id="newMobileNo"
                             value={newAddress.mobileNo}
@@ -855,16 +923,21 @@ export default function CheckoutPage() {
                               const val = e.target.value;
                               if ((val === '' || /^[0-9]+$/.test(val)) && val.length <= 10) {
                                 setNewAddress({ ...newAddress, mobileNo: val });
+                                if (addressFormErrors.mobileNo) {
+                                  setAddressFormErrors({ ...addressFormErrors, mobileNo: '' });
+                                }
                               }
                             }}
                             placeholder="10-digit mobile number"
+                            className={addressFormErrors.mobileNo ? "border-red-500" : ""}
                           />
+                          {addressFormErrors.mobileNo && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.mobileNo}</span>}
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="pincode">Pincode</Label>
+                          <Label htmlFor="pincode">Pincode <span className="text-red-500">*</span></Label>
                           <Input
                             id="pincode"
                             value={newAddress.pincode}
@@ -872,28 +945,47 @@ export default function CheckoutPage() {
                               const val = e.target.value;
                               if ((val === '' || /^[0-9]+$/.test(val)) && val.length <= 6) {
                                 setNewAddress({ ...newAddress, pincode: val });
+                                if (addressFormErrors.pincode) {
+                                  setAddressFormErrors({ ...addressFormErrors, pincode: '' });
+                                }
                               }
                             }}
                             placeholder="6-digit [0-9] PIN code"
+                            className={addressFormErrors.pincode ? "border-red-500" : ""}
                           />
+                          {addressFormErrors.pincode && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.pincode}</span>}
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="houseNo">Flat, House no., Building, Company, Apartment</Label>
+                          <Label htmlFor="houseNo">Flat, House no., Building, Company, Apartment <span className="text-red-500">*</span></Label>
                           <Input
                             id="houseNo"
                             value={newAddress.houseNo}
-                            onChange={(e) => setNewAddress({ ...newAddress, houseNo: e.target.value })}
+                            onChange={(e) => {
+                              setNewAddress({ ...newAddress, houseNo: e.target.value });
+                              if (addressFormErrors.houseNo) {
+                                setAddressFormErrors({ ...addressFormErrors, houseNo: '' });
+                              }
+                            }}
+                            className={addressFormErrors.houseNo ? "border-red-500" : ""}
                           />
+                          {addressFormErrors.houseNo && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.houseNo}</span>}
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="area">Area, Street, Sector, Village</Label>
+                        <Label htmlFor="area">Area, Street, Sector, Village <span className="text-red-500">*</span></Label>
                         <Input
                           id="area"
                           value={newAddress.area}
-                          onChange={(e) => setNewAddress({ ...newAddress, area: e.target.value })}
+                          onChange={(e) => {
+                            setNewAddress({ ...newAddress, area: e.target.value });
+                            if (addressFormErrors.area) {
+                              setAddressFormErrors({ ...addressFormErrors, area: '' });
+                            }
+                          }}
+                          className={addressFormErrors.area ? "border-red-500" : ""}
                         />
+                        {addressFormErrors.area && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.area}</span>}
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -907,7 +999,7 @@ export default function CheckoutPage() {
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="city">Town/City</Label>
+                          <Label htmlFor="city">Town/City <span className="text-red-500">*</span></Label>
                           <Input
                             id="city"
                             value={newAddress.city}
@@ -915,12 +1007,17 @@ export default function CheckoutPage() {
                               const val = e.target.value;
                               if (val === '' || /^[a-zA-Z\s]+$/.test(val)) {
                                 setNewAddress({ ...newAddress, city: val });
+                                if (addressFormErrors.city) {
+                                  setAddressFormErrors({ ...addressFormErrors, city: '' });
+                                }
                               }
                             }}
+                            className={addressFormErrors.city ? "border-red-500" : ""}
                           />
+                          {addressFormErrors.city && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.city}</span>}
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="state">State</Label>
+                          <Label htmlFor="state">State <span className="text-red-500">*</span></Label>
                           <Input
                             id="state"
                             value={newAddress.state}
@@ -928,9 +1025,14 @@ export default function CheckoutPage() {
                               const val = e.target.value;
                               if (val === '' || /^[a-zA-Z\s]+$/.test(val)) {
                                 setNewAddress({ ...newAddress, state: val });
+                                if (addressFormErrors.state) {
+                                  setAddressFormErrors({ ...addressFormErrors, state: '' });
+                                }
                               }
                             }}
+                            className={addressFormErrors.state ? "border-red-500" : ""}
                           />
+                          {addressFormErrors.state && <span className="text-red-500 text-xs mt-1 block">{addressFormErrors.state}</span>}
                         </div>
                       </div>
 

@@ -168,8 +168,17 @@ export default function SupplierProductsPage() {
   };
 
   const handleSaveProduct = async () => {
-    if (!formData.productName?.trim() || !formData.category?.trim()) {
-      toast.error('Product Name and Category are required.');
+    if (
+      !formData.productName?.trim() ||
+      !formData.category?.trim() ||
+      !formData.price
+    ) {
+      toast.error("Product Name, Category, and Regular Price are required.");
+      return;
+    }
+
+    if (formData.salePrice && formData.salePrice >= formData.price) {
+      toast.error("Sale Price must be less than Regular Price.");
       return;
     }
 

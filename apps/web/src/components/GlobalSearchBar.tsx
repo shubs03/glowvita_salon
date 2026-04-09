@@ -13,6 +13,7 @@ import {
 import {
   useGetPublicCategoriesQuery,
   useGetPublicServicesQuery,
+  useGetPublicVendorsQuery,
 } from "@repo/store/services/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@repo/ui/cn";
@@ -63,6 +64,7 @@ export const GlobalSearchBar = ({
 
   const { data: categoriesData } = useGetPublicCategoriesQuery(undefined);
   const { data: servicesData } = useGetPublicServicesQuery({ limit: 100 });
+  const { data: vendorsData } = useGetPublicVendorsQuery({ limit: 100 });
 
   const { isLoaded } = useLoadScript({
     googleMapsApiKey: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
@@ -78,6 +80,7 @@ export const GlobalSearchBar = ({
       return {
         categories: categoriesData?.categories?.slice(0, 10) || [],
         services: servicesData?.services?.slice(0, 20) || [],
+        venues: vendorsData?.vendors?.slice(0, 10) || [],
       };
 
     const term = serviceInput.toLowerCase();
@@ -89,9 +92,13 @@ export const GlobalSearchBar = ({
       servicesData?.services
         ?.filter((s: any) => s.name.toLowerCase().includes(term))
         .slice(0, 50) || [];
+    const venues = 
+      vendorsData?.vendors
+        ?.filter((v: any) => v.businessName?.toLowerCase().includes(term))
+        .slice(0, 10) || [];
 
-    return { categories, services };
-  }, [serviceInput, categoriesData, servicesData]);
+    return { categories, services, venues };
+  }, [serviceInput, categoriesData, servicesData, vendorsData]);
 
   // ── Sync state with URL parameters ──────────────────────────────────────────
   useEffect(() => {
@@ -310,7 +317,8 @@ export const GlobalSearchBar = ({
                     {autocompleteResults.categories.map((cat: any) => (
                       <button
                         key={cat._id}
-                        onClick={() => {
+                        onMouseDown={(e) => {
+                          e.preventDefault();
                           setServiceInput(cat.name);
                           setSelectedCategoryId(cat._id);
                           setIsServiceFocused(false);
@@ -338,7 +346,8 @@ export const GlobalSearchBar = ({
                     {autocompleteResults.services.map((svc: any) => (
                       <button
                         key={svc._id}
-                        onClick={() => {
+                        onMouseDown={(e) => {
+                          e.preventDefault();
                           setServiceInput(svc.name);
                           setSelectedCategoryId("");
                           setIsServiceFocused(false);
@@ -364,8 +373,47 @@ export const GlobalSearchBar = ({
                 </div>
               )}
 
+              {autocompleteResults.venues.length > 0 && (
+                <div className="mb-4">
+                  <div className="p-3 text-[10px] font-black text-gray-400 uppercase tracking-widest px-4 mb-1">
+                    Salons
+                  </div>
+                  <div className="grid grid-cols-1 gap-1">
+                    {autocompleteResults.venues.map((vendor: any) => (
+                      <button
+                        key={vendor._id}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setServiceInput(vendor.businessName);
+                          setSelectedCategoryId("");
+                          setIsServiceFocused(false);
+                        }}
+                        className="w-full text-left px-4 py-3 hover:bg-gray-50 rounded-2xl flex items-center gap-3 transition-colors group"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center group-hover:scale-110 transition-transform overflow-hidden">
+                          {vendor.profileImage ? (
+                            <img src={vendor.profileImage} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <MapPin className="w-4 h-4 text-gray-400" />
+                          )}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-gray-800 text-sm">
+                            {vendor.businessName}
+                          </span>
+                          <span className="text-[10px] text-gray-400 font-bold uppercase">
+                            {vendor.city}, {vendor.state}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {autocompleteResults.categories.length === 0 &&
-                autocompleteResults.services.length === 0 && (
+                autocompleteResults.services.length === 0 &&
+                autocompleteResults.venues.length === 0 && (
                   <div className="p-8 text-center">
                     <div className="w-12 h-12 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
                       <Search className="w-6 h-6 text-gray-300" />

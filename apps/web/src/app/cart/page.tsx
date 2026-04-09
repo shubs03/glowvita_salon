@@ -510,32 +510,7 @@ export default function CartPage() {
                     </Card>
                   </div>
 
-                  {/* Additional Information */}
-                  <div className="mt-10 lg:mt-12 text-center">
-                    <Card className="bg-primary/5 border border-primary/20 p-6 lg:p-8">
-                      <div className="space-y-4">
-                        <h3 className="text-lg lg:text-xl font-semibold text-foreground">
-                          Need Help?
-                        </h3>
-                        <p className="text-sm lg:text-base text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-                          Our customer support team is available 24/7 to assist
-                          you with your order. Contact us via chat, email, or
-                          phone if you have any questions.
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-                          <Button variant="outline" size="sm">
-                            Live Chat
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            Email Support
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            Call: 1-800-BEAUTY
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  </div>
+
                 </div>
 
                 {/* Other sections can be added here if needed */}

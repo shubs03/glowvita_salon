@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import React, { useState, useMemo } from "react";
 import { Button } from "@repo/ui/button";
 import {
@@ -141,107 +142,97 @@ const ServicesSection: React.FC<ServicesSectionProps> = ({ vendorId, onBookNow, 
             <ErrorState />
           ) : filteredServices.length > 0 ? (
             filteredServices.map((service: any, index: number) => (
-              <div
-                key={`${service.name}-${index}`}
-                className="flex items-center p-4 border rounded-md hover:bg-secondary/50 transition-colors"
-                onClick={() => {
-                  if (!isSubscriptionExpired) {
-                    // Store complete service data in sessionStorage
-                    const serviceData = {
-                      id: service.id,
-                      name: service.name,
-                      price: service.price,
-                      discountedPrice: service.discountedPrice,
-                      duration: service.duration,
-                      category: service.category,
-                      description: service.description,
-                      image: service.image
-                    };
-                    sessionStorage.setItem("selectedService", JSON.stringify(serviceData));
-                    onBookNow(service);
-                  }
-                }}
-              >
-                <div className="flex-1">
-                  <h3 className="font-semibold">{service.name}</h3>
-                  <div className="text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <span>{service.duration} min</span>
-                      {service.description && (
-                        <span className="line-clamp-1 flex-1">• {service.description}</span>
-                      )}
-                    </div>
-                    {isSubscriptionExpired && (
-                      <p className="text-[10px] text-red-600 font-medium mt-1">
-                        This service is temporarily closed
-                      </p>
-                    )}
+                <div className="flex items-start gap-4 p-4 border rounded-md hover:bg-secondary/50 transition-all duration-300 group cursor-pointer">
+                  {/* Service Image */}
+                  <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 bg-secondary/30">
+                    <Image
+                      src={service.image || `https://placehold.co/400x400/png?text=${encodeURIComponent(service.name)}`}
+                      alt={service.name}
+                      fill
+                      className="object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                  </div>
 
-                    {/* Service Badges */}
-                    <div className="flex gap-2 mt-2">
-                      {service.homeService?.available && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary text-secondary">
-                          <Home className="h-3 w-3 mr-1" />
-                          Home Service
-                        </span>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold group-hover:text-primary transition-colors truncate">{service.name}</h3>
+                    <div className="text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <span>{service.duration} min</span>
+                        {service.description && (
+                          <span className="line-clamp-1 flex-1">• {service.description}</span>
+                        )}
+                      </div>
+                      {isSubscriptionExpired && (
+                        <p className="text-[10px] text-red-600 font-medium mt-1">
+                          This service is temporarily closed
+                        </p>
                       )}
-                      {service.weddingService?.available && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-100 text-rose-800">
-                          <Heart className="h-3 w-3 mr-1" />
-                          Wedding Service
-                        </span>
-                      )}
+
+                      {/* Service Badges */}
+                      <div className="flex gap-2 mt-2">
+                        {service.homeService?.available && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-primary text-secondary">
+                            <Home className="h-3 w-3 mr-1" />
+                            Home Service
+                          </span>
+                        )}
+                        {service.weddingService?.available && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-100 text-rose-800">
+                            <Heart className="h-3 w-3 mr-1" />
+                            Wedding Service
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="text-right ml-4">
-                  <div className="mb-1">
-                    {service.discountedPrice !== null && service.discountedPrice !== undefined && service.discountedPrice !== 0 && service.discountedPrice !== service.price ? (
-                      <div>
-                        <div className="flex items-center justify-end gap-2">
-                          <span className="text-muted-foreground line-through text-xs italic">
-                            ₹{service.price}
-                          </span>
-                          <span className="font-bold text-lg text-primary">
-                            ₹{service.discountedPrice}
-                          </span>
+                  <div className="text-right ml-4">
+                    <div className="mb-1">
+                      {service.discountedPrice !== null && service.discountedPrice !== undefined && service.discountedPrice !== 0 && service.discountedPrice !== service.price ? (
+                        <div>
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-muted-foreground line-through text-xs italic">
+                              ₹{service.price}
+                            </span>
+                            <span className="font-bold text-lg text-primary">
+                              ₹{service.discountedPrice}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-green-600 font-bold uppercase tracking-wider">
+                            {Math.round(((parseFloat(String(service.price)) - parseFloat(String(service.discountedPrice))) / parseFloat(String(service.price))) * 100)}% OFF
+                          </div>
                         </div>
-                        <div className="text-[10px] text-green-600 font-bold uppercase tracking-wider">
-                          {Math.round(((parseFloat(String(service.price)) - parseFloat(String(service.discountedPrice))) / parseFloat(String(service.price))) * 100)}% OFF
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="font-bold text-lg text-primary">
-                        ₹{service.price}
-                      </p>
-                    )}
+                      ) : (
+                        <p className="font-bold text-lg text-primary">
+                          ₹{service.price}
+                        </p>
+                      )}
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className={`h-8 px-4 rounded-full font-bold text-[10px] uppercase tracking-widest ${isSubscriptionExpired ? 'opacity-50' : 'hover:bg-primary hover:text-white transition-all'}`}
+                      disabled={isSubscriptionExpired}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Store complete service data in sessionStorage
+                        const serviceData = {
+                          id: service.id,
+                          name: service.name,
+                          price: service.price,
+                          discountedPrice: service.discountedPrice,
+                          duration: service.duration,
+                          category: service.category,
+                          description: service.description,
+                          image: service.image
+                        };
+                        sessionStorage.setItem("selectedService", JSON.stringify(serviceData));
+                        onBookNow(service);
+                      }}
+                    >
+                      {isSubscriptionExpired ? 'Unavailable' : 'Book'}
+                    </Button>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className={`h-8 px-4 rounded-full font-bold text-[10px] uppercase tracking-widest ${isSubscriptionExpired ? 'opacity-50' : 'hover:bg-primary hover:text-white transition-all'}`}
-                    disabled={isSubscriptionExpired}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Store complete service data in sessionStorage
-                      const serviceData = {
-                        id: service.id,
-                        name: service.name,
-                        price: service.price,
-                        discountedPrice: service.discountedPrice,
-                        duration: service.duration,
-                        category: service.category,
-                        description: service.description,
-                        image: service.image
-                      };
-                      sessionStorage.setItem("selectedService", JSON.stringify(serviceData));
-                      onBookNow(service);
-                    }}
-                  >
-                    {isSubscriptionExpired ? 'Unavailable' : 'Book'}
-                  </Button>
                 </div>
-              </div>
             ))
           ) : (
             <div className="text-center py-8">

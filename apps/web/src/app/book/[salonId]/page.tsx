@@ -3384,6 +3384,7 @@ function BookingPageContent() {
                 isLoading={false}
                 error={null}
                 onNext={handleNextStep}
+                bookingMode={bookingMode}
               />
             );
           } else {
@@ -3456,6 +3457,7 @@ function BookingPageContent() {
                 selectedService={selectedService}
                 onStaffSelect={setSelectedStaff}
                 onNext={handleNextStep}
+                bookingMode={bookingMode}
               />
             );
           }
