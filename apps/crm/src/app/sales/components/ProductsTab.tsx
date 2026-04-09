@@ -176,36 +176,43 @@ export default function ProductsTab({
   const [createBilling, { isLoading: isCreatingBilling }] = useCreateBillingMutation();
 
   // Fetch categories
-  const { data: categoriesData = [] } = useGetAdminProductCategoriesQuery({});
-  const categories = categoriesData?.data || [];
+  const { data: categoriesData } = useGetAdminProductCategoriesQuery({});
+  const categories = useMemo(() => categoriesData?.data || [], [categoriesData]);
+
+  // Only show categories that are present in the loaded products
+  const availableCategories = useMemo(() => {
+    if (!productsData || !Array.isArray(productsData)) return categories;
+    const productCategoryNames = new Set((productsData as Product[]).map(p => p.category).filter(Boolean));
+    return categories.filter((cat: any) => productCategoryNames.has(cat.name));
+  }, [categories, productsData]);
 
   // Fetch staff members
   const { data: staffData = [] } = useGetStaffQuery({});
 
   // Filter products based on search and category
   useEffect(() => {
-    if (productsData) {
-      let filtered = productsData as Product[];
+    if (productsData && Array.isArray(productsData)) {
+      let filtered = [...productsData] as Product[];
 
       // Apply search filter
       if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
         filtered = filtered.filter(product =>
-          product.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
+          product.productName.toLowerCase().includes(searchLower) ||
+          (product.description && product.description.toLowerCase().includes(searchLower))
         );
       }
 
-      // Apply category filter
+      // Apply category filter — selectedCategory is now the category NAME directly
       if (selectedCategory !== "all") {
-        const selectedCategoryName = categories.find((cat: any) => cat._id === selectedCategory)?.name;
-        if (selectedCategoryName) {
-          filtered = filtered.filter(product => product.category === selectedCategoryName);
-        }
+        filtered = filtered.filter(product =>
+          product.category?.toLowerCase() === selectedCategory.toLowerCase()
+        );
       }
 
       setProducts(filtered);
     }
-  }, [productsData, searchTerm, selectedCategory, categories]);
+  }, [productsData, searchTerm, selectedCategory]);
 
   // Filter clients based on search term
   const filteredClients = useMemo(() => {
@@ -234,12 +241,21 @@ export default function ProductsTab({
   // Handle client form input change
   const handleClientInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+
+    // Full Name & Country: only letters, spaces, hyphens — no digits
+    if (name === 'fullName' || name === 'country') {
+      const lettersOnly = value.replace(/[0-9]/g, '');
+      setClientFormData(prev => ({ ...prev, [name]: lettersOnly }));
+      return;
+    }
+
+    // Phone: digits only, max 10
     if (name === 'phone') {
-      // Allow only digits and limit to 10 characters
       const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
       setClientFormData(prev => ({ ...prev, phone: digitsOnly }));
       return;
     }
+
     setClientFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -263,9 +279,45 @@ export default function ProductsTab({
   // Handle save new client
   const handleSaveClient = async () => {
     try {
+      // Validate full name
+      if (!clientFormData.fullName.trim()) {
+        toast.error('Full name is required.');
+        return;
+      }
+      if (/[0-9]/.test(clientFormData.fullName)) {
+        toast.error('Full name must contain only letters.');
+        return;
+      }
+
+      // Validate email format (if provided)
+      if (clientFormData.email.trim()) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(clientFormData.email.trim())) {
+          toast.error('Please enter a valid email address.');
+          return;
+        }
+      }
+
       // Validate phone: exactly 10 digits
       if (!clientFormData.phone || clientFormData.phone.trim().length !== 10) {
         toast.error('Phone number must be exactly 10 digits.');
+        return;
+      }
+
+      // Validate birthday: must be in the past
+      if (clientFormData.birthdayDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const birthday = new Date(clientFormData.birthdayDate);
+        if (birthday >= today) {
+          toast.error('Birthday date must be in the past.');
+          return;
+        }
+      }
+
+      // Validate country (if provided)
+      if (clientFormData.country.trim() && /[0-9]/.test(clientFormData.country)) {
+        toast.error('Country name must contain only letters.');
         return;
       }
 
@@ -1063,8 +1115,8 @@ export default function ProductsTab({
               </SelectTrigger>
               <SelectContent className="rounded-lg border border-border/40">
                 <SelectItem value="all">All Categories</SelectItem>
-                {[...categories.slice(0, 5), ...categories.slice(5)].map((category: any) => (
-                  <SelectItem key={category._id} value={category._id}>
+                {availableCategories.map((category: any) => (
+                  <SelectItem key={category._id} value={category.name}>
                     {category.name}
                   </SelectItem>
                 ))}
@@ -1633,6 +1685,7 @@ export default function ProductsTab({
                   placeholder="Enter full name"
                   required
                 />
+                <p className="text-xs text-muted-foreground">Letters only, no numbers</p>
               </div>
 
               <div className="space-y-2">
@@ -1643,8 +1696,11 @@ export default function ProductsTab({
                   type="email"
                   value={clientFormData.email}
                   onChange={handleClientInputChange}
-                  placeholder="Enter email address"
+                  placeholder="example@email.com"
                 />
+                {clientFormData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientFormData.email) && (
+                  <p className="text-xs text-red-500">Enter a valid email address</p>
+                )}
               </div>
             </div>
 
@@ -1662,10 +1718,12 @@ export default function ProductsTab({
                   pattern="\d{10}"
                   maxLength={10}
                   placeholder="Enter 10-digit phone number"
-                  title="Phone number must be exactly 10 digits"
                   onKeyDown={(e) => { if (e.key === ' ') e.preventDefault(); }}
                   required
                 />
+                {clientFormData.phone && clientFormData.phone.length !== 10 && (
+                  <p className="text-xs text-red-500">Phone must be exactly 10 digits ({clientFormData.phone.length}/10)</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -1676,7 +1734,9 @@ export default function ProductsTab({
                   type="date"
                   value={clientFormData.birthdayDate}
                   onChange={handleClientInputChange}
+                  max={new Date().toISOString().split('T')[0]}
                 />
+                <p className="text-xs text-muted-foreground">Must be a past date</p>
               </div>
             </div>
 
@@ -1705,6 +1765,7 @@ export default function ProductsTab({
                   onChange={handleClientInputChange}
                   placeholder="e.g., India"
                 />
+                <p className="text-xs text-muted-foreground">Letters only, no numbers</p>
               </div>
             </div>
 

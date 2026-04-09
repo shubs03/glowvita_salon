@@ -50,8 +50,7 @@ export const SalesByProductTable = ({ product, category, brand, onFiltersChange,
   }, [refetch, product, category, brand, triggerRefresh]);
 
   const products = useMemo(() => {
-    const allProducts = data?.data?.products || [];
-    return allProducts.filter((product: any) => product.status === 'delivered');
+    return data?.data?.salesByProduct || data?.data?.products || [];
   }, [data]);
 
   const searchedProducts = useMemo(() => {
@@ -65,11 +64,11 @@ export const SalesByProductTable = ({ product, category, brand, onFiltersChange,
 
   const totals = useMemo(() => {
     return searchedProducts.reduce((acc: any, item: any) => ({
-      quantitySold: acc.quantitySold + (item.quantitySold || 0),
-      grossSales: acc.grossSales + (item.grossSales || 0),
-      discountAmount: acc.discountAmount + (item.discountAmount || 0),
-      netSales: acc.netSales + (item.netSales || 0),
-      taxAmount: acc.taxAmount + (item.taxAmount || 0),
+      quantitySold: acc.quantitySold + (item.quantitySold || item.unitsSold || 0),
+      grossSales: acc.grossSales + (item.grossSales || item.grossSale || 0),
+      discountAmount: acc.discountAmount + (item.discountAmount || item.discounts || 0),
+      netSales: acc.netSales + (item.netSales || item.netSale || 0),
+      taxAmount: acc.taxAmount + (item.taxAmount || item.tax || 0),
       totalSales: acc.totalSales + (item.totalSales || 0)
     }), {
       quantitySold: 0,
@@ -221,16 +220,16 @@ export const SalesByProductTable = ({ product, category, brand, onFiltersChange,
           <TableBody>
             {paginatedProducts.map((item: any, index: number) => (
               <TableRow key={index}>
-                <TableCell>{item.productId}</TableCell>
-                <TableCell className="font-medium">{item.productName}</TableCell>
-                <TableCell>{item.brand}</TableCell>
-                <TableCell>{item.productCategory}</TableCell>
-                <TableCell>{item.quantitySold}</TableCell>
-                <TableCell>₹{typeof item.grossSales === 'number' ? item.grossSales.toFixed(2) : '0.00'}</TableCell>
-                <TableCell>₹{typeof item.discountAmount === 'number' ? item.discountAmount.toFixed(2) : '0.00'}</TableCell>
-                <TableCell>₹{typeof item.netSales === 'number' ? item.netSales.toFixed(2) : '0.00'}</TableCell>
-                <TableCell>₹{typeof item.taxAmount === 'number' ? item.taxAmount.toFixed(2) : '0.00'}</TableCell>
-                <TableCell>₹{typeof item.totalSales === 'number' ? item.totalSales.toFixed(2) : '0.00'}</TableCell>
+                <TableCell>{item.productId || 'N/A'}</TableCell>
+                <TableCell className="font-medium">{item.productName || item.product || 'Unknown Product'}</TableCell>
+                <TableCell>{item.brand || 'N/A'}</TableCell>
+                <TableCell>{item.productCategory || item.category || 'N/A'}</TableCell>
+                <TableCell>{item.quantitySold || item.unitsSold || 0}</TableCell>
+                <TableCell>₹{(item.grossSales ?? item.grossSale ?? 0).toFixed(2)}</TableCell>
+                <TableCell>₹{(item.discountAmount ?? item.discounts ?? 0).toFixed(2)}</TableCell>
+                <TableCell>₹{(item.netSales ?? item.netSale ?? 0).toFixed(2)}</TableCell>
+                <TableCell>₹{(item.taxAmount ?? item.tax ?? 0).toFixed(2)}</TableCell>
+                <TableCell>₹{(item.totalSales ?? 0).toFixed(2)}</TableCell>
               </TableRow>
             ))}
             <TableRow className="font-bold bg-muted/50">

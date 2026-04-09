@@ -99,23 +99,11 @@ export const FilterModal = ({
     const uniqueBrands = brandsData?.data || [];
 
     // Limit displayed filter options to 5 with scroll for the rest
-    const renderFilterOptions = (options: string[], showAll: boolean = false) => {
-        // Ensure options is an array and not a single value
+    const renderFilterOptions = (options: string[]) => {
         const validOptions = Array.isArray(options) ? options.filter(opt => typeof opt === 'string' && opt) : [];
-
-        if (showAll || validOptions.length <= 5) {
-            return validOptions.map((option, index) => (
-                <SelectItem key={index} value={option}>{option}</SelectItem>
-            ));
-        }
-
-        return (
-            <div className="max-h-40 overflow-y-auto">
-                {validOptions.map((option, index) => (
-                    <SelectItem key={index} value={option}>{option}</SelectItem>
-                ))}
-            </div>
-        );
+        return validOptions.map((option, index) => (
+            <SelectItem key={index} value={option}>{option}</SelectItem>
+        ));
     };
 
     const handleApply = () => {

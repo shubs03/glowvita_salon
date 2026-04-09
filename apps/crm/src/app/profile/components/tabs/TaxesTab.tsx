@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useUpdateVendorProfileMutation, useUpdateSupplierProfileMutation } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
+import { IndianRupee } from 'lucide-react';
 
 interface Taxes {
-    taxValue: number;
+    taxValue: any;
     taxType: "percentage" | "fixed";
 }
 
@@ -28,9 +29,16 @@ export const TaxesTab = ({ taxes, setVendor }: TaxesTabProps) => {
     const handleSave = async () => {
         try {
             const updateFn = role === 'vendor' ? updateVendorProfile : updateSupplierProfile;
+            
+            // Ensure taxValue is a number before saving
+            const finalTaxValue = parseFloat(taxes.taxValue?.toString() || "0") || 0;
+            
             const result: any = await updateFn({
                 _id: typeof window !== 'undefined' ? (JSON.parse(localStorage.getItem('user') || '{}')._id) : undefined,
-                taxes: taxes
+                taxes: {
+                    ...taxes,
+                    taxValue: finalTaxValue
+                }
             }).unwrap();
 
             if (result.success) {
@@ -44,14 +52,29 @@ export const TaxesTab = ({ taxes, setVendor }: TaxesTabProps) => {
     };
 
     const handleValueChange = (value: string) => {
-        const numValue = parseFloat(value) || 0;
-        setVendor((prev: any) => ({
-            ...prev,
-            taxes: {
-                ...prev.taxes,
-                taxValue: numValue
-            }
-        }));
+        // If it's empty, allow it to stay empty in the UI
+        if (value === "") {
+            setVendor((prev: any) => ({
+                ...prev,
+                taxes: {
+                    ...prev.taxes,
+                    taxValue: ""
+                }
+            }));
+            return;
+        }
+
+        // Allow leading zeros and valid numeric input
+        // Pattern: numbers only, or numbers with a single decimal point
+        if (/^\d*\.?\d*$/.test(value)) {
+            setVendor((prev: any) => ({
+                ...prev,
+                taxes: {
+                    ...prev.taxes,
+                    taxValue: value
+                }
+            }));
+        }
     };
 
     const handleTypeChange = (value: string) => {
@@ -85,7 +108,7 @@ export const TaxesTab = ({ taxes, setVendor }: TaxesTabProps) => {
                         </div>
                     </div>
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                        <IndianRupee className="h-5 w-5 text-primary" />
                     </div>
                 </div>
 
@@ -94,7 +117,8 @@ export const TaxesTab = ({ taxes, setVendor }: TaxesTabProps) => {
                         <Label htmlFor="taxValue" className="text-sm font-semibold tracking-wide">Tax Value</Label>
                         <Input
                             id="taxValue"
-                            type="number"
+                            type="text"
+                            inputMode="decimal"
                             placeholder="Enter value"
                             value={taxes?.taxValue ?? ''}
                             onChange={(e) => handleValueChange(e.target.value)}

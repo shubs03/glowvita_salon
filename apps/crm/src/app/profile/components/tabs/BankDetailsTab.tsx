@@ -44,6 +44,11 @@ export const BankDetailsTab = ({ bankDetails, setVendor }: BankDetailsTabProps) 
   };
 
   const handleInputChange = (field: string, value: string) => {
+    // Validation for account number: only allow numbers
+    if (field === 'accountNumber' && value !== '' && !/^\d+$/.test(value)) {
+      return; // Ignore non-numeric input
+    }
+
     setVendor((prev: any) => ({
       ...prev,
       bankDetails: {
@@ -75,6 +80,9 @@ export const BankDetailsTab = ({ bankDetails, setVendor }: BankDetailsTabProps) 
             <Label htmlFor="accountNumber">Account Number</Label>
             <Input
               id="accountNumber"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               placeholder="Enter account number"
               value={bankDetails?.accountNumber || ''}
               onChange={(e) => handleInputChange('accountNumber', e.target.value)}

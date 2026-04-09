@@ -17,6 +17,7 @@ import ExpenseStatsCards from './components/ExpenseStatsCards';
 import ExpenseFiltersToolbar from './components/ExpenseFiltersToolbar';
 import ExpenseTable from './components/ExpenseTable';
 import ExpensePaginationControls from './components/ExpensePaginationControls';
+import { ExpenseDetailsModal } from './components/ExpenseDetailsModal';
 
 export type Expense = {
     _id: string;
@@ -53,7 +54,9 @@ export default function ExpensesPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+    const [selectedExpensePreview, setSelectedExpensePreview] = useState<Expense | null>(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
 
     // Filter states
@@ -206,6 +209,11 @@ export default function ExpensesPage() {
         setIsModalOpen(true);
     };
 
+    const handleOpenDetails = (expense: Expense) => {
+        setSelectedExpensePreview(expense);
+        setIsDetailsModalOpen(true);
+    };
+
     const handleDeleteClick = (expense: Expense) => {
         setSelectedExpense(expense);
         setIsDeleteModalOpen(true);
@@ -274,8 +282,8 @@ export default function ExpensesPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow className="bg-secondary hover:bg-secondary">
-                                            {["Expense Type", "Date", "Amount", "Payment Mode", "Invoice No", "Note", "Actions"].map((_, i) => (
-                                                <TableHead key={i} className={i < 3 ? (i === 0 ? "min-w-[120px]" : "min-w-[120px]") : ""}>
+                                            {["Image", "Expense Type", "Date", "Amount", "Payment Mode", "Invoice No", "Note", "Actions"].map((_, i) => (
+                                                <TableHead key={i} className={i < 4 ? "min-w-[120px]" : ""}>
                                                     <Skeleton className="h-5 w-full" />
                                                 </TableHead>
                                             ))}
@@ -284,17 +292,17 @@ export default function ExpensesPage() {
                                     <TableBody>
                                         {[...Array(5)].map((_, i) => (
                                             <TableRow key={i} className="hover:bg-muted/50">
-                                                <TableCell className="font-medium py-3 min-w-[120px] max-w-[150px]">
-                                                    <div className="flex items-center gap-3">
-                                                        <Skeleton className="w-10 h-10 rounded-full" />
-                                                        <Skeleton className="h-5 w-32" />
-                                                    </div>
+                                                <TableCell className="min-w-[50px]">
+                                                    <Skeleton className="h-10 w-10 rounded-md" />
                                                 </TableCell>
-                                                <TableCell className="min-w-[120px] max-w-[150px]">
-                                                    <Skeleton className="h-5 w-full mb-1" />
+                                                <TableCell className="font-medium py-3 min-w-[120px]">
+                                                    <Skeleton className="h-5 w-32" />
                                                 </TableCell>
-                                                <TableCell className="min-w-[120px] max-w-[150px]">
-                                                    <Skeleton className="h-5 w-full mb-1" />
+                                                <TableCell className="min-w-[120px]">
+                                                    <Skeleton className="h-5 w-full" />
+                                                </TableCell>
+                                                <TableCell className="min-w-[120px]">
+                                                    <Skeleton className="h-5 w-full" />
                                                 </TableCell>
                                                 <TableCell>
                                                     <Skeleton className="h-5 w-full" />
@@ -384,6 +392,7 @@ export default function ExpensesPage() {
                                 searchTerm={searchTerm}
                                 hasActiveFilters={hasActiveFilters}
                                 onOpenModal={handleOpenModal}
+                                onOpenDetails={handleOpenDetails}
                                 onDeleteClick={handleDeleteClick}
                             />
                         </CardContent>
@@ -408,6 +417,12 @@ export default function ExpensesPage() {
                         setIsModalOpen(false);
                         refetch();
                     }}
+                />
+
+                <ExpenseDetailsModal 
+                    isOpen={isDetailsModalOpen}
+                    onClose={() => setIsDetailsModalOpen(false)}
+                    expense={selectedExpensePreview}
                 />
 
                 <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>

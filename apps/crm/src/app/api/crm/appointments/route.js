@@ -429,12 +429,22 @@ export const POST = withSubscriptionCheck(async (req) => {
             }];
         }
 
-        // Calculate total amount including add-ons
+        // Calculate total amount including add-ons, tax, and discount
+        // We prioritize the totalAmount sent from the frontend if available, 
+        // as the frontend now has the complex vendor-specific tax logic.
         const baseAmount = Number(body.amount) || 0;
         const addOnsAmount = serviceItems.reduce((sum, item) => {
             return sum + (item.addOns?.reduce((addonSum, addon) => addonSum + (Number(addon.price) || 0), 0) || 0);
         }, 0);
-        const totalAmount = baseAmount + addOnsAmount;
+        
+        const discountAmount = Number(body.discount || body.discountAmount) || 0;
+        const taxAmount = Number(body.serviceTax || body.tax) || 0;
+        const platformFee = Number(body.platformFee) || 0;
+        
+        // If totalAmount is provided in body, use it, otherwise calculate it
+        const totalAmount = body.totalAmount !== undefined 
+            ? Number(body.totalAmount) 
+            : Math.max(0, baseAmount + addOnsAmount - discountAmount + taxAmount + platformFee);
 
         // Set default values
         const appointmentData = {
@@ -444,12 +454,14 @@ export const POST = withSubscriptionCheck(async (req) => {
             status: body.status || 'scheduled',
             amount: baseAmount,
             addOnsAmount,
-            discount: Number(body.discount || body.discountAmount) || 0,
-            discountAmount: Number(body.discountAmount || body.discount) || 0,
+            discount: discountAmount,
+            discountAmount: discountAmount,
             couponCode: body.couponCode || null,
-            tax: Number(body.tax) || 0,
+            serviceTax: taxAmount,
+            tax: taxAmount,
+            platformFee: platformFee,
             totalAmount,
-            finalAmount: totalAmount, // <--- Ensure finalAmount is set for online/offline consistency
+            finalAmount: totalAmount, // Ensure finalAmount is in sync with totalAmount
             notes: body.notes || '',
             mode: 'offline', // CRM bookings are always offline mode
             serviceItems // Include the processed service items
@@ -569,11 +581,14 @@ export const PUT = withSubscriptionCheck(async (req, { params }) => {
         }
 
         // Recalculate total amount if relevant fields are updated
-        if (updateData.amount !== undefined || updateData.discount !== undefined || updateData.tax !== undefined) {
+        if (updateData.amount !== undefined || updateData.discount !== undefined || updateData.tax !== undefined || updateData.serviceTax !== undefined || updateData.addOnsAmount !== undefined) {
             const amount = updateData.amount !== undefined ? Number(updateData.amount) : existingAppointment.amount;
-            const discount = updateData.discount !== undefined ? Number(updateData.discount) : existingAppointment.discount || 0;
-            const tax = updateData.tax !== undefined ? Number(updateData.tax) : existingAppointment.tax || 0;
-            updateData.totalAmount = Math.max(0, amount - discount + tax);
+            const discount = updateData.discount !== undefined ? Number(updateData.discount) : (existingAppointment.discountAmount || existingAppointment.discount || 0);
+            const tax = updateData.serviceTax !== undefined ? Number(updateData.serviceTax) : (updateData.tax !== undefined ? Number(updateData.tax) : (existingAppointment.serviceTax || existingAppointment.tax || 0));
+            const addOns = updateData.addOnsAmount !== undefined ? Number(updateData.addOnsAmount) : (existingAppointment.addOnsAmount || 0);
+            const platformFee = updateData.platformFee !== undefined ? Number(updateData.platformFee) : (existingAppointment.platformFee || 0);
+            
+            updateData.totalAmount = Math.max(0, amount + addOns - discount + tax + platformFee);
         }
 
         // Check for conflicts if staff, date, or time is being updated

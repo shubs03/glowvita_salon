@@ -8,15 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@repo/ui/checkbox";
 import { useUpdateVendorProfileMutation } from '@repo/store/api';
 import { toast } from 'sonner';
-import { Upload, User } from 'lucide-react';
+import { Upload, User, IndianRupee } from 'lucide-react';
 import { cn } from "@repo/ui/cn";
 
 interface ProfileTabProps {
   vendor: any;
   setVendor: any;
+  handleProfileImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
 }
 
-export const ProfileTab = ({ vendor, setVendor }: ProfileTabProps) => {
+export const ProfileTab = ({ vendor, setVendor, handleProfileImageUpload }: ProfileTabProps) => {
   const [updateVendorProfile] = useUpdateVendorProfileMutation();
 
   const handleSave = async () => {
@@ -68,16 +69,7 @@ export const ProfileTab = ({ vendor, setVendor }: ProfileTabProps) => {
                 type="file"
                 className="hidden"
                 accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                      setVendor({ ...vendor, profileImage: reader.result as string });
-                    };
-                    reader.readAsDataURL(file);
-                  }
-                }}
+                onChange={handleProfileImageUpload}
               />
             </label>
           </div>
@@ -164,7 +156,7 @@ export const ProfileTab = ({ vendor, setVendor }: ProfileTabProps) => {
           <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-md bg-primary/10 text-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                <IndianRupee className="h-4 w-4" />
               </div>
               <div className="space-y-0.5">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-tight">Active Tax Rate</p>

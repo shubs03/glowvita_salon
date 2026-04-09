@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 interface ProductFilterState {
   product: string;
@@ -34,12 +34,12 @@ export const useSupplierFilters = () => {
     }
   });
 
-  const updateFilter = (reportType: keyof SupplierFiltersState, newFilter: Partial<ProductFilterState>) => {
+  const updateFilter = useCallback((reportType: keyof SupplierFiltersState, newFilter: Partial<ProductFilterState>) => {
     setFilters(prev => ({
       ...prev,
       [reportType]: { ...prev[reportType], ...newFilter }
     }));
-  };
+  }, []);
 
   return { filters, updateFilter };
 };

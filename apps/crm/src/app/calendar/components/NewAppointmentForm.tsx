@@ -13,7 +13,7 @@ import { selectBlockedTimesByStaffAndDate } from '@repo/store/slices/blockTimeSl
 
 import { getDay } from 'date-fns';
 import { Calendar as CalendarIcon, Trash2, Loader2, Search, X, PlusCircle, MapPin, Home, Briefcase } from 'lucide-react';
-import { glowvitaApi, useCreateClientMutation, useGetWorkingHoursQuery, useGetPublicTaxFeeSettingsQuery } from '@repo/store/api';
+import { glowvitaApi, useCreateClientMutation, useGetWorkingHoursQuery, useGetPublicTaxFeeSettingsQuery, useGetVendorProfileQuery } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { Badge } from '@repo/ui/badge';
@@ -143,12 +143,27 @@ export default function NewAppointmentForm({
 
   // Fetch tax settings
   const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
+  
+  // Fetch vendor profile for vendor-specific tax settings
+  const { data: vendorProfile } = useGetVendorProfileQuery(undefined, {
+    skip: !vendorId
+  });
 
   // Calculate total amount with proper tax/fee logic
   const calculateFinancials = (baseAmount: number, discount: number, addOnAmount: number = 0) => {
     const totalBase = baseAmount + addOnAmount;
     let tax = 0;
-    if (taxSettings?.serviceTaxEnabled !== false) {
+    
+    // Use vendor-specific tax if available, otherwise fallback to public settings
+    const vendorTaxes = vendorProfile?.data?.taxes;
+    
+    if (vendorTaxes) {
+      if (vendorTaxes.taxType === 'fixed') {
+        tax = Number(vendorTaxes.taxValue) || 0;
+      } else {
+        tax = (totalBase * (Number(vendorTaxes.taxValue) || 0)) / 100;
+      }
+    } else if (taxSettings?.serviceTaxEnabled !== false) {
       if (taxSettings?.serviceTaxType === 'fixed') {
         tax = Number(taxSettings.serviceTax) || 0;
       } else {
@@ -166,7 +181,8 @@ export default function NewAppointmentForm({
     }
 
     const totalAmount = Math.max(0, totalBase - discount + tax + platformFee);
-    return { tax, platformFee, totalAmount };
+    const taxRate = vendorTaxes ? Number(vendorTaxes.taxValue) : (Number(taxSettings?.serviceTax) || 0);
+    return { tax, platformFee, totalAmount, taxRate };
   };
 
   const getAddOnsDuration = (addOns: any[]) => {
@@ -175,24 +191,24 @@ export default function NewAppointmentForm({
 
   // Update taxRate and calculate fees if settings change and we are creating a new appointment
   useEffect(() => {
-    if (taxSettings && !isEditing && !isRescheduling) {
+    if ((taxSettings || vendorProfile) && !isEditing && !isRescheduling) {
       setAppointmentData(prev => {
         const amount = prev.amount || 0;
         const discount = prev.discount || 0;
         const addOnAmount = ((prev as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0);
 
-        const { tax, platformFee, totalAmount } = calculateFinancials(amount, discount, addOnAmount);
+        const { tax, platformFee, totalAmount, taxRate } = calculateFinancials(amount, discount, addOnAmount);
 
         return {
           ...prev,
-          taxRate: taxSettings.serviceTax,
+          taxRate,
           tax,
           platformFee,
           totalAmount
         };
       });
     }
-  }, [taxSettings, isEditing, isRescheduling]);
+  }, [taxSettings, vendorProfile, isEditing, isRescheduling]);
 
   // Debug working hours state
   const [workingHours, setWorkingHours] = useState<Record<string, any> | null>(null);
@@ -1224,11 +1240,15 @@ export default function NewAppointmentForm({
     // --- Final State Calculation ---
 
     // Recalculate total amount with the hydrated data
-    newAppointmentState.totalAmount = calculateTotalAmount(
+    const financialResults = calculateFinancials(
       newAppointmentState.amount || 0,
       newAppointmentState.discount || 0,
-      newAppointmentState.tax || 0
+      ((newAppointmentState as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0)
     );
+    newAppointmentState.tax = financialResults.tax;
+    newAppointmentState.taxRate = financialResults.taxRate;
+    newAppointmentState.totalAmount = financialResults.totalAmount;
+    (newAppointmentState as any).platformFee = financialResults.platformFee;
 
     // Set the final, hydrated state
     setAppointmentData({
@@ -1262,11 +1282,10 @@ export default function NewAppointmentForm({
           serviceName: firstService.name,
           duration: firstService.duration || 60,
           amount: firstService.price || 0,
-          totalAmount: calculateTotalAmount(
-            firstService.price || 0,
-            prev.discount || 0,
-            prev.tax || 0
-          )
+          ...(() => {
+            const { tax, totalAmount, taxRate, platformFee } = calculateFinancials(firstService.price || 0, prev.discount || 0, 0);
+            return { tax, totalAmount, taxRate, platformFee };
+          })()
         }));
       }
     }
@@ -1356,7 +1375,7 @@ export default function NewAppointmentForm({
       const discount = appointmentData.discount || 0;
       const addOnAmount = ((appointmentData as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0);
       const addOnDuration = ((appointmentData as any).addOns || []).reduce((sum: number, a: any) => sum + (a.duration || 0), 0);
-      const { tax: calculatedTax, platformFee, totalAmount } = calculateFinancials(amount, discount, addOnAmount);
+      const { tax: calculatedTax, platformFee, totalAmount, taxRate } = calculateFinancials(amount, discount, addOnAmount);
 
       setAppointmentData((prev: Appointment) => ({
         ...prev,
@@ -1365,6 +1384,7 @@ export default function NewAppointmentForm({
         duration: (selectedService.duration || 60) + addOnDuration,
         amount: amount,
         tax: calculatedTax,
+        taxRate,
         platformFee,
         totalAmount: totalAmount,
         endTime: calculateEndTime(prev.startTime, (selectedService.duration || 60) + addOnDuration),
@@ -1442,12 +1462,18 @@ export default function NewAppointmentForm({
     const totalDurationIncludingAddOns = baseDuration + addOnDuration;
     const totalAmount = updatedServices.reduce((sum, s) => sum + s.amount, 0);
 
+    const addOnAmount = ((appointmentData as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0);
+    const { tax, totalAmount: calculatedTotal, taxRate, platformFee } = calculateFinancials(totalAmount, appointmentData.discount || 0, addOnAmount);
+
     setAppointmentData((prev: Appointment) => ({
       ...prev,
       services: updatedServices,
       duration: totalDurationIncludingAddOns,
       amount: totalAmount,
-      totalAmount: calculateTotalAmount(totalAmount, prev.discount || 0, prev.tax || 0),
+      tax,
+      taxRate,
+      totalAmount: calculatedTotal,
+      platformFee,
       endTime: calculateEndTime(prev.startTime, totalDurationIncludingAddOns)
     }));
 
@@ -1477,12 +1503,18 @@ export default function NewAppointmentForm({
     const totalDurationIncludingAddOns = totalDuration + addOnDuration;
     const totalAmount = recalculatedServices.reduce((sum, s) => sum + s.amount, 0);
 
+    const addOnAmount = ((appointmentData as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0);
+    const { tax, totalAmount: calculatedTotal, taxRate, platformFee } = calculateFinancials(totalAmount, appointmentData.discount || 0, addOnAmount);
+
     setAppointmentData((prev: Appointment) => ({
       ...prev,
       services: recalculatedServices,
       duration: totalDurationIncludingAddOns,
       amount: totalAmount,
-      totalAmount: calculateTotalAmount(totalAmount, prev.discount || 0, prev.tax || 0),
+      tax,
+      taxRate,
+      totalAmount: calculatedTotal,
+      platformFee,
       endTime: calculateEndTime(prev.startTime, totalDurationIncludingAddOns)
     }));
   };
@@ -1507,7 +1539,7 @@ export default function NewAppointmentForm({
       const baseServiceDuration = Math.max(0, (prev.duration || 60) - prevAddOnDuration);
 
       const newTotalDuration = baseServiceDuration + addOnDuration;
-      const { tax, platformFee, totalAmount } = calculateFinancials(prev.amount || 0, prev.discount || 0, addOnAmount);
+      const { tax, platformFee, totalAmount, taxRate } = calculateFinancials(prev.amount || 0, prev.discount || 0, addOnAmount);
 
       return {
         ...prev,
@@ -1515,6 +1547,7 @@ export default function NewAppointmentForm({
         duration: newTotalDuration,
         endTime: calculateEndTime(prev.startTime, newTotalDuration),
         tax,
+        taxRate,
         platformFee,
         totalAmount
       };
@@ -1533,7 +1566,7 @@ export default function NewAppointmentForm({
       const baseServiceDuration = Math.max(0, (prev.duration || 60) - prevAddOnDuration);
 
       const newTotalDuration = baseServiceDuration + addOnDuration;
-      const { tax, platformFee, totalAmount } = calculateFinancials(prev.amount || 0, prev.discount || 0, addOnAmount);
+      const { tax, platformFee, totalAmount, taxRate } = calculateFinancials(prev.amount || 0, prev.discount || 0, addOnAmount);
 
       return {
         ...prev,
@@ -1541,6 +1574,7 @@ export default function NewAppointmentForm({
         duration: newTotalDuration,
         endTime: calculateEndTime(prev.startTime, newTotalDuration),
         tax,
+        taxRate,
         platformFee,
         totalAmount
       };
@@ -1684,10 +1718,7 @@ export default function NewAppointmentForm({
     return Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60));
   };
 
-  // Calculate total amount
-  const calculateTotalAmount = (amount: number, discount: number, tax: number): number => {
-    return Math.max(0, amount - discount + tax);
-  };
+
 
 
 
@@ -1719,9 +1750,10 @@ export default function NewAppointmentForm({
         const discount = field === 'discount' ? numericValue : updated.discount || 0;
         const addOnAmount = ((updated as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0);
 
-        const { tax, platformFee, totalAmount } = calculateFinancials(amount, discount, addOnAmount);
+        const { tax, platformFee, totalAmount, taxRate } = calculateFinancials(amount, discount, addOnAmount);
         updated.tax = tax;
         updated.totalAmount = totalAmount;
+        updated.taxRate = taxRate;
         // checking if platformFee exists on the type before assigning would be ideal, 
         // but for now we'll inject it into the state object
         (updated as any).platformFee = platformFee;
@@ -1909,6 +1941,14 @@ export default function NewAppointmentForm({
         }
       }
 
+      // Recalculate financials to ensure precision in the payload
+      const currentAddOnsAmount = ((appointmentData as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0);
+      const financials = calculateFinancials(
+        Number(appointmentData.amount) || 0,
+        Number(appointmentData.discount) || 0,
+        currentAddOnsAmount
+      );
+
       const appointmentPayload: any = {
         clientName: appointmentData.clientName.trim(),
         clientEmail: appointmentData.clientEmail?.trim(),
@@ -1925,14 +1965,16 @@ export default function NewAppointmentForm({
         status: appointmentData.status || 'scheduled',
         amount: Number(appointmentData.amount) || 0,
         discount: Number(appointmentData.discount) || 0,
-        tax: Number(appointmentData.tax) || 0,
-        taxRate: Number(appointmentData.taxRate) || Number(taxSettings?.serviceTax) || 0,
-        totalAmount: Number(appointmentData.totalAmount) || 0,
+        discountAmount: Number(appointmentData.discount) || 0,
+        serviceTax: financials.tax,
+        tax: financials.tax,
+        taxRate: financials.taxRate,
+        totalAmount: financials.totalAmount,
+        finalAmount: financials.totalAmount,
         addOns: (appointmentData as any).addOns || [],
-        addOnsAmount: ((appointmentData as any).addOns || []).reduce((sum: number, a: any) => sum + (a.price || 0), 0),
-        finalAmount: Number(appointmentData.totalAmount) || 0,
+        addOnsAmount: currentAddOnsAmount,
         paymentStatus: appointmentData.paymentStatus || 'pending',
-        platformFee: (appointmentData as any).platformFee || 0,
+        platformFee: financials.platformFee,
         mode: appointmentData.mode || (isRescheduling || isEditing ? defaultValues?.mode : 'offline') || 'offline',
         isHomeService: appointmentData.isHomeService,
         homeServiceLocation: appointmentData.isHomeService ? appointmentData.homeServiceLocation : undefined,
@@ -2149,6 +2191,24 @@ export default function NewAppointmentForm({
 
   const handleNewClientInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    if (name === "phone") {
+      // Allow only digits and limit to 10 characters
+      const digitsOnly = value.replace(/\D/g, "").slice(0, 10);
+      setNewClientData((prev) => ({ ...prev, phone: digitsOnly }));
+      return;
+    }
+    if (name === "fullName" || name === "country" || name === "occupation") {
+      // Allow only letters and spaces
+      const lettersAndSpaces = value.replace(/[^a-zA-Z\s]/g, "");
+      setNewClientData((prev) => ({ ...prev, [name]: lettersAndSpaces }));
+      return;
+    }
+    if (name === "email") {
+      // Allow only alphanumeric, @ and .
+      const allowedChars = value.replace(/[^a-zA-Z0-9@.]/g, "");
+      setNewClientData((prev) => ({ ...prev, email: allowedChars }));
+      return;
+    }
     setNewClientData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -2168,21 +2228,76 @@ export default function NewAppointmentForm({
   };
 
   const handleCreateClient = async () => {
-    if (!newClientData.fullName || !newClientData.phone) {
-      toast.error('Full Name and Phone are required.');
-      return;
-    }
     try {
-      const newClient = await createClient(newClientData);
+      // Validate Full Name: required and only letters/spaces
+      if (!newClientData.fullName || newClientData.fullName.trim().length === 0) {
+        toast.error("Full name is required.");
+        return;
+      }
+      if (newClientData.fullName.trim().length < 2) {
+        toast.error("Full name must be at least 2 characters long.");
+        return;
+      }
+
+      // Validate Email: required and must contain @
+      if (!newClientData.email || newClientData.email.trim().length === 0) {
+        toast.error("Email address is required.");
+        return;
+      }
+
+      // Check for forbidden special characters
+      const allowedCharsRegex = /^[a-zA-Z0-9@.]*$/;
+      if (!allowedCharsRegex.test(newClientData.email)) {
+        toast.error("Email can only contain @ and . as special characters.");
+        return;
+      }
+
+      // Strict email format check
+      const emailFormatRegex = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.]+\.[a-zA-Z]{2,}$/;
+      if (!emailFormatRegex.test(newClientData.email.trim())) {
+        toast.error("Please enter a valid email format (e.g., example@gmail.com).");
+        return;
+      }
+
+      // Validate phone: exactly 10 digits
+      if (!newClientData.phone || newClientData.phone.trim().length !== 10) {
+        toast.error("Phone number must be exactly 10 digits.");
+        return;
+      }
+
+      // Validate Birthday: cannot be in the future
+      if (newClientData.birthdayDate) {
+        const selectedDate = new Date(newClientData.birthdayDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (selectedDate > today) {
+          toast.error("Birthday cannot be in the future.");
+          return;
+        }
+      }
+
+      const clientDataToSave = {
+        ...newClientData,
+        fullName: newClientData.fullName.trim(),
+        email: newClientData.email.trim(),
+        phone: newClientData.phone.trim(),
+        gender: newClientData.gender || "Other"
+      };
+
+      const newClient = await createClient(clientDataToSave).unwrap();
       toast.success('New client has been added successfully.');
-      handleClientSelect(newClient.data);
+      
+      // Auto-select the new client for the appointment
+      const clientObj = newClient.data || newClient;
+      handleClientSelect(clientObj);
+      
       setIsAddClientModalOpen(false);
       setNewClientData({
         fullName: '',
         email: '',
         phone: '',
         birthdayDate: '',
-        gender: '',
+        gender: '' as any,
         country: '',
         occupation: '',
         profilePicture: '',
@@ -2212,131 +2327,259 @@ export default function NewAppointmentForm({
 
   /* Client Section Logic */
   let clientSection;
-
   if (isClientSearchEnabled) {
-    clientSection = (
-      <div className="space-y-2 relative" ref={clientSearchRef}>
-        <Label htmlFor="clientSearch" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Client <span className="text-red-500">*</span>
-        </Label>
-        <div className="relative flex items-center gap-2">
-          {/* Search Input and logic */}
-          <div className="relative flex-1">
-            <Input
-              id="clientSearch"
-              type="text"
-              value={isClientDropdownOpen ? clientSearchTerm : appointmentData.clientName}
-              onChange={(e) => {
-                setClientSearchTerm(e.target.value);
-                if (!isClientDropdownOpen) setIsClientDropdownOpen(true);
-              }}
-              onFocus={() => {
-                setIsClientDropdownOpen(true);
-              }}
-              placeholder="Search for a client..."
-              disabled={isRescheduling}
-              className="pl-10 w-full bg-background text-foreground border border-border placeholder:text-muted-foreground"
-              autoComplete="off"
-              onBlur={() => {
-                // Delay slightly to allow click on dropdown items
-                setTimeout(() => {
-                  if (!appointmentData.client && clientSearchTerm) {
-                    setAppointmentData(prev => ({ ...prev, clientName: clientSearchTerm }));
-                  }
-                }, 200);
-              }}
-            />
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-            {(isLoadingClients || isFetchingClients) && (
-              <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
-            )}
-            {appointmentData.clientName && (
-              <button
-                type="button"
-                onClick={clearClient}
-                className="absolute right-9 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                title="Clear"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-            {/* Client Dropdown */}
-            {isClientDropdownOpen && (
-              <div className="absolute z-10 mt-1 w-full bg-background shadow-lg rounded-md py-1 max-h-60 overflow-auto border border-border">
-                {isLoadingClients || isFetchingClients ? (
-                  <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">Loading clients...</div>
-                ) : Array.isArray(clientsResponse) && clientsResponse.length > 0 ? (
-                  clientsResponse.map((client: any) => (
-                    <button
-                      key={client._id}
-                      type="button"
-                      onClick={() => handleClientSelect(client)}
-                      className="w-full text-left px-4 py-2 hover:bg-muted border-b border-border last:border-0"
-                    >
-                      <div className="font-medium text-foreground">{client.fullName || client.name}</div>
-                      {client.email && (
-                        <div className="text-sm text-muted-foreground truncate">{client.email}</div>
-                      )}
-                      {client.phone && (
-                        <div className="text-sm text-muted-foreground">{client.phone}</div>
-                      )}
-                    </button>
-                  ))
-                ) : (
-                  <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-                    {debouncedClientSearchTerm ? 'No matching clients found.' : 'No clients found.'}
-                  </div>
-                )}
-              </div>
-            )}
+    if (isAddClientModalOpen) {
+      // New Client Form View (when + is clicked)
+      clientSection = (
+        <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+              <PlusCircle className="h-4 w-4 text-primary" />
+              Register New Client
+            </h3>
+            <Button 
+              type="button" 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsAddClientModalOpen(false)}
+              className="h-8 text-xs text-muted-foreground hover:text-foreground"
+            >
+              Back to Search
+            </Button>
           </div>
-          <Button
-            type="button"
-            onClick={() => setIsAddClientModalOpen(true)}
-            variant="outline"
-            size="icon"
-            className="shrink-0"
-            disabled={isRescheduling}
-            title="Add client"
-          >
-            <PlusCircle className="h-4 w-4" />
-          </Button>
-        </div>
 
-        {isGuest && (
-          <>
-            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-              <Label htmlFor="clientEmail" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Guest Email <span className="text-gray-400 text-xs">(Optional - for receipts)</span>
-              </Label>
-              <Input
-                id="clientEmail"
-                type="email"
-                value={appointmentData.clientEmail || ''}
-                onChange={(e) => setAppointmentData(prev => ({ ...prev, clientEmail: e.target.value }))}
-                placeholder="client@example.com"
-                disabled={isRescheduling}
-                className="w-full bg-background text-foreground border border-border"
-              />
+          <div className="space-y-6">
+            {/* Profile Picture */}
+            <div className="space-y-4">
+              <div className="flex justify-center">
+                <div className="relative">
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 text-center mb-3">Profile Photo</p>
+                  <input
+                    id="profilePicture"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleNewClientFileChange}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="profilePicture"
+                    className="cursor-pointer block"
+                  >
+                    <div className="w-24 h-24 rounded-full border-4 border-dashed border-gray-300 dark:border-neutral-700 hover:border-primary/50 transition-all duration-200 flex items-center justify-center overflow-hidden bg-background hover:bg-muted/50">
+                      {newClientData.profilePicture ? (
+                        <img
+                          src={newClientData.profilePicture}
+                          alt="Profile preview"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-center">
+                          <PlusCircle className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+                          <span className="text-[10px] text-gray-500 font-medium">Add Photo</span>
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 dark:text-gray-300">Full Name <span className="text-red-500">*</span></Label>
+                  <Input id="fullName" name="fullName" value={newClientData.fullName} onChange={handleNewClientInputChange} placeholder="Enter full name" required className="bg-background text-foreground border border-border" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone <span className="text-red-500">*</span></Label>
+                  <Input id="phone" name="phone" value={newClientData.phone} onChange={handleNewClientInputChange} placeholder="10-digit number" required className="bg-background text-foreground border border-border" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">Email <span className="text-red-500">*</span></Label>
+                  <Input id="email" name="email" type="email" value={newClientData.email} onChange={handleNewClientInputChange} placeholder="client@example.com" required className="bg-background text-foreground border border-border" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="birthdayDate" className="text-sm font-medium text-gray-700 dark:text-gray-300">Birthday</Label>
+                  <Input 
+                    id="birthdayDate" 
+                    name="birthdayDate" 
+                    type="date" 
+                    value={newClientData.birthdayDate} 
+                    onChange={handleNewClientInputChange} 
+                    max={new Date().toISOString().split('T')[0]}
+                    className="bg-background text-foreground border border-border" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gender" className="text-sm font-medium text-gray-700 dark:text-gray-300">Gender</Label>
+                  <Select name="gender" value={newClientData.gender} onValueChange={(value) => handleNewClientSelectChange('gender', value)}>
+                    <SelectTrigger className="bg-background text-foreground border border-border">
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background text-foreground border border-border">
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="country" className="text-sm font-medium text-gray-700 dark:text-gray-300">Country</Label>
+                  <Input id="country" name="country" value={newClientData.country} onChange={handleNewClientInputChange} placeholder="Country" className="bg-background text-foreground border border-border" />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="occupation" className="text-sm font-medium text-gray-700 dark:text-gray-300">Occupation</Label>
+                  <Input id="occupation" name="occupation" value={newClientData.occupation} onChange={handleNewClientInputChange} placeholder="Occupation" className="bg-background text-foreground border border-border" />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="address" className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</Label>
+                  <Textarea id="address" name="address" value={newClientData.address} onChange={handleNewClientInputChange} placeholder="Physical address" className="bg-background text-foreground border border-border min-h-[80px]" />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="preferences" className="text-sm font-medium text-gray-700 dark:text-gray-300">Preferences / Notes</Label>
+                  <Textarea id="preferences" name="preferences" value={newClientData.preferences} onChange={handleNewClientInputChange} placeholder="Client preferences, allergies, etc." className="bg-background text-foreground border border-border min-h-[80px]" />
+                </div>
+              </div>
             </div>
-            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
-              <Label htmlFor="clientPhone" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Guest Phone <span className="text-gray-400 text-xs">(Optional - for contact)</span>
-              </Label>
-              <Input
-                id="clientPhone"
-                type="tel"
-                value={appointmentData.clientPhone || ''}
-                onChange={(e) => setAppointmentData(prev => ({ ...prev, clientPhone: e.target.value }))}
-                placeholder="Phone number"
-                disabled={isRescheduling}
-                className="w-full bg-background text-foreground border border-border"
-              />
+            
+            <div className="flex gap-3 pt-4 border-t border-border/50">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setIsAddClientModalOpen(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="button" 
+                onClick={handleCreateClient} 
+                disabled={isCreatingClient} 
+                className="flex-1"
+              >
+                {isCreatingClient && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save & Select
+              </Button>
             </div>
-          </>
-        )}
-      </div>
-    );
+          </div>
+        </div>
+      );
+    } else {
+      // Client Search View (default)
+      clientSection = (
+        <div className="space-y-2 relative" ref={clientSearchRef}>
+          <Label htmlFor="clientSearch" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Client <span className="text-red-500">*</span>
+          </Label>
+          <div className="relative flex items-center gap-2">
+            <div className="relative flex-1">
+              <Input
+                id="clientSearch"
+                type="text"
+                value={isClientDropdownOpen ? clientSearchTerm : appointmentData.clientName}
+                onChange={(e) => {
+                  setClientSearchTerm(e.target.value);
+                  if (!isClientDropdownOpen) setIsClientDropdownOpen(true);
+                }}
+                onFocus={() => {
+                  setIsClientDropdownOpen(true);
+                }}
+                placeholder="Search for a client..."
+                disabled={isRescheduling}
+                className="pl-10 w-full bg-background text-foreground border border-border placeholder:text-muted-foreground"
+                autoComplete="off"
+                onBlur={() => {
+                  setTimeout(() => {
+                    if (!appointmentData.client && clientSearchTerm) {
+                      setAppointmentData(prev => ({ ...prev, clientName: clientSearchTerm }));
+                    }
+                  }, 200);
+                }}
+              />
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+              {(isLoadingClients || isFetchingClients) && (
+                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-gray-400" />
+              )}
+              {appointmentData.clientName && (
+                <button
+                  type="button"
+                  onClick={clearClient}
+                  className="absolute right-9 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                  title="Clear"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+              
+              {isClientDropdownOpen && (
+                <div className="absolute z-[100] mt-1 w-full bg-background shadow-lg rounded-md py-1 max-h-60 overflow-auto border border-border">
+                  {isLoadingClients || isFetchingClients ? (
+                    <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">Loading clients...</div>
+                  ) : Array.isArray(clientsResponse) && clientsResponse.length > 0 ? (
+                    clientsResponse.map((client: any) => (
+                      <button
+                        key={client._id}
+                        type="button"
+                        onClick={() => handleClientSelect(client)}
+                        className="w-full text-left px-4 py-2 hover:bg-muted border-b border-border last:border-0"
+                      >
+                        <div className="font-medium text-foreground">{client.fullName || client.name}</div>
+                        {client.email && (
+                          <div className="text-xs text-muted-foreground truncate">{client.email}</div>
+                        )}
+                        {client.phone && (
+                          <div className="text-xs text-muted-foreground">{client.phone}</div>
+                        )}
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400 italic text-center">
+                      {debouncedClientSearchTerm ? 'No matching clients found.' : 'No clients found.'}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <Button
+              type="button"
+              onClick={() => setIsAddClientModalOpen(true)}
+              variant="outline"
+              size="icon"
+              className="shrink-0 h-10 w-10 border-primary/20 hover:bg-primary/5 hover:border-primary transition-all"
+              disabled={isRescheduling}
+              title="Add new client"
+            >
+              <PlusCircle className="h-5 w-5 text-primary" />
+            </Button>
+          </div>
+
+          {isGuest && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="space-y-1 text-xs">
+                <Label htmlFor="clientEmail" className="text-[10px] font-medium text-muted-foreground">Guest Email</Label>
+                <Input
+                  id="clientEmail"
+                  type="email"
+                  value={appointmentData.clientEmail || ''}
+                  onChange={(e) => setAppointmentData(prev => ({ ...prev, clientEmail: e.target.value }))}
+                  placeholder="Optional"
+                  className="h-8 text-xs"
+                />
+              </div>
+              <div className="space-y-1 text-xs">
+                <Label htmlFor="clientPhone" className="text-[10px] font-medium text-muted-foreground">Guest Phone</Label>
+                <Input
+                  id="clientPhone"
+                  type="tel"
+                  value={appointmentData.clientPhone || ''}
+                  onChange={(e) => setAppointmentData(prev => ({ ...prev, clientPhone: e.target.value }))}
+                  placeholder="Optional"
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
   } else {
     // Edit/Reschedule Mode
     clientSection = (
@@ -2998,18 +3241,15 @@ export default function NewAppointmentForm({
 
           <div className="space-y-2">
             <Label htmlFor="tax" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              Tax (₹)
+              Tax (₹) {vendorProfile?.data?.taxes?.taxValue ? `(${vendorProfile.data.taxes.taxValue}${vendorProfile.data.taxes.taxType === 'percentage' ? '%' : ''})` : ''}
             </Label>
             <Input
               id="tax"
-              type="number"
-              step="0.01"
-              min="0"
-              value={appointmentData.tax || ''}
-              onChange={(e) => handleFieldChange('tax', e.target.value)}
+              type="text"
+              value={appointmentData.tax ? appointmentData.tax.toFixed(2) : '0.00'}
+              readOnly
+              className="w-full bg-muted text-foreground border border-border"
               placeholder="0.00"
-              disabled={isRescheduling}
-              className="w-full bg-white dark:bg-neutral-900 text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-neutral-700"
             />
           </div>
 
@@ -3109,114 +3349,6 @@ export default function NewAppointmentForm({
         </div>
       </form >
 
-      {/* Add New Client Modal - Only for new appointments */}
-      {
-        isClientSearchEnabled && (
-          <Dialog open={isAddClientModalOpen} onOpenChange={setIsAddClientModalOpen}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background text-foreground">
-              <DialogHeader>
-                <DialogTitle>Add New Client</DialogTitle>
-                <DialogDescription>
-                  Enter the details for the new client.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4 py-4">
-                {/* Profile Picture */}
-                <div className="space-y-2">
-                  <div className="flex justify-center">
-                    <div className="relative">
-                      <p className="text-sm font-medium text-gray-700 text-center mb-2">Profile Photo</p>
-                      <input
-                        id="profilePicture"
-                        type="file"
-                        accept="image/*"
-                        onChange={handleNewClientFileChange}
-                        className="hidden"
-                      />
-                      <label
-                        htmlFor="profilePicture"
-                        className="cursor-pointer block"
-                      >
-                        <div className="w-24 h-24 rounded-full border-4 border-dashed border-gray-300 dark:border-neutral-700 hover:border-blue-400 transition-colors duration-200 flex items-center justify-center overflow-hidden bg-gray-50 dark:bg-neutral-800 hover:bg-blue-50 dark:hover:bg-neutral-700">
-                          {newClientData.profilePicture ? (
-                            <img
-                              src={newClientData.profilePicture}
-                              alt="Profile preview"
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="text-center">
-                              <PlusCircle className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-                              <span className="text-xs text-gray-500">Add Photo</span>
-                            </div>
-                          )}
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName" className="text-sm font-medium text-gray-700 dark:text-gray-300">Full Name <span className="text-red-500">*</span></Label>
-                    <Input id="fullName" name="fullName" value={newClientData.fullName} onChange={handleNewClientInputChange} required className="bg-background text-foreground border border-border" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-sm font-medium text-gray-700 dark:text-gray-300">Phone <span className="text-red-500">*</span></Label>
-                    <Input id="phone" name="phone" value={newClientData.phone} onChange={handleNewClientInputChange} required className="bg-background text-foreground border border-border" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium text-gray-700 dark:text-gray-300">Email</Label>
-                    <Input id="email" name="email" type="email" value={newClientData.email} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="birthdayDate" className="text-sm font-medium text-gray-700 dark:text-gray-300">Birthday</Label>
-                    <Input id="birthdayDate" name="birthdayDate" type="date" value={newClientData.birthdayDate} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="gender" className="text-sm font-medium text-gray-700 dark:text-gray-300">Gender</Label>
-                    <Select name="gender" value={newClientData.gender} onValueChange={(value) => handleNewClientSelectChange('gender', value)}>
-                      <SelectTrigger className="bg-background text-foreground border border-border">
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-background text-foreground border border-border">
-                        <SelectItem value="Male">Male</SelectItem>
-                        <SelectItem value="Female">Female</SelectItem>
-                        <SelectItem value="Other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="country" className="text-sm font-medium text-gray-700 dark:text-gray-300">Country</Label>
-                    <Input id="country" name="country" value={newClientData.country} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="occupation" className="text-sm font-medium text-gray-700 dark:text-gray-300">Occupation</Label>
-                    <Input id="occupation" name="occupation" value={newClientData.occupation} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address" className="text-sm font-medium text-gray-700 dark:text-gray-300">Address</Label>
-                  <Textarea id="address" name="address" value={newClientData.address} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border placeholder:text-muted-foreground" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="preferences" className="text-sm font-medium text-gray-700 dark:text-gray-300">Preferences</Label>
-                  <Textarea id="preferences" name="preferences" value={newClientData.preferences} onChange={handleNewClientInputChange} className="bg-background text-foreground border border-border placeholder:text-muted-foreground" />
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddClientModalOpen(false)}>Cancel</Button>
-                <Button onClick={handleCreateClient} disabled={isCreatingClient}>
-                  {isCreatingClient && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Save Client
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        )
-      }
     </div >
   );
 

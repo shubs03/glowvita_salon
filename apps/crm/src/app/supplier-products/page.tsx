@@ -83,6 +83,7 @@ export default function SupplierProductsPage() {
   const [itemsPerPage, setItemsPerPage] = useState(8);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -95,15 +96,22 @@ export default function SupplierProductsPage() {
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
   const [formData, setFormData] = useState<Partial<Product>>({});
 
+  // Derive unique categories present in the loaded products
+  const availableCategories = useMemo(() => {
+    const names = new Set(productsData.map((p: Product) => p.category).filter(Boolean));
+    return Array.from(names) as string[];
+  }, [productsData]);
+
   // Filtered products
   const filteredProducts = useMemo(() => {
     return [...productsData]
       .filter(p =>
         p.productName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-        (statusFilter === 'all' || p.status === statusFilter)
+        (statusFilter === 'all' || p.status === statusFilter) &&
+        (categoryFilter === 'all' || p.category?.toLowerCase() === categoryFilter.toLowerCase())
       )
       .sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
-  }, [productsData, searchTerm, statusFilter]);
+  }, [productsData, searchTerm, statusFilter, categoryFilter]);
 
   // Paginated products
   const paginatedProducts = useMemo(() => {
@@ -308,9 +316,12 @@ export default function SupplierProductsPage() {
             <FiltersToolbar
               searchTerm={searchTerm}
               statusFilter={statusFilter}
+              categoryFilter={categoryFilter}
+              availableCategories={availableCategories}
               viewMode={viewMode}
               onSearchChange={setSearchTerm}
               onStatusChange={setStatusFilter}
+              onCategoryChange={setCategoryFilter}
               onViewModeChange={setViewMode}
               onAddProduct={() => handleOpenProductModal()}
             />

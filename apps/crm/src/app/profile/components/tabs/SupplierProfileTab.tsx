@@ -12,9 +12,10 @@ import { Upload, User } from 'lucide-react';
 interface SupplierProfileTabProps {
     supplier: any;
     setSupplier: any;
+    handleProfileImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
 }
 
-export const SupplierProfileTab = ({ supplier, setSupplier }: SupplierProfileTabProps) => {
+export const SupplierProfileTab = ({ supplier, setSupplier, handleProfileImageUpload }: SupplierProfileTabProps) => {
     const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
 
     const handleSave = async () => {
@@ -75,16 +76,7 @@ export const SupplierProfileTab = ({ supplier, setSupplier }: SupplierProfileTab
                                 type="file"
                                 className="hidden"
                                 accept="image/*"
-                                onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => {
-                                            setSupplier({ ...supplier, profileImage: reader.result as string });
-                                        };
-                                        reader.readAsDataURL(file);
-                                    }
-                                }}
+                                onChange={handleProfileImageUpload}
                             />
                         </label>
                     </div>

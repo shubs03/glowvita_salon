@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { updateUser } from "@repo/store/slices/crmAuthSlice";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@repo/ui/tabs";
 import { useRouter } from 'next/navigation';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
@@ -165,6 +167,7 @@ interface DoctorProfile {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const { user, role } = useCrmAuth();
 
   // Vendor profile data
@@ -380,6 +383,9 @@ export default function ProfilePage() {
         await updateDoctorProfile(updatedDoctor).unwrap();
       }
 
+      // Update Redux state to sync header, sidebar and other components
+      dispatch(updateUser({ profileImage: base64 }));
+
       toast.success('Profile image updated successfully');
     } catch (error: any) {
       toast.error(error?.data?.message || 'Failed to update profile image');
@@ -499,12 +505,7 @@ export default function ProfilePage() {
                     >
                       Subscription
                     </TabsTrigger>
-                    <TabsTrigger
-                      value="gallery"
-                      className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
-                    >
-                      Gallery
-                    </TabsTrigger>
+
                     <TabsTrigger
                       value="bank"
                       className="whitespace-nowrap rounded-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm font-medium transition-all hover:bg-background/60 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:border data-[state=active]:border-primary/20"
@@ -554,10 +555,10 @@ export default function ProfilePage() {
 
           <TabsContent value="profile">
             {role === 'vendor' && localVendor && (
-              <ProfileTab vendor={localVendor} setVendor={setLocalVendor} />
+              <ProfileTab vendor={localVendor} setVendor={setLocalVendor} handleProfileImageUpload={handleProfileImageUpload} />
             )}
             {role === 'supplier' && localSupplier && (
-              <SupplierProfileTab supplier={localSupplier} setSupplier={setLocalSupplier} />
+              <SupplierProfileTab supplier={localSupplier} setSupplier={setLocalSupplier} handleProfileImageUpload={handleProfileImageUpload} />
             )}
             {role === 'doctor' && localDoctor && (
               <div className="p-8 text-center bg-card rounded-xl border border-dashed">
@@ -613,9 +614,7 @@ export default function ProfilePage() {
                 <SubscriptionTab subscription={localSupplier?.subscription} userType="supplier" />
               </TabsContent>
 
-              <TabsContent value="gallery">
-                <GalleryTab gallery={localSupplier?.gallery || []} setVendor={setLocalSupplier} />
-              </TabsContent>
+
 
               <TabsContent value="bank">
                 <BankDetailsTab bankDetails={localSupplier?.bankDetails || {}} setVendor={setLocalSupplier} />
