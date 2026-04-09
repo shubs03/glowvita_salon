@@ -37,14 +37,33 @@ export const assignRegion = async (city, state, coordinates) => {
     }
 
     // 2. Text-based Match (Fallback for imprecise coordinates or neighborhoods like "Baner, Pune")
-    if (city && typeof city === 'string' && city.trim() !== "" && city !== "Current Location") {
-      const cityParts = city.split(',').map(part => part.trim().toLowerCase());
+    const searchString = [city, state].filter(s => s && typeof s === 'string' && s.trim() !== "" && s !== "Current Location").join(', ');
+    
+    if (searchString) {
+      const parts = searchString.split(',').map(part => part.trim().toLowerCase());
       const allRegions = await RegionModel.find({ isActive: true }).lean();
       
-      for (const part of cityParts) {
+      console.log(`[RegionAssignment] Attempting text match for: "${searchString}" across ${allRegions.length} regions`);
+
+      // Priority 1: Exact matches for name or code
+      for (const part of parts) {
         if (!part || part.length < 3) continue;
 
-        // Find a region whose name or code overlaps with the search part
+        const exactMatch = allRegions.find(r => 
+          r.name.toLowerCase() === part || 
+          r.code.toLowerCase() === part
+        );
+
+        if (exactMatch) {
+          console.log(`[RegionAssignment] Exact text match found: ${exactMatch.name} for part: "${part}"`);
+          return exactMatch._id;
+        }
+      }
+
+      // Priority 2: Overlap matches (the existing logic)
+      for (const part of parts) {
+        if (!part || part.length < 3) continue;
+
         const matchedRegion = allRegions.find(r => {
           const rName = r.name.toLowerCase();
           const rCode = r.code.toLowerCase();
@@ -53,14 +72,14 @@ export const assignRegion = async (city, state, coordinates) => {
         });
 
         if (matchedRegion) {
-          console.log(`[RegionAssignment] Full-text match found: ${matchedRegion.name} for location part: ${part}`);
+          console.log(`[RegionAssignment] Overlap text match found: ${matchedRegion.name} for part: "${part}"`);
           return matchedRegion._id;
         }
       }
     }
 
     // No fallback, no default region as per requirements
-    console.warn(`[RegionAssignment] No region found for city: ${city}, coordinates:`, coordinates);
+    console.warn(`[RegionAssignment] No region found for city: ${city}, state: ${state}, coordinates:`, coordinates);
     return null;
 
   } catch (error) {

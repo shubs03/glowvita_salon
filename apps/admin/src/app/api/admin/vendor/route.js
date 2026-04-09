@@ -381,7 +381,7 @@ export const GET = authMiddlewareAdmin(
     // Otherwise fetch all vendors with region filter
     const regionQuery = buildRegionQueryFromRequest(req);
     console.log('[Vendor GET] Query:', regionQuery);
-    const vendors = await VendorModel.find(regionQuery).populate("subscription.plan", "name").select("-password").lean();
+    const vendors = await VendorModel.find(regionQuery).populate("subscription.plan", "name").populate("regionId", "name").select("-password").lean();
     console.log('[Vendor GET] Found vendors:', vendors.length);
     return Response.json(vendors);
   }, ["SUPER_ADMIN", "REGIONAL_ADMIN", "STAFF"],
@@ -449,6 +449,16 @@ export const PUT = authMiddlewareAdmin(
       gstNo,
       updatedAt: Date.now(),
     };
+
+    // Re-assign region if location/city/state changed
+    if (city || state || location) {
+      const { assignRegion } = await import("@repo/lib");
+      const newRegionId = await assignRegion(city || existingVendor.city, state || existingVendor.state, location || existingVendor.location);
+      if (newRegionId) {
+        updateData.regionId = newRegionId;
+      }
+    }
+
 
     // Validate required fields
     if (
