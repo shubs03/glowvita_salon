@@ -130,7 +130,7 @@ export const GlobalSearchBar = ({
   }, [searchParams, categoriesData]);
 
   // ── Sync with global context (Requirements 1 & 3) ─────────────────────────
-  const { userLat, userLng, locationLabel, setUserLocation, setServiceQuery, setSelectedCity } = useSalonFilter();
+  const { userLat, userLng, locationLabel, setUserLocation, setServiceQuery, setSelectedCity, clearLocation } = useSalonFilter();
 
   useEffect(() => {
     if (typeof window === 'undefined' || window.location.pathname !== "/salons") return;
@@ -249,20 +249,42 @@ export const GlobalSearchBar = ({
     if (serviceInput) params.append("serviceName", serviceInput);
     if (selectedCategoryId) params.append("categoryIds", selectedCategoryId);
 
-    if (selectedLat != null && selectedLng != null) {
-      params.append("lat", selectedLat.toString());
-      params.append("lng", selectedLng.toString());
-      if (locationInput && locationInput !== "Current Location") {
-        params.append("locationLabel", locationInput.split(",")[0].trim());
+    const navigate = (lat?: number, lng?: number, label?: string) => {
+      if (lat != null && lng != null) {
+        params.append("lat", lat.toString());
+        params.append("lng", lng.toString());
+        if (label) params.append("locationLabel", label.split(",")[0].trim());
+      } else if (locationInput && locationInput !== "Current Location") {
+        params.append("city", locationInput.split(",")[0].trim());
       }
-    } else if (locationInput && locationInput !== "Current Location") {
-      // Fallback: text-based city search (legacy)
-      const cityPart = locationInput.split(",")[0].trim();
-      params.append("city", cityPart);
-    }
+      if (dateInput) params.append("date", dateInput);
+      router.push(`/search?${params.toString()}`);
+    };
 
-    if (dateInput) params.append("date", dateInput);
-    router.push(`/search?${params.toString()}`);
+    // If we have coordinates already, navigate immediately
+    if (selectedLat != null && selectedLng != null) {
+      navigate(selectedLat, selectedLng, locationInput);
+    } 
+    // If no coordinates but we have text, try one-time geocode to get better precision
+    else if (locationInput && locationInput !== "Current Location" && isLoaded) {
+      const geocoder = new google.maps.Geocoder();
+      const qualifiedQuery = locationInput.toLowerCase().includes("india") ? locationInput : `${locationInput}, India`;
+      
+      geocoder.geocode({ 
+        address: qualifiedQuery,
+        componentRestrictions: { country: 'IN' }
+      }, (results, status) => {
+        if (status === "OK" && results?.[0]?.geometry?.location) {
+          const loc = results[0].geometry.location;
+          navigate(loc.lat(), loc.lng(), locationInput);
+        } else {
+          // If geocode fails, fallback to pure text search
+          navigate();
+        }
+      });
+    } else {
+      navigate();
+    }
   };
 
   const isHero = variant === "hero";
@@ -455,6 +477,9 @@ export const GlobalSearchBar = ({
               // Clear resolved coords if user is editing
               setSelectedLat(null);
               setSelectedLng(null);
+              if (!e.target.value.trim()) {
+                clearLocation();
+              }
             }}
             onFocus={() => setIsLocationFocused(true)}
             onBlur={() =>

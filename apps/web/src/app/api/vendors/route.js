@@ -140,14 +140,43 @@ export const GET = async (request) => {
       const region = await RegionModel.findById(targetRegionId).lean();
       const regionName = region?.name || "";
 
-      vendorMatch.$or = [
-        { "vendorData.regionId": targetRegionId },
-        { "vendorData.city": { $regex: new RegExp(`^${regionName}$`, "i") } }
-      ];
+      // If the search string (city) contains a specific area like "College Road",
+      // and it's different from the general city/region name, we filter by area.
+      const searchParts = city.split(',').map(p => p.trim());
+      const specificArea = searchParts[0];
+      const isSpecificArea = specificArea && 
+                             specificArea.toLowerCase() !== regionName.toLowerCase() && 
+                             specificArea !== "Current Location";
+
+      if (isSpecificArea) {
+        console.log(`[SearchAPI] Applying neighborhood filter for: ${specificArea} within region: ${regionName}`);
+        vendorMatch.$and = [
+          {
+            $or: [
+              { "vendorData.regionId": targetRegionId },
+              { "vendorData.city": { $regex: new RegExp(`^${regionName}$`, "i") } }
+            ]
+          },
+          {
+            $or: [
+              { "vendorData.address": { $regex: new RegExp(specificArea, "i") } },
+              { "vendorData.city": { $regex: new RegExp(specificArea, "i") } }
+            ]
+          }
+        ];
+      } else {
+        vendorMatch.$or = [
+          { "vendorData.regionId": targetRegionId },
+          { "vendorData.city": { $regex: new RegExp(`^${regionName}$`, "i") } }
+        ];
+      }
     } 
-    // Priority 3: City Fallback
+    // Priority 3: City Fallback (Legacy)
     else if (useCityFallback && cityLegacy) {
-      vendorMatch["vendorData.city"] = { $regex: new RegExp(`^${cityLegacy}$`, "i") };
+      vendorMatch.$or = [
+        { "vendorData.city": { $regex: new RegExp(`^${cityLegacy}$`, "i") } },
+        { "vendorData.address": { $regex: new RegExp(cityLegacy, "i") } }
+      ];
     }
 
     pipeline.push({ $match: vendorMatch });

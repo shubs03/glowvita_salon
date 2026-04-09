@@ -22,7 +22,7 @@ const HeroSection2 = () => {
   const router = useRouter();
 
   // ── Shared filter context — updating this changes landing page sections ─────
-  const { setUserLocation, userLat, userLng, locationLabel } = useSalonFilter();
+  const { setUserLocation, userLat, userLng, locationLabel, clearLocation } = useSalonFilter();
 
   const [serviceInput, setServiceInput] = useState("");
   // Synced with context's locationLabel so the input reflects auto-detected location
@@ -120,6 +120,9 @@ const HeroSection2 = () => {
     setLocationInput(value);
     setSelectedLat(null);
     setSelectedLng(null);
+    if (!value.trim()) {
+      clearLocation();
+    }
   };
 
   // ── Geocode a place_id and update both local state AND context ────────────

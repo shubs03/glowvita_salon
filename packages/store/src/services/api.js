@@ -402,12 +402,14 @@ export const glowvitaApi = createApi({
         if (params.limit) queryParams.append("limit", params.limit.toString());
         if (params.offset) queryParams.append("offset", params.offset.toString());
 
-        // Coordinate-based location (primary)
+        // Coordinate-based location
         if (params.lat != null && params.lng != null) {
           queryParams.append("lat", params.lat.toString());
           queryParams.append("lng", params.lng.toString());
-        } else if (params.city) {
-          // Legacy city fallback
+        }
+
+        // Region / Neighborhood fallback or explicit filter
+        if (params.city) {
           queryParams.append("city", params.city);
         }
 
@@ -425,12 +427,14 @@ export const glowvitaApi = createApi({
       query: (params = {}) => {
         const queryParams = new URLSearchParams();
 
-        // Coordinate-based location (primary)
+        // Coordinate-based location
         if (params.lat != null && params.lng != null) {
           queryParams.append("lat", params.lat.toString());
           queryParams.append("lng", params.lng.toString());
-        } else if (params.city) {
-          // Legacy city fallback
+        }
+
+        // Region / Neighborhood fallback or explicit filter
+        if (params.city) {
           queryParams.append("city", params.city);
         }
 

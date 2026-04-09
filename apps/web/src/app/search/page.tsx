@@ -51,21 +51,15 @@ const SearchResults = () => {
   const { data: vendorsData, isLoading: vendorsLoading } =
     useGetPublicVendorsQuery({
       serviceName: serviceQuery || productNameQuery,
-      ...(lat != null && lng != null
-        ? { lat, lng }             // coordinate-based (primary)
-        : cityFallback
-        ? { city: cityFallback }   // legacy city fallback
-        : {}),                     // no location filter → show all
+      ...(lat != null && lng != null ? { lat, lng } : {}),
+      city: locationLabel || cityFallback,
       categoryIds: categoryIdQuery,
     });
 
   const { data: productsData, isLoading: productsLoading } =
     useGetPublicProductsQuery({
-      ...(lat != null && lng != null
-        ? { lat, lng }
-        : cityFallback
-        ? { city: cityFallback }
-        : {}),
+      ...(lat != null && lng != null ? { lat, lng } : {}),
+      city: locationLabel || cityFallback,
     });
 
   const vendors = useMemo(

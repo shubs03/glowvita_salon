@@ -13,11 +13,11 @@ import RegionModel from "../models/admin/Region.model.js";
 export const assignRegion = async (city, state, coordinates) => {
   try {
     // 1. Geospatial Match (Highest Priority)
-    if (coordinates && 
-        typeof coordinates.lat === 'number' && 
-        typeof coordinates.lng === 'number' && 
-        coordinates.lat !== 0 && coordinates.lng !== 0) {
-      
+    if (coordinates &&
+      typeof coordinates.lat === 'number' &&
+      typeof coordinates.lng === 'number' &&
+      coordinates.lat !== 0 && coordinates.lng !== 0) {
+
       const region = await RegionModel.findOne({
         geometry: {
           $geoIntersects: {
@@ -29,7 +29,7 @@ export const assignRegion = async (city, state, coordinates) => {
         },
         isActive: true
       });
-      
+
       if (region) {
         console.log(`[RegionAssignment] Geospatial match found: ${region.name} for [${coordinates.lat}, ${coordinates.lng}]`);
         return region._id;
@@ -40,20 +40,28 @@ export const assignRegion = async (city, state, coordinates) => {
     if (city && typeof city === 'string' && city.trim() !== "" && city !== "Current Location") {
       const cityParts = city.split(',').map(part => part.trim().toLowerCase());
       const allRegions = await RegionModel.find({ isActive: true }).lean();
-      
-      for (const part of cityParts) {
+
+      // Reverse to check general parts (City, State, Country) before specific (Street, Building)
+      for (const part of [...cityParts].reverse()) {
         if (!part || part.length < 3) continue;
 
-        // Find a region whose name or code overlaps with the search part
-        const matchedRegion = allRegions.find(r => {
-          const rName = r.name.toLowerCase();
-          const rCode = r.code.toLowerCase();
-          return part.includes(rName) || rName.includes(part) || 
-                 part.includes(rCode) || rCode.includes(part);
-        });
+        // Try exact match first for better precision
+        let matchedRegion = allRegions.find(r =>
+          r.name.toLowerCase() === part || r.code.toLowerCase() === part
+        );
+
+        // Fallback to partial match if no exact match found
+        if (!matchedRegion) {
+          matchedRegion = allRegions.find(r => {
+            const rName = r.name.toLowerCase();
+            const rCode = r.code.toLowerCase();
+            return part.includes(rName) || rName.includes(part) ||
+              part.includes(rCode) || rCode.includes(part);
+          });
+        }
 
         if (matchedRegion) {
-          console.log(`[RegionAssignment] Full-text match found: ${matchedRegion.name} for location part: ${part}`);
+          console.log(`[RegionAssignment] Text-based match found: ${matchedRegion.name} for location part: ${part}`);
           return matchedRegion._id;
         }
       }

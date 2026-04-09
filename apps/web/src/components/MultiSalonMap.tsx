@@ -37,24 +37,40 @@ export const MultiSalonMap = ({ vendors, onMarkerClick, searchQuery }: MultiSalo
   useEffect(() => {
     if (!isLoaded) return;
 
-    if (searchQuery) {
+    // 1. If we have vendors with coordinates, prioritize centering on them
+    if (vendors.length > 0) {
+      const vendorsWithCoords = vendors.filter(v => v.location?.lat && v.location?.lng);
+      if (vendorsWithCoords.length > 0) {
+        // Average coordinates or just pick the first one
+        const firstWithCoords = vendorsWithCoords[0];
+        setMapCenter({ lat: firstWithCoords.location.lat, lng: firstWithCoords.location.lng });
+        return;
+      }
+    }
+
+    // 2. Fallback to geocoding the search query if no vendors have coordinates
+    if (searchQuery && searchQuery.trim() !== "") {
       const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ address: searchQuery }, (results, status) => {
+      // Restrict geocoding to India and optionally append it to the query for better results
+      const qualifiedQuery = searchQuery.toLowerCase().includes("india") 
+        ? searchQuery 
+        : `${searchQuery}, India`;
+
+      geocoder.geocode({ 
+        address: qualifiedQuery,
+        componentRestrictions: { country: 'IN' } 
+      }, (results, status) => {
         if (status === "OK" && results?.[0]?.geometry?.location) {
           setMapCenter({
             lat: results[0].geometry.location.lat(),
             lng: results[0].geometry.location.lng()
           });
+        } else {
+          console.warn(`[MultiSalonMap] Geocoding failed for "${qualifiedQuery}": ${status}`);
+          // Fallback to default center if everything fails
+          setMapCenter(defaultCenter);
         }
       });
-      return;
-    }
-
-    if (vendors.length > 0) {
-      const firstWithCoords = vendors.find(v => v.location?.lat && v.location?.lng);
-      if (firstWithCoords) {
-        setMapCenter({ lat: firstWithCoords.location.lat, lng: firstWithCoords.location.lng });
-      }
     }
   }, [vendors, searchQuery, isLoaded]);
 
