@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@repo/ui/tabs";
 import { useRouter } from 'next/navigation';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
+import { useAppDispatch } from '@repo/store/hooks';
+import { updateUser } from '@repo/store/slices/crmAuthSlice';
 import { useGetVendorProfileQuery, useGetWorkingHoursQuery, useGetCurrentSupplierProfileQuery, useGetDoctorProfileQuery, useUpdateVendorProfileMutation, useUpdateSupplierProfileMutation, useUpdateDoctorProfileMutation } from '@repo/store/api';
 import { toast } from 'sonner';
 import { ProfileTab } from './tabs/ProfileTab';
@@ -165,6 +167,7 @@ interface DoctorProfile {
 
 export default function ProfilePage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const { user, role } = useCrmAuth();
 
   // Vendor profile data
@@ -370,14 +373,20 @@ export default function ProfilePage() {
         const updatedVendor = { ...localVendor, profileImage: base64 };
         setLocalVendor(updatedVendor);
         await updateVendorProfile(updatedVendor).unwrap();
+        // Sync with global auth state for sidebar/navbar
+        dispatch(updateUser({ profileImage: base64 }));
       } else if (role === 'supplier' && localSupplier) {
         const updatedSupplier = { ...localSupplier, profileImage: base64 };
         setLocalSupplier(updatedSupplier);
         await updateSupplierProfile(updatedSupplier).unwrap();
+        // Sync with global auth state for sidebar/navbar
+        dispatch(updateUser({ profileImage: base64, shopName: updatedSupplier.shopName }));
       } else if (role === 'doctor' && localDoctor) {
         const updatedDoctor = { ...localDoctor, profileImage: base64 };
         setLocalDoctor(updatedDoctor);
         await updateDoctorProfile(updatedDoctor).unwrap();
+        // Sync with global auth state for sidebar/navbar
+        dispatch(updateUser({ profileImage: base64, name: updatedDoctor.name }));
       }
 
       toast.success('Profile image updated successfully');
