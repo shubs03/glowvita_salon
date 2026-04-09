@@ -7,7 +7,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@repo/ui/tabs";
 import { useRouter } from 'next/navigation';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { useAppDispatch } from '@repo/store/hooks';
-import { updateUser } from '@repo/store/slices/crmAuthSlice';
 import { useGetVendorProfileQuery, useGetWorkingHoursQuery, useGetCurrentSupplierProfileQuery, useGetDoctorProfileQuery, useUpdateVendorProfileMutation, useUpdateSupplierProfileMutation, useUpdateDoctorProfileMutation } from '@repo/store/api';
 import { toast } from 'sonner';
 import { ProfileTab } from './tabs/ProfileTab';

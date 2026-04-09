@@ -25,6 +25,7 @@ interface ProductCardProps {
     description: string;
     discount?: number;
     rating?: number;
+    reviewCount?: number;
   };
   onQuickAddToCart: (product: any, e: React.MouseEvent) => void;
   onViewDetails: (product: any) => void;
@@ -41,9 +42,8 @@ export function ProductCard({
 }: ProductCardProps) {
   const [addToCart] = useAddToCartMutation();
   
-  // Mock review count since it's not in the product data
-  const reviewCount = Math.floor(Math.random() * 50) + 10;
-  const rating = product.rating || 4.5;
+  const rating = product.rating || 0;
+  const reviewCount = product.reviewCount || 0;
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -82,28 +82,23 @@ export function ProductCard({
           className="group-hover:scale-105 transition-transform duration-300 object-cover"
         />
         
-        {/* Stock Badge */}
-        <div className="absolute top-2 left-2 text-xs">
-          <Badge 
-            variant={product.stock > 10 ? "secondary" : product.stock > 0 ? "outline" : "destructive"}
-            className={cn(
-              "text-xs font-medium",
-              product.stock > 10 
-                ? 'bg-green-100 text-green-800 border-green-200' 
-                : product.stock > 0 
-                  ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                  : 'bg-red-100 text-red-800 border-red-200'
-            )}
-          >
-            {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
-          </Badge>
-        </div>
+        {/* Out of Stock Badge - only show when stock is 0 */}
+        {product.stock === 0 && (
+          <div className="absolute top-2 left-2 text-xs">
+            <Badge 
+              variant="destructive"
+              className="text-xs font-medium bg-red-100 text-red-800 border-red-200"
+            >
+              Out of stock
+            </Badge>
+          </div>
+        )}
         
         {/* Discount Badge */}
         {discountPercentage > 0 && (
-          <div className="absolute -top-1 -right-1">
-            <div className="bg-primary text-white px-1.5 py-0.5 rounded-full text-xs font-bold">
-              {discountPercentage}%
+          <div className="absolute top-2 right-2">
+            <div className="bg-primary text-primary-foreground px-2 py-0.5 rounded-full text-xs font-bold shadow-sm">
+              {discountPercentage}% OFF
             </div>
           </div>
         )}
@@ -129,16 +124,7 @@ export function ProductCard({
           {product.productName}
         </h4>
         
-        <div className="flex items-center gap-1 mb-2">
-          <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-          <span className="text-xs font-medium text-foreground">
-            {rating}
-          </span>
-          <span className="text-xs text-muted-foreground">
-            ({reviewCount})
-          </span>
-        </div>
-        
+
         <div className="flex justify-between items-center mt-auto">
           <div>
             {product.salePrice && product.salePrice < product.price ? (
@@ -159,11 +145,18 @@ export function ProductCard({
         </div>
 
         <div className="flex items-center justify-between gap-2 mt-2">
-          <div className="flex justify-between w-full">
+          {/* Dynamic Reviews */}
+          <div className="flex items-center gap-1 shrink-0">
+            <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
+            <span className="text-xs font-semibold">{rating > 0 ? rating : '0'}</span>
+            <span className="text-[10px] text-muted-foreground">({reviewCount})</span>
+          </div>
+
+          <div className="flex justify-end gap-2 w-full">
             <Button
               size="sm"
               variant="outline"
-              className="w-full text-xs lg:mr-3"
+              className="text-xs px-2"
               onClick={handleBuyNowClick}
               disabled={product.stock === 0}
             >
@@ -173,7 +166,7 @@ export function ProductCard({
             <Button
               size="sm"
               variant="outline"
-              className="w-fit text-xs"
+              className="w-fit text-xs px-2"
               onClick={handleAddToCart}
               disabled={product.stock === 0}
             >

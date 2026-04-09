@@ -36,6 +36,9 @@ const orderSchema = new mongoose.Schema({
 
   trackingNumber: { type: String },
   courier: { type: String },
+  cancellationReason: { type: String, default: null },
+  cancelledAt: { type: Date, default: null },
+  cancelledBy: { type: String, default: null }, // 'Vendor', 'Supplier'
 
   statusHistory: [{
     status: String,

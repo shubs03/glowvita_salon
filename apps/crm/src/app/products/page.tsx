@@ -26,6 +26,7 @@ import {
   useCreateCrmProductMutation,
   useUpdateCrmProductMutation,
   useDeleteCrmProductMutation,
+  useAdjustInventoryMutation,
 } from "@repo/store/api";
 import { useCrmAuth } from "@/hooks/useCrmAuth";
 
@@ -90,6 +91,8 @@ export default function ProductsPage() {
     useUpdateCrmProductMutation();
   const [deleteProduct, { isLoading: isDeletingProduct }] =
     useDeleteCrmProductMutation();
+  const [adjustInventory, { isLoading: isAdjustingInventory }] =
+    useAdjustInventoryMutation();
 
   const {
     data: categoriesDatas,
@@ -276,7 +279,7 @@ export default function ProductsPage() {
       return;
     }
 
-    if (formData.salePrice && formData.salePrice >= formData.price) {
+    if (formData.salePrice && Number(formData.salePrice) >= Number(formData.price)) {
       toast.error("Sale Price must be less than Regular Price.");
       return;
     }
@@ -285,6 +288,56 @@ export default function ProductsPage() {
     let payload = selectedProduct
       ? { id: selectedProduct._id, ...formData }
       : formData;
+
+    // Check if it's an update to an approved product
+    if (selectedProduct && selectedProduct.status === "approved") {
+      // Define critical fields that require re-approval
+      const criticalFields: (keyof Product)[] = [
+        "productName",
+        "price",
+        "salePrice",
+        "category",
+        "description",
+        "brand",
+        "size",
+        "sizeMetric",
+        "keyIngredients",
+        "forBodyPart",
+        "bodyPartType",
+        "productForm",
+      ];
+
+      const changedFields = criticalFields.filter(
+        (field) => formData[field] !== selectedProduct[field],
+      );
+
+      console.log("Edit Check - Changed Fields:", changedFields);
+
+      if (changedFields.length === 0 && formData.stock !== selectedProduct.stock) {
+        // ONLY stock changed. Use adjustInventory to avoid re-approval.
+        try {
+          const diff = (formData.stock || 0) - (selectedProduct.stock || 0);
+          if (diff !== 0) {
+            await adjustInventory({
+              productId: selectedProduct._id,
+              adjustmentType: diff > 0 ? "IN" : "OUT",
+              quantity: Math.abs(diff),
+              reason: "Correction",
+              reference: "Quick Edit",
+            }).unwrap();
+
+            toast.success("Stock updated successfully");
+            setIsProductModalOpen(false);
+            refetchProducts();
+            return;
+          }
+        } catch (error) {
+          console.error("Failed to adjust inventory:", error);
+          toast.error("Failed to update stock. Falling back to full update.");
+          // Fall through to standard mutation if it fails
+        }
+      }
+    }
 
     if (
       selectedProduct &&
@@ -297,12 +350,13 @@ export default function ProductsPage() {
     try {
       await mutation(payload).unwrap();
       toast.success(
-        `Product ${selectedProduct ? "updated" : "created"} successfully!`,
+        `Product ${selectedProduct ? "updated" : "created"} successfully.`,
       );
       setIsProductModalOpen(false);
       refetchProducts();
-    } catch (error: any) {
-      toast.error(error.data?.message || `Failed to save product.`);
+    } catch (error) {
+      console.error("Save error:", error);
+      toast.error("Failed to save product.");
     }
   };
 
@@ -498,7 +552,7 @@ export default function ProductsPage() {
           onSave={handleSaveProduct}
           product={selectedProduct}
           categories={categoriesData}
-          isSaving={isCreatingProduct || isUpdatingProduct}
+          isSaving={isCreatingProduct || isUpdatingProduct || isAdjustingInventory}
           formData={formData}
           setFormData={setFormData}
           onAddCategoryClick={() => setIsCategoryModalOpen(true)}

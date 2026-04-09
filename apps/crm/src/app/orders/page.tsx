@@ -2,12 +2,13 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Tabs } from "@repo/ui/tabs";
-import { useGetCrmOrdersQuery, useUpdateCrmOrderMutation, useGetCrmClientOrdersQuery, useUpdateCrmClientOrderMutation } from '@repo/store/api';
+import { useGetCrmOrdersQuery, useUpdateCrmOrderMutation, useGetCrmClientOrdersQuery, useUpdateCrmClientOrderMutation, useAdjustInventoryMutation, useGetCrmProductsQuery } from '@repo/store/api';
 import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { toast } from 'sonner';
 import { CheckCircle, Truck, Package, Clock, XCircle } from 'lucide-react';
 import { OrderDetailsModal } from './components/OrderDetailsModal';
 import { ShipOrderModal } from './components/ShipOrderModal';
+import { CancelOrderModal } from './components/CancelOrderModal';
 
 // Import new components
 import OrdersStatsCards from './components/OrdersStatsCards';
@@ -19,7 +20,7 @@ import { Order, OrderItem } from './types';
 
 export default function OrdersPage() {
   const { user, role } = useCrmAuth();
-  const defaultTab = role === 'supplier' ? 'received-orders' : (role === 'vendor' ? 'customer-orders' : 'my-purchases');
+  const defaultTab = role === 'supplier' ? 'marketplace-orders' : (role === 'vendor' ? 'customer-orders' : 'my-purchases');
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   const { data: ordersData = [], isLoading, isError, refetch } = useGetCrmOrdersQuery(
@@ -49,8 +50,16 @@ export default function OrdersPage() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [updateOrder, { isLoading: isUpdatingStatus }] = useUpdateCrmOrderMutation();
   const [updateClientOrder] = useUpdateCrmClientOrderMutation();
+  const [adjustInventory] = useAdjustInventoryMutation();
+  const { data: products = [] } = useGetCrmProductsQuery({ vendorId: user?._id }, { skip: !user?._id });
   const [isShipModalOpen, setIsShipModalOpen] = useState(false);
   const [orderToShip, setOrderToShip] = useState<Order | null>(null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState<Order | null>(null);
+
+  const isOnlineOrder = (order: Order) => {
+    return !!order.userId;
+  };
 
 
   const { customerOrders, myPurchases, receivedOrders, onlineCustomerOrders } = useMemo(() => {
@@ -105,6 +114,8 @@ export default function OrdersPage() {
           trackingNumber: clientOrder.trackingNumber,
           courier: undefined,
           cancellationReason: clientOrder.cancellationReason,
+          cancelledBy: clientOrder.cancelledBy,
+          cancelledAt: clientOrder.cancelledAt,
           userId: clientOrder.userId
         };
       })
@@ -129,7 +140,11 @@ export default function OrdersPage() {
       // Default to activeTab logic when not in purchases view
       if (activeTab === 'customer-orders') dataToFilter = [...customerOrders, ...onlineCustomerOrders];
       if (activeTab === 'my-purchases' && role !== 'supplier') dataToFilter = myPurchases;
-      // For received-orders: Suppliers see both B2B orders (from vendors) and B2C orders (from online customers)
+      // For Received Orders: Separation of Online vs Marketplace for Suppliers
+      if (activeTab === 'online-orders') dataToFilter = onlineCustomerOrders;
+      if (activeTab === 'marketplace-orders') dataToFilter = receivedOrders;
+      
+      // Legacy received-orders fallback (if any)
       if (activeTab === 'received-orders') {
         if (role === 'supplier') {
           dataToFilter = [...receivedOrders, ...onlineCustomerOrders];
@@ -183,7 +198,7 @@ export default function OrdersPage() {
     setIsDetailModalOpen(true);
   };
 
-  const handleUpdateStatus = async (orderId: string, status: Order['status']) => {
+  const handleUpdateStatus = async (orderId: string, status: Order['status'], reason?: string) => {
     const orderExists = [...receivedOrders, ...customerOrders, ...myPurchases, ...onlineCustomerOrders].some(
       (o: Order) => o._id === orderId
     );
@@ -194,9 +209,32 @@ export default function OrdersPage() {
       return;
     }
 
-    const isOnlineOrder = onlineCustomerOrders.some((o: Order) => o._id === orderId);
+    const isFromOnline = onlineCustomerOrders.some((o: Order) => o._id === orderId);
 
-    if (status === 'Shipped') {
+    if (status === 'Cancelled') {
+      const order = [...receivedOrders, ...customerOrders, ...myPurchases, ...onlineCustomerOrders].find(
+        (o: Order) => o._id === orderId
+      );
+
+      // Check if already shipped or delivered (only for non-online orders)
+      if (!isOnlineOrder(order!) && order && (order.status === 'Shipped' || order.status === 'Delivered')) {
+        toast.error("Cannot cancel an order that has already been shipped or delivered.");
+        return;
+      }
+
+      try {
+        if (isOnlineOrder(order!)) {
+          await updateClientOrder({ orderId, status, cancellationReason: reason }).unwrap();
+        } else {
+          await updateOrder({ orderId, status, cancellationReason: reason }).unwrap();
+        }
+
+        toast.success(`Order status updated to ${status} and stock refunded.`);
+        refetch();
+      } catch (error) {
+        toast.error("Failed to update order status.");
+      }
+    } else if (status === 'Shipped') {
       const order = [...receivedOrders, ...customerOrders, ...myPurchases, ...onlineCustomerOrders].find(
         (o: Order) => o._id === orderId
       );
@@ -204,7 +242,7 @@ export default function OrdersPage() {
       setIsShipModalOpen(true);
     } else {
       try {
-        if (isOnlineOrder) {
+        if (isFromOnline) {
           await updateClientOrder({ orderId, status }).unwrap();
         } else {
           await updateOrder({ orderId, status }).unwrap();
@@ -259,12 +297,20 @@ export default function OrdersPage() {
     }
   };
 
+  const handleCancelOrder = (order: Order) => {
+    setOrderToCancel(order);
+    setIsCancelModalOpen(true);
+  };
+
+  const handleCancelConfirm = async (reason: string) => {
+    if (!orderToCancel) return;
+    await handleUpdateStatus(orderToCancel._id, 'Cancelled', reason);
+    setIsCancelModalOpen(false);
+    setOrderToCancel(null);
+  };
+
   const isLoadingAll = isLoading || isClientOrdersLoading;
   const isErrorAny = isError || isClientOrdersError;
-
-  const isOnlineOrder = (order: Order) => {
-    return !!order.userId;
-  };
 
   const getNextStatus = (currentStatus: Order['status'], order: Order) => {
     const vendorOrderStatuses: Order['status'][] = ['Pending', 'Processing', 'Packed', 'Shipped', 'Delivered'];
@@ -304,8 +350,19 @@ export default function OrdersPage() {
           exportData={filteredOrders}
           role={role}
           activeTab={activeTab}
-          onViewMode={activeTab === 'my-purchases' ? 'purchases' : 'orders'}
-          onViewModeChange={(mode) => setActiveTab(mode === 'purchases' ? 'my-purchases' : 'customer-orders')}
+          onViewMode={role === 'supplier' 
+            ? (activeTab === 'marketplace-orders' ? 'purchases' : 'orders')
+            : (activeTab === 'my-purchases' ? 'purchases' : 'orders')
+          }
+          onViewModeChange={(mode) => {
+            if (role === 'supplier') {
+              setActiveTab(mode === 'purchases' ? 'marketplace-orders' : 'online-orders');
+            } else {
+              setActiveTab(mode === 'purchases' ? 'my-purchases' : 'customer-orders');
+            }
+          }}
+          orderLabel={role === 'supplier' ? "Online Orders" : "Orders"}
+          purchasesLabel={role === 'supplier' ? "Marketplace" : "Purchases"}
           onRefetch={() => refetch()}
           isRefreshing={isLoading || isClientOrdersLoading}
         />
@@ -321,6 +378,7 @@ export default function OrdersPage() {
               viewMode={viewMode}
               handleViewDetails={handleViewDetails}
               handleUpdateStatus={handleUpdateStatus}
+              handleCancelOrder={handleCancelOrder}
               isUpdatingStatus={isUpdatingStatus}
               getStatusColor={getStatusColor}
               getStatusIcon={getStatusIcon}
@@ -354,6 +412,14 @@ export default function OrdersPage() {
           onClose={() => setIsShipModalOpen(false)}
           onConfirm={handleShipOrder}
           orderToShip={orderToShip}
+          isUpdatingStatus={isUpdatingStatus}
+        />
+
+        <CancelOrderModal
+          isOpen={isCancelModalOpen}
+          onClose={() => setIsCancelModalOpen(false)}
+          onConfirm={handleCancelConfirm}
+          order={orderToCancel}
           isUpdatingStatus={isUpdatingStatus}
         />
       </div>

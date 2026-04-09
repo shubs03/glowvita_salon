@@ -199,8 +199,8 @@ export default function CartPage() {
       {/* Stats Section */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         <StatCard icon={ShoppingCart} title="Items in Cart" value={cartItems.length} change={`Total quantity: ${itemCount}`} />
-        <StatCard icon={DollarSign} title="Cart Value" value={`₹${subtotal.toFixed(0)}`} change="Before taxes and shipping" />
-        <StatCard icon={Tag} title="Estimated Tax" value={`₹${tax.toFixed(0)}`} change="Including GST and platform fees" />
+        <StatCard icon={DollarSign} title="Cart Value" value={`₹${subtotal.toFixed(2)}`} change="Before taxes and shipping" />
+        <StatCard icon={Tag} title="Estimated Tax" value={`₹${tax.toFixed(2)}`} change="Including GST and platform fees" />
       </div>
 
       {/* Main Cart Table */}
@@ -365,12 +365,12 @@ export default function CartPage() {
                     {/* Left Section - Order Details */}
                     <div className="lg:col-span-2">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                        <div className="text-center">
+                        <div className="text-center border-r md:border-r border-border/50">
                           <div className="text-2xl font-bold text-primary">₹{subtotal.toFixed(2)}</div>
                           <div className="text-sm text-muted-foreground">Subtotal</div>
                           <div className="text-xs text-muted-foreground mt-1">({itemCount} items)</div>
                         </div>
-                        <div className="text-center">
+                        <div className="text-center border-r md:border-r border-border/50">
                           <div className="text-2xl font-bold text-green-600">
                             {shipping > 0 ? `₹${shipping.toFixed(2)}` : 'Free'}
                           </div>
@@ -379,10 +379,13 @@ export default function CartPage() {
                             {shipping === 0 ? 'Qualified!' : 'Standard'}
                           </div>
                         </div>
+                        <div className="text-center border-r md:border-r border-border/50">
+                          <div className="text-2xl font-bold text-orange-600">₹{gst.toFixed(2)}</div>
+                          <div className="text-sm text-muted-foreground">GST ({productGST}%)</div>
+                        </div>
                         <div className="text-center">
-                          <div className="text-2xl font-bold text-gray-600">₹{tax.toFixed(2)}</div>
-                          <div className="text-sm text-muted-foreground">Tax</div>
-                          <div className="text-xs text-muted-foreground mt-1">(8% incl.)</div>
+                          <div className="text-2xl font-bold text-purple-600">₹{platformFee.toFixed(2)}</div>
+                          <div className="text-sm text-muted-foreground">Platform Fee ({productPlatformFee}%)</div>
                         </div>
                       </div>
                     </div>

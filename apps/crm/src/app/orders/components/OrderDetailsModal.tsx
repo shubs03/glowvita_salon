@@ -30,6 +30,8 @@ type Order = {
   trackingNumber?: string;
   courier?: string;
   cancellationReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
   userId?: any;
 };
 
@@ -68,20 +70,75 @@ export function OrderDetailsModal({
         `}</style>
         <DialogHeader className="p-6 pb-4 bg-muted">
           <DialogTitle className="text-xl font-bold">Order Details</DialogTitle>
-          <DialogDescription>
-            Order ID: #{selectedOrder.orderId || `ONLINE-${selectedOrder._id.substring(0, 8).toUpperCase()}`}
+          <DialogDescription className="flex items-center justify-between">
+            <span>Order ID: #{selectedOrder.orderId || `ONLINE-${selectedOrder._id.substring(0, 8).toUpperCase()}`}</span>
+            <Badge className={
+              selectedOrder.status === 'Cancelled' 
+                ? 'bg-red-100 text-red-700 border-red-200 uppercase font-bold text-[10px]' 
+                : 'bg-primary/10 text-primary border-primary/20 uppercase font-bold text-[10px]'
+            }>
+              {selectedOrder.status}
+            </Badge>
           </DialogDescription>
         </DialogHeader>
         <div className="modal-content overflow-y-auto max-h-[calc(80vh-6rem)] p-6 pt-4">
           <div className="space-y-6">
-            {/* Order Progress */}
-            <div className="status-timeline rounded-lg p-4 bg-muted">
-              <h3 className="font-bold text-md mb-3 flex items-center gap-2">
-                <Package className="h-4 w-4 text-primary" />
-                Order Progress
-              </h3>
-              <OrderStatusTimeline currentStatus={selectedOrder.status} />
-            </div>
+            {selectedOrder.status === 'Cancelled' ? (
+              <div className="rounded-xl p-8 bg-gradient-to-br from-red-50 to-white border-2 border-red-100 flex flex-col items-center text-center shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <XCircle className="h-24 w-24 text-red-500" />
+                </div>
+                <div className="bg-red-100 p-3 rounded-full mb-4">
+                  <XCircle className="h-8 w-8 text-red-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-red-800 mb-2 font-headline">Order Cancelled</h3>
+                {selectedOrder.cancellationReason ? (
+                    <div className="p-4 bg-white/80 backdrop-blur-sm rounded-lg border border-red-100 max-w-2xl text-center">
+                      <p className="text-red-700 leading-relaxed">
+                        cancellation reason: &quot;{selectedOrder.cancellationReason}&quot;
+                      </p>
+                      {selectedOrder.cancelledBy && (
+                        <p className="text-red-600 text-sm mt-3 font-semibold">
+                          Order cancelled by: {selectedOrder.cancelledBy}
+                        </p>
+                      )}
+                      {selectedOrder.cancelledAt && (
+                        <p className="text-red-500 text-xs mt-1">
+                          on: {new Date(selectedOrder.cancelledAt).toLocaleString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      )}
+                    </div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <p className="text-red-600 text-sm">No cancellation reason provided.</p>
+                    {selectedOrder.cancelledBy && (
+                      <p className="text-red-600 text-sm mt-2 font-semibold">
+                        Order cancelled by: {selectedOrder.cancelledBy}
+                      </p>
+                    )}
+                    {selectedOrder.cancelledAt && (
+                      <p className="text-red-500 text-xs mt-1">
+                        on: {new Date(selectedOrder.cancelledAt).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="status-timeline rounded-lg p-4 bg-muted">
+                <h3 className="font-bold text-md mb-3 flex items-center gap-2">
+                  <Package className="h-4 w-4 text-primary" />
+                  Order Progress
+                </h3>
+                <OrderStatusTimeline currentStatus={selectedOrder.status} />
+              </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Order Items - Sticky */}
@@ -278,18 +335,6 @@ export function OrderDetailsModal({
                   </div>
                 </div>
 
-                {/* Cancellation Reason */}
-                {selectedOrder.status === 'Cancelled' && selectedOrder.cancellationReason && (
-                  <div className="rounded-lg p-4 border">
-                    <h3 className="font-bold text-md mb-3 flex items-center gap-2">
-                      <XCircle className="h-4 w-4 text-primary" />
-                      Cancellation Reason
-                    </h3>
-                    <div className="p-3 bg-muted rounded-lg">
-                      <p className="text-sm leading-relaxed">{selectedOrder.cancellationReason}</p>
-                    </div>
-                  </div>
-                )}
 
                 {/* Tracking Information */}
                 {selectedOrder.trackingNumber && (

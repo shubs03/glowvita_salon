@@ -294,10 +294,10 @@ export async function PATCH(req) {
       return NextResponse.json({ success: false, message: 'Order not found or unauthorized' }, { status: 404 });
     }
 
-    // Check if order can be cancelled
+    // Check if order can be cancelled (Only before shipped)
     console.log('Order status:', order.status);
-    if (!['Pending', 'Processing'].includes(order.status)) {
-      return NextResponse.json({ success: false, message: 'Order cannot be cancelled at this stage' }, { status: 400 });
+    if (!['Pending', 'Processing', 'Packed'].includes(order.status)) {
+      return NextResponse.json({ success: false, message: `Order cannot be cancelled when it is ${order.status}` }, { status: 400 });
     }
 
     // Update order status to Cancelled and add cancellation reason
@@ -305,11 +305,32 @@ export async function PATCH(req) {
     order.set({
       status: 'Cancelled',
       cancellationReason: cancellationReason,
+      cancelledAt: new Date(),
+      cancelledBy: 'User',
       updatedAt: new Date()
     });
 
     await order.save();
     console.log('Order after save:', order);
+
+    // Stock Refund: Increment stock for each product in the cancelled order
+    if (order.items && order.items.length > 0) {
+      for (const item of order.items) {
+        if (item.productId) {
+          try {
+            await ProductModel.findByIdAndUpdate(
+              item.productId,
+              { $inc: { stock: item.quantity } },
+              { new: true }
+            );
+            console.log(`Refunded stock for product ${item.productId}: +${item.quantity}`);
+          } catch (refundError) {
+            console.error(`Error refunding stock for product ${item.productId}:`, refundError);
+            // We don't fail the cancellation if refund fails, but we log it
+          }
+        }
+      }
+    }
     // Also log specific fields
     console.log('Saved order status:', order.status);
     console.log('Saved order cancellationReason:', order.cancellationReason);

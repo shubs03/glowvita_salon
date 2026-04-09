@@ -54,8 +54,9 @@ import {
 import { Textarea } from "@repo/ui/textarea";
 import { Label } from "@repo/ui/label";
 import Image from "next/image";
-import { useGetClientOrdersQuery } from "@repo/store/services/api";
+import { useGetClientOrdersQuery, useGetPublicTaxFeeSettingsQuery } from "@repo/store/services/api";
 import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface OrderItem {
   productId: string;
@@ -84,6 +85,8 @@ interface Order {
   customerPhone?: string;
   vendorId?: string;
   cancellationReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
 }
 
 export default function OrdersPage() {
@@ -109,6 +112,9 @@ export default function OrdersPage() {
   const [originFilter, setOriginFilter] = useState("all"); // Origin filter
   const [dateFromFilter, setDateFromFilter] = useState(""); // Date from filter
   const [dateToFilter, setDateToFilter] = useState(""); // Date to filter
+  const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
+  const productGST = taxSettings?.productGST || 18;
+  const productPlatformFee = taxSettings?.productPlatformFee || 10;
 
   const orderHistory: Order[] = ordersData?.data || [];
 
@@ -152,13 +158,17 @@ export default function OrdersPage() {
   };
 
   const handleViewClick = (order: Order) => {
-    console.log('Viewing order:', order);
     setSelectedOrder(order);
     setIsViewModalOpen(true);
   };
 
+  const [isCancelling, setIsCancelling] = useState(false);
+
   const handleConfirmCancel = async () => {
     if (!orderToCancel || !cancellationReason.trim()) return;
+
+    setIsCancelling(true);
+    const toastId = toast.loading('Cancelling order...');
 
     try {
       console.log('Sending cancellation request for order:', orderToCancel._id, 'with reason:', cancellationReason);
@@ -177,22 +187,33 @@ export default function OrdersPage() {
       console.log('Cancellation response:', result);
 
       if (result.success) {
+        toast.success('Order cancelled successfully', { id: toastId });
         // Close the modal
         setIsCancelModalOpen(false);
         setOrderToCancel(null);
         setCancellationReason("");
-        // Trigger a refetch of the orders
-        window.location.reload();
+        // Trigger a refetch or reload
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
       } else {
+        toast.error(result.message || 'Failed to cancel order', { id: toastId });
         console.error('Failed to cancel order:', result.message);
       }
     } catch (error) {
+      toast.error('An unexpected error occurred', { id: toastId });
       console.error('Error cancelling order:', error);
+    } finally {
+      setIsCancelling(false);
     }
   };
 
   const isOrderCancellable = (status: string) => {
-    return status === "Processing" || status === "Pending";
+    if (!status) return false;
+    const lowerStatus = status.toLowerCase();
+    // Orders can only be cancelled before they are shipped (Pending, Processing, Packed)
+    return ["processing", "pending", "packed"].includes(lowerStatus) && 
+           !["shipped", "delivered", "cancelled"].includes(lowerStatus);
   };
 
   const lastItemIndex = currentPage * itemsPerPage;
@@ -456,9 +477,9 @@ export default function OrdersPage() {
             <Button
               variant="destructive"
               onClick={handleConfirmCancel}
-              disabled={!cancellationReason.trim()}
+              disabled={!cancellationReason.trim() || isCancelling}
             >
-              Yes, Cancel Order
+              {isCancelling ? 'Cancelling...' : 'Yes, Cancel Order'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -498,10 +519,30 @@ export default function OrdersPage() {
                         {selectedOrder.shippingAddress}
                       </p>
                     </div>
-                    {selectedOrder.status === 'Cancelled' && selectedOrder.cancellationReason && (
+                    {selectedOrder.status === 'Cancelled' && (
                       <div className="mt-1 p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <p className="font-medium text-red-800 text-sm mb-1">Cancellation Reason</p>
-                        <p className="text-red-700 text-sm break-words whitespace-pre-wrap overflow-wrap-anywhere">{selectedOrder.cancellationReason}</p>
+                        <p className="font-medium text-red-800 text-sm mb-1">Cancellation Details</p>
+                        {selectedOrder.cancellationReason && (
+                           <p className="text-red-700 text-sm break-words whitespace-pre-wrap overflow-wrap-anywhere">
+                             cancellation reason: {selectedOrder.cancellationReason}
+                           </p>
+                        )}
+                        {selectedOrder.cancelledBy && (
+                          <p className="text-red-600 text-[11px] mt-2 font-semibold">
+                            Cancelled by: {selectedOrder.cancelledBy}
+                          </p>
+                        )}
+                        {selectedOrder.cancelledAt && (
+                          <p className="text-red-500 text-[10px] mt-0.5">
+                            on: {new Date(selectedOrder.cancelledAt).toLocaleString('en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -522,11 +563,11 @@ export default function OrdersPage() {
                         <span>₹{(typeof selectedOrder.shippingAmount === 'number' ? selectedOrder.shippingAmount : 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">GST (18%)</span>
+                        <span className="text-muted-foreground">GST ({productGST}%)</span>
                         <span>₹{(typeof selectedOrder.gstAmount === 'number' ? selectedOrder.gstAmount : 0).toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Platform Fee (10%)</span>
+                        <span className="text-muted-foreground">Platform Fee ({productPlatformFee}%)</span>
                         <span>₹{(typeof selectedOrder.platformFeeAmount === 'number' ? selectedOrder.platformFeeAmount : 0).toFixed(2)}</span>
                       </div>
                     </div>

@@ -6,9 +6,15 @@ if (mongoose.models.ClientOrder) {
 }
 import ClientOrder from '@repo/lib/models/user/ClientOrder.model';
 import UserModel from '@repo/lib/models/user/User.model';
+import ProductModel from '@repo/lib/models/Vendor/Product.model';
+import InventoryTransactionModel from '@repo/lib/models/Vendor/InventoryTransaction.model';
 import { withSubscriptionCheck } from '@/middlewareCrm';
 
-await _db();
+// Initialize DB connection
+const initDb = async () => {
+  await _db();
+};
+initDb();
 
 // GET Online Customer Orders for the logged-in vendor
 export const GET = withSubscriptionCheck(async (req) => {
@@ -38,7 +44,7 @@ export const PATCH = withSubscriptionCheck(async (req) => {
   try {
     const userId = req.user.userId;
     const role = req.user.role;
-    const { orderId, status, trackingNumber, courier } = await req.json();
+    const { orderId, status, trackingNumber, courier, cancellationReason } = await req.json();
 
     console.log("=== CLIENT ORDER UPDATE DEBUG INFO ===");
     console.log("User ID:", userId);
@@ -85,6 +91,11 @@ export const PATCH = withSubscriptionCheck(async (req) => {
     order.status = status;
     if (trackingNumber) order.trackingNumber = trackingNumber;
     if (courier) order.courier = courier;
+    if (status === 'Cancelled') {
+      if (cancellationReason) order.cancellationReason = cancellationReason;
+      order.cancelledAt = new Date();
+      order.cancelledBy = role === 'vendor' ? 'Vendor' : (role === 'supplier' ? 'Supplier' : 'User');
+    }
     order.updatedAt = new Date();
 
     console.log("Saving order with updated data:", {
@@ -95,6 +106,47 @@ export const PATCH = withSubscriptionCheck(async (req) => {
     });
 
     await order.save();
+
+    // Stock Refund: Increment stock for each product if order is cancelled
+    if (status === 'Cancelled' && order.items && order.items.length > 0) {
+      console.log("Cancelling order, performing stock refund for items:", order.items.length);
+      for (const item of order.items) {
+        if (item.productId) {
+          try {
+            const product = await ProductModel.findById(item.productId);
+            if (product) {
+              const previousStock = product.stock;
+              const newStock = previousStock + item.quantity;
+
+              await ProductModel.findByIdAndUpdate(
+                item.productId,
+                { $set: { stock: newStock } },
+                { new: true }
+              );
+              console.log(`Refunded stock for product ${item.productId}: +${item.quantity}`);
+
+              // Create inventory transaction record
+              const transaction = new InventoryTransactionModel({
+                productId: item.productId,
+                vendorId: order.vendorId,
+                productCategory: product.category,
+                type: 'IN',
+                quantity: item.quantity,
+                previousStock,
+                newStock,
+                reason: `B2C Order #${order._id.toString().substring(0, 8)} cancelled. Reason: ${cancellationReason || 'N/A'}`,
+                reference: order._id.toString(),
+                performedBy: userId
+              });
+              await transaction.save();
+            }
+          } catch (refundError) {
+            console.error(`Error refunding stock for product ${item.productId}:`, refundError);
+            // Non-blocking
+          }
+        }
+      }
+    }
 
     console.log("Order saved successfully:", order._id);
     return NextResponse.json(order, { status: 200 });
