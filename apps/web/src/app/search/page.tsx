@@ -237,9 +237,20 @@ const SearchResults = () => {
                                 </p>
                               </div>
                               <div className="flex items-center gap-4">
-                                <p className="text-base font-black text-gray-900 tracking-tighter">
-                                  ₹{svc.price}
-                                </p>
+                                {svc.discountedPrice && svc.discountedPrice < svc.price ? (
+                                  <div className="flex flex-col items-end gap-0.5">
+                                    <p className="text-base font-black text-gray-900 tracking-tighter leading-none">
+                                      ₹{svc.discountedPrice}
+                                    </p>
+                                    <p className="text-[10px] font-bold text-gray-400 line-through leading-none">
+                                      ₹{svc.price}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <p className="text-base font-black text-gray-900 tracking-tighter">
+                                    ₹{svc.price}
+                                  </p>
+                                )}
                                 <Button className="h-8 px-4 rounded-full font-black text-[10px] uppercase tracking-widest">
                                   Book
                                 </Button>
