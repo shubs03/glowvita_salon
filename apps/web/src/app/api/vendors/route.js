@@ -52,7 +52,7 @@ export const GET = async (request) => {
     if (!regionId) {
       const { assignRegion } = await import("@repo/lib/utils/assignRegion.js");
       const detectedRegionId = await assignRegion(city, null, { lat, lng });
-      
+
       if (detectedRegionId) {
         regionId = detectedRegionId;
       } else if (city && city !== "Current Location" && city !== "") {
@@ -67,8 +67,8 @@ export const GET = async (request) => {
 
     if (offerCode) {
       // 1. Try CRM Offers (Vendor Specific)
-      const crmOffer = await CRMOfferModel.findOne({ 
-        code: offerCode, 
+      const crmOffer = await CRMOfferModel.findOne({
+        code: offerCode,
         isActive: { $ne: false },
         startDate: { $lte: new Date() },
         $or: [{ expires: null }, { expires: { $gte: new Date() } }]
@@ -79,8 +79,8 @@ export const GET = async (request) => {
         console.log(`[SearchAPI] Filtering by CRM offer: ${offerCode} for vendor: ${crmOffer.businessId}`);
       } else {
         // 2. Try Admin Offers (Regional / Global)
-        const adminOffer = await AdminOfferModel.findOne({ 
-          code: offerCode, 
+        const adminOffer = await AdminOfferModel.findOne({
+          code: offerCode,
           isActive: { $ne: false },
           startDate: { $lte: new Date() },
           $or: [{ expires: null }, { expires: { $gte: new Date() } }]
@@ -131,11 +131,11 @@ export const GET = async (request) => {
     // Priority 1: Offer-based Vendor Filter
     if (offerVendorIds && offerVendorIds.length > 0) {
       vendorMatch["vendorData._id"] = { $in: offerVendorIds.map(id => new mongoose.Types.ObjectId(id)) };
-    } 
+    }
     // Priority 2: Offer-based Region Filter OR Explicit Region Filter
     else if (offerRegionId || regionId) {
       const targetRegionId = new mongoose.Types.ObjectId(offerRegionId || regionId);
-      
+
       // Look up region name for city-fallback
       const region = await RegionModel.findById(targetRegionId).lean();
       const regionName = region?.name || "";
@@ -144,9 +144,9 @@ export const GET = async (request) => {
       // and it's different from the general city/region name, we filter by area.
       const searchParts = city.split(',').map(p => p.trim());
       const specificArea = searchParts[0];
-      const isSpecificArea = specificArea && 
-                             specificArea.toLowerCase() !== regionName.toLowerCase() && 
-                             specificArea !== "Current Location";
+      const isSpecificArea = specificArea &&
+        specificArea.toLowerCase() !== regionName.toLowerCase() &&
+        specificArea !== "Current Location";
 
       if (isSpecificArea) {
         console.log(`[SearchAPI] Applying neighborhood filter for: ${specificArea} within region: ${regionName}`);
@@ -170,7 +170,7 @@ export const GET = async (request) => {
           { "vendorData.city": { $regex: new RegExp(`^${regionName}$`, "i") } }
         ];
       }
-    } 
+    }
     // Priority 3: City Fallback (Legacy)
     else if (useCityFallback && cityLegacy) {
       vendorMatch.$or = [
@@ -221,6 +221,15 @@ export const GET = async (request) => {
       },
     });
 
+    pipeline.push({
+      $lookup: {
+        from: "weddingpackages",
+        localField: "vendor",
+        foreignField: "vendorId",
+        as: "weddingPackageList",
+      },
+    });
+
     /* 6️⃣ Regroup vendors */
     pipeline.push({
       $group: {
@@ -239,7 +248,40 @@ export const GET = async (request) => {
         regionId: { $first: "$vendorData.regionId" },
         createdAt: { $first: "$vendorData.createdAt" },
         subscription: { $first: "$vendorData.subscription" },
+        vendorType: { $first: "$vendorData.vendorType" },
         services: { $push: "$services" },
+        isHomeService: {
+          $max: {
+            $or: [
+              { $in: ["$vendorData.vendorType", ["hybrid", "home-only", "vendor-home-travel"]] },
+              { $in: ["at-home", { $ifNull: ["$vendorData.subCategories", []] }] },
+              { $eq: ["$services.homeService.available", true] },
+              { $eq: ["$services.serviceHomeService.available", true] }
+            ]
+          }
+        },
+        isWeddingService: {
+          $max: {
+            $or: [
+              { $eq: ["$services.weddingService.available", true] },
+              { $eq: ["$services.serviceWeddingService.available", true] },
+              {
+                $gt: [
+                  {
+                    $size: {
+                      $filter: {
+                        input: { $ifNull: ["$weddingPackageList", []] },
+                        as: "pkg",
+                        cond: { $eq: ["$$pkg.isActive", true] }
+                      }
+                    }
+                  },
+                  0
+                ]
+              }
+            ]
+          }
+        },
       },
     });
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { MapPin, Users, Star, ArrowRight, Filter, RotateCcw, X } from "lucide-react";
+import { MapPin, Users, Star, ArrowRight, Filter, RotateCcw, X, Home, Heart } from "lucide-react";
 import { useGetPublicVendorsQuery, useGetLandingSalonsQuery } from "@repo/store/services/api";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
@@ -55,6 +55,8 @@ interface TransformedSalon {
   image: string;
   badge: string | null;
   serviceNames: string[];
+  isHomeService?: boolean;
+  isWeddingService?: boolean;
 }
 
 interface WhereToGoProps {
@@ -210,7 +212,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
   const pathname = usePathname();
   const isSalonsPage = pathname === '/salons';
   const { userLat, userLng, selectedCity, setSelectedCity, locationLabel, serviceQuery } = useSalonFilter();
-  
+
   // Fetch params for filtering
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const qLat = searchParams?.get("lat") ? parseFloat(searchParams.get("lat")!) : userLat;
@@ -310,6 +312,17 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
           return (!startDate || now >= startDate) && (!expires || now <= expires);
         });
 
+      const isHomeService =
+        vendor.isHomeService === true ||
+        (vendor.vendorType && ["hybrid", "home-only", "vendor-home-travel"].includes(vendor.vendorType)) ||
+        (vendor.subCategories?.includes("at-home")) ||
+        (vendor.services?.some((s: any) => s.homeService?.available || s.serviceHomeService?.available));
+
+      const isWeddingService =
+        vendor.isWeddingService === true ||
+        vendor.services?.some((s: any) => s.weddingService?.available || s.serviceWeddingService?.available) ||
+        (vendor.vendorServicesItems?.[0]?.services?.some((s: any) => s.weddingService?.available || s.serviceWeddingService?.available));
+
       return {
         id: vendor._id,
         name: vendor.businessName || "Beauty Salon",
@@ -327,6 +340,8 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
         image: imageUrl,
         badge: hasOffer ? "Offer Available" : null,
         serviceNames: vendor.services?.map((s: any) => s.name) || [],
+        isHomeService,
+        isWeddingService,
       };
     };
 
@@ -414,6 +429,22 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
               />
               {/* Gradient Overlay */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+              {/* Service Badges */}
+              <div className="absolute bottom-3 right-3 flex flex-col items-end gap-1.5 z-10">
+                {salon.isHomeService && (
+                  <div className="flex items-center gap-1 bg-primary text-secondary text-[9px] font-bold px-2 py-1 rounded-full shadow-lg backdrop-blur-sm">
+                    <Home className="w-3 h-3" />
+                    <span className="uppercase tracking-wider">Home Service</span>
+                  </div>
+                )}
+                {salon.isWeddingService && (
+                  <div className="flex items-center gap-1 bg-rose-500 text-white text-[9px] font-bold px-2 py-1 rounded-full shadow-lg backdrop-blur-sm">
+                    <Heart className="w-3 h-3 fill-current" />
+                    <span className="uppercase tracking-wider">Wedding Service</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Content */}
@@ -446,10 +477,10 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
                 </div>
                 {salon.badge && (
                   <div className="flex-shrink-0 mb-1">
-                    <img 
-                      src="/images/new-offer.png" 
-                      alt="Offer" 
-                      className="h-10 w-auto object-contain" 
+                    <img
+                      src="/images/new-offer.png"
+                      alt="Offer"
+                      className="h-10 w-auto object-contain"
                     />
                   </div>
                 )}
@@ -563,7 +594,7 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
             <span className="text-sm font-semibold text-primary">Active Offer:</span>
             <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{qOfferCode}</span>
           </div>
-          <button 
+          <button
             onClick={() => {
               const params = new URLSearchParams(window.location.search);
               params.delete("offerCode");

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { MapPin, Users, Star, ArrowRight } from "lucide-react";
+import { MapPin, Users, Star, ArrowRight, Home, Heart } from "lucide-react";
 import { useGetLandingSalonsQuery } from "@repo/store/services/api";
 import { useRouter } from "next/navigation";
 import { useSalonFilter } from "./SalonFilterContext";
@@ -16,6 +16,8 @@ interface TransformedSalon {
   image: string;
   badge: string | null;
   serviceNames: string[];
+  isHomeService?: boolean;
+  isWeddingService?: boolean;
 }
 
 interface NewlyAddedSalonsProps {
@@ -47,6 +49,17 @@ const NewlyAddedSalons: React.FC<NewlyAddedSalonsProps> = ({ maxSalons = 8 }) =>
         return (!startDate || now >= startDate) && (!expires || now <= expires);
       });
 
+    const isHomeService =
+      vendor.isHomeService === true ||
+      (vendor.vendorType && ["hybrid", "home-only", "vendor-home-travel"].includes(vendor.vendorType)) ||
+      (vendor.subCategories?.includes("at-home")) ||
+      (vendor.services?.some((s: any) => s.homeService?.available || s.serviceHomeService?.available));
+
+    const isWeddingService =
+      vendor.isWeddingService === true ||
+      vendor.services?.some((s: any) => s.weddingService?.available || s.serviceWeddingService?.available) ||
+      (vendor.vendorServicesItems?.[0]?.services?.some((s: any) => s.weddingService?.available || s.serviceWeddingService?.available));
+
     return {
       id: vendor._id,
       name: vendor.businessName || "Beauty Salon",
@@ -64,6 +77,8 @@ const NewlyAddedSalons: React.FC<NewlyAddedSalonsProps> = ({ maxSalons = 8 }) =>
       image: imageUrl,
       badge: hasOffer ? "Offer Available" : null,
       serviceNames: vendor.services?.map((s: any) => s.name) || [],
+      isHomeService,
+      isWeddingService,
     };
   };
 
@@ -103,7 +118,7 @@ const NewlyAddedSalons: React.FC<NewlyAddedSalonsProps> = ({ maxSalons = 8 }) =>
           </p>
         </div>
 
-        <button 
+        <button
           onClick={() => {
             const params = new URLSearchParams();
             if (userLat) params.append("lat", userLat.toString());
@@ -132,6 +147,24 @@ const NewlyAddedSalons: React.FC<NewlyAddedSalonsProps> = ({ maxSalons = 8 }) =>
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 onError={(e) => { (e.target as HTMLImageElement).src = "/images/salon-placeholder.png"; }}
               />
+              {/* Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+              {/* Service Badges */}
+              <div className="absolute bottom-3 right-3 flex flex-col items-end gap-1.5 z-10">
+                {salon.isHomeService && (
+                  <div className="flex items-center gap-1 bg-primary text-secondary text-[9px] font-bold px-2 py-1 rounded-full shadow-lg backdrop-blur-sm">
+                    <Home className="w-3 h-3" />
+                    <span className="uppercase tracking-wider">Home Service</span>
+                  </div>
+                )}
+                {salon.isWeddingService && (
+                  <div className="flex items-center gap-1 bg-rose-500 text-white text-[9px] font-bold px-2 py-1 rounded-full shadow-lg backdrop-blur-sm">
+                    <Heart className="w-3 h-3 fill-current" />
+                    <span className="uppercase tracking-wider">Wedding Service</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="p-4">
@@ -161,10 +194,10 @@ const NewlyAddedSalons: React.FC<NewlyAddedSalonsProps> = ({ maxSalons = 8 }) =>
                 </div>
                 {salon.badge && (
                   <div className="flex-shrink-0 mb-1">
-                    <img 
-                      src="/images/new-offer.png" 
-                      alt="Offer" 
-                      className="h-10 w-auto object-contain" 
+                    <img
+                      src="/images/new-offer.png"
+                      alt="Offer"
+                      className="h-10 w-auto object-contain"
                     />
                   </div>
                 )}

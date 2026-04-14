@@ -185,6 +185,82 @@ export const GET = async (request) => {
     ];
 
     const now = new Date();
+    const lookupWeddingPackages = {
+      $lookup: {
+        from: "weddingpackages",
+        localField: "_id",
+        foreignField: "vendorId",
+        as: "weddingPackagesItems"
+      }
+    };
+
+    const projectFlags = {
+      $addFields: {
+        isHomeService: {
+          $or: [
+            { $in: ["$vendorType", ["hybrid", "home-only", "vendor-home-travel"]] },
+            { $in: ["at-home", { $ifNull: ["$subCategories", []] }] },
+            {
+              $gt: [
+                {
+                  $size: {
+                    $filter: {
+                      input: { $ifNull: [{ $arrayElemAt: ["$vendorServicesItems.services", 0] }, []] },
+                      as: "s",
+                      cond: {
+                        $or: [
+                          { $eq: ["$$s.homeService.available", true] },
+                          { $eq: ["$$s.serviceHomeService.available", true] }
+                        ]
+                      }
+                    }
+                  }
+                },
+                0
+              ]
+            }
+          ]
+        },
+        isWeddingService: {
+          $or: [
+            {
+              $gt: [
+                {
+                  $size: {
+                    $filter: {
+                      input: { $ifNull: [{ $arrayElemAt: ["$vendorServicesItems.services", 0] }, []] },
+                      as: "s",
+                      cond: {
+                        $or: [
+                          { $eq: ["$$s.weddingService.available", true] },
+                          { $eq: ["$$s.serviceWeddingService.available", true] }
+                        ]
+                      }
+                    }
+                  }
+                },
+                0
+              ]
+            },
+            {
+              $gt: [
+                {
+                  $size: {
+                    $filter: {
+                      input: { $ifNull: ["$weddingPackagesItems", []] },
+                      as: "pkg",
+                      cond: { $eq: ["$$pkg.isActive", true] }
+                    }
+                  }
+                },
+                0
+              ]
+            }
+          ]
+        }
+      }
+    };
+
     const lookupOffers = {
       $lookup: {
         from: "crmoffers",
@@ -218,7 +294,9 @@ export const GET = async (request) => {
       lookupReviews,
       lookupAppointments,
       lookupOffers,
+      lookupWeddingPackages,
       projectStats,
+      projectFlags,
       { $sort: { rating: -1, totalBookings: -1 } },
       { $limit: 8 },
     ]);
@@ -230,7 +308,9 @@ export const GET = async (request) => {
       lookupReviews,
       lookupAppointments,
       lookupOffers,
+      lookupWeddingPackages,
       projectStats,
+      projectFlags,
       { $sort: { createdAt: -1 } },
       { $limit: 8 },
     ]);
@@ -242,7 +322,9 @@ export const GET = async (request) => {
       lookupReviews,
       lookupAppointments,
       lookupOffers,
+      lookupWeddingPackages,
       projectStats,
+      projectFlags,
       { $limit: 8 },
     ]);
 

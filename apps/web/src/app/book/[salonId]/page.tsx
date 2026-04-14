@@ -233,11 +233,11 @@ function BookingPageContent() {
   } = useBookingData(salonId as string);
 
   // Fetch all offers (Admin + CRM)
-  const { data: vendorOffersData, isLoading: isOffersLoading } = useGetPublicAllOffersQuery({ 
+  const { data: vendorOffersData, isLoading: isOffersLoading } = useGetPublicAllOffersQuery({
     vendorId: salonId as string,
-    regionId: (salonInfo as any)?.regionId 
-  }, { 
-    skip: !salonId 
+    regionId: (salonInfo as any)?.regionId
+  }, {
+    skip: !salonId
   });
   const vendorOffers = vendorOffersData?.data || [];
 
@@ -285,7 +285,7 @@ function BookingPageContent() {
     }
 
     // First filter by service applicability
-    const applicableOffers = vendorOffers.filter((offer: any) => 
+    const applicableOffers = vendorOffers.filter((offer: any) =>
       isOfferApplicable(offer, selectedServices)
     );
 
@@ -845,12 +845,12 @@ function BookingPageContent() {
     setAppliedOffer(selectedOffer);
     setShowOfferDropdown(false);
     setOfferSearchTerm('');
-    
+
     // Calculate preview savings
-    const savings = selectedOffer.type === 'percentage' 
-      ? Math.round(totalAmount * selectedOffer.value / 100) 
+    const savings = selectedOffer.type === 'percentage'
+      ? Math.round(totalAmount * selectedOffer.value / 100)
       : Math.round(selectedOffer.value);
-    
+
     toast.success(`Offer ${selectedOffer.code} applied successfully!`);
   };
 

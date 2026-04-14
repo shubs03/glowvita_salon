@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { MapPin, ArrowRight } from "lucide-react";
+import { MapPin, ArrowRight, Home, Heart } from "lucide-react";
 import { useGetPublicVendorsQuery } from "@repo/store/services/api";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSalonFilter } from "@/components/landing/SalonFilterContext";
@@ -50,7 +50,7 @@ const RecentlyJoinedSalon = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { userLat, userLng, locationLabel, selectedCity, serviceQuery } = useSalonFilter();
-  
+
   // Use location from context or search params if available
   const qLat = searchParams?.get("lat") ? parseFloat(searchParams.get("lat")!) : userLat;
   const qLng = searchParams?.get("lng") ? parseFloat(searchParams.get("lng")!) : userLng;
@@ -117,6 +117,15 @@ const RecentlyJoinedSalon = () => {
         }),
       description: mostRecentSalon.description ||
         "Experience luxury and relaxation at our newest salon location. We offer premium hair styling, coloring, and beauty services with the latest techniques and products. Our skilled professionals are dedicated to making you look and feel your best.",
+      isHomeService:
+        mostRecentSalon.isHomeService === true ||
+        (mostRecentSalon.vendorType && ["hybrid", "home-only", "vendor-home-travel"].includes(mostRecentSalon.vendorType)) ||
+        (mostRecentSalon.subCategories?.includes("at-home")) ||
+        (mostRecentSalon.services?.some((s: any) => s.homeService?.available || s.serviceHomeService?.available)),
+      isWeddingService:
+        mostRecentSalon.isWeddingService === true ||
+        mostRecentSalon.services?.some((s: any) => s.weddingService?.available || s.serviceWeddingService?.available) ||
+        (mostRecentSalon.vendorServicesItems?.[0]?.services?.some((s: any) => s.weddingService?.available || s.serviceWeddingService?.available)),
     };
   }, [mostRecentSalon]);
 
@@ -203,13 +212,29 @@ const RecentlyJoinedSalon = () => {
       >
         <div className="flex flex-col lg:flex-row lg:h-[460px]">
           {/* Left - Large Image */}
-          <div className="w-full lg:w-1/2 h-80 md:h-96 lg:h-full flex-shrink-0 rounded-2xl">
+          <div className="w-full lg:w-1/2 h-80 md:h-96 lg:h-full flex-shrink-0 rounded-2xl relative overflow-hidden">
             <img
               src={salon.image}
               alt={salon.name}
               className="w-full h-full object-cover rounded-2xl"
               onError={(e) => { (e.target as HTMLImageElement).src = "/images/salon-placeholder.png"; }}
             />
+
+            {/* Service Badges */}
+            <div className="absolute bottom-4 right-4 flex flex-col items-end gap-2 z-10">
+              {salon.isHomeService && (
+                <div className="flex items-center gap-1.5 bg-primary text-secondary text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full shadow-xl backdrop-blur-sm border border-secondary/20">
+                  <Home className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                  <span className="uppercase tracking-wider">Home Service</span>
+                </div>
+              )}
+              {salon.isWeddingService && (
+                <div className="flex items-center gap-1.5 bg-rose-500 text-white text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full shadow-xl backdrop-blur-sm border border-white/20">
+                  <Heart className="w-3.5 h-3.5 md:w-4 md:h-4 fill-current" />
+                  <span className="uppercase tracking-wider">Wedding Service</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right - Details */}
@@ -248,10 +273,10 @@ const RecentlyJoinedSalon = () => {
                 {/* Offer */}
                 {salon.hasOffer && (
                   <div className="flex-shrink-0">
-                    <img 
-                      src="/images/new-offer.png" 
-                      alt="Offer" 
-                      className="h-12 md:h-14 w-auto object-contain" 
+                    <img
+                      src="/images/new-offer.png"
+                      alt="Offer"
+                      className="h-12 md:h-14 w-auto object-contain"
                     />
                   </div>
                 )}

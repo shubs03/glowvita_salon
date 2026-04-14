@@ -14,8 +14,8 @@ export async function GET(
             isActive: true,
             status: 'approved'
         })
-        .select('name description services totalPrice discountedPrice duration staffCount assignedStaff image status isActive createdAt updatedAt')
-        .lean();
+            .select('name description services totalPrice discountedPrice duration staffCount assignedStaff image status isActive createdAt updatedAt')
+            .lean();
 
         console.log('Fetched wedding packages:', packages);
         console.log('Package 0 assignedStaff:', packages[0]?.assignedStaff);
