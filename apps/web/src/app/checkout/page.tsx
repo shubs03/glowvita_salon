@@ -367,6 +367,8 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!product) return;
+
     // Use the correct calculation for totalAmount that matches the checkout page display
     const subtotal = Number(product.price) * Number(product.quantity);
 
