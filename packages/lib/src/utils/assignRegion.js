@@ -43,7 +43,7 @@ export const assignRegion = async (city, state, coordinates) => {
       const parts = searchString.split(',').map(part => part.trim().toLowerCase());
       const allRegions = await RegionModel.find({ isActive: true }).lean();
 
-      for (const part of cityParts) {
+      for (const part of parts) {
         if (!part || part.length < 3) continue;
 
         // Find a region whose name or code overlaps with the search part
