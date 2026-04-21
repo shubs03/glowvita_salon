@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Card } from "@repo/ui/card";
-import { Heart, ShoppingCart, Star } from "lucide-react";
+import { Heart, ShoppingCart, Star, Store } from "lucide-react";
 import { Badge } from "@repo/ui/badge";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -289,10 +289,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </Button>
       </div>
       <div className="p-3 flex flex-col flex-grow">
-        <p className="text-xs font-bold text-primary mb-1">
-          {category}
-        </p>
-        <h4 className="text-sm font-semibold flex-grow mb-2">
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-[10px] font-bold text-primary uppercase tracking-wider truncate mr-2">
+            {category}
+          </p>
+          <div className="flex items-center gap-1 text-muted-foreground flex-shrink-0" title={`Sold by ${vendorName || "GlowVita Partner"}`}>
+            <Store className="w-3 h-3" />
+            <span className="text-[10px] font-semibold truncate max-w-[90px]">{vendorName || "GlowVita Partner"}</span>
+          </div>
+        </div>
+        <h4 className="text-sm font-semibold flex-grow mb-1 line-clamp-2">
           {name}
         </h4>
         <p className="text-xs text-muted-foreground line-clamp-2">

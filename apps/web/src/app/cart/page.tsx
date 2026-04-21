@@ -32,6 +32,7 @@ import {
   ShoppingCart,
   ArrowLeft,
   ChevronLeft,
+  Store,
 } from "lucide-react";
 import { PageContainer } from "@repo/ui/page-container";
 import Link from "next/link";
@@ -363,9 +364,13 @@ export default function CartPage() {
                         />
                       </div>
                       <div className="flex-grow ml-4 lg:ml-6">
-                        <h3 className="font-semibold text-base lg:text-lg mb-1">
+                        <h3 className="font-semibold text-base lg:text-lg">
                           {item.productName}
                         </h3>
+                        <div className="flex items-center gap-1 mb-2 text-muted-foreground" title={`Sold by ${item.supplierName || item.vendorName || "GlowVita Partner"}`}>
+                          <Store className="w-3 h-3" />
+                          <span className="text-xs">{item.supplierName || item.vendorName || "GlowVita Partner"}</span>
+                        </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-primary font-semibold text-sm lg:text-base">
                             ₹{item.price.toFixed(2)}
