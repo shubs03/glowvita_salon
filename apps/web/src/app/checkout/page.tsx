@@ -56,7 +56,7 @@ export default function CheckoutPage() {
   const [addressError, setAddressError] = useState('');
   const [phoneError, setPhoneError] = useState('');
 
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
   const { data: shippingConfig } = useGetPublicShippingConfigQuery(product?.vendorId);
   const [createOrder, { isLoading }] = useCreateClientOrderMutation();
@@ -175,6 +175,12 @@ export default function CheckoutPage() {
   };
 
   const handleSaveNewAddress = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please sign in to save your address.');
+      router.push('/client-login?redirect=/checkout');
+      return;
+    }
+
     // Basic validation
     const errors: any = {};
     if (!newAddress.fullName) errors.fullName = 'Full Name is required';
@@ -318,6 +324,12 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please sign in before placing your order.');
+      router.push('/client-login?redirect=/checkout');
+      return;
+    }
+
     if (showAddressForm) {
       toast.error('Please save your address first before placing the order.');
       return;
