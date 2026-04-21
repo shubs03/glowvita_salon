@@ -85,7 +85,7 @@ export const useUserAppointments = () => {
       if (typeof status === 'string') {
         const lowerStatus = status.toLowerCase();
 
-        if (lowerStatus === 'completed' || lowerStatus === 'partially-completed') {
+        if (lowerStatus === 'completed' || lowerStatus === 'partially-completed' || lowerStatus === 'completed without payment') {
           status = 'Completed';
         } else if (lowerStatus === 'cancelled' || lowerStatus === 'no-show') {
           status = 'Cancelled';

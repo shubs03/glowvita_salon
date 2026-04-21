@@ -580,7 +580,7 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                         <Button variant="outline" className="justify-start gap-2" onClick={handleSalonDetails} disabled={!appointment.vendorId}>
                             <LinkIcon className="h-4 w-4" /> Salon Details
                         </Button>
-                        {appointment.status === 'Completed' && (
+                        {(appointment.status === 'Completed' || appointment.status?.toLowerCase() === 'completed') && (
                             <Button
                                 variant="outline"
                                 className="justify-start gap-2 col-span-2 border-green-300 text-green-700 hover:bg-green-50 hover:text-green-800"
