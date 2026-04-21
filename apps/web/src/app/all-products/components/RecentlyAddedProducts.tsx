@@ -18,6 +18,7 @@ interface ProductData {
   salePrice?: number;
   image: string;
   productImages?: string[];
+  vendorId: string;
   vendorName: string;
   vendorLocation?: string;
   category: string;
@@ -80,6 +81,7 @@ const RecentlyAddedProducts = () => {
       price: mostRecentProduct.price || 0,
       salePrice: mostRecentProduct.salePrice,
       image: mainImage,
+      vendorId: mostRecentProduct.vendorId,
       vendorName: mostRecentProduct.vendorName || "Vendor",
       vendorLocation: mostRecentProduct.vendorLocation || "Location",
       category: mostRecentProduct.category || "Beauty Products",

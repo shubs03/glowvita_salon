@@ -169,6 +169,8 @@ function OverviewContent() {
       name: product.productName || product.name,
       price: product.salePrice || product.price || 0,
       image: product.productImage || product.image || "https://picsum.photos/id/1027/200/200",
+      vendorId: product.vendorId || "",
+      vendorName: product.vendorName || "Vendor",
     }));
   }, [productsResponse]);
 
@@ -538,7 +540,7 @@ function OverviewContent() {
                           hasSale: false,
                           image: product.image,
                           vendorId: product.vendorId || "", // We might need to fetch this or ensure it's in the mapped product
-                          vendorName: "Vendor", // Fallback
+                          vendorName: product.vendorName || "Vendor",
                           quantity: 1,
                         };
                         localStorage.setItem("buyNowProduct", JSON.stringify(productForCheckout));
