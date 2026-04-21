@@ -946,8 +946,21 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { f
                 <Label className="text-muted-foreground">Current Plan</Label>
                 <div className="text-xl font-bold flex items-center gap-2">
                   {currentPlanName}
-                  <Badge variant={formData.subscription?.status === 'Active' ? 'default' : 'destructive'}>
-                    {formData.subscription?.status || 'Inactive'}
+                  <Badge variant={
+                    (() => {
+                      const status = formData.subscription?.status || 'Inactive';
+                      if (status !== 'Active') return 'destructive';
+                      if (formData.subscription?.endDate && new Date(formData.subscription.endDate) < new Date()) return 'destructive';
+                      return 'default';
+                    })()
+                  }>
+                    {(() => {
+                      const status = formData.subscription?.status || 'Inactive';
+                      if (status === 'Active' && formData.subscription?.endDate && new Date(formData.subscription.endDate) < new Date()) {
+                        return 'Expired';
+                      }
+                      return status;
+                    })()}
                   </Badge>
                 </div>
               </div>
@@ -977,10 +990,16 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { f
                 (() => {
                   const now = new Date();
                   const end = new Date(formData.subscription.endDate);
-                  const diffTime = end.getTime() - now.getTime();
-                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  
+                  // Use calendar days to avoid negative rounding issues
+                  now.setHours(0, 0, 0, 0);
+                  const endDateOnly = new Date(end);
+                  endDateOnly.setHours(0, 0, 0, 0);
+                  
+                  const diffTime = endDateOnly.getTime() - now.getTime();
+                  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-                  if (diffDays > 0) return (
+                  if (diffDays >= 0) return (
                     <>
                       <span className="text-3xl font-bold text-green-600">{diffDays}</span>
                       <span className="text-sm text-muted-foreground">Days Remaining</span>
@@ -1008,28 +1027,54 @@ const SubscriptionTab = ({ formData, handleInputChange, errors, onSuccess }: { f
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {formData.subscription?.history && formData.subscription.history.length > 0 ? (
-            <div className="relative border-l-2 border-muted ml-3 pl-6 space-y-6">
-              {formData.subscription.history.slice().reverse().map((item, idx) => (
-                <div key={idx} className="relative">
-                  <span className="absolute -left-[31px] top-1 h-4 w-4 rounded-full bg-muted border-2 border-background" />
-                  <div className="space-y-1">
-                    <p className="font-medium">
-                      {typeof item.plan === 'object' ? (item.plan as any).name : 'Plan'}
-                      <span className="ml-2 text-xs text-muted-foreground border px-1 rounded">
-                        {item.status}
-                      </span>
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}
-                    </p>
+          {(() => {
+            const historyItems = [...(formData.subscription?.history || [])];
+            
+            if (formData.subscription?.plan && formData.subscription?.startDate && formData.subscription?.endDate) {
+              const currentStatus = formData.subscription.status || 'Inactive';
+              const computedStatus = (currentStatus === 'Active' && new Date(formData.subscription.endDate) < new Date()) 
+                ? 'Expired' 
+                : currentStatus;
+                
+              historyItems.push({
+                plan: formData.subscription.plan,
+                startDate: formData.subscription.startDate as string,
+                endDate: formData.subscription.endDate as string,
+                status: computedStatus,
+                archivedAt: new Date().toISOString()
+              });
+            }
+
+            // Remove duplicates based on start date and sort descending
+            const uniqueHistoryItems = historyItems.filter((item, index, self) =>
+              index === self.findIndex((t) => t.startDate === item.startDate)
+            );
+            const sortedHistory = uniqueHistoryItems.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+
+            return sortedHistory.length > 0 ? (
+              <div className="relative border-l-2 border-muted ml-3 pl-6 space-y-6">
+                {sortedHistory.map((item, idx) => (
+                  <div key={idx} className="relative">
+                    <span className="absolute -left-[31px] top-1 h-4 w-4 rounded-full bg-muted border-2 border-background" />
+                    <div className="space-y-1">
+                      <p className="font-medium">
+                        {typeof item.plan === 'object' && item.plan ? (item.plan as any).name : 'Plan'}
+                        <span className={`ml-2 text-xs border px-1 rounded ${item.status === 'Expired' || item.status === 'Inactive' ? 'text-red-600 border-red-200 bg-red-50' : 'text-green-600 border-green-200 bg-green-50'}`}>
+                          {item.status}
+                        </span>
+                        {idx === 0 && <span className="ml-2 text-xs font-semibold text-primary">(Latest)</span>}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(item.startDate).toLocaleDateString()} - {new Date(item.endDate).toLocaleDateString()}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-center py-4">No subscription history available</p>
-          )}
+                ))}
+              </div>
+            ) : (
+              <p className="text-muted-foreground text-center py-4">No subscription history available</p>
+            );
+          })()}
         </CardContent>
       </Card>
 

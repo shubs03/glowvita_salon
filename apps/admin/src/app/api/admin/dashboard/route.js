@@ -482,25 +482,40 @@ async function getRegionWiseRevenueDetailed(req, allowedRegionIds) {
     entry.totalBusinesses += c.count || 0;
   });
 
-  // Calculate subscriptions per region
+  // Calculate subscriptions per region with history and trial-exclusion
   const [vendorsWithSubs, suppliersWithSubs] = await Promise.all([
-    VendorModel.find({ "subscription.plan": { $exists: true } }).populate('subscription.plan'),
-    SupplierModel.find({ "subscription.plan": { $exists: true } }).populate('subscription.plan')
+    VendorModel.find({ "subscription.plan": { $exists: true } }).populate('subscription.plan subscription.history.plan'),
+    SupplierModel.find({ "subscription.plan": { $exists: true } }).populate('subscription.plan subscription.history.plan')
   ]);
 
-  vendorsWithSubs.forEach(v => {
-    if (v.regionId && v.subscription?.plan) {
-      const entry = getEntry(v.regionId);
-      entry.subscriptionAmount += v.subscription.plan.price || 0;
-    }
-  });
+  const processRegionalSubs = (list) => {
+    list.forEach(user => {
+      const rid = user.regionId ? user.regionId.toString() : 'other';
+      const entry = getEntry(rid);
+      const sub = user.subscription;
 
-  suppliersWithSubs.forEach(s => {
-    if (s.regionId && s.subscription?.plan) {
-      const entry = getEntry(s.regionId);
-      entry.subscriptionAmount += s.subscription.plan.price || 0;
-    }
-  });
+      // 1. Current Plan (Paid only)
+      if (sub?.plan) {
+        const price = (sub.plan.discountedPrice || sub.plan.price || 0);
+        if (price > 0) {
+          entry.subscriptionAmount += price;
+        }
+      }
+
+      // 2. History (Paid only, skip active duplicates)
+      (sub?.history || []).forEach(historyItem => {
+         if (historyItem.plan && historyItem.status !== 'Active') {
+            const hPrice = (historyItem.plan.discountedPrice || historyItem.plan.price || 0);
+            if (hPrice > 0) {
+              entry.subscriptionAmount += hPrice;
+            }
+         }
+      });
+    });
+  };
+
+  processRegionalSubs(vendorsWithSubs);
+  processRegionalSubs(suppliersWithSubs);
 
   const regions = await RegionModel.find({ _id: { $in: Object.keys(map).filter(id => mongoose.Types.ObjectId.isValid(id)) } });
   const names = regions.reduce((acc, r) => ({ ...acc, [r._id.toString()]: r.name }), {});
@@ -546,7 +561,6 @@ async function calculateSubscriptionAmount(req, filterType, filterValue) {
   try {
     const VendorModel = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
     const SupplierModel = (await import('@repo/lib/models/Vendor/Supplier.model')).default;
-    const SubscriptionPlanModel = (await import('@repo/lib/models/admin/SubscriptionPlan.model')).default;
     const regionQuery = buildRegionQueryFromRequest(req);
 
     const [vendors, suppliers] = await Promise.all([
@@ -554,7 +568,7 @@ async function calculateSubscriptionAmount(req, filterType, filterValue) {
       SupplierModel.find({ ...regionQuery, "subscription.plan": { $exists: true } }).populate('subscription.plan subscription.history.plan')
     ]);
 
-    const filter = (subDate) => {
+    const filterDate = (subDate) => {
       if (!filterType || !filterValue) return true;
       const d = new Date(subDate);
       if (filterType === 'day') return d.toDateString() === new Date(filterValue).toDateString();
@@ -566,15 +580,37 @@ async function calculateSubscriptionAmount(req, filterType, filterValue) {
       return true;
     };
 
-    const process = (list) => list.reduce((t, u) => {
-      let s = 0;
-      if (u.subscription?.plan && filter(u.subscription.startDate)) s += u.subscription.plan.price || 0;
-      (u.subscription?.history || []).forEach(h => { if (h.plan && filter(h.startDate)) s += h.plan.price || 0; });
-      return t + s;
+    const process = (list) => list.reduce((total, user) => {
+      let userSubRevenue = 0;
+      const sub = user.subscription;
+
+      // 1. Current Plan Revenue (Paid only)
+      if (sub?.plan && filterDate(sub.startDate)) {
+        const price = (sub.plan.discountedPrice || sub.plan.price || 0);
+        if (price > 0) {
+          userSubRevenue += price;
+        }
+      }
+
+      // 2. Historical Revenue (Paid + Deduplicated)
+      (sub?.history || []).forEach(historyItem => {
+         // Skip Trials and Active duplicates
+         if (historyItem.plan && historyItem.status !== 'Active' && filterDate(historyItem.startDate)) {
+            const hPrice = (historyItem.plan.discountedPrice || historyItem.plan.price || 0);
+            if (hPrice > 0) {
+              userSubRevenue += hPrice;
+            }
+         }
+      });
+
+      return total + userSubRevenue;
     }, 0);
 
     return process(vendors) + process(suppliers);
-  } catch (e) { return 0; }
+  } catch (e) { 
+    console.error("Error calculating subscription amount:", e);
+    return 0; 
+  }
 }
 
 async function getSubscriptionStats(req) {
@@ -583,18 +619,42 @@ async function getSubscriptionStats(req) {
     const SupplierModel = (await import('@repo/lib/models/Vendor/Supplier.model')).default;
     const regionQuery = buildRegionQueryFromRequest(req);
 
-    const [activeVendors, inactiveVendors, activeSuppliers, inactiveSuppliers] = await Promise.all([
-      VendorModel.countDocuments({ ...regionQuery, "subscription.status": "Active" }),
-      VendorModel.countDocuments({ ...regionQuery, "subscription.status": { $ne: "Active" } }),
-      SupplierModel.countDocuments({ ...regionQuery, "subscription.status": "Active" }),
-      SupplierModel.countDocuments({ ...regionQuery, "subscription.status": { $ne: "Active" } })
+    const [vendors, suppliers] = await Promise.all([
+      VendorModel.find({ ...regionQuery, "subscription.plan": { $exists: true, $ne: null } }),
+      SupplierModel.find({ ...regionQuery, "subscription.plan": { $exists: true, $ne: null } })
     ]);
 
-    return {
-      active: activeVendors + activeSuppliers,
-      inactive: inactiveVendors + inactiveSuppliers
+    const allBusinessUsers = [...vendors, ...suppliers];
+    
+    // Helper to determine status (same logic as Management page)
+    const getDerivedStatus = (status, endDate) => {
+      if (!endDate) return status || 'Inactive';
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const expiryDate = new Date(endDate);
+      const expiryDateNormalized = new Date(expiryDate.getFullYear(), expiryDate.getMonth(), expiryDate.getDate());
+      
+      if (!isNaN(expiryDateNormalized.getTime()) && today > expiryDateNormalized) {
+        return 'Expired';
+      }
+      return status === 'Active' ? 'Active' : 'Inactive';
     };
+
+    let active = 0;
+    let inactive = 0;
+
+    allBusinessUsers.forEach(user => {
+      const status = getDerivedStatus(user.subscription?.status, user.subscription?.endDate);
+      if (status === 'Active') {
+        active++;
+      } else {
+        inactive++;
+      }
+    });
+
+    return { active, inactive };
   } catch (e) {
+    console.error("Error getting subscription stats:", e);
     return { active: 0, inactive: 0 };
   }
-}
+}

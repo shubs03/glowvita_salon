@@ -8,7 +8,7 @@ import { Input } from '@repo/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@repo/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@repo/ui/table';
-import { X, Plus, Minus, ShoppingCart, ArrowLeft, Trash2, Shield, Tag, Search, DollarSign, Package } from 'lucide-react';
+import { X, Plus, Minus, ShoppingCart, ArrowLeft, Trash2, Shield, Tag, Search, DollarSign, Package, Store } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useGetClientCartQuery, useUpdateClientCartItemMutation, useRemoveFromClientCartMutation, useGetPublicTaxFeeSettingsQuery, useGetPublicShippingConfigQuery } from '@repo/store/api';
@@ -259,6 +259,10 @@ export default function CartPage() {
                           </div>
                           <div>
                             <p className="font-medium">{item.productName}</p>
+                            <div className="flex items-center gap-1 mt-1 text-muted-foreground" title={`Sold by ${item.supplierName || item.vendorName || "GlowVita Partner"}`}>
+                              <Store className="w-3 h-3" />
+                              <span className="text-xs">{item.supplierName || item.vendorName || "GlowVita Partner"}</span>
+                            </div>
                           </div>
                         </div>
                       </TableCell>
