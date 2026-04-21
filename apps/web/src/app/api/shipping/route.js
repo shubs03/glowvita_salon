@@ -31,8 +31,10 @@ export const GET = async (req) => {
     let config;
 
     // If vendorId is provided, prioritize finding config for that specific vendor
-    if (vendorId) {
+    if (vendorId && vendorId.match(/^[0-9a-fA-F]{24}$/)) {
       config = await ShippingConfigModel.findOne({ vendorId });
+    } else if (vendorId) {
+      console.warn('[PUBLIC SHIPPING API] Invalid vendorId format provided:', vendorId);
     }
 
     // If no vendorId provided or no config found for that vendor, fallback to latest config

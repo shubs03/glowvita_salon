@@ -56,17 +56,25 @@ export default function CheckoutPage() {
   const [addressError, setAddressError] = useState('');
   const [phoneError, setPhoneError] = useState('');
 
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
-  const { data: shippingConfig } = useGetPublicShippingConfigQuery(product?.vendorId);
+  const { data: shippingConfig, isFetching: isShippingLoading } = useGetPublicShippingConfigQuery(product?.vendorId, {
+    skip: !product?.vendorId
+  });
   const [createOrder, { isLoading }] = useCreateClientOrderMutation();
   const [createPaymentOrder] = useCreatePaymentOrderMutation();
   const [verifyPayment] = useVerifyPaymentMutation();
 
-  console.log('Shipping Config Full Data: ', shippingConfig);
-  console.log('Shipping Config Amount: ', shippingConfig?.amount);
-  console.log('Shipping Config ChargeType: ', shippingConfig?.chargeType);
-  console.log('Shipping Config IsEnabled: ', shippingConfig?.isEnabled);
+  // Enhanced logging for debugging shipping issues in production
+  useEffect(() => {
+    if (shippingConfig) {
+      console.log('Shipping Config Received:', {
+        vendorId: product?.vendorId,
+        config: shippingConfig,
+        isArray: Array.isArray(shippingConfig)
+      });
+    }
+  }, [shippingConfig, product?.vendorId]);
 
   // Load Razorpay script
   useEffect(() => {
@@ -175,6 +183,12 @@ export default function CheckoutPage() {
   };
 
   const handleSaveNewAddress = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please sign in to save your address.');
+      router.push('/client-login?redirect=/checkout');
+      return;
+    }
+
     // Basic validation
     const errors: any = {};
     if (!newAddress.fullName) errors.fullName = 'Full Name is required';
@@ -318,6 +332,12 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please sign in before placing your order.');
+      router.push('/client-login?redirect=/checkout');
+      return;
+    }
+
     if (showAddressForm) {
       toast.error('Please save your address first before placing the order.');
       return;
@@ -347,13 +367,16 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!product) return;
-
     // Use the correct calculation for totalAmount that matches the checkout page display
     const subtotal = Number(product.price) * Number(product.quantity);
-    const shippingAmount = Number(shippingConfig?.amount || 0);
-    const shipping = subtotal > 0 && shippingConfig?.isEnabled
-      ? (shippingConfig.chargeType === 'percentage'
+
+    // Calculate dynamic shipping based on config - Robust calculation
+    const config = Array.isArray(shippingConfig) ? shippingConfig[0] : shippingConfig;
+    const shippingAmount = Number(config?.amount || 0);
+    const shippingEnabled = String(config?.isEnabled) === 'true' || config?.isEnabled === true;
+    
+    const shipping = subtotal > 0 && shippingEnabled
+      ? (config?.chargeType === 'percentage'
         ? (subtotal * shippingAmount) / 100
         : shippingAmount)
       : 0;
@@ -639,10 +662,13 @@ export default function CheckoutPage() {
 
   const subtotal = Number(product.price) * Number(product.quantity);
 
-  // Calculate dynamic shipping based on config
-  const shippingAmount = Number(shippingConfig?.amount || 0);
-  const shipping = subtotal > 0 && shippingConfig?.isEnabled
-    ? (shippingConfig.chargeType === 'percentage'
+  // Calculate dynamic shipping based on config - Robust calculation
+  const config = Array.isArray(shippingConfig) ? shippingConfig[0] : shippingConfig;
+  const shippingAmount = Number(config?.amount || 0);
+  const shippingEnabled = String(config?.isEnabled) === 'true' || config?.isEnabled === true;
+
+  const shipping = subtotal > 0 && shippingEnabled
+    ? (config?.chargeType === 'percentage'
       ? (subtotal * shippingAmount) / 100
       : shippingAmount)
     : 0;
@@ -1089,7 +1115,11 @@ export default function CheckoutPage() {
                   )}
                   <div className="flex justify-between">
                     <span>Shipping</span>
-                    <span>₹{shipping.toFixed(2)}</span>
+                    {isShippingLoading ? (
+                      <span className="text-xs text-muted-foreground italic animate-pulse">Calculating...</span>
+                    ) : (
+                      <span>₹{shipping.toFixed(2)}</span>
+                    )}
                   </div>
                   {productGSTEnabled && (
                     <div className="flex justify-between">
