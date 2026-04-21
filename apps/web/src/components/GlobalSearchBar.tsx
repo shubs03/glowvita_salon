@@ -40,7 +40,7 @@ export const GlobalSearchBar = ({
   );
   // Display label for the location field (neighbourhood / city name shown to user)
   const [locationInput, setLocationInput] = useState(
-    searchParams.get("locationLabel") || searchParams.get("city") || ""
+    searchParams.get("locationLabel") || searchParams.get("city") || "Current Location"
   );
   const [dateInput, setDateInput] = useState(
     searchParams.get("date") || ""
@@ -103,8 +103,7 @@ export const GlobalSearchBar = ({
   // ── Sync state with URL parameters ──────────────────────────────────────────
   useEffect(() => {
     const service = searchParams.get("serviceName") || "";
-    const locLabel =
-      searchParams.get("locationLabel") || searchParams.get("city") || "";
+    const locLabel = searchParams.get("locationLabel") || searchParams.get("city");
     const date = searchParams.get("date") || "";
     const latP = searchParams.get("lat");
     const lngP = searchParams.get("lng");
@@ -123,7 +122,12 @@ export const GlobalSearchBar = ({
       setSelectedCategoryId("");
     }
 
-    setLocationInput(locLabel);
+    if (locLabel !== null && locLabel !== undefined) {
+      setLocationInput(locLabel);
+    } else {
+      setLocationInput((prev) => prev || "Current Location");
+    }
+    
     setDateInput(date);
     setSelectedLat(latP ? parseFloat(latP) : null);
     setSelectedLng(lngP ? parseFloat(lngP) : null);
