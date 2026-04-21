@@ -7,6 +7,8 @@ import { useSalonFilter } from "@/components/landing/SalonFilterContext";
 import { useRouter } from "next/navigation";
 import { Button } from "@repo/ui/button";
 import { Badge } from "@repo/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface ProductData {
   id: string;
@@ -30,6 +32,7 @@ interface ProductData {
 const RecentlyAddedProducts = () => {
   const router = useRouter();
   const { userLat, userLng } = useSalonFilter();
+  const { isAuthenticated } = useAuth();
   
   const {
     data: productsData,
@@ -262,16 +265,46 @@ const RecentlyAddedProducts = () => {
 
             {/* Bottom Section - Action Button */}
             <div className="mt-6 pt-6 border-t border-border">
-              <Button
-                className="inline-flex items-center gap-2 text-sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/product-details/${product.id}`);
-                }}
-              >
-                View Details
-                <ArrowRight className="w-4 h-4" />
-              </Button>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  className="inline-flex items-center gap-2 text-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.push(`/product-details/${product.id}`);
+                  }}
+                >
+                  View Details
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="inline-flex items-center gap-2 text-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (!isAuthenticated) {
+                      router.push(`/client-login?redirect=${encodeURIComponent(window.location.pathname)}`);
+                      return;
+                    }
+                    // Handle buy now logic
+                    const productData = {
+                      id: product.id,
+                      name: product.name,
+                      price: product.salePrice && product.salePrice > 0 ? product.salePrice : product.price,
+                      originalPrice: product.price,
+                      hasSale: !!(product.salePrice && product.salePrice > 0),
+                      image: product.image,
+                      vendorName: product.vendorName,
+                      vendorId: product.vendorId || 'unknown-vendor',
+                      quantity: 1,
+                    };
+                    localStorage.setItem('buyNowProduct', JSON.stringify(productData));
+                    router.push('/checkout');
+                  }}
+                >
+                  Buy Now
+                </Button>
+              </div>
             </div>
           </div>
         </div>

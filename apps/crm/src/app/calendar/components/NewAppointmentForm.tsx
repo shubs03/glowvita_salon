@@ -143,7 +143,7 @@ export default function NewAppointmentForm({
 
   // Fetch tax settings
   const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
-  
+
   // Fetch vendor profile for vendor-specific tax settings
   const { data: vendorProfile } = useGetVendorProfileQuery(undefined, {
     skip: !vendorId
@@ -153,10 +153,10 @@ export default function NewAppointmentForm({
   const calculateFinancials = (baseAmount: number, discount: number, addOnAmount: number = 0) => {
     const totalBase = baseAmount + addOnAmount;
     let tax = 0;
-    
+
     // Use vendor-specific tax if available, otherwise fallback to public settings
     const vendorTaxes = vendorProfile?.data?.taxes;
-    
+
     if (vendorTaxes) {
       if (vendorTaxes.taxType === 'fixed') {
         tax = Number(vendorTaxes.taxValue) || 0;
@@ -2286,11 +2286,11 @@ export default function NewAppointmentForm({
 
       const newClient = await createClient(clientDataToSave).unwrap();
       toast.success('New client has been added successfully.');
-      
+
       // Auto-select the new client for the appointment
       const clientObj = newClient.data || newClient;
       handleClientSelect(clientObj);
-      
+
       setIsAddClientModalOpen(false);
       setNewClientData({
         fullName: '',
@@ -2337,10 +2337,10 @@ export default function NewAppointmentForm({
               <PlusCircle className="h-4 w-4 text-primary" />
               Register New Client
             </h3>
-            <Button 
-              type="button" 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setIsAddClientModalOpen(false)}
               className="h-8 text-xs text-muted-foreground hover:text-foreground"
             >
@@ -2398,14 +2398,14 @@ export default function NewAppointmentForm({
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="birthdayDate" className="text-sm font-medium text-gray-700 dark:text-gray-300">Birthday</Label>
-                  <Input 
-                    id="birthdayDate" 
-                    name="birthdayDate" 
-                    type="date" 
-                    value={newClientData.birthdayDate} 
-                    onChange={handleNewClientInputChange} 
+                  <Input
+                    id="birthdayDate"
+                    name="birthdayDate"
+                    type="date"
+                    value={newClientData.birthdayDate}
+                    onChange={handleNewClientInputChange}
                     max={new Date().toISOString().split('T')[0]}
-                    className="bg-background text-foreground border border-border" 
+                    className="bg-background text-foreground border border-border"
                   />
                 </div>
                 <div className="space-y-2">
@@ -2439,20 +2439,20 @@ export default function NewAppointmentForm({
                 </div>
               </div>
             </div>
-            
+
             <div className="flex gap-3 pt-4 border-t border-border/50">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => setIsAddClientModalOpen(false)}
                 className="flex-1"
               >
                 Cancel
               </Button>
-              <Button 
-                type="button" 
-                onClick={handleCreateClient} 
-                disabled={isCreatingClient} 
+              <Button
+                type="button"
+                onClick={handleCreateClient}
+                disabled={isCreatingClient}
                 className="flex-1"
               >
                 {isCreatingClient && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -2508,7 +2508,7 @@ export default function NewAppointmentForm({
                   <X className="h-4 w-4" />
                 </button>
               )}
-              
+
               {isClientDropdownOpen && (
                 <div className="absolute z-[100] mt-1 w-full bg-background shadow-lg rounded-md py-1 max-h-60 overflow-auto border border-border">
                   {isLoadingClients || isFetchingClients ? (

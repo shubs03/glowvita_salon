@@ -256,7 +256,6 @@ export default function ProductsPage() {
       product || {
         price: 0,
         salePrice: 0,
-        stock: 0,
         isActive: true,
         status: "pending",
       },
@@ -273,9 +272,22 @@ export default function ProductsPage() {
     if (
       !formData.productName?.trim() ||
       !formData.category?.trim() ||
-      !formData.price
+      !formData.price ||
+      formData.stock === undefined ||
+      formData.stock === null ||
+      formData.stock === '' as any
     ) {
-      toast.error("Product Name, Category, and Regular Price are required.");
+      toast.error("Product Name, Category, Regular Price, and Stock Quantity are required.");
+      return;
+    }
+
+    if (formData.stock === 0) {
+      toast.error("Please enter a stock value greater than 0.");
+      return;
+    }
+
+    if (!formData.productImages || formData.productImages.length === 0) {
+      toast.error("At least one product image is required.");
       return;
     }
 

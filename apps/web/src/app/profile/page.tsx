@@ -27,6 +27,7 @@ import {
   Package,
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { StatCard } from '../../components/profile/StatCard';
 import { Appointment, AppointmentCard } from '../../components/profile/AppointmentCard';
 import { useAuth } from '../../hooks/useAuth';
@@ -513,11 +514,39 @@ function OverviewContent() {
                     <h4 className="font-semibold">{product.name}</h4>
                     <p className="text-sm text-muted-foreground">₹{product.price.toFixed(2)}</p>
                   </div>
-                  <div
-                    onClick={() => router.push(`/product-details/${product.id}`)}
-                    className="cursor-pointer"
-                  >
-                    <Button variant="outline" size="sm" className="ml-auto">View</Button>
+                  <div className="flex gap-2 ml-auto">
+                    <div
+                      onClick={() => router.push(`/product-details/${product.id}`)}
+                      className="cursor-pointer"
+                    >
+                      <Button variant="outline" size="sm">View</Button>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (!isAuthenticated) {
+                          router.push(`/client-login?redirect=${encodeURIComponent(window.location.pathname)}`);
+                          return;
+                        }
+
+                        // Buy Now logic
+                        const productForCheckout = {
+                          id: product.id,
+                          name: product.name,
+                          price: product.price,
+                          originalPrice: product.price,
+                          hasSale: false,
+                          image: product.image,
+                          vendorId: product.vendorId || "", // We might need to fetch this or ensure it's in the mapped product
+                          vendorName: "Vendor", // Fallback
+                          quantity: 1,
+                        };
+                        localStorage.setItem("buyNowProduct", JSON.stringify(productForCheckout));
+                        router.push("/checkout");
+                      }}
+                    >
+                      Buy Now
+                    </Button>
                   </div>
                 </div>
               ))

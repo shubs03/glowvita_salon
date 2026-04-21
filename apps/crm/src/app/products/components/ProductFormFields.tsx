@@ -69,6 +69,7 @@ const ProductFormFields = ({
   const [imagePreviews, setImagePreviews] = useState<string[]>(formData.productImages || []);
   const [calculatedFinalPrice, setCalculatedFinalPrice] = useState<number>(0);
   const [gstAmount, setGstAmount] = useState<number>(0);
+  const [isManualEntry, setIsManualEntry] = useState<boolean>(false);
 
   // Fetch product masters
   const { data: productMastersData, isLoading: productMastersLoading, error: productMastersError } = useGetCrmProductMastersQuery(undefined);
@@ -129,9 +130,12 @@ const ProductFormFields = ({
   const handleProductMasterChange = (productName: string) => {
     // Allow manual entry by checking if it's a special value
     if (productName === 'manual-entry') {
-      return; // Don't update, let user type
+      setIsManualEntry(true);
+      onFieldChange('productName', '');
+      return; // Don't update matched product, let user type
     }
-
+    
+    setIsManualEntry(false);
     onFieldChange('productName', productName);
 
     // Find the selected product master and auto-fill fields
@@ -169,6 +173,7 @@ const ProductFormFields = ({
   const handleCategoryChange = (categoryName: string) => {
     onFieldChange('category', categoryName);
     onFieldChange('productName', ''); // Reset product name when category changes
+    setIsManualEntry(false);
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -233,7 +238,7 @@ const ProductFormFields = ({
           <Label htmlFor="productName" className="text-sm font-medium">Product Name <span className="text-red-500">*</span></Label>
           <div className="space-y-2">
             <Select
-              value={formData.productName || ''}
+              value={isManualEntry ? 'manual-entry' : (formData.productName || '')}
               onValueChange={handleProductMasterChange}
               disabled={!formData.category}
             >
@@ -249,25 +254,31 @@ const ProductFormFields = ({
                   <SelectItem value="error" disabled>
                     Error loading products - Please try again
                   </SelectItem>
-                ) : productMastersForCategory.length > 0 ? (
-                  productMastersForCategory.map((pm: ProductMaster) => (
-                    <SelectItem key={pm._id} value={pm.name}>
-                      {pm.name}
-                    </SelectItem>
-                  ))
                 ) : (
-                  <SelectItem value="no-products" disabled>
-                    No products available for this category
-                  </SelectItem>
+                  <>
+                    {productMastersForCategory.map((pm: ProductMaster) => (
+                      <SelectItem key={pm._id} value={pm.name}>
+                        {pm.name}
+                      </SelectItem>
+                    ))}
+                    {productMastersForCategory.length === 0 && (
+                      <SelectItem value="no-products" disabled>
+                        No products available for this category
+                      </SelectItem>
+                    )}
+                    <SelectItem value="manual-entry" className="text-primary font-medium">
+                      + Add Custom Product
+                    </SelectItem>
+                  </>
                 )}
               </SelectContent>
             </Select>
-            {formData.category && (!productMastersLoading && !productMastersError && productMastersForCategory.length === 0) && (
+            {formData.category && (isManualEntry || (!productMastersLoading && !productMastersError && productMastersForCategory.length === 0)) && (
               <Input
                 placeholder="Or enter custom product name"
                 value={formData.productName || ''}
                 onChange={(e) => onFieldChange('productName', e.target.value)}
-                className="rounded-xl border-border/40 focus:border-primary/50 focus:ring-primary/20"
+                className="mt-2 rounded-xl border-border/40 focus:border-primary/50 focus:ring-primary/20"
               />
             )}
           </div>
@@ -349,19 +360,24 @@ const ProductFormFields = ({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="stock" className="text-sm font-medium">Stock Quantity</Label>
+          <Label htmlFor="stock" className="text-sm font-medium">Stock Quantity <span className="text-red-500">*</span></Label>
           <Input
             placeholder="0"
             id="stock"
             type="number"
             min="0"
-            value={formData.stock || ''}
+            value={formData.stock !== undefined && formData.stock !== null ? formData.stock : ''}
             onChange={(e) => {
+              if (e.target.value === '') {
+                onFieldChange('stock', undefined);
+                return;
+              }
               const value = Number(e.target.value);
               if (value < 0) return;
               onFieldChange('stock', value);
             }}
             className="rounded-xl border-border/40 focus:border-primary/50"
+            required
           />
         </div>
       </div>

@@ -330,10 +330,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
         ...formData.weddingService,
         charges: Number(formData.weddingService.charges) || null,
       } : { available: false, charges: null },
-      tax: formData.tax ? {
-        ...formData.tax,
-        value: Number(formData.tax.value) || null,
-      } : { enabled: false, type: 'percentage', value: null },
+      tax: { enabled: false, type: 'percentage', value: null },
       bookingInterval: Number(formData.bookingInterval) || 0,
       image: formData.image,
       status: service?._id ? formData.status : 'pending',
@@ -719,36 +716,6 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
       </div>
       <div className="flex items-center space-x-2">
         <Switch
-          id="tax-enabled"
-          checked={formData.tax?.enabled || false}
-          onCheckedChange={(checked) => handleNestedChange("tax", "enabled", checked)}
-        />
-        <Label htmlFor="tax-enabled">Enable Service Tax</Label>
-      </div>
-      {formData.tax?.enabled && (
-        <div className="grid grid-cols-2 gap-4">
-          <Select
-            value={formData.tax?.type || ""}
-            onValueChange={(value) => handleNestedChange("tax", "type", value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select tax type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="percentage">Percentage</SelectItem>
-              <SelectItem value="fixed">Fixed</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input
-            type="number"
-            placeholder="Tax Value"
-            value={formData.tax?.value || ""}
-            onChange={(e) => handleNestedChange("tax", "value", Number(e.target.value))}
-          />
-        </div>
-      )}
-      <div className="flex items-center space-x-2">
-        <Switch
           id="onlineBooking"
           checked={formData.onlineBooking || false}
           onCheckedChange={(checked) => handleSelectChange("onlineBooking", checked)}
@@ -848,18 +815,6 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
                       {service?.discountedPrice ? `₹${service.discountedPrice.toFixed(2)}` : 'N/A'}
                     </span>
                   </div>
-                  <div className="flex items-start justify-between py-1.5">
-                    <span className="text-sm font-medium text-muted-foreground">Tax Enabled:</span>
-                    <span className="text-sm font-semibold">{service?.tax?.enabled ? 'Yes' : 'No'}</span>
-                  </div>
-                  {service?.tax?.enabled && (
-                    <div className="flex items-start justify-between py-1.5">
-                      <span className="text-sm font-medium text-muted-foreground">Tax Value:</span>
-                      <span className="text-sm font-semibold">
-                        {service.tax.value}{service.tax.type === 'percentage' ? '%' : ' (Fixed)'}
-                      </span>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -971,7 +926,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
                 Advanced
               </TabsTrigger>
               <TabsTrigger value="booking" disabled={!formData.name}>
-                Booking & Tax
+                Booking
               </TabsTrigger>
             </TabsList>
             <div className="pr-1">

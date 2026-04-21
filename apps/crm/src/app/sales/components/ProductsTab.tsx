@@ -690,8 +690,7 @@ export default function ProductsTab({
   const [editFormData, setEditFormData] = useState({
     quantity: 1,
     discount: 0,
-    discountType: 'flat' as 'flat' | 'percentage',
-    staffMemberId: 'none'
+    discountType: 'flat' as 'flat' | 'percentage'
   });
 
   // Email response type
@@ -1022,8 +1021,7 @@ export default function ProductsTab({
     setEditFormData({
       quantity: item.quantity || 1,
       discount: item.discount || 0,
-      discountType: item.discountType || 'flat',
-      staffMemberId: item.staffMember?.id || 'none'
+      discountType: item.discountType || 'flat'
     });
     setIsEditDialogOpen(true);
   };
@@ -1031,16 +1029,6 @@ export default function ProductsTab({
   // Handle save edited item
   const handleSaveEditedItem = () => {
     if (!editingItem) return;
-
-    // Check if discount is greater than 0, then staff member is required
-    if (editFormData.discount > 0 && editFormData.staffMemberId === 'none') {
-      toast.error('Staff member is required');
-      return;
-    }
-
-    // Find staff member name
-    const selectedStaff = editFormData.staffMemberId !== 'none' ?
-      staffData.find((staff: any) => staff._id === editFormData.staffMemberId) : null;
 
     setCart(prevCart =>
       prevCart.map(item =>
@@ -1050,8 +1038,7 @@ export default function ProductsTab({
             quantity: editFormData.quantity,
             totalPrice: calculateItemTotalPrice(item, editFormData.quantity, editFormData.discount, editFormData.discountType),
             discount: editFormData.discount,
-            discountType: editFormData.discountType,
-            staffMember: selectedStaff ? { id: selectedStaff._id, name: selectedStaff.fullName } : undefined
+            discountType: editFormData.discountType
           }
           : item
       )
@@ -1365,28 +1352,6 @@ export default function ProductsTab({
                             <div className="cursor-pointer text-green-600 p-2 rounded -ml-2 hover:bg-muted/50 transition-colors" onClick={() => handleEditItemClick(item)}>
                               <div className="font-medium line-clamp-2">{item.productName}</div>
                             </div>
-                            {/* Per-item Staff Selector - Hidden for suppliers */}
-                            {!isSupplier && (
-                              <div className="mt-1">
-                                <Select
-                                  value={item.staffMember?.id || 'none'}
-                                  onValueChange={(value) => updateStaffMember(item._id, value)}
-                                >
-                                  <SelectTrigger className="h-7 text-xs w-fit min-w-[120px] px-2 bg-transparent border-gray-200 hover:bg-gray-50 focus:ring-0 focus:ring-offset-0 gap-1">
-                                    <UserCircle className="h-3 w-3 text-gray-500" />
-                                    <SelectValue placeholder="Select Staff" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="none" className="text-xs">No Staff</SelectItem>
-                                    {staffData.map((staff: any) => (
-                                      <SelectItem key={staff._id} value={staff._id} className="text-xs">
-                                        {staff.fullName}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -1885,27 +1850,6 @@ export default function ProductsTab({
                 </div>
               </div>
 
-              {!isSupplier && (
-                <div>
-                  <Label htmlFor="staffMember">Staff Member</Label>
-                  <Select
-                    value={editFormData.staffMemberId}
-                    onValueChange={(value) => setEditFormData(prev => ({ ...prev, staffMemberId: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select staff member" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {staffData.map((staff: any) => (
-                        <SelectItem key={staff._id} value={staff._id}>
-                          {staff.fullName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
           )}
 
