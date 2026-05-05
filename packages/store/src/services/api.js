@@ -413,6 +413,14 @@ export const glowvitaApi = createApi({
           queryParams.append("city", params.city);
         }
 
+        if (params.offerCode) {
+          queryParams.append("offerCode", params.offerCode);
+        }
+
+        if (params.regionId) {
+          queryParams.append("regionId", params.regionId);
+        }
+
         const queryString = queryParams.toString();
         return {
           url: `/vendors${queryString ? `?${queryString}` : ""}`,
@@ -420,7 +428,6 @@ export const glowvitaApi = createApi({
         };
       },
       providesTags: ["PublicVendors"],
-      transformResponse: (response) => response,
     }),
 
     getLandingSalons: builder.query({

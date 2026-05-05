@@ -1,11 +1,11 @@
 import _db from "@repo/lib/db";
 import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
 import RegionModel from "@repo/lib/models/admin/Region.model";
-import CRMOfferModel from "@repo/lib/models/Vendor/CRMOffer.model.js";
-import AdminOfferModel from "@repo/lib/models/admin/AdminOffers.model.js";
+// CRMOfferModel and AdminOfferModel will be dynamically imported
 import ReviewModel from "@repo/lib/models/Review/Review.model";
 import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model.js";
 import mongoose from "mongoose";
+import { assignRegion } from "@repo/lib/utils/assignRegion.js";
 
 const setCorsHeaders = (response) => {
   response.headers.set("Access-Control-Allow-Origin", "*");
@@ -50,7 +50,6 @@ export const GET = async (request) => {
 
     // Only detect region if not explicitly provided via regionId param
     if (!regionId) {
-      const { assignRegion } = await import("@repo/lib/utils/assignRegion.js");
       const detectedRegionId = await assignRegion(city, null, { lat, lng });
 
       if (detectedRegionId) {
@@ -64,8 +63,16 @@ export const GET = async (request) => {
     /* ── Handle Offer Filtering ─────────────────────────────────────────── */
     let offerVendorIds = null;
     let offerRegionId = null;
+    let offerSpecialties = [];
+    let offerCategories = [];
+    let offerServices = [];
+    let offerServiceCategories = [];
 
     if (offerCode) {
+      // Dynamically import offer models to prevent circular dependencies
+      const CRMOfferModel = (await import("@repo/lib/models/Vendor/CRMOffer.model.js")).default;
+      const AdminOfferModel = (await import("@repo/lib/models/admin/AdminOffers.model.js")).default;
+
       // 1. Try CRM Offers (Vendor Specific)
       const crmOffer = await CRMOfferModel.findOne({
         code: offerCode,
@@ -76,6 +83,11 @@ export const GET = async (request) => {
 
       if (crmOffer) {
         offerVendorIds = [crmOffer.businessId];
+        offerServices = crmOffer.applicableServices || [];
+        offerServiceCategories = crmOffer.applicableServiceCategories || [];
+        offerSpecialties = (crmOffer.applicableSpecialties || []).filter(s => s !== "");
+        offerCategories = (crmOffer.applicableCategories || []).filter(s => s !== "");
+
         console.log(`[SearchAPI] Filtering by CRM offer: ${offerCode} for vendor: ${crmOffer.businessId}`);
       } else {
         // 2. Try Admin Offers (Regional / Global)
@@ -87,6 +99,9 @@ export const GET = async (request) => {
         }).lean();
 
         if (adminOffer) {
+          offerSpecialties = (adminOffer.applicableSpecialties || []).filter(s => s !== "");
+          offerCategories = (adminOffer.applicableCategories || []).filter(s => s !== "");
+
           if (adminOffer.regionId) {
             offerRegionId = adminOffer.regionId;
             console.log(`[SearchAPI] Filtering by Admin Regional offer: ${offerCode} for region: ${offerRegionId}`);
@@ -176,6 +191,16 @@ export const GET = async (request) => {
               },
             },
           ],
+        }),
+
+        // 🟢 Offer-based filtering: Only show services included in the offer
+        ...((offerServices.length > 0 || offerServiceCategories.length > 0 || offerSpecialties.length > 0 || offerCategories.length > 0) && {
+          $or: [
+            ...(offerServices.length > 0 ? [{ "services._id": { $in: offerServices.map(id => new mongoose.Types.ObjectId(id)) } }] : []),
+            ...(offerServiceCategories.length > 0 ? [{ "services.category": { $in: offerServiceCategories.map(id => new mongoose.Types.ObjectId(id)) } }] : []),
+            ...(offerSpecialties.length > 0 ? [{ "services.name": { $in: offerSpecialties.map(s => new RegExp(s, "i")) } }] : []),
+            ...(offerCategories.length > 0 ? [{ "vendorData.category": { $in: offerCategories.map(c => c.toLowerCase()) } }] : []),
+          ]
         }),
       },
     });
