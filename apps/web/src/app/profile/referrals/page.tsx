@@ -58,6 +58,25 @@ export default function ReferralsPage() {
     toast.success(`${textToCopy === referralLink ? 'Link' : 'Code'} copied to clipboard!`);
   };
 
+  const shareMessage = `Hey! Use my referral code ${referralCode} to join GlowVita Salon and get rewards on your first booking! Join here: ${referralLink}`;
+  const encodedMessage = encodeURIComponent(shareMessage);
+
+  const handleEmailShare = () => {
+    if (!isValidCode) {
+      toast.error('Referral code not available yet.');
+      return;
+    }
+    window.location.href = `mailto:?subject=${encodeURIComponent('Join GlowVita Salon')}&body=${encodedMessage}`;
+  };
+
+  const handleWhatsAppShare = () => {
+    if (!isValidCode) {
+      toast.error('Referral code not available yet.');
+      return;
+    }
+    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+  };
+
   // Refetch if referral code is not available
   useEffect(() => {
     if (!isLoading && referralCode === 'NOTAVAILABLE') {
@@ -206,8 +225,12 @@ export default function ReferralsPage() {
               </div>
             </div>
             <div className="pt-2 flex justify-center gap-2">
-              <Button variant="outline" size="icon"><Mail className="h-4 w-4" /></Button>
-              <Button variant="outline" size="icon"><MessageCircle className="h-4 w-4" /></Button>
+              <Button variant="outline" size="icon" onClick={handleEmailShare} title="Share via Email">
+                <Mail className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={handleWhatsAppShare} title="Share via WhatsApp">
+                <MessageCircle className="h-4 w-4" />
+              </Button>
             </div>
           </CardContent>
         </Card>
