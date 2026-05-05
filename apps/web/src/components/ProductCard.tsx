@@ -223,6 +223,11 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const handleBuyNow = (e: React.MouseEvent) => {
     e.stopPropagation();
 
+    if (!isAuthenticated) {
+      router.push(`/client-login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+
     // Check if cart already has items from a different vendor
     if (cartItems.length > 0) {
       const firstItem = cartItems[0];

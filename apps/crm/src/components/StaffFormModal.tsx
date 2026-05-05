@@ -299,6 +299,30 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
 
     const handleBankDetailsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
+
+        // Account Number validation: only digits, no spaces
+        if (name === 'accountNumber') {
+            const regex = /^[0-9]*$/;
+            if (!regex.test(value)) return;
+        }
+
+        // Bank Name validation: no spaces allowed
+        if (name === 'bankName') {
+            if (value.includes(' ')) return;
+        }
+
+        // IFSC Code: force uppercase
+        if (name === 'ifscCode') {
+            setFormData((prev: any) => ({
+                ...prev,
+                bankDetails: {
+                    ...prev.bankDetails,
+                    [name]: value.toUpperCase(),
+                }
+            }));
+            return;
+        }
+
         setFormData((prev: any) => ({
             ...prev,
             bankDetails: {
@@ -757,6 +781,29 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
             }
         }
 
+        // Bank Details Validation (Optional format check)
+        const bank = formData.bankDetails;
+        
+        // Only validate IFSC if it's provided
+        if (bank.ifscCode) {
+            const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+            if (!ifscRegex.test(bank.ifscCode)) {
+                toast.error("Please enter a valid IFSC code (e.g., SBIN0001234).");
+                if (activeTab !== 'bank') setActiveTab('bank');
+                return;
+            }
+        }
+
+        // Only validate UPI ID if it's provided
+        if (bank.upiId) {
+            const upiRegex = /^[\w.-]+@[\w.-]+$/;
+            if (!upiRegex.test(bank.upiId)) {
+                toast.error("Please enter a valid UPI ID (e.g., name@bank).");
+                if (activeTab !== 'bank') setActiveTab('bank');
+                return;
+            }
+        }
+
         const payload: any = {
             ...formData,
             vendorId: user._id,
@@ -998,21 +1045,21 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="accountNumber">Account Number</Label>
-                    <Input id="accountNumber" name="accountNumber" value={formData.bankDetails.accountNumber} onChange={handleBankDetailsChange} />
+                    <Input id="accountNumber" name="accountNumber" value={formData.bankDetails.accountNumber} onChange={handleBankDetailsChange} placeholder="Only digits allowed" />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="bankName">Bank Name</Label>
-                    <Input id="bankName" name="bankName" value={formData.bankDetails.bankName} onChange={handleBankDetailsChange} />
+                    <Input id="bankName" name="bankName" value={formData.bankDetails.bankName} onChange={handleBankDetailsChange} placeholder="No spaces allowed" />
                 </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="ifscCode">IFSC Code</Label>
-                    <Input id="ifscCode" name="ifscCode" value={formData.bankDetails.ifscCode} onChange={handleBankDetailsChange} />
+                    <Input id="ifscCode" name="ifscCode" value={formData.bankDetails.ifscCode} onChange={handleBankDetailsChange} placeholder="SBIN0001234" />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="upiId">UPI ID</Label>
-                    <Input id="upiId" name="upiId" value={formData.bankDetails.upiId} onChange={handleBankDetailsChange} />
+                    <Input id="upiId" name="upiId" value={formData.bankDetails.upiId} onChange={handleBankDetailsChange} placeholder="name@bank" />
                 </div>
             </div>
         </div>
