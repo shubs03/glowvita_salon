@@ -56,7 +56,7 @@ export async function GET(req) {
         const reviewData = reviewMap[item.doctorId.toString()] || { rating: 0, reviewCount: 0 };
         return {
           ...item,
-          rating: reviewData.rating ? parseFloat(reviewData.rating.toFixed(1)) : 4.5,
+          rating: reviewData.rating ? parseFloat(reviewData.rating.toFixed(1)) : 0,
           reviewCount: reviewData.reviewCount
         };
       });

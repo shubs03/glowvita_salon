@@ -384,7 +384,7 @@ export default function WishlistPage() {
                         id={salon.salonId}
                         title={salon.salonName}
                         location={salon.location}
-                        rating={salon.rating || 4.5}
+                        rating={salon.rating}
                         clients={salon.reviewCount?.toString() || salon.clients || "0"}
                         specialty={salon.specialty}
                         description={salon.description}
@@ -434,7 +434,7 @@ export default function WishlistPage() {
                           price={item.price}
                           image={item.productImage}
                           hint=""
-                          rating={item.rating || 4.5}
+                          rating={item.rating}
                           reviewCount={item.reviewCount || 0}
                           vendorName={item.supplierName}
                           vendorId={item.vendorId}
@@ -464,7 +464,7 @@ export default function WishlistPage() {
                         id={salon.salonId}
                         title={salon.salonName}
                         location={salon.location}
-                        rating={salon.rating || 4.5}
+                        rating={salon.rating}
                         clients={salon.reviewCount?.toString() || salon.clients || "0"}
                         specialty={salon.specialty}
                         description={salon.description}
@@ -504,7 +504,7 @@ export default function WishlistPage() {
                           price={item.price}
                           image={item.productImage}
                           hint=""
-                          rating={item.rating || 4.5}
+                          rating={item.rating}
                           reviewCount={item.reviewCount || 0}
                           vendorName={item.supplierName}
                           vendorId={item.vendorId}

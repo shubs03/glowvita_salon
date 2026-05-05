@@ -56,7 +56,7 @@ export async function GET(req) {
         const reviewData = reviewMap[item.productId.toString()] || { rating: 0, reviewCount: 0 };
         return {
           ...item,
-          rating: reviewData.rating ? parseFloat(reviewData.rating.toFixed(1)) : 4.5, // Fallback to 4.5 if no reviews
+          rating: reviewData.rating ? parseFloat(reviewData.rating.toFixed(1)) : 0, // Use 0 if no reviews
           reviewCount: reviewData.reviewCount
         };
       });
