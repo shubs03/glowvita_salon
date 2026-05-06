@@ -233,10 +233,19 @@ export function OrdersTableContent({
                     <p className="font-bold text-lg text-primary">₹{(order.totalAmount || 0).toFixed(2)}</p>
                   </TableCell>
                   <TableCell>
-                    <Badge className={`${getStatusColor(order.status)} border-2 font-medium px-2 py-1 rounded-full flex items-center gap-1 w-fit text-xs`}>
-                      {getStatusIcon(order.status)}
-                      <span className="hidden sm:inline">{order.status || 'Unknown'}</span>
-                    </Badge>
+                    <div className="flex flex-col gap-1.5">
+                      <Badge className={`${getStatusColor(order.status)} border-2 font-medium px-2 py-1 rounded-full flex items-center gap-1 w-fit text-xs`}>
+                        {getStatusIcon(order.status)}
+                        <span className="hidden sm:inline">{order.status || 'Unknown'}</span>
+                      </Badge>
+                      {order.paymentMethod && (
+                        <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] py-0 px-1.5 h-5 w-fit">
+                          {order.paymentMethod === 'cash-on-delivery' ? 'COD' : 
+                           order.paymentMethod === 'pay-online' ? 'Online' : 
+                           order.paymentMethod}
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex gap-1 justify-end">
@@ -335,10 +344,19 @@ function MobileOrdersView({
                     {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : 'N/A'}
                   </div>
                 </div>
-                <Badge className={`${getStatusColor(order.status)} border-2 font-medium px-3 py-1 rounded-full flex items-center gap-1`}>
-                  {getStatusIcon(order.status)}
-                  <span className="text-xs">{order.status || 'Unknown'}</span>
-                </Badge>
+                <div className="flex flex-col items-end gap-1.5">
+                  <Badge className={`${getStatusColor(order.status)} border-2 font-medium px-3 py-1 rounded-full flex items-center gap-1`}>
+                    {getStatusIcon(order.status)}
+                    <span className="text-xs">{order.status || 'Unknown'}</span>
+                  </Badge>
+                  {order.paymentMethod && (
+                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[10px] py-0 px-1.5 h-5">
+                      {order.paymentMethod === 'cash-on-delivery' ? 'COD' : 
+                       order.paymentMethod === 'pay-online' ? 'Online' : 
+                       order.paymentMethod}
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
 

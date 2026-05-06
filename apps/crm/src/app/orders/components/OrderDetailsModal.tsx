@@ -33,6 +33,7 @@ type Order = {
   cancelledAt?: string;
   cancelledBy?: string;
   userId?: any;
+  paymentMethod?: string;
 };
 
 interface OrderDetailsModalProps {
@@ -219,6 +220,19 @@ export function OrderDetailsModal({
                         <span className="text-md font-semibold">Total Amount</span>
                         <span className="text-xl font-bold text-primary">₹{(selectedOrder.totalAmount || 0).toFixed(2)}</span>
                       </div>
+
+                      {selectedOrder.paymentMethod && (
+                        <div className="pt-2 border-t border-border mt-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-muted-foreground">Payment Method</span>
+                            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                              {selectedOrder.paymentMethod === 'cash-on-delivery' ? 'Cash on Delivery (COD)' : 
+                               selectedOrder.paymentMethod === 'pay-online' ? 'Online Payment' : 
+                               selectedOrder.paymentMethod}
+                            </Badge>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -116,7 +116,8 @@ export default function OrdersPage() {
           cancellationReason: clientOrder.cancellationReason,
           cancelledBy: clientOrder.cancelledBy,
           cancelledAt: clientOrder.cancelledAt,
-          userId: clientOrder.userId
+          userId: clientOrder.userId,
+          paymentMethod: clientOrder.paymentMethod
         };
       })
       .filter((order: any) => order !== null);

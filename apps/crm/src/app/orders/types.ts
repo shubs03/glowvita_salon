@@ -30,6 +30,7 @@ export interface Order {
   cancelledAt?: string;
   cancelledBy?: string;
   userId?: any; // may be populated User object or string id
+  paymentMethod?: string;
 }
 
 export interface OrdersTableProps {
