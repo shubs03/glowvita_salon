@@ -54,7 +54,7 @@ async function getVendorMetricsHandler(request) {
   try {
     console.log("Full user object:", JSON.stringify(request.user, null, 2));
     // Use userId and convert to string based on other routes in the app
-    const vendorId = (request.user.userId || request.user.id).toString();
+    const vendorId = (request.user.vendorId || request.user.userId || request.user.id).toString();
     console.log("Fetching metrics for vendor ID:", vendorId);
 
     // Get filter parameters from query parameters
@@ -634,26 +634,35 @@ async function getVendorMetricsHandler(request) {
     nextWeek.setDate(nextWeek.getDate() + 7);
     nextWeek.setHours(23, 59, 59, 999);
 
-    // Try with string vendorId first
-    let upcomingAppointments = await AppointmentModel.countDocuments({
-      vendorId: vendorId,
-      status: { $in: ['scheduled', 'confirmed'] },
-      date: { $gte: new Date(), $lte: nextWeek }
-    });
+    // Try both scheduled and confirmed, and include various casing just in case
+    const upcomingStatuses = ['scheduled', 'confirmed', 'Scheduled', 'Confirmed'];
 
-    // If that doesn't work, try with ObjectId
-    if (upcomingAppointments === 0) {
-      try {
-        const mongoose = require('mongoose');
-        const vendorObjectId = new mongoose.Types.ObjectId(vendorId);
-        upcomingAppointments = await AppointmentModel.countDocuments({
-          vendorId: vendorObjectId,
-          status: { $in: ['scheduled', 'confirmed'] },
-          date: { $gte: new Date(), $lte: nextWeek }
-        });
-      } catch (error) {
-        console.log("Error converting vendorId to ObjectId for upcoming appointments query:", error.message);
-      }
+    // Try with both string and ObjectId to be safe
+    let upcomingAppointments = 0;
+    try {
+      const mongoose = require('mongoose');
+      const vendorObjectId = mongoose.Types.ObjectId.isValid(vendorId) 
+        ? new mongoose.Types.ObjectId(vendorId) 
+        : null;
+
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      upcomingAppointments = await AppointmentModel.countDocuments({
+        $or: [
+          { vendorId: vendorId },
+          ...(vendorObjectId ? [{ vendorId: vendorObjectId }] : [])
+        ],
+        status: { $in: upcomingStatuses },
+        date: { $gte: todayStart, $lte: nextWeek }
+      });
+    } catch (countError) {
+      console.error("Error counting upcoming appointments:", countError);
+      upcomingAppointments = await AppointmentModel.countDocuments({
+        vendorId: vendorId,
+        status: { $in: upcomingStatuses },
+        date: { $gte: todayStart, $lte: nextWeek }
+      });
     }
 
     console.log("Upcoming appointments (next 7 days):", upcomingAppointments);

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react';
+import { useCrmAuth } from '@/hooks/useCrmAuth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import {
@@ -45,15 +46,18 @@ export function UpcomingAppointments({
   startDate = '',
   endDate = ''
 }: UpcomingAppointmentsProps) {
+  const { role } = useCrmAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchUpcomingAppointments = async () => {
+      if (!role) return;
+
       try {
         // Build query params based on filter parameters
-        let url = '/api/crm/vendor/metrics/upcoming';
+        let url = `/api/crm/${role.toLowerCase()}/metrics/upcoming`;
         const params = new URLSearchParams();
 
         // Handle custom date range
