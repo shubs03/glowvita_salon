@@ -52,7 +52,7 @@ export default function CheckoutPage() {
 
   const [shippingAddress, setShippingAddress] = useState('');
   const [contactNumber, setContactNumber] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('credit-card');
+  const [paymentMethod, setPaymentMethod] = useState('pay-online');
   const [addressError, setAddressError] = useState('');
   const [phoneError, setPhoneError] = useState('');
 
@@ -477,8 +477,8 @@ export default function CheckoutPage() {
         return;
       }
 
-      // For UPI, Credit/Debit Card, and Net Banking payments, use Razorpay
-      if (paymentMethod === 'upi' || paymentMethod === 'credit-card' || paymentMethod === 'netbanking') {
+      // For online payments (UPI, Credit/Debit Card, and Net Banking), use Razorpay
+      if (paymentMethod === 'pay-online') {
         // Create Razorpay payment order
         const paymentOrderResponse = await createPaymentOrder({
           amount: totalAmount,
@@ -489,39 +489,15 @@ export default function CheckoutPage() {
           throw new Error('Failed to create payment order');
         }
 
-        const razorpayOrder = paymentOrderResponse.order;
+        const razorpayOrder = paymentOrderResponse;
 
         // Check if Razorpay is loaded
         if (!(window as any).Razorpay) {
           throw new Error('Razorpay SDK not loaded');
         }
 
-        // Configure payment methods based on selection
-        let paymentMethods = {};
-        if (paymentMethod === 'credit-card') {
-          paymentMethods = {
-            card: true,
-            upi: false,
-            netbanking: false,
-            wallet: false,
-          };
-        } else if (paymentMethod === 'upi') {
-          paymentMethods = {
-            card: false,
-            upi: true,
-            netbanking: false,
-            wallet: false,
-          };
-        } else if (paymentMethod === 'netbanking') {
-          paymentMethods = {
-            card: false,
-            upi: false,
-            netbanking: true,
-            wallet: false,
-          };
-        }
-
-        // Initialize Razorpay payment
+        // Initialize Razorpay payment with all standard options
+        // This allows credit cards, debit cards, net banking, and UPI to all be visible.
         const options = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
           amount: razorpayOrder.amount,
@@ -531,18 +507,10 @@ export default function CheckoutPage() {
           image: '/images/logo.png', // Add your logo here
           order_id: razorpayOrder.id,
           retry: { enabled: true, max_count: 3 },
-          // Simplified config to prevent interaction lag
+          // Removed restrictive config to allow all payment methods (Cards, NetBanking, etc.) to be visible.
+          // The sequence can still be customized if desired.
           config: {
             display: {
-              blocks: {
-                upi: {
-                  name: 'UPI / QR',
-                  instruments: [
-                    { method: 'upi', vpa: true }, // UPI ID entry
-                    { method: 'upi', qr: true }   // QR Code
-                  ],
-                },
-              },
               sequence: ['block.upi', 'block.card', 'block.netbanking'],
             },
           },
@@ -1157,25 +1125,29 @@ export default function CheckoutPage() {
                 <div>
                   <Label className="font-semibold">Payment Method</Label>
                   <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="mt-2 space-y-2">
-                    <Label className="flex items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
-                      <RadioGroupItem value="credit-card" id="credit-card" />
-                      <CreditCard className="h-5 w-5" />
-                      <span>Credit/Debit Card</span>
+                    <Label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-all has-[:checked]:bg-primary/5 has-[:checked]:border-primary hover:bg-gray-50 group">
+                      <RadioGroupItem value="pay-online" id="pay-online" className="mt-1" />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">Pay Online Securely</span>
+                          <div className="flex items-center gap-1.5 opacity-60 group-has-[:checked]:opacity-100 transition-opacity">
+                            <CreditCard className="h-4 w-4" />
+                            <Landmark className="h-4 w-4" />
+                            <Shield className="h-4 w-4 text-green-600" />
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">Pay via UPI, Cards, or Net Banking</p>
+                      </div>
                     </Label>
-                    <Label className="flex items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
-                      <RadioGroupItem value="upi" id="upi" />
-                      <Landmark className="h-5 w-5" />
-                      <span>UPI</span>
-                    </Label>
-                    <Label className="flex items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
-                      <RadioGroupItem value="netbanking" id="netbanking" />
-                      <Landmark className="h-5 w-5" />
-                      <span>Net Banking</span>
-                    </Label>
-                    <Label className="flex items-center space-x-3 p-3 border rounded-md has-[:checked]:bg-primary/10 has-[:checked]:border-primary">
-                      <RadioGroupItem value="cash-on-delivery" id="cash-on-delivery" />
-                      <Wallet className="h-5 w-5" />
-                      <span>Cash on Delivery</span>
+                    <Label className="flex items-center space-x-3 p-4 border rounded-lg cursor-pointer transition-all has-[:checked]:bg-primary/5 has-[:checked]:border-primary hover:bg-gray-50 group">
+                      <RadioGroupItem value="cash-on-delivery" id="cash-on-delivery" className="mt-1" />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">Cash on Delivery</span>
+                          <Wallet className="h-4 w-4 opacity-60 group-has-[:checked]:opacity-100 transition-opacity" />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">Pay when your order arrives</p>
+                      </div>
                     </Label>
                   </RadioGroup>
                 </div>
@@ -1188,11 +1160,7 @@ export default function CheckoutPage() {
                   disabled={isLoading}
                 >
                   {isLoading ? 'Processing...' :
-                    paymentMethod === 'cash-on-delivery' ? 'Place Order' :
-                      paymentMethod === 'credit-card' ? 'Pay with Card' :
-                        paymentMethod === 'upi' ? 'Pay with UPI' :
-                          paymentMethod === 'netbanking' ? 'Pay with Net Banking' :
-                            'Place Order'
+                    paymentMethod === 'pay-online' ? 'Pay & Place Order' : 'Place Order'
                   }
                 </Button>
                 <div className="flex items-center text-xs text-muted-foreground">
