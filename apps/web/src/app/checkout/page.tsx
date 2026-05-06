@@ -373,10 +373,20 @@ export default function CheckoutPage() {
     const subtotal = Number(product.price) * Number(product.quantity);
 
     // Calculate dynamic shipping based on config - Robust calculation
-    const config = Array.isArray(shippingConfig) ? shippingConfig[0] : shippingConfig;
-    const shippingAmount = Number(config?.amount || 0);
-    const shippingEnabled = String(config?.isEnabled) === 'true' || config?.isEnabled === true;
+    // Support both direct object and nested data property if transformResponse was bypassed
+    const configData = (shippingConfig as any)?.data || shippingConfig;
+    const config = Array.isArray(configData) ? configData[0] : configData;
     
+    const shippingAmount = Number(config?.amount || 0);
+    const shippingEnabled = config?.isEnabled === true || String(config?.isEnabled) === 'true';
+    
+    console.log('Shipping calculation debug (Place Order):', {
+      config,
+      shippingAmount,
+      shippingEnabled,
+      subtotal
+    });
+
     const shipping = subtotal > 0 && shippingEnabled
       ? (config?.chargeType === 'percentage'
         ? (subtotal * shippingAmount) / 100
@@ -665,9 +675,12 @@ export default function CheckoutPage() {
   const subtotal = Number(product.price) * Number(product.quantity);
 
   // Calculate dynamic shipping based on config - Robust calculation
-  const config = Array.isArray(shippingConfig) ? shippingConfig[0] : shippingConfig;
+  // Support both direct object and nested data property if transformResponse was bypassed
+  const configData = (shippingConfig as any)?.data || shippingConfig;
+  const config = Array.isArray(configData) ? configData[0] : configData;
+  
   const shippingAmount = Number(config?.amount || 0);
-  const shippingEnabled = String(config?.isEnabled) === 'true' || config?.isEnabled === true;
+  const shippingEnabled = config?.isEnabled === true || String(config?.isEnabled) === 'true';
 
   const shipping = subtotal > 0 && shippingEnabled
     ? (config?.chargeType === 'percentage'
