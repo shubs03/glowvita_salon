@@ -56,6 +56,7 @@ interface Appointment {
     discountAmount?: number;
     finalAmount?: number;
     cancellationReason?: string;
+    paymentMethod?: string;
 }
 
 interface AppointmentCardProps {
@@ -663,6 +664,13 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                             <span>Total Amount</span>
                             <span>₹{appointment.finalAmount?.toFixed(2) || appointment.price.toFixed(2)}</span>
                         </div>
+
+                        {appointment.paymentMethod && (
+                            <div className="flex justify-between text-sm pt-2 border-t border-dashed">
+                                <span className="text-muted-foreground">Payment Method</span>
+                                <span className="font-medium">{appointment.paymentMethod}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
             </CardContent>
