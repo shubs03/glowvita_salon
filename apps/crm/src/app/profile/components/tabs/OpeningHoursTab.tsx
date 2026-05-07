@@ -207,14 +207,12 @@ export const OpeningHoursTab = ({
                     </div>
                     <div
                       onClick={() => updateHours(index, { isOpen: !hour.isOpen })}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors ${
-                        hour.isOpen ? 'bg-blue-400' : 'bg-gray-300'
-                      }`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors ${hour.isOpen ? 'bg-blue-400' : 'bg-gray-300'
+                        }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          hour.isOpen ? 'translate-x-6' : 'translate-x-1'
-                        }`}
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hour.isOpen ? 'translate-x-6' : 'translate-x-1'
+                          }`}
                       />
                     </div>
                   </div>
@@ -258,9 +256,8 @@ export const OpeningHoursTab = ({
 
                 {/* Desktop/Tablet Layout - Grid */}
                 <div
-                  className={`hidden md:grid grid-cols-12 gap-2 lg:gap-4 px-3 sm:px-4 py-2 sm:py-3 items-center transition-colors hover:bg-muted/30 ${
-                    index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
-                  }`}
+                  className={`hidden md:grid grid-cols-12 gap-2 lg:gap-4 px-3 sm:px-4 py-2 sm:py-3 items-center transition-colors hover:bg-muted/30 ${index % 2 === 0 ? 'bg-background' : 'bg-muted/10'
+                    }`}
                 >
                   <div className="col-span-3 font-medium flex items-center gap-2 text-sm">
                     {hour.day}
@@ -310,14 +307,12 @@ export const OpeningHoursTab = ({
                   <div className="col-span-1 flex justify-center">
                     <div
                       onClick={() => updateHours(index, { isOpen: !hour.isOpen })}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors ${
-                        hour.isOpen ? 'bg-primary' : 'bg-secondary'
-                      }`}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full cursor-pointer transition-colors ${hour.isOpen ? 'bg-primary' : 'bg-secondary'
+                        }`}
                     >
                       <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          hour.isOpen ? 'translate-x-6' : 'translate-x-1'
-                        }`}
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${hour.isOpen ? 'translate-x-6' : 'translate-x-1'
+                          }`}
                       />
                     </div>
                   </div>
