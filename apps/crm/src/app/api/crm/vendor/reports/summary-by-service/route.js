@@ -175,6 +175,8 @@ export const GET = authMiddlewareCrm(async (req) => {
     const serviceSummary = {};
     
     allAppointments.forEach(appt => {
+      const isCompleted = appt.status === 'completed';
+      
       // Handle multi-service appointments
       if (appt.isMultiService && appt.serviceItems && appt.serviceItems.length > 0) {
         // Add each service item to the summary
@@ -183,16 +185,20 @@ export const GET = authMiddlewareCrm(async (req) => {
           if (!serviceSummary[serviceName]) {
             serviceSummary[serviceName] = {
               count: 0,
+              completedCount: 0,
               totalAmount: 0,
               totalDuration: 0
             };
           }
           
-          // For multi-service appointments, distribute the total amount proportionally
-          // or count each service item separately
           serviceSummary[serviceName].count += 1;
-          serviceSummary[serviceName].totalAmount += item.amount || 0;
-          serviceSummary[serviceName].totalDuration += item.duration || 0;
+          
+          // Only add sales and duration if appointment is completed
+          if (isCompleted) {
+            serviceSummary[serviceName].completedCount += 1;
+            serviceSummary[serviceName].totalAmount += item.amount || 0;
+            serviceSummary[serviceName].totalDuration += item.duration || 0;
+          }
         });
       } else {
         // Handle single-service appointments
@@ -200,26 +206,37 @@ export const GET = authMiddlewareCrm(async (req) => {
         if (!serviceSummary[serviceName]) {
           serviceSummary[serviceName] = {
             count: 0,
+            completedCount: 0,
             totalAmount: 0,
             totalDuration: 0
           };
         }
         
         serviceSummary[serviceName].count += 1;
-        serviceSummary[serviceName].totalAmount += appt.totalAmount || 0;
-        serviceSummary[serviceName].totalDuration += appt.duration || 0;
+        
+        // Only add sales and duration if appointment is completed
+        if (isCompleted) {
+          serviceSummary[serviceName].completedCount += 1;
+          serviceSummary[serviceName].totalAmount += appt.totalAmount || 0;
+          serviceSummary[serviceName].totalDuration += appt.duration || 0;
+        }
       }
     });
     
     // Convert to array and sort by count
-    const serviceSummaryArray = Object.keys(serviceSummary).map(serviceName => ({
-      serviceName,
-      count: serviceSummary[serviceName].count,
-      totalAmount: serviceSummary[serviceName].totalAmount,
-      totalDuration: serviceSummary[serviceName].totalDuration,
-      averageAmount: serviceSummary[serviceName].totalAmount / serviceSummary[serviceName].count,
-      averageDuration: serviceSummary[serviceName].totalDuration / serviceSummary[serviceName].count
-    })).sort((a, b) => b.count - a.count);
+    const serviceSummaryArray = Object.keys(serviceSummary).map(serviceName => {
+      const summary = serviceSummary[serviceName];
+      return {
+        serviceName,
+        count: summary.count,
+        completedCount: summary.completedCount,
+        totalAmount: summary.totalAmount,
+        totalDuration: summary.totalDuration,
+        // Calculate averages based on completed appointments to avoid skewing by cancellations
+        averageAmount: summary.completedCount > 0 ? summary.totalAmount / summary.completedCount : 0,
+        averageDuration: summary.completedCount > 0 ? summary.totalDuration / summary.completedCount : 0
+      };
+    }).sort((a, b) => b.count - a.count);
     
     const responseData = {
       summaryByService: serviceSummaryArray
