@@ -229,6 +229,13 @@ export default function PlatformMarketingPage() {
   const [isEditSocialMediaTemplateMode, setIsEditSocialMediaTemplateMode] = useState(false);
   const [selectedSocialMediaTemplate, setSelectedSocialMediaTemplate] = useState<any>(null);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
+  const [isViewPurchaseDetailsOpen, setIsViewPurchaseDetailsOpen] = useState(false);
+  const [selectedPurchase, setSelectedPurchase] = useState<PurchaseHistory | null>(null);
+
+  const handleViewPurchase = (purchase: PurchaseHistory) => {
+    setSelectedPurchase(purchase);
+    setIsViewPurchaseDetailsOpen(true);
+  };
 
 
   // Social media templates are automatically fetched by the useGetSocialMediaTemplatesQuery hook
@@ -432,8 +439,7 @@ export default function PlatformMarketingPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Platform Marketing</h1>
-      <div>
-      
+
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -881,6 +887,7 @@ export default function PlatformMarketingPage() {
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
+                                                    onClick={() => handleViewPurchase(purchase)}
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
@@ -1083,7 +1090,64 @@ export default function PlatformMarketingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
+      
+      {/* View Purchase Details Dialog */}
+      <Dialog open={isViewPurchaseDetailsOpen} onOpenChange={setIsViewPurchaseDetailsOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Purchase Details</DialogTitle>
+            <DialogDescription>
+              Detailed information for invoice {selectedPurchase?.invoiceNumber}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedPurchase && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
+                <span className="text-sm font-semibold">Invoice #</span>
+                <span className="col-span-3 text-sm">{selectedPurchase.invoiceNumber}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
+                <span className="text-sm font-semibold">Vendor</span>
+                <span className="col-span-3 text-sm">{selectedPurchase.vendorName}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
+                <span className="text-sm font-semibold">Item</span>
+                <span className="col-span-3 text-sm">
+                  <div>{selectedPurchase.item}</div>
+                  <div className="text-xs text-muted-foreground">{selectedPurchase.smsCount?.toLocaleString()} SMS</div>
+                </span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
+                <span className="text-sm font-semibold">Date</span>
+                <span className="col-span-3 text-sm">{new Date(selectedPurchase.date).toLocaleString()}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
+                <span className="text-sm font-semibold">Amount</span>
+                <span className="col-span-3 text-sm font-medium text-green-600">₹{Number(selectedPurchase.amount || 0).toFixed(2)}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
+                <span className="text-sm font-semibold">Status</span>
+                <span className="col-span-3">
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    selectedPurchase.status === 'Active' || selectedPurchase.status === 'Completed' ? 'bg-green-100 text-green-800' : 
+                    selectedPurchase.status === 'Expired' ? 'bg-red-100 text-red-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {selectedPurchase.status}
+                  </span>
+                </span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <span className="text-sm font-semibold">Payment</span>
+                <span className="col-span-3 text-sm">{selectedPurchase.paymentMethod}</span>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsViewPurchaseDetailsOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
