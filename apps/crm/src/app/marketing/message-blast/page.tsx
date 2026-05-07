@@ -8,7 +8,7 @@ import { Button } from "@repo/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@repo/ui/tabs';
 import { MessageSquare, Package, FileText, Plus, ArrowLeft } from 'lucide-react';
 import { useAppSelector } from '@repo/store/hooks';
-import { useGetCrmSmsPackagesQuery, useGetCrmCampaignsQuery, usePurchaseSmsPackageMutation } from '@repo/store/services/api';
+import { useGetCrmSmsPackagesQuery, useGetCrmCampaignsQuery, usePurchaseSmsPackageMutation, useGetSmsPurchaseHistoryQuery } from '@repo/store/services/api';
 import { toast } from 'sonner';
 
 type SMSPackage = {
@@ -88,6 +88,20 @@ export default function MessageBlastPage() {
     refetchOnMountOrArgChange: true
   });
   
+  // Fetch Purchase History
+  const {
+    data: purchaseHistoryResponse,
+    refetch: refetchPurchaseHistory
+  } = useGetSmsPurchaseHistoryQuery({ limit: 10, page: 1 }, {
+    skip: !isAuthenticated,
+    refetchOnMountOrArgChange: true
+  });
+  
+  // Extract active package from purchase history
+  const purchases = purchaseHistoryResponse?.data?.purchases || [];
+  const activePurchase = purchases.find((p: any) => p.status === 'active' && new Date(p.expiryDate) >= new Date());
+  const activePackageId = activePurchase?.packageId;
+  
   // Extract packages from the response
   const smsPackages = packagesResponse?.data || [];
   
@@ -129,8 +143,9 @@ export default function MessageBlastPage() {
       if (result.success) {
         // Show success message
         toast.success(`${result.message} New SMS Balance: ${result.data.newBalance}`);
-        // Refresh packages to update any UI that depends on balance
+        // Refresh packages and purchase history to update any UI that depends on balance
         refetchPackages();
+        refetchPurchaseHistory();
       } else {
         toast.error(result.message || 'Failed to purchase package');
       }
@@ -285,10 +300,10 @@ export default function MessageBlastPage() {
                     <Button 
                       className="w-full" 
                       size="sm" 
-                      disabled={pkg.status !== 'active' || purchasingPackageId === pkg._id}
+                      disabled={pkg.status !== 'active' || purchasingPackageId === pkg._id || activePackageId === pkg._id}
                       onClick={() => handlePurchasePackage(pkg._id)}
                     >
-                      {purchasingPackageId === pkg._id ? 'Processing...' : pkg.status === 'active' ? 'Buy Now' : 'Unavailable'}
+                      {purchasingPackageId === pkg._id ? 'Processing...' : activePackageId === pkg._id ? 'Active' : pkg.status === 'active' ? 'Buy Now' : 'Unavailable'}
                     </Button>
                   </CardFooter>
                 </Card>

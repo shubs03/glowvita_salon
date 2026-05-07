@@ -29,7 +29,8 @@ import {
   useGetSocialMediaTemplatesQuery,
   useCreateSocialMediaTemplateMutation,
   useUpdateSocialMediaTemplateMutation,
-  useDeleteSocialMediaTemplateMutation
+  useDeleteSocialMediaTemplateMutation,
+  useGetAdminMarketingDashboardQuery
 } from '../../../../../packages/store/src/services/api';
 
 // TODO: Add SMS package endpoints to the API service
@@ -184,12 +185,26 @@ export default function PlatformMarketingPage() {
     refetch: refetchSocialMediaTemplates 
   } = useGetSocialMediaTemplatesQuery(undefined);
   
+  const {
+    data: marketingDashboardResponse,
+    isLoading: isLoadingDashboard,
+    refetch: refetchDashboard
+  } = useGetAdminMarketingDashboardQuery(undefined);
+  
   // Cast the data to proper types since we know the shape from the API
   const smsPackages = Array.isArray(smsPackagesData) ? smsPackagesData as SmsPackage[] : [];
   const smsTemplates = Array.isArray(smsTemplatesData) ? smsTemplatesData as SmsTemplate[] : [];
-  const marketingTickets: MarketingTicket[] = [];
-  const purchaseHistory: PurchaseHistory[] = [];
-  const activeCampaigns: ActiveCampaign[] = [];
+  const marketingTickets: MarketingTicket[] = []; // Placeholder as requested
+  const dashboardData = marketingDashboardResponse?.data || {};
+  const purchaseHistory: PurchaseHistory[] = dashboardData.purchaseHistory || [];
+  const activeCampaigns: ActiveCampaign[] = dashboardData.activeCampaigns || [];
+  const metrics = dashboardData.metrics || {
+    totalMarketingRevenue: 0,
+    smsSentCount: 0,
+    activeCampaignsCount: 0,
+    openTicketsCount: 0
+  };
+  
   const popularPackages = smsPackages.filter((pkg: SmsPackage) => pkg.isPopular);
   
   // Ensure socialMediaTemplates is always an array
@@ -426,7 +441,7 @@ export default function PlatformMarketingPage() {
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">₹6,000</div>
+                    <div className="text-2xl font-bold">₹{metrics.totalMarketingRevenue.toLocaleString()}</div>
                     <p className="text-xs text-muted-foreground">From all package sales</p>
                 </CardContent>
             </Card>
@@ -436,8 +451,8 @@ export default function PlatformMarketingPage() {
                     <MessageSquare className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">1,250</div>
-                    <p className="text-xs text-muted-foreground">+15% from last month</p>
+                    <div className="text-2xl font-bold">{metrics.smsSentCount.toLocaleString()}</div>
+                    <p className="text-xs text-muted-foreground">From all SMS campaigns</p>
                 </CardContent>
             </Card>
             <Card>
@@ -446,7 +461,7 @@ export default function PlatformMarketingPage() {
                     <Megaphone className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{activeCampaigns?.length || 0}</div>
+                    <div className="text-2xl font-bold">{metrics.activeCampaignsCount}</div>
                     <p className="text-xs text-muted-foreground">Across all marketing types</p>
                 </CardContent>
             </Card>
@@ -456,7 +471,7 @@ export default function PlatformMarketingPage() {
                     <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{marketingTickets?.filter(t => t.status === 'Pending').length || 0}</div>
+                    <div className="text-2xl font-bold">{metrics.openTicketsCount}</div>
                     <p className="text-xs text-muted-foreground">Awaiting resolution</p>
                 </CardContent>
             </Card>
@@ -843,14 +858,18 @@ export default function PlatformMarketingPage() {
                             <TableBody>
                                 {purchaseHistory?.map((purchase) => (
                                     <TableRow key={purchase.id}>
-                                        <TableCell>{purchase.invoiceNumber}</TableCell>
+                                        <TableCell className="font-medium">{purchase.invoiceNumber}</TableCell>
                                         <TableCell>{purchase.vendorName}</TableCell>
-                                        <TableCell>{purchase.item}</TableCell>
+                                        <TableCell>
+                                            <div>{purchase.item}</div>
+                                            <div className="text-[10px] text-muted-foreground">{purchase.smsCount?.toLocaleString()} SMS</div>
+                                        </TableCell>
                                         <TableCell>{new Date(purchase.date).toLocaleDateString()}</TableCell>
-                                        <TableCell>₹{(purchase.amount / 100).toFixed(2)}</TableCell>
+                                        <TableCell>₹{Number(purchase.amount || 0).toFixed(2)}</TableCell>
                                         <TableCell>
                                             <span className={`px-2 py-1 text-xs rounded-full ${
-                                                purchase.status === 'Completed' ? 'bg-green-100 text-green-800' : 
+                                                purchase.status === 'Active' || purchase.status === 'Completed' ? 'bg-green-100 text-green-800' : 
+                                                purchase.status === 'Expired' ? 'bg-red-100 text-red-800' :
                                                 'bg-yellow-100 text-yellow-800'
                                             }`}>
                                                 {purchase.status}
@@ -918,7 +937,7 @@ export default function PlatformMarketingPage() {
                                             {new Date(campaign.startDate).toLocaleDateString()} - 
                                             {new Date(campaign.endDate).toLocaleDateString()}
                                         </TableCell>
-                                        <TableCell>₹{(campaign.budget / 100).toFixed(2)}</TableCell>
+                                        <TableCell>₹{Number(campaign.budget || 0).toFixed(2)}</TableCell>
                                         <td>
                                             <div className="flex items-center">
                                                 <span className={`h-2.5 w-2.5 rounded-full mr-2 ${

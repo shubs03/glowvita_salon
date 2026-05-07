@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import _db from '../../../../../../../packages/lib/src/db.js';
-import SmsPackage from '../../../../../../../packages/lib/src/models/Marketing/SmsPackage.model.js';
-import SmsTransaction from '../../../../../../../packages/lib/src/models/Marketing/SmsPurchaseHistory.model.js';
-import VendorModel from '../../../../../../../packages/lib/src/models/Vendor/Vendor.model.js';
-import SupplierModel from '../../../../../../../packages/lib/src/models/Vendor/Supplier.model.js';
+import _db from '@repo/lib/db';
+import SmsPackage from '@repo/lib/models/Marketing/SmsPackage.model';
+import SmsTransaction from '@repo/lib/models/Marketing/SmsPurchaseHistory.model';
+import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
+import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
 import { authMiddlewareCrm } from '../../../../middlewareCrm.js';
 
 // POST: Purchase an SMS package
@@ -103,7 +103,7 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       );
     }
     
-    const { packageId } = body;
+    const { packageId, paymentMethod = 'Online' } = body;
     
     if (!packageId) {
       return NextResponse.json(
@@ -243,6 +243,7 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       price: smsPackage.price,
       purchaseDate,
       expiryDate,
+      paymentMethod,
       status: 'active'
     };
     
