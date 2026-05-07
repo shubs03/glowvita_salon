@@ -50,6 +50,15 @@ const smsTransactionSchema = new mongoose.Schema({
     enum: ["active", "expired", "used"],
     default: "active"
   },
+  invoiceNumber: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  paymentMethod: {
+    type: String,
+    default: "Online"
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -99,6 +108,26 @@ smsTransactionSchema.pre("save", async function (next) {
       const parent = await ParentModel.findById(this.userId).select('regionId');
       if (parent && parent.regionId) {
         this.regionId = parent.regionId;
+      }
+    }
+
+    // 2. Generate invoiceNumber if missing
+    if (!this.invoiceNumber) {
+      try {
+        const CounterModel = mongoose.models.Counter || (await import('../Counter.model.js')).default;
+        const year = new Date().getFullYear();
+        const counterId = `marketing_invoice_${year}`;
+        
+        const counter = await CounterModel.findByIdAndUpdate(
+          counterId,
+          { $inc: { seq: 1 } },
+          { new: true, upsert: true }
+        );
+        
+        const sequence = String(counter.seq).padStart(4, '0');
+        this.invoiceNumber = `MKT-${year}-${sequence}`;
+      } catch (error) {
+        console.error("Error generating marketing invoice number:", error);
       }
     }
 

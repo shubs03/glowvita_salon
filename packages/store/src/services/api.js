@@ -658,6 +658,13 @@ export const glowvitaApi = createApi({
     }),
 
     // Admin Panel Endpoints
+    getAdminMarketingDashboard: builder.query({
+      query: () => ({
+        url: "/admin/Marketing/dashboard",
+        method: "GET",
+      }),
+      providesTags: ["Marketing"],
+    }),
     getUsers: builder.query({
       query: () => ({
         url: "/admin/users",
@@ -3636,4 +3643,7 @@ export const {
   useGetAdminWithdrawalsQuery,
   useGetAdminTransactionsQuery,
   useGetAdminOnlineTransactionsQuery,
+
+  // Admin Marketing Dashboard Hook
+  useGetAdminMarketingDashboardQuery,
 } = glowvitaApi;
