@@ -636,8 +636,8 @@ async function handleSlotDiscovery(searchParams) {
         if (vendorServicesDoc && vendorServicesDoc.services) {
           services = vendorServicesDoc.services
             .filter(s => serviceIds.includes(s._id.toString()))
-            .map(s => ({ 
-              ...s, 
+            .map(s => ({
+              ...s,
               duration: parseDuration(s.duration),
               prepTime: parseDuration(s.prepTime, 0),
               setupCleanupTime: parseDuration(s.setupCleanupTime, 0)
@@ -649,8 +649,8 @@ async function handleSlotDiscovery(searchParams) {
         // Fallback to ServiceModel if not found (legacy or different structure)
         if (services.length === 0) {
           const rawServices = await ServiceModel.find({ _id: { $in: serviceIds } }).lean();
-          services = rawServices.map(s => ({ 
-            ...s, 
+          services = rawServices.map(s => ({
+            ...s,
             duration: parseDuration(s.duration),
             prepTime: parseDuration(s.prepTime, 0),
             setupCleanupTime: parseDuration(s.setupCleanupTime, 0)
@@ -1407,6 +1407,8 @@ async function handleBookingConfirmation(body) {
     paymentDetails,
     paymentMethod,
     paymentStatus,
+    razorpayPaymentId,
+    razorpayOrderId,
     couponCode,
     discountAmount,
     finalAmount,
@@ -1416,7 +1418,12 @@ async function handleBookingConfirmation(body) {
   } = body;
 
   // consolidate payment info
-  const effectivePaymentDetails = paymentDetails || { paymentMethod, paymentStatus };
+  const effectivePaymentDetails = paymentDetails || {
+    paymentMethod,
+    paymentStatus,
+    razorpayPaymentId,
+    razorpayOrderId
+  };
 
   console.log('Received confirmation request:', body);
 
@@ -1430,9 +1437,9 @@ async function handleBookingConfirmation(body) {
   try {
     // Pass lockId as lockToken to match the function signature
     // CRITICAL FIX: Also pass platformFee, serviceTax, and taxRate to ensure they're saved
-    confirmResult = await confirmAppointment(appointmentId, lockId, effectivePaymentDetails, { 
-      couponCode, 
-      discountAmount, 
+    confirmResult = await confirmAppointment(appointmentId, lockId, effectivePaymentDetails, {
+      couponCode,
+      discountAmount,
       finalAmount,
       platformFee,
       serviceTax,

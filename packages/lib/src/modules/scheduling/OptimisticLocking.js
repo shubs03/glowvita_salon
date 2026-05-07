@@ -260,18 +260,18 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
     let finalServiceTax = Math.round(cleanAppointmentData.serviceTax || 0);
     let finalTaxRate = cleanAppointmentData.taxRate || 0;
     let finalAmount = Math.round(cleanAppointmentData.finalAmount || cleanAppointmentData.totalAmount || cleanAppointmentData.amount || 0);
-    
+
     // If fees are 0 but we have an amount, try to calculate them
     if ((finalPlatformFee === 0 || finalServiceTax === 0) && cleanAppointmentData.amount > 0) {
       console.log('⚠️ Platform fee or service tax is 0, attempting to calculate from tax settings...');
-      
+
       try {
         const TaxFeeSettings = (await import('../../models/admin/TaxFeeSettings.model.js')).default;
         const taxSettings = await TaxFeeSettings.getLatestSettings();
-        
+
         if (taxSettings) {
           const baseAmount = cleanAppointmentData.totalAmount || cleanAppointmentData.amount || 0;
-          
+
           // Calculate platform fee if enabled and not provided
           if (finalPlatformFee === 0 && taxSettings.platformFeeEnabled) {
             if (taxSettings.platformFeeType === 'percentage') {
@@ -281,7 +281,7 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
             }
             console.log('✅ Calculated platform fee:', finalPlatformFee);
           }
-          
+
           // Calculate service tax (GST) if enabled and not provided
           if (finalServiceTax === 0 && taxSettings.serviceTaxEnabled) {
             if (taxSettings.serviceTaxType === 'percentage') {
@@ -292,7 +292,7 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
             }
             console.log('✅ Calculated service tax (GST):', finalServiceTax);
           }
-          
+
           // Recalculate final amount if fees were calculated
           if (finalPlatformFee > 0 || finalServiceTax > 0) {
             const discountAmount = Math.round(cleanAppointmentData.discountAmount || 0);
@@ -564,11 +564,34 @@ export async function confirmAppointment(appointmentId, lockToken, paymentDetail
 
     // Set payment details and confirmation time
     if (paymentDetails) {
-      if (paymentDetails.paymentMethod) appointment.paymentMethod = paymentDetails.paymentMethod;
-      else if (paymentDetails.method) appointment.paymentMethod = paymentDetails.method;
+      const method = paymentDetails.paymentMethod || paymentDetails.method;
+      const status = paymentDetails.paymentStatus || paymentDetails.status;
 
-      if (paymentDetails.paymentStatus) appointment.paymentStatus = paymentDetails.paymentStatus;
-      else if (paymentDetails.status) appointment.paymentStatus = paymentDetails.status;
+      if (method) appointment.paymentMethod = method;
+      if (status) appointment.paymentStatus = status;
+
+      // Update Razorpay IDs if present
+      if (paymentDetails.razorpayPaymentId) appointment.razorpayPaymentId = paymentDetails.razorpayPaymentId;
+      if (paymentDetails.razorpayOrderId) appointment.razorpayOrderId = paymentDetails.razorpayOrderId;
+
+      // CRITICAL FIX: If payment is completed, update amountPaid and amountRemaining
+      if (status === 'completed') {
+        const paidAmount = couponData.finalAmount !== undefined ? Math.round(couponData.finalAmount) : appointment.finalAmount;
+        appointment.amountPaid = paidAmount;
+        appointment.amountRemaining = 0;
+
+        // Add to payment history if not already present
+        const hasHistory = appointment.paymentHistory && appointment.paymentHistory.length > 0;
+        if (!hasHistory) {
+          appointment.paymentHistory.push({
+            amount: paidAmount,
+            paymentMethod: method || 'Pay Online',
+            paymentDate: new Date(),
+            notes: 'Online payment confirmed during booking',
+            transactionId: paymentDetails.razorpayPaymentId || null
+          });
+        }
+      }
 
       // Keep paymentDetails for backward compatibility if any field uses it as a map
       appointment.paymentDetails = paymentDetails;
@@ -579,15 +602,15 @@ export async function confirmAppointment(appointmentId, lockToken, paymentDetail
     // Update coupon data if provided in confirmation request
     if (couponData.couponCode) {
       appointment.couponCode = couponData.couponCode;
-      
+
       // Increment redemption count and total discount in CRMOfferModel/AdminOfferModel
       try {
         const CRMOfferModel = (await import('../../models/Vendor/CRMOffer.model.js')).default;
         const discountToTrack = couponData.discountAmount || couponData.discount || 0;
-        
+
         // Try CRM offer first
         const crmResult = await CRMOfferModel.incrementRedemption(couponData.couponCode, discountToTrack);
-        
+
         // If not found in CRM, try Admin offer (fallback)
         if (!crmResult) {
           const AdminOfferModel = (await import('../../models/admin/AdminOffers.model.js')).default;
@@ -607,7 +630,7 @@ export async function confirmAppointment(appointmentId, lockToken, paymentDetail
       console.log(`Setting finalAmount for appointment ${appointmentId}: ${couponData.finalAmount} (discount: ${couponData.discountAmount})`);
       appointment.finalAmount = Math.round(couponData.finalAmount);
     }
-    
+
     // Update fee data if provided in confirmation request
     if (couponData.platformFee !== undefined) {
       appointment.platformFee = Math.round(couponData.platformFee);
