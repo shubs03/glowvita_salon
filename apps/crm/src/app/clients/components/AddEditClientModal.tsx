@@ -162,6 +162,17 @@ export default function AddEditClientModal({
         return;
       }
 
+      // Validate Birthday: not in future
+      if (formData.birthdayDate) {
+        const selectedDate = new Date(formData.birthdayDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (selectedDate > today) {
+          toast.error("Birthday date cannot be in the future.");
+          return;
+        }
+      }
+
       const clientData = {
         fullName: formData.fullName.trim(),
         email: formData.email.trim(),
@@ -404,6 +415,7 @@ export default function AddEditClientModal({
                 type="date"
                 value={formData.birthdayDate}
                 onChange={handleInputChange}
+                max={new Date().toISOString().split("T")[0]}
                 placeholder="Select birthday (optional)"
               />
             </div>
