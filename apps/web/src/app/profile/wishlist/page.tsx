@@ -434,7 +434,7 @@ export default function WishlistPage() {
                           price={item.price}
                           image={item.productImage}
                           hint=""
-                          rating={item.rating}
+                          rating={item.rating || 0}
                           reviewCount={item.reviewCount || 0}
                           vendorName={item.supplierName}
                           vendorId={item.vendorId}
@@ -504,7 +504,7 @@ export default function WishlistPage() {
                           price={item.price}
                           image={item.productImage}
                           hint=""
-                          rating={item.rating}
+                          rating={item.rating || 0}
                           reviewCount={item.reviewCount || 0}
                           vendorName={item.supplierName}
                           vendorId={item.vendorId}
