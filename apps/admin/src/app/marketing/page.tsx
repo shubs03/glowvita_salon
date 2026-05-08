@@ -126,6 +126,7 @@ type PurchaseHistory = {
   id: string;
   vendorName: string;
   item: string;
+  smsCount?: number;
   date: string;
   amount: number;
   status: string;
