@@ -85,11 +85,11 @@ export function DoctorCard({
 
   return (
     <div
-      className="group relative overflow-hidden rounded-md hover:shadow-md border bg-card transition-all duration-500 hover:-translate-y-2 cursor-pointer"
+      className="group bg-card border rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer h-full relative flex flex-col"
       onClick={handleCardClick}
     >
       {/* Upper Half: Image */}
-      <div className="aspect-[4/3] relative w-full overflow-hidden">
+      <div className="relative h-48 w-full flex-shrink-0 overflow-hidden">
         {image ? (
           <img
             src={image}
@@ -122,7 +122,7 @@ export function DoctorCard({
       </div>
 
       {/* Lower Half: Details */}
-      <div className="p-4 flex flex-col justify-between h-fit bg-card">
+      <div className="p-4 flex flex-col justify-between flex-1 bg-card">
         <div>
           <p className="text-xs font-medium text-muted-foreground mb-1">
             {specialty}

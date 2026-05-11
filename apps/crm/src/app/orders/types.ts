@@ -27,7 +27,10 @@ export interface Order {
   trackingNumber?: string;
   courier?: string;
   cancellationReason?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
   userId?: any; // may be populated User object or string id
+  paymentMethod?: string;
 }
 
 export interface OrdersTableProps {

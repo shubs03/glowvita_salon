@@ -164,7 +164,7 @@ export const PATCH = authMiddlewareCrm(async (req) => {
   try {
     const userId = req.user.userId;
     const role = req.user.role;
-    const { orderId, status, trackingNumber, courier } = await req.json();
+    const { orderId, status, trackingNumber, courier, cancellationReason } = await req.json();
 
     if (!orderId || !status) {
       return NextResponse.json({ message: "Order ID and status are required" }, { status: 400 });
@@ -262,7 +262,7 @@ export const PATCH = authMiddlewareCrm(async (req) => {
               quantity: item.quantity,
               previousStock,
               newStock,
-              reason: `B2B Order ${order.orderId} cancelled. Stock restored.`,
+              reason: `B2B Order ${order.orderId} cancelled. Reason: ${cancellationReason || 'N/A'}. Stock restored.`,
               reference: order.orderId,
               performedBy: userId
             });
@@ -275,6 +275,11 @@ export const PATCH = authMiddlewareCrm(async (req) => {
     order.status = status;
     if (trackingNumber) order.trackingNumber = trackingNumber;
     if (courier) order.courier = courier;
+    if (status === 'Cancelled') {
+      if (cancellationReason) order.cancellationReason = cancellationReason;
+      order.cancelledAt = new Date();
+      order.cancelledBy = role === 'vendor' ? 'Vendor' : 'Supplier';
+    }
 
     order.statusHistory.push({
       status: status,

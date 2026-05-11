@@ -299,6 +299,30 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
 
     const handleBankDetailsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
+
+        // Account Number validation: only digits, no spaces
+        if (name === 'accountNumber') {
+            const regex = /^[0-9]*$/;
+            if (!regex.test(value)) return;
+        }
+
+        // Bank Name validation: no spaces allowed
+        if (name === 'bankName') {
+            if (value.includes(' ')) return;
+        }
+
+        // IFSC Code: force uppercase
+        if (name === 'ifscCode') {
+            setFormData((prev: any) => ({
+                ...prev,
+                bankDetails: {
+                    ...prev.bankDetails,
+                    [name]: value.toUpperCase(),
+                }
+            }));
+            return;
+        }
+
         setFormData((prev: any) => ({
             ...prev,
             bankDetails: {
@@ -689,6 +713,16 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
         }));
     };
 
+    const handleSelectAllPermissions = () => {
+        const allPermissions = navItems.map(item => item.permission);
+        const allSelected = allPermissions.every(p => (formData.permissions as string[]).includes(p));
+
+        setFormData((prev: any) => ({
+            ...prev,
+            permissions: allSelected ? [] : allPermissions
+        }));
+    };
+
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -743,6 +777,29 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
             const emailFormatRegex = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.]+\.[a-zA-Z]{2,}$/;
             if (!emailFormatRegex.test(emailValue)) {
                 toast.error("Please enter a valid email format (e.g., example@gmail.com).");
+                return;
+            }
+        }
+
+        // Bank Details Validation (Optional format check)
+        const bank = formData.bankDetails;
+        
+        // Only validate IFSC if it's provided
+        if (bank.ifscCode) {
+            const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
+            if (!ifscRegex.test(bank.ifscCode)) {
+                toast.error("Please enter a valid IFSC code (e.g., SBIN0001234).");
+                if (activeTab !== 'bank') setActiveTab('bank');
+                return;
+            }
+        }
+
+        // Only validate UPI ID if it's provided
+        if (bank.upiId) {
+            const upiRegex = /^[\w.-]+@[\w.-]+$/;
+            if (!upiRegex.test(bank.upiId)) {
+                toast.error("Please enter a valid UPI ID (e.g., name@bank).");
+                if (activeTab !== 'bank') setActiveTab('bank');
                 return;
             }
         }
@@ -988,44 +1045,64 @@ export const StaffFormModal = ({ isOpen, onClose, staff, initialTab = 'personal'
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="accountNumber">Account Number</Label>
-                    <Input id="accountNumber" name="accountNumber" value={formData.bankDetails.accountNumber} onChange={handleBankDetailsChange} />
+                    <Input id="accountNumber" name="accountNumber" value={formData.bankDetails.accountNumber} onChange={handleBankDetailsChange} placeholder="Only digits allowed" />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="bankName">Bank Name</Label>
-                    <Input id="bankName" name="bankName" value={formData.bankDetails.bankName} onChange={handleBankDetailsChange} />
+                    <Input id="bankName" name="bankName" value={formData.bankDetails.bankName} onChange={handleBankDetailsChange} placeholder="No spaces allowed" />
                 </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="ifscCode">IFSC Code</Label>
-                    <Input id="ifscCode" name="ifscCode" value={formData.bankDetails.ifscCode} onChange={handleBankDetailsChange} />
+                    <Input id="ifscCode" name="ifscCode" value={formData.bankDetails.ifscCode} onChange={handleBankDetailsChange} placeholder="SBIN0001234" />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="upiId">UPI ID</Label>
-                    <Input id="upiId" name="upiId" value={formData.bankDetails.upiId} onChange={handleBankDetailsChange} />
+                    <Input id="upiId" name="upiId" value={formData.bankDetails.upiId} onChange={handleBankDetailsChange} placeholder="name@bank" />
                 </div>
             </div>
         </div>
     );
 
-    const renderPermissionsTab = () => (
-        <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 border p-4 rounded-md">
-                {navItems.map((item) => (
-                    <div key={item.permission} className="flex items-center space-x-2">
-                        <Checkbox
-                            id={item.permission}
-                            checked={(formData.permissions as string[]).includes(item.permission)}
-                            onCheckedChange={(checked) => handleCheckboxChange(item.permission, checked as boolean)}
-                        />
-                        <Label htmlFor={item.permission} className="text-sm font-medium">
-                            {item.title}
-                        </Label>
+    const renderPermissionsTab = () => {
+        const allPermissions = navItems.map(item => item.permission);
+        const allSelected = allPermissions.length > 0 && allPermissions.every(p => (formData.permissions as string[]).includes(p));
+
+        return (
+            <div className="space-y-4">
+                <div className="flex justify-between items-center px-1">
+                    <div className="space-y-0.5">
+                        <Label className="text-sm font-semibold">Enable Modules Access</Label>
+                        <p className="text-[11px] text-muted-foreground">Select which features this staff member can access.</p>
                     </div>
-                ))}
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSelectAllPermissions}
+                        className="h-8 text-xs font-bold uppercase tracking-wider"
+                    >
+                        {allSelected ? 'Deselect All' : 'Select All'}
+                    </Button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 border p-4 rounded-md bg-muted/20">
+                    {navItems.map((item) => (
+                        <div key={item.permission} className="flex items-center space-x-2 bg-white p-2 rounded border border-transparent hover:border-primary/20 transition-all">
+                            <Checkbox
+                                id={item.permission}
+                                checked={(formData.permissions as string[]).includes(item.permission)}
+                                onCheckedChange={(checked) => handleCheckboxChange(item.permission, checked as boolean)}
+                            />
+                            <Label htmlFor={item.permission} className="text-xs font-medium cursor-pointer flex-1">
+                                {item.title}
+                            </Label>
+                        </div>
+                    ))}
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     const renderTimingTab = () => {
         const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];

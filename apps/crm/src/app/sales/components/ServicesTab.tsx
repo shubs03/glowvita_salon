@@ -235,6 +235,12 @@ export default function ServicesTab({
       setClientFormData(prev => ({ ...prev, phone: digitsOnly }));
       return;
     }
+    if (name === 'email') {
+      // Allow only alphanumeric, @ and .
+      const filteredEmail = value.replace(/[^a-zA-Z0-9@.]/g, '');
+      setClientFormData(prev => ({ ...prev, email: filteredEmail }));
+      return;
+    }
     setClientFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -1289,7 +1295,10 @@ export default function ServicesTab({
                 {/* Add New Client Button */}
                 <Button
                   variant="outline"
-                  onClick={() => setIsAddClientModalOpen(true)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setIsAddClientModalOpen(true);
+                  }}
                   className="w-full h-12 rounded-lg border-border hover:border-primary text-base"
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -1660,6 +1669,7 @@ export default function ServicesTab({
                   type="date"
                   value={clientFormData.birthdayDate}
                   onChange={handleClientInputChange}
+                  max={new Date().toISOString().split('T')[0]}
                 />
               </div>
             </div>

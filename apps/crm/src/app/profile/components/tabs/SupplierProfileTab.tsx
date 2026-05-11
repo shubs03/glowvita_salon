@@ -6,16 +6,20 @@ import { Label } from "@repo/ui/label";
 import { Textarea } from "@repo/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { useUpdateSupplierProfileMutation } from '@repo/store/api';
+import { useAppDispatch } from '@repo/store/hooks';
+import { updateUser } from '@repo/store/slices/crmAuthSlice';
 import { toast } from 'sonner';
 import { Upload, User } from 'lucide-react';
 
 interface SupplierProfileTabProps {
     supplier: any;
     setSupplier: any;
+    handleProfileImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
 }
 
-export const SupplierProfileTab = ({ supplier, setSupplier }: SupplierProfileTabProps) => {
+export const SupplierProfileTab = ({ supplier, setSupplier, handleProfileImageUpload }: SupplierProfileTabProps) => {
     const [updateSupplierProfile] = useUpdateSupplierProfileMutation();
+    const dispatch = useAppDispatch();
 
     const handleSave = async () => {
         try {
@@ -41,6 +45,11 @@ export const SupplierProfileTab = ({ supplier, setSupplier }: SupplierProfileTab
 
             if (result.success) {
                 toast.success(result.message);
+                // Sync with global auth state for sidebar/navbar
+                dispatch(updateUser({
+                    shopName: supplier.shopName,
+                    profileImage: supplier.profileImage
+                }));
             } else {
                 toast.error(result.message);
             }
@@ -75,16 +84,7 @@ export const SupplierProfileTab = ({ supplier, setSupplier }: SupplierProfileTab
                                 type="file"
                                 className="hidden"
                                 accept="image/*"
-                                onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) {
-                                        const reader = new FileReader();
-                                        reader.onloadend = () => {
-                                            setSupplier({ ...supplier, profileImage: reader.result as string });
-                                        };
-                                        reader.readAsDataURL(file);
-                                    }
-                                }}
+                                onChange={handleProfileImageUpload}
                             />
                         </label>
                     </div>

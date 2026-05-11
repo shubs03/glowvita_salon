@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
-import { Star, Plus, Minus, Heart, Shield, Truck, ThumbsUp, ThumbsDown, Droplets, Leaf, FlaskConical, Loader2, PackageCheck, AlertCircle } from 'lucide-react';
+import { Star, Plus, Minus, Heart, Shield, Truck, ThumbsUp, ThumbsDown, Droplets, Leaf, FlaskConical, Loader2, PackageCheck, AlertCircle, Store } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { PageContainer } from '@repo/ui/page-container';
 import { Input } from '@repo/ui/input';
@@ -342,6 +342,11 @@ export default function ProductDetailsPage() {
       return;
     }
 
+    if (!isAuthenticated) {
+      router.push(`/client-login?redirect=${encodeURIComponent(window.location.pathname)}`);
+      return;
+    }
+
     // Check if cart already has items from a different vendor
     if (cartItems.length > 0) {
       const firstItem = cartItems[0];
@@ -563,7 +568,9 @@ export default function ProductDetailsPage() {
   return (
     <PageContainer className='max-w-7xl'>
 
-      <DiscountBanner />
+      {product.salePrice && product.salePrice > 0 && product.salePrice < product.price ? (
+        <DiscountBanner discountPercentage={Math.round(((product.price - product.salePrice) / product.price) * 100)} />
+      ) : null}
 
       <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-start py-12">
         {/* Left Column: Image Gallery (Sticky) */}
@@ -652,7 +659,13 @@ export default function ProductDetailsPage() {
         {/* Right Column: Product Details (Scrollable) */}
         <div className="mt-8 lg:mt-0 space-y-12">
           <div className="space-y-6">
-            <h1 className="text-4xl font-bold font-headline text-primary">{product.name}</h1>
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1.5">
+                <Store className="w-4 h-4" /> 
+                Sold by <span className="text-primary cursor-pointer hover:underline" onClick={() => product.vendorId && router.push(`/salon-details/${product.vendorId}`)}>{product.vendorName || "GlowVita Partner"}</span>
+              </p>
+              <h1 className="text-4xl font-bold font-headline text-primary">{product.name}</h1>
+            </div>
 
             <div className="flex items-center gap-2">
               <div className="flex">

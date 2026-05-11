@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
+import SubscriptionPlan from '@repo/lib/models/admin/SubscriptionPlan.model';
 import SmsTransaction from '@repo/lib/models/Marketing/SmsPurchaseHistory.model';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 import { uploadBase64, deleteFile } from '@repo/lib/utils/upload';

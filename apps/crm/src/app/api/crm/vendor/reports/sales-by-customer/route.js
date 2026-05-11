@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
+import VendorServicesModel from '@repo/lib/models/Vendor/VendorServices.model';
 import _db from '@repo/lib/db';
 import { authMiddlewareCrm } from '@/middlewareCrm.js';
 import { parseDate } from '../../../../../../utils/dateParser';
@@ -9,9 +10,9 @@ await _db();
 // Helper function to calculate date ranges based on filter period
 const getDateRanges = (period) => {
   const now = new Date();
-  
+
   let startDate, endDate;
-  
+
   if (period === 'day' || period === 'today') {
     // Today only
     startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -28,7 +29,7 @@ const getDateRanges = (period) => {
     startDate = new Date(now);
     startDate.setDate(now.getDate() - dayOfWeek);
     startDate.setHours(0, 0, 0, 0);
-    
+
     endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 6);
     endDate.setHours(23, 59, 59, 999);
@@ -45,7 +46,7 @@ const getDateRanges = (period) => {
     startDate = new Date(2020, 0, 1); // Default to beginning of 2020
     endDate = new Date(now.getFullYear() + 1, 0, 1, 23, 59, 59, 999);
   }
-  
+
   return { startDate, endDate };
 };
 
@@ -54,7 +55,7 @@ export const GET = authMiddlewareCrm(async (req) => {
   try {
     const vendorId = req.user.userId.toString();
     const { searchParams } = new URL(req.url);
-    
+
     // Get filter parameters
     const period = searchParams.get('period') || 'all';
     const startDateParam = searchParams.get('startDate');
@@ -64,10 +65,10 @@ export const GET = authMiddlewareCrm(async (req) => {
     const staffFilter = searchParams.get('staff');
     const statusFilter = searchParams.get('status');
     const bookingTypeFilter = searchParams.get('bookingType');
-    
+
     // Determine date range
     let startDate, endDate;
-    
+
     // Handle special periods (today, yesterday) with proper date range
     if (period === 'today' || period === 'yesterday') {
       const dateRange = getDateRanges(period);
@@ -77,7 +78,7 @@ export const GET = authMiddlewareCrm(async (req) => {
       // Handle ISO string dates from frontend for custom ranges
       startDate = parseDate(startDateParam);
       endDate = parseDate(endDateParam);
-      
+
       // Ensure we're working with proper date objects
       if (!startDate || !endDate || isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
         // Fallback to period-based dates if parsing fails
@@ -85,7 +86,7 @@ export const GET = authMiddlewareCrm(async (req) => {
         startDate = dateRange.startDate;
         endDate = dateRange.endDate;
       }
-      
+
       // For same-day custom ranges (like today/yesterday sent from frontend),
       // ensure we capture the full day
       if (startDate.toDateString() === endDate.toDateString()) {
@@ -97,53 +98,47 @@ export const GET = authMiddlewareCrm(async (req) => {
       startDate = dateRange.startDate;
       endDate = dateRange.endDate;
     }
-    
+
     // Base query for appointments - only include completed appointments for sales reporting
     const baseQuery = {
       vendorId: vendorId,
       date: { $gte: startDate, $lte: endDate },
       status: 'completed' // Only include completed appointments in sales reports
     };
-    
+
     // Apply additional filters if provided (except status, as we only want completed)
     if (clientFilter && clientFilter !== '') {
       baseQuery.clientName = clientFilter;
     }
-    
+
     if (bookingTypeFilter && bookingTypeFilter !== '') {
       baseQuery.mode = bookingTypeFilter;
     }
+
+    // Fetch vendor services to get original prices for accurate Gross Sale calculation
+    const vendorServicesDoc = await VendorServicesModel.findOne({ vendor: vendorId }).lean();
+    const servicePriceMap = {};
+    const serviceNamePriceMap = {}; // Fallback mapping by name
     
+    if (vendorServicesDoc && vendorServicesDoc.services) {
+      vendorServicesDoc.services.forEach(s => {
+        const price = s.price || 0;
+        // Use the base price as the "Gross" price
+        servicePriceMap[s._id.toString()] = price;
+        serviceNamePriceMap[s.name] = price;
+      });
+    }
+
     // Fetch all appointments within date range
     let allAppointments = await AppointmentModel.find(baseQuery)
-      .populate({
-        path: 'service',
-        select: 'name',
-        strictPopulate: false // Prevent errors if population fails
-      })
-      .populate({
-        path: 'staff',
-        select: 'fullName',
-        strictPopulate: false // Prevent errors if population fails
-      })
-      .populate({
-        path: 'serviceItems.service',
-        select: 'name',
-        strictPopulate: false // Prevent errors if population fails
-      })
-      .populate({
-        path: 'serviceItems.staff',
-        select: 'fullName',
-        strictPopulate: false // Prevent errors if population fails
-      })
       .sort({ date: 1 });
-    
+
     // Apply service filter if provided
     if (serviceFilter && serviceFilter !== '') {
       allAppointments = allAppointments.filter(appt => {
         if (appt.isMultiService && appt.serviceItems && appt.serviceItems.length > 0) {
           // For multi-service appointments, check if any service matches
-          return appt.serviceItems.some(item => 
+          return appt.serviceItems.some(item =>
             (item.service?.name || item.serviceName) === serviceFilter
           );
         } else {
@@ -152,13 +147,13 @@ export const GET = authMiddlewareCrm(async (req) => {
         }
       });
     }
-    
+
     // Apply staff filter if provided
     if (staffFilter && staffFilter !== '') {
       allAppointments = allAppointments.filter(appt => {
         if (appt.isMultiService && appt.serviceItems && appt.serviceItems.length > 0) {
           // For multi-service appointments, check if any staff matches
-          return appt.serviceItems.some(item => 
+          return appt.serviceItems.some(item =>
             (item.staff?.fullName || item.staffName) === staffFilter
           );
         } else {
@@ -167,14 +162,14 @@ export const GET = authMiddlewareCrm(async (req) => {
         }
       });
     }
-    
+
     // Sales by customer with enhanced financial details
     const salesByCustomer = {};
-    
+
     allAppointments.forEach(appt => {
       // Get customer name
       const customerName = appt.clientName || 'Unknown Customer';
-      
+
       if (!salesByCustomer[customerName]) {
         salesByCustomer[customerName] = {
           customer: customerName,
@@ -188,48 +183,52 @@ export const GET = authMiddlewareCrm(async (req) => {
           appointments: []
         };
       }
-      
+
       // Add appointment to customer's appointment list
       salesByCustomer[customerName].appointments.push({
         id: appt._id,
         date: appt.date,
         amount: appt.totalAmount || 0
       });
-      
+
       // Handle multi-service appointments
+      let appointmentGrossAmount = 0;
       if (appt.isMultiService && appt.serviceItems && appt.serviceItems.length > 0) {
-        // Add each service item to the customer's sales summary
-        appt.serviceItems.forEach(item => {
-          salesByCustomer[customerName].serviceSold += 1;
-          salesByCustomer[customerName].grossSale += item.amount || 0;
-          salesByCustomer[customerName].totalSales += item.amount || 0;
-        });
-        
-        // Distribute appointment-level financials proportionally across service items
-        const totalItemAmount = appt.serviceItems.reduce((sum, item) => sum + (item.amount || 0), 0);
-        
-        appt.serviceItems.forEach(item => {
-          const itemProportion = totalItemAmount > 0 ? (item.amount || 0) / totalItemAmount : 0;
-          
-          // Distribute appointment-level values proportionally
-          salesByCustomer[customerName].discounts += (appt.discountAmount || 0) * itemProportion;
-          salesByCustomer[customerName].offers += (appt.discountAmount || 0) * itemProportion;
-          salesByCustomer[customerName].netSale += ((item.amount || 0) - ((appt.discountAmount || 0) * itemProportion)) || 0;
-          salesByCustomer[customerName].tax += (appt.serviceTax || 0) * itemProportion;
-        });
+        // Calculate the total gross amount (original prices + addons) for the whole appointment
+        appointmentGrossAmount = appt.serviceItems.reduce((sum, item) => {
+          const serviceId = (item.service?._id || item.service)?.toString();
+          const serviceName = item.service?.name || item.serviceName || 'Unknown Service';
+          const originalPrice = servicePriceMap[serviceId] || serviceNamePriceMap[serviceName] || item.amount || 0;
+          const itemAddOnsAmount = (item.addOns || []).reduce((s, a) => s + (a.price || 0), 0);
+          return sum + originalPrice + itemAddOnsAmount;
+        }, 0);
       } else {
-        // Handle single-service appointments
-        salesByCustomer[customerName].serviceSold += 1;
-        salesByCustomer[customerName].grossSale += appt.amount || 0;
-        salesByCustomer[customerName].discounts += appt.discountAmount || 0;
-        // Assuming offers are represented by discountAmount for now
-        salesByCustomer[customerName].offers += appt.discountAmount || 0;
-        salesByCustomer[customerName].netSale += (appt.amount - (appt.discountAmount || 0)) || 0;
-        salesByCustomer[customerName].tax += appt.serviceTax || 0;
-        salesByCustomer[customerName].totalSales += appt.totalAmount || 0;
+        const serviceId = (appt.service?._id || appt.service)?.toString();
+        const serviceName = appt.service?.name || appt.serviceName || 'Unknown Service';
+        const originalPrice = servicePriceMap[serviceId] || serviceNamePriceMap[serviceName] || appt.amount || 0;
+        appointmentGrossAmount = originalPrice + (appt.addOnsAmount || 0);
       }
+
+      const appointmentDiscountAmount = appt.discountAmount || 0;
+      const appointmentTax = appt.serviceTax || 0;
+      const appointmentTotalSales = appt.totalAmount || 0; // Final amount paid
+      const isCouponUsed = !!appt.couponCode;
+
+      // Add to customer's sales summary
+      salesByCustomer[customerName].serviceSold += (appt.isMultiService ? appt.serviceItems.length : 1);
+      salesByCustomer[customerName].grossSale += appointmentGrossAmount;
+      
+      if (isCouponUsed) {
+        salesByCustomer[customerName].offers += appointmentDiscountAmount;
+      } else {
+        salesByCustomer[customerName].discounts += appointmentDiscountAmount;
+      }
+      
+      salesByCustomer[customerName].netSale += (appointmentGrossAmount - appointmentDiscountAmount);
+      salesByCustomer[customerName].tax += appointmentTax;
+      salesByCustomer[customerName].totalSales += appointmentTotalSales;
     });
-    
+
     // Convert to array and sort by total sales amount
     const salesByCustomerArray = Object.values(salesByCustomer).map(customerData => ({
       customer: customerData.customer,
@@ -241,7 +240,7 @@ export const GET = authMiddlewareCrm(async (req) => {
       tax: parseFloat(customerData.tax.toFixed(2)),
       totalSales: parseFloat(customerData.totalSales.toFixed(2))
     })).sort((a, b) => b.totalSales - a.totalSales);
-    
+
     // Also prepare data in the format for the preview table (ID, Name, Amount, Date)
     // For this, we'll take the most recent appointment for each customer
     const previewData = [];
@@ -249,7 +248,7 @@ export const GET = authMiddlewareCrm(async (req) => {
       // Get the most recent appointment
       const appointments = customerData.appointments.sort((a, b) => new Date(b.date) - new Date(a.date));
       const latestAppointment = appointments[0];
-      
+
       if (latestAppointment) {
         previewData.push({
           id: `REP-${(index + 1).toString().padStart(3, '0')}`,
@@ -259,15 +258,15 @@ export const GET = authMiddlewareCrm(async (req) => {
         });
       }
     });
-    
+
     const responseData = {
       salesByCustomer: salesByCustomerArray,
       previewData: previewData
     };
-    
+
     // Check if client wants preview data format
     const format = searchParams.get('format') || 'full';
-    
+
     if (format === 'preview') {
       return NextResponse.json({
         success: true,
@@ -301,7 +300,7 @@ export const GET = authMiddlewareCrm(async (req) => {
         }
       });
     }
-    
+
   } catch (error) {
     console.error("Error fetching sales by customer report:", error);
     return NextResponse.json(

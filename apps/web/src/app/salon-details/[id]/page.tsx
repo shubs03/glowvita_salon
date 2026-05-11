@@ -227,6 +227,17 @@ const StarRating = ({ rating }: { rating: number }) => {
   );
 };
 
+// Default working hours to show when no data is available
+const DEFAULT_WORKING_HOURS = [
+  { day: "Monday", open: "09:00", close: "20:00", isOpen: true },
+  { day: "Tuesday", open: "09:00", close: "20:00", isOpen: true },
+  { day: "Wednesday", open: "09:00", close: "20:00", isOpen: true },
+  { day: "Thursday", open: "09:00", close: "20:00", isOpen: true },
+  { day: "Friday", open: "09:00", close: "20:00", isOpen: true },
+  { day: "Saturday", open: "09:00", close: "20:00", isOpen: true },
+  { day: "Sunday", open: "09:00", close: "20:00", isOpen: true },
+];
+
 // Working Hours Display Component
 const WorkingHoursDisplay = ({
   workingHoursData,
@@ -250,58 +261,83 @@ const WorkingHoursDisplay = ({
     );
   }
 
-  if (error) {
-    return (
-      <div className="text-center text-muted-foreground">
-        <p className="text-sm">Unable to load working hours</p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Please try again later
-        </p>
-      </div>
-    );
-  }
-
   // Check if we have working hours data - use workingHoursArray as the primary source (consistent with CRM)
-  const workingHours =
-    workingHoursData?.workingHoursArray || workingHoursData?.workingHours;
+  const workingHours = useMemo(() => {
+    const rawData = workingHoursData?.workingHoursArray || workingHoursData?.workingHours;
 
-  if (!workingHours || workingHours.length === 0) {
-    return (
-      <div className="text-center text-muted-foreground">
-        <div className="bg-secondary/20 rounded-lg p-6">
-          <Clock className="h-8 w-8 mx-auto text-muted-foreground mb-3" />
-          <p className="text-sm">Working hours not available</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Contact salon for current hours
-          </p>
-        </div>
-      </div>
-    );
-  }
+    // 1. If no data at all, return defaults
+    if (!rawData || (Array.isArray(rawData) && rawData.length === 0)) {
+      return DEFAULT_WORKING_HOURS;
+    }
+
+    // 2. If it's an array, check if it's "effectively empty" (all days closed or no times)
+    if (Array.isArray(rawData)) {
+      const anyOpen = rawData.some(d => d.isOpen === true || d.hours || d.open);
+      if (!anyOpen) {
+        return DEFAULT_WORKING_HOURS;
+      }
+      return rawData;
+    }
+
+    // 3. Handle object format
+    if (rawData && typeof rawData === "object") {
+      const days = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+      const result = days.map((day) => {
+        if (rawData[day]) {
+          return {
+            day: day.charAt(0).toUpperCase() + day.slice(1),
+            ...rawData[day],
+          };
+        }
+        return {
+          day: day.charAt(0).toUpperCase() + day.slice(1),
+          open: "09:00",
+          close: "20:00",
+          isOpen: true,
+        };
+      });
+      
+      // Check if the resulting object-based array is also "effectively empty"
+      const anyOpen = result.some(d => d.isOpen === true || d.hours || d.open);
+      if (!anyOpen) {
+        return DEFAULT_WORKING_HOURS;
+      }
+      
+      return result;
+    }
+
+    return DEFAULT_WORKING_HOURS;
+  }, [workingHoursData]);
 
   // Helper function to format time display
   const formatTimeDisplay = (dayData: any) => {
-    // Handle new format with open/close/isOpen
-    if (
-      dayData.hasOwnProperty("isOpen") &&
-      dayData.hasOwnProperty("open") &&
-      dayData.hasOwnProperty("close")
-    ) {
-      if (!dayData.isOpen) {
-        return "Closed";
-      }
-      if (dayData.open && dayData.close) {
-        return `${dayData.open} - ${dayData.close}`;
-      }
-      return "Open";
+    // 1. If isOpen is explicitly false, it's Closed
+    if (dayData.hasOwnProperty("isOpen") && dayData.isOpen === false) {
+      return "Closed";
     }
 
-    // Handle old format with hours property
-    if (dayData.hours) {
+    // 2. Handle direct open/close properties
+    if (dayData.open && dayData.close) {
+      return `${dayData.open} - ${dayData.close}`;
+    }
+
+    // 3. Handle hours array (CRM format)
+    if (Array.isArray(dayData.hours) && dayData.hours.length > 0) {
+      const h = dayData.hours[0];
+      const openTime = h.openTime || h.open;
+      const closeTime = h.closeTime || h.close;
+      if (openTime && closeTime) {
+        return `${openTime} - ${closeTime}`;
+      }
+    }
+
+    // 4. Handle legacy hours string
+    if (typeof dayData.hours === "string" && dayData.hours) {
       return dayData.hours;
     }
 
-    return "Closed";
+    // 5. Default to Open if not explicitly closed
+    return dayData.open && dayData.close ? `${dayData.open} - ${dayData.close}` : "09:00 - 20:00";
   };
 
   return (
@@ -1070,6 +1106,7 @@ export default function SalonDetailsPage() {
                         {isLoading ? (
                           <Skeleton className="h-8 w-12 mx-auto" />
                         ) : (
+                          vendorData?.dynamicClientCount ||
                           vendorData?.stats?.find(
                             (s: any) => s.label === "Happy Clients"
                           )?.value ||

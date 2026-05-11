@@ -369,6 +369,12 @@ const appointmentSchema = new mongoose.Schema(
         type: [mongoose.Schema.Types.Mixed],
         default: []
       },
+      teamCommissions: [{
+        staffId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staffs' },
+        staffName: String,
+        rate: Number,
+        amount: Number
+      }],
       totalDuration: {
         type: Number,
       },
@@ -535,7 +541,7 @@ appointmentSchema.pre('save', async function (next) {
     }
 
     // 3. Calculate staff commission
-    if (this.isModified('staff') || this.isModified('serviceItems') || this.isModified('amount') || this.isModified('totalAmount') || this.isModified('finalAmount') || this.isModified('status')) {
+    if (this.isModified('staff') || this.isModified('serviceItems') || this.isModified('weddingPackageDetails.teamMembers') || this.isModified('amount') || this.isModified('totalAmount') || this.isModified('finalAmount') || this.isModified('status')) {
       try {
         const staffId = this.staff?._id || this.staff;
         console.log(`[Commission Debug] Pre-save triggered for Appointment ${this._id}. Staff ID: ${staffId}`);
@@ -622,6 +628,60 @@ appointmentSchema.pre('save', async function (next) {
             });
           }
         }
+
+        // Calculate for Wedding Team
+        if (this.isWeddingService && this.weddingPackageDetails?.teamMembers?.length > 0) {
+          const teamMembers = this.weddingPackageDetails.teamMembers;
+          const staffIds = teamMembers.map(m => (m._id || m).toString());
+
+          const StaffModelDef = mongoose.models.Staffs || (await import('../Vendor/Staff.model.js')).default;
+          const staffMembers = await StaffModelDef.find({ _id: { $in: staffIds } });
+          const staffMap = new Map(staffMembers.map(s => [s._id.toString(), s]));
+
+          const servicePrice = Number(this.amount || 0);
+          const addOnsPrice = Number(this.addOnsAmount || 0);
+          const discount = Number(this.discountAmount || this.discount || 0);
+          const commissionableAmount = Math.max(0, servicePrice + addOnsPrice - discount);
+
+          // Split commissionable amount equally among team members
+          const sharePerMember = commissionableAmount / teamMembers.length;
+
+          this.weddingPackageDetails.teamCommissions = [];
+
+          for (const sId of staffIds) {
+            const staff = staffMap.get(sId);
+            if (staff && staff.commission) {
+              const rate = Number(staff.commissionRate) || 0;
+              const commAmount = Number(((sharePerMember * rate) / 100).toFixed(2));
+
+              this.weddingPackageDetails.teamCommissions.push({
+                staffId: staff._id,
+                staffName: staff.fullName,
+                rate: rate,
+                amount: commAmount
+              });
+              console.log(`[Commission Debug] Wedding Team Commission for ${staff.fullName}: ${commAmount} (Rate: ${rate}%, Share: ${sharePerMember.toFixed(2)})`);
+            } else {
+              this.weddingPackageDetails.teamCommissions.push({
+                staffId: sId,
+                staffName: staff?.fullName || 'Unknown',
+                rate: 0,
+                amount: 0
+              });
+            }
+          }
+
+          // Update root summary for UI visibility
+          if (this.weddingPackageDetails.teamCommissions.length > 0) {
+            const totalAmount = this.weddingPackageDetails.teamCommissions.reduce((sum, c) => sum + (c.amount || 0), 0);
+            const firstRate = this.weddingPackageDetails.teamCommissions[0].rate || 0;
+            this.staffCommission = {
+              rate: firstRate,
+              amount: Number(totalAmount.toFixed(2))
+            };
+            console.log(`[Commission Debug] Updated root staffCommission for wedding: Amount=${this.staffCommission.amount}, Representative Rate=${this.staffCommission.rate}%`);
+          }
+        }
       } catch (commissionError) {
         console.error("[Commission Debug] Error calculating commission in pre-save:", commissionError);
       }
@@ -648,6 +708,18 @@ if (mongoose.models.Appointment && AppointmentModel.schema && !AppointmentModel.
       type: String,
       default: null,
     }
+  });
+}
+
+// Also ensure teamCommissions exists in the schema
+if (mongoose.models.Appointment && AppointmentModel.schema && !AppointmentModel.schema.paths['weddingPackageDetails.teamCommissions']) {
+  AppointmentModel.schema.add({
+    'weddingPackageDetails.teamCommissions': [{
+      staffId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staffs' },
+      staffName: String,
+      rate: Number,
+      amount: Number
+    }]
   });
 }
 

@@ -122,7 +122,8 @@ export async function calculateBookingAmount(
         return acc + parseFloat(addon.price || 0);
       }, 0);
 
-      const totalServicePrice = price + addOnsPrice;
+      const quantity = service.quantity || 1;
+      const totalServicePrice = (price * quantity) + addOnsPrice;
       subtotal += totalServicePrice;
 
       // Check if this specific service is eligible for the offer

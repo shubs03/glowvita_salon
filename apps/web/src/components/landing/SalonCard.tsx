@@ -104,7 +104,7 @@ export const SalonCard: React.FC<SalonCardProps> = ({
                     <div className="flex items-center gap-1 bg-accent/50 px-2 py-1 rounded-lg ml-2 shrink-0">
                         <Star className="w-3.5 h-3.5 fill-current text-yellow-500" />
                         <span className="text-xs font-bold text-accent-foreground">
-                            {rating}
+                            {Number(rating).toFixed(1)}
                         </span>
                     </div>
                 </div>

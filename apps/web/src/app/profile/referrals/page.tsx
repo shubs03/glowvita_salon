@@ -64,6 +64,25 @@ export default function ReferralsPage() {
     toast.success(`${type} copied to clipboard!`);
   };
 
+  const shareMessage = `Hey! Use my referral code ${referralCode} to join GlowVita Salon and get rewards on your first booking! Join here: ${referralLink}`;
+  const encodedMessage = encodeURIComponent(shareMessage);
+
+  const handleEmailShare = () => {
+    if (!isValidCode) {
+      toast.error('Referral code not available yet.');
+      return;
+    }
+    window.location.href = `mailto:?subject=${encodeURIComponent('Join GlowVita Salon')}&body=${encodedMessage}`;
+  };
+
+  const handleWhatsAppShare = () => {
+    if (!isValidCode) {
+      toast.error('Referral code not available yet.');
+      return;
+    }
+    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+  };
+
   // Refetch if referral code is not available
   useEffect(() => {
     if (!isLoading && referralCode === 'NOTAVAILABLE') {

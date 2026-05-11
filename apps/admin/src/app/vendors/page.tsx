@@ -21,6 +21,7 @@ import {
 import { Pagination } from "@repo/ui/pagination";
 import { Skeleton } from "@repo/ui/skeleton";
 import { Input } from "@repo/ui/input";
+import { Tabs, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import {
   Eye,
   ToggleRight,
@@ -591,23 +592,34 @@ export default function VendorManagementPage() {
                 value={filterPhone}
                 onChange={(e) => { setFilterPhone(e.target.value); setCurrentPage(1); }}
               />
-              <Select
-                disabled={isLoading}
-                value={filterStatus}
-                onValueChange={(value) => { setFilterStatus(value); setCurrentPage(1); }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Filter by Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Disabled">Disabled</SelectItem>
-                  <SelectItem value="Approved">Approved</SelectItem>
-                  <SelectItem value="Disapproved">Disapproved</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                </SelectContent>
-              </Select>
+            </div>
+            <div className="mt-4 pt-4 border-t border-slate-200">
+                <Tabs
+                  value={filterStatus}
+                  onValueChange={(value) => { setFilterStatus(value); setCurrentPage(1); }}
+                  className="w-full"
+                >
+                  <TabsList className="bg-slate-100/50 p-1 gap-1 h-auto flex-wrap justify-start border border-slate-200/50">
+                    <TabsTrigger value="all" className="px-6 py-2.5 rounded-md transition-all data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-primary">
+                      All Salons
+                    </TabsTrigger>
+                    <TabsTrigger value="Active" className="px-6 py-2.5 rounded-md transition-all data-[state=active]:bg-green-600 data-[state=active]:text-white">
+                      Active
+                    </TabsTrigger>
+                    <TabsTrigger value="Approved" className="px-6 py-2.5 rounded-md transition-all data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                      Approved
+                    </TabsTrigger>
+                    <TabsTrigger value="Pending" className="px-6 py-2.5 rounded-md transition-all data-[state=active]:bg-orange-500 data-[state=active]:text-white">
+                      Pending
+                    </TabsTrigger>
+                    <TabsTrigger value="Disabled" className="px-6 py-2.5 rounded-md transition-all data-[state=active]:bg-slate-700 data-[state=active]:text-white">
+                      Disabled
+                    </TabsTrigger>
+                    <TabsTrigger value="Disapproved" className="px-6 py-2.5 rounded-md transition-all data-[state=active]:bg-red-600 data-[state=active]:text-white">
+                      Disapproved
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
             </div>
           </div>
 
@@ -617,6 +629,7 @@ export default function VendorManagementPage() {
                 <TableRow>
                   <TableHead>Salon Name</TableHead>
                   <TableHead>Owner Name</TableHead>
+                  <TableHead>Region</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -631,6 +644,9 @@ export default function VendorManagementPage() {
                       </TableCell>
                       <TableCell>
                         <Skeleton className="h-4 w-24" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-20" />
                       </TableCell>
                       <TableCell>
                         <Skeleton className="h-4 w-20" />
@@ -656,6 +672,11 @@ export default function VendorManagementPage() {
                         {vendor.businessName}
                       </TableCell>
                       <TableCell>{`${vendor.firstName} ${vendor.lastName}`}</TableCell>
+                      <TableCell>
+                         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                           {(vendor as any).regionId?.name || 'No Region'}
+                         </span>
+                      </TableCell>
                       <TableCell>{vendor.phone}</TableCell>
                       <TableCell data-export-value={vendor.status || "Pending"}>
                         <span

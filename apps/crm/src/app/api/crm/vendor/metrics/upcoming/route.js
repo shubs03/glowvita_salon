@@ -25,8 +25,9 @@ const getDateRanges = (period) => {
     endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
   } else {
     // All time (next 7 days for upcoming appointments)
-    startDate = new Date();
-    endDate = new Date();
+    // Start from the beginning of today to include all of today's appointments
+    startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     endDate.setDate(endDate.getDate() + 7);
     endDate.setHours(23, 59, 59, 999);
   }
@@ -53,7 +54,7 @@ const getCustomDateRanges = (startDateStr, endDateStr) => {
 async function getUpcomingAppointmentsHandler(request) {
   try {
     // Get vendor ID from authenticated user
-    const vendorId = (request.user.userId || request.user.id).toString();
+    const vendorId = (request.user.vendorId || request.user.userId || request.user.id).toString();
 
     // Get filter parameters from query parameters
     const url = new URL(request.url);
@@ -76,35 +77,43 @@ async function getUpcomingAppointmentsHandler(request) {
     }
 
     // For upcoming appointments, we always look forward from today or the start date
-    const queryStartDate = startDate > new Date() ? startDate : new Date();
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const queryStartDate = startDate > todayStart ? startDate : todayStart;
 
-    // Try querying with string vendorId first
-    let matchCondition = {
-      vendorId: vendorId,
-      status: { $in: ['scheduled', 'confirmed'] },
-      date: { $gte: queryStartDate, $lte: endDate }
-    };
+    // Try both scheduled and confirmed, and include various casing just in case
+    const upcomingStatuses = ['scheduled', 'confirmed', 'Scheduled', 'Confirmed'];
 
-    // Find upcoming appointments
-    let appointments = await AppointmentModel.find(matchCondition)
+    // Try querying with both string and ObjectId to be safe
+    let appointments = [];
+    try {
+      const mongoose = require('mongoose');
+      const vendorObjectId = mongoose.Types.ObjectId.isValid(vendorId) 
+        ? new mongoose.Types.ObjectId(vendorId) 
+        : null;
+
+      appointments = await AppointmentModel.find({
+        $or: [
+          { vendorId: vendorId },
+          ...(vendorObjectId ? [{ vendorId: vendorObjectId }] : [])
+        ],
+        status: { $in: upcomingStatuses },
+        date: { $gte: queryStartDate, $lte: endDate }
+      })
       .select('clientName serviceName startTime date duration staffName')
       .sort({ date: 1, startTime: 1 })
       .limit(10);
-
-    // If no appointments found with string vendorId, try with ObjectId
-    if (appointments.length === 0) {
-      try {
-        const mongoose = require('mongoose');
-        const vendorObjectId = new mongoose.Types.ObjectId(vendorId);
-        matchCondition.vendorId = vendorObjectId;
-
-        appointments = await AppointmentModel.find(matchCondition)
-          .select('clientName serviceName startTime date duration staffName')
-          .sort({ date: 1, startTime: 1 })
-          .limit(10);
-      } catch (objectIdError) {
-        console.log("Could not convert vendorId to ObjectId:", objectIdError.message);
-      }
+    } catch (queryError) {
+      console.error("Error in upcoming appointments query:", queryError);
+      // Fallback to simpler query if complex one fails
+      appointments = await AppointmentModel.find({
+        vendorId: vendorId,
+        status: { $in: upcomingStatuses },
+        date: { $gte: queryStartDate, $lte: endDate }
+      })
+      .select('clientName serviceName startTime date duration staffName')
+      .sort({ date: 1, startTime: 1 })
+      .limit(10);
     }
 
     // Format the data for the frontend

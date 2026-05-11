@@ -77,11 +77,11 @@ export default function SubscriptionManagementPage() {
 
   const { data: regionsResponse } = useGetRegionsQuery(undefined);
   const regions: any[] = (regionsResponse as any)?.data || (Array.isArray(regionsResponse) ? regionsResponse : []);
-  
+
   // Fetch ALL plans to handle Global/Regional filtering on frontend
   const { data: allPlansRaw = [], isLoading, error, refetch } = useGetSubscriptionPlansQuery(undefined);
   const allPlans: Plan[] = Array.isArray(allPlansRaw) ? allPlansRaw : (allPlansRaw as any)?.data || [];
-  
+
   const { data: vendors = [], isLoading: vendorsLoading, refetch: refetchVendors } = useGetVendorsQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
   const { data: suppliers = [], isLoading: suppliersLoading, refetch: refetchSuppliers } = useGetSuppliersQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
   const { data: doctors = [], isLoading: doctorsLoading, refetch: refetchDoctors } = useGetDoctorsQuery(selectedRegion ? { regionId: selectedRegion } : undefined);
@@ -90,19 +90,71 @@ export default function SubscriptionManagementPage() {
   const [deletePlan] = useDeleteSubscriptionPlanMutation();
 
   // Filter plans based on selected region (including Global plans)
-  const plans = allPlans.filter(p => 
-    !selectedRegion || 
-    !(p as any).regionId || 
+  const plans = allPlans.filter(p =>
+    !selectedRegion ||
+    !(p as any).regionId ||
     (p as any).regionId === selectedRegion
   );
+
+  // Helper to extract date string from MongoDB $date object or raw string
+  const getDateValue = (dateInput: any) => {
+    if (!dateInput) return '';
+    if (typeof dateInput === 'string') return dateInput;
+    if (typeof dateInput === 'object' && dateInput.$date) return dateInput.$date;
+    return dateInput.toString();
+  };
+
+  // Helper to safely parse date without timezone shifts for calendar comparisons
+  const getSafeDate = (dateInput: any) => {
+    const val = getDateValue(dateInput);
+    if (!val) return null;
+    const date = new Date(val);
+    if (isNaN(date.getTime())) return null;
+
+    // If it's an ISO string (YYYY-MM-DD...), parse parts manually to avoid timezone spillover
+    if (typeof val === 'string' && val.includes('-')) {
+      const parts = val.split('T')[0].split('-');
+      if (parts.length === 3) {
+        const [y, m, d] = parts.map(Number);
+        return new Date(y, m - 1, d);
+      }
+    }
+    // Fallback to local reconstruction
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  };
+
+  // Helper to determine real-time subscription status
+  const getSubStatus = (subscription: any) => {
+    const rawStatus = (subscription?.status || 'Pending').toString().trim();
+    const normalizedStatus = rawStatus.toLowerCase();
+
+    // Ensure we have a valid end date
+    const endDateVal = getDateValue(subscription?.endDate);
+    if (endDateVal) {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const expiryDate = getSafeDate(endDateVal);
+
+      if (expiryDate && today > expiryDate) {
+        return 'Expired';
+      }
+    }
+
+    // Return capitalized status for UI consistency
+    if (normalizedStatus === 'active') return 'Active';
+    if (normalizedStatus === 'pending') return 'Pending';
+    if (normalizedStatus === 'expired') return 'Expired';
+
+    return rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
+  };
 
   // Derived subscribers from vendors, suppliers, and doctors (live data)
   const subscribers: (Subscription & { planPrice?: number })[] = [
     ...(Array.isArray(vendors) ? vendors : []).map((v: any) => {
       const plan = v.subscription?.plan;
-      const planId = typeof plan === 'object' && plan !== null ? (plan as any)._id : (typeof plan === 'string' ? plan : undefined);
-      const planName = typeof plan === 'object' && plan !== null ? (plan as any).name : undefined;
-      
+      const planId = typeof plan === 'object' && plan !== null ? ((plan as any).$oid || (plan as any)._id) : (typeof plan === 'string' ? plan : undefined);
+      const planName = (typeof plan === 'object' && plan !== null && (plan as any).name) ? (plan as any).name : undefined;
+
       // Lookup plan details for revenue calculation
       const planDetails = allPlans.find(p => p._id === planId || p.name === planName);
 
@@ -110,54 +162,54 @@ export default function SubscriptionManagementPage() {
         id: v._id,
         subscriberId: v._id,
         subscriberName: v.businessName || 'Vendor',
-        planName: planName || (typeof plan === 'string' ? plan : '-'),
+        planName: planName || planDetails?.name || '-',
         planId,
         planPrice: (planDetails?.discountedPrice && planDetails.discountedPrice > 0) ? planDetails.discountedPrice : planDetails?.price,
-        startDate: v.subscription?.startDate || '',
-        endDate: v.subscription?.endDate || '',
-        status: v.subscription?.status || 'Pending',
+        startDate: getDateValue(v.subscription?.startDate),
+        endDate: getDateValue(v.subscription?.endDate),
+        status: getSubStatus(v.subscription),
         history: (v.subscription as any)?.history || [],
         userType: 'vendor' as const
       };
     }),
     ...(Array.isArray(suppliers) ? suppliers : []).map((s: any) => {
       const plan = s.subscription?.plan;
-      const planId = typeof plan === 'object' && plan !== null ? (plan as any)._id : (typeof plan === 'string' ? plan : undefined);
-      const planName = typeof plan === 'object' && plan !== null ? (plan as any).name : undefined;
-      
+      const planId = typeof plan === 'object' && plan !== null ? ((plan as any).$oid || (plan as any)._id) : (typeof plan === 'string' ? plan : undefined);
+      const planName = (typeof plan === 'object' && plan !== null && (plan as any).name) ? (plan as any).name : undefined;
+
       const planDetails = allPlans.find(p => p._id === planId || p.name === planName);
 
       return {
         id: s._id,
         subscriberId: s._id,
         subscriberName: s.shopName || (s.firstName + ' ' + s.lastName) || 'Supplier',
-        planName: planName || (typeof plan === 'string' ? plan : '-'),
+        planName: planName || planDetails?.name || '-',
         planId,
         planPrice: (planDetails?.discountedPrice && planDetails.discountedPrice > 0) ? planDetails.discountedPrice : planDetails?.price,
-        startDate: s.subscription?.startDate || '',
-        endDate: s.subscription?.endDate || '',
-        status: s.subscription?.status || 'Pending',
+        startDate: getDateValue(s.subscription?.startDate),
+        endDate: getDateValue(s.subscription?.endDate),
+        status: getSubStatus(s.subscription),
         history: (s.subscription as any)?.history || [],
         userType: 'supplier' as const
       };
     }),
     ...(Array.isArray(doctors) ? doctors : []).map((d: any) => {
       const plan = d.subscription?.plan;
-      const planId = typeof plan === 'object' && plan !== null ? (plan as any)._id : (typeof plan === 'string' ? plan : undefined);
-      const planName = typeof plan === 'object' && plan !== null ? (plan as any).name : undefined;
-      
+      const planId = typeof plan === 'object' && plan !== null ? ((plan as any).$oid || (plan as any)._id) : (typeof plan === 'string' ? plan : undefined);
+      const planName = (typeof plan === 'object' && plan !== null && (plan as any).name) ? (plan as any).name : undefined;
+
       const planDetails = allPlans.find(p => p._id === planId || p.name === planName);
 
       return {
         id: d._id,
         subscriberId: d._id,
         subscriberName: d.clinicName ? `${d.name} (${d.clinicName})` : d.name || 'Doctor',
-        planName: planName || (typeof plan === 'string' ? plan : '-'),
+        planName: planName || planDetails?.name || '-',
         planId,
         planPrice: (planDetails?.discountedPrice && planDetails.discountedPrice > 0) ? planDetails.discountedPrice : planDetails?.price,
-        startDate: d.subscription?.startDate || '',
-        endDate: d.subscription?.endDate || '',
-        status: d.subscription?.status || 'Pending',
+        startDate: getDateValue(d.subscription?.startDate),
+        endDate: getDateValue(d.subscription?.endDate),
+        status: getSubStatus(d.subscription),
         history: (d.subscription as any)?.history || [],
         userType: 'doctor' as const
       };
@@ -196,6 +248,7 @@ export default function SubscriptionManagementPage() {
   const [planItemsPerPage, setPlanItemsPerPage] = useState<number>(5); // Explicit number type
   const [subItemsPerPage, setSubItemsPerPage] = useState<number>(5); // Explicit number type
   const [subscriberRoleFilter, setSubscriberRoleFilter] = useState<string>('all');
+  const [subscriberStatusFilter, setSubscriberStatusFilter] = useState<string>('all');
 
   const durationTypeOptions = [
     { value: 'days', label: 'Days' },
@@ -386,16 +439,39 @@ export default function SubscriptionManagementPage() {
   const activeSubscribersCount = subscribers.filter((s) => s.status === 'Active').length;
   const expiredSubscribersCount = subscribers.filter((s) => s.status === 'Expired').length;
 
-  // Dynamic Total Revenue calculation from Active subscribers
-  const totalRevenue = subscribers
-    .filter((s) => s.status === 'Active')
-    .reduce((acc, sub) => acc + (sub.planPrice || 0), 0);
+  // Total Revenue = Current Paid Plan + Historical Expired Plans
+  // Exclusion logic: skip Free Trials (₹0), duplicate 'Active' history, and Failed/Pending payments.
+  const totalRevenue = subscribers.reduce((acc, sub) => {
+    // 1. Current plan revenue (only if status is Active or Expired and price > 0)
+    const currentPrice = ((sub.status === 'Active' || sub.status === 'Expired') && (sub.planPrice || 0) > 0) 
+      ? (sub.planPrice || 0) : 0;
+    
+    // 2. Historical revenue from completed past plans
+    const historyRevenue = (sub.history || []).reduce((hAcc, hItem) => {
+      // Rule: Only count history items that are strictly 'Expired' 
+      // (This avoids double-counting the 'Active' duplicate in history)
+      if (hItem.status?.toLowerCase() !== 'expired') return hAcc;
+
+      const hPlanId = typeof hItem.plan === 'object' ? ((hItem.plan as any).$oid || (hItem.plan as any)._id) : hItem.plan;
+      const hPlan = allPlans.find(p => p._id === hPlanId || p.name === (hItem.plan as any)?.name);
+      const hPrice = (hPlan?.discountedPrice && hPlan.discountedPrice > 0) ? hPlan.discountedPrice : (hPlan?.price || 0);
+      
+      // Rule: Skip Free Trials (where price is 0)
+      if (hPrice <= 0) return hAcc;
+      
+      return hAcc + hPrice;
+    }, 0);
+
+    return acc + currentPrice + historyRevenue;
+  }, 0);
 
   // Pagination logic with safeguards
   const totalPlanPages = Math.ceil(plans.length / (planItemsPerPage || 1)) || 1;
 
   const filteredAndSortedSubscribers = subscribers
-    .filter((s) => subscriberRoleFilter === 'all' || s.userType === subscriberRoleFilter)
+    .filter((s) => s.status !== 'Pending' &&
+      (subscriberRoleFilter === 'all' || s.userType === subscriberRoleFilter) &&
+      (subscriberStatusFilter === 'all' || s.status === subscriberStatusFilter))
     .sort((a, b) => {
       const dateA = a.startDate ? new Date(a.startDate).getTime() : 0;
       const dateB = b.startDate ? new Date(b.startDate).getTime() : 0;
@@ -584,17 +660,30 @@ export default function SubscriptionManagementPage() {
                 <CardTitle>All Subscriptions</CardTitle>
                 <CardDescription>View and manage all active and inactive user subscriptions.</CardDescription>
               </div>
-              <Select value={subscriberRoleFilter} onValueChange={(val) => { setSubscriberRoleFilter(val); setCurrentSubPage(1); }}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by User Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="vendor">Vendor</SelectItem>
-                  <SelectItem value="supplier">Supplier</SelectItem>
-                  <SelectItem value="doctor">Doctor</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={subscriberRoleFilter} onValueChange={(val) => { setSubscriberRoleFilter(val); setCurrentSubPage(1); }}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="User Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="vendor">Vendor</SelectItem>
+                    <SelectItem value="supplier">Supplier</SelectItem>
+                    <SelectItem value="doctor">Doctor</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={subscriberStatusFilter} onValueChange={(val) => { setSubscriberStatusFilter(val); setCurrentSubPage(1); }}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Expired">Expired</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto no-scrollbar">
@@ -1110,7 +1199,7 @@ export default function SubscriptionManagementPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Subscriber Name</Label>
                     <p className="font-medium">{selectedSubscription.subscriberName}</p>
@@ -1118,6 +1207,10 @@ export default function SubscriptionManagementPage() {
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Plan Name</Label>
                     <p className="font-medium">{selectedSubscription.planName || 'N/A'}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Plan Price</Label>
+                    <p className="font-medium text-primary font-bold">₹{(selectedSubscription as any).planPrice?.toLocaleString('en-IN') || '0'}</p>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs text-muted-foreground">Start Date</Label>
@@ -1145,6 +1238,10 @@ export default function SubscriptionManagementPage() {
                       }
                     </p>
                   </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">User Type</Label>
+                    <p className="font-medium capitalize">{selectedSubscription.userType || 'N/A'}</p>
+                  </div>
                 </div>
 
                 {/* Days Remaining/Expired */}
@@ -1152,9 +1249,15 @@ export default function SubscriptionManagementPage() {
                   <div className="pt-2 border-t">
                     {(() => {
                       const now = new Date();
-                      const end = new Date(selectedSubscription.endDate);
-                      const diffTime = end.getTime() - now.getTime();
-                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                      // Normalize both to start of day for accurate calendar day difference
+                      const startDateNormalized = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                      const endDateNormalized = getSafeDate(selectedSubscription.endDate);
+
+                      if (!endDateNormalized) return null;
+
+                      const diffTime = endDateNormalized.getTime() - startDateNormalized.getTime();
+                      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
                       if (diffDays > 0) {
                         return (
@@ -1188,60 +1291,74 @@ export default function SubscriptionManagementPage() {
                 </h3>
 
                 {selectedSubscription.history && selectedSubscription.history.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {/* Timeline */}
-                    <div className="relative space-y-4 pl-6 border-l-2 border-muted">
-                      {[...selectedSubscription.history].reverse().map((historyItem, index) => (
-                        <div key={index} className="relative">
-                          {/* Timeline dot */}
-                          <div className="absolute -left-[1.6rem] top-1 w-4 h-4 rounded-full bg-primary border-4 border-background"></div>
+                    <div className="relative space-y-6 pl-8 border-l-2 border-muted-foreground/20 ml-2">
+                      {[...selectedSubscription.history].reverse().map((historyItem, index) => {
+                        const hPlanId = typeof historyItem.plan === 'object' ? ((historyItem.plan as any)?.$oid || (historyItem.plan as any)?._id) : historyItem.plan;
+                        const hPlan = allPlans.find(p => p._id === hPlanId || p.name === (historyItem.plan as any)?.name);
+                        const hPrice = (hPlan?.discountedPrice && hPlan.discountedPrice > 0) ? hPlan.discountedPrice : (hPlan?.price || 0);
 
-                          {/* History card */}
-                          <div className="bg-muted/30 rounded-lg p-3 border">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1">
-                                <p className="font-semibold text-sm">
-                                  {typeof historyItem.plan === 'object' && historyItem.plan !== null
-                                    ? historyItem.plan.name
-                                    : 'Unknown Plan'}
-                                </p>
-                                <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                                  <span>
-                                    {historyItem.startDate
-                                      ? new Date(historyItem.startDate).toLocaleDateString('en-IN', {
-                                        day: 'numeric',
-                                        month: 'short',
-                                        year: 'numeric',
-                                      })
-                                      : 'N/A'}
-                                  </span>
-                                  <span>→</span>
-                                  <span>
-                                    {historyItem.endDate
-                                      ? new Date(historyItem.endDate).toLocaleDateString('en-IN', {
-                                        day: 'numeric',
-                                        month: 'short',
-                                        year: 'numeric',
-                                      })
-                                      : 'N/A'}
-                                  </span>
+                        return (
+                          <div key={index} className="relative">
+                            {/* Timeline dot */}
+                            <div className="absolute -left-[2.6rem] top-1.5 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+                              <div className="w-2.5 h-2.5 rounded-full bg-primary"></div>
+                            </div>
+
+                            {/* History card */}
+                            <div className="bg-muted/30 rounded-xl p-4 border transition-colors hover:bg-muted/50">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="space-y-2 flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="font-bold text-sm text-foreground">
+                                      {typeof historyItem.plan === 'object' && historyItem.plan !== null && (historyItem.plan as any).name
+                                        ? (historyItem.plan as any).name
+                                        : (allPlans.find(p => p._id === hPlanId || p.name === hPlanId)?.name || hPlanId || 'Unknown Plan')}
+                                    </h4>
+                                    <span className="text-sm font-black text-primary">
+                                      ₹{hPrice.toLocaleString('en-IN')}
+                                    </span>
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-2 mt-2">
+                                    <div className="flex flex-col">
+                                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">From</span>
+                                      <span className="text-xs font-semibold">
+                                        {(() => {
+                                          const dVal = getDateValue(historyItem.startDate);
+                                          return dVal ? new Date(dVal).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A';
+                                        })()}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Until</span>
+                                      <span className="text-xs font-semibold">
+                                        {(() => {
+                                          const dVal = getDateValue(historyItem.endDate);
+                                          return dVal ? new Date(dVal).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A';
+                                        })()}
+                                      </span>
+                                    </div>
+                                  </div>
                                 </div>
-                              </div>
-                              <div
-                                className={`
-                                  px-2 py-0.5 rounded-full text-xs font-semibold
-                                  ${historyItem.status === 'Active'
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-gray-100 text-gray-700'
-                                  }
-                                `}
-                              >
-                                {historyItem.status}
+
+                                <div
+                                  className={`
+                                    px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight
+                                    ${historyItem.status === 'Active'
+                                      ? 'bg-green-100 text-green-700 border border-green-200'
+                                      : 'bg-muted text-muted-foreground border border-muted-foreground/10'
+                                    }
+                                  `}
+                                >
+                                  {historyItem.status}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (

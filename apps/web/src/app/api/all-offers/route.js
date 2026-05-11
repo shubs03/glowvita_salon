@@ -38,9 +38,10 @@ export async function GET(request) {
         $or: [
           { regionId: null },                     // global offers (filtered later by disabledRegions)
           { regionId: regionId.toString() }       // exact-match regional offers only
-        ]
+        ],
+        isActive: { $ne: false }                  // Only fetch active offers!
       }
-      : {}; // no region = show all offers to guest
+      : { isActive: { $ne: false } };             // guest: only active ones!
 
     const adminOffers = await AdminOfferModel.find(adminOffersQuery).lean();
 
@@ -75,20 +76,17 @@ export async function GET(request) {
 
     // Get all active CRM offers (vendor-specific offers)
     let crmOffers = [];
+    let crmQuery = { businessType: 'vendor' };
+    
     if (vendorId) {
-      // If vendorId is provided, get only offers for that vendor
-      crmOffers = await CRMOfferModel.find({
-        businessType: 'vendor',
-        businessId: vendorId
-      }).lean();
-    } else {
-      // Otherwise get CRM offers for the region
-      let crmQuery = {};
-      if (regionId) {
-        crmQuery = { regionId };
-      }
-      crmOffers = await CRMOfferModel.find(crmQuery).lean();
+      crmQuery.businessId = vendorId;
+    } else if (regionId) {
+      crmQuery.regionId = regionId;
     }
+
+    crmOffers = await CRMOfferModel.find(crmQuery)
+      .populate({ path: 'businessId', select: 'businessName' })
+      .lean();
 
     // Process CRM offers to update status based on current date
     const activeCrmOffers = crmOffers.filter(offer => {

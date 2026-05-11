@@ -3,6 +3,7 @@ import _db from '@repo/lib/db';
 import ProductModel from '@repo/lib/models/Vendor/Product.model';
 import SupplierModel from '@repo/lib/models/Vendor/Supplier.model';
 import ProductCategoryModel from '@repo/lib/models/admin/ProductCategory';
+import ReviewModel from '@repo/lib/models/Review/Review.model';
 import { authMiddlewareCrm } from '@/middlewareCrm';
 
 await _db();
@@ -35,6 +36,32 @@ export const GET = authMiddlewareCrm(async (req) => {
       .sort({ createdAt: -1 })
       .lean();
 
+    const productIds = products.map(p => p._id);
+    const reviews = await ReviewModel.aggregate([
+      {
+        $match: {
+          entityType: 'product',
+          entityId: { $in: productIds },
+          isApproved: true
+        }
+      },
+      {
+        $group: {
+          _id: "$entityId",
+          averageRating: { $avg: "$rating" },
+          reviewCount: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const reviewMap = {};
+    reviews.forEach(r => {
+      reviewMap[r._id.toString()] = {
+        rating: Number(r.averageRating.toFixed(1)),
+        reviewCount: r.reviewCount
+      };
+    });
+
     const transformedProducts = products.map(p => ({
       ...p,
       supplierName: p.vendorId?.shopName,
@@ -49,6 +76,8 @@ export const GET = authMiddlewareCrm(async (req) => {
       categoryDescription: p.category?.description || p.categoryDescription || '',
       // Transform status to match vendor products format
       status: p.status === 'rejected' ? 'disapproved' : p.status,
+      rating: reviewMap[p._id.toString()]?.rating || 0,
+      reviewCount: reviewMap[p._id.toString()]?.reviewCount || 0,
     }));
 
     // Return in the same format as vendor products API

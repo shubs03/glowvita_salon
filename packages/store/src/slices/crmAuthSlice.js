@@ -72,41 +72,29 @@ const crmAuthSlice = createSlice({
       const incomingUser = action.payload;
       
       // Update the user with incoming data, always prioritizing fresh data from the server
-      if (incomingUser?.subscription) {
-        // Always update with the incoming subscription data from the server
-        // The server should provide the most accurate subscription status
-        state.user = incomingUser;
-        
-        // Update localStorage with the fresh data
-        if (typeof window !== 'undefined') {
-          try {
-            const persistedState = JSON.parse(localStorage.getItem('crmAuthState'));
-            if (persistedState) {
-              const updatedState = { ...persistedState, user: state.user };
-              localStorage.setItem('crmAuthState', JSON.stringify(updatedState));
-            }
-          } catch (e) {
-            console.error("Could not update user in localStorage", e);
+      // We merge the incoming user data with existing data to preserve fields like profileImage
+      // that might not be returned by every endpoint (e.g., core auth endpoints vs profile endpoints)
+      state.user = {
+        ...state.user,
+        ...incomingUser,
+        // Explicitly preserve profileImage if the incoming data doesn't have it
+        profileImage: incomingUser?.profileImage || state.user?.profileImage,
+        // Preserve businessName/shopName/name for the same reason
+        businessName: incomingUser?.businessName || state.user?.businessName,
+        shopName: incomingUser?.shopName || state.user?.shopName,
+        name: incomingUser?.name || state.user?.name,
+      };
+      
+      // Sync to localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          const persistedState = JSON.parse(localStorage.getItem('crmAuthState'));
+          if (persistedState) {
+            const updatedState = { ...persistedState, user: state.user };
+            localStorage.setItem('crmAuthState', JSON.stringify(updatedState));
           }
-        }
-      } else {
-        // No subscription data in incoming user, just update other fields
-        state.user = {
-          ...state.user,
-          ...incomingUser
-        };
-        
-        // Sync to localStorage
-        if (typeof window !== 'undefined') {
-          try {
-            const persistedState = JSON.parse(localStorage.getItem('crmAuthState'));
-            if (persistedState) {
-              const updatedState = { ...persistedState, user: state.user };
-              localStorage.setItem('crmAuthState', JSON.stringify(updatedState));
-            }
-          } catch (e) {
-            console.error("Could not update user in localStorage", e);
-          }
+        } catch (e) {
+          console.error("Could not update user in localStorage", e);
         }
       }
     },

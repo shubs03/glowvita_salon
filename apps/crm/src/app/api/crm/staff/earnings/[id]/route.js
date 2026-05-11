@@ -38,13 +38,26 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
 
             // Fetch all completed appointments for this staff
             const completedAppointments = await AppointmentModel.find({
-                vendorId: new mongoose.Types.ObjectId(vendorId),
-                status: { $in: ['completed', 'completed without payment'] },
-                $or: [
-                    { staff: new mongoose.Types.ObjectId(staffId) },
-                    { "serviceItems.staff": new mongoose.Types.ObjectId(staffId) }
+                $and: [
+                    {
+                        $or: [
+                            { vendorId: vendorId },
+                            { vendorId: new mongoose.Types.ObjectId(vendorId) }
+                        ]
+                    },
+                    {
+                        status: { $in: [/completed/i, /completed without payment/i] }
+                    },
+                    {
+                        $or: [
+                            { staff: staffId },
+                            { staff: new mongoose.Types.ObjectId(staffId) },
+                            { "serviceItems.staff": staffId },
+                            { "serviceItems.staff": new mongoose.Types.ObjectId(staffId) }
+                        ]
+                    }
                 ]
-            }).select('_id').lean();
+            }).select('_id status').lean();
 
             const completedBillings = await BillingModel.find({
                 vendorId: new mongoose.Types.ObjectId(vendorId),
@@ -138,7 +151,7 @@ export const GET = authMiddlewareCrm(async (req, { params }) => {
         // 3. Fetch Transaction History (The Ledger)
         const transactions = await StaffTransactionsModel.find({ staffId })
             .sort({ transactionDate: -1 })
-            .limit(50)
+            .limit(200)
             .populate({
                 path: 'appointmentId',
                 select: 'clientName serviceName totalAmount date serviceItems staffCommission',

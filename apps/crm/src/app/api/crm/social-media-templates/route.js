@@ -13,7 +13,7 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
   try {
     console.log('Received GET /api/crm/social-media-templates request');
     console.log('Auth context:', ctx);
-    console.log('User info:', { userId: req.user?._id, userRole: req.user?.role });
+    console.log('User info:', { userId: req.user?.userId, userRole: req.user?.role });
     
     // Connect to database inside the handler (following memory specification)
     const db = await _db();
@@ -139,8 +139,8 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       isActive: true,
       jsonData: jsonData,
       imageUrl: originalTemplate.imageUrl, // Keep original background
-      createdBy: req.user._id,
-      updatedBy: req.user._id,
+      createdBy: req.user.userId,
+      updatedBy: req.user.userId,
       parentTemplateId: templateId // Reference to original template
     };
     

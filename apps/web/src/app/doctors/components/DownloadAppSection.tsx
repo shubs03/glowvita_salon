@@ -85,7 +85,12 @@ export function DownloadAppSection() {
                 className="px-8 py-4 rounded-md font-semibold text-base border-2 border-primary/30 hover:border-primary/50 bg-transparent hover:bg-primary/5 text-foreground"
                 asChild
               >
-                <Link href="#" className="flex items-center gap-3">
+                <Link 
+                  href="https://play.google.com/store/apps/details?id=com.paarsh.glow_vita_salon" 
+                  className="flex items-center gap-3"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <Play className="h-6 w-6 text-green-600" />
                   <div className="text-left">
                     <div className="text-xs">Get it on</div>

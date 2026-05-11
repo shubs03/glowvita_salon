@@ -29,7 +29,8 @@ import {
   useGetSocialMediaTemplatesQuery,
   useCreateSocialMediaTemplateMutation,
   useUpdateSocialMediaTemplateMutation,
-  useDeleteSocialMediaTemplateMutation
+  useDeleteSocialMediaTemplateMutation,
+  useGetAdminMarketingDashboardQuery
 } from '../../../../../packages/store/src/services/api';
 
 // TODO: Add SMS package endpoints to the API service
@@ -125,6 +126,7 @@ type PurchaseHistory = {
   id: string;
   vendorName: string;
   item: string;
+  smsCount?: number;
   date: string;
   amount: number;
   status: string;
@@ -184,12 +186,26 @@ export default function PlatformMarketingPage() {
     refetch: refetchSocialMediaTemplates 
   } = useGetSocialMediaTemplatesQuery(undefined);
   
+  const {
+    data: marketingDashboardResponse,
+    isLoading: isLoadingDashboard,
+    refetch: refetchDashboard
+  } = useGetAdminMarketingDashboardQuery(undefined);
+  
   // Cast the data to proper types since we know the shape from the API
   const smsPackages = Array.isArray(smsPackagesData) ? smsPackagesData as SmsPackage[] : [];
   const smsTemplates = Array.isArray(smsTemplatesData) ? smsTemplatesData as SmsTemplate[] : [];
-  const marketingTickets: MarketingTicket[] = [];
-  const purchaseHistory: PurchaseHistory[] = [];
-  const activeCampaigns: ActiveCampaign[] = [];
+  const marketingTickets: MarketingTicket[] = []; // Placeholder as requested
+  const dashboardData = marketingDashboardResponse?.data || {};
+  const purchaseHistory: PurchaseHistory[] = dashboardData.purchaseHistory || [];
+  const activeCampaigns: ActiveCampaign[] = dashboardData.activeCampaigns || [];
+  const metrics = dashboardData.metrics || {
+    totalMarketingRevenue: 0,
+    smsSentCount: 0,
+    activeCampaignsCount: 0,
+    openTicketsCount: 0
+  };
+  
   const popularPackages = smsPackages.filter((pkg: SmsPackage) => pkg.isPopular);
   
   // Ensure socialMediaTemplates is always an array
@@ -214,6 +230,13 @@ export default function PlatformMarketingPage() {
   const [isEditSocialMediaTemplateMode, setIsEditSocialMediaTemplateMode] = useState(false);
   const [selectedSocialMediaTemplate, setSelectedSocialMediaTemplate] = useState<any>(null);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
+  const [isViewPurchaseDetailsOpen, setIsViewPurchaseDetailsOpen] = useState(false);
+  const [selectedPurchase, setSelectedPurchase] = useState<PurchaseHistory | null>(null);
+
+  const handleViewPurchase = (purchase: PurchaseHistory) => {
+    setSelectedPurchase(purchase);
+    setIsViewPurchaseDetailsOpen(true);
+  };
 
 
   // Social media templates are automatically fetched by the useGetSocialMediaTemplatesQuery hook
@@ -417,8 +440,7 @@ export default function PlatformMarketingPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <h1 className="text-2xl font-bold font-headline mb-6">Platform Marketing</h1>
-      <div>
-      
+
        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -426,7 +448,7 @@ export default function PlatformMarketingPage() {
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">₹6,000</div>
+                    <div className="text-2xl font-bold">₹{metrics.totalMarketingRevenue.toLocaleString()}</div>
                     <p className="text-xs text-muted-foreground">From all package sales</p>
                 </CardContent>
             </Card>
@@ -436,8 +458,8 @@ export default function PlatformMarketingPage() {
                     <MessageSquare className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">1,250</div>
-                    <p className="text-xs text-muted-foreground">+15% from last month</p>
+                    <div className="text-2xl font-bold">{metrics.smsSentCount.toLocaleString()}</div>
+                    <p className="text-xs text-muted-foreground">From all SMS campaigns</p>
                 </CardContent>
             </Card>
             <Card>
@@ -446,7 +468,7 @@ export default function PlatformMarketingPage() {
                     <Megaphone className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{activeCampaigns?.length || 0}</div>
+                    <div className="text-2xl font-bold">{metrics.activeCampaignsCount}</div>
                     <p className="text-xs text-muted-foreground">Across all marketing types</p>
                 </CardContent>
             </Card>
@@ -456,7 +478,7 @@ export default function PlatformMarketingPage() {
                     <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{marketingTickets?.filter(t => t.status === 'Pending').length || 0}</div>
+                    <div className="text-2xl font-bold">{metrics.openTicketsCount}</div>
                     <p className="text-xs text-muted-foreground">Awaiting resolution</p>
                 </CardContent>
             </Card>
@@ -843,14 +865,18 @@ export default function PlatformMarketingPage() {
                             <TableBody>
                                 {purchaseHistory?.map((purchase) => (
                                     <TableRow key={purchase.id}>
-                                        <TableCell>{purchase.invoiceNumber}</TableCell>
+                                        <TableCell className="font-medium">{purchase.invoiceNumber}</TableCell>
                                         <TableCell>{purchase.vendorName}</TableCell>
-                                        <TableCell>{purchase.item}</TableCell>
+                                        <TableCell>
+                                            <div>{purchase.item}</div>
+                                            <div className="text-[10px] text-muted-foreground">{purchase.smsCount?.toLocaleString()} SMS</div>
+                                        </TableCell>
                                         <TableCell>{new Date(purchase.date).toLocaleDateString()}</TableCell>
-                                        <TableCell>₹{(purchase.amount / 100).toFixed(2)}</TableCell>
+                                        <TableCell>₹{Number(purchase.amount || 0).toFixed(2)}</TableCell>
                                         <TableCell>
                                             <span className={`px-2 py-1 text-xs rounded-full ${
-                                                purchase.status === 'Completed' ? 'bg-green-100 text-green-800' : 
+                                                purchase.status === 'Active' || purchase.status === 'Completed' ? 'bg-green-100 text-green-800' : 
+                                                purchase.status === 'Expired' ? 'bg-red-100 text-red-800' :
                                                 'bg-yellow-100 text-yellow-800'
                                             }`}>
                                                 {purchase.status}
@@ -862,6 +888,7 @@ export default function PlatformMarketingPage() {
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
+                                                    onClick={() => handleViewPurchase(purchase)}
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
@@ -918,7 +945,7 @@ export default function PlatformMarketingPage() {
                                             {new Date(campaign.startDate).toLocaleDateString()} - 
                                             {new Date(campaign.endDate).toLocaleDateString()}
                                         </TableCell>
-                                        <TableCell>₹{(campaign.budget / 100).toFixed(2)}</TableCell>
+                                        <TableCell>₹{Number(campaign.budget || 0).toFixed(2)}</TableCell>
                                         <td>
                                             <div className="flex items-center">
                                                 <span className={`h-2.5 w-2.5 rounded-full mr-2 ${
@@ -1064,7 +1091,64 @@ export default function PlatformMarketingPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      </div>
+      
+      {/* View Purchase Details Dialog */}
+      <Dialog open={isViewPurchaseDetailsOpen} onOpenChange={setIsViewPurchaseDetailsOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Purchase Details</DialogTitle>
+            <DialogDescription>
+              Detailed information for invoice {selectedPurchase?.invoiceNumber}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedPurchase && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
+                <span className="text-sm font-semibold">Invoice #</span>
+                <span className="col-span-3 text-sm">{selectedPurchase.invoiceNumber}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
+                <span className="text-sm font-semibold">Vendor</span>
+                <span className="col-span-3 text-sm">{selectedPurchase.vendorName}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
+                <span className="text-sm font-semibold">Item</span>
+                <span className="col-span-3 text-sm">
+                  <div>{selectedPurchase.item}</div>
+                  <div className="text-xs text-muted-foreground">{selectedPurchase.smsCount?.toLocaleString()} SMS</div>
+                </span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
+                <span className="text-sm font-semibold">Date</span>
+                <span className="col-span-3 text-sm">{new Date(selectedPurchase.date).toLocaleString()}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
+                <span className="text-sm font-semibold">Amount</span>
+                <span className="col-span-3 text-sm font-medium text-green-600">₹{Number(selectedPurchase.amount || 0).toFixed(2)}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4 border-b pb-2">
+                <span className="text-sm font-semibold">Status</span>
+                <span className="col-span-3">
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    selectedPurchase.status === 'Active' || selectedPurchase.status === 'Completed' ? 'bg-green-100 text-green-800' : 
+                    selectedPurchase.status === 'Expired' ? 'bg-red-100 text-red-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {selectedPurchase.status}
+                  </span>
+                </span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <span className="text-sm font-semibold">Payment</span>
+                <span className="col-span-3 text-sm">{selectedPurchase.paymentMethod}</span>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsViewPurchaseDetailsOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

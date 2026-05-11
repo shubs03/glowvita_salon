@@ -118,6 +118,7 @@ type Service = {
   vendorName: string;
   category: string;
   price: number;
+  discountedPrice?: number;
   status: "pending" | "approved" | "disapproved";
   description: string;
   createdAt?: string;
@@ -910,7 +911,18 @@ export default function VendorApprovalPage() {
                         <TableRow key={service._id}>
                           <TableCell className="font-normal text-xs max-w-[120px] truncate">{service.name || 'N/A'}</TableCell>
                           <TableCell className="text-xs max-w-[100px] truncate">{service.vendorName || 'N/A'}</TableCell>
-                          <TableCell className="text-xs">{typeof service.price === 'number' ? `₹${service.price.toFixed(2)}` : 'N/A'}</TableCell>
+                          <TableCell className="text-xs">
+                            <div className="flex flex-col">
+                              {typeof service.discountedPrice === 'number' && service.discountedPrice < service.price ? (
+                                <>
+                                  <span className="font-medium text-primary">₹{service.discountedPrice.toFixed(2)}</span>
+                                  <span className="line-through text-muted-foreground">₹{service.price.toFixed(2)}</span>
+                                </>
+                              ) : (
+                                <span>{typeof service.price === 'number' ? `₹${service.price.toFixed(2)}` : 'N/A'}</span>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 text-xs">
                               {service.status || 'pending'}

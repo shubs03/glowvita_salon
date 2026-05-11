@@ -139,23 +139,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           data-ai-hint={product.hint}
         />
-        <Badge
-          variant={
-            product.stock > 0 ? "secondary" : "default"
-          }
-          className="absolute top-2 right-2 text-xs"
-        >
-          {product.stock > 0 ? `In Stock` : "Out of Stock"}
-        </Badge>
+
         <Button
           size="icon"
           variant="ghost"
-          className="absolute top-1 left-1 h-8 w-8 rounded-full bg-white/20 text-red-500 backdrop-blur-sm hover:bg-white/30 transition-all"
+          className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/70 text-gray-600 hover:text-red-500 hover:bg-white shadow-sm backdrop-blur-md transition-all duration-300 z-10"
           onClick={handleWishlistToggle}
           disabled={isLoading}
         >
           <Heart
-            className={cn("h-4 w-4", isLiked && "fill-red-500 text-red-500")}
+            className={cn("h-4 w-4 transition-all", isLiked && "fill-red-500 text-red-500")}
           />
         </Button>
       </div>

@@ -1,5 +1,5 @@
 import React from "react";
-import { Star, ThumbsUp, ThumbsDown, Loader2 } from "lucide-react";
+import { Star, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
 import { Label } from "@repo/ui/label";
@@ -413,25 +413,7 @@ const ProductRatingsReviews: React.FC<ProductRatingsReviewsProps> = ({
                       <p className="text-sm text-muted-foreground mt-2">
                         A: {item.answer}
                       </p>
-                      <div className="flex items-center gap-4 mt-2">
-                        <span className="text-xs text-muted-foreground">
-                          Was this helpful?
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="flex items-center gap-1 text-xs h-auto p-1"
-                        >
-                          <ThumbsUp className="h-3 w-3" /> Yes
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="flex items-center gap-1 text-xs h-auto p-1"
-                        >
-                          <ThumbsDown className="h-3 w-3" /> No
-                        </Button>
-                      </div>
+
                     </>
                   )}
                 </div>

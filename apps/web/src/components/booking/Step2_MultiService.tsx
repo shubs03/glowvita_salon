@@ -6,8 +6,8 @@ import { cn } from '@repo/ui/cn';
 import { User, Users, CheckCircle, ChevronRight, Loader2, AlertCircle, Star, Plus, X } from 'lucide-react';
 import { StaffMember, Service, ServiceStaffAssignment, isStaffCompatibleWithService } from '@/hooks/useBookingData';
 
-const Breadcrumb = ({ currentStep, setCurrentStep }: { currentStep: number; setCurrentStep: (step: number) => void; }) => {
-    const steps = ['Services', 'Select Professionals', 'Time Slot'];
+const Breadcrumb = ({ currentStep, setCurrentStep, bookingMode }: { currentStep: number; setCurrentStep: (step: number) => void; bookingMode?: string; }) => {
+    const steps = ['Services', 'Select Professionals', bookingMode === 'home' ? 'Location' : 'Time Slot'];
     return (
         <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
             {steps.map((step, index) => (
@@ -38,6 +38,7 @@ interface Step2MultiServiceProps {
     isLoading: boolean;
     error?: any;
     onNext: () => void;
+    bookingMode?: 'salon' | 'home' | string;
 }
 
 export function Step2_MultiService({
@@ -48,7 +49,8 @@ export function Step2_MultiService({
     staff,
     isLoading,
     error,
-    onNext
+    onNext,
+    bookingMode
 }: Step2MultiServiceProps): JSX.Element {
 
     // State to track which service is currently being assigned
@@ -143,7 +145,7 @@ export function Step2_MultiService({
     if (isLoading) {
         return (
             <div className="w-full">
-                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} bookingMode={bookingMode} />
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -168,7 +170,7 @@ export function Step2_MultiService({
     if (error) {
         return (
             <div className="w-full">
-                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} bookingMode={bookingMode} />
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -193,7 +195,7 @@ export function Step2_MultiService({
     if (serviceStaffAssignments.length === 0) {
         return (
             <div className="w-full">
-                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+                <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} bookingMode={bookingMode} />
                 <div className="mb-8">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -219,7 +221,7 @@ export function Step2_MultiService({
 
     return (
         <div className="w-full">
-            <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
+            <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} bookingMode={bookingMode} />
             <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
                     <div className="p-3 bg-primary/10 rounded-full text-primary">
@@ -352,7 +354,7 @@ export function Step2_MultiService({
                         className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background bg-primary text-primary-foreground hover:bg-primary/90 h-10 py-2 px-4 sm:ml-auto"
                     >
                         {currentAssignmentIndex === serviceStaffAssignments.length - 1 
-                            ? 'Continue to Time Slot' 
+                            ? (bookingMode === 'home' ? 'Continue to Location' : 'Continue to Time Slot')
                             : 'Next Service'
                         }
                         <ChevronRight className="h-4 w-4 ml-2" />

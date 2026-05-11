@@ -36,7 +36,12 @@ const supplierSchema = new mongoose.Schema({
   licenseFiles: [{ type: String }], // Existing license files (for backward compatibility)
   bankDetails: {
     bankName: { type: String, trim: true, default: null },
-    accountNumber: { type: String, trim: true, default: null },
+    accountNumber: { 
+      type: String, 
+      trim: true, 
+      default: null,
+      match: [/^\d+$/, "Please enter a valid account number (only digits allowed)"] 
+    },
     ifscCode: {
       type: String,
       trim: true,

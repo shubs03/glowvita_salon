@@ -56,6 +56,7 @@ interface Appointment {
     discountAmount?: number;
     finalAmount?: number;
     cancellationReason?: string;
+    paymentMethod?: string;
 }
 
 interface AppointmentCardProps {
@@ -580,7 +581,7 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                         <Button variant="outline" className="justify-start gap-2" onClick={handleSalonDetails} disabled={!appointment.vendorId}>
                             <LinkIcon className="h-4 w-4" /> Salon Details
                         </Button>
-                        {appointment.status === 'Completed' && (
+                        {(appointment.status === 'Completed' || appointment.status?.toLowerCase() === 'completed') && (
                             <Button
                                 variant="outline"
                                 className="justify-start gap-2 col-span-2 border-green-300 text-green-700 hover:bg-green-50 hover:text-green-800"
@@ -663,6 +664,13 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                             <span>Total Amount</span>
                             <span>₹{appointment.finalAmount?.toFixed(2) || appointment.price.toFixed(2)}</span>
                         </div>
+
+                        {appointment.paymentMethod && (
+                            <div className="flex justify-between text-sm pt-2 border-t border-dashed">
+                                <span className="text-muted-foreground">Payment Method</span>
+                                <span className="font-medium">{appointment.paymentMethod}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
             </CardContent>
@@ -846,7 +854,6 @@ export default function AppointmentsPage() {
                                                 <SelectItem value="all">All Status</SelectItem>
                                                 <SelectItem value="Completed">Completed</SelectItem>
                                                 <SelectItem value="Confirmed">Confirmed</SelectItem>
-                                                <SelectItem value="Pending">Pending</SelectItem>
                                                 <SelectItem value="Scheduled">Scheduled</SelectItem>
                                                 <SelectItem value="Cancelled">Cancelled</SelectItem>
                                             </SelectContent>

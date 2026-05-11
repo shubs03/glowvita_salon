@@ -10,7 +10,7 @@ export async function POST(request) {
   try {
     console.log("=== WEDDING PACKAGE POST ENDPOINT CALLED ===");
     await connectDB();
-    
+
     const body = await request.json();
     console.log("Request body:", JSON.stringify(body, null, 2));
     const { packageId, selectedSlot, clientId, clientName, customerDetails } = body;
@@ -24,7 +24,7 @@ export async function POST(request) {
     }
 
     console.log("Looking for wedding package with ID:", packageId);
-    
+
     // First, check if packageId is a valid ObjectId
     const mongoose = await import('mongoose');
     if (!mongoose.default.Types.ObjectId.isValid(packageId)) {
@@ -34,11 +34,11 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-    
+
     // Find the wedding package
     const weddingPackage = await WeddingPackageModel.findById(packageId).lean();
     console.log("WeddingPackageModel result:", !!weddingPackage);
-    
+
     if (!weddingPackage) {
       console.log("Wedding package not found with ID:", packageId);
       return NextResponse.json(
@@ -46,11 +46,11 @@ export async function POST(request) {
         { status: 404 }
       );
     }
-    
+
     console.log("Found wedding package:", { id: weddingPackage._id, name: weddingPackage.name });
-    
+
     console.log("Final wedding package found:", !!weddingPackage);
-    
+
     if (!weddingPackage) {
       console.log("Wedding package not found for ID:", packageId);
       return NextResponse.json(
@@ -68,14 +68,14 @@ export async function POST(request) {
     // Only acquire a Redis lock, DO NOT create appointment yet
     console.log("Importing OptimisticLocking module...");
     const { acquireLock } = await import('@repo/lib/modules/scheduling/OptimisticLocking');
-    
+
     console.log("Acquiring lock for wedding package...");
     console.log("Selected slot data:", {
       date: selectedSlot.date,
       startTime: selectedSlot.startTime,
       endTime: selectedSlot.endTime
     });
-    
+
     // Acquire lock - this just reserves the slot in Redis
     // CRITICAL: startTime must be provided to create a time-specific lock
     const lockToken = await acquireLock({
@@ -128,10 +128,10 @@ export async function PUT(request) {
   try {
     console.log("=== WEDDING PACKAGE PUT ENDPOINT CALLED ===");
     await connectDB();
-    
+
     const body = await request.json();
     console.log("PUT Request body:", JSON.stringify(body, null, 2));
-    const { packageId, lockId, selectedSlot, clientName, customerDetails, paymentDetails } = body;
+    const { packageId, lockId, selectedSlot, clientName, customerDetails, paymentDetails, customizedPackageServices } = body;
 
     if (!packageId || !lockId || !selectedSlot) {
       console.log("Missing required fields:", { packageId: !!packageId, lockId: !!lockId, selectedSlot: !!selectedSlot });
@@ -142,11 +142,11 @@ export async function PUT(request) {
     }
 
     console.log("Confirming wedding package booking for package:", packageId);
-    
+
     // Find the wedding package
     const weddingPackage = await WeddingPackageModel.findById(packageId).lean();
     console.log("WeddingPackageModel result:", !!weddingPackage);
-    
+
     if (!weddingPackage) {
       return NextResponse.json(
         { success: false, message: 'Wedding package not found' },
@@ -156,17 +156,17 @@ export async function PUT(request) {
 
     // Now create the appointment with payment confirmation
     const AppointmentModel = (await import('@repo/lib/models/Appointment/Appointment.model')).default;
-    
+
     console.log("Creating confirmed appointment after payment...");
     console.log("Coupon code from request:", selectedSlot.couponCode);
     console.log("Discount amount from request:", selectedSlot.discountAmount);
-    
+
     // Check if appointment already exists for this time slot to prevent duplicates
     const startOfDay = new Date(selectedSlot.date);
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date(selectedSlot.date);
     endOfDay.setHours(23, 59, 59, 999);
-    
+
     const existingAppointment = await AppointmentModel.findOne({
       vendorId: weddingPackage.vendorId,
       date: { $gte: startOfDay, $lte: endOfDay },
@@ -175,7 +175,7 @@ export async function PUT(request) {
       status: { $in: ['scheduled', 'confirmed', 'checked-in'] },
       isWeddingService: true
     });
-    
+
     if (existingAppointment) {
       console.log("Appointment already exists for this time slot:", existingAppointment._id);
       return NextResponse.json({
@@ -184,32 +184,35 @@ export async function PUT(request) {
         existingAppointment: existingAppointment._id
       }, { status: 409 });
     }
-    
+
     // Get first service from package as the primary service, or use package ID
-    const primaryServiceId = weddingPackage.services && weddingPackage.services.length > 0 
+    const primaryServiceId = weddingPackage.services && weddingPackage.services.length > 0
       ? weddingPackage.services[0].serviceId || weddingPackage.services[0]._id
       : weddingPackage._id; // Fallback to package ID if no services
-    
+
     // Get team members or assigned staff
     const teamMembers = selectedSlot.teamMembers || weddingPackage.assignedStaff || [];
-    const primaryStaffName = teamMembers.length > 0 
+    const primaryStaffName = teamMembers.length > 0
       ? (typeof teamMembers[0] === 'string' ? teamMembers[0] : teamMembers[0].name || teamMembers[0].firstName || 'Wedding Team')
       : 'Wedding Team';
-    
+
     // Fetch Vendor Region
     const VendorModel = (await import('@repo/lib/models/Vendor/Vendor.model')).default;
     const vendor = await VendorModel.findById(weddingPackage.vendorId).select('regionId').lean();
-    
+
     // Calculate amounts with offer code discount
-    const baseAmount = weddingPackage.discountedPrice || weddingPackage.totalPrice;
-    const discountAmount = selectedSlot.discountAmount || 0;
-    const finalAmount = selectedSlot.totalAmount || (baseAmount - discountAmount);
+    // baseAmount is the subtotal (service price)
+    const baseAmount = Number(selectedSlot.totalAmount) || (weddingPackage.discountedPrice || weddingPackage.totalPrice);
+    const discountAmount = Number(selectedSlot.discountAmount) || 0;
     
     // Extract fee fields from selectedSlot
-    const platformFee = selectedSlot.platformFee || 0;
-    const serviceTax = selectedSlot.serviceTax || 0;
-    const taxRate = selectedSlot.taxRate || 0;
-    
+    const platformFee = Number(selectedSlot.platformFee) || 0;
+    const serviceTax = Number(selectedSlot.serviceTax) || 0;
+    const taxRate = Number(selectedSlot.taxRate) || 0;
+
+    // finalAmount = subtotal + fees + taxes - discount
+    const finalAmount = selectedSlot.finalAmount || (baseAmount + platformFee + serviceTax - discountAmount);
+
     const appointment = new AppointmentModel({
       vendorId: weddingPackage.vendorId,
       regionId: vendor?.regionId || null, // <--- Added Region ID
@@ -235,17 +238,47 @@ export async function PUT(request) {
       status: 'scheduled', // Confirmed booking
       paymentStatus: paymentDetails?.status || 'pending',
       paymentMethod: paymentDetails?.method || 'Pay at Salon',
+      // Update amountPaid and amountRemaining if payment was completed
+      amountPaid: (paymentDetails?.status === 'completed') ? finalAmount : 0,
+      amountRemaining: (paymentDetails?.status === 'completed') ? 0 : finalAmount,
+      // Add payment history if completed
+      paymentHistory: (paymentDetails?.status === 'completed') ? [{
+        amount: finalAmount,
+        paymentMethod: paymentDetails?.method || 'Pay Online',
+        paymentDate: new Date(),
+        notes: 'Online payment confirmed during booking',
+        transactionId: paymentDetails?.razorpayPaymentId || null
+      }] : [],
+      razorpayPaymentId: paymentDetails?.razorpayPaymentId || null,
+      razorpayOrderId: paymentDetails?.razorpayOrderId || body.razorpayOrderId || null,
       isWeddingService: true,
       staffMembers: teamMembers, // Store at root level for easier querying
       weddingPackageDetails: {
         packageId: weddingPackage._id,
         packageName: weddingPackage.name,
-        packageServices: weddingPackage.services || [],
+        packageServices: (customizedPackageServices || weddingPackage.services || []).map(svc => {
+          // Parse duration if it's a string (e.g., "45 min")
+          let duration = svc.duration;
+          if (typeof duration === 'string') {
+            const match = duration.match(/(\d+)/);
+            duration = match ? parseInt(match[1]) : 0;
+          }
+
+          return {
+            serviceId: svc.serviceId || svc.id || svc._id,
+            serviceName: svc.serviceName || svc.name,
+            duration: Number(duration) || 0,
+            amount: Number(svc.amount || svc.discountedPrice || svc.price || 0),
+            vendorId: svc.vendorId || weddingPackage.vendorId,
+            staffId: svc.staffId || null
+          };
+        }),
         teamMembers: teamMembers
       },
       homeServiceLocation: selectedSlot.location || null,
       isHomeService: !!selectedSlot.location,
       lockToken: lockId,
+      mode: 'online',
       createdAt: new Date(),
       updatedAt: new Date()
     });
@@ -254,7 +287,12 @@ export async function PUT(request) {
     if (selectedSlot.couponCode) {
       try {
         const discountToTrack = selectedSlot.discountAmount || selectedSlot.discount || 0;
-        await CRMOfferModel.incrementRedemption(selectedSlot.couponCode, discountToTrack);
+        const CRMOfferModel = (await import('@repo/lib/models/Vendor/CRMOffer.model')).default;
+        const crmResult = await CRMOfferModel.incrementRedemption(selectedSlot.couponCode, discountToTrack);
+        if (!crmResult) {
+          const AdminOfferModel = (await import('@repo/lib/models/admin/AdminOffers.model.js')).default;
+          await AdminOfferModel.incrementRedemption(selectedSlot.couponCode, discountToTrack);
+        }
         console.log(`Incremented redemption count and discount for wedding coupon: ${selectedSlot.couponCode}`);
       } catch (offerErr) {
         console.error(`Error incrementing wedding coupon redemption for ${selectedSlot.couponCode}:`, offerErr);

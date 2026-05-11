@@ -176,36 +176,43 @@ export default function ProductsTab({
   const [createBilling, { isLoading: isCreatingBilling }] = useCreateBillingMutation();
 
   // Fetch categories
-  const { data: categoriesData = [] } = useGetAdminProductCategoriesQuery({});
-  const categories = categoriesData?.data || [];
+  const { data: categoriesData } = useGetAdminProductCategoriesQuery({});
+  const categories = useMemo(() => categoriesData?.data || [], [categoriesData]);
+
+  // Only show categories that are present in the loaded products
+  const availableCategories = useMemo(() => {
+    if (!productsData || !Array.isArray(productsData)) return categories;
+    const productCategoryNames = new Set((productsData as Product[]).map(p => p.category).filter(Boolean));
+    return categories.filter((cat: any) => productCategoryNames.has(cat.name));
+  }, [categories, productsData]);
 
   // Fetch staff members
   const { data: staffData = [] } = useGetStaffQuery({});
 
   // Filter products based on search and category
   useEffect(() => {
-    if (productsData) {
-      let filtered = productsData as Product[];
+    if (productsData && Array.isArray(productsData)) {
+      let filtered = [...productsData] as Product[];
 
       // Apply search filter
       if (searchTerm) {
+        const searchLower = searchTerm.toLowerCase();
         filtered = filtered.filter(product =>
-          product.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (product.description && product.description.toLowerCase().includes(searchTerm.toLowerCase()))
+          product.productName.toLowerCase().includes(searchLower) ||
+          (product.description && product.description.toLowerCase().includes(searchLower))
         );
       }
 
-      // Apply category filter
+      // Apply category filter — selectedCategory is now the category NAME directly
       if (selectedCategory !== "all") {
-        const selectedCategoryName = categories.find((cat: any) => cat._id === selectedCategory)?.name;
-        if (selectedCategoryName) {
-          filtered = filtered.filter(product => product.category === selectedCategoryName);
-        }
+        filtered = filtered.filter(product =>
+          product.category?.toLowerCase() === selectedCategory.toLowerCase()
+        );
       }
 
       setProducts(filtered);
     }
-  }, [productsData, searchTerm, selectedCategory, categories]);
+  }, [productsData, searchTerm, selectedCategory]);
 
   // Filter clients based on search term
   const filteredClients = useMemo(() => {
@@ -234,10 +241,24 @@ export default function ProductsTab({
   // Handle client form input change
   const handleClientInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+
+    // Full Name & Country: only letters, spaces, hyphens — no digits
+    if (name === 'fullName' || name === 'country') {
+      const lettersOnly = value.replace(/[0-9]/g, '');
+      setClientFormData(prev => ({ ...prev, [name]: lettersOnly }));
+      return;
+    }
+
+    // Phone: digits only, max 10
     if (name === 'phone') {
-      // Allow only digits and limit to 10 characters
       const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
       setClientFormData(prev => ({ ...prev, phone: digitsOnly }));
+      return;
+    }
+    if (name === 'email') {
+      // Allow only alphanumeric, @ and .
+      const filteredEmail = value.replace(/[^a-zA-Z0-9@.]/g, '');
+      setClientFormData(prev => ({ ...prev, email: filteredEmail }));
       return;
     }
     setClientFormData(prev => ({ ...prev, [name]: value }));
@@ -263,9 +284,45 @@ export default function ProductsTab({
   // Handle save new client
   const handleSaveClient = async () => {
     try {
+      // Validate full name
+      if (!clientFormData.fullName.trim()) {
+        toast.error('Full name is required.');
+        return;
+      }
+      if (/[0-9]/.test(clientFormData.fullName)) {
+        toast.error('Full name must contain only letters.');
+        return;
+      }
+
+      // Validate email format (if provided)
+      if (clientFormData.email.trim()) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(clientFormData.email.trim())) {
+          toast.error('Please enter a valid email address.');
+          return;
+        }
+      }
+
       // Validate phone: exactly 10 digits
       if (!clientFormData.phone || clientFormData.phone.trim().length !== 10) {
         toast.error('Phone number must be exactly 10 digits.');
+        return;
+      }
+
+      // Validate birthday: must be in the past
+      if (clientFormData.birthdayDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const birthday = new Date(clientFormData.birthdayDate);
+        if (birthday >= today) {
+          toast.error('Birthday date must be in the past.');
+          return;
+        }
+      }
+
+      // Validate country (if provided)
+      if (clientFormData.country.trim() && /[0-9]/.test(clientFormData.country)) {
+        toast.error('Country name must contain only letters.');
         return;
       }
 
@@ -633,8 +690,7 @@ export default function ProductsTab({
   const [editFormData, setEditFormData] = useState({
     quantity: 1,
     discount: 0,
-    discountType: 'flat' as 'flat' | 'percentage',
-    staffMemberId: 'none'
+    discountType: 'flat' as 'flat' | 'percentage'
   });
 
   // Email response type
@@ -965,8 +1021,7 @@ export default function ProductsTab({
     setEditFormData({
       quantity: item.quantity || 1,
       discount: item.discount || 0,
-      discountType: item.discountType || 'flat',
-      staffMemberId: item.staffMember?.id || 'none'
+      discountType: item.discountType || 'flat'
     });
     setIsEditDialogOpen(true);
   };
@@ -974,16 +1029,6 @@ export default function ProductsTab({
   // Handle save edited item
   const handleSaveEditedItem = () => {
     if (!editingItem) return;
-
-    // Check if discount is greater than 0, then staff member is required
-    if (editFormData.discount > 0 && editFormData.staffMemberId === 'none') {
-      toast.error('Staff member is required');
-      return;
-    }
-
-    // Find staff member name
-    const selectedStaff = editFormData.staffMemberId !== 'none' ?
-      staffData.find((staff: any) => staff._id === editFormData.staffMemberId) : null;
 
     setCart(prevCart =>
       prevCart.map(item =>
@@ -993,8 +1038,7 @@ export default function ProductsTab({
             quantity: editFormData.quantity,
             totalPrice: calculateItemTotalPrice(item, editFormData.quantity, editFormData.discount, editFormData.discountType),
             discount: editFormData.discount,
-            discountType: editFormData.discountType,
-            staffMember: selectedStaff ? { id: selectedStaff._id, name: selectedStaff.fullName } : undefined
+            discountType: editFormData.discountType
           }
           : item
       )
@@ -1063,8 +1107,8 @@ export default function ProductsTab({
               </SelectTrigger>
               <SelectContent className="rounded-lg border border-border/40">
                 <SelectItem value="all">All Categories</SelectItem>
-                {[...categories.slice(0, 5), ...categories.slice(5)].map((category: any) => (
-                  <SelectItem key={category._id} value={category._id}>
+                {availableCategories.map((category: any) => (
+                  <SelectItem key={category._id} value={category.name}>
                     {category.name}
                   </SelectItem>
                 ))}
@@ -1223,7 +1267,10 @@ export default function ProductsTab({
                 {/* Add New Client Button */}
                 <Button
                   variant="outline"
-                  onClick={() => setIsAddClientModalOpen(true)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setIsAddClientModalOpen(true);
+                  }}
                   className="w-full h-12 rounded-lg border-border hover:border-primary text-base"
                 >
                   <Plus className="w-4 h-4 mr-2" />
@@ -1305,28 +1352,6 @@ export default function ProductsTab({
                             <div className="cursor-pointer text-green-600 p-2 rounded -ml-2 hover:bg-muted/50 transition-colors" onClick={() => handleEditItemClick(item)}>
                               <div className="font-medium line-clamp-2">{item.productName}</div>
                             </div>
-                            {/* Per-item Staff Selector - Hidden for suppliers */}
-                            {!isSupplier && (
-                              <div className="mt-1">
-                                <Select
-                                  value={item.staffMember?.id || 'none'}
-                                  onValueChange={(value) => updateStaffMember(item._id, value)}
-                                >
-                                  <SelectTrigger className="h-7 text-xs w-fit min-w-[120px] px-2 bg-transparent border-gray-200 hover:bg-gray-50 focus:ring-0 focus:ring-offset-0 gap-1">
-                                    <UserCircle className="h-3 w-3 text-gray-500" />
-                                    <SelectValue placeholder="Select Staff" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="none" className="text-xs">No Staff</SelectItem>
-                                    {staffData.map((staff: any) => (
-                                      <SelectItem key={staff._id} value={staff._id} className="text-xs">
-                                        {staff.fullName}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -1633,6 +1658,7 @@ export default function ProductsTab({
                   placeholder="Enter full name"
                   required
                 />
+                <p className="text-xs text-muted-foreground">Letters only, no numbers</p>
               </div>
 
               <div className="space-y-2">
@@ -1643,8 +1669,11 @@ export default function ProductsTab({
                   type="email"
                   value={clientFormData.email}
                   onChange={handleClientInputChange}
-                  placeholder="Enter email address"
+                  placeholder="example@email.com"
                 />
+                {clientFormData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clientFormData.email) && (
+                  <p className="text-xs text-red-500">Enter a valid email address</p>
+                )}
               </div>
             </div>
 
@@ -1662,10 +1691,12 @@ export default function ProductsTab({
                   pattern="\d{10}"
                   maxLength={10}
                   placeholder="Enter 10-digit phone number"
-                  title="Phone number must be exactly 10 digits"
                   onKeyDown={(e) => { if (e.key === ' ') e.preventDefault(); }}
                   required
                 />
+                {clientFormData.phone && clientFormData.phone.length !== 10 && (
+                  <p className="text-xs text-red-500">Phone must be exactly 10 digits ({clientFormData.phone.length}/10)</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -1676,7 +1707,9 @@ export default function ProductsTab({
                   type="date"
                   value={clientFormData.birthdayDate}
                   onChange={handleClientInputChange}
+                  max={new Date().toISOString().split('T')[0]}
                 />
+                <p className="text-xs text-muted-foreground">Must be a past date</p>
               </div>
             </div>
 
@@ -1705,6 +1738,7 @@ export default function ProductsTab({
                   onChange={handleClientInputChange}
                   placeholder="e.g., India"
                 />
+                <p className="text-xs text-muted-foreground">Letters only, no numbers</p>
               </div>
             </div>
 
@@ -1816,27 +1850,6 @@ export default function ProductsTab({
                 </div>
               </div>
 
-              {!isSupplier && (
-                <div>
-                  <Label htmlFor="staffMember">Staff Member</Label>
-                  <Select
-                    value={editFormData.staffMemberId}
-                    onValueChange={(value) => setEditFormData(prev => ({ ...prev, staffMemberId: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select staff member" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {staffData.map((staff: any) => (
-                        <SelectItem key={staff._id} value={staff._id}>
-                          {staff.fullName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
           )}
 

@@ -36,6 +36,8 @@ interface SalonFilterContextType {
   setSelectedCity: (city: string) => void;
   serviceQuery: string;
   setServiceQuery: (query: string) => void;
+  // ── Region Detection ──────────────────────────────────────────────────────
+  selectedRegionId: string | null;
 }
 
 const defaultContextValue: SalonFilterContextType = {
@@ -58,6 +60,7 @@ const defaultContextValue: SalonFilterContextType = {
   setSelectedCity: () => { },
   serviceQuery: "",
   setServiceQuery: () => { },
+  selectedRegionId: null,
 };
 
 const SalonFilterContext =
@@ -71,6 +74,7 @@ export function SalonFilterProvider({ children }: { children: ReactNode }) {
   const [locationLabel, setLocationLabel] = useState<string>("");
   const [geoStatus, setGeoStatus] = useState<GeoStatus>("pending");
   const [serviceQuery, setServiceQuery] = useState<string>("");
+  const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
 
   // Guard: run geolocation only once per session
   const geoAttempted = useRef(false);
@@ -82,17 +86,36 @@ export function SalonFilterProvider({ children }: { children: ReactNode }) {
   const registeredCity: string = userAuth?.user?.city || "";
   const isAuthenticated: boolean = userAuth?.isAuthenticated || false;
 
+  // ── Detect Region From Coordinates ────────────────────────────────────────
+  const detectRegion = async (lat: number, lng: number, cityName: string = "") => {
+    try {
+      const cityParams = cityName ? `&city=${encodeURIComponent(cityName)}` : "";
+      const response = await fetch(`/api/regions/detect?lat=${lat}&lng=${lng}${cityParams}`);
+      const data = await response.json();
+      if (data.success && data.regionId) {
+        setSelectedRegionId(data.regionId);
+        return data.regionId;
+      }
+    } catch (e) {
+      console.error("[SalonFilterContext] Region detection failed:", e);
+    }
+    setSelectedRegionId(null);
+    return null;
+  };
+
   // ── Expose setter for manual overrides (Case 2) ───────────────────────────
   const setUserLocation = (lat: number, lng: number, label: string = "") => {
     setUserLat(lat);
     setUserLng(lng);
     setLocationLabel(label);
+    detectRegion(lat, lng, label);
   };
 
   const clearLocation = () => {
     setUserLat(null);
     setUserLng(null);
     setLocationLabel("");
+    setSelectedRegionId(null);
   };
 
   // ── Reverse Geocode for Case 1 (Auto-detect) ──────────────────────────────
@@ -132,6 +155,9 @@ export function SalonFilterProvider({ children }: { children: ReactNode }) {
         // Requirement 1: Show detected location name in search bar if possible
         const cityLabel = await reverseGeocode(latitude, longitude);
         setLocationLabel(cityLabel);
+
+        // Detect region for auto-detected coords
+        detectRegion(latitude, longitude, cityLabel);
       },
       () => {
         setGeoStatus("denied");
@@ -155,6 +181,9 @@ export function SalonFilterProvider({ children }: { children: ReactNode }) {
       setUserLng(registeredLng);
       // Case 3A: Show salons from saved city + show in search bar
       setLocationLabel(registeredCity || "Your Profile Area");
+      
+      // Detect region for registered user location
+      detectRegion(registeredLat, registeredLng, registeredCity);
     }
   }, [geoStatus, isAuthenticated, registeredLat, registeredLng, registeredCity]);
 
@@ -190,6 +219,7 @@ export function SalonFilterProvider({ children }: { children: ReactNode }) {
     setUserLat(null);
     setUserLng(null);
     setLocationLabel(city);
+    setSelectedRegionId(null);
   };
 
   return (
@@ -214,6 +244,7 @@ export function SalonFilterProvider({ children }: { children: ReactNode }) {
         setSelectedCity,
         serviceQuery,
         setServiceQuery,
+        selectedRegionId,
       }}
     >
       {children}

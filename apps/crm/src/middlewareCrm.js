@@ -45,11 +45,19 @@ async function verifyJwt(token) {
 // Create a higher-order function for authenticated routes
 export function authMiddlewareCrm(handler, allowedRoles = []) {
   return async (request, context) => {
-    const token = request.cookies.get('crm_access_token')?.value;
+    let token = request.cookies.get('crm_access_token')?.value;
+    
+    // Fallback to Authorization header if cookie is missing
+    if (!token) {
+      const authHeader = request.headers.get('authorization');
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
+    }
 
     if (!token) {
       return NextResponse.json(
-        { success: false, message: 'Authentication required' },
+        { success: false, message: 'Authentication required: No token provided' },
         { status: 401 }
       );
     }
@@ -60,7 +68,7 @@ export function authMiddlewareCrm(handler, allowedRoles = []) {
       // Don't immediately clear the cookie as it may be a transient error
       // Just return an auth error response
       return NextResponse.json(
-        { success: false, message: 'Invalid or expired token' },
+        { success: false, message: 'Invalid or expired token: Verification failed' },
         { status: 401 }
       );
     }

@@ -17,7 +17,7 @@ import {
 } from "../../config/config.js";
 
 
-function generateTokens(_id, role = "user", permissions = [], regions = [], roleName = null, regionId = null) {
+function generateTokens(_id, role = "user", permissions = [], regions = [], roleName = null, regionId = null, vendorId = null) {
   let secretKey;
   let refreshSecret; // This seems unused in the current setup, but keeping for completeness
 
@@ -59,6 +59,7 @@ function generateTokens(_id, role = "user", permissions = [], regions = [], role
      permissions: permissions || [],
      regions: regions || [],
      regionId: regionId || (regions && regions.length > 0 ? regions[0] : null), // Fallback to first region for admins
+     vendorId: vendorId,
   };
 
 

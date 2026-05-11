@@ -7,7 +7,7 @@ import {
   TableRow,
 } from "@repo/ui/table";
 import { Button } from "@repo/ui/button";
-import { Eye, ChevronDown } from "lucide-react";
+import { Eye, ChevronDown, XCircle } from "lucide-react";
 import { Order, OrderStatus } from "../types";
 import {
   DropdownMenu,
@@ -25,6 +25,7 @@ interface OrdersTableProps {
   viewMode: 'orders' | 'purchases';
   handleViewDetails: (order: Order) => void;
   handleUpdateStatus: (orderId: string, status: OrderStatus) => void;
+  handleCancelOrder: (order: Order) => void;
   isUpdatingStatus: boolean;
   getStatusColor: (status: OrderStatus) => string;
   getStatusIcon: (status: OrderStatus) => React.ReactNode;
@@ -43,6 +44,7 @@ const OrdersTable = ({
   viewMode,
   handleViewDetails,
   handleUpdateStatus,
+  handleCancelOrder,
   isUpdatingStatus,
   getStatusColor,
   getStatusIcon,
@@ -135,7 +137,11 @@ const OrdersTable = ({
                             onClick={(e) => {
                               e.stopPropagation();
                               if (canUpdate) {
-                                handleUpdateStatus(order._id, nextStatus);
+                                if (nextStatus === 'Cancelled') {
+                                  handleCancelOrder(order);
+                                } else {
+                                  handleUpdateStatus(order._id, nextStatus);
+                                }
                               }
                             }}
                             title={canUpdate ? `Click to mark as ${nextStatus}` : undefined}
@@ -158,6 +164,29 @@ const OrdersTable = ({
                           <span>View</span>
                         </Button>
 
+                        {(() => {
+                          const isCancelled = order.status === 'Cancelled';
+                          const isShippedOrDelivered = order.status === 'Shipped' || order.status === 'Delivered';
+                          
+                          if (isCancelled) return false;
+                          
+                          // Customer/Online Orders: Vendor can cancel anytime with reason
+                          if (activeTab === 'customer-orders' || isOnlineOrder(order)) return true;
+                          
+                          // Marketplace/Purchase Orders: Cancel only before shipped
+                          return !isShippedOrDelivered;
+                        })() && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleCancelOrder(order)}
+                            className="h-8 gap-1 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                          >
+                            <XCircle className="h-4 w-4" />
+                            <span>Cancel</span>
+                          </Button>
+                        )}
+
                         {(role === "supplier" || role === "vendor") && activeTab !== 'my-purchases' && order.status !== 'Delivered' && order.status !== 'Cancelled' && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -174,10 +203,23 @@ const OrdersTable = ({
                             <DropdownMenuContent align="end" className="w-40">
                               {allStatuses
                                 .filter(s => s !== order.status)
+                                .filter(s => {
+                                  if (s === 'Cancelled') {
+                                    if (activeTab === 'customer-orders' || isOnlineOrder(order)) return order.status !== 'Cancelled';
+                                    return order.status !== 'Shipped' && order.status !== 'Delivered' && order.status !== 'Cancelled';
+                                  }
+                                  return true;
+                                })
                                 .map((status) => (
                                   <DropdownMenuItem
                                     key={status}
-                                    onClick={() => handleUpdateStatus(order._id, status)}
+                                    onClick={() => {
+                                      if (status === 'Cancelled') {
+                                        handleCancelOrder(order);
+                                      } else {
+                                        handleUpdateStatus(order._id, status);
+                                      }
+                                    }}
                                     className="cursor-pointer"
                                   >
                                     <div className="flex items-center gap-2">

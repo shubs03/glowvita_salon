@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import _db from '@repo/lib/db.js';
 import ShippingConfigModel from '@repo/lib/models/Vendor/Shipping.model.js';
 
@@ -9,46 +10,52 @@ await _db();
 // This endpoint doesn't require authentication and returns default shipping config
 export const GET = async (req) => {
   try {
-    // During build phase, return default config
-    if (process.env.NEXT_PHASE === 'phase-production-build') {
-      return NextResponse.json({
-        success: true,
-        data: {
-          chargeType: 'fixed',
-          amount: 0,
-          isEnabled: false
-        }
-      }, { status: 200 });
-    }
-
     // Check database connection
     const db = await _db();
 
     // Get vendorId from query params
     const { searchParams } = new URL(req.url);
-    const vendorId = searchParams.get('vendorId');
+    const vendorId = searchParams.get('vendorId')?.trim();
 
     let config;
 
     // If vendorId is provided, prioritize finding config for that specific vendor
-    if (vendorId) {
-      config = await ShippingConfigModel.findOne({ vendorId });
+    if (vendorId && vendorId.match(/^[0-9a-fA-F]{24}$/)) {
+      try {
+        const queryVendorId = new mongoose.Types.ObjectId(vendorId);
+        // Try to find by ObjectId OR String to be safe
+        config = await ShippingConfigModel.findOne({ 
+          $or: [
+            { vendorId: queryVendorId },
+            { vendorId: vendorId }
+          ]
+        }).lean();
+        
+        if (config) {
+          console.log(`[PUBLIC SHIPPING API] Found config for vendor ${vendorId}`);
+        } else {
+          console.warn(`[PUBLIC SHIPPING API] No config found for vendor ${vendorId}, falling back`);
+        }
+      } catch (err) {
+        console.error(`[PUBLIC SHIPPING API] Error casting vendorId ${vendorId}:`, err);
+        // Fallback to searching as string if casting fails
+        config = await ShippingConfigModel.findOne({ vendorId }).lean();
+      }
     }
 
-    // If no vendorId provided or no config found for that vendor, fallback to latest config
+    // If no specific vendor config found, look for latest vendor-specific config
     if (!config) {
-      // Find the most recently updated config (prioritizing configs with vendorId)
-      // Sort by updatedAt descending to get the latest config
       config = await ShippingConfigModel.findOne({ vendorId: { $exists: true } })
-        .sort({ updatedAt: -1 });
+        .sort({ updatedAt: -1 })
+        .lean();
     }
 
-    // If still no vendor-specific config exists, try to find any config
+    // If still no config found, fallback to any existing config
     if (!config) {
-      config = await ShippingConfigModel.findOne({}).sort({ updatedAt: -1 });
+      config = await ShippingConfigModel.findOne({}).sort({ updatedAt: -1 }).lean();
     }
 
-    // If still no config exists, create a default one
+    // If absolutely no config exists in DB, create a default one
     if (!config) {
       config = await ShippingConfigModel.create({
         chargeType: 'fixed',
@@ -63,7 +70,8 @@ export const GET = async (req) => {
       amount: config.amount,
       chargeType: config.chargeType,
       isEnabled: config.isEnabled,
-      vendorId: config.vendorId
+      vendorId: config.vendorId,
+      requestedVendorId: vendorId
     });
 
     return NextResponse.json({

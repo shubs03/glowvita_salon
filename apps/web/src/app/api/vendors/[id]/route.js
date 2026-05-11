@@ -2,6 +2,8 @@
 import _db from "@repo/lib/db";
 import VendorModel from "@repo/lib/models/Vendor.model";
 import VendorServicesModel from "@repo/lib/models/Vendor/VendorServices.model";
+import ClientModel from "@repo/lib/models/Vendor/Client.model";
+import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model";
 
 await _db();
 
@@ -69,6 +71,24 @@ export const GET = async (req, { params }) => {
 
     // Attach services to the vendor object
     vendor.services = vendorServices ? vendorServices.services.filter(s => s.status === 'approved') : [];
+
+    // Fetch dynamic happy clients count
+    // We want unique individuals who are either in the Client table or have booked an Appointment
+    const clientPhones = await ClientModel.distinct('phone', { 
+      vendorId: id,
+      phone: { $ne: '', $ne: null }
+    });
+
+    const appointmentPhones = await AppointmentModel.distinct('clientPhone', { 
+      vendorId: id,
+      clientPhone: { $ne: '', $ne: null }
+    });
+
+    // Combine and get unique phone numbers
+    const uniquePhones = new Set([...clientPhones, ...appointmentPhones]);
+    const dynamicClientCount = uniquePhones.size || 0;
+    
+    vendor.dynamicClientCount = dynamicClientCount;
 
     const response = Response.json({
       success: true,

@@ -167,7 +167,9 @@ export const GET = authMiddlewareAdmin(
       const processedOffers = offers.map(offer => {
         const currentDate = new Date();
         let newStatus = "Scheduled";
-        if (new Date(offer.startDate) <= currentDate) {
+        if (offer.isActive === false) {
+          newStatus = "Deactivated";
+        } else if (new Date(offer.startDate) <= currentDate) {
           if (!offer.expires || new Date(offer.expires) >= currentDate) {
             newStatus = "Active";
           } else {
@@ -204,7 +206,9 @@ export const GET = authMiddlewareAdmin(
     const sanitizedOffers = offers.map(offer => {
       const currentDate = new Date();
       let newStatus = "Scheduled";
-      if (new Date(offer.startDate) <= currentDate) {
+      if (offer.isActive === false) {
+        newStatus = "Deactivated";
+      } else if (new Date(offer.startDate) <= currentDate) {
         if (!offer.expires || new Date(offer.expires) >= currentDate) {
           newStatus = "Active";
         } else {

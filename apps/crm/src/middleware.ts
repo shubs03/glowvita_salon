@@ -65,7 +65,10 @@ export async function middleware(request: NextRequest) {
   const token = request.cookies.get('crm_access_token')?.value;
 
   const publicPaths = ['/login', '/auth/register', '/', '/apps', '/pricing', '/support', '/forgot-password', '/reset-password', '/about', '/privacy-policy', '/terms-conditions', '/return-policy'];
-  const isPublicPath = publicPaths.some(path => pathname === path);
+  const isPublicPath = publicPaths.some(path => {
+    if (path === '/') return pathname === '/';
+    return pathname === path || pathname.startsWith(path + '/');
+  });
 
   // Allow static files and Next.js internal assets
   if (pathname.includes('.') || pathname.startsWith('/_next/')) {

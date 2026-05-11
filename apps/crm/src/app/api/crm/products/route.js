@@ -78,7 +78,7 @@ const getProducts = async (req) => {
     const queryUserId = searchParams?.get('userId');
 
     // Try to get the vendor ID from multiple possible places
-    const vendorId = queryUserId || req.user?._id || req.user?.userId;
+    const vendorId = queryUserId || req.user?.userId;
     const userRole = req.user?.role;
 
     // Don't return 401 error if userId is missing - return empty products instead

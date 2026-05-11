@@ -7,7 +7,7 @@ interface Appointment {
   service: string;
   date: string;
   staff: string;
-  status: 'Completed' | 'Confirmed' | 'Cancelled';
+  status: 'Completed' | 'Confirmed' | 'Cancelled' | 'Pending' | 'Scheduled';
   price: number;
   duration: number;
   salon: {
@@ -34,6 +34,7 @@ interface Appointment {
   discountAmount?: number;
   finalAmount?: number;
   cancellationReason?: string;
+  paymentMethod?: string;
 }
 
 export const useUserAppointments = () => {
@@ -85,7 +86,7 @@ export const useUserAppointments = () => {
       if (typeof status === 'string') {
         const lowerStatus = status.toLowerCase();
 
-        if (lowerStatus === 'completed' || lowerStatus === 'partially-completed') {
+        if (lowerStatus === 'completed' || lowerStatus === 'partially-completed' || lowerStatus === 'completed without payment') {
           status = 'Completed';
         } else if (lowerStatus === 'cancelled' || lowerStatus === 'no-show') {
           status = 'Cancelled';
@@ -145,7 +146,8 @@ export const useUserAppointments = () => {
         startTime: appointment.startTime,
         endTime: appointment.endTime,
         serviceItems: appointment.serviceItems || [],
-        cancellationReason: appointment.cancellationReason
+        cancellationReason: appointment.cancellationReason,
+        paymentMethod: appointment.paymentMethod
       };
     });
   }, [appointments]);

@@ -133,104 +133,63 @@ export const GET = authMiddlewareAdmin(async (req) => {
       ]);
     }
 
-    // Process subscriptions to match the required format
+    // Helper to determine real-time subscription status based on date
+    const getDerivedStatus = (status, endDate) => {
+      const rawStatus = (status || 'Pending').toString().trim();
+      const normalizedStatus = rawStatus.toLowerCase();
+      
+      if (endDate) {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const expiryDate = new Date(endDate);
+        
+        // Ensure expiryDate is at the start of its day for comparison
+        const expiryDateNormalized = new Date(expiryDate.getFullYear(), expiryDate.getMonth(), expiryDate.getDate());
+        
+        if (!isNaN(expiryDateNormalized.getTime()) && today > expiryDateNormalized) {
+          return 'Expired';
+        }
+      }
+      
+      if (normalizedStatus === 'active') return 'Active';
+      if (normalizedStatus === 'expired') return 'Expired';
+      return rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
+    };
+
+    // Process subscriptions - Ensuring 1 single entry per vendor (latest)
     const processSubscriptions = (users, userType) => {
       return users
         .filter(user => user.subscription && (user.subscription.plan || (user.subscription.history && user.subscription.history.length > 0)))
-        .flatMap(user => {
-          const subscriptions = [];
+        .map(user => {
+          const sub = user.subscription;
+          const plan = sub.plan;
+          
+          if (!plan) return null;
 
-          // Add current subscription if it exists
-          if (user.subscription && user.subscription.plan) {
-            subscriptions.push({
-              purchaseDate: user.subscription.startDate,
-              vendor: user.businessName || user.shopName || user.name || 'N/A',
-              city: user.city || 'N/A',
-              subscription: user.subscription.plan.name,
-              startDate: user.subscription.startDate,
-              endDate: user.subscription.endDate,
-              price: user.subscription.plan.price,
-              planStatus: user.subscription.plan.status,
-              paymentMode: 'Online',
-              userType: userType,
-              type: userType,
-              // Adding vendor history information
-              vendorId: user._id,
-              vendorEmail: user.email || 'N/A',
-              vendorPhone: user.phone || user.mobile || 'N/A',
-              vendorAddress: user.address || 'N/A',
-              vendorRegistrationDate: user.createdAt || 'N/A',
-              subscriptionHistory: user.subscription.history || []
-            });
-          }
+          const derivedStatus = getDerivedStatus(sub.status || plan.status, sub.endDate);
+          const price = plan.discountedPrice || plan.price || 0;
 
-          // Add historical subscriptions if they exist
-          if (user.subscription && user.subscription.history && user.subscription.history.length > 0) {
-            user.subscription.history.forEach(historyItem => {
-              // Make sure the history item has a populated plan
-              if (historyItem.plan && historyItem.plan.name) {
-                subscriptions.push({
-                  purchaseDate: historyItem.startDate,
-                  vendor: user.businessName || user.shopName || user.name || 'N/A',
-                  city: user.city || 'N/A',
-                  subscription: historyItem.plan.name,
-                  startDate: historyItem.startDate,
-                  endDate: historyItem.endDate,
-                  price: historyItem.plan.price,
-                  planStatus: historyItem.status,
-                  paymentMode: 'Online',
-                  userType: userType,
-                  type: userType,
-                  // Adding vendor history information
-                  vendorId: user._id,
-                  vendorEmail: user.email || 'N/A',
-                  vendorPhone: user.phone || user.mobile || 'N/A',
-                  vendorAddress: user.address || 'N/A',
-                  vendorRegistrationDate: user.createdAt || 'N/A',
-                  subscriptionHistory: user.subscription.history || []
-                });
-              }
-            });
-          }
-
-          return subscriptions;
+          return {
+            purchaseDate: sub.startDate,
+            vendor: user.businessName || user.shopName || user.name || 'N/A',
+            city: user.city || 'N/A',
+            subscription: plan.name,
+            startDate: sub.startDate,
+            endDate: sub.endDate,
+            price: price,
+            planStatus: derivedStatus,
+            paymentMode: 'Online',
+            userType: userType,
+            type: userType,
+            vendorId: user._id,
+            vendorEmail: user.email || 'N/A',
+            vendorPhone: user.phone || user.mobile || 'N/A',
+            vendorAddress: user.address || 'N/A',
+            vendorRegistrationDate: user.createdAt || 'N/A',
+            rawSubscription: sub // Keep raw for revenue calc
+          };
         })
-        .filter(sub => {
-          // Apply date filter
-          if (Object.keys(dateFilter).length > 0 && dateFilter.createdAt) {
-            const purchaseDate = new Date(sub.purchaseDate);
-            return purchaseDate >= dateFilter.createdAt.$gte && purchaseDate <= dateFilter.createdAt.$lte;
-          }
-          return true;
-        })
-        .filter(sub => {
-          // Apply user type filter
-          if (userType && userType !== 'all') {
-            return userType === userType;
-          }
-          return true;
-        })
-        .filter(sub => {
-          // Apply city filter
-          if (city && city !== 'all') {
-            return sub.city === city;
-          }
-          return true;
-        })
-        .filter(sub => {
-          // Apply business name filter
-          if (businessName && businessName !== 'all') {
-            return sub.vendor === businessName;
-          }
-          return true;
-        })
-        .filter(sub => {
-          // Apply plan status filter
-          if (planStatus && planStatus !== 'all') {
-            return sub.planStatus === planStatus;
-          }
-          return true;
-        });
+        .filter(Boolean);
     };
 
     // Process subscriptions for each user type
@@ -240,12 +199,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const supplierSubscriptions = (userTypeFilter === 'all' || userTypeFilter === 'supplier')
       ? processSubscriptions(suppliersWithSubscriptions, 'supplier')
       : [];
-
     const doctorSubscriptions = (userTypeFilter === 'all' || userTypeFilter === 'doctor')
       ? processSubscriptions(doctorsWithSubscriptions, 'doctor')
       : [];
 
-    // Combine all subscriptions
+    // Combine all unique vendor records
     const allSubscriptions = [
       ...vendorSubscriptions,
       ...supplierSubscriptions,
@@ -255,14 +213,42 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Sort by purchase date (newest first)
     allSubscriptions.sort((a, b) => new Date(b.purchaseDate) - new Date(a.purchaseDate));
 
-    // Calculate totals
-    const totalSubscriptions = allSubscriptions.length;
-    const totalRevenue = allSubscriptions.reduce((sum, sub) => sum + (sub.price || 0), 0);
+    // Calculate totals with strict business rules
+    let totalRevenue = 0;
+    let activePlans = 0;
+    let inactivePlans = 0;
 
-    // Calculate active and inactive plan counts
-    // Consider both 'Inactive' and 'Expired' as inactive plans
-    const activePlans = allSubscriptions.filter(sub => sub.planStatus === 'Active').length;
-    const inactivePlans = allSubscriptions.filter(sub => sub.planStatus === 'Inactive' || sub.planStatus === 'Expired').length;
+    allSubscriptions.forEach(sub => {
+      // 1. Plan Status Counts (already derived)
+      if (sub.planStatus === 'Active') {
+        activePlans++;
+      } else {
+        inactivePlans++;
+      }
+
+      // 2. Revenue calculation
+      const currentSub = sub.rawSubscription;
+      
+      // Add current plan revenue if it's paid and status is Active/Expired
+      if (sub.price > 0 && (sub.planStatus === 'Active' || sub.planStatus === 'Expired')) {
+        totalRevenue += sub.price;
+      }
+
+      // Add historical paid revenue
+      if (currentSub.history && currentSub.history.length > 0) {
+        currentSub.history.forEach(hItem => {
+          // Rule: Skip Trial plans and duplicate 'Active' records in history
+          if (hItem.status === 'Executed' || hItem.status === 'Expired') {
+            const hPrice = (hItem.plan?.discountedPrice || hItem.plan?.price || 0);
+            if (hPrice > 0) {
+              totalRevenue += hPrice;
+            }
+          }
+        });
+      }
+    });
+
+    const totalSubscriptions = allSubscriptions.length;
 
     // Get unique subscription plans
     const subscriptionPlans = [...new Set(allSubscriptions.map(sub => sub.subscription))];

@@ -105,7 +105,7 @@ export const GET = async (req) => {
 
         // Fetch appointments with populated vendor data
         const appointments = await AppointmentModel.find(query)
-            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId clientName clientEmail clientPhone amount addOnsAmount totalAmount finalAmount platformFee serviceTax discountAmount vendorId cancellationReason notes isHomeService homeServiceLocation travelTime travelDistance distanceMeters blockedTravelWindows isWeddingService weddingPackageDetails invoiceNumber')
+            .select('_id staff staffName service serviceName date startTime endTime duration status serviceItems client userId clientName clientEmail clientPhone amount addOnsAmount totalAmount finalAmount platformFee serviceTax discountAmount vendorId cancellationReason notes isHomeService homeServiceLocation travelTime travelDistance distanceMeters blockedTravelWindows isWeddingService weddingPackageDetails invoiceNumber paymentMethod paymentStatus amountPaid')
             .populate('vendorId', 'businessName address')
             .lean(); // Use lean() to get plain JavaScript objects with raw ObjectIds
 
@@ -252,7 +252,10 @@ export const GET = async (req) => {
                 blockedTravelWindows: apt.blockedTravelWindows || [],
                 isWeddingService: apt.isWeddingService || false,
                 weddingPackageDetails: apt.weddingPackageDetails || null,
-                invoiceNumber: apt.invoiceNumber || null
+                invoiceNumber: apt.invoiceNumber || null,
+                paymentMethod: apt.paymentMethod || null,
+                paymentStatus: apt.paymentStatus || null,
+                amountPaid: apt.amountPaid || 0
             };
         });
 
@@ -554,7 +557,22 @@ export const POST = async (req) => {
         // Increment coupon redemption count and total discount if applicable
         if (appointmentData.couponCode) {
             try {
-                await CRMOfferModel.incrementRedemption(appointmentData.couponCode, appointmentData.discountAmount || 0);
+                console.log(`[DEBUG] Attempting to increment redemption for code: ${appointmentData.couponCode}, amount: ${appointmentData.discountAmount}`);
+                const crmResult = await CRMOfferModel.incrementRedemption(appointmentData.couponCode, appointmentData.discountAmount || 0);
+                
+                if (crmResult) {
+                    console.log(`[DEBUG] CRMOffer incremented successfully: ${crmResult.code}`);
+                } else {
+                    console.log(`[DEBUG] Code not found in CRMOffer, attempting AdminOfferFallback`);
+                    const AdminOfferModel = (await import('@repo/lib/models/admin/AdminOffers.model.js')).default;
+                    const adminResult = await AdminOfferModel.incrementRedemption(appointmentData.couponCode, appointmentData.discountAmount || 0);
+                    
+                    if (adminResult) {
+                        console.log(`[DEBUG] AdminOffer incremented successfully: ${adminResult.code}`);
+                    } else {
+                        console.log(`[DEBUG] Code NOT found in AdminOffer either: ${appointmentData.couponCode}`);
+                    }
+                }
                 console.log(`Incremented redemption count and discount for public booking coupon: ${appointmentData.couponCode}`);
             } catch (offerErr) {
                 console.error(`Error incrementing public coupon redemption for ${appointmentData.couponCode}:`, offerErr);

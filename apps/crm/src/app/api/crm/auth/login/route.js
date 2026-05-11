@@ -126,7 +126,8 @@ export async function POST(request) {
       permissions, 
       user.assignedRegions || (user.regionId ? [user.regionId] : []), 
       null, 
-      user.regionId
+      user.regionId,
+      userType === 'staff' ? user.vendorId : (userType === 'vendor' ? user._id : null)
     );
 
     const { password: _, ...safeUser } = user.toObject();

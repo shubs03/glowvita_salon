@@ -84,6 +84,14 @@ const ClientOrderSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  cancelledAt: {
+    type: Date,
+    default: null,
+  },
+  cancelledBy: {
+    type: String, // 'User', 'Vendor', 'Supplier'
+    default: null,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

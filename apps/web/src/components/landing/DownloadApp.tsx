@@ -47,8 +47,10 @@ const DownloadApp = () => {
             <div className="flex flex-wrap gap-3 sm:gap-4 justify-center lg:justify-start">
               {/* Google Play Button */}
               <a
-                href="#"
+                href="https://play.google.com/store/apps/details?id=com.paarsh.glow_vita_salon"
                 className="transition-transform duration-300 hover:scale-105"
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 <img
                   src="/icons/Group 1000002487.png"

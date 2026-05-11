@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
-import { Search, Package, X, ShoppingCart } from 'lucide-react';
+import { Search, Package, X, ShoppingCart, Star } from 'lucide-react';
 import NextImage from 'next/image';
 import { ProductCard } from '@/components/marketplace/ProductCard';
 
@@ -21,6 +21,7 @@ interface Product {
   description: string;
   discount?: number;
   rating?: number;
+  reviewCount?: number;
 }
 
 interface MarketplaceProductsSectionProps {
@@ -96,12 +97,14 @@ export const MarketplaceProductsSection = ({
                             <Badge variant="outline" className="text-xs">
                               {product.category.name}
                             </Badge>
-                            <Badge 
-                              variant={product.stock > 10 ? "secondary" : product.stock > 0 ? "outline" : "destructive"}
-                              className="text-xs"
-                            >
-                              {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
-                            </Badge>
+                             {product.stock === 0 && (
+                              <Badge 
+                                variant="destructive"
+                                className="text-xs bg-red-100 text-red-800 border-red-200"
+                              >
+                                Out of stock
+                              </Badge>
+                            )}
                           </div>
                         </div>
                         <div className="text-right">
@@ -121,7 +124,13 @@ export const MarketplaceProductsSection = ({
                               </span>
                             )}
                           </div>
-                          <div className="flex gap-1">
+                          <div className="flex gap-2 items-center">
+                            {/* Dynamic Reviews */}
+                            <div className="flex items-center gap-1 shrink-0 mr-auto">
+                              <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500" />
+                              <span className="text-xs font-semibold">{product.rating && product.rating > 0 ? product.rating : '0'}</span>
+                              <span className="text-[10px] text-muted-foreground">({product.reviewCount || 0})</span>
+                            </div>
                             <Button
                               size="sm"
                               variant="outline"
@@ -129,7 +138,7 @@ export const MarketplaceProductsSection = ({
                                 e.stopPropagation();
                                 onBuyNow(product, e);
                               }}
-                              className="h-7 px-2 text-xs"
+                              className="h-7 px-3 text-xs"
                               disabled={product.stock === 0}
                             >
                               Buy Now
@@ -141,7 +150,7 @@ export const MarketplaceProductsSection = ({
                                 e.stopPropagation();
                                 onQuickAddToCart(product, e);
                               }}
-                              className="h-7 px-2 text-xs"
+                              className="h-7 px-3 text-xs"
                               disabled={product.stock === 0}
                             >
                               <ShoppingCart className="h-3 w-3" />

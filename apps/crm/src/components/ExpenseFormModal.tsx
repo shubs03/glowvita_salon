@@ -8,7 +8,7 @@ import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
 import { useCreateExpenseMutation, useUpdateExpenseMutation, useGetCrmExpenseTypesQuery, useGetCrmPaymentModesQuery } from '@repo/store/api';
 import { toast } from 'sonner';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, Receipt } from 'lucide-react';
 
 interface ExpenseFormModalProps {
     isOpen: boolean;
@@ -74,7 +74,14 @@ export const ExpenseFormModal = ({ isOpen, onClose, expense, onSuccess }: Expens
                 toast.error('File size should be less than 5MB');
                 return;
             }
-            setInvoiceFile(file);
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result as string;
+                setFormData(prev => ({ ...prev, invoice: base64String }));
+                setInvoiceFile(file);
+            };
+            reader.readAsDataURL(file);
         }
     };
 
@@ -109,9 +116,7 @@ export const ExpenseFormModal = ({ isOpen, onClose, expense, onSuccess }: Expens
             // If there's a file, convert to base64 or upload to server
             // For now, we'll just store the filename
             if (invoiceFile) {
-                // In a real app, you'd upload to a storage service
-                // For now, we'll just store a reference
-                expenseData.invoice = invoiceFile.name;
+                // The base64 string is already in formData.invoice from handleFileChange
             }
 
             if (expense) {
@@ -239,42 +244,53 @@ export const ExpenseFormModal = ({ isOpen, onClose, expense, onSuccess }: Expens
                         {/* Expense Invoice File Upload */}
                         <div className="space-y-2">
                             <Label htmlFor="invoice">Expense Invoice (Optional)</Label>
-                            <div className="flex items-center gap-2">
-                                <div className="relative flex-1">
+                            
+                            {/* Preview Area */}
+                            {formData.invoice && (
+                                <div className="relative w-full aspect-video rounded-lg border border-border overflow-hidden bg-muted group">
+                                    {formData.invoice.startsWith('data:image/') ? (
+                                        <img 
+                                            src={formData.invoice} 
+                                            alt="Invoice Preview" 
+                                            className="w-full h-full object-contain"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                                            <Receipt className="h-10 w-10 text-muted-foreground" />
+                                            <span className="text-xs text-muted-foreground">{invoiceFile?.name || 'Invoice File'}</span>
+                                        </div>
+                                    )}
+                                    <Button
+                                        type="button"
+                                        variant="destructive"
+                                        size="icon"
+                                        onClick={removeFile}
+                                        className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
+
+                            {!formData.invoice && (
+                                <div 
+                                    className="border-2 border-dashed border-border rounded-lg p-6 flex flex-col items-center justify-center gap-2 hover:border-primary/50 hover:bg-muted/50 transition-all cursor-pointer"
+                                    onClick={() => document.getElementById('invoice')?.click()}
+                                >
+                                    <Upload className="h-8 w-8 text-muted-foreground" />
+                                    <div className="text-center">
+                                        <p className="text-sm font-medium">Click to upload invoice</p>
+                                        <p className="text-xs text-muted-foreground">Images or PDF (Max 5MB)</p>
+                                    </div>
                                     <Input
                                         id="invoice"
                                         type="file"
                                         accept="image/*,.pdf"
                                         onChange={handleFileChange}
-                                        className="cursor-pointer"
+                                        className="hidden"
                                     />
-                                    {!invoiceFile && formData.invoice && (
-                                        <span className="text-xs text-muted-foreground mt-1 block">
-                                            Current: {formData.invoice}
-                                        </span>
-                                    )}
-                                </div>
-                                {(invoiceFile || formData.invoice) && (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={removeFile}
-                                        className="flex-shrink-0"
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </Button>
-                                )}
-                            </div>
-                            {invoiceFile && (
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                    <Upload className="h-4 w-4" />
-                                    <span>{invoiceFile.name}</span>
                                 </div>
                             )}
-                            <p className="text-xs text-muted-foreground">
-                                Accepted formats: Images, PDF (Max 5MB)
-                            </p>
                         </div>
 
                         {/* Note */}

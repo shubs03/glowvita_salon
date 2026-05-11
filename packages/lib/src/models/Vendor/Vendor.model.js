@@ -201,10 +201,11 @@ const vendorSchema = new mongoose.Schema({
       trim: true,
       default: null,
     },
-    accountNumber: {
-      type: String,
-      trim: true,
+    accountNumber: { 
+      type: String, 
+      trim: true, 
       default: null,
+      match: [/^\d+$/, "Please enter a valid account number (only digits allowed)"] 
     },
     ifscCode: {
       type: String,

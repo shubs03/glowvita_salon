@@ -51,21 +51,15 @@ const SearchResults = () => {
   const { data: vendorsData, isLoading: vendorsLoading } =
     useGetPublicVendorsQuery({
       serviceName: serviceQuery || productNameQuery,
-      ...(lat != null && lng != null
-        ? { lat, lng }             // coordinate-based (primary)
-        : cityFallback
-        ? { city: cityFallback }   // legacy city fallback
-        : {}),                     // no location filter → show all
+      ...(lat != null && lng != null ? { lat, lng } : {}),
+      city: locationLabel || cityFallback,
       categoryIds: categoryIdQuery,
     });
 
   const { data: productsData, isLoading: productsLoading } =
     useGetPublicProductsQuery({
-      ...(lat != null && lng != null
-        ? { lat, lng }
-        : cityFallback
-        ? { city: cityFallback }
-        : {}),
+      ...(lat != null && lng != null ? { lat, lng } : {}),
+      city: locationLabel || cityFallback,
     });
 
   const vendors = useMemo(
@@ -200,11 +194,7 @@ const SearchResults = () => {
                           fill
                           className="object-cover rounded-[24px] group-hover:scale-105 transition-transform duration-700"
                         />
-                        <div className="absolute top-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-md flex items-center justify-center shadow-lg hover:bg-white text-gray-800">
-                            <Bookmark className="w-4 h-4" />
-                          </button>
-                        </div>
+                        {/* Removed Bookmark icon as per user request */}
                       </div>
 
                       {/* Content */}
@@ -247,9 +237,20 @@ const SearchResults = () => {
                                 </p>
                               </div>
                               <div className="flex items-center gap-4">
-                                <p className="text-base font-black text-gray-900 tracking-tighter">
-                                  ₹{svc.price}
-                                </p>
+                                {svc.discountedPrice && svc.discountedPrice < svc.price ? (
+                                  <div className="flex flex-col items-end gap-0.5">
+                                    <p className="text-base font-black text-gray-900 tracking-tighter leading-none">
+                                      ₹{svc.discountedPrice}
+                                    </p>
+                                    <p className="text-[10px] font-bold text-gray-400 line-through leading-none">
+                                      ₹{svc.price}
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <p className="text-base font-black text-gray-900 tracking-tighter">
+                                    ₹{svc.price}
+                                  </p>
+                                )}
                                 <Button className="h-8 px-4 rounded-full font-black text-[10px] uppercase tracking-widest">
                                   Book
                                 </Button>

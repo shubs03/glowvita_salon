@@ -23,6 +23,7 @@ export default function OnlineTransactionsPage() {
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
+    const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
     const [vendorFilter, setVendorFilter] = useState('all');
     const [serviceFilter, setServiceFilter] = useState('all');
     const [pagination, setPagination] = useState({
@@ -40,6 +41,7 @@ export default function OnlineTransactionsPage() {
         regionId: selectedRegion,
         search: debouncedSearch,
         status: statusFilter,
+        paymentStatus: paymentStatusFilter,
         vendorId: vendorFilter,
         serviceName: serviceFilter
     });
@@ -56,10 +58,30 @@ export default function OnlineTransactionsPage() {
     const totalTransactions = response?.pagination?.total || 0;
     const totalPages = response?.pagination?.totalPages || 0;
 
+    // Use a ref to store the timeout ID for debouncing
+    const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
     const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSearch(e.target.value);
-        // Simple debounce
-        setTimeout(() => setDebouncedSearch(e.target.value), 500);
+        const val = e.target.value;
+        setSearch(val);
+        
+        // Reset pagination when searching
+        setPagination(prev => ({ ...prev, currentPage: 1 }));
+        
+        // Clear existing timeout
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+        
+        // Set new timeout
+        debounceTimeoutRef.current = setTimeout(() => {
+            setDebouncedSearch(val);
+        }, 500);
+    };
+
+    const handleFilterChange = (setter: React.Dispatch<React.SetStateAction<string>>) => (value: string) => {
+        setter(value);
+        setPagination(prev => ({ ...prev, currentPage: 1 }));
     };
 
     const handlePageChange = (page: number) => {
@@ -135,7 +157,7 @@ export default function OnlineTransactionsPage() {
                                     onChange={handleSearch}
                                 />
                             </div>
-                            <Select value={vendorFilter} onValueChange={setVendorFilter}>
+                            <Select value={vendorFilter} onValueChange={handleFilterChange(setVendorFilter)}>
                                 <SelectTrigger className="w-[140px]">
                                     <SelectValue placeholder="Vendor" />
                                 </SelectTrigger>
@@ -146,7 +168,7 @@ export default function OnlineTransactionsPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Select value={serviceFilter} onValueChange={setServiceFilter}>
+                            <Select value={serviceFilter} onValueChange={handleFilterChange(setServiceFilter)}>
                                 <SelectTrigger className="w-[140px]">
                                     <SelectValue placeholder="Service" />
                                 </SelectTrigger>
@@ -157,16 +179,29 @@ export default function OnlineTransactionsPage() {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[130px]">
-                                    <SelectValue placeholder="Status" />
+                            <Select value={statusFilter} onValueChange={handleFilterChange(setStatusFilter)}>
+                                <SelectTrigger className="w-[150px]">
+                                    <SelectValue placeholder="Appt Status" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Status</SelectItem>
+                                    <SelectItem value="all">All Appt Status</SelectItem>
                                     <SelectItem value="scheduled">Scheduled</SelectItem>
                                     <SelectItem value="confirmed">Confirmed</SelectItem>
                                     <SelectItem value="completed">Completed</SelectItem>
                                     <SelectItem value="cancelled">Cancelled</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select value={paymentStatusFilter} onValueChange={handleFilterChange(setPaymentStatusFilter)}>
+                                <SelectTrigger className="w-[160px]">
+                                    <SelectValue placeholder="Payment Status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Payment Status</SelectItem>
+                                    <SelectItem value="pending">Pending</SelectItem>
+                                    <SelectItem value="partial">Partial</SelectItem>
+                                    <SelectItem value="completed">Completed</SelectItem>
+                                    <SelectItem value="failed">Failed</SelectItem>
+                                    <SelectItem value="refunded">Refunded</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

@@ -15,7 +15,7 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
     console.log('Database connection status:', db ? 'Connected' : 'Not connected');
     
     const { searchParams } = new URL(req.url);
-    const vendorId = searchParams.get('vendorId') || req.user?._id;
+    const vendorId = searchParams.get('vendorId') || req.user?.userId;
     const status = searchParams.get('status');
     const page = parseInt(searchParams.get('page')) || 1;
     const limit = parseInt(searchParams.get('limit')) || 10;
@@ -26,8 +26,8 @@ export const GET = authMiddlewareCrm(async (req, ctx) => {
     const query = {};
     if (vendorId) {
       query.vendorId = vendorId;
-    } else if (req.user?._id) {
-      query.vendorId = req.user._id;
+    } else if (req.user?.userId) {
+      query.vendorId = req.user.userId;
     }
     if (status) {
       query.status = status;
@@ -104,11 +104,11 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
     }
     
     // Validate authenticated user
-    if (!req.user?._id) {
+    if (!req.user?.userId) {
       return NextResponse.json(
         { 
           success: false, 
-          message: 'User authentication required' 
+          message: 'User authentication required: Missing userId in request object' 
         },
         { status: 401 }
       );
@@ -137,8 +137,8 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       templateId: templateId,
       content: body.content,
       status: body.status || 'Draft',
-      vendorId: body.vendorId || req.user?._id,
-      createdBy: req.user?._id,
+      vendorId: body.vendorId || req.user?.userId,
+      createdBy: req.user?.userId,
       targetAudience: body.targetAudience || 'All Customers',
       scheduledDate: body.scheduledDate ? new Date(body.scheduledDate) : new Date(),
       budget: body.budget || 0,
@@ -154,10 +154,10 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
     };
     
     console.log('Creating campaign with data:', campaignData);
-    console.log('User info:', { userId: req.user?._id, userRole: req.user?.role });
+    console.log('User info:', { userId: req.user?.userId, userRole: req.user?.role });
     
     // Validate that user ID is a valid ObjectId
-    if (!mongoose.Types.ObjectId.isValid(req.user._id)) {
+    if (!mongoose.Types.ObjectId.isValid(req.user.userId)) {
       return NextResponse.json(
         { 
           success: false, 

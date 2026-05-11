@@ -411,13 +411,23 @@ export const glowvitaApi = createApi({
         if (params.limit) queryParams.append("limit", params.limit.toString());
         if (params.offset) queryParams.append("offset", params.offset.toString());
 
-        // Coordinate-based location (primary)
+        // Coordinate-based location
         if (params.lat != null && params.lng != null) {
           queryParams.append("lat", params.lat.toString());
           queryParams.append("lng", params.lng.toString());
-        } else if (params.city) {
-          // Legacy city fallback
+        }
+
+        // Region / Neighborhood fallback or explicit filter
+        if (params.city) {
           queryParams.append("city", params.city);
+        }
+
+        if (params.offerCode) {
+          queryParams.append("offerCode", params.offerCode);
+        }
+
+        if (params.regionId) {
+          queryParams.append("regionId", params.regionId);
         }
 
         const queryString = queryParams.toString();
@@ -427,19 +437,20 @@ export const glowvitaApi = createApi({
         };
       },
       providesTags: ["PublicVendors"],
-      transformResponse: (response) => response,
     }),
 
     getLandingSalons: builder.query({
       query: (params = {}) => {
         const queryParams = new URLSearchParams();
 
-        // Coordinate-based location (primary)
+        // Coordinate-based location
         if (params.lat != null && params.lng != null) {
           queryParams.append("lat", params.lat.toString());
           queryParams.append("lng", params.lng.toString());
-        } else if (params.city) {
-          // Legacy city fallback
+        }
+
+        // Region / Neighborhood fallback or explicit filter
+        if (params.city) {
           queryParams.append("city", params.city);
         }
 
@@ -656,6 +667,13 @@ export const glowvitaApi = createApi({
     }),
 
     // Admin Panel Endpoints
+    getAdminMarketingDashboard: builder.query({
+      query: () => ({
+        url: "/admin/Marketing/dashboard",
+        method: "GET",
+      }),
+      providesTags: ["Marketing"],
+    }),
     getUsers: builder.query({
       query: () => ({
         url: "/admin/users",
@@ -670,6 +688,7 @@ export const glowvitaApi = createApi({
         if (params.limit) queryParams.append("limit", params.limit);
         if (params.search) queryParams.append("search", params.search);
         if (params.status && params.status !== 'all') queryParams.append("status", params.status);
+        if (params.paymentStatus && params.paymentStatus !== 'all') queryParams.append("paymentStatus", params.paymentStatus);
         if (params.vendorId && params.vendorId !== 'all') queryParams.append("vendorId", params.vendorId);
         if (params.serviceName && params.serviceName !== 'all') queryParams.append("serviceName", params.serviceName);
         if (params.regionId && params.regionId !== 'all') queryParams.append("regionId", params.regionId);
@@ -3634,4 +3653,7 @@ export const {
   useUpdateWithdrawalStatusMutation,
   useGetAdminTransactionsQuery,
   useGetAdminOnlineTransactionsQuery,
+
+  // Admin Marketing Dashboard Hook
+  useGetAdminMarketingDashboardQuery,
 } = glowvitaApi;

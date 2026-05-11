@@ -258,6 +258,7 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
     const purchaseHistoryData = {
       userId: userType === 'supplier' ? validatedSupplierId : validatedVendorId,
       userType,
+      regionId: req.user.regionId || (req.user.regions && req.user.regions.length > 0 ? req.user.regions[0] : undefined),
       packageId: smsPackage._id,
       packageName: smsPackage.name,
       smsCount: smsPackage.smsCount,
@@ -266,6 +267,18 @@ export const POST = authMiddlewareCrm(async (req, ctx) => {
       expiryDate,
       status: 'active'
     };
+    
+    // If regionId couldn't be extracted from the token, fetch it from the database first
+    // to prevent Mongoose validation errors since it's a required field
+    if (!purchaseHistoryData.regionId) {
+      if (userType === 'supplier') {
+        const supplier = await SupplierModel.findById(validatedSupplierId).select('regionId');
+        if (supplier && supplier.regionId) purchaseHistoryData.regionId = supplier.regionId;
+      } else {
+        const vendor = await VendorModel.findById(validatedVendorId).select('regionId');
+        if (vendor && vendor.regionId) purchaseHistoryData.regionId = vendor.regionId;
+      }
+    }
     
     const purchaseHistory = new SmsTransaction(purchaseHistoryData);
     

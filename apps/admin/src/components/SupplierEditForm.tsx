@@ -45,9 +45,10 @@ interface SupplierEditFormProps {
   isOpen: boolean;
   onClose: () => void;
   refetch: () => void;
+  supplierTypes?: { id: string; name: string }[];
 }
 
-export default function SupplierEditForm({ supplier, isOpen, onClose, refetch }: SupplierEditFormProps) {
+export default function SupplierEditForm({ supplier, isOpen, onClose, refetch, supplierTypes = [] }: SupplierEditFormProps) {
   const [activeTab, setActiveTab] = useState("profile");
   const [formData, setFormData] = useState<Partial<Supplier>>({});
   const [updateSupplier, { isLoading: isUpdating }] = useUpdateSupplierMutation();
@@ -95,7 +96,7 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch }:
 
   const handleUpdate = async () => {
     try {
-      await updateSupplier({ id: supplier._id, data: formData }).unwrap();
+      await updateSupplier({ id: supplier._id, ...formData }).unwrap();
       toast.success("Supplier updated successfully");
       refetch();
       // Don't close immediately, let user see success or close manually
@@ -253,18 +254,27 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch }:
               <div className="space-y-2">
                 <Label>Supplier Type</Label>
                 <Select
-                  value={formData.supplierType}
+                  value={formData.supplierType || ''}
                   onValueChange={(val) => handleChange('supplierType', val)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select Type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Equipment">Equipment</SelectItem>
-                    <SelectItem value="Consumables">Consumables</SelectItem>
-                    <SelectItem value="Furniture">Furniture</SelectItem>
-                    <SelectItem value="Software">Software</SelectItem>
-                    <SelectItem value="Other">Other</SelectItem>
+                    {supplierTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.name}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                    {supplierTypes.length === 0 && (
+                      <>
+                        <SelectItem value="Equipment">Equipment</SelectItem>
+                        <SelectItem value="Consumables">Consumables</SelectItem>
+                        <SelectItem value="Furniture">Furniture</SelectItem>
+                        <SelectItem value="Software">Software</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -302,23 +312,7 @@ export default function SupplierEditForm({ supplier, isOpen, onClose, refetch }:
               </div>
             </div>
 
-            {/* Location Map Placeholder - could be improved with actual Map component */}
-            <div className="space-y-2">
-              <Label>Location (Coordinates)</Label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Latitude"
-                  value={formData.location?.coordinates?.[0] || ''}
-                  disabled // Read-only for now unless map integration is added
-                />
-                <Input
-                  placeholder="Longitude"
-                  value={formData.location?.coordinates?.[1] || ''}
-                  disabled
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">Location editing requires map interaction (not implemented in this quick form).</p>
-            </div>
+
 
             <div className="flex justify-end pt-4">
               <Button onClick={handleUpdate} disabled={isUpdating}>
