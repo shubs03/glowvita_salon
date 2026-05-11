@@ -234,7 +234,7 @@ export const DocumentsTab = ({ documents, setVendor }: DocumentsTabProps) => {
               >
                 <X className="h-4 w-4" />
               </Button>
-              {previewDocument.src?.startsWith('data:application/pdf') ? (
+              {previewDocument.src?.startsWith('data:application/pdf') || previewDocument.src?.toLowerCase().includes('.pdf') ? (
                 <iframe
                   src={previewDocument.src}
                   className="w-full h-[80vh]"

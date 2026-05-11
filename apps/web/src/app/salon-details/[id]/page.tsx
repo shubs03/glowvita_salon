@@ -1106,6 +1106,7 @@ export default function SalonDetailsPage() {
                         {isLoading ? (
                           <Skeleton className="h-8 w-12 mx-auto" />
                         ) : (
+                          vendorData?.dynamicClientCount ||
                           vendorData?.stats?.find(
                             (s: any) => s.label === "Happy Clients"
                           )?.value ||

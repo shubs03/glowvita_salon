@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { NEXT_PUBLIC_CRM_URL } from "@repo/config/config";
 
 const IntroductionSection = () => {
   return (
@@ -36,7 +37,7 @@ const IntroductionSection = () => {
 
         <div className="gap-4 flex flex-wrap justify-center mt-8">
           <Link href="/salons" className="bg-primary text-white px-6 py-3 rounded-md font-medium transition-all hover:opacity-90">Explore Salons</Link>
-          <Link href="/client-register" className="bg-transparent border border-primary text-primary px-6 py-3 rounded-md font-medium transition-all hover:bg-primary/5">Join GlowVita Today</Link>
+          <a href={`${NEXT_PUBLIC_CRM_URL || "https://partners.glowvitasalon.com"}/login`} className="bg-transparent border border-primary text-primary px-6 py-3 rounded-md font-medium transition-all hover:bg-primary/5">Join GlowVita Today</a>
         </div>
       </div>
     </section>

@@ -176,7 +176,10 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
     addOns: [],
   });
 
+  const [formErrors, setFormErrors] = useState<string[]>([]);
+
   useEffect(() => {
+    setFormErrors([]);
     if (service && type === "edit") {
       setFormData({
         name: service.name || '',
@@ -311,6 +314,20 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
   };
 
   const handleSave = async () => {
+    const errors: string[] = [];
+    if (!('_id' in formData.category && formData.category._id)) errors.push("Service Category is required.");
+    if (!formData.name) errors.push("Service Name is required.");
+    if (!formData.price || Number(formData.price) <= 0) errors.push("Valid Price is required.");
+    if (!formData.duration || Number(formData.duration) <= 0) errors.push("Valid Duration is required.");
+    if (!formData.description || formData.description.trim() === '') errors.push("Service Description is required.");
+
+    if (errors.length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+
+    setFormErrors([]);
+
     if (!VENDOR_ID) {
       console.error("Vendor ID is missing");
       return;
@@ -370,7 +387,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="category">Service Category</Label>
+          <Label htmlFor="category">Service Category <span className="text-red-500">*</span></Label>
           <div className="flex gap-2">
             <Select
               onValueChange={handleCategoryChange}
@@ -404,7 +421,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
           </div>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="name">Service Name</Label>
+          <Label htmlFor="name">Service Name <span className="text-red-500">*</span></Label>
           <div className="flex gap-2">
             <Select
               value={formData.name || ""}
@@ -451,7 +468,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <Label htmlFor="description">Description <span className="text-red-500">*</span></Label>
         <Textarea
           id="description"
           name="description"
@@ -462,7 +479,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="price">Price (₹)</Label>
+          <Label htmlFor="price">Price (₹) <span className="text-red-500">*</span></Label>
           <Input
             id="price"
             name="price"
@@ -484,7 +501,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="duration">Duration (minutes)</Label>
+          <Label htmlFor="duration">Duration (minutes) <span className="text-red-500">*</span></Label>
           <Select
             value={String(formData.duration || "")}
             onValueChange={(value) => handleSelectChange("duration", value)}
@@ -545,7 +562,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
         <Button variant="outline" onClick={onClose} disabled={isSaving}>
           Cancel
         </Button>
-        <Button onClick={handleNextTab} disabled={!formData.name}>
+        <Button onClick={handleNextTab}>
           Next
         </Button>
       </DialogFooter>
@@ -700,11 +717,23 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
         />
         <Label htmlFor="onlineBooking">Enable Online Booking</Label>
       </div>
+      {formErrors.length > 0 && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-sm font-semibold text-red-600 mb-1 flex items-center">
+            <AlertCircle className="w-4 h-4 mr-1" /> Please fix the following errors:
+          </p>
+          <ul className="list-disc list-inside text-xs text-red-600 space-y-1">
+            {formErrors.map((error, idx) => (
+              <li key={idx}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <DialogFooter className="flex justify-end pt-4">
         <Button variant="outline" onClick={onClose} disabled={isSaving}>
           Cancel
         </Button>
-        <Button onClick={handleSave} disabled={isSaving || !formData.name}>
+        <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? "Saving..." : "Save Service"}
         </Button>
       </DialogFooter>
@@ -895,10 +924,10 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
           >
             <TabsList className="grid w-full grid-cols-3 mb-6 sticky top-0 bg-background z-10 pt-2">
               <TabsTrigger value="basic">Basic Info</TabsTrigger>
-              <TabsTrigger value="advanced" disabled={!formData.name}>
+              <TabsTrigger value="advanced">
                 Advanced
               </TabsTrigger>
-              <TabsTrigger value="booking" disabled={!formData.name}>
+              <TabsTrigger value="booking">
                 Booking
               </TabsTrigger>
             </TabsList>
