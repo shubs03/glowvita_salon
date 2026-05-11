@@ -36,6 +36,7 @@ interface WeddingPackageCustomizerProps {
     weddingPackage: WeddingPackageType;
     allServices: Service[];
     onPackageUpdate: (updatedPackage: WeddingPackageType, selectedServices: Service[]) => void;
+    onLiveUpdate?: (services: Service[]) => void;
     onBack: () => void;
     currentStep: number;
     setCurrentStep: (step: number) => void;
@@ -45,6 +46,7 @@ export function Step1_WeddingPackageCustomizer({
     weddingPackage,
     allServices,
     onPackageUpdate,
+    onLiveUpdate,
     onBack,
     currentStep,
     setCurrentStep
@@ -102,6 +104,17 @@ export function Step1_WeddingPackageCustomizer({
 
     const totalPrice = calculateTotalPrice();
     const totalDuration = calculateTotalDuration();
+
+    // Live update parent when services or quantities change
+    useEffect(() => {
+        if (onLiveUpdate) {
+            const updatedServices = selectedServices.map(service => ({
+                ...service,
+                quantity: serviceQuantities[service.id] || 1
+            }));
+            onLiveUpdate(updatedServices);
+        }
+    }, [selectedServices, serviceQuantities, onLiveUpdate]);
 
     // Handle adding a service to the package
     const handleAddService = (service: Service) => {

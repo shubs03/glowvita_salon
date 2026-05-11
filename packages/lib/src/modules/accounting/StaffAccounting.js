@@ -19,10 +19,21 @@ export const syncStaffCommission = async (appointmentId) => {
         }
 
         const allowedStatuses = ['completed', 'completed without payment'];
-        const isEligible = allowedStatuses.includes(appointment.status);
+        const currentStatus = (appointment.status || '').toLowerCase();
+        const isEligible = allowedStatuses.includes(currentStatus);
         const vendorId = appointment.vendorId;
+        const vendorIdStr = vendorId?.toString();
 
-        console.log(`[StaffAccounting] Appointment status: "${appointment.status}" | Eligible: ${isEligible}`);
+        if (!vendorIdStr) {
+            console.error(`[StaffAccounting] CRITICAL: appointment ${appointmentId} has no vendorId — aborting sync.`);
+            return { success: false, message: 'Missing vendorId on appointment' };
+        }
+
+        console.log(`[StaffAccounting] Appointment ID: ${appointment._id} | Status: "${appointment.status}" | Eligible: ${isEligible} | Vendor: ${vendorIdStr}`);
+
+        if (!isEligible) {
+            console.log(`[StaffAccounting] Skipping sync: Appointment status "${appointment.status}" is not in allowed list.`);
+        }
 
         // --- Build the list of commissions we WANT to exist after this sync ---
         let targetCommissions = [];
@@ -38,20 +49,47 @@ export const syncStaffCommission = async (appointmentId) => {
                             amount: commAmount,
                             description: `Commission for ${item.serviceName} (${item._id})`
                         });
-                        console.log(`[StaffAccounting] Found serviceItem commission: Staff=${item.staff}, Service=${item.serviceName}, Amount=${commAmount}`);
+                        console.log(`[StaffAccounting] Target commission added (Priority 1): Staff=${item.staff}, Amount=${commAmount}`);
+                    } else if (item.staff && commAmount <= 0) {
+                        console.log(`[StaffAccounting] Skipping item commission (Amount is 0): Staff=${item.staff}, Service=${item.serviceName}`);
+                    }
+                }
+            } else {
+                console.log(`[StaffAccounting] No serviceItems found in appointment.`);
+            }
+
+            // PRIORITY 1b: Wedding Team Commissions
+            if (appointment.isWeddingService && appointment.weddingPackageDetails?.teamCommissions?.length > 0) {
+                console.log(`[StaffAccounting] Found wedding team commissions: ${appointment.weddingPackageDetails.teamCommissions.length} members`);
+                for (const comm of appointment.weddingPackageDetails.teamCommissions) {
+                    if (comm.staffId && comm.amount > 0) {
+                        targetCommissions.push({
+                            staffId: comm.staffId.toString(),
+                            amount: comm.amount,
+                            description: `Wedding Commission: ${appointment.serviceName} (Staff: ${comm.staffName || 'Team Member'})`
+                        });
+                        console.log(`[StaffAccounting] Target wedding commission added: Staff=${comm.staffId}, Amount=${comm.amount}`);
                     }
                 }
             }
 
-            // PRIORITY 2: Fallback to top-level staffCommission (legacy single-service)
-            if (targetCommissions.length === 0 && appointment.staff && (appointment.staffCommission?.amount || 0) > 0) {
-                targetCommissions.push({
-                    staffId: appointment.staff.toString(),
-                    amount: appointment.staffCommission.amount,
-                    description: `Commission for ${appointment.serviceName}`
-                });
-                console.log(`[StaffAccounting] Found top-level commission: Staff=${appointment.staff}, Amount=${appointment.staffCommission.amount}`);
+            // PRIORITY 2: Fallback to top-level staffCommission
+            // We now do this if targetCommissions is still empty OR if we want to ensure root commissions are never missed
+            if (targetCommissions.length === 0) {
+                const rootStaffId = appointment.staff?._id || appointment.staff;
+                const rootCommAmount = appointment.staffCommission?.amount || 0;
+                
+                if (rootStaffId && rootCommAmount > 0) {
+                    targetCommissions.push({
+                        staffId: rootStaffId.toString(),
+                        amount: rootCommAmount,
+                        description: `Commission for ${appointment.serviceName} (Root)`
+                    });
+                    console.log(`[StaffAccounting] Priority 2: Using root commission for staff ${rootStaffId} | Amount: ${rootCommAmount}`);
+                }
             }
+        } else {
+            console.log(`[StaffAccounting] Appointment ${appointmentId} is NOT ELIGIBLE for sync (Status: ${appointment.status})`);
         }
 
         console.log(`[StaffAccounting] Total target commissions from stored data: ${targetCommissions.length}`);
@@ -62,7 +100,38 @@ export const syncStaffCommission = async (appointmentId) => {
         if (targetCommissions.length === 0 && isEligible) {
             console.log(`[StaffAccounting] No stored commissions found. Attempting live recalculation from staff records...`);
 
-            if (appointment.serviceItems && appointment.serviceItems.length > 0) {
+            if (appointment.isWeddingService && appointment.weddingPackageDetails?.teamMembers?.length > 0) {
+                const teamMembers = appointment.weddingPackageDetails.teamMembers;
+                const staffIds = teamMembers.map(m => (m._id || m).toString());
+
+                const staffMembers = await StaffModel.find({ _id: { $in: staffIds } });
+                const staffMap = new Map(staffMembers.map(s => [s._id.toString(), s]));
+
+                const servicePrice = Number(appointment.amount || 0);
+                const addOnsPrice = Number(appointment.addOnsAmount || 0);
+                const discount = Number(appointment.discountAmount || appointment.discount || 0);
+                const commissionableAmount = Math.max(0, servicePrice + addOnsPrice - discount);
+
+                // Split commissionable amount equally among team members
+                const sharePerMember = commissionableAmount / teamMembers.length;
+
+                for (const sId of staffIds) {
+                    const staff = staffMap.get(sId);
+                    if (staff && staff.commission) {
+                        const rate = Number(staff.commissionRate) || 0;
+                        const commAmount = Number(((sharePerMember * rate) / 100).toFixed(2));
+
+                        if (commAmount > 0) {
+                            targetCommissions.push({
+                                staffId: sId,
+                                amount: commAmount,
+                                description: `Wedding Commission (Live): ${appointment.serviceName} (Staff: ${staff.fullName})`
+                            });
+                            console.log(`[StaffAccounting] Wedding Live recalculation: Staff=${staff.fullName}, Rate=${rate}%, Amount=${commAmount}`);
+                        }
+                    }
+                }
+            } else if (appointment.serviceItems && appointment.serviceItems.length > 0) {
                 const staffIds = [...new Set(
                     appointment.serviceItems
                         .map(item => item.staff?.toString())
@@ -116,8 +185,12 @@ export const syncStaffCommission = async (appointmentId) => {
                             amount: commAmount,
                             description: `Commission for ${appointment.serviceName}`
                         });
-                        console.log(`[StaffAccounting] Live recalculation (top-level): Staff=${staff.fullName}, Rate=${rate}%, Amount=${commAmount}`);
+                        console.log(`[StaffAccounting] Live recalculation (Priority 2): Staff=${staff.fullName}, Rate=${rate}%, Amount=${commAmount}`);
+                    } else {
+                        console.log(`[StaffAccounting] Live recalculation (Priority 2) result was 0. Base: ${base}, Discount: ${discount}`);
                     }
+                } else {
+                    console.log(`[StaffAccounting] Staff ${appointment.staff} not eligible for commission (commission: ${staff?.commission}, rate: ${staff?.commissionRate})`);
                 }
             }
 
@@ -134,9 +207,11 @@ export const syncStaffCommission = async (appointmentId) => {
 
         // --- Process reversals: credits that no longer have a matching target ---
         for (const existing of existingCredits) {
-            const stillNeeded = targetCommissions.find(
-                t => t.staffId === existing.staffId.toString() && t.description === existing.description
-            );
+            const stillNeeded = targetCommissions.find(t => {
+                const matchesStaff = t.staffId.toString() === existing.staffId.toString();
+                const matchesDesc = t.description === existing.description;
+                return matchesStaff && matchesDesc;
+            });
 
             if (!stillNeeded) {
                 // This credit is no longer valid (e.g. appointment was cancelled after being completed)
@@ -156,27 +231,30 @@ export const syncStaffCommission = async (appointmentId) => {
         // --- Process new or adjusted commissions ---
         for (const target of targetCommissions) {
             // Find any existing credit for this exact staff + description
-            const existing = existingCredits.find(
-                t => t.staffId.toString() === target.staffId && t.description === target.description
-            );
+            const existing = existingCredits.find(t => {
+                const matchesStaff = t.staffId.toString() === target.staffId.toString();
+                const matchesDesc = t.description === target.description;
+                return matchesStaff && matchesDesc;
+            });
 
             if (!existing) {
                 // No prior credit — create a new one
-                console.log(`[StaffAccounting] CREDITING new commission: ${target.amount} to staff ${target.staffId}`);
+                console.log(`[StaffAccounting] ACTION: Creating NEW credit for staff ${target.staffId} | Amount: ${target.amount} | Description: ${target.description}`);
                 await processTransaction({
-                    vendorId,
+                    vendorId: vendorIdStr,
                     staffId: target.staffId,
                     amount: target.amount,
                     type: 'CREDIT',
                     appointmentId: appointment._id,
                     description: target.description,
-                    isAdjustment: true
+                    isAdjustment: false
                 });
             } else {
                 // Prior credit exists — check if adjustment is needed
-                const diff = target.amount - existing.amount;
+                const diff = Number((target.amount - existing.amount).toFixed(2));
+                console.log(`[StaffAccounting] ACTION: Found existing record (ID: ${existing._id}). Checking diff: ${diff}`);
                 if (Math.abs(diff) > 0.01) {
-                    console.log(`[StaffAccounting] ADJUSTING commission for ${target.description}: diff=${diff}`);
+                    console.log(`[StaffAccounting] ADJUSTING commission for ${target.description}: target=${target.amount}, existing=${existing.amount}, diff=${diff}`);
                     await processTransaction({
                         vendorId,
                         staffId: target.staffId,
@@ -187,13 +265,13 @@ export const syncStaffCommission = async (appointmentId) => {
                         isAdjustment: true
                     });
                 } else {
-                    console.log(`[StaffAccounting] Commission already up to date for ${target.description}`);
+                    console.log(`[StaffAccounting] Commission already up to date for ${target.description} (${target.amount})`);
                 }
             }
         }
 
-        console.log(`[StaffAccounting] syncStaffCommission COMPLETED SUCCESSFULLY for appointment ${appointmentId}`);
-        return { success: true };
+        console.log(`[StaffAccounting] syncStaffCommission COMPLETED SUCCESS for appointment ${appointmentId}. Targets processed: ${targetCommissions.length}`);
+        return { success: true, processed: targetCommissions.length };
 
     } catch (error) {
         console.error(`[StaffAccounting] ERROR in syncStaffCommission for ${appointmentId}:`, error);
@@ -350,34 +428,38 @@ async function processTransaction({
     appointmentId, billingId, paymentMethod, notes,
     transactionDate, description, isAdjustment = false
 }) {
-    if (!amount || amount <= 0) {
-        console.warn(`[StaffAccounting] processTransaction skipped: amount is ${amount}`);
+    const numericAmount = Number(Number(amount).toFixed(2));
+
+    if (!numericAmount || numericAmount <= 0) {
+        console.warn(`[StaffAccounting] processTransaction SKIPPED: amount is ${numericAmount} (Original: ${amount})`);
         return;
     }
 
     console.log(`[StaffAccounting] processTransaction: ${type} ₹${amount} for staff ${staffId}`);
 
     // 1. Record the transaction entry
-    await StaffTransactionsModel.create({
+    const newTransaction = await StaffTransactionsModel.create({
         vendorId,
         staffId,
         type,
-        amount: Number(Number(amount).toFixed(2)),
+        amount: numericAmount,
         appointmentId: appointmentId || null,
         billingId: billingId || null,
-        paymentMethod: paymentMethod || null,
-        notes: notes || null,
-        description: description || null,
-        transactionDate: transactionDate || new Date()
+        paymentMethod: paymentMethod || null,   // null for commission credits, set for payouts
+        notes: notes || '',
+        transactionDate: transactionDate || new Date(),
+        description: description || ''
     });
+
+    console.log(`[StaffAccounting] Transaction CREATED: ID=${newTransaction._id}, Type=${type}, Amount=${numericAmount}`);
 
     // 2. Update the Staff summary
     let update;
     if (type === 'CREDIT') {
-        update = { $inc: { accumulatedEarnings: amount, netBalance: amount, commissionCount: 1 } };
+        update = { $inc: { accumulatedEarnings: numericAmount, netBalance: numericAmount, commissionCount: 1 } };
     } else if (isAdjustment) {
         // Reversal: undo a previous earning
-        update = { $inc: { accumulatedEarnings: -amount, netBalance: -amount, commissionCount: -1 } };
+        update = { $inc: { accumulatedEarnings: -numericAmount, netBalance: -numericAmount, commissionCount: -1 } };
     } else {
         // Real payout
         update = { $inc: { totalPaidOut: amount, netBalance: -amount } };

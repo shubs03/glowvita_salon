@@ -595,7 +595,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
         />
         <Label htmlFor="commission">Enable Staff Commission</Label>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         <div className="p-4 border rounded-md space-y-2">
           <div className="flex items-center space-x-2">
             <Switch
@@ -614,28 +614,6 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
               value={formData.homeService?.charges || ""}
               onChange={(e) =>
                 handleNestedChange("homeService", "charges", Number(e.target.value))
-              }
-            />
-          )}
-        </div>
-        <div className="p-4 border rounded-md space-y-2">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="wedding-service"
-              checked={formData.weddingService?.available || false}
-              onCheckedChange={(checked) =>
-                handleNestedChange("weddingService", "available", checked)
-              }
-            />
-            <Label htmlFor="wedding-service">Wedding Service</Label>
-          </div>
-          {formData.weddingService?.available && (
-            <Input
-              placeholder="Additional Charges (₹)"
-              type="number"
-              value={formData.weddingService?.charges || ""}
-              onChange={(e) =>
-                handleNestedChange("weddingService", "charges", Number(e.target.value))
               }
             />
           )}
@@ -842,12 +820,7 @@ const ServiceFormModal = ({ isOpen, onClose, service, type }: ServiceFormModalPr
                       {service?.homeService?.available ? `₹${service.homeService.charges || 0}` : 'Not Available'}
                     </span>
                   </div>
-                  <div className="flex items-start justify-between py-1.5">
-                    <span className="text-sm font-medium text-muted-foreground">Wedding Service:</span>
-                    <span className="text-sm font-semibold">
-                      {service?.weddingService?.available ? `₹${service.weddingService.charges || 0}` : 'Not Available'}
-                    </span>
-                  </div>
+
                 </div>
               </div>
 

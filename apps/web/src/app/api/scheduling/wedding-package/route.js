@@ -131,7 +131,7 @@ export async function PUT(request) {
 
     const body = await request.json();
     console.log("PUT Request body:", JSON.stringify(body, null, 2));
-    const { packageId, lockId, selectedSlot, clientName, customerDetails, paymentDetails } = body;
+    const { packageId, lockId, selectedSlot, clientName, customerDetails, paymentDetails, customizedPackageServices } = body;
 
     if (!packageId || !lockId || !selectedSlot) {
       console.log("Missing required fields:", { packageId: !!packageId, lockId: !!lockId, selectedSlot: !!selectedSlot });
@@ -201,14 +201,17 @@ export async function PUT(request) {
     const vendor = await VendorModel.findById(weddingPackage.vendorId).select('regionId').lean();
 
     // Calculate amounts with offer code discount
-    const baseAmount = weddingPackage.discountedPrice || weddingPackage.totalPrice;
-    const discountAmount = selectedSlot.discountAmount || 0;
-    const finalAmount = selectedSlot.totalAmount || (baseAmount - discountAmount);
-
+    // baseAmount is the subtotal (service price)
+    const baseAmount = Number(selectedSlot.totalAmount) || (weddingPackage.discountedPrice || weddingPackage.totalPrice);
+    const discountAmount = Number(selectedSlot.discountAmount) || 0;
+    
     // Extract fee fields from selectedSlot
-    const platformFee = selectedSlot.platformFee || 0;
-    const serviceTax = selectedSlot.serviceTax || 0;
-    const taxRate = selectedSlot.taxRate || 0;
+    const platformFee = Number(selectedSlot.platformFee) || 0;
+    const serviceTax = Number(selectedSlot.serviceTax) || 0;
+    const taxRate = Number(selectedSlot.taxRate) || 0;
+
+    // finalAmount = subtotal + fees + taxes - discount
+    const finalAmount = selectedSlot.finalAmount || (baseAmount + platformFee + serviceTax - discountAmount);
 
     const appointment = new AppointmentModel({
       vendorId: weddingPackage.vendorId,
@@ -253,12 +256,29 @@ export async function PUT(request) {
       weddingPackageDetails: {
         packageId: weddingPackage._id,
         packageName: weddingPackage.name,
-        packageServices: weddingPackage.services || [],
+        packageServices: (customizedPackageServices || weddingPackage.services || []).map(svc => {
+          // Parse duration if it's a string (e.g., "45 min")
+          let duration = svc.duration;
+          if (typeof duration === 'string') {
+            const match = duration.match(/(\d+)/);
+            duration = match ? parseInt(match[1]) : 0;
+          }
+
+          return {
+            serviceId: svc.serviceId || svc.id || svc._id,
+            serviceName: svc.serviceName || svc.name,
+            duration: Number(duration) || 0,
+            amount: Number(svc.amount || svc.discountedPrice || svc.price || 0),
+            vendorId: svc.vendorId || weddingPackage.vendorId,
+            staffId: svc.staffId || null
+          };
+        }),
         teamMembers: teamMembers
       },
       homeServiceLocation: selectedSlot.location || null,
       isHomeService: !!selectedSlot.location,
       lockToken: lockId,
+      mode: 'online',
       createdAt: new Date(),
       updatedAt: new Date()
     });

@@ -69,7 +69,15 @@ export function BookingSummary({
 
   // Calculate totals - handle wedding package pricing
   const subtotal = weddingPackage
-    ? (weddingPackage.discountedPrice || weddingPackage.totalPrice || 0)
+    ? (weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
+      ? customizedPackageServices.reduce((acc, service) => {
+        const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+          parseFloat(String(service.discountedPrice)) :
+          parseFloat(String(service.price || '0'));
+        const quantity = (service as any).quantity || 1;
+        return acc + (servicePrice * quantity);
+      }, 0)
+      : (weddingPackage.discountedPrice || weddingPackage.totalPrice || 0))
     : (priceBreakdown?.subtotal ?? selectedServices.reduce((acc, service) => {
       const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
         parseFloat(String(service.discountedPrice)) :
@@ -364,7 +372,7 @@ export function BookingSummary({
                   )}
                   <div className="flex justify-between text-sm font-semibold border-t pt-2 mt-2">
                     <span>Package Price</span>
-                    <span className="text-primary">₹{weddingPackage.discountedPrice || weddingPackage.totalPrice}</span>
+                    <span className="text-primary">₹{Math.round(subtotal)}</span>
                   </div>
                 </div>
               </div>

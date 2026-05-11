@@ -904,17 +904,18 @@ export const PATCH = withSubscriptionCheck(async (req, { params }) => {
                         updatedAppointment.invoiceNumber = invoice.invoiceNumber;
                         console.log(`Linked sequential invoice ${invoice.invoiceNumber} to appointment ${appointmentId}`);
                     }
-
-                    // CREDIT STAFF COMMISSION TO LEDGER
-                    try {
-                        const { creditStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
-                        await creditStaffCommission(appointmentId);
-                        console.log(`Credited staff commission for appointment ${appointmentId}`);
-                    } catch (commError) {
-                        console.error("Error crediting staff commission:", commError);
-                    }
                 } catch (invoiceError) {
                     console.error("Error in centralized invoice generation:", invoiceError);
+                }
+
+                // SYNC STAFF COMMISSION — runs independently of invoice logic
+                // This MUST be outside the invoice try-catch so invoice errors don't block commission
+                try {
+                    const { syncStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
+                    const syncResult = await syncStaffCommission(appointmentId);
+                    console.log(`[PATCH] Staff commission sync result for ${appointmentId}:`, syncResult);
+                } catch (commError) {
+                    console.error("[PATCH] Error syncing staff commission:", commError);
                 }
 
                 // Check and credit referral bonus if user was referred (triggers on first completed appointment)

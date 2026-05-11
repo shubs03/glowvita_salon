@@ -368,8 +368,19 @@ function BookingPageContent() {
   // Update totalAmount when selectedServices or wedding package change
   useEffect(() => {
     if (selectedWeddingPackage) {
-      const packagePrice = selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice || 0;
-      setTotalAmount(packagePrice);
+      if (weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0) {
+        const amount = customizedPackageServices.reduce((sum, service) => {
+          const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+            parseFloat(service.discountedPrice) :
+            parseFloat(service.price || '0');
+          const quantity = (service as any).quantity || 1;
+          return sum + (servicePrice * quantity);
+        }, 0);
+        setTotalAmount(amount);
+      } else {
+        const packagePrice = selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice || 0;
+        setTotalAmount(packagePrice);
+      }
     } else if (priceBreakdown?.subtotal) {
       setTotalAmount(priceBreakdown.subtotal);
     } else {
@@ -387,7 +398,7 @@ function BookingPageContent() {
       }, 0);
       setTotalAmount(amount);
     }
-  }, [selectedServices, selectedWeddingPackage, priceBreakdown]);
+  }, [selectedServices, selectedWeddingPackage, priceBreakdown, weddingPackageMode, customizedPackageServices]);
 
   // Reset wedding venue type when wedding package changes or is cleared
   useEffect(() => {
@@ -1520,12 +1531,12 @@ function BookingPageContent() {
         startTime: selectedTime,
         endTime: endTime,
         duration: packageDuration,
-        amount: Math.round(selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice),
-        totalAmount: Math.round(selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice),
+        amount: Math.round(totalAmount),
+        totalAmount: Math.round(totalAmount),
         platformFee: 0,
         serviceTax: 0,
-        discountAmount: Math.round(selectedWeddingPackage.totalPrice - (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice)),
-        finalAmount: Math.round(selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice),
+        discountAmount: isCustomized ? 0 : Math.round(selectedWeddingPackage.totalPrice - (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice)),
+        finalAmount: Math.round(totalAmount),
         paymentMethod: paymentMethod,
         paymentStatus: 'pending',
         status: 'scheduled',
@@ -1679,12 +1690,23 @@ function BookingPageContent() {
     // Get the primary service - either from selected services or wedding package
     let primaryService;
     if (selectedWeddingPackage) {
+      // Calculate customized subtotal if applicable
+      const customizedSubtotal = weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
+        ? customizedPackageServices.reduce((acc, service) => {
+            const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+              parseFloat(String(service.discountedPrice)) :
+              parseFloat(String(service.price || '0'));
+            const quantity = (service as any).quantity || 1;
+            return acc + (servicePrice * quantity);
+          }, 0)
+        : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice);
+
       // Create a service-like object from wedding package
       primaryService = {
         id: selectedWeddingPackage.id || selectedWeddingPackage._id,
         name: selectedWeddingPackage.name,
-        price: selectedWeddingPackage.totalPrice,
-        discountedPrice: selectedWeddingPackage.discountedPrice,
+        price: customizedSubtotal,
+        discountedPrice: customizedSubtotal,
         duration: selectedWeddingPackage.duration,
         category: 'Wedding Package',
         description: selectedWeddingPackage.description
@@ -1766,7 +1788,7 @@ function BookingPageContent() {
         Math.round(Number(primaryService.price)),
       totalAmount: Math.round(((() => {
         // Calculate subtotal including add-ons
-        const subtotal = selectedServices.reduce((total, service) => {
+        const servicesSubtotal = selectedServices.reduce((total, service) => {
           const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
             Number(service.discountedPrice) :
             Number(service.price);
@@ -1777,7 +1799,13 @@ function BookingPageContent() {
 
           return total + servicePrice + addonsPrice;
         }, 0);
-        return subtotal;
+
+        // Add wedding package price if applicable
+        if (selectedWeddingPackage) {
+          return servicesSubtotal + Number(primaryService.price || 0);
+        }
+
+        return servicesSubtotal;
       })())),
       platformFee: Math.round(priceBreakdown?.platformFee || 0),
       serviceTax: Math.round(priceBreakdown?.serviceTax || 0),
@@ -1810,18 +1838,18 @@ function BookingPageContent() {
         ? `Wedding Package: ${selectedWeddingPackage.name}`
         : isMultiService ? "Multi-service appointment" : "Single service appointment",
       serviceItems: selectedWeddingPackage
-        ? // For wedding packages, create service items from package services
-        selectedWeddingPackage.services.map((pkgService: any) => ({
-          service: pkgService.serviceId || pkgService.id,
+        ? // For wedding packages, create service items from package services (including customized)
+        (customizedPackageServices.length > 0 ? customizedPackageServices : selectedWeddingPackage.services).map((pkgService: any) => ({
+          service: pkgService.serviceId || pkgService.id || pkgService._id,
           serviceName: pkgService.serviceName || pkgService.name,
           staff: staffId,
           staffName: staffName,
           startTime: selectedTime,
           endTime: endTime,
-          duration: totalDuration,
-          amount: primaryService.discountedPrice !== null && primaryService.discountedPrice !== undefined ?
-            Number(primaryService.discountedPrice) :
-            Number(primaryService.price)
+          duration: convertDurationToMinutes(pkgService.duration || selectedWeddingPackage.duration),
+          amount: pkgService.discountedPrice !== null && pkgService.discountedPrice !== undefined ?
+            Number(pkgService.discountedPrice) :
+            Number(pkgService.price || 0)
         }))
         : // For regular services (including single service)
         (() => {
@@ -1917,13 +1945,22 @@ function BookingPageContent() {
         // Determine services to calculate
         let servicesToCalculate = [];
         if (selectedWeddingPackage) {
-          servicesToCalculate = [{
-            id: selectedWeddingPackage.id || selectedWeddingPackage._id,
-            name: selectedWeddingPackage.name,
-            price: selectedWeddingPackage.totalPrice,
-            discountedPrice: selectedWeddingPackage.discountedPrice || null,
-            selectedAddons: []
-          }];
+          if (weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0) {
+            // If customized, use the individual services to calculate amount
+            servicesToCalculate = customizedPackageServices.map((s: any) => ({
+              ...s,
+              id: s.id || s._id,
+              selectedAddons: s.selectedAddons || []
+            }));
+          } else {
+            servicesToCalculate = [{
+              id: (selectedWeddingPackage as any).id || (selectedWeddingPackage as any)._id,
+              name: selectedWeddingPackage.name,
+              price: selectedWeddingPackage.totalPrice,
+              discountedPrice: selectedWeddingPackage.discountedPrice || null,
+              selectedAddons: []
+            }];
+          }
         } else {
           servicesToCalculate = selectedServices;
         }
@@ -2020,7 +2057,7 @@ function BookingPageContent() {
               startTime: selectedTime,
               endTime: endTime,
               location: weddingVenueType === 'venue' ? serviceLocation : null,
-              totalAmount: finalPriceBreakdown?.finalTotal || appointmentData.totalAmount,
+              totalAmount: appointmentData.totalAmount,
               couponCode: appliedOffer?.code || offerCode || null,
               discountAmount: finalPriceBreakdown?.discountAmount || 0,
               platformFee: finalPriceBreakdown?.platformFee || 0,
@@ -2038,7 +2075,8 @@ function BookingPageContent() {
             paymentDetails: {
               method: paymentMethod,
               status: 'pending'
-            }
+            },
+            customizedPackageServices: weddingPackageMode === 'customized' ? customizedPackageServices : null
           })
         });
 
@@ -3307,6 +3345,7 @@ function BookingPageContent() {
                   onPackageUpdate={(updatedPackage, customServices) => {
                     handleCustomizationComplete(customServices);
                   }}
+                  onLiveUpdate={setCustomizedPackageServices}
                   onBack={handleBackFromCustomization}
                   currentStep={1}
                   setCurrentStep={setCurrentStep}
@@ -3866,20 +3905,31 @@ function BookingPageContent() {
     const calculatePrices = async () => {
       // Handle wedding package pricing with offer code support
       if (selectedWeddingPackage) {
-        const packagePrice = selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice || 0;
+        // Calculate base package price (with customization if applicable) for fallback
+        const packagePrice = weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
+          ? customizedPackageServices.reduce((sum, service: any) => {
+              const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+                parseFloat(service.discountedPrice) :
+                parseFloat(service.price || '0');
+              const quantity = service.quantity || 1;
+              return sum + (servicePrice * quantity);
+            }, 0)
+          : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice || 0);
 
-        // Create a service-like object for calculateBookingAmount to enable offer code support
-        const packageAsService = [{
-          id: selectedWeddingPackage.id || selectedWeddingPackage._id,
-          name: selectedWeddingPackage.name,
-          price: selectedWeddingPackage.totalPrice,
-          discountedPrice: selectedWeddingPackage.discountedPrice || null,
-          selectedAddons: []
-        }];
+        // Use customized services if available, otherwise use package defaults
+        const servicesForCalculation = weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
+          ? customizedPackageServices
+          : [{
+            id: (selectedWeddingPackage as any).id || (selectedWeddingPackage as any)._id,
+            name: selectedWeddingPackage.name,
+            price: selectedWeddingPackage.totalPrice,
+            discountedPrice: selectedWeddingPackage.discountedPrice || null,
+            selectedAddons: []
+          }];
 
         try {
           // Call calculateBookingAmount WITH offer support (pass offer and taxFeeSettings)
-          const breakdown = await calculateBookingAmount(packageAsService, offer, taxFeeSettings);
+          const breakdown = await calculateBookingAmount(servicesForCalculation, offer, taxFeeSettings);
           console.log('Wedding package price breakdown with offer:', breakdown);
           setPriceBreakdown(breakdown);
         } catch (error) {
@@ -3958,7 +4008,7 @@ function BookingPageContent() {
     };
 
     calculatePrices();
-  }, [selectedServices, selectedWeddingPackage, offer, taxFeeSettings]);
+  }, [selectedServices, selectedWeddingPackage, weddingPackageMode, customizedPackageServices, offer, taxFeeSettings]);
 
   // Check for pre-selected service from salon details page
   useEffect(() => {

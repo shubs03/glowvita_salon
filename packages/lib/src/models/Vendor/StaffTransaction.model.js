@@ -40,9 +40,10 @@ const staffTransactionSchema = new mongoose.Schema({
     },
     paymentMethod: {
         type: String,
-        enum: ['Cash', 'Bank Transfer', 'UPI', 'Other'],
-        default: 'Cash',
-        required: false // Only for payouts (DEBIT)
+        // No enum restriction — CREDIT transactions (commissions) don't have a payment method
+        // DEBIT transactions (payouts) can be: Cash, Bank Transfer, UPI, Other
+        default: null,
+        required: false
     },
     notes: {
         type: String,
@@ -58,6 +59,8 @@ const staffTransactionSchema = new mongoose.Schema({
 
 // Index for ledger filtering
 staffTransactionSchema.index({ staffId: 1, transactionDate: -1 });
+staffTransactionSchema.index({ appointmentId: 1 });
+staffTransactionSchema.index({ billingId: 1 });
 
 const StaffTransactionsModel = mongoose.models.StaffTransactions || mongoose.model("StaffTransactions", staffTransactionSchema);
 

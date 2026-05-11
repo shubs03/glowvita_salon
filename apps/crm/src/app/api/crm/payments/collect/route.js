@@ -380,13 +380,21 @@ export const POST = authMiddlewareCrm(async (req) => {
         amountRemaining: currentAppointment.amountRemaining
       } : 'null');
 
-      const updatedAppointment = await AppointmentModel.findByIdAndUpdate(
-        appointmentId,
-        updateQuery,
-        { new: true, runValidators: false }
-      ).populate([
-        // REMOVED 'client' from population to handle manual lookup below
-        // { path: 'client', select: 'fullName email phone' },
+      // Apply updates to the current appointment document
+      if (updateQuery.$set) {
+        Object.keys(updateQuery.$set).forEach(key => {
+          currentAppointment[key] = updateQuery.$set[key];
+        });
+      }
+      if (updateQuery.$push && updateQuery.$push.paymentHistory) {
+        currentAppointment.paymentHistory.push(updateQuery.$push.paymentHistory);
+      }
+
+      // Save the document to trigger pre-save hooks (commission calculation, etc.)
+      const updatedAppointment = await currentAppointment.save({ validateBeforeSave: false });
+
+      // Re-populate needed fields for the response
+      await updatedAppointment.populate([
         { path: 'service', select: 'name duration price' },
         { path: 'staff', select: 'name email phone' }
       ]);
@@ -399,6 +407,17 @@ export const POST = authMiddlewareCrm(async (req) => {
         amountRemaining: updatedAppointment.amountRemaining,
         invoiceNumber: updatedAppointment.invoiceNumber
       } : 'null');
+
+      // SYNC STAFF COMMISSION — runs independently of invoice logic
+      if (appointmentStatus === 'completed' || appointmentStatus === 'completed without payment') {
+        try {
+          const { syncStaffCommission } = await import('@repo/lib/modules/accounting/StaffAccounting');
+          const syncResult = await syncStaffCommission(appointmentId);
+          console.log(`[Collect Payment] Staff commission sync result for ${appointmentId}:`, syncResult);
+        } catch (commError) {
+          console.error("[Collect Payment] Error syncing staff commission:", commError);
+        }
+      }
 
       // If the update failed for some reason, use the original appointment
       const finalAppointment = updatedAppointment || appointment;

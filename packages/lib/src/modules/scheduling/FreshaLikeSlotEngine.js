@@ -15,31 +15,31 @@ import { calculateVendorTravelTime } from './EnhancedTravelUtils.js';
  */
 function timeToMinutes(timeStr) {
   if (!timeStr) return 0;
-  
+
   // Remove any spaces
   timeStr = timeStr.trim();
-  
+
   // Check if it's 12-hour format with AM/PM
   const isPM = timeStr.toUpperCase().includes('PM');
   const isAM = timeStr.toUpperCase().includes('AM');
-  
+
   if (isPM || isAM) {
     // Remove AM/PM and parse
     const cleanTime = timeStr.replace(/AM|PM|am|pm/gi, '').trim();
     const [hours, minutes] = cleanTime.split(':').map(Number);
-    
+
     let totalHours = hours;
-    
+
     // Convert to 24-hour format
     if (isPM && hours !== 12) {
       totalHours = hours + 12;
     } else if (isAM && hours === 12) {
       totalHours = 0; // Midnight
     }
-    
+
     return totalHours * 60 + minutes;
   }
-  
+
   // Standard 24-hour format
   const [hours, minutes] = timeStr.split(':').map(Number);
   return hours * 60 + minutes;
@@ -107,7 +107,7 @@ export async function generateFreshaLikeSlots({
     today.setHours(0, 0, 0, 0);
     const bookingDate = new Date(date);
     bookingDate.setHours(0, 0, 0, 0);
-    
+
     const daysDifference = Math.floor((bookingDate - today) / (1000 * 60 * 60 * 24));
     if (daysDifference < 0) {
       throw new Error('Cannot book appointments in the past');
@@ -183,19 +183,19 @@ export async function generateFreshaLikeSlots({
       const istOffset = 5.5 * 60; // 330 minutes
       const nowUTC = now.getTime() + (now.getTimezoneOffset() * 60000);
       const nowIST = new Date(nowUTC + (istOffset * 60000));
-      
+
       const isToday = bookingDate.toDateString() === nowIST.toDateString();
       const currentMinutesIST = isToday ? (nowIST.getHours() * 60 + nowIST.getMinutes()) : 0;
 
       // Adjust start time to account for travel time and buffer
       let slotStart = periodStart;
-      
+
       // If today, ensure we don't show past slots
       if (isToday && slotStart < currentMinutesIST) {
         // Round up to next 15-minute interval
         slotStart = Math.ceil(currentMinutesIST / stepMinutes) * stepMinutes;
       }
-      
+
       if (isHomeService && travelTimeInfo) {
         // For home services, we need to account for travel time to the customer
         // We block time before the appointment for travel to the customer
@@ -335,14 +335,14 @@ async function validateAndFilterSlots({
       for (const appointment of existingAppointments) {
         const aptStartMinutes = timeToMinutes(appointment.startTime);
         const aptEndMinutes = timeToMinutes(appointment.endTime);
-        
+
         // Calculate the full blocked window for the existing appointment
         // including its own travel time and buffers if recorded
         // Robustness fallback: use 30 mins if it's a home service but travel is not recorded
         const aptTravelTime = appointment.travelTime || (appointment.isHomeService ? 30 : 0);
         const aptBufferBefore = appointment.bufferBefore || 0;
         const aptBufferAfter = appointment.bufferAfter || 0;
-        
+
         const aptBlockedStart = aptStartMinutes - aptTravelTime - aptBufferBefore;
         const aptBlockedEnd = aptEndMinutes + aptTravelTime + aptBufferAfter;
 
@@ -357,10 +357,10 @@ async function validateAndFilterSlots({
         const dateString = date.toISOString().split('T')[0];
 
         for (const blocked of staff.blockedTimes) {
-          const blockedDateString = blocked.date instanceof Date ? 
-            blocked.date.toISOString().split('T')[0] : 
+          const blockedDateString = blocked.date instanceof Date ?
+            blocked.date.toISOString().split('T')[0] :
             new Date(blocked.date).toISOString().split('T')[0];
-          
+
           // Check if blocked time is for the same date
           if (blockedDateString === dateString) {
             const blockStart = timeToMinutes(blocked.startTime);
@@ -496,7 +496,7 @@ export async function generateAnyStaffSlots({
 
     for (const slot of allStaffSlots) {
       const timeKey = `${slot.startTime}-${slot.endTime}`;
-      
+
       if (!timeSlotMap.has(timeKey)) {
         timeSlotMap.set(timeKey, {
           startTime: slot.startTime,
@@ -525,7 +525,7 @@ export async function generateAnyStaffSlots({
     return availableSlots.map(slot => {
       // Calculate average staff rating for this slot
       const avgRating = slot.availableStaff.reduce((sum, staff) => sum + (staff.rating || 0), 0) / slot.availableStaff.length;
-      
+
       return {
         ...slot,
         score: Math.round(avgRating * 10) // Simple scoring based on average rating
@@ -574,16 +574,16 @@ export async function generateWeddingPackageSlots({
     let staffMembers;
     if (weddingPackage.assignedStaff && weddingPackage.assignedStaff.length > 0) {
       console.log('Wedding package has assigned staff:', weddingPackage.assignedStaff);
-      
+
       // Use only the assigned staff members
       staffMembers = await StaffModel.find({
         _id: { $in: weddingPackage.assignedStaff },
         vendorId: vendorId,
         status: 'Active'
       });
-      
+
       console.log(`Found ${staffMembers.length} assigned staff members:`, staffMembers.map(s => ({ id: s._id, name: s.fullName })));
-      
+
       // If no staff found, it might be an ID format mismatch - try treating as strings
       if (staffMembers.length === 0) {
         console.log('No staff found with _id, trying string comparison...');
@@ -591,13 +591,13 @@ export async function generateWeddingPackageSlots({
           vendorId: vendorId,
           status: 'Active'
         });
-        
+
         // Filter staff manually by comparing ID strings
         const assignedStaffStrings = weddingPackage.assignedStaff.map(id => id.toString());
-        staffMembers = allStaff.filter(staff => 
+        staffMembers = allStaff.filter(staff =>
           assignedStaffStrings.includes(staff._id.toString())
         );
-        
+
         console.log(`After manual filtering: Found ${staffMembers.length} staff members`);
       }
     } else {
@@ -639,14 +639,14 @@ export async function generateWeddingPackageSlots({
 
     // Get vendor working hours
     const VendorWorkingHoursModel = (await import('../../models/Vendor/VendorWorkingHours.model.js')).default;
-    
+
     console.log('Looking up working hours for vendor:', vendorId);
     const vendorWorkingHours = await VendorWorkingHoursModel.findOne({ vendor: vendorId });
 
     if (!vendorWorkingHours) {
       console.error('Vendor working hours not found for vendor:', vendorId);
       console.error('This vendor may not have working hours configured in the database');
-      
+
       // Return empty array instead of throwing error to prevent 500
       console.warn('Returning empty slots array - vendor needs working hours configuration');
       return [];
@@ -668,9 +668,9 @@ export async function generateWeddingPackageSlots({
 
     // Calculate total duration - use package duration directly as it's already calculated
     let totalDuration = weddingPackage.duration || 0;
-    
+
     console.log(`Wedding package "${weddingPackage.name}" duration: ${totalDuration} minutes`);
-    
+
     if (totalDuration === 0) {
       console.error('Wedding package has no duration set');
       throw new Error('Wedding package duration is not configured');
@@ -699,10 +699,10 @@ export async function generateWeddingPackageSlots({
     const istOffset = 5.5 * 60; // 330 minutes
     const nowUTC = now.getTime() + (now.getTimezoneOffset() * 60000);
     const nowIST = new Date(nowUTC + (istOffset * 60000));
-    
+
     const isToday = date.toDateString() === nowIST.toDateString();
     const currentMinutesIST = isToday ? (nowIST.getHours() * 60 + nowIST.getMinutes()) : 0;
-    
+
     // If it's today, start from current time or opening time, whichever is later
     if (isToday && currentMinutesIST > currentTime) {
       // Round up to next 15-minute interval
@@ -711,8 +711,8 @@ export async function generateWeddingPackageSlots({
     }
 
     // Account for travel time to and from the customer for home services
-    const totalSlotActivityTime = customerLocation ? 
-      totalDuration + (2 * travelTime) + bufferBefore + bufferAfter : 
+    const totalSlotActivityTime = customerLocation ?
+      totalDuration + (2 * travelTime) + bufferBefore + bufferAfter :
       totalDuration + bufferBefore + bufferAfter;
 
     while (currentTime + totalSlotActivityTime <= closeMinutes) {
@@ -985,10 +985,10 @@ async function validateWeddingPackageSlot({
         const dateString = date.toISOString().split('T')[0];
 
         for (const blocked of staff.blockedTimes) {
-          const blockedDateString = blocked.date instanceof Date ? 
-            blocked.date.toISOString().split('T')[0] : 
+          const blockedDateString = blocked.date instanceof Date ?
+            blocked.date.toISOString().split('T')[0] :
             new Date(blocked.date).toISOString().split('T')[0];
-          
+
           if (blockedDateString === dateString) {
             const blockStart = timeToMinutes(blocked.startTime);
             const blockEnd = timeToMinutes(blocked.endTime);

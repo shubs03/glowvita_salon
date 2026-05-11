@@ -31,6 +31,9 @@ function ClientRegisterForm() {
   const [mobileNo, setMobileNo] = useState('');
   const [gender, setGender] = useState('');
   const [birthdayDate, setBirthdayDate] = useState('');
+  const [birthDay, setBirthDay] = useState('');
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthYear, setBirthYear] = useState('');
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [address, setAddress] = useState('');
   const [state, setState] = useState('');
@@ -41,6 +44,15 @@ function ClientRegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Sync individual birth date parts to the single birthdayDate string
+  useEffect(() => {
+    if (birthDay && birthMonth && birthYear) {
+      setBirthdayDate(`${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`);
+    } else {
+      setBirthdayDate('');
+    }
+  }, [birthDay, birthMonth, birthYear]);
 
   // Extract referral code from URL on component mount
   useEffect(() => {
@@ -171,12 +183,35 @@ function ClientRegisterForm() {
     }
   };
 
+  // Auto-send Phone OTP when 10 digits are reached
+  useEffect(() => {
+    if (mobileNo.length === 10 && !isPhoneOtpSent && !isPhoneVerified && !isOtpLoading) {
+      handleSendPhoneOtp();
+    }
+  }, [mobileNo, isPhoneOtpSent, isPhoneVerified, isOtpLoading]);
+
+  // Auto-verify Phone OTP when 6 digits are reached
+  useEffect(() => {
+    if (phoneOtp.length === 6 && !isPhoneVerified && !isOtpLoading) {
+      handleVerifyPhoneOtp();
+    }
+  }, [phoneOtp, isPhoneVerified, isOtpLoading]);
+
+  // Auto-verify Email OTP when 6 digits are reached
+  useEffect(() => {
+    if (emailOtp.length === 6 && !isEmailVerified && !isOtpLoading) {
+      handleVerifyEmailOtp();
+    }
+  }, [emailOtp, isEmailVerified, isOtpLoading]);
+
   const handleProceedToForm = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isEmailVerified && isPhoneVerified) {
+    if (isPhoneVerified) {
       setShowRegistrationForm(true);
+    } else if (!isPhoneOtpSent) {
+      handleSendPhoneOtp();
     } else {
-      toast.error("Please verify both email and mobile number.");
+      handleVerifyPhoneOtp();
     }
   };
 
@@ -200,6 +235,11 @@ function ClientRegisterForm() {
     if (missingFields.length > 0) {
       const errorMessage = `Please fill in the following required fields: ${missingFields.join(', ')}`;
       toast.error(errorMessage);
+      return;
+    }
+
+    if (!isEmailVerified) {
+      toast.error('Please verify your email address with OTP before continuing');
       return;
     }
 
@@ -571,69 +611,24 @@ function ClientRegisterForm() {
 
           {!showRegistrationForm ? (
             <div className="space-y-5">
-              <form onSubmit={handleProceedToForm} className="space-y-4">
-                {/* Email Block */}
-                <div className="space-y-3 p-4 rounded-xl border border-gray-200 bg-white">
+              <form onSubmit={handleProceedToForm} className="space-y-6">
+                {/* Mobile Block */}
+                <div className="space-y-4 p-5 rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:shadow-md">
                   <div className="flex justify-between items-center">
-                    <Label className="text-sm font-semibold flex items-center gap-1">Email <span className="text-red-500">*</span></Label>
-                    {isEmailVerified && <span className="text-green-600 text-xs font-bold flex items-center gap-1"><ShieldCheck className="w-4 h-4" /> Verified</span>}
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Email Address"
-                      required
-                      value={email}
-                      disabled={isEmailVerified || isOtpLoading}
-                      onChange={(e) => {
-                        setEmail(e.target.value.replace(/[^a-zA-Z0-9@.]/g, ''));
-                        setIsEmailVerified(false);
-                        setIsEmailOtpSent(false);
-                      }}
-                      className="w-full h-11 px-4 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg focus:ring-2 focus:ring-gray-400"
-                    />
-                    {!isEmailVerified && (
-                      <Button 
-                        type="button" 
-                        onClick={handleSendEmailOtp} 
-                        disabled={isOtpLoading || !email}
-                        className="h-11 px-4 rounded-lg font-bold bg-blue-100 text-blue-700 hover:bg-blue-200"
-                      >
-                        {isEmailOtpSent ? "Resend" : "Send OTP"}
-                      </Button>
+                    <Label className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                      Mobile Number <span className="text-red-500">*</span>
+                      {!isPhoneOtpSent && !isPhoneVerified && mobileNo.length < 10 && (
+                        <span className="text-[10px] font-normal text-gray-400 ml-auto">OTP sends automatically</span>
+                      )}
+                    </Label>
+                    {isPhoneVerified && (
+                      <span className="text-green-600 text-xs font-bold flex items-center gap-1 animate-in fade-in zoom-in duration-300">
+                        <ShieldCheck className="w-4 h-4" /> Verified
+                      </span>
                     )}
                   </div>
-                  {isEmailOtpSent && !isEmailVerified && (
-                    <div className="flex gap-2 pt-2 animate-in fade-in slide-in-from-top-2">
-                      <Input 
-                        type="text" 
-                        placeholder="OTP" 
-                        maxLength={6} 
-                        value={emailOtp} 
-                        onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, ''))}
-                        disabled={isOtpLoading}
-                        className="w-full h-11 text-center tracking-widest font-black"
-                      />
-                      <Button 
-                        type="button" 
-                        onClick={handleVerifyEmailOtp} 
-                        disabled={isOtpLoading || emailOtp.length < 6}
-                        className="h-11 px-6 rounded-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
-                      >
-                        {isOtpLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : "Verify"}
-                      </Button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Mobile Block */}
-                <div className="space-y-3 p-4 rounded-xl border border-gray-200 bg-white">
-                  <div className="flex justify-between items-center">
-                    <Label className="text-sm font-semibold flex items-center gap-1">Mobile Number <span className="text-red-500">*</span></Label>
-                    {isPhoneVerified && <span className="text-green-600 text-xs font-bold flex items-center gap-1"><ShieldCheck className="w-4 h-4" /> Verified</span>}
-                  </div>
-                  <div className="flex gap-2">
+                  
+                  <div className="relative group">
                     <Input
                       id="mobileNo"
                       type="tel"
@@ -647,75 +642,73 @@ function ClientRegisterForm() {
                         setIsPhoneVerified(false);
                         setIsPhoneOtpSent(false);
                       }}
-                      className="w-full h-11 px-4 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg focus:ring-2 focus:ring-gray-400"
+                      className="w-full h-12 px-4 text-base font-semibold bg-gray-50 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                     />
-                    {!isPhoneVerified && (
-                      <Button 
-                        type="button" 
-                        onClick={handleSendPhoneOtp} 
-                        disabled={isOtpLoading || mobileNo.length < 10}
-                        className="h-11 px-4 rounded-lg font-bold bg-blue-100 text-blue-700 hover:bg-blue-200"
-                      >
-                        {isPhoneOtpSent ? "Resend" : "Send OTP"}
-                      </Button>
-                    )}
                   </div>
+
                   {isPhoneOtpSent && !isPhoneVerified && (
-                    <div className="flex gap-2 pt-2 animate-in fade-in slide-in-from-top-2">
+                    <div className="space-y-3 pt-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="flex items-center justify-between px-1">
+                        <Label className="text-xs font-semibold text-gray-700">Enter Security Code</Label>
+                        <button 
+                          type="button" 
+                          onClick={handleSendPhoneOtp} 
+                          disabled={isOtpLoading}
+                          className="text-[10px] font-bold text-blue-600 hover:underline disabled:text-gray-400"
+                        >
+                          Resend Code
+                        </button>
+                      </div>
+                      
                       <Input 
                         type="text" 
-                        placeholder="OTP" 
+                        placeholder="······" 
                         maxLength={6} 
                         value={phoneOtp} 
-                        onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, ''))}
+                        onChange={(e) => setPhoneOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                         disabled={isOtpLoading}
-                        className="w-full h-11 text-center tracking-widest font-black"
+                        className="w-full h-12 text-center text-xl tracking-[0.5em] font-medium border border-gray-200 bg-gray-50/30 focus:bg-white rounded-xl transition-all"
+                        autoFocus
                       />
-                      <Button 
-                        type="button" 
-                        onClick={handleVerifyPhoneOtp} 
-                        disabled={isOtpLoading || phoneOtp.length < 6}
-                        className="h-11 px-6 rounded-lg font-bold bg-gradient-to-r from-blue-600 to-indigo-600 text-white"
-                      >
-                        {isOtpLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : "Verify"}
-                      </Button>
                     </div>
                   )}
                 </div>
 
-                {/* Continue Button */}
+                {/* Main Action Button */}
                 <Button
                   type="submit"
-                  disabled={!isEmailVerified || !isPhoneVerified}
-                  className="w-full h-12 text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg shadow-md transition-all duration-300"
+                  disabled={isOtpLoading || (!isPhoneVerified && mobileNo.length < 10)}
+                  className="w-full h-14 text-base font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl shadow-lg shadow-blue-500/20 transition-all duration-300 flex items-center justify-center gap-2"
                 >
-                  Continue to Registration
+                  {isOtpLoading ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : isPhoneVerified ? (
+                    "Continue to Registration"
+                  ) : isPhoneOtpSent ? (
+                    "Verify OTP"
+                  ) : (
+                    "Continue"
+                  )}
                 </Button>
 
-                <div className="relative my-4">
+                <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
-                  <div className="relative flex justify-center text-xs"><span className="px-2 bg-white text-gray-500">OR CONTINUE WITH</span></div>
+                  <div className="relative flex justify-center text-xs"><span className="px-3 bg-gray-50 text-gray-500 font-medium">OR CONTINUE WITH</span></div>
                 </div>
 
-                {/* Continue with Google Button */}
-                <Button type="button" className="w-full h-11 text-sm font-medium bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 rounded-lg shadow-sm flex items-center justify-center gap-2">
-                  <div className="flex items-center justify-center w-5 h-5">
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                    </svg>
-                  </div>
-                  <span>Continue with Google</span>
+                {/* Google Button */}
+                <Button type="button" className="w-full h-12 text-sm font-semibold bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 rounded-xl shadow-sm flex items-center justify-center gap-3 transition-all">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                  </svg>
+                  <span>Sign up with Google</span>
                 </Button>
 
-                {/* Already have an account section */}
-                <div className="text-center mt-6">
-                  <p className="text-sm font-medium text-gray-600">Already have an account?</p>
-                  <Link href="/client-login" className="text-sm font-medium text-blue-600 hover:text-blue-500 block mt-1">
-                    Sign in to manage your appointments.
-                  </Link>
+                <div className="text-center pt-2">
+                  <p className="text-sm text-gray-500">Already have an account? <Link href="/client-login" className="text-blue-600 font-bold hover:underline">Sign in</Link></p>
                 </div>
               </form>
             </div>
@@ -724,8 +717,7 @@ function ClientRegisterForm() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="text-center mb-6">
                   <h2 className="text-2xl font-extrabold text-gray-900 md:text-xl">Create account</h2>
-                  <p className="text-gray-600 mt-3 lg:whitespace-nowrap md:whitespace-normal sm:whitespace-normal">You're almost there! Create your new account for</p>
-                  <p className="text-gray-600 lg:whitespace-nowrap md:whitespace-normal sm:whitespace-normal"><span className="font-bold">{email}</span> by completing these details</p>
+                  <p className="text-gray-600 mt-3">Complete your details and verify your email to finish registration</p>
                 </div>
 
                 {/* First Name and Last Name */}
@@ -758,7 +750,68 @@ function ClientRegisterForm() {
                   </div>
                 </div>
 
-
+                {/* Email Verification Block */}
+                <div className="space-y-3 p-4 rounded-xl border border-gray-200 bg-white shadow-sm">
+                  <div className="flex justify-between items-center">
+                    <Label className="text-sm font-semibold flex items-center gap-1">Email <span className="text-red-500">*</span></Label>
+                    {isEmailVerified && <span className="text-green-600 text-xs font-bold flex items-center gap-1"><ShieldCheck className="w-4 h-4" /> Verified</span>}
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Email Address"
+                      required
+                      value={email}
+                      disabled={isEmailVerified || isOtpLoading}
+                      onChange={(e) => {
+                        setEmail(e.target.value.replace(/[^a-zA-Z0-9@.]/g, ''));
+                        setIsEmailVerified(false);
+                        setIsEmailOtpSent(false);
+                      }}
+                      className="w-full h-11 px-4 text-sm font-medium bg-gray-50 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20"
+                    />
+                    {!isEmailVerified && (
+                      <Button 
+                        type="button" 
+                        onClick={handleSendEmailOtp} 
+                        disabled={isOtpLoading || !email}
+                        className="h-11 px-4 rounded-lg font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-100 transition-all"
+                      >
+                        {isEmailOtpSent ? "Resend" : "Send OTP"}
+                      </Button>
+                    )}
+                  </div>
+                  {isEmailOtpSent && !isEmailVerified && (
+                    <div className="space-y-3 pt-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="flex justify-between items-center px-1">
+                        <Label className="text-xs font-semibold text-gray-700">Enter Verification Code</Label>
+                        <button 
+                          type="button" 
+                          onClick={handleSendEmailOtp}
+                          disabled={isOtpLoading}
+                          className="text-[10px] font-semibold text-gray-400 hover:text-gray-600 underline underline-offset-2"
+                        >
+                          Resend Code
+                        </button>
+                      </div>
+                      
+                      <Input 
+                        type="text" 
+                        placeholder="······" 
+                        maxLength={6} 
+                        value={emailOtp} 
+                        onChange={(e) => setEmailOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        disabled={isOtpLoading}
+                        className="w-full h-12 text-center text-xl tracking-[0.5em] font-medium border border-gray-200 bg-gray-50/30 focus:bg-white rounded-xl transition-all"
+                      />
+                      
+                      {isOtpLoading && (
+                        <p className="text-[10px] text-center text-gray-500 font-bold">Verifying code...</p>
+                      )}
+                    </div>
+                  )}
+                </div>
 
                 {/* Gender and Birthday */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -779,26 +832,49 @@ function ClientRegisterForm() {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="birthdayDate" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Birthday <span className="font-normal text-gray-400">(Optional)</span>
                     </label>
-                    <input
-                      id="birthdayDate"
-                      type="date"
-                      value={birthdayDate}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const tzOffset = new Date().getTimezoneOffset() * 60000;
-                        const today = new Date(Date.now() - tzOffset).toISOString().split('T')[0];
-                        if (val > today) {
-                          toast.error("Birthday cannot be in the future");
-                          return;
-                        }
-                        setBirthdayDate(val);
-                      }}
-                      max={new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0]}
-                      className="w-full h-11 px-4 text-sm font-medium bg-gray-50 hover:bg-gray-0 text-gray-700 border border-gray-300 hover:border-gray-400 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:border-gray-400"
-                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      {/* Day Select */}
+                      <select
+                        value={birthDay}
+                        onChange={(e) => setBirthDay(e.target.value)}
+                        className="h-11 px-3 text-sm font-medium bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:outline-none"
+                      >
+                        <option value="">Day</option>
+                        {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+
+                      {/* Month Select */}
+                      <select
+                        value={birthMonth}
+                        onChange={(e) => setBirthMonth(e.target.value)}
+                        className="h-11 px-3 text-sm font-medium bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:outline-none"
+                      >
+                        <option value="">Month</option>
+                        {[
+                          "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+                        ].map((m, i) => (
+                          <option key={m} value={i + 1}>{m}</option>
+                        ))}
+                      </select>
+
+                      {/* Year Select */}
+                      <select
+                        value={birthYear}
+                        onChange={(e) => setBirthYear(e.target.value)}
+                        className="h-11 px-3 text-sm font-medium bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-400 focus:outline-none"
+                      >
+                        <option value="">Year</option>
+                        {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                 </div>
 

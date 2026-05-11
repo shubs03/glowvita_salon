@@ -754,21 +754,39 @@ export const Step3_TimeSlot = memo(({
         </div>
       )}
 
-      <div className="grid md:grid-cols-1 gap-6">
-        {/* Date Scroller with Month and Navigation */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-lg">{currentMonthYear}</h3>
-            <div className="flex gap-1">
-              <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('left')}>
-                <ChevronLeft className="h-4 w-4" />
+      <div className="grid md:grid-cols-1 gap-8">
+        {/* Date Selector Section */}
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="font-bold text-xl text-gray-900">{currentMonthYear}</h3>
+              <p className="text-xs text-muted-foreground font-medium">Select your preferred date</p>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-10 w-10 rounded-xl border-gray-100 hover:bg-gray-50 transition-colors" 
+                onClick={() => handleDateScroll('left')}
+              >
+                <ChevronLeft className="h-5 w-5 text-gray-600" />
               </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('right')}>
-                <ChevronRight className="h-4 w-4" />
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-10 w-10 rounded-xl border-gray-100 hover:bg-gray-50 transition-colors" 
+                onClick={() => handleDateScroll('right')}
+              >
+                <ChevronRight className="h-5 w-5 text-gray-600" />
               </Button>
             </div>
           </div>
-          <div id="date-scroller" ref={dateScrollerRef} className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar">
+
+          <div 
+            id="date-scroller" 
+            ref={dateScrollerRef} 
+            className="flex gap-3 overflow-x-auto pb-4 no-scrollbar scroll-smooth"
+          >
             {dates.map((date: Date) => {
               const isToday = date.toDateString() === new Date().toDateString();
               const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
@@ -776,24 +794,36 @@ export const Step3_TimeSlot = memo(({
               const isSelected = selectedDate.toDateString() === date.toDateString();
 
               return (
-                <Button
+                <button
                   key={date.toISOString()}
                   id={`date-${format(date, 'yyyy-MM-dd')}`}
-                  variant={isSelected ? 'default' : 'outline'}
-                  className={cn(
-                    'flex-shrink-0 flex flex-col items-center justify-center h-20 w-16 rounded-lg',
-                    isSelected && 'ring-2 ring-primary ring-offset-2',
-                    (isPast || !isAvailable) && 'opacity-50 cursor-not-allowed'
-                  )}
-                  onClick={() => !isPast && isAvailable && onSelectDate(date)}
                   disabled={isPast || !isAvailable}
+                  onClick={() => !isPast && isAvailable && onSelectDate(date)}
+                  className={cn(
+                    'flex-shrink-0 flex flex-col items-center justify-center h-24 w-20 rounded-2xl transition-all duration-300 relative group',
+                    isSelected 
+                      ? 'bg-gradient-to-br from-indigo-600 to-violet-700 text-white shadow-xl shadow-indigo-200 scale-105 z-10' 
+                      : (isPast || !isAvailable)
+                        ? 'bg-gray-50/50 text-gray-300 cursor-not-allowed border border-gray-100'
+                        : 'bg-white text-gray-600 border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30'
+                  )}
                 >
-                  <span className="text-xs font-medium">
-                    {isToday ? 'Today' : format(date, 'EEE')}
+                  <span className={cn(
+                    "text-[10px] font-bold uppercase tracking-wider mb-1",
+                    isSelected ? "text-indigo-100" : "text-gray-400"
+                  )}>
+                    {format(date, 'EEE')}
                   </span>
-                  <span className="text-2xl font-bold">{format(date, 'd')}</span>
-                  <span className="text-xs">{format(date, 'MMM')}</span>
-                </Button>
+                  <span className="text-2xl font-black">{format(date, 'd')}</span>
+                  {isToday && !isSelected && (
+                    <div className="absolute bottom-2 w-1 h-1 rounded-full bg-indigo-500" />
+                  )}
+                  {isSelected && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full flex items-center justify-center shadow-sm">
+                      <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full" />
+                    </div>
+                  )}
+                </button>
               );
             })}
           </div>
@@ -812,79 +842,67 @@ export const Step3_TimeSlot = memo(({
           </div>
 
           {isLoadingSlots ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mr-3" />
-              <span className="text-muted-foreground">Checking availability...</span>
+            <div className="flex flex-col items-center justify-center py-20 bg-gray-50/50 rounded-3xl border border-dashed border-gray-200">
+              <RefreshCw className="h-8 w-8 animate-spin text-indigo-500 mb-4" />
+              <span className="text-sm text-gray-500 font-medium">Fetching best slots for you...</span>
             </div>
           ) : isSalonClosedEveryDay ? (
-            <div className="text-center py-12 bg-red-50 rounded-xl border border-red-100 p-8 shadow-sm">
+            <div className="text-center py-12 bg-red-50 rounded-3xl border border-red-100 p-8">
               <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
               <h3 className="text-lg font-bold text-red-800 mb-2">Salon is Currently Closed</h3>
-
+              <p className="text-red-600">Please check back later or contact the salon directly.</p>
             </div>
           ) : !isDateAvailable(selectedDate) ? (
-            <div className="text-center py-12 bg-amber-50 rounded-xl border border-amber-100 p-8 shadow-sm">
+            <div className="text-center py-12 bg-amber-50 rounded-3xl border border-amber-100 p-8">
               <Clock className="h-12 w-12 text-amber-500 mx-auto mb-4" />
               <h3 className="text-lg font-bold text-amber-800 mb-2">Salon is Closed Today ({format(selectedDate, 'EEEE')})</h3>
-              <p className="text-amber-600 mb-4">
-                The salon is closed on this particular day. Please select another date from the calendar above to see available times.
-              </p>
+              <p className="text-amber-600">Please select another date from the calendar above.</p>
             </div>
           ) : displaySlots.length === 0 ? (
-            <div className="text-center py-12">
-              <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">No available slots</h3>
-              <p className="text-muted-foreground">We couldn't find any available time slots for {format(selectedDate, 'MMMM d')}.</p>
-              <p className="text-sm text-muted-foreground mt-2">Try selecting a different date or another professional.</p>
+            <div className="text-center py-16 bg-gray-50/50 rounded-3xl border border-dashed border-gray-200">
+              <CalendarDays className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-bold text-gray-700 mb-2">No available slots</h3>
+              <p className="text-gray-500 text-sm">Try selecting a different date or another professional.</p>
             </div>
           ) : (
-            <div className="max-h-96 overflow-y-auto pr-2 no-scrollbar">
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 transition-opacity duration-300" style={{ opacity: isBackgroundRefreshing ? 0.95 : 1 }}>
-                {displaySlots.map((slot) => {
-                  const isSelected = selectedTime === slot.startTime;
-                  const isLocked = lockedSlot?.slot.startTime === slot.startTime;
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 transition-all duration-500">
+              {displaySlots.map((slot) => {
+                const isSelected = selectedTime === slot.startTime;
+                const isLocked = lockedSlot?.slot.startTime === slot.startTime;
 
-                  return (
-                    <button
-                      key={slot.startTime}
-                      onClick={() => !isLocked && handleTimeSelect(slot)}
-                      disabled={isLocking || isLocked}
-                      className={cn(
-                        "p-3 border-2 rounded-lg transition-all text-left",
-                        isLocked
-                          ? "border-amber-500 bg-amber-50 cursor-default"
-                          : isSelected
-                            ? "border-primary bg-primary/5"
-                            : "border-gray-200 hover:border-primary hover:bg-primary/5",
-                        isLocking && "opacity-50 cursor-not-allowed"
-                      )}
-                    >
-                      <div className="font-semibold text-sm">
-                        {slot.startTime}
+                return (
+                  <button
+                    key={slot.startTime}
+                    onClick={() => !isLocked && handleTimeSelect(slot)}
+                    disabled={isLocking || isLocked}
+                    className={cn(
+                      "p-4 rounded-2xl transition-all duration-300 text-center border-2 flex flex-col items-center justify-center gap-1",
+                      isLocked
+                        ? "border-amber-200 bg-amber-50 cursor-not-allowed"
+                        : isSelected
+                          ? "border-indigo-600 bg-indigo-50 shadow-md shadow-indigo-100"
+                          : "border-gray-100 bg-white hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-50"
+                    )}
+                  >
+                    <span className={cn(
+                      "text-base font-bold",
+                      isSelected ? "text-indigo-700" : "text-gray-900"
+                    )}>
+                      {slot.startTime}
+                    </span>
+                    <span className="text-[10px] font-medium text-gray-400 uppercase tracking-tighter">
+                      {slot.duration} MIN
+                    </span>
+                    
+                    {isLocked && (
+                      <div className="text-[10px] text-amber-600 font-bold flex items-center gap-1 mt-1">
+                        <Lock className="h-3 w-3" />
+                        LOCKED
                       </div>
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        {slot.duration} min
-                      </div>
-                      {Boolean(slot.travelTime && slot.travelTime > 0) && (
-                        <div className="text-xs text-blue-600 mt-1">
-                          +{slot.travelTime} min travel
-                        </div>
-                      )}
-                      {slot.staffCount && slot.staffCount > 1 && (
-                        <div className="text-xs text-purple-600 mt-1">
-                          {slot.staffCount} staff available
-                        </div>
-                      )}
-                      {isLocked && (
-                        <div className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                          <Lock className="h-3 w-3" />
-                          Locked
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
