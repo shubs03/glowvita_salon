@@ -748,19 +748,6 @@ export function AppointmentDetailView({
   const isPaidOnline = isOnlineBooking && isFullyPaid;
 
   const getStatusOptions = (currentStatus: string) => {
-    if (isPaidOnline) {
-      // For online paid appointments, show "Confirmed", "Completed" and "Cancelled" (restored as per user request)
-      return [
-        { value: 'confirmed', label: 'Confirm Appointment' },
-        { value: 'completed', label: 'Mark as Completed' },
-        { value: 'cancelled', label: 'Cancel Appointment' }
-      ];
-    }
-
-    const commonOptions = [
-      { value: 'cancelled', label: 'Cancel Appointment' }
-    ];
-
     const statusLabels: Record<string, string> = {
       'scheduled': 'Scheduled',
       'pending': 'Pending',
@@ -775,36 +762,49 @@ export function AppointmentDetailView({
     };
 
     const currentOption = { value: currentStatus, label: statusLabels[currentStatus] || currentStatus };
+    const commonOptions = [
+      { value: 'cancelled', label: 'Cancel Appointment' }
+    ];
 
     let options = [];
-    switch (currentStatus) {
-      case 'scheduled':
-        options = [
-          { value: 'confirmed', label: 'Confirm Appointment' },
-          { value: 'completed without payment', label: 'Completed without payment' },
-          ...commonOptions
-        ];
-        break;
-      case 'pending':
-        options = [
-          { value: 'scheduled', label: 'Mark as Scheduled' },
-          { value: 'confirmed', label: 'Confirm Appointment' },
-          { value: 'completed without payment', label: 'Completed without payment' },
-          ...commonOptions
-        ];
-        break;
-      case 'confirmed':
-        options = [
-          { value: 'completed without payment', label: 'Completed without payment' },
-          ...commonOptions
-        ];
-        break;
-      default:
-        options = [
-          { value: 'scheduled', label: 'Mark as Scheduled' },
-          { value: 'confirmed', label: 'Confirm Appointment' },
-          ...commonOptions
-        ];
+
+    if (isPaidOnline) {
+      // For online paid appointments, show "Confirmed", "Completed" and "Cancelled" (restored as per user request)
+      options = [
+        { value: 'confirmed', label: 'Confirm Appointment' },
+        { value: 'completed', label: 'Mark as Completed' },
+        { value: 'cancelled', label: 'Cancel Appointment' }
+      ];
+    } else {
+      switch (currentStatus) {
+        case 'scheduled':
+          options = [
+            { value: 'confirmed', label: 'Confirm Appointment' },
+            { value: 'completed without payment', label: 'Completed without payment' },
+            ...commonOptions
+          ];
+          break;
+        case 'pending':
+          options = [
+            { value: 'scheduled', label: 'Mark as Scheduled' },
+            { value: 'confirmed', label: 'Confirm Appointment' },
+            { value: 'completed without payment', label: 'Completed without payment' },
+            ...commonOptions
+          ];
+          break;
+        case 'confirmed':
+          options = [
+            { value: 'completed without payment', label: 'Completed without payment' },
+            ...commonOptions
+          ];
+          break;
+        default:
+          options = [
+            { value: 'scheduled', label: 'Mark as Scheduled' },
+            { value: 'confirmed', label: 'Confirm Appointment' },
+            ...commonOptions
+          ];
+      }
     }
 
     // Ensure current status is in the options list if not already there
