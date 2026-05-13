@@ -29,7 +29,7 @@ interface Appointment {
     service: string;
     date: string;
     staff: string;
-    status: 'Completed' | 'Confirmed' | 'Cancelled' | 'Pending' | 'Scheduled';
+    status: 'Completed' | 'Confirmed' | 'Cancelled' | 'Pending' | 'Scheduled' | 'partially-completed';
     price: number;
     duration: number;
     salon: {
@@ -57,6 +57,8 @@ interface Appointment {
     finalAmount?: number;
     cancellationReason?: string;
     paymentMethod?: string;
+    paymentStatus?: string;
+    amountPaid?: number;
 }
 
 interface AppointmentCardProps {
@@ -280,6 +282,7 @@ const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardP
         Cancelled: { icon: X, color: 'text-red-500' },
         Pending: { icon: Clock, color: 'text-yellow-500' },
         Scheduled: { icon: Calendar, color: 'text-blue-500' },
+        'partially-completed': { icon: Clock, color: 'text-amber-500' },
     };
     const StatusIcon = statusConfig[appointment.status]?.icon || CheckCircle;
     console.log("appointment ", appointment);
@@ -322,9 +325,17 @@ const AppointmentCard = ({ appointment, onSelect, isSelected }: AppointmentCardP
                 </div>
                 <div className={`flex items-center text-xs font-medium gap-1 ${statusConfig[appointment.status]?.color}`}>
                     <StatusIcon className="h-3 w-3" />
-                    {appointment.status}
+                    {appointment.status === 'partially-completed' ? 'Partially Paid' : appointment.status}
                 </div>
             </div>
+            {appointment.status === 'partially-completed' && appointment.amountPaid !== undefined && (
+                <div className="mt-1 flex justify-between items-center text-[11px] font-semibold">
+                    <span className="text-amber-600">Paid: ₹{appointment.amountPaid.toFixed(2)}</span>
+                    <span className="text-red-500 bg-red-50 px-1.5 py-0.5 rounded border border-red-100">
+                        Pending: ₹{((appointment.finalAmount || appointment.price) - appointment.amountPaid).toFixed(2)}
+                    </span>
+                </div>
+            )}
             <div className="text-sm text-muted-foreground mt-2">
                 {appointment.serviceItems && appointment.serviceItems.length > 1 ? (
                     <>
@@ -372,6 +383,7 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
         Confirmed: { color: 'bg-blue-100 text-blue-800' },
         Pending: { color: 'bg-yellow-100 text-yellow-800' },
         Cancelled: { color: 'bg-red-100 text-red-800' },
+        'partially-completed': { color: 'bg-amber-100 text-amber-800' },
     };
 
     const isAppointmentCancellable = (appointmentDate: string, status: string, startTime?: string) => {
@@ -520,7 +532,7 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                         <CardTitle className="text-xl">{appointment.service}</CardTitle>
                     )}
                     <Badge className={cn("text-xs", statusConfig[appointment.status]?.color)}>
-                        {appointment.status}
+                        {appointment.status === 'partially-completed' ? 'Partially Paid' : appointment.status}
                     </Badge>
                 </div>
                 <CardDescription>{appointment.salon.name}</CardDescription>
@@ -671,6 +683,19 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                                 <span className="font-medium">{appointment.paymentMethod}</span>
                             </div>
                         )}
+
+                        {appointment.status === 'partially-completed' && (
+                            <div className="space-y-2 pt-2 border-t border-dashed mt-2">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground font-medium">Amount Paid</span>
+                                    <span className="text-green-600 font-semibold">₹{appointment.amountPaid?.toFixed(2) || '0.00'}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground font-medium">Amount Remaining</span>
+                                    <span className="text-amber-600 font-semibold">₹{((appointment.finalAmount || appointment.price) - (appointment.amountPaid || 0)).toFixed(2)}</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </CardContent>
@@ -718,9 +743,33 @@ export default function AppointmentsPage() {
                     }
                 }
 
-                // Default: select first appointment
+                // Default: select first appointment (sorted by latest)
                 if (!selectedAppointment) {
-                    setSelectedAppointment(userAppointments[0]);
+                    // We need the sorted ones matching the UI order
+                    const sorted = [...userAppointments].sort((a: any, b: any) => {
+                        const statusGroupOrder: Record<string, number> = {
+                            'in_progress': 0,
+                            Scheduled: 0,
+                            Confirmed: 0,
+                            'partially-completed': 1,
+                            Pending: 2,
+                            Completed: 3,
+                            Cancelled: 4,
+                            'no_show': 5,
+                        };
+                        const getDateTime = (apt: any) => {
+                            const date = new Date(apt.date).getTime();
+                            const timeStr = apt.startTime || apt.serviceItems?.[0]?.startTime || '00:00';
+                            const [h, m] = timeStr.split(':').map(Number);
+                            return date + (h || 0) * 60 * 60 * 1000 + (m || 0) * 60 * 1000;
+                        };
+                        
+                        const groupA = statusGroupOrder[a.status] ?? 99;
+                        const groupB = statusGroupOrder[b.status] ?? 99;
+                        if (groupA !== groupB) return groupA - groupB;
+                        return getDateTime(b) - getDateTime(a);
+                    });
+                    setSelectedAppointment(sorted[0]);
                 }
                 hasSetInitialSelection.current = true;
             }
@@ -729,11 +778,14 @@ export default function AppointmentsPage() {
 
     const filteredAppointments = useMemo(() => {
         const statusGroupOrder: Record<string, number> = {
+            'in_progress': 0,
             Scheduled: 0,
             Confirmed: 0,
-            Pending: 1,
-            Completed: 2,
-            Cancelled: 3,
+            'partially-completed': 1,
+            Pending: 2,
+            Completed: 3,
+            Cancelled: 4,
+            'no_show': 5,
         };
 
         const getDateTime = (apt: Appointment) => {
@@ -753,7 +805,7 @@ export default function AppointmentsPage() {
                 const groupA = statusGroupOrder[a.status] ?? 99;
                 const groupB = statusGroupOrder[b.status] ?? 99;
                 if (groupA !== groupB) return groupA - groupB;
-                return getDateTime(a) - getDateTime(b);
+                return getDateTime(b) - getDateTime(a);
             });
     }, [appointments, searchTerm, statusFilter]);
 
@@ -852,6 +904,7 @@ export default function AppointmentsPage() {
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="all">All Status</SelectItem>
+                                                <SelectItem value="partially-completed">Partially Paid</SelectItem>
                                                 <SelectItem value="Completed">Completed</SelectItem>
                                                 <SelectItem value="Confirmed">Confirmed</SelectItem>
                                                 <SelectItem value="Scheduled">Scheduled</SelectItem>

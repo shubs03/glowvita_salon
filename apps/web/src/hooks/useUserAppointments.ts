@@ -7,7 +7,7 @@ interface Appointment {
   service: string;
   date: string;
   staff: string;
-  status: 'Completed' | 'Confirmed' | 'Cancelled' | 'Pending' | 'Scheduled';
+  status: 'Completed' | 'Confirmed' | 'Cancelled' | 'Pending' | 'Scheduled' | 'partially-completed';
   price: number;
   duration: number;
   salon: {
@@ -86,14 +86,18 @@ export const useUserAppointments = () => {
       if (typeof status === 'string') {
         const lowerStatus = status.toLowerCase();
 
-        if (lowerStatus === 'completed' || lowerStatus === 'partially-completed' || lowerStatus === 'completed without payment') {
+        if (lowerStatus === 'completed' || lowerStatus === 'completed without payment') {
           status = 'Completed';
+        } else if (lowerStatus === 'partially-completed' || lowerStatus === 'partially completed' || appointment.paymentStatus === 'partial') {
+          status = 'partially-completed';
         } else if (lowerStatus === 'cancelled' || lowerStatus === 'no-show') {
           status = 'Cancelled';
         } else if (lowerStatus === 'scheduled') {
           status = 'Scheduled';
         } else if (lowerStatus === 'pending') {
           status = 'Pending';
+        } else if (lowerStatus === 'confirmed') {
+          status = 'Confirmed';
         } else {
           status = 'Confirmed';
         }
@@ -101,7 +105,7 @@ export const useUserAppointments = () => {
 
       // Check if appointment is in the past and should be marked as Completed
       // Only strictly apply this to confirmed/scheduled/pending appointments
-      if (status !== 'Cancelled' && status !== 'Completed') {
+      if (status !== 'Cancelled' && status !== 'Completed' && status !== 'partially-completed') {
         try {
           const now = new Date();
           const apptDate = new Date(appointment.date);
