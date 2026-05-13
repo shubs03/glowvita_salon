@@ -69,7 +69,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
     if (!appointment) return null;
 
     return {
-      invoiceNumber: (() => {
+      invoiceNumber: (appointment as any).invoiceNumber || (() => {
         const dateStr = appointment.date instanceof Date
           ? appointment.date.toISOString().split('T')[0].replace(/-/g, '')
           : String(appointment.date).split('T')[0].replace(/-/g, '');
