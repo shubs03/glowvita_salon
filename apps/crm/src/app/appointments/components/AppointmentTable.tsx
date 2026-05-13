@@ -109,10 +109,9 @@ const AppointmentTable = ({
               </TableRow>
             ) : (
               currentItems.map((appointment) => {
-                const totalAmount = (appointment as any).finalAmount || appointment.totalAmount || 0;
-                // Use the new amountPaid field from the appointment, fallback to payment.paid for backward compatibility
-                const paidAmount = (appointment as any).amountPaid || appointment.payment?.paid || 0;
-                const remainingAmount = Math.max(0, totalAmount - paidAmount);
+                const totalAmount = (appointment as any).finalAmount ?? appointment.totalAmount ?? (appointment as any).amount ?? 0;
+                const paidAmount = (appointment as any).amountPaid ?? appointment.payment?.paid ?? 0;
+                const remainingAmount = Math.max(0, Number(totalAmount) - Number(paidAmount));
 
                 return (
                   <TableRow key={appointment._id}>

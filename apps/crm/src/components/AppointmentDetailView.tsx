@@ -526,7 +526,7 @@ export function AppointmentDetailView({
   };
 
   // Calculate total amount - prioritize finalAmount, then totalAmount, then amount (from liveAppointment)
-  const totalAmount = (liveAppointment as any).finalAmount || (liveAppointment as any).totalAmount || payment.total || (liveAppointment as any).amount || 0;
+  const totalAmount = (liveAppointment as any).finalAmount ?? (liveAppointment as any).totalAmount ?? payment.total ?? (liveAppointment as any).amount ?? 0;
 
   // Use override first, then amountPaid from appointment, then fallback to payment.paid
   const paidAmount = overridePayment?.amountPaid !== undefined
@@ -1669,14 +1669,14 @@ export function AppointmentDetailView({
                               value={paymentData.amount}
                               onChange={(e) => {
                                 const value = parseFloat(e.target.value) || 0;
-                                // Allow any positive value for manual entry
                                 setPaymentData(prev => ({
                                   ...prev,
                                   amount: value >= 0 ? value : 0
                                 }));
                               }}
-                              className="pl-7 text-lg font-semibold"
+                              className={`pl-7 text-lg font-semibold ${paymentData.amount > remainingAmount ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                               min="0"
+                              max={remainingAmount}
                               step="0.01"
                               placeholder="Enter amount to collect"
                             />
@@ -1695,11 +1695,11 @@ export function AppointmentDetailView({
                             )}
                           </div>
                           {paymentData.amount > remainingAmount && (
-                            <p className="text-xs text-foreground/80 mt-1 flex items-center gap-1">
+                            <p className="text-xs text-red-600 font-medium mt-1 flex items-center gap-1">
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                               </svg>
-                              Amount exceeds remaining balance by {formatCurrency(paymentData.amount - remainingAmount)}
+                              Amount cannot exceed remaining balance (Max: {formatCurrency(remainingAmount)})
                             </p>
                           )}
                         </div>
@@ -1806,7 +1806,7 @@ export function AppointmentDetailView({
                           </Button>
                           <Button
                             onClick={handlePaymentSubmit}
-                            disabled={paymentData.amount <= 0 || isCollectingPaymentLoading}
+                            disabled={paymentData.amount <= 0 || paymentData.amount > remainingAmount || isCollectingPaymentLoading}
                             className="flex-1 bg-foreground hover:bg-foreground/90 text-background"
                           >
                             {isCollectingPaymentLoading ? (
