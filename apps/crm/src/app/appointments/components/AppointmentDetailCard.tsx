@@ -160,7 +160,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
 
       const opt: any = {
         margin: [10, 10, 10, 10] as [number, number, number, number],
-        filename: `Invoice_${(appointment as any)._id?.substring((appointment as any)._id.length - 6).toUpperCase() || 'INV'}.pdf`,
+        filename: `Invoice_${invoiceData?.invoiceNumber || (appointment as any)._id?.substring((appointment as any)._id.length - 6).toUpperCase() || 'INV'}.pdf`,
         image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
