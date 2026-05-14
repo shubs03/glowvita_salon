@@ -127,6 +127,19 @@ export const POST = authMiddlewareCrm(async (req) => {
     const totalAmount = appointment.finalAmount || appointment.totalAmount || 0;
     // Use the new amountPaid field from the appointment, fallback to payment.paid for backward compatibility
     const currentPaid = appointment.amountPaid || appointment.payment?.paid || 0;
+    const remainingBalance = Math.max(0, totalAmount - currentPaid);
+
+    // Validate that payment does not exceed remaining balance
+    if (amount > remainingBalance + 0.01) { // Allow small float precision difference
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: `Payment amount (₹${amount.toFixed(2)}) exceeds remaining balance (₹${remainingBalance.toFixed(2)})` 
+        },
+        { status: 400 }
+      );
+    }
+
     const newPaidAmount = currentPaid + amount;
     const remainingAmount = Math.max(0, totalAmount - newPaidAmount);
 

@@ -38,9 +38,9 @@ const AppointmentPaymentModal = ({
 
   const handleOpen = () => {
     if (selectedAppointment) {
-      const totalAmount = (selectedAppointment as any).finalAmount || selectedAppointment.totalAmount || 0;
-      const paidAmount = (selectedAppointment as any).amountPaid || selectedAppointment.payment?.paid || 0;
-      const remainingAmount = Math.max(0, totalAmount - paidAmount);
+      const totalAmount = (selectedAppointment as any).finalAmount ?? selectedAppointment.totalAmount ?? (selectedAppointment as any).amount ?? 0;
+      const paidAmount = (selectedAppointment as any).amountPaid ?? selectedAppointment.payment?.paid ?? 0;
+      const remainingAmount = Math.max(0, Number(totalAmount) - Number(paidAmount));
 
       setPaymentData({
         amount: remainingAmount,
@@ -65,9 +65,9 @@ const AppointmentPaymentModal = ({
 
   if (!selectedAppointment) return null;
 
-  const totalAmount = (selectedAppointment as any).finalAmount || selectedAppointment.totalAmount || 0;
-  const paidAmount = (selectedAppointment as any).amountPaid || selectedAppointment.payment?.paid || 0;
-  const remainingAmount = Math.max(0, totalAmount - paidAmount);
+  const totalAmount = (selectedAppointment as any).finalAmount ?? selectedAppointment.totalAmount ?? (selectedAppointment as any).amount ?? 0;
+  const paidAmount = (selectedAppointment as any).amountPaid ?? selectedAppointment.payment?.paid ?? 0;
+  const remainingAmount = Math.max(0, Number(totalAmount) - Number(paidAmount));
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -101,7 +101,16 @@ const AppointmentPaymentModal = ({
 
           {/* Amount Input */}
           <div className="space-y-2">
-            <Label htmlFor="amount">Collecting Amount</Label>
+            <div className="flex justify-between items-center">
+              <Label htmlFor="amount">Collecting Amount</Label>
+              <button 
+                type="button"
+                onClick={() => setPaymentData(prev => ({ ...prev, amount: remainingAmount }))}
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                Set Maximum
+              </button>
+            </div>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">₹</span>
               <Input
@@ -109,11 +118,17 @@ const AppointmentPaymentModal = ({
                 type="number"
                 value={paymentData.amount}
                 onChange={(e) => setPaymentData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
-                className="pl-7"
+                className={`pl-7 ${paymentData.amount > remainingAmount ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                 min="0"
+                max={remainingAmount}
                 step="0.01"
               />
             </div>
+            {paymentData.amount > remainingAmount && (
+              <p className="text-xs text-red-500 font-medium">
+                Amount cannot exceed remaining balance (₹{remainingAmount.toFixed(2)})
+              </p>
+            )}
           </div>
 
           {/* Payment Method */}
@@ -157,7 +172,7 @@ const AppointmentPaymentModal = ({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isProcessing || paymentData.amount <= 0}
+            disabled={isProcessing || paymentData.amount <= 0 || paymentData.amount > remainingAmount}
             className="bg-green-600 hover:bg-green-700"
           >
             {isProcessing ? (

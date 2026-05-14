@@ -311,11 +311,25 @@ export default function AppointmentCard({
 
       {/* Price and Booking Mode */}
       <div className="flex items-center justify-between mb-5">
-        {appointment.price && (
-          <span className="text-lg font-extrabold text-gray-900 dark:text-white bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 rounded-lg shadow-md">
-            {appointment.price}
-          </span>
-        )}
+        {(() => {
+          const totalAmount = (appointment as any).finalAmount || (appointment as any).totalAmount || (appointment as any).price || 0;
+          const paidAmount = (appointment as any).amountPaid || (appointment as any).payment?.paid || 0;
+          const remainingAmount = Math.max(0, Number(totalAmount) - Number(paidAmount));
+          const isPartial = paidAmount > 0 && remainingAmount > 0;
+
+          return (
+            <div className="flex flex-col gap-1">
+              <span className="text-lg font-extrabold text-gray-900 dark:text-white bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 rounded-lg shadow-md">
+                {isPartial ? `Remaining: ₹${remainingAmount.toFixed(2)}` : `Total: ₹${Number(totalAmount).toFixed(2)}`}
+              </span>
+              {isPartial && (
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 ml-1">
+                  Total: ₹{Number(totalAmount).toFixed(2)}
+                </span>
+              )}
+            </div>
+          );
+        })()}
         {appointment.mode && (
           <div className="mt-3">
             <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${appointment.mode === 'online'

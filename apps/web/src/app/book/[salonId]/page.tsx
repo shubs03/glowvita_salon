@@ -3814,24 +3814,23 @@ function BookingPageContent() {
             // Prepare wedding package data for time slot
             const weddingPkg = selectedWeddingPackage as any;
             const packageServices = weddingPackageMode === 'customized' ? customizedPackageServices : weddingPkg.services;
-            const totalDuration = weddingPkg.duration || packageServices.reduce((total: number, service: any) => {
-              const dur = service.duration || service.serviceDuration || 0;
-              const duration = convertDurationToMinutes(dur);
-              return total + (duration || 0);
-            }, 0);
 
-            const serviceForTimeSlot = {
-              id: weddingPkg.id || weddingPkg._id || 'wedding-package',
-              name: weddingPkg.name,
-              duration: `${totalDuration} min`,
-              price: (weddingPkg.discountedPrice || weddingPkg.totalPrice).toString(),
-              category: 'Wedding Package',
-              description: weddingPkg.description
-            } as any;
+            // [NEW] Normalize services to ensure they have 'id' property and prepare assignments
+            const normalizedPackageServices = packageServices.map((s: any) => ({
+              ...s,
+              id: s.serviceId || s.id || s._id,
+              name: s.serviceName || s.name,
+              duration: s.duration || s.serviceDuration
+            }));
+
+            const weddingAssignments = normalizedPackageServices.map((s: any) => ({
+              service: s,
+              staff: selectedStaff || undefined
+            }));
 
             return (
               <TimeSlotSelector
-                selectedServices={selectedServices}
+                selectedServices={normalizedPackageServices}
                 selectedDate={selectedDate}
                 onSelectDate={setSelectedDate}
                 selectedTime={selectedTime}
@@ -3845,10 +3844,10 @@ function BookingPageContent() {
                 isLoading={false}
                 error={null}
                 salonId={salonId as string}
-                service={serviceForTimeSlot}
+                service={null}
                 isWeddingPackage={true}
                 weddingPackage={selectedWeddingPackage}
-                weddingPackageServices={weddingPackageMode === 'customized' ? customizedPackageServices : (selectedWeddingPackage as any).services}
+                weddingPackageServices={normalizedPackageServices}
                 onLockAcquired={(token, appId) => {
                   setSlotLockToken(token);
                   if (appId) setPendingAppointmentId(appId);

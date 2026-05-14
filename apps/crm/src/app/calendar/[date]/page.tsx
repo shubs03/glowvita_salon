@@ -777,16 +777,23 @@ export default function DailySchedulePage() {
       }
 
       // Calculate the new paid amount
-      const currentPaid = (selectedAppointment as any).payment?.paid || 0;
-      const currentAmountPaid = (selectedAppointment as any).amountPaid || 0;
-      const newPaidAmount = currentPaid + paymentData.amount;
-      const newAmountPaid = currentAmountPaid + paymentData.amount;
+      const currentAmountPaid = (selectedAppointment as any).amountPaid || (selectedAppointment as any).payment?.paid || 0;
       const totalAmount = (selectedAppointment as any).finalAmount || selectedAppointment.totalAmount || 0;
+      const currentBalance = totalAmount - currentAmountPaid;
+
+      // Validate that payment does not exceed remaining balance
+      if (paymentData.amount > currentBalance + 0.01) {
+        toast.error(`Payment amount (₹${paymentData.amount.toFixed(2)}) exceeds remaining balance (₹${currentBalance.toFixed(2)})`);
+        return;
+      }
+
+      const newPaidAmount = ((selectedAppointment as any).payment?.paid || 0) + paymentData.amount;
+      const newAmountPaid = currentAmountPaid + paymentData.amount;
       const remainingAmount = Math.max(0, totalAmount - newAmountPaid);
 
       // Determine payment status
       let paymentStatus = 'pending';
-      if (newAmountPaid >= totalAmount) {
+      if (newAmountPaid >= totalAmount - 0.01) {
         paymentStatus = 'completed';
       } else if (newAmountPaid > 0) {
         paymentStatus = 'partial';

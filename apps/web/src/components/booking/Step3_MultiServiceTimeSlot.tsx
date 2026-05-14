@@ -9,28 +9,44 @@ import { StaffMember, WorkingHours, Service, ServiceStaffAssignment, calculateTo
 import { useGetMultiServiceSlotsMutation } from '@repo/store/api';
 import { toast } from 'react-toastify';
 
-const Breadcrumb = ({ currentStep, setCurrentStep, isHomeService }: {
+const Breadcrumb = ({ currentStep, setCurrentStep, isHomeService, isWeddingService }: {
   currentStep: number;
   setCurrentStep: (step: number) => void;
   isHomeService?: boolean;
+  isWeddingService?: boolean;
 }) => {
-  const steps = isHomeService
-    ? ['Services', 'Select Professionals', 'Select Location', 'Select Date & Time']
-    : ['Services', 'Select Professionals', 'Select Date & Time'];
+  const steps = isWeddingService
+    ? [
+      { name: 'Select Package', step: 1 },
+      { name: 'Select Location', step: 3 },
+      { name: 'Select Date & Time', step: 4 }
+    ]
+    : isHomeService
+      ? [
+        { name: 'Services', step: 1 },
+        { name: 'Select Professionals', step: 2 },
+        { name: 'Select Location', step: 3 },
+        { name: 'Select Date & Time', step: 4 }
+      ]
+      : [
+        { name: 'Services', step: 1 },
+        { name: 'Select Professionals', step: 2 },
+        { name: 'Select Date & Time', step: 3 }
+      ];
 
   return (
     <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
-      {steps.map((step, index) => (
-        <React.Fragment key={step}>
+      {steps.map((stepObj, index) => (
+        <React.Fragment key={stepObj.name}>
           <button
-            onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
+            onClick={() => currentStep > stepObj.step && setCurrentStep(stepObj.step)}
             className={cn(
               "transition-colors",
-              currentStep > index + 1 ? "hover:text-primary" : "cursor-default",
-              currentStep === index + 1 && "text-primary font-semibold"
+              currentStep > stepObj.step ? "hover:text-primary" : "cursor-default",
+              currentStep === stepObj.step && "text-primary font-semibold"
             )}
           >
-            {step}
+            {stepObj.name}
           </button>
           {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
         </React.Fragment>
@@ -67,6 +83,8 @@ interface Step3MultiServiceTimeSlotProps {
   onLockAcquired?: (lockToken: string, appointmentId?: string) => void;
   user?: any;
   isWeddingService?: boolean;
+  packageId?: string;
+  weddingPackage?: any;
 }
 
 interface MultiServiceSlot {
@@ -186,7 +204,9 @@ export function Step3_MultiServiceTimeSlot({
   couponCode = null,
   discountAmount = 0,
   user,
-  isWeddingService = false
+  isWeddingService = false,
+  packageId,
+  weddingPackage
 }: Step3MultiServiceTimeSlotProps) {
   // RTK Query mutation hook
   const [getMultiServiceSlots, { data: slotsData, isLoading: isLoadingSlots, error: slotsError }] = useGetMultiServiceSlotsMutation();
@@ -281,6 +301,9 @@ export function Step3_MultiServiceTimeSlot({
         assignments,
         isHomeService,
         location: homeServiceLocation,
+        isWeddingService,
+        isWeddingPackage: isWeddingService,
+        packageId,
         stepMinutes: 15,
         bufferBefore: 5,
         bufferAfter: 5
@@ -388,7 +411,60 @@ export function Step3_MultiServiceTimeSlot({
       setIsLocking(true);
       console.log('Acquiring lock for multi-service slot:', slot);
 
-      // Prepare lock request
+      // For wedding packages, use the specialized lock endpoint
+      if (isWeddingService && (packageId || weddingPackage)) {
+        console.log('Using wedding package specialized lock endpoint');
+        
+        const weddingLockRequest = {
+          packageId: packageId || weddingPackage?.id || weddingPackage?._id,
+          selectedSlot: {
+            date: selectedDate.toISOString(),
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            location: isHomeService && homeServiceLocation ? homeServiceLocation : null,
+            totalAmount: weddingPackage?.discountedPrice || weddingPackage?.totalPrice || 0,
+            depositAmount: weddingPackage?.depositAmount || 0
+          },
+          clientId: user?._id || user?.id || 'temp-client-id',
+          clientName: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : 'Customer',
+          customerDetails: {
+            name: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : 'Customer',
+            phone: user?.mobileNo || user?.phone || null
+          }
+        };
+
+        const response = await fetch('/api/scheduling/wedding-package', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(weddingLockRequest)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Slot no longer available');
+        }
+
+        const lockData = await response.json();
+        console.log('Wedding package lock response received:', lockData);
+
+        setLockedSlot({
+          slot,
+          lockToken: lockData.lockId,
+          appointmentId: lockData.appointmentId,
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes for wedding packages
+        } as any);
+
+        if (onLockAcquired && lockData.lockId) {
+          onLockAcquired(lockData.lockId, lockData.appointmentId);
+        }
+
+        setSelectedSlot(slot);
+        onSelectTime(slot.startTime);
+        toast.success('Time slot reserved for 30 minutes');
+        return;
+      }
+
+      // Prepare standard lock request
       const lockRequest = {
         vendorId,
         serviceId: 'combo', // Multi-service identifier
@@ -590,7 +666,7 @@ export function Step3_MultiServiceTimeSlot({
 
   return (
     <div className="w-full">
-      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isHomeService={isHomeService} />
+      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isHomeService={isHomeService} isWeddingService={isWeddingService} />
 
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
