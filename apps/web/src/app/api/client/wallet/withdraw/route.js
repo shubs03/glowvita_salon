@@ -7,12 +7,6 @@ import WalletWithdrawalModel from '@repo/lib/models/Payment/WalletWithdrawal.mod
 import WalletTransactionModel from '@repo/lib/models/Payment/WalletTransaction.model';
 import WalletSettingsModel from '@repo/lib/models/admin/WalletSettings.model';
 import UserModel from '@repo/lib/models/user/User.model';
-import { 
-    createRazorpayContact, 
-    createRazorpayFundAccount, 
-    initiateRazorpayPayout 
-} from '@repo/lib/utils/razorpayPayout';
-import { RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_ACCOUNT_NUMBER } from '@repo/config/config';
 
 await _db();
 
@@ -105,8 +99,6 @@ const calculateRiskScore = async (userId, amount, user, settings) => {
   }
 };
 
-// Razorpay X Payout Helpers moved to @repo/lib/utils/razorpayPayout.js
-
 // POST: Submit withdrawal request (automated processing)
 export async function POST(req) {
   const session = await mongoose.startSession();
@@ -121,26 +113,6 @@ export async function POST(req) {
         success: false,
         message: 'User not authenticated'
       }, { status: 401 });
-    }
-
-    const keyId = (RAZORPAY_KEY_ID || '').trim();
-    const keySecret = (RAZORPAY_KEY_SECRET || '').trim();
-    const razorpayAccountNumber = (RAZORPAY_ACCOUNT_NUMBER || '').trim();
-
-    if (!keyId || !keySecret) {
-        await session.abortTransaction();
-        return NextResponse.json({
-          success: false,
-          message: 'Razorpay API keys (ID or Secret) are missing in server configuration.'
-        }, { status: 500 });
-    }
-
-    if (!razorpayAccountNumber) {
-        await session.abortTransaction();
-        return NextResponse.json({
-          success: false,
-          message: 'Razorpay Account Number (RAZORPAY_ACCOUNT_NUMBER) is missing. This is required for payouts.'
-        }, { status: 500 });
     }
 
     // Parse request body
@@ -349,72 +321,7 @@ export async function POST(req) {
       shouldBlock = riskAssessment.shouldBlock;
     }
 
-    // If high risk, reject automatically
-    if (shouldBlock) {
-      const withdrawal = await WalletWithdrawalModel.create([{
-        userId: user._id,
-        amount,
-        withdrawalFee,
-        netAmount,
-        bankDetails: {
-          accountNumber: bankDetails.accountNumber || null,
-          ifsc: bankDetails.ifsc ? bankDetails.ifsc.toUpperCase() : null,
-          accountHolderName: bankDetails.accountHolderName,
-          bankName: bankDetails.bankName || '',
-          upiId: bankDetails.upiId || null
-        },
-        status: 'rejected_by_system',
-        rejectionReason: `High risk transaction detected: ${riskFlags.join(', ')}`,
-        riskScore,
-        riskFlags,
-        autoProcessed: true
-      }], { session });
-
-      await session.commitTransaction();
-
-      return NextResponse.json({
-        success: false,
-        message: 'Withdrawal request rejected due to security concerns.',
-        data: {
-          withdrawalId: withdrawal[0].withdrawalId,
-          riskFlags,
-          reason: 'Please contact support for assistance.'
-        }
-      }, { status: 400 });
-    }
-
-    // RAZORPAY PAYOUT INTEGRATION
-    let contactId = user.razorpayContactId;
-    if (!contactId) {
-      contactId = await createRazorpayContact({
-        name: `${user.firstName} ${user.lastName || ''}`.trim(),
-        email: user.emailAddress,
-        phone: user.mobileNumber || user.phone || '9999999999',
-        userId: user._id
-      }, keyId, keySecret);
-      
-      if (!contactId) {
-        await session.abortTransaction();
-        return NextResponse.json({ success: false, message: 'Failed to create Razorpay contact. Reach support.' }, { status: 500 });
-      }
-      
-      user.razorpayContactId = contactId;
-      await user.save({ session });
-    }
-
-    const fundAccountId = await createRazorpayFundAccount(contactId, {
-      accountHolderName: bankDetails.accountHolderName,
-      accountNumber: bankDetails.accountNumber,
-      ifsc: bankDetails.ifsc,
-      upiId: bankDetails.upiId
-    }, keyId, keySecret);
-    
-    if (!fundAccountId) {
-        await session.abortTransaction();
-        return NextResponse.json({ success: false, message: 'Failed to link fund account with Razorpay.' }, { status: 400 });
-    }
-
-    // Initial withdrawal record in 'processing' status
+    // Initial withdrawal record in 'pending' status
     const withdrawal = await WalletWithdrawalModel.create([{
       userId: user._id,
       userType: 'User',
@@ -429,42 +336,20 @@ export async function POST(req) {
         bankName: bankDetails.bankName || '',
         upiId: bankDetails.upiId || null
       },
-      status: 'processing',
+      status: 'pending',
       riskScore,
       riskFlags,
-      autoProcessed: true,
-      processedAt: new Date()
+      autoProcessed: false
     }], { session });
 
-    // Deduct from user wallet before calling Razorpay to prevent double spending
+    // Deduct from user wallet to lock funds
     user.wallet = user.wallet - amount;
     await user.save({ session });
 
-    // Create Payout in Razorpay
-    const payoutData = await initiateRazorpayPayout({
-      razorpayAccountNumber,
-      fundAccountId,
-      amount: netAmount,
-      mode: withdrawalMethod === 'upi' ? 'UPI' : 'IMPS',
-      referenceId: withdrawal[0].withdrawalId,
-      narration: `Withdrawal for ${user.firstName}`
-    }, keyId, keySecret);
-    
-    if (payoutData.error) {
-        // Rollback wallet if Razorpay fails immediately
-        user.wallet = user.wallet + amount;
-        await user.save({ session });
-        
-        await session.abortTransaction();
-        console.error('Razorpay Payout Error:', payoutData.error);
-        return NextResponse.json({
-            success: false,
-            message: payoutData.error.description || 'Failed to initiate Razorpay payout'
-        }, { status: 400 });
-    }
-
-    // Create debit transaction record
+    // Create debit transaction record (Status: pending)
+    const txId = `WTX_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     const transaction = await WalletTransactionModel.create([{
+      transactionId: txId,
       userId: user._id,
       userType: 'User',
       regionId: user.regionId,
@@ -473,12 +358,11 @@ export async function POST(req) {
       balanceBefore: user.wallet + amount,
       balanceAfter: user.wallet,
       source: 'withdrawal',
-      status: 'completed',
-      description: `Withdrawal via ${withdrawalMethod === 'upi' ? 'UPI' : 'Bank Transfer'} - ₹${amount}`,
+      status: 'pending',
+      description: `Withdrawal Request via ${withdrawalMethod === 'upi' ? 'UPI' : 'Bank Transfer'} - ₹${amount}`,
       withdrawalId: withdrawal[0]._id,
       metadata: {
         withdrawalId: withdrawal[0].withdrawalId,
-        razorpayPayoutId: payoutData.id,
         withdrawalMethod,
         bankDetails: {
           ifsc: bankDetails.ifsc ? bankDetails.ifsc.toUpperCase() : null,
@@ -489,23 +373,8 @@ export async function POST(req) {
       }
     }], { session });
 
-    // Update withdrawal with Razorpay details
-    withdrawal[0].razorpayPayoutId = payoutData.id;
+    // Update withdrawal with transaction reference
     withdrawal[0].transactionId = transaction[0]._id;
-    withdrawal[0].razorpayResponse = payoutData;
-    
-    // Status depends on Razorpay initial response
-    if (payoutData.status === 'processed' || payoutData.status === 'completed') {
-        withdrawal[0].status = 'completed';
-        withdrawal[0].completedAt = new Date();
-    } else if (payoutData.status === 'failed' || payoutData.status === 'rejected') {
-        withdrawal[0].status = 'failed';
-        withdrawal[0].failureReason = payoutData.status_details?.reason || 'Razorpay payout failed';
-        // Refund wallet
-        user.wallet = user.wallet + amount;
-        await user.save({ session });
-    }
-
     await withdrawal[0].save({ session });
 
     // Commit transaction
@@ -513,15 +382,14 @@ export async function POST(req) {
 
     return NextResponse.json({
       success: true,
-      message: 'Withdrawal request processed successfully. Money will be credited to your account shortly.',
+      message: 'Withdrawal request submitted successfully. It will be processed after admin approval.',
       data: {
         withdrawalId: withdrawal[0].withdrawalId,
         amount,
         withdrawalFee,
         netAmount,
         status: withdrawal[0].status,
-        newBalance: user.wallet,
-        razorpayPayoutId: payoutData.id
+        newBalance: user.wallet
       }
     });
 
