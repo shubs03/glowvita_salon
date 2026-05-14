@@ -30,7 +30,7 @@ const AppointmentTable = ({
     if (status === 'completed without payment') {
       return 'Completed Without Payment';
     }
-    return status.split('_').map(word =>
+    return status.split(/[-_]/).map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
@@ -193,16 +193,6 @@ const AppointmentTable = ({
                           }`}>
                           {formatStatus(appointment.status)}
                         </span>
-                        {(() => {
-                          const totalAmountNum = Number((appointment as any).finalAmount ?? appointment.totalAmount ?? 0) || 0;
-                          const paidAmountNum = Number((appointment as any).amountPaid ?? appointment.payment?.paid ?? 0) || 0;
-                          const isPartial = totalAmountNum > 0 && paidAmountNum > 0 && paidAmountNum < totalAmountNum;
-                          return isPartial ? (
-                            <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-800 border border-purple-200 uppercase tracking-wide">
-                              Partial
-                            </span>
-                          ) : null;
-                        })()}
                       </div>
                     </TableCell>
                     <TableCell className="text-right">

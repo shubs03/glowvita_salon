@@ -32,7 +32,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
   };
 
   const formatStatus = (status: string) => {
-    return status.split('_').map(word =>
+    return status.split(/[-_]/).map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
