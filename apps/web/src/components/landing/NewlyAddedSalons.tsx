@@ -73,7 +73,10 @@ const NewlyAddedSalons: React.FC<NewlyAddedSalonsProps> = ({ maxSalons = 8 }) =>
               : "Beauty Services",
       location: `${vendor.city || "Unknown City"}, ${vendor.state || "Unknown State"}`,
       rating: vendor.rating || "0.0",
-      clients: `${vendor.totalBookings || vendor.clientCount || 0}+`,
+      clients: `${vendor.dynamicClientCount || 
+                vendor.stats?.find((s: any) => s.label === "Happy Clients")?.value ||
+                vendor.clientCount || 
+                0}+`,
       image: imageUrl,
       badge: hasOffer ? "Offer Available" : null,
       serviceNames: vendor.services?.map((s: any) => s.name) || [],
