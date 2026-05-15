@@ -11,7 +11,8 @@ import { Input } from '@repo/ui/input';
 import { Skeleton } from '@repo/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@repo/ui/dialog";
 import { Label } from "@repo/ui/label";
-import { Calendar } from 'lucide-react';
+import { Calendar, LayoutGrid, History } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/tabs";
 import { useGetSubscriptionReportQuery, useGetSubscriptionPlansQuery } from '@repo/store/api';
 import { SubscriptionData, CampaignData, VendorPayoutSettlementData, VendorPayoutSettlementProductData, VendorPayableProductData, FilterParams } from '../types';
 import { exportToExcel, exportToCSV, exportToPDF, copyToClipboard, printTable } from '../utils/exportFunctions';
@@ -35,6 +36,8 @@ export const SubscriptionReportTable = () => {
     handleFilterChange,
     filterAndPaginateData
   } = useReport<SubscriptionData>(5);
+
+  const [activeTab, setActiveTab] = useState("active");
 
   console.log("Subscription Report API filters:", apiFilters);
 
@@ -147,16 +150,20 @@ export const SubscriptionReportTable = () => {
     .filter(s => (s.price || 0) > 0)
     .reduce((sum: number, sub) => sum + (sub.price || 0), 0);
 
-  // Filter unique data based on search term
+  // Filter data based on Tab and search term
   const filteredData = useMemo((): SubscriptionData[] => {
-    if (!searchTerm) return uniqueSubscriptionData;
+    let baseData = activeTab === "active" 
+      ? uniqueSubscriptionData.filter(s => s.planStatus === 'Active')
+      : subscriptionData; // Show all for history
 
-    return uniqueSubscriptionData.filter((subscription: SubscriptionData) =>
+    if (!searchTerm) return baseData;
+
+    return baseData.filter((subscription: SubscriptionData) =>
       Object.values(subscription).some((value: any) =>
         value?.toString().toLowerCase().includes(searchTerm.toLowerCase())
       )
     );
-  }, [uniqueSubscriptionData, searchTerm]);
+  }, [uniqueSubscriptionData, subscriptionData, searchTerm, activeTab]);
 
   // Pagination logic
   const totalItems = filteredData.length;
@@ -466,55 +473,70 @@ export const SubscriptionReportTable = () => {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-4 gap-2">
-        <div className="relative w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search..."
-            className="pl-8"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page when search term changes
-            }}
-          />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'subscription_report')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'subscription_report')}>
-                <FileText className="mr-2 h-4 w-4" />
-                CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'subscription_report')}>
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => printTable(tableRef)}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full md:w-auto">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="active" className="flex items-center gap-2">
+              <LayoutGrid className="h-4 w-4" />
+              Active Plans
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-2">
+              <History className="h-4 w-4" />
+              Subscription History
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        <div className="flex flex-1 w-full md:w-auto justify-end items-center gap-2">
+          <div className="relative w-full md:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search..."
+              className="pl-8"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1); // Reset to first page when search term changes
+              }}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsFilterModalOpen(true)} variant="outline">
+              <Filter className="mr-2 h-4 w-4" />
+              Filters
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="mr-2 h-4 w-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => copyToClipboard(tableRef)}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToExcel(tableRef, 'subscription_report')}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToCSV(tableRef, 'subscription_report')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToPDF(tableRef, 'subscription_report')}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => printTable(tableRef)}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </div>
 

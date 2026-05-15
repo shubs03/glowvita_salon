@@ -20,6 +20,10 @@ export const SubscriptionReportDialog = ({ isOpen, onClose }: SubscriptionReport
           <DialogTitle>Subscription Report</DialogTitle>
           <DialogDescription>
             Track purchases, renewals, expiries, and overall subscription revenue.
+            <div className="mt-2 space-y-1 p-2 bg-muted/50 rounded-md text-xs font-mono text-muted-foreground border border-border/50">
+              <div>Formula: Revenue = SUM(subscription_price) WHERE price &gt; 0</div>
+              <div>Formula: Inactive Plans = Total Plans - Active Plans</div>
+            </div>
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">

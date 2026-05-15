@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from '@repo/ui/button';
 import { cn } from "@repo/ui/cn";
-import { Heart, Loader2 } from 'lucide-react';
+import { Heart, Loader2, AlertCircle } from 'lucide-react';
 
 interface ProductPurchaseActionsProps {
   handleWishlistToggle: () => void;
@@ -14,6 +14,7 @@ interface ProductPurchaseActionsProps {
   isOutOfStock: boolean;
   isBuyingNow: boolean;
   isAddingToCart: boolean;
+  isSubscriptionExpired?: boolean;
 }
 
 const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
@@ -25,9 +26,18 @@ const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
   isOutOfStock,
   isBuyingNow,
   isAddingToCart,
+  isSubscriptionExpired = false,
 }) => {
   return (
     <div className="mt-4">
+      {isSubscriptionExpired && (
+        <div className="mb-4 bg-red-50 border border-red-100 rounded-md p-3 flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0 mt-0.5" />
+          <p className="text-xs text-red-700">
+            Purchases are temporarily disabled for this salon.
+          </p>
+        </div>
+      )}
       <div className="flex items-center gap-3">
         <Button
           variant="outline"
@@ -44,7 +54,7 @@ const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
           variant="default"
           className="flex-1 bg-primary hover:bg-primary/95"
           onClick={() => handleBuyNow()}
-          disabled={isOutOfStock || isBuyingNow}
+          disabled={isOutOfStock || isBuyingNow || isSubscriptionExpired}
         >
           {isBuyingNow ? (
             <>
@@ -53,6 +63,8 @@ const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
             </>
           ) : isOutOfStock ? (
             'Out of Stock'
+          ) : isSubscriptionExpired ? (
+            'Unavailable'
           ) : (
             'Buy Now'
           )}
@@ -63,7 +75,7 @@ const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
           variant="outline"
           className="flex-1 border-2 border-primary hover:border-primary/95"
           onClick={() => handleAddToCart()}
-          disabled={isOutOfStock || isAddingToCart}
+          disabled={isOutOfStock || isAddingToCart || isSubscriptionExpired}
         >
           {isAddingToCart ? (
             <>
@@ -72,6 +84,8 @@ const ProductPurchaseActions: React.FC<ProductPurchaseActionsProps> = ({
             </>
           ) : isOutOfStock ? (
             'Out of Stock'
+          ) : isSubscriptionExpired ? (
+            'Unavailable'
           ) : (
             'Add to Cart'
           )}

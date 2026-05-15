@@ -20,6 +20,9 @@ export const SalesByProductReportDialog = ({ isOpen, onClose }: SalesByProductRe
           <DialogTitle>Sales by Product</DialogTitle>
           <DialogDescription>
             Revenue breakdown by individual products.
+            <div className="mt-2 p-2 bg-muted/50 rounded-md text-xs font-mono text-muted-foreground border border-border/50">
+              Formula: Product Sales Total = Product Amount + Product Tax/GST + Product Platform Fee
+            </div>
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">

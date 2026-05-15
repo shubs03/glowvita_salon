@@ -189,7 +189,9 @@ const AppointmentTable = ({
                               appointment.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                                 appointment.status === 'confirmed' ? 'bg-emerald-100 text-emerald-800' :
                                   appointment.status === 'no_show' ? 'bg-orange-100 text-orange-800' :
-                                    'bg-yellow-100 text-yellow-800'
+                                    appointment.status === 'partially-completed' ? 'bg-indigo-100 text-indigo-800' :
+                                      appointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-gray-100 text-gray-800'
                           }`}>
                           {formatStatus(appointment.status)}
                         </span>
