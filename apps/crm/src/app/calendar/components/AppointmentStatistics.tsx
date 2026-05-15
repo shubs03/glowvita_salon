@@ -16,7 +16,7 @@ export default function AppointmentStatistics({ appointments }: AppointmentStati
               {appointments.length}
             </span>
           </div>
-          
+
           <div className="space-y-1.5">
             <div className="flex justify-between items-center py-1">
               <div className="flex items-center">
@@ -27,17 +27,17 @@ export default function AppointmentStatistics({ appointments }: AppointmentStati
                 {appointments.filter((a: any) => a.status === 'confirmed').length}
               </span>
             </div>
-            
+
             <div className="flex justify-between items-center py-1">
               <div className="flex items-center">
-                <div className="w-2 h-2 rounded-full bg-green-500 mr-1.5"></div>
+                <div className="w-2 h-2 rounded-full bg-secondary mr-1.5"></div>
                 <span className="text-muted-foreground text-xs">Completed</span>
               </div>
-              <span className="text-xs font-medium text-green-600">
+              <span className="text-xs font-medium text-secondary-foreground">
                 {appointments.filter((a: any) => a.status === 'completed').length}
               </span>
             </div>
-            
+
             <div className="flex justify-between items-center py-1">
               <div className="flex items-center">
                 <div className="w-2 h-2 rounded-full bg-primary/70 mr-1.5"></div>
@@ -47,7 +47,7 @@ export default function AppointmentStatistics({ appointments }: AppointmentStati
                 {appointments.filter((a: any) => a.status === 'scheduled').length}
               </span>
             </div>
-            
+
             <div className="flex justify-between items-center py-1">
               <div className="flex items-center">
                 <div className="w-2 h-2 rounded-full bg-indigo-500 mr-1.5"></div>
@@ -58,22 +58,13 @@ export default function AppointmentStatistics({ appointments }: AppointmentStati
               </span>
             </div>
 
+
             <div className="flex justify-between items-center py-1">
               <div className="flex items-center">
-                <div className="w-2 h-2 rounded-full bg-yellow-500 mr-1.5"></div>
-                <span className="text-muted-foreground text-xs">Pending</span>
-              </div>
-              <span className="text-xs font-medium text-yellow-600">
-                {appointments.filter((a: any) => a.status === 'pending').length}
-              </span>
-            </div>
-            
-            <div className="flex justify-between items-center py-1">
-              <div className="flex items-center">
-                <div className="w-2 h-2 rounded-full bg-red-500 mr-1.5"></div>
+                <div className="w-2 h-2 rounded-full bg-primary/30 mr-1.5"></div>
                 <span className="text-muted-foreground text-xs">Cancelled</span>
               </div>
-              <span className="text-xs font-medium text-red-600">
+              <span className="text-xs font-medium text-primary/50">
                 {appointments.filter((a: any) => a.status === 'cancelled').length}
               </span>
             </div>
