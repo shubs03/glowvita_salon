@@ -81,7 +81,8 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
     setSidebarOpen(!isSidebarOpen);
   };
      
-  if (isLoading || !isAdminAuthenticated) {
+  // Show full-screen spinner ONLY while the auth state is still being determined.
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
         <div className="flex flex-col items-center">
@@ -90,6 +91,13 @@ export function AdminLayout({ children }: { children: React.ReactNode; }) {
         </div>
       </div>
     )
+  }
+
+  // Loading is done but user is not authenticated — the useEffect above will
+  // redirect to /login. Return null here to avoid rendering the protected layout
+  // or an infinite spinner while the navigation completes.
+  if (!isAdminAuthenticated) {
+    return null;
   }
 
   return (

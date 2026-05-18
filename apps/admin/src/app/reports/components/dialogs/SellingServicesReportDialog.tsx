@@ -44,6 +44,9 @@ export const SellingServicesReportDialog = ({ isOpen, onClose }: SellingServices
           <DialogTitle>Selling Services</DialogTitle>
           <DialogDescription>
             Overview of services sold and their performance metrics.
+            <div className="mt-2 p-2 bg-muted/50 rounded-md text-xs font-mono text-muted-foreground border border-border/50">
+              Formula: Service Sales Total = Service Amount + Service Platform Fee + Service Tax
+            </div>
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">

@@ -4,6 +4,7 @@ import RegionModel from "@repo/lib/models/admin/Region.model";
 // CRMOfferModel and AdminOfferModel will be dynamically imported
 import ReviewModel from "@repo/lib/models/Review/Review.model";
 import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model.js";
+import ClientModel from "@repo/lib/models/Vendor/Client.model.js";
 import mongoose from "mongoose";
 import { assignRegion } from "@repo/lib/utils/assignRegion.js";
 
@@ -343,26 +344,20 @@ export const GET = async (request) => {
           },
         ]);
 
-        const clientCountStats = await AppointmentModel.aggregate([
-          {
-            $match: {
-              vendorId: vendor._id,
-              status: { $in: ["confirmed", "completed", "scheduled"] },
-            },
-          },
-          {
-            $group: {
-              _id: "$vendorId",
-              uniqueClients: { $addToSet: "$clientPhone" },
-            },
-          },
-          {
-            $project: {
-              _id: 1,
-              clientCount: { $size: "$uniqueClients" },
-            },
-          },
+        // Fetch dynamic happy clients count (Online + Offline)
+        const [clientPhones, appointmentPhones] = await Promise.all([
+          ClientModel.distinct('phone', {
+            vendorId: vendor._id,
+            phone: { $ne: '', $ne: null }
+          }),
+          AppointmentModel.distinct('clientPhone', {
+            vendorId: vendor._id,
+            clientPhone: { $ne: '', $ne: null }
+          })
         ]);
+
+        const uniquePhones = new Set([...clientPhones, ...appointmentPhones]);
+        const dynamicClientCount = uniquePhones.size || 0;
 
         return {
           ...vendor,
@@ -372,10 +367,8 @@ export const GET = async (request) => {
               : "0.0",
           reviewCount:
             ratingStats.length > 0 ? ratingStats[0].reviewCount : 0,
-          clientCount:
-            clientCountStats.length > 0
-              ? clientCountStats[0].clientCount
-              : 0,
+          clientCount: dynamicClientCount,
+          dynamicClientCount: dynamicClientCount,
         };
       })
     );

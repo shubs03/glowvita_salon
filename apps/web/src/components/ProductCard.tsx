@@ -8,8 +8,10 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
 import { addToCart } from "@repo/store/slices/cartSlice";
-import { useGetClientCartQuery, useAddToClientCartMutation } from "@repo/store/api";
+import { useGetClientCartQuery, useAddToClientCartMutation, useGetPublicVendorByIdQuery } from "@repo/store/api";
 import { cn } from "@repo/ui/cn";
+import { useMemo } from "react";
+import { AlertCircle } from "lucide-react";
 
 const PRODUCT_PLACEHOLDER = "/images/product-placeholder.png";
 
@@ -71,6 +73,32 @@ const ProductCard: React.FC<ProductCardProps> = ({
   });
 
   const cartItems = isAuthenticated && user?._id ? (cartData?.data?.items || []) : localCartItems;
+
+  // Fetch vendor data to check subscription
+  const { data: vendorResponse } = useGetPublicVendorByIdQuery(vendorId, {
+    skip: !vendorId,
+  });
+
+  const vendorData = vendorResponse?.vendor;
+
+  const isSubscriptionExpired = useMemo(() => {
+    if (!vendorData) return false;
+
+    const subscription = vendorData.subscription;
+    if (!subscription) return false;
+
+    const now = new Date();
+    const endDate = subscription.endDate ? new Date(subscription.endDate) : null;
+    const status = (subscription.status || '').toLowerCase().trim();
+
+    const isStatusActive = status === 'active';
+    const expiredStatuses = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'];
+    const isStatusExpired = expiredStatuses.includes(status);
+    const isDateExpired = endDate ? endDate < now : false;
+
+    if (isStatusActive && !isDateExpired) return false;
+    return isStatusExpired || isDateExpired;
+  }, [vendorData]);
 
   // Check if product is in wishlist on component mount
   useEffect(() => {
@@ -144,6 +172,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    if (isSubscriptionExpired) {
+      toast.error("Salon Unavailable", {
+        description: "This product is temporarily closed due to salon subscription expiry."
+      });
+      return;
+    }
 
     // Check if cart already has items from a different vendor
     if (cartItems.length > 0) {
@@ -223,6 +258,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const handleBuyNow = (e: React.MouseEvent) => {
     e.stopPropagation();
 
+    if (isSubscriptionExpired) {
+      toast.error("Salon Unavailable", {
+        description: "This product is temporarily closed due to salon subscription expiry."
+      });
+      return;
+    }
+
     if (!isAuthenticated) {
       router.push(`/client-login?redirect=${encodeURIComponent(window.location.pathname)}`);
       return;
@@ -269,8 +311,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <Card
-      className="group overflow-hidden hover:shadow-lg rounded-none rounded-tr-2xl rounded-bl-2xl transition-shadow flex flex-col text-left cursor-pointer relative"
-      onClick={() => router.push(`/product-details/${id}`)}
+      className={cn(
+        "group overflow-hidden hover:shadow-lg rounded-none rounded-tr-2xl rounded-bl-2xl transition-shadow flex flex-col text-left relative",
+        isSubscriptionExpired ? "cursor-not-allowed opacity-90" : "cursor-pointer"
+      )}
+      onClick={() => {
+        if (isSubscriptionExpired) {
+          toast.error("Salon Unavailable", {
+            description: "This product is temporarily closed due to salon subscription expiry."
+          });
+          return;
+        }
+        router.push(`/product-details/${id}`);
+      }}
     >
       <div className="relative aspect-square overflow-hidden rounded-md m-2">
         <img
@@ -342,22 +395,36 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <Button
               size="sm"
               variant="outline"
-              className="w-full hover:border-none rounded-none rounded-tr-xl rounded-bl-xl text-xs lg:mr-3"
+              className={cn(
+                "w-full hover:border-none rounded-none rounded-tr-xl rounded-bl-xl text-xs lg:mr-3",
+                isSubscriptionExpired && "opacity-50 cursor-not-allowed"
+              )}
               onClick={handleBuyNow}
+              disabled={isSubscriptionExpired}
             >
-              Buy Now
+              {isSubscriptionExpired ? "Unavailable" : "Buy Now"}
             </Button>
 
             <Button
               size="sm"
               variant="outline"
-              className="w-fit border-none text-xs rounded-none rounded-tr-2xl rounded-bl-2xl"
+              className={cn(
+                "w-fit border-none text-xs rounded-none rounded-tr-2xl rounded-bl-2xl",
+                isSubscriptionExpired && "opacity-50 cursor-not-allowed"
+              )}
               onClick={handleAddToCart}
+              disabled={isSubscriptionExpired}
             >
               <ShoppingCart className="h-4 w-4" />
             </Button>
           </div>
         </div>
+        {isSubscriptionExpired && (
+          <div className="flex items-center gap-1.5 mt-2 text-red-600">
+            <AlertCircle className="h-3 w-3" />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Temporarily Closed</span>
+          </div>
+        )}
       </div>
     </Card>
   );

@@ -42,8 +42,11 @@ import {
   useRemoveFromClientCartMutation,
   useGetPublicTaxFeeSettingsQuery,
   useGetPublicShippingConfigQuery,
+  useGetPublicVendorByIdQuery,
 } from "@repo/store/api";
 import { useAppSelector, useAppDispatch } from "@repo/store/hooks";
+import { useMemo } from "react";
+import { AlertCircle, AlertTriangle } from "lucide-react";
 import {
   updateQuantity,
   removeFromCart as removeFromLocalCart,
@@ -118,6 +121,33 @@ export default function CartPage() {
 
   const { data: taxSettings } = useGetPublicTaxFeeSettingsQuery(undefined);
   const { data: shippingConfig } = useGetPublicShippingConfigQuery(currentVendorId);
+
+  // Fetch vendor data to check subscription
+  const { data: vendorResponse } = useGetPublicVendorByIdQuery(currentVendorId, {
+    skip: !currentVendorId,
+  });
+
+  const vendorData = vendorResponse?.vendor;
+
+  const isSubscriptionExpired = useMemo(() => {
+    if (!vendorData) return false;
+
+    const subscription = vendorData.subscription;
+    if (!subscription) return false;
+
+    const now = new Date();
+    const endDate = subscription.endDate ? new Date(subscription.endDate) : null;
+    const status = (subscription.status || '').toLowerCase().trim();
+
+    const isStatusActive = status === 'active';
+    const expiredStatuses = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'];
+    const isStatusExpired = expiredStatuses.includes(status);
+    const isDateExpired = endDate ? endDate < now : false;
+
+    if (isStatusActive && !isDateExpired) return false;
+    return isStatusExpired || isDateExpired;
+  }, [vendorData]);
+
   const [updateCartItem] = useUpdateClientCartItemMutation();
   const [removeFromCartAPI] = useRemoveFromClientCartMutation();
 
@@ -190,6 +220,13 @@ export default function CartPage() {
   };
 
   const handleProceedToCheckout = () => {
+    if (isSubscriptionExpired) {
+      toast.error("Checkout Unavailable", {
+        description: "This salon is temporarily closed and not accepting new orders at this time."
+      });
+      return;
+    }
+
     if (!isAuthenticated) {
       toast.error("Please login to proceed to checkout");
       router.push(`/login?returnUrl=${encodeURIComponent('/cart')}`);
@@ -298,6 +335,23 @@ export default function CartPage() {
       />
       <PageContainer className="max-w-7xl">
         <div className="py-8 lg:py-12">
+          {isSubscriptionExpired && (
+            <div className="mb-8 bg-red-50 border border-red-200 rounded-xl p-6 flex flex-col md:flex-row items-center gap-4 text-center md:text-left shadow-sm">
+              <div className="bg-red-100 p-3 rounded-full">
+                <AlertTriangle className="h-8 w-8 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-red-800 mb-1">Action Required: Salon Unavailable</h3>
+                <p className="text-red-700">
+                  The salon you're trying to purchase from is temporarily closed for product orders. 
+                  You can keep these items in your cart, but you won't be able to checkout until the salon is back online.
+                </p>
+              </div>
+              <Button variant="outline" className="border-red-300 text-red-700 hover:bg-red-100" asChild>
+                <Link href="/all-products">Explore Other Salons</Link>
+              </Button>
+            </div>
+          )}
 
           <div className="text-center mb-8 lg:mb-12 space-y-2 lg:space-y-3">
             <h1 className="text-3xl lg:text-4xl xl:text-5xl font-bold font-headline text-foreground">
@@ -603,8 +657,9 @@ export default function CartPage() {
                       className="w-full"
                       size="lg"
                       onClick={handleProceedToCheckout}
+                      disabled={isSubscriptionExpired}
                     >
-                      Proceed to Checkout
+                      {isSubscriptionExpired ? "Salon Temporarily Closed" : "Proceed to Checkout"}
                     </Button>
                   </CardFooter>
                 </Card>

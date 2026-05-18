@@ -24,10 +24,12 @@ import { toast } from "sonner";
 
 import { 
   useGetAdminWithdrawalsQuery,
-  useGetRegionsQuery
+  useGetRegionsQuery,
+  useUpdateWithdrawalStatusMutation
 } from "@repo/store/services/api";
 import { useSelector } from "react-redux";
 import { selectSelectedRegion, selectCurrentAdmin } from "@repo/store/slices/adminAuthSlice";
+import { Textarea } from "@repo/ui/textarea";
 
 interface WalletWithdrawal {
   _id: string;
@@ -66,8 +68,9 @@ export function WalletWithdrawalsTab() {
   const [filterUserType, setFilterUserType] = useState<string>("all");
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<WalletWithdrawal | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [adminReason, setAdminReason] = useState("");
 
-  // RTK Query hook
+  // RTK Query hooks
   const { data: withdrawalResp, isLoading, isError, refetch } = useGetAdminWithdrawalsQuery({
     page: currentPage,
     limit: itemsPerPage,
@@ -76,6 +79,8 @@ export function WalletWithdrawalsTab() {
     search: searchQuery || undefined,
     regionId: selectedRegionId || undefined,
   });
+
+  const [updateStatus, { isLoading: isUpdating }] = useUpdateWithdrawalStatusMutation();
 
   const withdrawals = withdrawalResp?.data || [];
   const stats = withdrawalResp?.stats || {
@@ -91,6 +96,34 @@ export function WalletWithdrawalsTab() {
 
   const fetchWithdrawals = () => {
     refetch();
+  };
+
+  const handleAction = async (action: 'approve' | 'reject') => {
+    if (!selectedWithdrawal) return;
+    
+    if (action === 'reject' && !adminReason) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
+
+    try {
+      const result = await updateStatus({
+        withdrawalId: selectedWithdrawal._id,
+        action,
+        reason: adminReason
+      }).unwrap();
+
+      if (result.success) {
+        toast.success(result.message);
+        setShowDetailModal(false);
+        setAdminReason("");
+        refetch();
+      } else {
+        toast.error(result.message || `Failed to ${action} withdrawal`);
+      }
+    } catch (error: any) {
+      toast.error(error.data?.message || `Error while ${action}ing withdrawal`);
+    }
   };
 
   // No longer need local filtering or pagination as it's done on backend
@@ -479,6 +512,42 @@ export function WalletWithdrawalsTab() {
                 <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
                   <p className="text-sm text-red-600 font-medium">Failure Reason</p>
                   <p className="text-sm text-red-600">{selectedWithdrawal.failureReason}</p>
+                </div>
+              )}
+
+              {selectedWithdrawal.status === "pending" && (
+                <div className="border-t pt-4 space-y-4">
+                  <div>
+                    <p className="text-sm font-semibold mb-2">Processing Actions</p>
+                    <Textarea 
+                      placeholder="Add notes or rejection reason..." 
+                      value={adminReason}
+                      onChange={(e) => setAdminReason(e.target.value)}
+                      className="min-h-[80px]"
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <Button 
+                      className="flex-1 bg-green-600 hover:bg-green-700" 
+                      onClick={() => handleAction('approve')}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                      Approve Payout
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      className="flex-1"
+                      onClick={() => handleAction('reject')}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
+                      Reject Request
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground text-center">
+                    Note: Approving will mark it as completed. Rejecting will refund the amount to the user's wallet.
+                  </p>
                 </div>
               )}
             </div>

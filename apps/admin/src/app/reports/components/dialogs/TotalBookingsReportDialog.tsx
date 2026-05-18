@@ -19,7 +19,11 @@ export const TotalBookingsReportDialog = ({ isOpen, onClose }: TotalBookingsRepo
         <DialogHeader>
           <DialogTitle>Total Bookings Report</DialogTitle>
           <DialogDescription>
-            Overview of all bookings across vendors.</DialogDescription>
+            Overview of all bookings across vendors.
+            <div className="mt-2 p-2 bg-muted/50 rounded-md text-xs font-mono text-muted-foreground border border-border/50">
+              Formula: Total Bookings = Count of all booked appointments
+            </div>
+          </DialogDescription>
         </DialogHeader>
         <div className="py-4">
           <div ref={tableRef}>

@@ -1054,10 +1054,10 @@ export default function CalendarPage() {
 
                           <div className="flex justify-between items-center py-1">
                             <div className="flex items-center">
-                              <div className="w-2 h-2 rounded-full bg-secondary mr-1.5"></div>
+                              <div className="w-2 h-2 rounded-full bg-green-500 mr-1.5"></div>
                               <span className="text-muted-foreground text-xs">Completed</span>
                             </div>
-                            <span className="text-xs font-medium text-secondary-foreground">
+                            <span className="text-xs font-medium text-green-600">
                               {appointments.filter((a) => a.status === 'completed').length}
                             </span>
                           </div>
@@ -1074,10 +1074,21 @@ export default function CalendarPage() {
 
                           <div className="flex justify-between items-center py-1">
                             <div className="flex items-center">
-                              <div className="w-2 h-2 rounded-full bg-primary/30 mr-1.5"></div>
+                              <div className="w-2 h-2 rounded-full bg-indigo-500 mr-1.5"></div>
+                              <span className="text-muted-foreground text-xs">Partially Completed</span>
+                            </div>
+                            <span className="text-xs font-medium text-indigo-600">
+                              {appointments.filter((a) => a.status === 'partially-completed').length}
+                            </span>
+                          </div>
+
+
+                          <div className="flex justify-between items-center py-1">
+                            <div className="flex items-center">
+                              <div className="w-2 h-2 rounded-full bg-red-500 mr-1.5"></div>
                               <span className="text-muted-foreground text-xs">Cancelled</span>
                             </div>
-                            <span className="text-xs font-medium text-primary/50">
+                            <span className="text-xs font-medium text-red-600">
                               {appointments.filter((a) => a.status === 'cancelled').length}
                             </span>
                           </div>

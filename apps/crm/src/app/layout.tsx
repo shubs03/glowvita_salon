@@ -10,6 +10,7 @@ import './globals.css';
 import { MarketingLayout } from '@/components/MarketingLayout';
 import { CrmLayout } from '@/components/CrmLayout';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { CrmAuthInitializer } from '@/components/CrmAuthInitializer';
 import { Toaster } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
@@ -81,15 +82,8 @@ function SubscriptionCheck({ children }: { children: React.ReactNode }) {
   }, [isCrmAuthenticated, refetch]);
 
   // Show loading state only for the initial check
-  if (isLoading && !initialCheckComplete) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <Loader2 className="w-12 h-12 text-primary animate-spin" />
-        <p className="text-muted-foreground">Loading your account...</p>
-      </div>
-    );
-  }
-
+  // Removed loading spinner here as CrmAuthInitializer handles it
+  
   return <>{children}</>;
 }
 
@@ -195,15 +189,17 @@ export default function RootLayout({
       </head>
       <body className="bg-background text-foreground">
         <StoreProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {layoutContent}
-            <Toaster position="top-center" />
-          </ThemeProvider>
+          <CrmAuthInitializer>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              {layoutContent}
+              <Toaster position="top-center" />
+            </ThemeProvider>
+          </CrmAuthInitializer>
         </StoreProvider>
       </body>
     </html>

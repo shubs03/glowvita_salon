@@ -20,6 +20,9 @@ export const ConsolidatedSalesReportDialog = ({ isOpen, onClose }: ConsolidatedS
           <DialogTitle>Consolidated Sales Report</DialogTitle>
           <DialogDescription>
             Complete overview of total platform revenue across vendors and suppliers.
+            <div className="mt-2 p-2 bg-muted/50 rounded-md text-xs font-mono text-muted-foreground border border-border/50">
+              Formula: Total Business = Total Service Amount + Total Product Amount + Service Tax + Product Tax/GST + Product Platform Fee + Service Platform Fees + Subscription Amount + SMS Amount
+            </div>
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
