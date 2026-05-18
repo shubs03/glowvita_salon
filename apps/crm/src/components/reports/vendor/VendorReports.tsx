@@ -22,6 +22,7 @@ import { SalesByProductTable } from './tables/SalesByProductTable';
 import { AllAppointmentsByStaffTable } from './tables/AllAppointmentsByStaffTable';
 import { SettlementSummaryTable } from './tables/SettlementSummaryTable';
 import { StaffCommissionTable } from './tables/StaffCommissionTable';
+import { ConsolidatedSalesReportTable } from './tables/ConsolidatedSalesReportTable';
 
 // Import constants, hooks, and modal wrapper
 import { VENDOR_REPORTS_DATA } from './constants';
@@ -47,6 +48,7 @@ export default function VendorReports() {
   const [completedAppointmentsRefresh, setCompletedAppointmentsRefresh] = useState(0);
   const [cancelledAppointmentsRefresh, setCancelledAppointmentsRefresh] = useState(0);
   const [settlementSummaryRefresh, setSettlementSummaryRefresh] = useState(0);
+  const [consolidatedSalesRefresh, setConsolidatedSalesRefresh] = useState(0);
 
   // Report registry - maps report titles to their configuration
   const reportRegistry: Record<string, {
@@ -248,6 +250,18 @@ export default function VendorReports() {
           onFiltersChange={(newFilters: any) => updateFilter('productSummary', newFilters)}
         />
       )
+    },
+    "Consolidated Sales Report": {
+      title: "Consolidated Sales Report",
+      description: "Comprehensive financial report aggregating service, product, subscription, and SMS revenue.",
+      component: (
+        <ConsolidatedSalesReportTable
+          startDate={filters.consolidatedSales.startDate || undefined}
+          endDate={filters.consolidatedSales.endDate || undefined}
+          triggerRefresh={consolidatedSalesRefresh}
+          onFiltersChange={(newFilters: any) => updateFilter('consolidatedSales', newFilters)}
+        />
+      )
     }
   };
 
@@ -422,6 +436,7 @@ export default function VendorReports() {
                 "Inventory / Stock Report": 'productSummary',
                 "Category-wise Product Report": 'productSummary',
                 "Settlement Summary Report": 'settlementSummary',
+                "Consolidated Sales Report": 'consolidatedSales',
               };
               
               const key = reportKeys[openReportTitle];

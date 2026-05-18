@@ -252,6 +252,7 @@ export const SalesByCustomerTable = ({ startDate, endDate, client, service, staf
                 <TableHead>Offers</TableHead>
                 <TableHead>Net Sale</TableHead>
                 <TableHead>Tax</TableHead>
+                <TableHead>Platform Fee</TableHead>
                 <TableHead>Total Sales</TableHead>
               </TableRow>
             </TableHeader>
@@ -269,6 +270,9 @@ export const SalesByCustomerTable = ({ startDate, endDate, client, service, staf
                   </TableCell>
                   <TableCell>
                     <Skeleton className="h-4 w-20" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-24" />
                   </TableCell>
                   <TableCell>
                     <Skeleton className="h-4 w-24" />
@@ -427,6 +431,7 @@ export const SalesByCustomerTable = ({ startDate, endDate, client, service, staf
               <TableHead>Offers</TableHead>
               <TableHead>Net Sale</TableHead>
               <TableHead>Tax</TableHead>
+              <TableHead>Platform Fee</TableHead>
               <TableHead>Total Sales</TableHead>
             </TableRow>
           </TableHeader>
@@ -441,6 +446,7 @@ export const SalesByCustomerTable = ({ startDate, endDate, client, service, staf
                   <TableCell>₹{typeof item.offers === 'number' ? item.offers.toFixed(2) : '0.00'}</TableCell>
                   <TableCell>₹{typeof item.netSale === 'number' ? item.netSale.toFixed(2) : '0.00'}</TableCell>
                   <TableCell>₹{typeof item.tax === 'number' ? item.tax.toFixed(2) : '0.00'}</TableCell>
+                  <TableCell>₹{typeof item.platformFee === 'number' ? item.platformFee.toFixed(2) : '0.00'}</TableCell>
                   <TableCell>₹{typeof item.totalSales === 'number' ? item.totalSales.toFixed(2) : '0.00'}</TableCell>
                 </TableRow>
               );
@@ -465,6 +471,9 @@ export const SalesByCustomerTable = ({ startDate, endDate, client, service, staf
               </TableCell>
               <TableCell>
                 ₹{paginatedCustomers.reduce((sum: number, item: any) => sum + (item.tax || 0), 0).toFixed(2)}
+              </TableCell>
+              <TableCell>
+                ₹{paginatedCustomers.reduce((sum: number, item: any) => sum + (item.platformFee || 0), 0).toFixed(2)}
               </TableCell>
               <TableCell>
                 ₹{paginatedCustomers.reduce((sum: number, item: any) => sum + (item.totalSales || 0), 0).toFixed(2)}
