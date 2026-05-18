@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
+import ClientOrderModel from '@repo/lib/models/user/ClientOrder.model';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import StaffModel from '@repo/lib/models/Vendor/Staff.model';
 import VendorSettlementPaymentModel from '@repo/lib/models/Vendor/VendorSettlementPayment.model';
@@ -27,7 +28,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 
         let vendorIdToUse = null;
 
-        if (userRole === 'vendor' || userRole === 'doctor') {
+        if (userRole === 'vendor' || userRole === 'doctor' || userRole === 'supplier') {
             vendorIdToUse = userId;
         } else if (userRole === 'staff') {
             const staffMember = await StaffModel.findById(userId);
@@ -101,6 +102,16 @@ export const GET = authMiddlewareCrm(async (req) => {
             ]
         });
 
+        const prevOrders = await ClientOrderModel.find({
+            vendorId: vendorObjectId,
+            createdAt: { $lt: startDate },
+            status: { $in: ['Delivered', 'Shipped', 'Processing', 'Packed'] },
+            $or: [
+                { paymentMethod: 'pay-online' },
+                { paymentMethod: 'cash-on-delivery' }
+            ]
+        });
+
         const prevPayments = await VendorSettlementPaymentModel.find({
             vendorId: vendorObjectId,
             paymentDate: { $lt: startDate }
@@ -116,6 +127,15 @@ export const GET = authMiddlewareCrm(async (req) => {
                 openingAdminOwesVendor += (appt.totalAmount || 0);
             } else {
                 openingVendorOwesAdmin += (appt.platformFee || 0) + (appt.serviceTax || 0);
+            }
+        });
+
+        prevOrders.forEach(order => {
+            if (order.paymentMethod === 'pay-online') {
+                const vendorShare = (order.totalAmount || 0) - (order.platformFeeAmount || 0) - (order.gstAmount || 0);
+                openingAdminOwesVendor += vendorShare;
+            } else {
+                openingVendorOwesAdmin += (order.platformFeeAmount || 0) + (order.gstAmount || 0);
             }
         });
 
@@ -145,22 +165,40 @@ export const GET = authMiddlewareCrm(async (req) => {
             })
             .sort({ date: -1 });
 
+        // Fetch current period orders
+        const orders = await ClientOrderModel.find({
+            vendorId: vendorObjectId,
+            createdAt: { $gte: startDate, $lte: endDate },
+            status: { $in: ['Delivered', 'Shipped', 'Processing', 'Packed'] },
+            $or: [
+                { paymentMethod: 'pay-online' },
+                { paymentMethod: 'cash-on-delivery' }
+            ]
+        })
+            .populate({
+                path: 'userId',
+                select: 'firstName lastName email mobileNo',
+                strictPopulate: false
+            })
+            .sort({ createdAt: -1 });
+
         // 3. Fetch current period payment history
         const paymentHistory = await VendorSettlementPaymentModel.find({
             vendorId: vendorObjectId,
             paymentDate: { $gte: startDate, $lte: endDate }
         }).sort({ paymentDate: -1 });
 
-        // Group appointments by vendor
+        // Group appointments and orders by vendor
         const vendorSettlementsMap = new Map();
 
         // Initialize with default or previous balance data
         const initialSettlement = {
             vendorId: vendorObjectId.toString(),
-            vendorName: 'N/A', // Will be updated by appointments or fallback
+            vendorName: 'N/A', 
             contactNo: 'N/A',
             ownerName: 'N/A',
             appointments: [],
+            orders: [],
             totalAmount: 0,
             platformFeeTotal: 0,
             serviceTaxTotal: 0,
@@ -175,9 +213,8 @@ export const GET = authMiddlewareCrm(async (req) => {
             paymentHistory: []
         };
 
-        // If we have appointments, we'll get vendor info from them
-        // If not, we should still try to get it from Vendor model for empty settlements
-        if (appointments.length === 0) {
+        // If we have data, we'll get vendor info from them
+        if (appointments.length === 0 && orders.length === 0) {
             const vendor = await VendorModel.findById(vendorObjectId);
             if (vendor) {
                 initialSettlement.vendorName = vendor.businessName;
@@ -188,6 +225,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 
         vendorSettlementsMap.set(vendorObjectId.toString(), initialSettlement);
 
+        // Process Appointments
         appointments.forEach(appt => {
             const vendorId = appt.vendorId?._id?.toString() || appt.vendorId?.toString();
             if (!vendorId) return;
@@ -211,6 +249,7 @@ export const GET = authMiddlewareCrm(async (req) => {
                 paymentStatus: appt.paymentStatus || 'pending',
                 paymentMethod: appt.paymentMethod || 'N/A',
                 mode: appt.mode || 'offline',
+                type: 'appointment'
             };
 
             settlement.appointments.push(appointmentData);
@@ -229,6 +268,46 @@ export const GET = authMiddlewareCrm(async (req) => {
             }
         });
 
+        // Process Orders
+        orders.forEach(order => {
+            const vendorId = order.vendorId?.toString();
+            if (!vendorId) return;
+
+            const settlement = vendorSettlementsMap.get(vendorId);
+            if (!settlement) return;
+
+            const orderData = {
+                _id: order._id.toString(),
+                orderId: order.orderId || order._id.toString(),
+                date: order.createdAt,
+                clientName: order.userId ? `${order.userId.firstName} ${order.userId.lastName}` : 'N/A',
+                productNames: order.items.map(i => i.name).join(', '),
+                totalAmount: order.totalAmount || 0,
+                platformFee: order.platformFeeAmount || 0,
+                gstAmount: order.gstAmount || 0,
+                shippingAmount: order.shippingAmount || 0,
+                finalAmount: order.totalAmount || 0,
+                status: order.status || 'Pending',
+                paymentMethod: order.paymentMethod === 'pay-online' ? 'Pay Online' : 'Cash on Delivery',
+                type: 'order',
+            };
+
+            settlement.orders.push(orderData);
+
+            const fees = (order.platformFeeAmount || 0) + (order.gstAmount || 0);
+            const vendorShare = (order.totalAmount || 0) - fees;
+
+            settlement.totalAmount += order.totalAmount || 0;
+            settlement.platformFeeTotal += order.platformFeeAmount || 0;
+            settlement.serviceTaxTotal += order.gstAmount || 0; 
+
+            if (order.paymentMethod === 'pay-online') {
+                settlement.adminOwesVendor += vendorShare;
+            } else {
+                settlement.vendorOwesAdmin += fees;
+            }
+        });
+
         // Add payment history
         paymentHistory.forEach(payment => {
             const vId = payment.vendorId.toString();
@@ -240,10 +319,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 
         // Calculate final amounts with Ledger Logic
         const settlements = Array.from(vendorSettlementsMap.values()).map(settlement => {
-            // Period Balance = Amount earned in period - Fees in period
             const periodNet = settlement.adminOwesVendor - settlement.vendorOwesAdmin;
-
-            // Total Ledger Balance including opening balance
             const totalNetBalance = settlement.openingBalance + periodNet;
 
             const totalPaidToVendorInPeriod = settlement.paymentHistory
@@ -251,19 +327,16 @@ export const GET = authMiddlewareCrm(async (req) => {
             const totalPaidToAdminInPeriod = settlement.paymentHistory
                 .filter(p => p.type === "Payment to Admin").reduce((acc, p) => acc + p.amount, 0);
 
-            // Closing Balance (Positive = Admin owes Vendor, Negative = Vendor owes Admin)
             const closingBalance = totalNetBalance - totalPaidToVendorInPeriod + totalPaidToAdminInPeriod;
 
-            settlement.netSettlement = totalNetBalance; // Total amount to be settled (Opening + New)
+            settlement.netSettlement = totalNetBalance; 
 
             if (closingBalance > 0) {
-                // Admin owes vendor
                 settlement.adminReceivableAmount = 0;
                 settlement.vendorAmount = closingBalance;
                 settlement.amountPending = closingBalance;
                 settlement.status = closingBalance <= 0 ? 'Paid' : (totalPaidToVendorInPeriod > 0 ? 'Partially Paid' : 'Pending');
             } else if (closingBalance < 0) {
-                // Vendor owes admin
                 const vendorOwes = Math.abs(closingBalance);
                 settlement.adminReceivableAmount = vendorOwes;
                 settlement.vendorAmount = 0;

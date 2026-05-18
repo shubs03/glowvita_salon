@@ -91,13 +91,13 @@ export const GET = authMiddlewareAdmin(async (req) => {
       };
     }
 
-    // Create the main filter for client orders - focusing on delivered orders with cash-on-delivery
+    // Show ALL online (non-COD) orders that are not cancelled
     const regionQuery = getRegionQuery(req.user, regionId);
     const mainFilter = {
       ...dateFilter,
       ...regionQuery,
-      paymentMethod: { $ne: 'cash-on-delivery' }, // Everything except COD (Online payments)
-      status: 'Delivered', // Only include delivered orders
+      paymentMethod: { $ne: 'cash-on-delivery' },
+      status: { $ne: 'Cancelled' }, // Show everything except Cancelled
     };
 
     // City filter will be applied after lookups
@@ -277,7 +277,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Get unique cities for filter dropdown
     const cityPipeline = [
-      { $match: { ...regionQuery, paymentMethod: { $ne: 'cash-on-delivery' }, status: 'Delivered' } },
+      { $match: { ...regionQuery, paymentMethod: { $ne: 'cash-on-delivery' }, status: { $ne: 'Cancelled' } } },
       {
         $lookup: {
           from: "crm_products",
@@ -324,7 +324,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Get unique business names for filter dropdown
     const businessNamePipeline = [
-      { $match: { ...regionQuery, paymentMethod: { $ne: 'cash-on-delivery' }, status: 'Delivered' } },
+      { $match: { ...regionQuery, paymentMethod: { $ne: 'cash-on-delivery' }, status: { $ne: 'Cancelled' } } },
       {
         $lookup: {
           from: "crm_products",
@@ -369,15 +369,15 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const businessNamesResult = await ClientOrderModel.aggregate(businessNamePipeline);
     const businessNames = businessNamesResult.map(item => item._id).filter(name => name); // Filter out null/undefined business names
 
-    // Calculate aggregated totals
-    const aggregatedTotals = results.reduce((totals, entity) => {
+    // Calculate aggregated totals from resultsWithPayments (includes Actually Paid + Pending Amount)
+    const aggregatedTotals = resultsWithPayments.reduce((totals, entity) => {
       totals.productGrossAmount += entity["Product Gross Amount"] || 0;
       totals.productPlatformFee += entity["Product Platform Fee"] || 0;
       totals.productTax += entity["Product Tax (₹)"] || 0;
       totals.productTotalAmount += entity["Product Total Amount"] || 0;
-      totals.total = entity.Total ? (totals.total + entity.Total) : totals.total;
-      totals.totalPaid = (totals.totalPaid || 0) + (entity["Actually Paid"] || 0);
-      totals.totalPending = (totals.totalPending || 0) + (entity["Pending Amount"] || 0);
+      totals.total += entity["Total"] || 0;
+      totals.totalPaid += entity["Actually Paid"] || 0;
+      totals.totalPending += entity["Pending Amount"] || 0;
       totals.orderCount += entity.orderCount || 0;
       totals.deliveredOrders += entity.deliveredOrders || 0;
       return totals;
@@ -386,7 +386,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       productPlatformFee: 0,
       productTax: 0,
       productTotalAmount: 0,
-      total: 0, // This will be the sum of all vendor/supplier payouts
+      total: 0,
       totalPaid: 0,
       totalPending: 0,
       orderCount: 0,

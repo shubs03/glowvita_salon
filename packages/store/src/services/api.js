@@ -1529,7 +1529,7 @@ export const glowvitaApi = createApi({
         method: "GET",
         params: params || {}
       }),
-      transformResponse: (response) => (response && response.success ? response.data : {}),
+      transformResponse: (response) => (response && response.success ? (response.data || response) : {}),
     }),
 
     // Booking Summary Reports Endpoints
@@ -1540,7 +1540,7 @@ export const glowvitaApi = createApi({
         params: params || {}
       }),
       providesTags: ["SellingServicesReport"],
-      transformResponse: (response) => (response && response.success ? response.data : {}),
+      transformResponse: (response) => (response && response.success ? (response.data || response) : {}),
     }),
 
     getTotalBookingsReport: builder.query({
@@ -1550,7 +1550,7 @@ export const glowvitaApi = createApi({
         params: params || {}
       }),
       providesTags: ["TotalBookingsReport"],
-      transformResponse: (response) => (response && response.success ? response.data : {}),
+      transformResponse: (response) => (response && response.success ? (response.data || response) : {}),
     }),
 
     getCompletedBookingsReport: builder.query({
@@ -1560,7 +1560,7 @@ export const glowvitaApi = createApi({
         params: params || {}
       }),
       providesTags: ["CompletedBookingsReport"],
-      transformResponse: (response) => (response && response.success ? response.data : {}),
+      transformResponse: (response) => (response && response.success ? (response.data || response) : {}),
     }),
 
     getCancellationReport: builder.query({
@@ -1656,7 +1656,7 @@ export const glowvitaApi = createApi({
         params: params || {}
       }),
       providesTags: ["VendorPayableReport"],
-      transformResponse: (response) => (response && response.success ? response.data : {}),
+      transformResponse: (response) => response,
     }),
 
     // Vendor Payout Settlement Report
@@ -1667,7 +1667,7 @@ export const glowvitaApi = createApi({
         params: params || {}
       }),
       providesTags: ["VendorPayoutSettlementReport"],
-      transformResponse: (response) => (response && response.success ? response.data : {}),
+      transformResponse: (response) => response,
     }),
 
     // Vendor Payout Settlement Report Product
@@ -1678,7 +1678,7 @@ export const glowvitaApi = createApi({
         params: params || {}
       }),
       providesTags: ["VendorPayoutSettlementReportProduct"],
-      transformResponse: (response) => (response && response.success ? response.data : {}),
+      transformResponse: (response) => response,
     }),
 
     // Vendor Payable to Admin Report Product
@@ -1689,7 +1689,7 @@ export const glowvitaApi = createApi({
         params: params || {}
       }),
       providesTags: ["VendorPayableReportProduct"],
-      transformResponse: (response) => (response && response.success ? response.data : {}),
+      transformResponse: (response) => response,
     }),
 
     // Referral Report

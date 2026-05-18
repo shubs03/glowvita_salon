@@ -1,5 +1,6 @@
 import _db from "@repo/lib/db";
 import OrderModel from "@repo/lib/models/Vendor/Order.model";
+import ProductModel from "@repo/lib/models/Vendor/Product.model";
 import TaxFeeSettings from "@repo/lib/models/admin/TaxFeeSettings";
 import { authMiddlewareAdmin } from '../../../../../middlewareAdmin';
 import { buildRegionQueryFromRequest } from "@repo/lib";

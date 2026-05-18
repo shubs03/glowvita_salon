@@ -72,7 +72,8 @@ export const VendorPayableReportTable = () => {
       `${item["Service Tax (₹)"] || 0}`,
       `${item["Total"] || 0}`,
       `${item["Actually Collected"] || 0}`,
-      `${item["Pending Amount"] || 0}`
+      `${item["Pending Amount"] || 0}`,
+      `${item["appointmentCount"] || 0}`
     ]
   );
 
@@ -271,7 +272,7 @@ export const VendorPayableReportTable = () => {
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                   No Vendor Payable data available.
                 </TableCell>
               </TableRow>
@@ -406,13 +407,14 @@ export const VendorPayableReportTable = () => {
               <TableHead>Total Payable</TableHead>
               <TableHead>Actually Collected</TableHead>
               <TableHead>Pending</TableHead>
+              <TableHead>Appointments</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedData.map((item: any, index: number) => (
               <TableRow key={startIndex + index}>
                 <TableCell className="font-medium">{item["Payee Type"]}</TableCell>
-                <TableCell>{item["Payee Name"]}</TableCell>
+                <TableCell className="font-medium">{item["Payee Name"]}</TableCell>
                 <TableCell>₹{item["Service Gross Amount"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Service Platform Fee"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Service Tax (₹)"]?.toFixed(2)}</TableCell>
@@ -421,6 +423,7 @@ export const VendorPayableReportTable = () => {
                 <TableCell className={`font-semibold ${(item["Pending Amount"] || 0) > 0 ? 'text-red-700' : 'text-gray-500'}`}>
                   ₹{item["Pending Amount"]?.toFixed(2) || 0}
                 </TableCell>
+                <TableCell className="text-center">{item["appointmentCount"] || 0}</TableCell>
               </TableRow>
             ))}
             {/* Aggregated Totals Row */}
@@ -431,8 +434,9 @@ export const VendorPayableReportTable = () => {
                 <TableCell>₹{aggregatedTotals.platformFee?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.serviceTax?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.total?.toFixed(2)}</TableCell>
-                <TableCell>₹{aggregatedTotals.totalCollected?.toFixed(2)}</TableCell>
-                <TableCell>₹{aggregatedTotals.totalPending?.toFixed(2)}</TableCell>
+                <TableCell className="text-green-700">₹{aggregatedTotals.totalCollected?.toFixed(2)}</TableCell>
+                <TableCell className="text-red-700">₹{aggregatedTotals.totalPending?.toFixed(2)}</TableCell>
+                <TableCell className="text-center">{aggregatedTotals.appointmentCount || 0}</TableCell>
               </TableRow>
             )}
           </TableBody>
