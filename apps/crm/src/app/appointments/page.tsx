@@ -89,15 +89,30 @@ export default function AppointmentsPage() {
 
   // Filter and paginate appointments
   const filteredAppointments = useMemo(() => {
-    return appointments.filter(
-      (appt) =>
-        (appt.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          appt.service?.toLowerCase().includes(searchTerm.toLowerCase())) &&
-        (statusFilter === "all" ||
-          appt.status === statusFilter ||
-          (statusFilter === "completed without payment" &&
-            appt.status === "completed without payment"))
-    );
+    return appointments.filter((appt) => {
+      const matchesSearch =
+        appt.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        appt.service?.toLowerCase().includes(searchTerm.toLowerCase());
+
+      if (!matchesSearch) return false;
+      if (statusFilter === "all") return true;
+
+      const methodStr = String((appt as any).paymentMethod || appt.payment?.paymentMethod || '').toLowerCase();
+      const isOnline = methodStr.includes('online');
+
+      if (statusFilter === "pay_online") {
+        return isOnline;
+      }
+      if (statusFilter === "pay_at_salon") {
+        return !isOnline;
+      }
+
+      return (
+        appt.status === statusFilter ||
+        (statusFilter === "completed without payment" &&
+          appt.status === "completed without payment")
+      );
+    });
   }, [appointments, searchTerm, statusFilter]);
 
   const lastItemIndex = currentPage * itemsPerPage;

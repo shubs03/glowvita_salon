@@ -82,15 +82,14 @@ export const GET = authMiddlewareAdmin(async (req) => {
       };
     }
 
-    // Create the main filter for appointments
+    // Create the main filter - show ALL 'Pay at Salon' appointments
+    // Removed strict status filter to show everything
     const regionQuery = getRegionQuery(req.user, regionId);
     const mainFilter = {
       ...dateFilter,
       ...regionQuery,
-      mode: 'online', // Only online appointments
-      paymentMethod: 'Pay at Salon', // Only Pay at Salon appointments
-      status: { $in: ['completed'] }, // Only include completed appointments
-      paymentStatus: { $in: ['completed'] } // Only include completed payment status
+      paymentMethod: 'Pay at Salon',
+      status: { $nin: ['cancelled', 'temp-locked'] }, // Show all except cancelled/temp-locked
     };
 
     console.log("Main filter for appointments:", mainFilter);
@@ -191,7 +190,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Get unique cities for filter dropdown
     const cityPipeline = [
-      { $match: { ...regionQuery, mode: 'online', paymentMethod: 'Pay at Salon', status: { $in: ['completed'] }, paymentStatus: { $in: ['completed'] } } },
+      { $match: { ...regionQuery, paymentMethod: 'Pay at Salon', status: { $nin: ['cancelled', 'temp-locked'] } } },
       {
         $lookup: {
           from: "vendors",
@@ -210,7 +209,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Get unique vendors for filter dropdown
     const vendorPipeline = [
-      { $match: { ...regionQuery, mode: 'online', paymentMethod: 'Pay at Salon', status: { $in: ['completed'] }, paymentStatus: { $in: ['completed'] } } },
+      { $match: { ...regionQuery, paymentMethod: 'Pay at Salon', status: { $nin: ['cancelled', 'temp-locked'] } } },
       {
         $lookup: {
           from: "vendors",
@@ -227,18 +226,16 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const vendorsResult = await AppointmentModel.aggregate(vendorPipeline);
     const vendorNames = vendorsResult.map(item => item._id).filter(vendor => vendor); // Filter out null/undefined vendors
 
-    // Calculate aggregated totals
-    const aggregatedTotals = results.reduce((totals, vendor) => {
+    // Calculate aggregated totals from resultsWithPayments (includes Actually Collected + Pending Amount)
+    const aggregatedTotals = resultsWithPayments.reduce((totals, vendor) => {
       totals.totalAmount += vendor["Service Gross Amount"] || 0;
       totals.platformFee += vendor["Service Platform Fee"] || 0;
       totals.serviceTax += vendor["Service Tax (₹)"] || 0;
-      totals.total = vendor.Total ? (totals.total + vendor.Total) : totals.total;
-      totals.totalCollected = (totals.totalCollected || 0) + (vendor["Actually Collected"] || 0);
-      totals.totalPending = (totals.totalPending || 0) + (vendor["Pending Amount"] || 0);
+      totals.total += vendor["Total"] || 0;
+      totals.totalCollected += vendor["Actually Collected"] || 0;
+      totals.totalPending += vendor["Pending Amount"] || 0;
       totals.appointmentCount += vendor.appointmentCount || 0;
       totals.completedAppointments += vendor.completedAppointments || 0;
-      totals.confirmedAppointments += vendor.confirmedAppointments || 0;
-      totals.scheduledAppointments += vendor.scheduledAppointments || 0;
       return totals;
     }, {
       totalAmount: 0,
@@ -248,9 +245,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
       totalCollected: 0,
       totalPending: 0,
       appointmentCount: 0,
-      completedAppointments: 0,
-      confirmedAppointments: 0,
-      scheduledAppointments: 0
+      completedAppointments: 0
     });
 
     return NextResponse.json({

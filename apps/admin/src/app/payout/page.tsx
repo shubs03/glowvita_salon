@@ -416,6 +416,17 @@ interface Appointment {
   paymentMethod: string;
 }
 
+interface Order {
+  _id: string;
+  date: string;
+  clientName: string;
+  productNames: string;
+  finalAmount: number;
+  platformFee: number;
+  gstAmount: number;
+  paymentMethod: string;
+}
+
 interface PayoutData {
   id: string;
   vendorId: string;
@@ -424,12 +435,21 @@ interface PayoutData {
   ownerName: string;
   adminReceivableAmount: number;
   vendorAmount: number;
+  adminOwesVendor?: number;
+  vendorOwesAdmin?: number;
   amountPending: number;
   totalAmount: number;
   netSettlement: number;
   status: string;
   paymentHistory: Transaction[];
   appointments: Appointment[];
+  orders?: Order[];
+  productPlatformFeeTotal?: number;
+  productGstTotal?: number;
+  productAdminOwesVendor?: number;
+  productVendorOwesAdmin?: number;
+  serviceTotalAmount?: number;
+  productTotalAmount?: number;
   totalVolume: number;
   totalToSettle: number;
   amountPaid: number;
@@ -880,7 +900,7 @@ export default function PayoutPage() {
                   <TableHeader>
                     <TableHead className="w-[50px]"></TableHead>
                     <TableHead>Salon Name</TableHead>
-                    <TableHead>Total Volume (₹)</TableHead>
+                    <TableHead>Total Amount (Service + Product)</TableHead>
                     <TableHead>Settlement Trend</TableHead>
                     <TableHead>Total to Settle (₹)</TableHead>
                     <TableHead>Paid (₹)</TableHead>
@@ -928,7 +948,13 @@ export default function PayoutPage() {
                               </div>
                             )}
                           </TableCell>
-                          <TableCell>₹{payout.totalVolume.toFixed(2)}</TableCell>
+                          <TableCell>
+                            <div className="font-medium">₹{((payout.serviceTotalAmount || 0) + (payout.productTotalAmount || 0)).toFixed(2)}</div>
+                            <div className="text-[11px] text-muted-foreground mt-1">
+                              Service: ₹{(payout.serviceTotalAmount || payout.appointments.reduce((sum, a) => sum + (a.finalAmount || 0), 0)).toFixed(2)}
+                              {((payout.productTotalAmount || 0) > 0) ? ` · Product: ₹${(payout.productTotalAmount || payout.orders?.reduce((sum, o) => sum + (o.finalAmount || 0), 0) || 0).toFixed(2)}` : ''}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <div className={`text-xs font-semibold px-2 py-0.5 rounded-full inline-block ${payout.netSettlement > 0 ? 'bg-orange-100 text-orange-700' : payout.netSettlement < 0 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
                               {payout.netSettlement > 0 ? 'Admin → Vendor' : payout.netSettlement < 0 ? 'Vendor → Admin' : 'Balanced'}
@@ -975,15 +1001,33 @@ export default function PayoutPage() {
                                 <DialogContent className="max-w-2xl">
                                   <DialogHeader>
                                     <DialogTitle className="text-xl">{payout.vendorName} - Transaction History</DialogTitle>
-                                    <div className="grid grid-cols-3 gap-4 pt-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4">
                                       <div className="bg-orange-50 p-4 rounded-lg">
-                                        <p className="text-xs text-orange-700 font-medium">Admin Owes (Online)</p>
-                                        <p className="text-lg font-bold text-orange-900">₹{(payout.appointments.filter(a => a.paymentMethod === 'Pay Online').reduce((sum, a) => sum + (a.finalAmount - a.platformFee - a.serviceTax), 0)).toFixed(2)}</p>
+                                        <p className="text-xs text-orange-700 font-medium">Service Admin Owes (Online)</p>
+                                        <p className="text-lg font-bold text-orange-900">₹{(payout.adminOwesVendor || 0).toFixed(2)}</p>
                                       </div>
                                       <div className="bg-green-50 p-4 rounded-lg">
-                                        <p className="text-xs text-green-700 font-medium">Vendor Owes (Fees)</p>
-                                        <p className="text-lg font-bold text-green-900">₹{(payout.appointments.filter(a => a.paymentMethod === 'Pay at Salon').reduce((sum, a) => sum + (a.platformFee + a.serviceTax), 0)).toFixed(2)}</p>
+                                        <p className="text-xs text-green-700 font-medium">Service Vendor Owes (Fees)</p>
+                                        <p className="text-lg font-bold text-green-900">₹{(payout.vendorOwesAdmin || 0).toFixed(2)}</p>
                                       </div>
+                                      <div className="bg-purple-50 p-4 rounded-lg">
+                                        <p className="text-xs text-purple-700 font-medium">Product Admin Owes</p>
+                                        <p className="text-lg font-bold text-purple-900">₹{(payout.productAdminOwesVendor || 0).toFixed(2)}</p>
+                                      </div>
+                                      <div className="bg-teal-50 p-4 rounded-lg">
+                                        <p className="text-xs text-teal-700 font-medium">Product Vendor Owes</p>
+                                        <p className="text-lg font-bold text-teal-900">₹{(payout.productVendorOwesAdmin || 0).toFixed(2)}</p>
+                                      </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-4 pt-4">
+                                      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                                        <p className="text-xs text-slate-700 font-medium">Total Amount to {payout.netSettlement > 0 ? 'Payout' : 'Collect'}</p>
+                                        <p className="text-xl font-bold text-slate-900">
+                                          ₹{(Math.abs((payout.netSettlement > 0 ? (payout.adminOwesVendor || 0) + (payout.productAdminOwesVendor || 0) : (payout.vendorOwesAdmin || 0) + (payout.productVendorOwesAdmin || 0)))).toFixed(2)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-4 pt-4">
                                       <div className="bg-blue-50 p-4 rounded-lg">
                                         <p className="text-xs text-blue-700 font-medium">Pending Balance</p>
                                         <div className="flex items-center justify-between">

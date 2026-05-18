@@ -60,7 +60,8 @@ export const VendorPayableReportProductTable = () => {
     `${item["product Tax/gst"]}`,
     `${item["Total"]}`,
     `${item["Actually Collected"] || 0}`,
-    `${item["Pending Amount"] || 0}`
+    `${item["Pending Amount"] || 0}`,
+    `${item["orderCount"] || 0}`
   ]);
 
   if (isLoading) {
@@ -326,7 +327,7 @@ export const VendorPayableReportProductTable = () => {
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   No vendor payable to admin product data available.
                 </TableCell>
               </TableRow>
@@ -445,18 +446,19 @@ export const VendorPayableReportProductTable = () => {
               <TableHead>Payee Type</TableHead>
               <TableHead>Payee Name</TableHead>
               <TableHead>Product Gross Amount</TableHead>
-              <TableHead>product Platform Fee</TableHead>
-              <TableHead>product Tax/gst</TableHead>
+              <TableHead>Product Platform Fee</TableHead>
+              <TableHead>Product Tax/GST</TableHead>
               <TableHead>Total Payable</TableHead>
               <TableHead>Actually Collected</TableHead>
               <TableHead>Pending Amount</TableHead>
+              <TableHead>Orders</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedData.map((item: any, index: number) => (
               <TableRow key={startIndex + index}>
-                <TableCell>{item["Payee Type"]}</TableCell>
-                <TableCell>{item["Payee Name"]}</TableCell>
+                <TableCell className="font-medium">{item["Payee Type"]}</TableCell>
+                <TableCell className="font-medium">{item["Payee Name"]}</TableCell>
                 <TableCell>₹{item["product Gross Amount"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["product Platform Fee"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["product Tax/gst"]?.toFixed(2)}</TableCell>
@@ -465,6 +467,7 @@ export const VendorPayableReportProductTable = () => {
                 <TableCell className={`font-semibold ${(item["Pending Amount"] || 0) > 0 ? 'text-red-500' : 'text-gray-500'}`}>
                   ₹{item["Pending Amount"]?.toFixed(2) || '0.00'}
                 </TableCell>
+                <TableCell className="text-center">{item["orderCount"] || 0}</TableCell>
               </TableRow>
             ))}
             {/* Aggregated Totals Row */}
@@ -475,8 +478,9 @@ export const VendorPayableReportProductTable = () => {
                 <TableCell>₹{aggregatedTotals.productPlatformFee?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.productTax?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.total?.toFixed(2)}</TableCell>
-                <TableCell>₹{aggregatedTotals.totalCollected?.toFixed(2)}</TableCell>
-                <TableCell>₹{aggregatedTotals.totalPending?.toFixed(2)}</TableCell>
+                <TableCell className="text-green-700">₹{aggregatedTotals.totalCollected?.toFixed(2)}</TableCell>
+                <TableCell className="text-red-700">₹{aggregatedTotals.totalPending?.toFixed(2)}</TableCell>
+                <TableCell className="text-center">{aggregatedTotals.orderCount || 0}</TableCell>
               </TableRow>
             )}
           </TableBody>
