@@ -241,7 +241,7 @@ function LoginPageContent() {
                 <p className="text-sm font-medium text-gray-600">
                   Have a business account?{" "}
                   <a
-                    href={`${NEXT_PUBLIC_CRM_URL || "http://localhost:3001"}/login`}
+                    href={`${NEXT_PUBLIC_CRM_URL || "https://partners.glowvitasalon.com"}/login`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-sm font-medium text-blue-600 hover:text-blue-500"
