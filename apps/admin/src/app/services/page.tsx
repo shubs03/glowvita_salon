@@ -377,9 +377,15 @@ export default function ServicesPage() {
                                                             </span>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                                                                {service.category || 'Uncategorized'}
-                                                            </span>
+                                                            <div className="flex flex-col gap-1 items-start">
+                                                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                                                                    {service.category || 'Uncategorized'}
+                                                                </span>
+                                                                <span className="text-[11px] font-medium text-muted-foreground capitalize flex items-center gap-1">
+                                                                    <Users className="h-3 w-3 text-indigo-500" />
+                                                                    {service.gender || 'unisex'}
+                                                                </span>
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell className="max-w-[250px]">
                                                             <p className="text-sm text-muted-foreground truncate" title={service.description}>
