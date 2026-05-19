@@ -3,11 +3,25 @@ export const dynamic = 'force-dynamic';
 import AdminOfferModel from '@repo/lib/models/admin/AdminOffers.model.js';
 import CRMOfferModel from '@repo/lib/models/Vendor/CRMOffer.model.js';
 import VendorModel from '@repo/lib/models/Vendor/Vendor.model.js';
+import DoctorModel from '@repo/lib/models/Vendor/Docters.model.js';
+import SupplierModel from '@repo/lib/models/Vendor/Supplier.model.js';
 import connectDB from '@repo/lib/db';
+import mongoose from 'mongoose';
 
 export async function GET(request) {
   try {
     await connectDB();
+
+    // Register lowercase aliases for refPath resolution
+    if (mongoose.models.Vendor && !mongoose.models.vendor) {
+      mongoose.model('vendor', mongoose.models.Vendor.schema);
+    }
+    if (mongoose.models.Doctor && !mongoose.models.doctor) {
+      mongoose.model('doctor', mongoose.models.Doctor.schema);
+    }
+    if (mongoose.models.Supplier && !mongoose.models.supplier) {
+      mongoose.model('supplier', mongoose.models.Supplier.schema);
+    }
 
     const { searchParams } = new URL(request.url);
     const vendorId = searchParams.get('vendorId'); // Optional vendor ID filter
@@ -102,8 +116,8 @@ export async function GET(request) {
       businessId: offer.businessId,
     }));
 
-    // Combine both sets of active offers
-    const allActiveOffers = [...activeAdminOffers, ...activeCrmOffers];
+    // Only return admin offers as requested (exclude CRM/vendor offers)
+    const allActiveOffers = activeAdminOffers;
 
     return NextResponse.json(
       {
