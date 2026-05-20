@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { Search, Layers, CheckCircle, XCircle, Eye, Image as ImageIcon } from "lucide-react";
+import { Search, Layers, CheckCircle, XCircle, Eye, Image as ImageIcon, Store, Tag, FileText, Calendar, ShieldCheck, AlertCircle, Info, Users } from "lucide-react";
 import { glowvitaApi } from '@repo/store/api';
 import { toast } from 'sonner';
 import {
@@ -41,6 +41,7 @@ interface Service {
     status?: 'approved' | 'disapproved';
     vendorName?: string;
     vendorId?: string;
+    gender?: string;
     createdAt: string;
 }
 
@@ -376,9 +377,15 @@ export default function ServicesPage() {
                                                             </span>
                                                         </TableCell>
                                                         <TableCell>
-                                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
-                                                                {service.category || 'Uncategorized'}
-                                                            </span>
+                                                            <div className="flex flex-col gap-1 items-start">
+                                                                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20">
+                                                                    {service.category || 'Uncategorized'}
+                                                                </span>
+                                                                <span className="text-[11px] font-medium text-muted-foreground capitalize flex items-center gap-1">
+                                                                    <Users className="h-3 w-3 text-indigo-500" />
+                                                                    {service.gender || 'unisex'}
+                                                                </span>
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell className="max-w-[250px]">
                                                             <p className="text-sm text-muted-foreground truncate" title={service.description}>
@@ -467,47 +474,156 @@ export default function ServicesPage() {
 
                 {/* View Modal */}
                 <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                    <DialogContent className="sm:max-w-[500px]">
-                        <DialogHeader>
-                            <DialogTitle>Service Details</DialogTitle>
-                            <DialogDescription>
-                                View vendor service details
-                            </DialogDescription>
-                        </DialogHeader>
+                    <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden border border-border/80 rounded-2xl shadow-xl">
                         {selectedService && (
-                            <div className="grid gap-4 py-4">
-                                <div className="grid gap-2">
-                                    <Label>Service Name</Label>
-                                    <p className="text-sm">{selectedService.name}</p>
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label>Vendor</Label>
-                                    <p className="text-sm">{selectedService.vendorName || 'N/A'}</p>
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label>Category</Label>
-                                    <p className="text-sm">{selectedService.category || 'Uncategorized'}</p>
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label>Description</Label>
-                                    <p className="text-sm">{selectedService.description || 'No description'}</p>
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label>Status</Label>
-                                    <p className="text-sm capitalize">{selectedService.status || 'N/A'}</p>
-                                </div>
-                                {selectedService.serviceImage && (
-                                    <div className="grid gap-2">
-                                        <Label>Service Image</Label>
-                                        <div className="relative h-32 w-full rounded-md overflow-hidden border">
-                                            <img src={selectedService.serviceImage} alt={selectedService.name} className="object-cover w-full h-full" />
+                            <div className="flex flex-col">
+                                {/* Banner section */}
+                                {selectedService.serviceImage ? (
+                                    <div className="relative h-48 w-full">
+                                        <img
+                                            src={selectedService.serviceImage}
+                                            alt={selectedService.name}
+                                            className="object-cover w-full h-full"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+                                        <div className="absolute top-4 right-4">
+                                            {selectedService.status === 'approved' ? (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500 text-white shadow-md border border-emerald-400/20 backdrop-blur-md">
+                                                    <ShieldCheck className="h-3.5 w-3.5" />
+                                                    Approved
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-500 text-white shadow-md border border-rose-400/20 backdrop-blur-md">
+                                                    <AlertCircle className="h-3.5 w-3.5" />
+                                                    Disapproved
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="relative h-36 w-full bg-gradient-to-r from-violet-600/20 via-primary/10 to-pink-500/10 flex items-center justify-center">
+                                        <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
+                                        <div className="flex flex-col items-center gap-1.5 relative z-10">
+                                            <div className="p-2.5 bg-background/80 rounded-full shadow-sm border border-border/40 backdrop-blur-sm">
+                                                <ImageIcon className="h-6 w-6 text-primary" />
+                                            </div>
+                                        </div>
+                                        <div className="absolute top-4 right-4">
+                                            {selectedService.status === 'approved' ? (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/50 shadow-sm backdrop-blur-sm">
+                                                    <ShieldCheck className="h-3.5 w-3.5" />
+                                                    Approved
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/50 shadow-sm backdrop-blur-sm">
+                                                    <AlertCircle className="h-3.5 w-3.5" />
+                                                    Disapproved
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Content Padding Area */}
+                                <div className="p-6 space-y-6">
+                                    {/* DialogHeader inside content to ensure correct ARIA compliance */}
+                                    <div className="space-y-1">
+                                        <DialogHeader className="p-0 text-left">
+                                            <DialogTitle className="text-2xl font-bold tracking-tight text-foreground">
+                                                {selectedService.name}
+                                            </DialogTitle>
+                                            <DialogDescription className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                                                <Info className="h-3.5 w-3.5 text-primary/75" />
+                                                View complete details and status of this vendor service.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                    </div>
+
+                                    {/* Metadata 2x2 grid */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {/* Vendor Card */}
+                                        <div className="p-3.5 rounded-xl border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200">
+                                            <div className="flex items-center gap-2 text-muted-foreground mb-1.5">
+                                                <Store className="h-4 w-4 text-violet-500" />
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">Vendor</span>
+                                            </div>
+                                            <p className="text-sm font-semibold text-foreground truncate" title={selectedService.vendorName}>
+                                                {selectedService.vendorName || 'N/A'}
+                                            </p>
+                                        </div>
+
+                                        {/* Category Card */}
+                                        <div className="p-3.5 rounded-xl border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200">
+                                            <div className="flex items-center gap-2 text-muted-foreground mb-1.5">
+                                                <Tag className="h-4 w-4 text-teal-500" />
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">Category</span>
+                                            </div>
+                                            <p className="text-sm font-semibold text-foreground truncate" title={selectedService.category}>
+                                                {selectedService.category || 'Uncategorized'}
+                                            </p>
+                                        </div>
+
+                                        {/* Gender / Suitable For Card */}
+                                        <div className="p-3.5 rounded-xl border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200">
+                                            <div className="flex items-center gap-2 text-muted-foreground mb-1.5">
+                                                <Users className="h-4 w-4 text-indigo-500" />
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">Gender Preference</span>
+                                            </div>
+                                            <p className="text-sm font-semibold text-foreground capitalize">
+                                                {selectedService.gender || 'Unisex'}
+                                            </p>
+                                        </div>
+
+                                        {/* Status Card */}
+                                        <div className="p-3.5 rounded-xl border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200">
+                                            <div className="flex items-center gap-2 text-muted-foreground mb-1.5">
+                                                <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">Status</span>
+                                            </div>
+                                            <div className="flex items-center mt-0.5">
+                                                {selectedService.status === 'approved' ? (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/50">
+                                                        Approved
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200/50">
+                                                        Disapproved
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Registered Card */}
+                                        <div className="col-span-2 p-3.5 rounded-xl border border-border/50 bg-card hover:bg-accent/40 transition-all duration-200 flex items-center justify-between">
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                                <Calendar className="h-4 w-4 text-amber-500" />
+                                                <span className="text-[10px] font-bold uppercase tracking-wider">Registered Date</span>
+                                            </div>
+                                            <p className="text-sm font-semibold text-foreground">
+                                                {selectedService.createdAt ? new Date(selectedService.createdAt).toLocaleDateString(undefined, {
+                                                    year: 'numeric',
+                                                    month: 'long',
+                                                    day: 'numeric'
+                                                }) : 'N/A'}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Description block */}
+                                    <div className="p-4 rounded-xl border border-border/40 bg-accent/20 space-y-2">
+                                        <div className="flex items-center gap-2 text-muted-foreground">
+                                            <FileText className="h-4 w-4 text-blue-500" />
+                                            <span className="text-[10px] font-bold uppercase tracking-wider">Service Description</span>
+                                        </div>
+                                        <p className="text-sm text-foreground/90 leading-relaxed max-h-[120px] overflow-y-auto pr-1">
+                                            {selectedService.description || 'No description provided for this service.'}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
                         )}
-                        <DialogFooter>
-                            <Button type="button" onClick={handleCloseModal}>
+                        <DialogFooter className="px-6 py-4 bg-muted/30 border-t border-border/45">
+                            <Button type="button" onClick={handleCloseModal} className="px-5 rounded-lg shadow-sm hover:scale-[1.01] active:scale-[0.99] transition-all">
                                 Close
                             </Button>
                         </DialogFooter>

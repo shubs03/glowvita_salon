@@ -20,6 +20,9 @@ export const CompletedBookingsReportDialog = ({ isOpen, onClose }: CompletedBook
           <DialogTitle>Completed Bookings Report</DialogTitle>
           <DialogDescription>
             Overview of successfully completed bookings.
+            <div className="mt-2 p-2 bg-muted/50 rounded-md text-xs font-mono text-muted-foreground border border-border/50">
+              Formula: Completed Bookings = Total Booked Appointments - Cancelled Appointments
+            </div>
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">

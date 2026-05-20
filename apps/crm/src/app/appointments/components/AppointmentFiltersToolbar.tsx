@@ -58,7 +58,10 @@ const AppointmentFiltersToolbar = ({
               <SelectItem value="in_progress">In Progress</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
               <SelectItem value="completed without payment">Completed without payment</SelectItem>
+              <SelectItem value="partially-completed">Partially Completed</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
+              <SelectItem value="pay_online">Pay Online</SelectItem>
+              <SelectItem value="pay_at_salon">Pay at Salon</SelectItem>
             </SelectContent>
           </Select>
           

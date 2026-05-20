@@ -12,8 +12,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { RadioGroup, RadioGroupItem } from '@repo/ui/radio-group';
 import { ArrowLeft, CreditCard, Shield, Lock, Landmark, Wallet, Plus, Minus, MapPin, CheckCircle2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useCreateClientOrderMutation, useCreatePaymentOrderMutation, useVerifyPaymentMutation, useGetPublicTaxFeeSettingsQuery, useGetPublicShippingConfigQuery } from '@repo/store/api';
+import { useCreateClientOrderMutation, useCreatePaymentOrderMutation, useVerifyPaymentMutation, useGetPublicTaxFeeSettingsQuery, useGetPublicShippingConfigQuery, useGetPublicVendorByIdQuery } from '@repo/store/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useMemo } from 'react';
+import { AlertCircle, AlertTriangle } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -64,6 +66,32 @@ export default function CheckoutPage() {
   const [createOrder, { isLoading }] = useCreateClientOrderMutation();
   const [createPaymentOrder] = useCreatePaymentOrderMutation();
   const [verifyPayment] = useVerifyPaymentMutation();
+
+  // Fetch vendor data to check subscription
+  const { data: vendorResponse } = useGetPublicVendorByIdQuery(product?.vendorId, {
+    skip: !product?.vendorId,
+  });
+
+  const vendorData = vendorResponse?.vendor;
+
+  const isSubscriptionExpired = useMemo(() => {
+    if (!vendorData) return false;
+
+    const subscription = vendorData.subscription;
+    if (!subscription) return false;
+
+    const now = new Date();
+    const endDate = subscription.endDate ? new Date(subscription.endDate) : null;
+    const status = (subscription.status || '').toLowerCase().trim();
+
+    const isStatusActive = status === 'active';
+    const expiredStatuses = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'];
+    const isStatusExpired = expiredStatuses.includes(status);
+    const isDateExpired = endDate ? endDate < now : false;
+
+    if (isStatusActive && !isDateExpired) return false;
+    return isStatusExpired || isDateExpired;
+  }, [vendorData]);
 
   // Enhanced logging for debugging shipping issues in production
   useEffect(() => {
@@ -332,6 +360,13 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async () => {
+    if (isSubscriptionExpired) {
+      toast.error('Checkout Unavailable', {
+        description: 'This salon is temporarily closed. Orders cannot be placed at this time.'
+      });
+      return;
+    }
+
     if (!isAuthenticated) {
       toast.error('Please sign in before placing your order.');
       router.push('/client-login?redirect=/checkout');
@@ -691,7 +726,16 @@ export default function CheckoutPage() {
           {product?.isCartOrder ? 'Back to Cart' : 'Back to Product'}
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {isSubscriptionExpired && (
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3 shadow-sm">
+              <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0" />
+              <p className="text-sm text-red-700">
+                <strong>Attention:</strong> This salon is temporarily closed. You won't be able to place your order until the salon is back online.
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-8">
             <Card>
               <CardHeader>
@@ -1157,9 +1201,10 @@ export default function CheckoutPage() {
                   size="lg"
                   className="w-full"
                   onClick={handlePlaceOrder}
-                  disabled={isLoading}
+                  disabled={isLoading || isSubscriptionExpired}
                 >
                   {isLoading ? 'Processing...' :
+                    isSubscriptionExpired ? 'Salon Temporarily Closed' :
                     paymentMethod === 'pay-online' ? 'Pay & Place Order' : 'Place Order'
                   }
                 </Button>

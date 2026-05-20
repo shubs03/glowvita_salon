@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@repo/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@repo/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { Pagination } from "@repo/ui/pagination";
 import { Badge } from "@repo/ui/badge";
-import { Download, Eye, DollarSign, Users, UserPlus, ShoppingCart, Search, Calendar, Copy, FileText, FileSpreadsheet, Printer, Filter, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Download, Search, Copy, FileText, FileSpreadsheet, Printer, Filter, UserX, AlertCircle, ShoppingBag, XCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Input } from '@repo/ui/input';
 import { Skeleton } from "@repo/ui/skeleton";
@@ -31,15 +29,72 @@ interface CancelledAppointmentsTableProps {
   triggerRefresh?: any;
 }
 
+const exportToExcel = (tableRef: React.RefObject<HTMLDivElement>, fileName: string) => {
+  if (!tableRef.current) return;
+  const table = tableRef.current.querySelector('table');
+  if (!table) return;
+  const wb = XLSX.utils.table_to_book(table, { sheet: 'Sheet1' });
+  XLSX.writeFile(wb, `${fileName}.xlsx`);
+};
+
+const exportToCSV = (tableRef: React.RefObject<HTMLDivElement>, fileName: string) => {
+  if (!tableRef.current) return;
+  const table = tableRef.current.querySelector('table');
+  if (!table) return;
+  const wb = XLSX.utils.table_to_book(table, { sheet: 'Sheet1' });
+  XLSX.writeFile(wb, `${fileName}.csv`);
+};
+
+const exportToPDF = async (tableRef: React.RefObject<HTMLDivElement>, fileName: string) => {
+  if (!tableRef.current) return;
+  const table = tableRef.current.querySelector('table');
+  if (!table) return;
+  const canvas = await html2canvas(table as HTMLElement);
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jsPDF('l', 'mm', 'a4');
+  const imgWidth = pdf.internal.pageSize.getWidth() - 20;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+  pdf.save(`${fileName}.pdf`);
+};
+
+const copyToClipboard = (tableRef: React.RefObject<HTMLDivElement>) => {
+  if (!tableRef.current) return;
+  const table = tableRef.current.querySelector('table');
+  if (!table) return;
+  const range = document.createRange();
+  range.selectNode(table);
+  window.getSelection()?.removeAllRanges();
+  window.getSelection()?.addRange(range);
+  document.execCommand('copy');
+  window.getSelection()?.removeAllRanges();
+  alert('Table copied to clipboard!');
+};
+
+const printTable = (tableRef: React.RefObject<HTMLDivElement>) => {
+  if (!tableRef.current) return;
+  const table = tableRef.current.querySelector('table');
+  if (!table) return;
+  const printWindow = window.open('', '', 'height=600,width=800');
+  if (printWindow) {
+    printWindow.document.write('<html><head><title>Cancelled Appointments Report</title>');
+    printWindow.document.write('<style>table { border-collapse: collapse; width: 100%; font-size: 8px; } th, td { border: 1px solid #ddd; padding: 4px; text-align: left; } th { background-color: #f2f2f2; }</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(table.outerHTML);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.print();
+  }
+};
+
 export const CancelledAppointmentsTable = ({ startDate, endDate, client, service, staff, status, bookingType, onFiltersChange, triggerRefresh }: CancelledAppointmentsTableProps) => {
   const [filters, setFilters] = useState<FilterParams>({});
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // 10 entries by default
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const tableRef = useRef<HTMLDivElement>(null);
 
-  // Use the RTK Query hook to fetch real data
   const { data, isLoading, isError, refetch } = useGetCancelledAppointmentsReportQuery({
     period: 'custom',
     startDate: startDate ? new Date(startDate) : undefined,
@@ -51,295 +106,81 @@ export const CancelledAppointmentsTable = ({ startDate, endDate, client, service
     bookingType: bookingType && bookingType !== 'all' ? bookingType : undefined
   });
 
-  // Sync local filters state with props from parent
-  useEffect(() => {
-    setFilters({
-      startDate,
-      endDate,
-      client,
-      service,
-      staff,
-      status,
-      bookingType
-    });
-  }, [startDate, endDate, client, service, staff, status, bookingType]);
-
   const handleFilterChange = (newFilters: FilterParams) => {
     setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-
-    // Notify parent component about filter changes
-    if (onFiltersChange) {
-      onFiltersChange(newFilters);
-    }
-  };
-
-  // Export functions
-  const exportToExcel = () => {
-    if (!tableRef.current) return;
-
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-
-    // Get table data
-    const wb = XLSX.utils.table_to_book(table, { sheet: 'Cancelled Appointments' });
-    XLSX.writeFile(wb, 'cancelled_appointments.xlsx');
-  };
-
-  const exportToCSV = () => {
-    if (!tableRef.current) return;
-
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-
-    // Get table data
-    const wb = XLSX.utils.table_to_book(table, { sheet: 'Cancelled Appointments' });
-    XLSX.writeFile(wb, 'cancelled_appointments.csv');
-  };
-
-  const exportToPDF = async () => {
-    if (!tableRef.current) return;
-
-    // Use html2canvas to capture the table
-    const canvas = await html2canvas(tableRef.current as HTMLElement);
-    const imgData = canvas.toDataURL('image/png');
-
-    // Create PDF
-    const pdf = new jsPDF();
-    const imgWidth = pdf.internal.pageSize.getWidth();
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-    pdf.save('cancelled_appointments.pdf');
-  };
-
-  const copyToClipboard = () => {
-    if (!tableRef.current) return;
-
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-
-    // Get table HTML
-    const range = document.createRange();
-    range.selectNode(table);
-    window.getSelection()?.removeAllRanges();
-    window.getSelection()?.addRange(range);
-    document.execCommand('copy');
-    window.getSelection()?.removeAllRanges();
-
-    // Show success message (you might want to implement a toast notification)
-    alert('Table copied to clipboard!');
-  };
-
-  const printTable = () => {
-    if (!tableRef.current) return;
-
-    const printWindow = window.open('', '', 'height=600,width=800');
-    if (printWindow) {
-      printWindow.document.write('<html><head><title>Cancelled Appointments</title>');
-      printWindow.document.write('</head><body >');
-      printWindow.document.write(tableRef.current.innerHTML);
-      printWindow.document.write('</body></html>');
-      printWindow.document.close();
-      printWindow.print();
-    }
+    setCurrentPage(1);
+    if (onFiltersChange) onFiltersChange(newFilters);
   };
 
   const handleExport = (format: string) => {
+    const fileName = 'cancelled_appointments_report';
     switch (format) {
-      case 'excel':
-        exportToExcel();
-        break;
-      case 'csv':
-        exportToCSV();
-        break;
-      case 'pdf':
-        exportToPDF();
-        break;
-      case 'copy':
-        copyToClipboard();
-        break;
-      case 'print':
-        printTable();
-        break;
-      default:
-        break;
+      case 'copy': copyToClipboard(tableRef); break;
+      case 'excel': exportToExcel(tableRef, fileName); break;
+      case 'csv': exportToCSV(tableRef, fileName); break;
+      case 'pdf': exportToPDF(tableRef, fileName); break;
+      case 'print': printTable(tableRef, fileName); break;
     }
   };
 
-  // Trigger refetch when filter values change or when explicitly triggered
-  useEffect(() => {
-    refetch();
-  }, [refetch, startDate, endDate, client, service, staff, status, bookingType, triggerRefresh]);
+  useEffect(() => { refetch(); }, [refetch, startDate, endDate, client, service, staff, status, bookingType, triggerRefresh]);
 
-  // Extract appointments from the API response
-  const filteredAppointments = data?.data?.cancellations?.cancellations || data?.data || [];
-
-  // Filter data based on search term and filter props
+  const appointments = data?.data?.cancellations?.cancellations || data?.data || [];
+  
   const finalFilteredAppointments = useMemo(() => {
-    let result = filteredAppointments;
-
-    // 1. Filter by specific client if selected
-    if (client && client !== 'all') {
-      result = result.filter((a: any) => 
-        (a.clientName === client) || 
-        (a.client?.fullName === client)
-      );
-    }
-
-    // 2. Filter by specific service if selected
-    if (service && service !== 'all') {
-      result = result.filter((a: any) => 
-        (a.serviceName === service) || 
-        (a.service?.name === service)
-      );
-    }
-
-    // 3. Filter by specific staff if selected
-    if (staff && staff !== 'all') {
-      result = result.filter((a: any) => 
-        (a.staffName === staff) || 
-        (a.staff?.fullName === staff)
-      );
-    }
-
-    // 4. Filter by search term
+    let result = appointments;
     if (searchTerm) {
-      result = result.filter((appointment: any) =>
-        Object.values(appointment).some(value =>
+      result = result.filter((a: any) =>
+        Object.values(a).some(value =>
           value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
         )
       );
     }
-
     return result;
-  }, [filteredAppointments, searchTerm, client, service, staff]);
+  }, [appointments, searchTerm]);
 
-  // Pagination logic
   const totalItems = finalFilteredAppointments.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedAppointments = finalFilteredAppointments.slice(startIndex, endIndex);
+  const paginatedAppointments = finalFilteredAppointments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  // Calculate counts for online/offline appointments
-  const onlineAppointmentIds = new Set();
-  const offlineAppointmentIds = new Set();
+  const stats = useMemo(() => {
+    const uniqueIds = new Set();
+    let onlineCount = 0;
+    let offlineCount = 0;
+    let revenueLoss = 0;
 
-  paginatedAppointments.forEach((appt: any) => {
-    const mode = appt.mode || '';
-    if (mode.toLowerCase() === 'online') {
-      onlineAppointmentIds.add(appt.id);
-    } else if (mode.toLowerCase() === 'offline') {
-      offlineAppointmentIds.add(appt.id);
-    }
-  });
+    appointments.forEach((appt: any) => {
+      if (!uniqueIds.has(appt.id)) {
+        uniqueIds.add(appt.id);
+        const mode = (appt.mode || '').toLowerCase();
+        if (mode === 'online') onlineCount++;
+        else if (mode === 'offline') offlineCount++;
+        revenueLoss += (appt.amount || 0);
+      }
+    });
 
-  // Count unique appointments to properly handle multi-service appointments
-  const uniqueAppointmentIds = new Set(paginatedAppointments.map((appt: any) => appt.id));
-  const totalCancelled = uniqueAppointmentIds.size;
-  const onlineCancelled = onlineAppointmentIds.size;
-  const offlineCancelled = offlineAppointmentIds.size;
-  // Calculate revenue loss from unique appointments to avoid double counting
-  // For cancelled appointments, we sum the base amounts of all services
-  const totalRevenueLoss = Array.from(uniqueAppointmentIds as Set<string>).reduce((sum: number, id: string) => {
-    const appointment = paginatedAppointments.find((appt: any) => appt.id === id);
-    return sum + (appointment?.amount || 0);
-  }, 0);
+    return { onlineCount, offlineCount, revenueLoss, totalCount: uniqueIds.size };
+  }, [appointments]);
 
   if (isLoading) {
     return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+      <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
         </div>
-        <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        </div>
+        <Skeleton className="h-[400px] w-full" />
       </div>
     );
   }
 
   if (isError) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-red-500">
-          Failed to load cancelled appointments data. Please try again.
-        </div>
-      </div>
-    );
+    return <div className="text-center py-4 text-red-500">Failed to load cancelled appointments data.</div>;
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4 gap-2">
+    <div className="space-y-6">
+      {/* Search and Filters */}
+      <div className="flex justify-between items-center gap-2">
         <div className="relative w-64">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -347,45 +188,23 @@ export const CancelledAppointmentsTable = ({ startDate, endDate, client, service
             placeholder="Search..."
             className="pl-8"
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page when search term changes
-            }}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           />
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
+          <Button variant="outline" onClick={() => setIsFilterModalOpen(true)}>
+            <Filter className="mr-2 h-4 w-4" /> Filters
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
+              <Button><Download className="mr-2 h-4 w-4" /> Export</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('copy')}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                <FileText className="mr-2 h-4 w-4" />
-                CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('print')}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('copy')}><Copy className="mr-2 h-4 w-4" /> Copy</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('excel')}><FileSpreadsheet className="mr-2 h-4 w-4" /> Excel</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('csv')}><FileText className="mr-2 h-4 w-4" /> CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('pdf')}><FileText className="mr-2 h-4 w-4" /> PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('print')}><Printer className="mr-2 h-4 w-4" /> Print</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -398,185 +217,108 @@ export const CancelledAppointmentsTable = ({ startDate, endDate, client, service
         cities={[]}
         initialFilters={filters}
         showStatusFilter={true}
-        hideClientFilter={false}
-        hideServiceFilter={false}
-        hideStaffFilter={false}
-        hideBookingTypeFilter={false}
       />
 
-      {paginatedAppointments.length === 0 ? (
-        <div className="text-center py-12 border rounded-md bg-muted/10">
-          <p className="text-muted-foreground">No cancelled appointments data available for the selected filters.</p>
-          <Button 
-            variant="link" 
-            onClick={() => handleFilterChange({})}
-            className="mt-2"
-          >
-            Clear all filters
-          </Button>
-        </div>
-      ) : (
-        <>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="border rounded-lg p-4 bg-primary/10">
-              <p className="text-sm text-gray-600">Total Cancelled</p>
-              <p className="text-2xl font-bold">{totalCancelled}</p>
-            </div>
-            <div className="border rounded-lg p-4 bg-primary/5">
-              <p className="text-sm text-gray-600">Online Cancelled</p>
-              <p className="text-2xl font-bold">{onlineCancelled}</p>
-            </div>
-            <div className="border rounded-lg p-4 bg-secondary/20">
-              <p className="text-sm text-gray-600">Offline Cancelled</p>
-              <p className="text-2xl font-bold">{offlineCancelled}</p>
-            </div>
-            <div className="border rounded-lg p-4 bg-secondary/10">
-              <p className="text-sm text-gray-600">Revenue Loss</p>
-              <p className="text-2xl font-bold">₹{totalRevenueLoss.toFixed(2)}</p>
-            </div>
-          </div>
+      {/* Formula Display */}
+      <div className="bg-muted/30 p-4 rounded-lg border border-dashed border-primary/20">
+        <p className="text-sm font-medium text-primary">
+          Formula: <span className="text-muted-foreground italic">Revenue Loss = Base Amount + Platform Fee + Service Tax</span>
+        </p>
+      </div>
 
-          <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Staff</TableHead>
-                  <TableHead>Scheduled On</TableHead>
-                  <TableHead>Created On</TableHead>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Cancelled By</TableHead>
-                  <TableHead>Cancelled On</TableHead>
-                  <TableHead>Base Amount</TableHead>
-                  <TableHead>Platform Fee</TableHead>
-                  <TableHead>Service Tax</TableHead>
-                  <TableHead>Final Amount</TableHead>
+      {/* Summary Cards */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="bg-red-50/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total Cancelled</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-600">{stats.totalCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Online</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">{stats.onlineCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Offline</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">{stats.offlineCount}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Revenue Loss</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{stats.revenueLoss.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-md border overflow-hidden" ref={tableRef}>
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead className="text-xs">Client</TableHead>
+              <TableHead className="text-xs">Service</TableHead>
+              <TableHead className="text-xs">Staff</TableHead>
+              <TableHead className="text-xs">Scheduled</TableHead>
+              <TableHead className="text-xs">Cancelled On</TableHead>
+              <TableHead className="text-xs">Amount</TableHead>
+              <TableHead className="text-xs">Fee</TableHead>
+              <TableHead className="text-xs">Tax</TableHead>
+              <TableHead className="text-xs font-bold">Final Loss</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedAppointments.length > 0 ? (
+              paginatedAppointments.map((item: any) => (
+                <TableRow key={`${item.id}-${item.multiServiceIndex || 0}`}>
+                  <TableCell className="text-xs py-2 font-medium">{item.clientName || 'N/A'}</TableCell>
+                  <TableCell className="text-xs py-2">{item.serviceName || 'N/A'}</TableCell>
+                  <TableCell className="text-xs py-2">{item.staffName || 'N/A'}</TableCell>
+                  <TableCell className="text-[10px] py-2">{item.scheduledDate ? new Date(item.scheduledDate).toLocaleDateString() : 'N/A'}</TableCell>
+                  <TableCell className="text-[10px] py-2">{item.cancelledDate ? new Date(item.cancelledDate).toLocaleDateString() : 'N/A'}</TableCell>
+                  <TableCell className="text-xs py-2">₹{item.amount || 0}</TableCell>
+                  <TableCell className="text-[10px] py-2">₹{(item.platformFee || 0).toFixed(1)}</TableCell>
+                  <TableCell className="text-[10px] py-2">₹{(item.serviceTax || 0).toFixed(1)}</TableCell>
+                  <TableCell className="text-xs py-2 font-bold text-red-600">₹{(item.finalAmount || item.totalAmount || 0).toFixed(2)}</TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedAppointments.map((item: any) => {
-                  // Helper function to convert MongoDB date objects to JavaScript Date
-                  const convertToDate = (dateValue: any): Date | null => {
-                    if (!dateValue) return null;
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">No cancelled appointments found.</TableCell>
+              </TableRow>
+            )}
+            {paginatedAppointments.length > 0 && (
+              <TableRow className="bg-muted font-bold">
+                <TableCell colSpan={5}>TOTAL LOSS</TableCell>
+                <TableCell className="text-xs">₹{paginatedAppointments.reduce((sum, a: any) => sum + (a.amount || 0), 0).toFixed(2)}</TableCell>
+                <TableCell colSpan={2}></TableCell>
+                <TableCell className="text-xs text-red-600">₹{paginatedAppointments.reduce((sum, a: any) => sum + (a.finalAmount || a.totalAmount || 0), 0).toFixed(2)}</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-                    if (dateValue instanceof Date) {
-                      return dateValue;
-                    }
-
-                    // Check if it's a MongoDB date object format: {"$date": "..."}
-                    if (typeof dateValue === 'object' && dateValue.$date) {
-                      return new Date(dateValue.$date);
-                    }
-
-                    // Check if it's already an ISO string
-                    if (typeof dateValue === 'string') {
-                      return new Date(dateValue);
-                    }
-
-                    // If it's a timestamp number
-                    if (typeof dateValue === 'number') {
-                      return new Date(dateValue);
-                    }
-
-                    return null;
-                  };
-
-                  // Format dates
-                  const scheduledDateValue = convertToDate(item.scheduledDate);
-                  const scheduledDate = scheduledDateValue ? scheduledDateValue.toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric'
-                  }) : 'N/A';
-
-                  const createdDateValue = convertToDate(item.createdAt);
-                  const createdDate = createdDateValue ? createdDateValue.toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric'
-                  }) : 'N/A';
-
-                  // Format time range
-                  const timeRange = item.startTime ?
-                    `${item.startTime} - ${item.endTime || item.startTime}` : 'N/A';
-
-                  // Format cancellation information
-                  const cancelledOnValue = convertToDate(item.cancelledDate);
-                  const cancelledOn = cancelledOnValue ? cancelledOnValue.toLocaleDateString('en-GB', {
-                    day: 'numeric',
-                    month: 'short',
-                    year: 'numeric'
-                  }) : 'N/A';
-
-                  // Determine who cancelled the appointment based on reason
-                  let cancelledBy = 'N/A';
-                  if (item.reason && item.reason.toLowerCase().includes('automatically cancelled')) {
-                    cancelledBy = 'Not Attended';
-                  } else if (item.mode === 'online' && item.clientName) {
-                    cancelledBy = 'User';
-                  } else {
-                    cancelledBy = 'Vendor';
-                  }
-
-                  // Format service name for multi-service appointments
-                  let serviceName = item.serviceName || item.service?.name || 'N/A';
-                  if (item.isMultiService && item.multiServiceTotal) {
-                    serviceName = `${serviceName}(${item.multiServiceIndex + 1}/${item.multiServiceTotal})`;
-                  }
-
-                  // Format status with asterisk for multi-service appointments
-                  const statusText = item.isMultiService ? `${item.status}*` : item.status || 'N/A';
-
-                  return (
-                    <TableRow key={`${item.id}-${item.multiServiceIndex || 0}`}>
-                      <TableCell>{item.clientName || 'N/A'}</TableCell>
-                      <TableCell>{serviceName}</TableCell>
-                      <TableCell>{item.staffName || item.staff?.fullName || 'N/A'}</TableCell>
-                      <TableCell>{scheduledDate}</TableCell>
-                      <TableCell>{createdDate}</TableCell>
-                      <TableCell>{timeRange}</TableCell>
-                      <TableCell>{cancelledBy}</TableCell>
-                      <TableCell>{cancelledOn}</TableCell>
-                      <TableCell>₹{item.amount || 0}</TableCell>
-                      <TableCell>₹{item.platformFee || 0}</TableCell>
-                      <TableCell>₹{item.serviceTax || 0}</TableCell>
-                      <TableCell>₹{item.finalAmount || item.totalAmount || 0}</TableCell>
-                    </TableRow>
-                  );
-                })}
-                {/* Total Row */}
-                <TableRow className="font-bold bg-gray-50">
-                  <TableCell>Total</TableCell>
-                  <TableCell colSpan={7}></TableCell>
-                  <TableCell>
-                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.amount || 0), 0).toFixed(2)}
-                  </TableCell>
-                  <TableCell>
-                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.platformFee || 0), 0).toFixed(2)}
-                  </TableCell>
-                  <TableCell>
-                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.serviceTax || 0), 0).toFixed(2)}
-                  </TableCell>
-                  <TableCell>
-                    ₹{paginatedAppointments.reduce((sum: number, item: any) => sum + (item.finalAmount || item.totalAmount || 0), 0).toFixed(2)}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
-          <Pagination
-            className="mt-4"
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            itemsPerPage={itemsPerPage}
-            onItemsPerPageChange={setItemsPerPage}
-            totalItems={totalItems}
-          />
-        </>
-      )}
+      <Pagination
+        className="mt-4"
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={setItemsPerPage}
+        totalItems={totalItems}
+      />
     </div>
   );
 };

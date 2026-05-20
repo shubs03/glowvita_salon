@@ -14,7 +14,7 @@ type Appointment = {
   startTime: string;
   endTime: string;
   notes?: string;
-  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'completed without payment';
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'completed without payment' | 'partially-completed' | 'pending';
   isBlocked?: boolean;
   description?: string;
   clientPhone?: string;
@@ -114,6 +114,20 @@ const getStatusConfig = (status: Appointment['status']) => {
         icon: <Clock4 className="w-4 h-4" />,
         color: 'bg-gradient-to-r from-purple-500 to-fuchsia-600 text-white shadow-purple-200',
         dotColor: 'bg-purple-400'
+      };
+    case 'partially-completed':
+      return {
+        label: 'Partially Completed',
+        icon: <Clock4 className="w-4 h-4" />,
+        color: 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-indigo-200',
+        dotColor: 'bg-indigo-400'
+      };
+    case 'pending':
+      return {
+        label: 'Pending',
+        icon: <Clock4 className="w-4 h-4" />,
+        color: 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-yellow-200',
+        dotColor: 'bg-yellow-400'
       };
     default:
       return {

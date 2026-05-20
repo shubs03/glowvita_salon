@@ -23,7 +23,7 @@ type Appointment = {
   endTime: string;
   duration?: number;
   notes?: string;
-  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'completed without payment';
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'completed without payment' | 'partially-completed' | 'pending';
   isBlocked?: boolean;
   description?: string;
   mode?: 'online' | 'offline'; // Booking mode
@@ -199,6 +199,20 @@ const getStatusConfig = (status: Appointment['status']) => {
         icon: '👻',
         className: 'bg-gray-500 text-white',
         cardBgColor: 'bg-gray-50 dark:bg-gray-900/20'
+      };
+    case 'partially-completed':
+      return {
+        label: 'Partial',
+        icon: '⏳',
+        className: 'bg-indigo-500 text-white',
+        cardBgColor: 'bg-indigo-50 dark:bg-indigo-900/20'
+      };
+    case 'pending':
+      return {
+        label: 'Pending',
+        icon: '⌛',
+        className: 'bg-yellow-500 text-white',
+        cardBgColor: 'bg-yellow-50 dark:bg-yellow-900/20'
       };
     default:
       return {

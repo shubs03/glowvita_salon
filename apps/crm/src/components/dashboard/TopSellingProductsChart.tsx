@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useGetSalesByProductReportQuery } from "@repo/store/services/api";
 
 interface TopProductData {
@@ -32,6 +32,19 @@ const formatDateDisplay = (dateString: string): string => {
     day: 'numeric'
   });
 };
+
+const PRODUCT_COLORS = [
+  "#3b82f6", // blue-500
+  "#10b981", // emerald-500
+  "#f59e0b", // amber-500
+  "#ef4444", // red-500
+  "#8b5cf6", // violet-500
+  "#ec4899", // pink-500
+  "#06b6d4", // cyan-500
+  "#84cc16", // lime-500
+  "#f97316", // orange-500
+  "#14b8a6", // teal-500
+];
 
 export function TopSellingProductsChart({
   filterType = 'preset',
@@ -190,8 +203,11 @@ export function TopSellingProductsChart({
               <Bar
                 dataKey="quantitySold"
                 name="Quantity Sold"
-                fill="hsl(var(--primary))"
-              />
+              >
+                {formattedData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={PRODUCT_COLORS[index % PRODUCT_COLORS.length]} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         ) : (

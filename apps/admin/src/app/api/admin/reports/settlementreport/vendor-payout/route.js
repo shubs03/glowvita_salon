@@ -82,15 +82,15 @@ export const GET = authMiddlewareAdmin(async (req) => {
       };
     }
 
-    // Create the main filter for appointments - focusing on completed appointments where admin pays to vendor
+    // Create the main filter for appointments - show ALL Pay Online appointments
+    // Removed strict status filter to show everything (even scheduled/cancelled for visibility)
+    // Admin can then see what's pending
     const regionQuery = getRegionQuery(req.user, regionId);
     const mainFilter = {
       ...dateFilter,
       ...regionQuery,
-      mode: 'online', // Only online appointments
-      paymentMethod: 'Pay Online', // Only Pay Online appointments
-      status: { $in: ['completed'] }, // Only include completed appointments
-      paymentStatus: { $in: ['completed'] } // Only include completed payment status
+      paymentMethod: 'Pay Online',
+      status: { $nin: ['cancelled', 'temp-locked'] }, // Show all except cancelled/temp-locked
     };
 
     // Apply city filter if provided
@@ -192,7 +192,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Get unique cities for filter dropdown
     const cityPipeline = [
-      { $match: { ...regionQuery, status: { $in: ['completed'] }, paymentStatus: { $in: ['completed'] } } },
+      { $match: { ...regionQuery, paymentMethod: 'Pay Online', status: { $nin: ['cancelled', 'temp-locked'] } } },
       {
         $lookup: {
           from: "vendors",
@@ -211,7 +211,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     // Get unique vendors for filter dropdown
     const vendorPipeline = [
-      { $match: { ...regionQuery, status: { $in: ['completed'] }, paymentStatus: { $in: ['completed'] } } },
+      { $match: { ...regionQuery, paymentMethod: 'Pay Online', status: { $nin: ['cancelled', 'temp-locked'] } } },
       {
         $lookup: {
           from: "vendors",
@@ -228,15 +228,15 @@ export const GET = authMiddlewareAdmin(async (req) => {
     const vendorsResult = await AppointmentModel.aggregate(vendorPipeline);
     const vendorNames = vendorsResult.map(item => item._id).filter(vendor => vendor); // Filter out null/undefined vendors
 
-    // Calculate aggregated totals
-    const aggregatedTotals = results.reduce((totals, vendor) => {
+    // Calculate aggregated totals from resultsWithPayments (which includes Actually Paid + Pending Amount)
+    const aggregatedTotals = resultsWithPayments.reduce((totals, vendor) => {
       totals.serviceGrossAmount += vendor["Service Gross Amount"] || 0;
       totals.servicePlatformFee += vendor["Service Platform Fee"] || 0;
       totals.serviceTax += vendor["Service Tax (₹)"] || 0;
       totals.serviceTotalAmount += vendor["Service Total Amount"] || 0;
-      totals.total = vendor.Total ? (totals.total + vendor.Total) : totals.total;
-      totals.totalPaid = (totals.totalPaid || 0) + (vendor["Actually Paid"] || 0);
-      totals.totalPending = (totals.totalPending || 0) + (vendor["Pending Amount"] || 0);
+      totals.total += vendor["Total"] || 0;
+      totals.totalPaid += vendor["Actually Paid"] || 0;
+      totals.totalPending += vendor["Pending Amount"] || 0;
       totals.appointmentCount += vendor.appointmentCount || 0;
       totals.completedAppointments += vendor.completedAppointments || 0;
       return totals;
@@ -245,15 +245,14 @@ export const GET = authMiddlewareAdmin(async (req) => {
       servicePlatformFee: 0,
       serviceTax: 0,
       serviceTotalAmount: 0,
-      total: 0, // This will be the sum of all vendor payouts
+      total: 0,
       totalPaid: 0,
       totalPending: 0,
       appointmentCount: 0,
       completedAppointments: 0
     });
 
-    // Calculate the actual total payout to vendors (serviceTotalAmount - servicePlatformFee)
-    aggregatedTotals.total = aggregatedTotals.serviceTotalAmount - aggregatedTotals.servicePlatformFee;
+    // total is already correctly summed above (no need to recalculate)
 
     return NextResponse.json({
       success: true,

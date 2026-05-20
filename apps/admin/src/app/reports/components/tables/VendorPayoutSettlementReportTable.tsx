@@ -61,7 +61,8 @@ export const VendorPayoutSettlementReportTable = () => {
     `${item["Service Total Amount"]}`,
     `${item["Total"]}`,
     `${item["Actually Paid"]}`,
-    `${item["Pending Amount"]}`
+    `${item["Pending Amount"]}`,
+    `${item["appointmentCount"] || 0}`
   ]);
 
   if (isLoading) {
@@ -152,6 +153,7 @@ export const VendorPayoutSettlementReportTable = () => {
                 <TableHead>Total Payable</TableHead>
                 <TableHead>Actually Paid</TableHead>
                 <TableHead>Pending</TableHead>
+                <TableHead>Appointments</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -309,11 +311,12 @@ export const VendorPayoutSettlementReportTable = () => {
                 <TableHead>Total Payable</TableHead>
                 <TableHead>Actually Paid</TableHead>
                 <TableHead>Pending</TableHead>
+                <TableHead>Appointments</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No vendor payout settlement data available.
                 </TableCell>
               </TableRow>
@@ -437,20 +440,22 @@ export const VendorPayoutSettlementReportTable = () => {
               <TableHead>Total Payable</TableHead>
               <TableHead>Actually Paid</TableHead>
               <TableHead>Pending</TableHead>
+              <TableHead>Appointments</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedData.map((item: any, index: number) => (
               <TableRow key={startIndex + index}>
                 <TableCell>{item["Source Type"]}</TableCell>
-                <TableCell>{item["Entity Name"]}</TableCell>
+                <TableCell className="font-medium">{item["Entity Name"]}</TableCell>
                 <TableCell>₹{item["Service Gross Amount"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Service Platform Fee"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Service Tax (₹)"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Service Total Amount"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Total"]?.toFixed(2)}</TableCell>
                 <TableCell className="text-green-700 font-medium">₹{item["Actually Paid"]?.toFixed(2)}</TableCell>
-                <TableCell className="text-red-700 font-medium">₹{item["Pending Amount"]?.toFixed(2)}</TableCell>
+                <TableCell className={`font-semibold ${(item["Pending Amount"] || 0) > 0 ? 'text-red-700' : 'text-gray-500'}`}>₹{item["Pending Amount"]?.toFixed(2)}</TableCell>
+                <TableCell className="text-center">{item["appointmentCount"] || 0}</TableCell>
               </TableRow>
             ))}
             {/* Aggregated Totals Row */}
@@ -462,8 +467,9 @@ export const VendorPayoutSettlementReportTable = () => {
                 <TableCell>₹{aggregatedTotals.serviceTax?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.serviceTotalAmount?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.total?.toFixed(2)}</TableCell>
-                <TableCell>₹{aggregatedTotals.totalPaid?.toFixed(2)}</TableCell>
-                <TableCell>₹{aggregatedTotals.totalPending?.toFixed(2)}</TableCell>
+                <TableCell className="text-green-700">₹{aggregatedTotals.totalPaid?.toFixed(2)}</TableCell>
+                <TableCell className="text-red-700">₹{aggregatedTotals.totalPending?.toFixed(2)}</TableCell>
+                <TableCell className="text-center">{aggregatedTotals.appointmentCount || 0}</TableCell>
               </TableRow>
             )}
           </TableBody>

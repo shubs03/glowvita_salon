@@ -3,6 +3,7 @@ import VendorModel from "@repo/lib/models/Vendor/Vendor.model";
 import RegionModel from "@repo/lib/models/admin/Region.model";
 import ReviewModel from "@repo/lib/models/Review/Review.model";
 import AppointmentModel from "@repo/lib/models/Appointment/Appointment.model.js";
+import ClientModel from "@repo/lib/models/Vendor/Client.model.js";
 import mongoose from "mongoose";
 
 const setCorsHeaders = (response) => {
@@ -330,13 +331,41 @@ export const GET = async (request) => {
 
     const cities = await VendorModel.distinct("city", { status: "Approved" });
 
+    // ── Enriched Counts for each salon ──────────────────────────────────────────
+    const enrichSalons = async (salons) => {
+      return Promise.all(salons.map(async (salon) => {
+        const [clientPhones, appointmentPhones] = await Promise.all([
+          ClientModel.distinct('phone', {
+            vendorId: salon._id,
+            phone: { $ne: '', $ne: null }
+          }),
+          AppointmentModel.distinct('clientPhone', {
+            vendorId: salon._id,
+            clientPhone: { $ne: '', $ne: null }
+          })
+        ]);
+        const uniquePhones = new Set([...clientPhones, ...appointmentPhones]);
+        return {
+          ...salon,
+          dynamicClientCount: uniquePhones.size || 0,
+          clientCount: uniquePhones.size || 0
+        };
+      }));
+    };
+
+    const [enrichedRecommended, enrichedNewlyAdded, enrichedAll] = await Promise.all([
+      enrichSalons(recommendedSalons),
+      enrichSalons(newlyAddedSalons),
+      enrichSalons(allSalons)
+    ]);
+
     return setCorsHeaders(
       Response.json({
         success: true,
         data: {
-          recommended: recommendedSalons,
-          newlyAdded: newlyAddedSalons,
-          all: allSalons,
+          recommended: enrichedRecommended,
+          newlyAdded: enrichedNewlyAdded,
+          all: enrichedAll,
           cities,
         },
       })
