@@ -78,6 +78,8 @@ interface TimeSlot {
   endTime: string;
   duration: number;
   travelTime?: number;
+  totalTravelTime?: number;
+  travelDistance?: number;
   distance?: number;
   score?: number;
   services?: any[];
@@ -351,7 +353,8 @@ export const Step3_TimeSlot = memo(({
     if (lockedSlot) {
       console.log('Releasing existing lock before acquiring new one');
       try {
-        await handleReleaseLock();
+        // Wait for release lock to finish without triggering a background fetch
+        await handleReleaseLock(true);
       } catch (err) {
         console.error('Error auto-releasing lock:', err);
       }
@@ -421,7 +424,8 @@ export const Step3_TimeSlot = memo(({
 
         onSelectTime(slot.startTime);
         toast.success('Slot locked! You have 30 minutes to complete booking.');
-        setSlots(prev => prev.filter(s => s.startTime !== slot.startTime));
+        // Fetch fresh slots from the server to ensure UI is in sync
+        await fetchSlots(true);
         return;
       }
 
@@ -490,6 +494,8 @@ export const Step3_TimeSlot = memo(({
 
       onSelectTime(slot.startTime);
       toast.success('Slot locked! You have 15 minutes to complete booking.');
+      // Fetch fresh slots from the server to ensure UI is in sync
+      await fetchSlots(true);
     } catch (error: any) {
       toast.error(error.message || 'This slot was just booked.');
       await fetchSlots(false);
@@ -499,7 +505,7 @@ export const Step3_TimeSlot = memo(({
   }, [effectiveVendorId, selectedStaff, selectedService, service, selectedServices, selectedDate, isHomeService, isWeddingService,
     isWeddingPackage, weddingPackage, weddingPackageServices, homeServiceLocation, onSelectTime, fetchSlots, isLocking]);
 
-  const handleReleaseLock = useCallback(async () => {
+  const handleReleaseLock = useCallback(async (skipFetch = false) => {
     if (!lockedSlot) return;
     try {
       await fetch('/api/booking/release-lock', {
@@ -510,7 +516,9 @@ export const Step3_TimeSlot = memo(({
       setLockedSlot(null);
       setLockCountdown(null);
       onSelectTime(null);
-      fetchSlots(false);
+      if (!skipFetch) {
+        fetchSlots(false);
+      }
     } catch (error) {}
   }, [lockedSlot, onSelectTime, fetchSlots]);
 
@@ -542,32 +550,6 @@ export const Step3_TimeSlot = memo(({
         </div>
         <p className="text-muted-foreground">Choose a convenient time for your appointment.</p>
       </div>
-
-      {/* Service Summary for Weddings (Matching Existing UI Style) */}
-      {isWeddingPackage && (weddingPackage || weddingPackageServices) && (
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-100">
-          <h3 className="font-semibold mb-2 flex items-center gap-2">
-            <Scissors className="h-4 w-4" />
-            Your Services:
-          </h3>
-          <div className="space-y-2">
-            {(weddingPackageServices || []).map((assignment: any, index: number) => (
-              <div key={index} className="flex items-center justify-between text-sm">
-                <span className="font-medium text-gray-700">{assignment.name || assignment.serviceName}</span>
-                <span className="text-muted-foreground">
-                  {assignment.duration || assignment.serviceDuration} min
-                </span>
-              </div>
-            ))}
-          </div>
-          {(weddingPackage as any)?.duration && (
-            <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between font-semibold">
-              <span>Total Duration:</span>
-              <span>{(weddingPackage as any).duration} minutes</span>
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Date Scroller (Matching Existing UI Style) */}
       <div className="mb-6">

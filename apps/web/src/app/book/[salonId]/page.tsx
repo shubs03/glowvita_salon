@@ -2038,6 +2038,115 @@ function BookingPageContent() {
           console.log("Using existing lock token from Step3");
         }
 
+        // --- For 'Pay Online': collect payment via Razorpay BEFORE confirming ---
+        let razorpayPaymentId: string | undefined;
+        let razorpayOrderId_: string | undefined;
+
+        if (paymentMethod === 'Pay Online' && (finalPriceBreakdown?.finalTotal ?? 0) > 0) {
+          const paymentAmount = finalPriceBreakdown!.finalTotal;
+          const loaded = await loadRazorpayScript();
+          if (!loaded) {
+            toast.error('Payment gateway failed to load. Please try again.');
+            setIsConfirmingBooking(false);
+            return;
+          }
+
+          // Create Razorpay order
+          const orderRes = await fetch('/api/payments/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount: paymentAmount,
+              currency: 'INR',
+              receipt: `wedding_${lockId}_${Date.now()}`,
+            }),
+          });
+
+          if (!orderRes.ok) {
+            const err = await orderRes.json().catch(() => ({}));
+            throw new Error(err.message || 'Failed to create payment order');
+          }
+
+          const rzpOrder = await orderRes.json();
+          const rzpOrderId = rzpOrder.id || rzpOrder.order?.id;
+          if (!rzpOrderId) throw new Error('Invalid payment order response');
+
+          // Close parent modals to escape focus trap
+          const wasPaymentOpen = isPaymentModalOpen;
+          const wasConfirmationOpen = isConfirmationModalOpen;
+          setIsPaymentModalOpen(false);
+          setIsConfirmationModalOpen(false);
+
+          // Open Razorpay checkout
+          try {
+            await new Promise<void>((resolve, reject) => {
+              const rzp = new (window as any).Razorpay({
+                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+                amount: Math.round(paymentAmount * 100),
+                currency: 'INR',
+                order_id: rzpOrderId,
+                name: 'GlowVita Salon',
+                description: `Wedding Booking – ${selectedWeddingPackage.name}`,
+                image: 'https://glowvita.com/logo.png',
+                theme: { color: '#7c3aed' },
+                prefill: {
+                  name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
+                  email: user?.emailAddress || '',
+                  contact: user?.mobileNo || user?.phone || '',
+                },
+                retry: { enabled: true, max_count: 3 },
+                config: {
+                  display: {
+                    blocks: {
+                      upi: {
+                        name: 'UPI / QR',
+                        instruments: [
+                          { method: 'upi', omnichannel: true }, // UPI ID entry / VPA
+                          { method: 'upi', intent: true },      // UPI Apps (GPay, PhonePe, etc.)
+                          { method: 'upi', qr: true }          // QR Code
+                        ],
+                      },
+                    },
+                    sequence: ['block.upi', 'block.card', 'block.netbanking'],
+                  },
+                },
+                modal: {
+                  ondismiss: () => {
+                    if (wasPaymentOpen) setIsPaymentModalOpen(true);
+                    if (wasConfirmationOpen) setIsConfirmationModalOpen(true);
+                    reject(new Error('Payment cancelled by user'));
+                  },
+                  escape: true,
+                  backdropClose: false,
+                },
+                handler: async (response: any) => {
+                  try {
+                    const verifyRes = await fetch('/api/payments/verify', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(response),
+                    });
+                    const verifyData = await verifyRes.json();
+                    if (!verifyData.success) throw new Error('Payment verification failed. Contact support.');
+                    razorpayPaymentId = response.razorpay_payment_id;
+                    razorpayOrderId_ = response.razorpay_order_id;
+                    resolve();
+                  } catch (err: any) { reject(err); }
+                },
+              });
+              rzp.open();
+            });
+          } catch (payErr: any) {
+            if (payErr?.message === 'Payment cancelled by user') {
+              toast.info('Payment cancelled.');
+            } else {
+              toast.error(payErr?.message || 'Payment failed. Please try again.');
+            }
+            setIsConfirmingBooking(false);
+            return;
+          }
+        }
+
         // Now confirm the booking with the lock ID
         console.log("=== CONFIRMING WEDDING PACKAGE BOOKING ===");
         console.log("Lock ID:", lockId);
@@ -2074,7 +2183,9 @@ function BookingPageContent() {
             },
             paymentDetails: {
               method: paymentMethod,
-              status: 'pending'
+              status: paymentMethod === 'Pay at Salon' ? 'pending' : 'completed',
+              ...(razorpayPaymentId && { razorpayPaymentId }),
+              ...(razorpayOrderId_ && { razorpayOrderId: razorpayOrderId_ })
             },
             customizedPackageServices: weddingPackageMode === 'customized' ? customizedPackageServices : null
           })
@@ -2086,6 +2197,7 @@ function BookingPageContent() {
         if (confirmResult.success) {
           toast.success("Wedding package booking confirmed!");
           setIsConfirmationModalOpen(false);
+          setIsPaymentModalOpen(false);
           await persistServiceLocation(weddingVenueType === 'venue' ? serviceLocation : null);
           router.push('/profile/appointments');
         } else {
@@ -2218,8 +2330,9 @@ function BookingPageContent() {
                         upi: {
                           name: 'UPI / QR',
                           instruments: [
-                            { method: 'upi', vpa: true }, // UPI ID entry
-                            { method: 'upi', qr: true }   // QR Code
+                            { method: 'upi', omnichannel: true }, // UPI ID entry / VPA
+                            { method: 'upi', intent: true },      // UPI Apps (GPay, PhonePe, etc.)
+                            { method: 'upi', qr: true }          // QR Code
                           ],
                         },
                       },

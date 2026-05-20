@@ -301,6 +301,15 @@ async function validateAndFilterSlots({
       status: { $in: ['scheduled', 'confirmed', 'checked-in', 'temp-locked'] }
     });
 
+    // Get active in-memory locks
+    let activeLocks = [];
+    try {
+      const { getActiveLocks } = await import('./OptimisticLocking.js');
+      activeLocks = getActiveLocks(vendorId.toString(), date);
+    } catch (err) {
+      console.error('Error fetching active locks:', err);
+    }
+
     // Filter candidate slots
     const availableSlots = candidateSlots.filter(slot => {
       const slotStartMinutes = timeToMinutes(slot.startTime);
@@ -349,6 +358,30 @@ async function validateAndFilterSlots({
         // Check for overlap between blocked windows
         if (slotBlockedStart < aptBlockedEnd && slotBlockedEnd > aptBlockedStart) {
           return false; // Slot or its travel/buffer time conflicts with existing appointment or its travel/buffer
+        }
+      }
+
+      // Check for conflicts with active in-memory locks
+      for (const lock of activeLocks) {
+        const lockStartMinutes = timeToMinutes(lock.timeSlot);
+        const lockDuration = lock.duration || 60; // Default to 60 if not available
+        const lockTravelTime = lock.travelTime || 0;
+        const lockBufferBefore = lock.bufferBefore || 0;
+        const lockBufferAfter = lock.bufferAfter || 0;
+
+        const lockBlockedStart = lockStartMinutes - lockTravelTime - lockBufferBefore;
+        const lockBlockedEnd = lockStartMinutes + lockDuration + lockTravelTime + lockBufferAfter;
+
+        // If a wedding package is locked at this time (overlapping), block it
+        if (lock.staffId.startsWith('wedding-') && slotBlockedStart < lockBlockedEnd && slotBlockedEnd > lockBlockedStart) {
+           return false;
+        }
+        
+        // Check for staff-specific locks that might overlap
+        if (lock.staffId === staffId || lock.staffId === 'any') {
+           if (slotBlockedStart < lockBlockedEnd && slotBlockedEnd > lockBlockedStart) {
+             return false;
+           }
         }
       }
 
@@ -678,13 +711,19 @@ export async function generateWeddingPackageSlots({
 
     // Calculate travel time if customer location is provided
     let travelTime = 0;
+    let travelDistance = 0;
+    let distanceMeters = 0;
     if (customerLocation) {
       try {
         const travelInfo = await calculateVendorTravelTime(vendorId, customerLocation);
         travelTime = travelInfo.timeInMinutes;
+        travelDistance = travelInfo.distanceInKm;
+        distanceMeters = travelInfo.distanceInMeters;
       } catch (error) {
         console.warn('Could not calculate travel time, using fallback:', error.message);
         travelTime = 30; // Fallback estimate
+        travelDistance = 10; // Fallback estimate
+        distanceMeters = 10000; // Fallback estimate
       }
     }
 
@@ -709,6 +748,38 @@ export async function generateWeddingPackageSlots({
       currentTime = Math.ceil(currentMinutesIST / 15) * 15;
       console.log(`Today's date detected (IST). Starting slots from ${minutesToTime(currentTime)} (current time: ${minutesToTime(currentMinutesIST)})`);
     }
+
+    // Pre-fetch all appointments and locks for the day to avoid querying in the loop
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const staffIdList = staffMembers.map(s => s._id);
+    const staffIdStrings = staffMembers.map(s => s._id.toString());
+    
+    const AppointmentModel = (await import('../../models/Appointment/Appointment.model.js')).default;
+    const allDayAppointments = await AppointmentModel.find({
+      vendorId: vendorId,
+      $or: [
+        { staff: { $in: staffIdList } },
+        { 'staff.id': { $in: staffIdList } },
+        { 'serviceItems.staff': { $in: staffIdList } },
+        { 'weddingPackageDetails.teamMembers.staffId': { $in: staffIdStrings } },
+        { 'weddingPackageDetails.teamMembers.staffId': { $in: staffIdList } },
+        { 'weddingPackageDetails.teamMembers': { $in: staffIdList } },
+        { 'weddingPackageDetails.teamMembers': { $in: staffIdStrings } },
+        { 'weddingPackageDetails.teamMembers._id': { $in: staffIdList } }
+      ],
+      date: {
+        $gte: startOfDay,
+        $lte: endOfDay
+      },
+      status: { $in: ['scheduled', 'confirmed', 'checked-in', 'temp-locked'] }
+    }).lean();
+
+    const { getActiveLocks } = await import('./OptimisticLocking.js');
+    const allDayLocks = getActiveLocks(vendorId.toString(), date);
 
     // Account for travel time to and from the customer for home services
     const totalSlotActivityTime = customerLocation ?
@@ -788,7 +859,9 @@ export async function generateWeddingPackageSlots({
         bufferBefore,
         bufferAfter,
         customerLocation,
-        isHomeService: !!customerLocation
+        isHomeService: !!customerLocation,
+        existingAppointments: allDayAppointments,
+        activeLocks: allDayLocks
       });
 
       console.log(`Slot ${slotStart}-${slotEnd}: ${isValidSlot ? 'VALID' : 'INVALID'}`);
@@ -806,6 +879,8 @@ export async function generateWeddingPackageSlots({
             yearOfExperience: staff.yearOfExperience
           })),
           totalTravelTime: travelTime,
+          travelDistance: travelDistance,
+          distanceMeters: distanceMeters,
           totalDuration: totalDuration,
           blockingWindows: blockingWindows,
           acceptanceWindowHours,
@@ -845,7 +920,10 @@ export async function generateWeddingPackageSlots({
         ...slot,
         score
       };
-    }).sort((a, b) => b.score - a.score); // Sort by score descending
+    }).sort((a, b) => {
+      // Sort chronologically for better sequential UX, ignoring score
+      return timeToMinutes(a.startTime) - timeToMinutes(b.startTime);
+    }); // Sort chronologically
 
     console.log(`=== Wedding Package Slot Generation Complete ===`);
     console.log(`Total slots generated: ${scoredSlots.length}`);
@@ -875,7 +953,9 @@ async function validateWeddingPackageSlot({
   bufferBefore,
   bufferAfter,
   customerLocation,
-  isHomeService
+  isHomeService,
+  existingAppointments = [],
+  activeLocks = []
 }) {
   try {
     const slotStartMinutes = timeToMinutes(slotStartTime);
@@ -934,37 +1014,26 @@ async function validateWeddingPackageSlot({
 
       console.log(`✅ Staff ${staff.fullName} is available for this slot`);
 
-      // Get existing appointments for this staff member on this day
-      const startOfDay = new Date(date);
-      startOfDay.setHours(0, 0, 0, 0);
-
-      const endOfDay = new Date(date);
-      endOfDay.setHours(23, 59, 59, 999);
-
-      // Query for appointments:
-      // 1. Regular appointments (with staff.id)
-      // 2. Wedding packages (with weddingPackageDetails.teamMembers)
-      // 3. For wedding slot generation, also get ALL wedding appointments for that date
-      const existingAppointments = await AppointmentModel.find({
-        vendorId: vendorId,
-        $or: [
-          { staff: staff._id },
-          { 'staff.id': staff._id },
-          { 'serviceItems.staff': staff._id },
-          { 'weddingPackageDetails.teamMembers.staffId': staff._id.toString() },
-          { 'weddingPackageDetails.teamMembers.staffId': staff._id }
-        ],
-        date: {
-          $gte: startOfDay,
-          $lte: endOfDay
-        },
-        status: { $in: ['scheduled', 'confirmed', 'checked-in', 'temp-locked'] }
+      // Filter existing appointments for this staff member
+      const staffIdStr = staff._id.toString();
+      const staffAppointments = existingAppointments.filter(app => {
+        if (app.staff && app.staff.toString() === staffIdStr) return true;
+        if (app.staff && app.staff.id && app.staff.id.toString() === staffIdStr) return true;
+        if (app.serviceItems && app.serviceItems.some(item => item.staff && item.staff.toString() === staffIdStr)) return true;
+        if (app.weddingPackageDetails && app.weddingPackageDetails.teamMembers) {
+          return app.weddingPackageDetails.teamMembers.some(member => 
+            (member.staffId && member.staffId.toString() === staffIdStr) || 
+            (member._id && member._id.toString() === staffIdStr) || 
+            (member.toString() === staffIdStr)
+          );
+        }
+        return false;
       });
 
-      console.log(`Found ${existingAppointments.length} existing appointments for validation`);
+      console.log(`Found ${staffAppointments.length} existing appointments for validation for ${staff.fullName}`);
 
       // Check for conflicts with existing appointments using full window logic
-      for (const appointment of existingAppointments) {
+      for (const appointment of staffAppointments) {
         const aptStartMinutes = timeToMinutes(appointment.startTime);
         const aptEndMinutes = timeToMinutes(appointment.endTime);
         const aptTravel = Number(appointment.travelTime) || 0;
@@ -978,6 +1047,35 @@ async function validateWeddingPackageSlot({
           console.log(`Slot window conflicts with appointment window ${minutesToTime(aptBlockedStart)}-${minutesToTime(aptBlockedEnd)}`);
           return false;
         }
+      }
+
+      // Check for conflicts with active in-memory locks
+      try {
+        for (const lock of activeLocks) {
+          const lockStartMinutes = timeToMinutes(lock.timeSlot);
+          const lockDuration = lock.duration || 60; // Default to 60 if not available
+          const lockTravelTime = lock.travelTime || 0;
+          const lockBufferBefore = lock.bufferBefore || 0;
+          const lockBufferAfter = lock.bufferAfter || 0;
+
+          const lockBlockedStart = lockStartMinutes - lockTravelTime - lockBufferBefore;
+          const lockBlockedEnd = lockStartMinutes + lockDuration + lockTravelTime + lockBufferAfter;
+
+          // If a wedding package is locked (overlapping), block it
+          if (lock.staffId.startsWith('wedding-') && slotTotalStart < lockBlockedEnd && slotTotalEnd > lockBlockedStart) {
+             console.log(`Slot window conflicts with active wedding lock at ${lock.timeSlot}`);
+             return false;
+          }
+          // Check for staff-specific locks that might overlap
+          if (lock.staffId === staff._id.toString() || lock.staffId === 'any') {
+             if (slotTotalStart < lockBlockedEnd && slotTotalEnd > lockBlockedStart) {
+               console.log(`Slot window conflicts with active staff lock at ${lock.timeSlot}`);
+               return false;
+             }
+          }
+        }
+      } catch (err) {
+        console.error('Error checking active locks:', err);
       }
 
       // Check for conflicts with staff blocked times using full window logic

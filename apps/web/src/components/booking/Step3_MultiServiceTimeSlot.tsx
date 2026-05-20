@@ -142,9 +142,9 @@ const SlotCard = React.memo<{
       {/* Duration Info */}
       <div className="text-sm text-gray-600 mb-3">
         {slot.totalDuration} min
-        {Boolean(slot.travelTime && slot.travelTime > 0) && (
+        {Boolean((slot.travelTime || slot.totalTravelTime) && (slot.travelTime || slot.totalTravelTime) > 0) && (
           <span className="text-blue-600 ml-2">
-            (+{slot.travelTime} min travel)
+            (+{slot.travelTime || slot.totalTravelTime} min travel)
           </span>
         )}
       </div>
@@ -162,9 +162,9 @@ const SlotCard = React.memo<{
       </div>
 
       {/* Travel Info */}
-      {slot.travelInfo && (
+      {(slot.travelInfo || (slot.travelDistance !== undefined && slot.travelDistance > 0)) && (
         <div className="mt-3 text-xs text-blue-600 border-t border-gray-100 pt-2">
-          📍 {slot.travelInfo.distanceInKm.toFixed(1)} km away
+          📍 {(slot.travelInfo?.distanceInKm ?? slot.travelDistance ?? 0).toFixed(1)} km away
         </div>
       )}
     </button>
@@ -692,7 +692,7 @@ export function Step3_MultiServiceTimeSlot({
         )}
       </div>
 
-      {/* Service Summary */}
+      {/* Service Summary
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
         <h3 className="font-semibold mb-2">Your Services:</h3>
         <div className="space-y-2">
@@ -711,7 +711,7 @@ export function Step3_MultiServiceTimeSlot({
             <span>{totalDuration} minutes</span>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Date Scroller */}
       <div className="mb-6">
