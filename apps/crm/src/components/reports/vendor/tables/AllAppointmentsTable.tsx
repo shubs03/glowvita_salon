@@ -9,6 +9,7 @@ import { Download, Search, Copy, FileText, FileSpreadsheet, Printer, Filter, Cal
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Input } from '@repo/ui/input';
 import { Skeleton } from "@repo/ui/skeleton";
+import { Badge } from "@repo/ui/badge";
 import { useGetAllAppointmentsReportQuery } from '@repo/store/api';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
@@ -281,16 +282,16 @@ export const AllAppointmentsTable = ({ startDate, endDate, client, service, staf
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead className="text-xs">Client</TableHead>
-              <TableHead className="text-xs">Service</TableHead>
-              <TableHead className="text-xs">Staff</TableHead>
-              <TableHead className="text-xs">Scheduled</TableHead>
-              <TableHead className="text-xs">Duration</TableHead>
-              <TableHead className="text-xs">Base Amount</TableHead>
-              <TableHead className="text-xs">Fee</TableHead>
-              <TableHead className="text-xs">Tax</TableHead>
-              <TableHead className="text-xs font-bold">Final</TableHead>
-              <TableHead className="text-xs text-center">Status</TableHead>
+              <TableHead>Client</TableHead>
+              <TableHead>Service</TableHead>
+              <TableHead>Staff</TableHead>
+              <TableHead>Scheduled</TableHead>
+              <TableHead>Duration</TableHead>
+              <TableHead>Base Amount</TableHead>
+              <TableHead>Fee</TableHead>
+              <TableHead>Tax</TableHead>
+              <TableHead className="font-bold">Final</TableHead>
+              <TableHead className="text-center">Status</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -307,17 +308,17 @@ export const AllAppointmentsTable = ({ startDate, endDate, client, service, staf
 
                 return (
                   <TableRow key={`${item.id}-${item.multiServiceIndex || 0}`}>
-                    <TableCell className="text-xs py-2">{item.clientName || 'N/A'}</TableCell>
-                    <TableCell className="text-xs py-2">{item.serviceName || item.service?.name || 'N/A'}{item.isMultiService ? '*' : ''}</TableCell>
-                    <TableCell className="text-xs py-2">{item.staffName || item.staff?.fullName || 'N/A'}</TableCell>
-                    <TableCell className="text-[10px] py-2">{item.date ? new Date(item.date).toLocaleDateString() : 'N/A'}<br/>{item.startTime}</TableCell>
-                    <TableCell className="text-xs py-2">{item.duration || 'N/A'}m</TableCell>
-                    <TableCell className="text-xs py-2">₹{item.amount || 0}</TableCell>
-                    <TableCell className="text-[10px] py-2">₹{proportionalPlatformFee.toFixed(1)}</TableCell>
-                    <TableCell className="text-[10px] py-2">₹{proportionalServiceTax.toFixed(1)}</TableCell>
-                    <TableCell className="text-xs py-2 font-bold">₹{finalAmtToShow.toFixed(2)}</TableCell>
-                    <TableCell className="text-center py-2">
-                      <Badge variant="secondary" className={`text-[10px] px-1 py-0 h-5 ${(item.status || '').toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 'bg-muted text-muted-foreground'}`}>
+                    <TableCell>{item.clientName || 'N/A'}</TableCell>
+                    <TableCell>{item.serviceName || item.service?.name || 'N/A'}{item.isMultiService ? '*' : ''}</TableCell>
+                    <TableCell>{item.staffName || item.staff?.fullName || 'N/A'}</TableCell>
+                    <TableCell>{item.date ? new Date(item.date).toLocaleDateString() : 'N/A'}<br/>{item.startTime}</TableCell>
+                    <TableCell>{item.duration || 'N/A'}m</TableCell>
+                    <TableCell>₹{item.amount || 0}</TableCell>
+                    <TableCell>₹{proportionalPlatformFee.toFixed(1)}</TableCell>
+                    <TableCell>₹{proportionalServiceTax.toFixed(1)}</TableCell>
+                    <TableCell className="font-bold">₹{finalAmtToShow.toFixed(2)}</TableCell>
+                    <TableCell className="text-center">
+                      <Badge variant="secondary" className={`text-xs px-2 py-0.5 ${(item.status || '').toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' : 'bg-muted text-muted-foreground'}`}>
                         {item.status}
                       </Badge>
                     </TableCell>
@@ -332,9 +333,9 @@ export const AllAppointmentsTable = ({ startDate, endDate, client, service, staf
             {paginatedAppointments.length > 0 && (
               <TableRow className="bg-muted font-bold text-primary">
                 <TableCell colSpan={5}>TOTAL</TableCell>
-                <TableCell className="text-xs">₹{paginatedAppointments.reduce((sum, a: any) => sum + (a.amount || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedAppointments.reduce((sum, a: any) => sum + (a.amount || 0), 0).toFixed(2)}</TableCell>
                 <TableCell colSpan={2}></TableCell>
-                <TableCell className="text-xs">₹{paginatedAppointments.reduce((sum, a: any) => sum + (a.finalAmount || a.totalAmount || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedAppointments.reduce((sum, a: any) => sum + (a.finalAmount || a.totalAmount || 0), 0).toFixed(2)}</TableCell>
                 <TableCell></TableCell>
               </TableRow>
             )}
