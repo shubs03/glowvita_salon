@@ -6,9 +6,11 @@ import { Separator } from '@repo/ui/separator';
 import Image from 'next/image';
 import { ArrowRight, Tag, Info, Scissors, User, Calendar, Clock, MapPin, Star, ChevronUp, ChevronDown, Search, X, Heart } from 'lucide-react';
 import { format } from 'date-fns';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@repo/ui/cn';
 import { Service, StaffMember, SalonInfo, ServiceStaffAssignment } from '@/hooks/useBookingData';
+import { useParams } from 'next/navigation';
+import { useGetPublicVendorStaffQuery } from '@repo/store/api';
 
 interface PriceBreakdown {
   subtotal: number;
@@ -66,6 +68,77 @@ export function BookingSummary({
   weddingVenueType
 }: BookingSummaryProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const params = useParams();
+  const vendorId = (params?.salonId as string) || salonInfo?.id;
+
+  // Fetch staff data for the vendor to resolve staff IDs to names
+  const { data: staffData } = useGetPublicVendorStaffQuery(vendorId, {
+    skip: !vendorId,
+  });
+
+  // Create a staff lookup map for quick ID to name resolution
+  const staffLookup = useMemo(() => {
+    if (!staffData) return {};
+    const lookup: { [key: string]: string } = {};
+    let staffArray: any[] = [];
+    if (Array.isArray(staffData)) {
+      staffArray = staffData;
+    } else if ((staffData as any)?.data && Array.isArray((staffData as any).data)) {
+      staffArray = (staffData as any).data;
+    } else if ((staffData as any)?.staff && Array.isArray((staffData as any).staff)) {
+      staffArray = (staffData as any).staff;
+    }
+    
+    if (staffArray.length > 0) {
+      staffArray.forEach((staff: any) => {
+        if (staff) {
+          const rawId = staff._id || staff.id || staff.staffId;
+          const staffId = rawId && typeof rawId === 'object' && rawId.$oid ? rawId.$oid : rawId;
+          const staffName = staff.fullName || staff.name || staff.staffName || staff.firstName 
+            || (staff.firstName && staff.lastName ? `${staff.firstName} ${staff.lastName}` : null);
+          if (staffId && staffName) {
+            lookup[String(staffId)] = staffName;
+          }
+        }
+      });
+    }
+    return lookup;
+  }, [staffData]);
+
+  // Helper function to get staff name from ID/object with fallback
+  const getStaffName = (staff: any): string => {
+    if (!staff) return 'Staff Member';
+    
+    let idStr = '';
+    if (typeof staff === 'string') {
+      idStr = staff;
+    } else if (staff && typeof staff === 'object') {
+      if (staff.$oid) {
+        idStr = staff.$oid;
+      } else {
+        const rawId = staff._id || staff.id || staff.staffId;
+        idStr = rawId && typeof rawId === 'object' && rawId.$oid ? rawId.$oid : String(rawId || '');
+      }
+    }
+
+    if (idStr && staffLookup[idStr]) {
+      return staffLookup[idStr];
+    }
+
+    if (staff && typeof staff === 'object' && !staff.$oid) {
+      const name = staff.fullName || staff.name || staff.staffName || staff.firstName 
+        || (staff.firstName && staff.lastName ? `${staff.firstName} ${staff.lastName}` : null);
+      if (name) return name;
+    }
+
+    const isMongoId = /^[0-9a-fA-F]{24}$/.test(idStr);
+    if (idStr && !isMongoId) {
+      return idStr;
+    }
+
+    return 'Wedding Specialist';
+  };
 
   // Calculate totals - handle wedding package pricing
   const subtotal = weddingPackage
@@ -359,7 +432,7 @@ export function BookingSummary({
                       <div className="flex flex-wrap gap-1.5">
                         {weddingPackage.assignedStaff.slice(0, 3).map((staff: any, idx: number) => (
                           <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs bg-secondary text-secondary-foreground border">
-                            {typeof staff === 'string' ? staff : staff.name}
+                            {getStaffName(staff)}
                           </span>
                         ))}
                         {weddingPackage.assignedStaff.length > 3 && (

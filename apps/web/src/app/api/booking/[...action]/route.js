@@ -592,14 +592,14 @@ async function handleSlotDiscovery(searchParams) {
 
     const vendorId = searchParams.get('vendorId');
     const staffId = searchParams.get('staffId');
-    const serviceIds = searchParams.get('serviceIds')?.split(',') || [];
+    const serviceIds = (searchParams.get('serviceIds') || '').split(',').filter(Boolean);
     const date = searchParams.get('date');
     const lat = searchParams.get('lat');
     const lng = searchParams.get('lng');
     const isHomeService = searchParams.get('isHomeService') === 'true';
     const isWeddingService = searchParams.get('isWeddingService') === 'true';
     const packageId = searchParams.get('packageId');
-    const addOnIds = searchParams.get('addOnIds')?.split(',') || [];
+    const addOnIds = (searchParams.get('addOnIds') || '').split(',').filter(Boolean);
     const bufferBefore = parseInt(searchParams.get('bufferBefore')) || 0;
     const bufferAfter = parseInt(searchParams.get('bufferAfter')) || 0;
 
