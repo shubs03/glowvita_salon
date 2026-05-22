@@ -278,11 +278,89 @@ export default function OffersCouponsPage() {
 
   // Handle category selection (for genders)
   const handleCategoryChange = (category: string, checked: boolean) => {
-    const updated = checked
+    let updated = checked
       ? [...selectedCategories, category]
       : selectedCategories.filter((c: string) => c !== category);
+
+    let updatedServiceCategories = [...selectedServiceCategories];
+    let updatedServices = [...selectedServices];
+
+    // Auto-select/deselect related service categories based on the selected gender
+    const matchesGender = (catName: string, gender: string) => {
+      const nameLower = catName.toLowerCase();
+      const genderLower = gender.toLowerCase();
+      
+      const isMen = () => {
+        if (nameLower.includes('men') && !nameLower.includes('women')) return true;
+        const menKeywords = ['hair cut', 'beard', 'shave'];
+        return menKeywords.some(keyword => nameLower.includes(keyword));
+      };
+
+      const isWomen = () => {
+        if (nameLower.includes('women')) return true;
+        const womenKeywords = ['makeup', 'hairstyling'];
+        return womenKeywords.some(keyword => nameLower.includes(keyword));
+      };
+
+      if (genderLower === 'men') {
+        return isMen();
+      } else if (genderLower === 'women') {
+        return isWomen();
+      } else if (genderLower === 'unisex') {
+        return nameLower.includes('unisex') || (!isMen() && !isWomen());
+      }
+
+      return false;
+    };
+
+    if (categoryOptions.includes(category)) {
+      // Find matching service categories from categoriesData
+      const matchingCats = Array.isArray(categoriesData)
+        ? categoriesData.filter((cat: any) => matchesGender(cat.name, category))
+        : [];
+
+      if (checked) {
+        // Add matching category IDs that are not already selected
+        matchingCats.forEach((cat: any) => {
+          if (!updatedServiceCategories.includes(cat._id)) {
+            updatedServiceCategories.push(cat._id);
+          }
+        });
+      } else {
+        // Remove matching category IDs
+        const matchingIds = matchingCats.map((cat: any) => cat._id);
+        updatedServiceCategories = updatedServiceCategories.filter((id) => !matchingIds.includes(id));
+      }
+
+      // Also select/deselect all services belonging to these matching service categories
+      if (vendorServicesData?.services) {
+        matchingCats.forEach((cat: any) => {
+          const servicesInCategory = (vendorServicesData.services as any[])
+            .filter((s: any) => 
+              s.category === cat._id || 
+              (typeof s.category === 'object' && s.category?._id === cat._id)
+            )
+            .map((s: any) => s._id);
+
+          if (checked) {
+            servicesInCategory.forEach((id: string) => {
+              if (!updatedServices.includes(id)) {
+                updatedServices.push(id);
+              }
+            });
+          } else {
+            updatedServices = updatedServices.filter((id: string) => !servicesInCategory.includes(id));
+          }
+        });
+      }
+    }
+
     setSelectedCategories(updated);
     setValue("applicableCategories", updated);
+    setSelectedServiceCategories(updatedServiceCategories);
+    setValue("applicableServiceCategories", updatedServiceCategories);
+    setSelectedServices(updatedServices);
+    setValue("applicableServices", updatedServices);
   };
 
   // Handle disease selection (for doctors)
@@ -306,18 +384,45 @@ export default function OffersCouponsPage() {
     // Automatically update service categories based on selected services
     const autoCategories = getAutoCategoriesFromServices(updated);
 
-    // Merge auto-detected categories with manually selected ones
-    // Keep manually selected categories that don't conflict with auto-detected ones
-    const currentManualCategories = selectedServiceCategories.filter(
-      (catId: string) => !autoCategories.includes(catId)
-    );
+    if (checked) {
+      // If checked, add the service's category to the selected categories if not already present
+      const serviceObj = (vendorServicesData?.services as any[])?.find((s: any) => s._id === serviceId);
+      if (serviceObj && serviceObj.category) {
+        const catId = typeof serviceObj.category === 'object' ? serviceObj.category._id?.toString() : serviceObj.category.toString();
+        if (catId && !selectedServiceCategories.includes(catId)) {
+          const newCats = [...selectedServiceCategories, catId];
+          setSelectedServiceCategories(newCats);
+          setValue("applicableServiceCategories", newCats);
+          return;
+        }
+      }
+    } else {
+      // If unchecked, find if any other selected services share the same category
+      const deselectedServiceObj = (vendorServicesData?.services as any[])?.find((s: any) => s._id === serviceId);
+      if (deselectedServiceObj && deselectedServiceObj.category) {
+        const catId = typeof deselectedServiceObj.category === 'object' ? deselectedServiceObj.category._id?.toString() : deselectedServiceObj.category.toString();
+        
+        const otherServicesInSameCat = updated.some((sId: string) => {
+          const sObj = (vendorServicesData?.services as any[])?.find((s: any) => s._id === sId);
+          if (sObj && sObj.category) {
+            const sCatId = typeof sObj.category === 'object' ? sObj.category._id?.toString() : sObj.category.toString();
+            return sCatId === catId;
+          }
+          return false;
+        });
 
-    const finalCategories = Array.from(
-      new Set([...autoCategories, ...currentManualCategories])
-    );
+        if (!otherServicesInSameCat) {
+          // No other selected services in this category, so deselect the category!
+          const newCats = selectedServiceCategories.filter((id) => id !== catId);
+          setSelectedServiceCategories(newCats);
+          setValue("applicableServiceCategories", newCats);
+          return;
+        }
+      }
+    }
 
-    setSelectedServiceCategories(finalCategories);
-    setValue("applicableServiceCategories", finalCategories);
+    setSelectedServiceCategories(autoCategories);
+    setValue("applicableServiceCategories", autoCategories);
   };
 
   // Handle service category selection
@@ -564,19 +669,25 @@ export default function OffersCouponsPage() {
     if (!vendorServicesData?.services) return [];
 
     const selectedServiceObjects = serviceIds
-      .map((id) => vendorServicesData.services.find((s: any) => s._id === id))
+      .map((id) => (vendorServicesData.services as any[]).find((s: any) => s._id === id))
       .filter((service) => service);
 
     // Extract unique category IDs from selected services
     const categoryIds = Array.from(
       new Set(
         selectedServiceObjects
-          .map((service: any) => service.category)
+          .map((service: any) => {
+            const cat = service.category;
+            if (typeof cat === 'object' && cat !== null) {
+              return cat._id?.toString();
+            }
+            return cat?.toString();
+          })
           .filter((categoryId) => categoryId)
       )
     );
 
-    return categoryIds;
+    return categoryIds as string[];
   };
 
 
@@ -904,17 +1015,6 @@ export default function OffersCouponsPage() {
                 <>
                   <div className="grid grid-cols-3 items-center gap-4">
                     <span className="font-semibold text-muted-foreground">
-                      Services
-                    </span>
-                    <span className="col-span-2">
-                      {(data as Coupon)?.applicableServices &&
-                        (data as Coupon).applicableServices.length > 0
-                        ? getServiceNames((data as Coupon).applicableServices)
-                        : "All services"}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 items-center gap-4">
-                    <span className="font-semibold text-muted-foreground">
                       Service Categories
                     </span>
                     <span className="col-span-2">
@@ -953,6 +1053,17 @@ export default function OffersCouponsPage() {
                           );
                         })()
                         : "All categories"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 items-center gap-4">
+                    <span className="font-semibold text-muted-foreground">
+                      Services
+                    </span>
+                    <span className="col-span-2">
+                      {(data as Coupon)?.applicableServices &&
+                        (data as Coupon).applicableServices.length > 0
+                        ? getServiceNames((data as Coupon).applicableServices)
+                        : "All services"}
                     </span>
                   </div>
                   <div className="grid grid-cols-3 items-center gap-4">
@@ -1154,7 +1265,7 @@ export default function OffersCouponsPage() {
                           return (
                             <div
                               key={category._id}
-                              className={`flex items-center space-x-2 p-1.5 rounded-sm transition-colors ${isAutoSelected ? "bg-blue-50/50" : "hover:bg-accent/50"}`}
+                              className={`flex items-center space-x-2 p-1.5 rounded-sm transition-colors hover:bg-accent/50`}
                             >
                               <Checkbox
                                 id={`service-category-${category._id}`}
@@ -1168,14 +1279,9 @@ export default function OffersCouponsPage() {
                               />
                               <Label
                                 htmlFor={`service-category-${category._id}`}
-                                className={`text-sm cursor-pointer flex-1 ${isAutoSelected ? "text-blue-600 font-semibold" : ""}`}
+                                className={`text-sm cursor-pointer flex-1`}
                               >
                                 {category.name}
-                                {isAutoSelected && (
-                                  <span className="ml-1 text-[10px] bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-bold uppercase">
-                                    Auto
-                                  </span>
-                                )}
                               </Label>
                             </div>
                           );
@@ -1207,8 +1313,8 @@ export default function OffersCouponsPage() {
                           )
                           .map((service: any) => (
                             <div
-                              key={service._id}
-                              className="flex items-center space-x-2 p-1 hover:bg-accent/50 rounded-sm transition-colors"
+                               key={service._id}
+                               className="flex items-center space-x-2 p-1 hover:bg-accent/50 rounded-sm transition-colors"
                             >
                               <Checkbox
                                 id={`service-${service._id}`}

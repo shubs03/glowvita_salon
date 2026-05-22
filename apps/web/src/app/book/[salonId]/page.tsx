@@ -1693,12 +1693,12 @@ function BookingPageContent() {
       // Calculate customized subtotal if applicable
       const customizedSubtotal = weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
         ? customizedPackageServices.reduce((acc, service) => {
-            const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
-              parseFloat(String(service.discountedPrice)) :
-              parseFloat(String(service.price || '0'));
-            const quantity = (service as any).quantity || 1;
-            return acc + (servicePrice * quantity);
-          }, 0)
+          const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+            parseFloat(String(service.discountedPrice)) :
+            parseFloat(String(service.price || '0'));
+          const quantity = (service as any).quantity || 1;
+          return acc + (servicePrice * quantity);
+        }, 0)
         : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice);
 
       // Create a service-like object from wedding package
@@ -3907,12 +3907,12 @@ function BookingPageContent() {
         // Calculate base package price (with customization if applicable) for fallback
         const packagePrice = weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
           ? customizedPackageServices.reduce((sum, service: any) => {
-              const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
-                parseFloat(service.discountedPrice) :
-                parseFloat(service.price || '0');
-              const quantity = service.quantity || 1;
-              return sum + (servicePrice * quantity);
-            }, 0)
+            const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+              parseFloat(service.discountedPrice) :
+              parseFloat(service.price || '0');
+            const quantity = service.quantity || 1;
+            return sum + (servicePrice * quantity);
+          }, 0)
           : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice || 0);
 
         // Use customized services if available, otherwise use package defaults
