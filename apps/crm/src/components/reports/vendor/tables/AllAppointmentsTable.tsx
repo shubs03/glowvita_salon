@@ -333,9 +333,9 @@ export const AllAppointmentsTable = ({ startDate, endDate, client, service, staf
             {paginatedAppointments.length > 0 && (
               <TableRow className="bg-muted font-bold text-primary">
                 <TableCell colSpan={5}>TOTAL</TableCell>
-                <TableCell>₹{paginatedAppointments.reduce((sum, a: any) => sum + (a.amount || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedAppointments.reduce((sum: number, a: any) => sum + (a.amount || 0), 0).toFixed(2)}</TableCell>
                 <TableCell colSpan={2}></TableCell>
-                <TableCell>₹{paginatedAppointments.reduce((sum, a: any) => sum + (a.finalAmount || a.totalAmount || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedAppointments.reduce((sum: number, a: any) => sum + (a.finalAmount || a.totalAmount || 0), 0).toFixed(2)}</TableCell>
                 <TableCell></TableCell>
               </TableRow>
             )}
