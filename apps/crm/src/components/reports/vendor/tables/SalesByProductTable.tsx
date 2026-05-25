@@ -296,12 +296,12 @@ export const SalesByProductTable = ({ product, category, brand, status, isActive
             {paginatedProducts.length > 0 && (
               <TableRow className="bg-muted font-bold text-primary">
                 <TableCell colSpan={4}>TOTAL</TableCell>
-                <TableCell>{paginatedProducts.reduce((sum, p: any) => sum + (p.quantitySold || 0), 0)}</TableCell>
-                <TableCell>₹{paginatedProducts.reduce((sum, p: any) => sum + (p.grossSales || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedProducts.reduce((sum, p: any) => sum + (p.discountAmount || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedProducts.reduce((sum, p: any) => sum + (p.netSales || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedProducts.reduce((sum, p: any) => sum + (p.taxAmount || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>₹{paginatedProducts.reduce((sum, p: any) => sum + (p.totalSales || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>{paginatedProducts.reduce((sum: number, p: any) => sum + (p.quantitySold || 0), 0)}</TableCell>
+                <TableCell>₹{paginatedProducts.reduce((sum: number, p: any) => sum + (p.grossSales || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedProducts.reduce((sum: number, p: any) => sum + (p.discountAmount || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedProducts.reduce((sum: number, p: any) => sum + (p.netSales || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedProducts.reduce((sum: number, p: any) => sum + (p.taxAmount || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>₹{paginatedProducts.reduce((sum: number, p: any) => sum + (p.totalSales || 0), 0).toFixed(2)}</TableCell>
               </TableRow>
             )}
           </TableBody>
