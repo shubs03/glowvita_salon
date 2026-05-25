@@ -23,6 +23,18 @@ export async function GET(request) {
       businessId: businessId
     });
 
+    // Import VendorServicesModel if not imported at top to fetch service names
+    const VendorServicesModel = (await import('@repo/lib/models/Vendor/VendorServices.model')).default;
+    
+    // Also fetch VendorServices to map service IDs to names
+    const vendorServicesDoc = await VendorServicesModel.findOne({ vendor: businessId });
+    const serviceMap = {};
+    if (vendorServicesDoc && vendorServicesDoc.services) {
+      vendorServicesDoc.services.forEach(service => {
+        serviceMap[service._id.toString()] = service.name;
+      });
+    }
+
     const currentDate = new Date();
 
     // Update status for each offer based on current date and filter for active offers
@@ -48,6 +60,7 @@ export async function GET(request) {
           startDate: offer.startDate,
           expires: offer.expires,
           applicableServices: offer.applicableServices,
+          applicableServiceNames: offer.applicableServices ? offer.applicableServices.map(id => serviceMap[id.toString()]).filter(Boolean) : [],
           applicableServiceCategories: offer.applicableServiceCategories,
           createdAt: offer.createdAt
         });

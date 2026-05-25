@@ -213,8 +213,11 @@ function OverviewContent() {
         : `Get a flat ₹${offer.value} off on your next booking`,
       icon: offer.type === 'percentage' ? Tag : Gift,
       code: offer.code,
-      image: offer.offerImage || "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=600",
+      image: offer.offerImage || "/images/Offer Placeholder.png",
       discount: offer.type === 'percentage' ? `${offer.value}%` : `₹${offer.value}`,
+      applicableServices: (offer.applicableServiceNames || offer.applicableServices || []).filter(Boolean),
+      applicableSpecialties: (offer.applicableSpecialties || []).filter(Boolean),
+      applicableCategories: (offer.applicableCategories || []).filter(Boolean),
     }));
   }, [offersResponse]);
 
@@ -454,47 +457,85 @@ function OverviewContent() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* OFFERS */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Current Offers</CardTitle>
-            <CardDescription>Don't miss out on these special deals.</CardDescription>
+        <Card className="overflow-hidden">
+          <CardHeader className="pb-2 px-4 pt-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-semibold">Current Offers</CardTitle>
+                <CardDescription className="text-[11px] mt-0.5">Don't miss out on these special deals.</CardDescription>
+              </div>
+              <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                {currentOffers.length} Active
+              </span>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+          <CardContent className="px-4 pb-3 pt-1">
+            <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-0.5 custom-scrollbar">
               {isLoadingOffers ? (
-                <p className="text-muted-foreground text-center py-8">Loading offers...</p>
+                <div className="flex items-center justify-center py-6 gap-2">
+                  <div className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  <span className="text-[11px] text-muted-foreground">Loading offers...</span>
+                </div>
               ) : currentOffers.length > 0 ? (
-                currentOffers.map((offer) => {
-                  return (
-                    <div key={offer.title} className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-secondary/50 border border-border/50 rounded-2xl relative">
-                      {/* Image */}
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 flex-shrink-0 rounded-xl overflow-hidden shadow-sm">
-                        <img src={offer.image} alt={offer.title} className="w-full h-full object-cover" />
-                      </div>
-
-                      <div className="flex-1">
-                        <h4 className="font-bold text-sm mb-1">{offer.title}</h4>
-                        
-                        {/* Promo Code Tag */}
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight">Code:</span>
-                          <span className="bg-primary/10 text-primary text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border border-primary/20">
-                            {offer.code}
-                          </span>
-                        </div>
-                        
-                        <p className="text-xs text-muted-foreground leading-tight">{offer.description}</p>
-                      </div>
-
-                      {/* Badge */}
-                      <div className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground w-11 h-11 rounded-full flex items-center justify-center text-[10px] font-bold shadow-md border-2 border-background">
-                        {offer.discount}
-                      </div>
+                currentOffers.map((offer, idx) => (
+                  <div key={offer.title + idx} className="flex items-center gap-2 p-2 bg-secondary/40 hover:bg-secondary/70 border border-border/40 rounded-lg relative transition-colors group">
+                    {/* Thumbnail */}
+                    <div className="w-9 h-9 flex-shrink-0 rounded-md overflow-hidden border border-border/30">
+                      <img src={offer.image} alt={offer.title} className="w-full h-full object-cover" />
                     </div>
-                  );
-                })
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 pr-9">
+                      {/* Title + code row */}
+                      <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+                        <span className="font-semibold text-[11px] text-foreground leading-none truncate max-w-[120px]">{offer.title}</span>
+                        <span className="bg-primary/10 text-primary text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border border-primary/20 leading-none flex-shrink-0">
+                          {offer.code}
+                        </span>
+                      </div>
+
+                      {/* Description */}
+                      <p className="text-[9px] text-muted-foreground line-clamp-1 leading-tight">{offer.description}</p>
+
+                      {/* Applicable tags */}
+                      {((offer.applicableServices && offer.applicableServices.length > 0) ||
+                        (offer.applicableSpecialties && offer.applicableSpecialties.length > 0) ||
+                        (offer.applicableCategories && offer.applicableCategories.length > 0)) && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {offer.applicableServices?.slice(0, 2).map((s: string) => (
+                            <span key={s} className="text-[8px] bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-1.5 py-0.5 rounded-full font-medium leading-none border border-blue-200/50">
+                              {s}
+                            </span>
+                          ))}
+                          {offer.applicableSpecialties?.slice(0, 1).map((s: string) => (
+                            <span key={s} className="text-[8px] bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 px-1.5 py-0.5 rounded-full font-medium leading-none border border-purple-200/50">
+                              {s}
+                            </span>
+                          ))}
+                          {offer.applicableCategories?.slice(0, 1).map((c: string) => (
+                            <span key={c} className="text-[8px] bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-1.5 py-0.5 rounded-full font-medium leading-none border border-green-200/50">
+                              {c}
+                            </span>
+                          ))}
+                          {((offer.applicableServices?.length ?? 0) > 2) && (
+                            <span className="text-[8px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full font-medium leading-none">
+                              +{(offer.applicableServices?.length ?? 0) - 2} more
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Discount Badge */}
+                    <div className="absolute top-1.5 right-1.5 bg-primary text-primary-foreground min-w-[32px] h-8 px-1.5 rounded-lg flex items-center justify-center text-[9px] font-bold shadow-sm flex-shrink-0 leading-none">
+                      {offer.discount}
+                    </div>
+                  </div>
+                ))
               ) : (
-                <p className="text-muted-foreground text-center py-8">No offers available at the moment.</p>
+                <div className="text-center py-6">
+                  <p className="text-[11px] text-muted-foreground">No offers available at the moment.</p>
+                </div>
               )}
             </div>
           </CardContent>

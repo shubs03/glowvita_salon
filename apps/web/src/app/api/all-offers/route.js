@@ -116,8 +116,8 @@ export async function GET(request) {
       businessId: offer.businessId,
     }));
 
-    // Only return admin offers as requested (exclude CRM/vendor offers)
-    const allActiveOffers = activeAdminOffers;
+    // Return both admin offers and CRM/vendor offers
+    const allActiveOffers = [...activeAdminOffers, ...activeCrmOffers];
 
     return NextResponse.json(
       {

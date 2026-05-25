@@ -61,13 +61,14 @@ export const GET = async (request) => {
       }
     }
 
-    /* ── Handle Offer Filtering ─────────────────────────────────────────── */
     let offerVendorIds = null;
     let offerRegionId = null;
     let offerSpecialties = [];
     let offerCategories = [];
     let offerServices = [];
     let offerServiceCategories = [];
+    let mainSalonCategories = [];
+    let serviceCategoryIdsFromNames = [];
 
     if (offerCode) {
       // Dynamically import offer models to prevent circular dependencies
@@ -76,10 +77,8 @@ export const GET = async (request) => {
 
       // 1. Try CRM Offers (Vendor Specific)
       const crmOffer = await CRMOfferModel.findOne({
-        code: offerCode,
-        isActive: { $ne: false },
-        startDate: { $lte: new Date() },
-        $or: [{ expires: null }, { expires: { $gte: new Date() } }]
+        code: new RegExp(`^${offerCode}$`, "i"),
+        status: { $ne: "Expired" }
       }).lean();
 
       if (crmOffer) {
@@ -93,10 +92,9 @@ export const GET = async (request) => {
       } else {
         // 2. Try Admin Offers (Regional / Global)
         const adminOffer = await AdminOfferModel.findOne({
-          code: offerCode,
-          isActive: { $ne: false },
-          startDate: { $lte: new Date() },
-          $or: [{ expires: null }, { expires: { $gte: new Date() } }]
+          code: new RegExp(`^${offerCode}$`, "i"),
+          status: { $ne: "Expired" },
+          isActive: { $ne: false }
         }).lean();
 
         if (adminOffer) {
@@ -110,6 +108,32 @@ export const GET = async (request) => {
             // Global offer - check if any regions are excluded
             console.log(`[SearchAPI] Global Admin offer: ${offerCode} applied.`);
             // No strict region filter for global offers unless specified
+          }
+        }
+      }
+
+      // Process categories into main salon categories vs service categories
+      if (offerCategories && offerCategories.length > 0) {
+        const mainSet = new Set(["unisex", "men", "women"]);
+        const serviceCategoryNames = [];
+        offerCategories.forEach(cat => {
+          const lowerCat = cat.toLowerCase();
+          if (mainSet.has(lowerCat)) {
+            mainSalonCategories.push(lowerCat);
+          } else {
+            serviceCategoryNames.push(cat);
+          }
+        });
+
+        if (serviceCategoryNames.length > 0) {
+          try {
+            const CategoryModel = (await import("@repo/lib/models/admin/Category.model.js")).default;
+            const matchedCats = await CategoryModel.find({
+              name: { $in: serviceCategoryNames.map(name => new RegExp(`^${name}$`, "i")) }
+            }).select("_id").lean();
+            serviceCategoryIdsFromNames = matchedCats.map(cat => cat._id);
+          } catch (err) {
+            console.error("Error looking up service category names:", err);
           }
         }
       }
@@ -146,7 +170,7 @@ export const GET = async (request) => {
 
     // Priority 1: Offer-based Vendor Filter
     if (offerVendorIds && offerVendorIds.length > 0) {
-      vendorMatch["vendorData._id"] = { $in: offerVendorIds.map(id => new mongoose.Types.ObjectId(id)) };
+      vendorMatch["vendorData._id"] = { $in: offerVendorIds.map(id => new mongoose.Types.ObjectId(id.toString())) };
     }
     // Priority 2: Offer-based Region Filter OR Explicit Region Filter
     else if (offerRegionId || regionId) {
@@ -195,13 +219,16 @@ export const GET = async (request) => {
         }),
 
         // 🟢 Offer-based filtering: Only show services included in the offer
-        ...((offerServices.length > 0 || offerServiceCategories.length > 0 || offerSpecialties.length > 0 || offerCategories.length > 0) && {
+        ...((offerServices.length > 0 || offerServiceCategories.length > 0 || serviceCategoryIdsFromNames.length > 0 || offerSpecialties.length > 0) && {
           $or: [
-            ...(offerServices.length > 0 ? [{ "services._id": { $in: offerServices.map(id => new mongoose.Types.ObjectId(id)) } }] : []),
-            ...(offerServiceCategories.length > 0 ? [{ "services.category": { $in: offerServiceCategories.map(id => new mongoose.Types.ObjectId(id)) } }] : []),
+            ...(offerServices.length > 0 ? [{ "services._id": { $in: offerServices.map(id => new mongoose.Types.ObjectId(id.toString())) } }] : []),
+            ...(offerServiceCategories.length > 0 ? [{ "services.category": { $in: offerServiceCategories.map(id => new mongoose.Types.ObjectId(id.toString())) } }] : []),
+            ...(serviceCategoryIdsFromNames.length > 0 ? [{ "services.category": { $in: serviceCategoryIdsFromNames } }] : []),
             ...(offerSpecialties.length > 0 ? [{ "services.name": { $in: offerSpecialties.map(s => new RegExp(s, "i")) } }] : []),
-            ...(offerCategories.length > 0 ? [{ "vendorData.category": { $in: offerCategories.map(c => c.toLowerCase()) } }] : []),
           ]
+        }),
+        ...(mainSalonCategories.length > 0 && {
+          "vendorData.category": { $in: mainSalonCategories }
         }),
       },
     });

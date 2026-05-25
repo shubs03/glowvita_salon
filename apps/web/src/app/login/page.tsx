@@ -12,7 +12,7 @@ import customerImage from '../../../public/images/web_login.jpg';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@repo/ui/dialog';
 
 import Link from 'next/link';
-import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY } from '@repo/config/config';
+import { NEXT_PUBLIC_GOOGLE_MAPS_API_KEY, NEXT_PUBLIC_CRM_URL } from '@repo/config/config';
 
 const rawApiKey = NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 const GOOGLE_MAPS_API_KEY = rawApiKey.toString().trim().replace(/['"“”]/g, '');
@@ -401,7 +401,7 @@ export default function LoginPage() {
                   HAVE A BUSINESS ACCOUNT?
                 </p>
                 <a 
-                  href="http://localhost:3001" 
+                  href={`${NEXT_PUBLIC_CRM_URL || "https://partners.glowvitasalon.com"}/login`}
                   className="text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors duration-200"
                   target="_blank"
                   rel="noopener noreferrer"

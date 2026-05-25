@@ -278,29 +278,24 @@ function BookingPageContent() {
     };
   }, []);
 
-  // Filter offers based on search term and service applicability
+  // Filter offers based on search term
   const filteredOffers = useMemo(() => {
     if (!vendorOffers || vendorOffers.length === 0) {
       return [];
     }
 
-    // First filter by service applicability
-    const applicableOffers = vendorOffers.filter((offer: any) =>
-      isOfferApplicable(offer, selectedServices)
-    );
-
     if (!offerSearchTerm) {
-      return applicableOffers;
+      return vendorOffers;
     }
 
-    const filtered = applicableOffers.filter((offer: { code: string; type: string; value: number }) =>
+    const filtered = vendorOffers.filter((offer: { code: string; type: string; value: number }) =>
       offer.code.toLowerCase().includes(offerSearchTerm.toLowerCase()) ||
       (offer.type === 'percentage' && `${offer.value}%`.includes(offerSearchTerm)) ||
       (offer.type === 'fixed' && `₹${offer.value}`.includes(offerSearchTerm))
     );
 
     return filtered;
-  }, [vendorOffers, offerSearchTerm, selectedServices]);
+  }, [vendorOffers, offerSearchTerm]);
 
   // Fetch service-specific staff data when a service is selected
   const serviceStaffData = useBookingData(salonId as string, selectedService?.id || (selectedServices.length > 0 ? selectedServices[0]?.id : undefined));
@@ -1693,12 +1688,12 @@ function BookingPageContent() {
       // Calculate customized subtotal if applicable
       const customizedSubtotal = weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
         ? customizedPackageServices.reduce((acc, service) => {
-            const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
-              parseFloat(String(service.discountedPrice)) :
-              parseFloat(String(service.price || '0'));
-            const quantity = (service as any).quantity || 1;
-            return acc + (servicePrice * quantity);
-          }, 0)
+          const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+            parseFloat(String(service.discountedPrice)) :
+            parseFloat(String(service.price || '0'));
+          const quantity = (service as any).quantity || 1;
+          return acc + (servicePrice * quantity);
+        }, 0)
         : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice);
 
       // Create a service-like object from wedding package
@@ -4020,12 +4015,12 @@ function BookingPageContent() {
         // Calculate base package price (with customization if applicable) for fallback
         const packagePrice = weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
           ? customizedPackageServices.reduce((sum, service: any) => {
-              const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
-                parseFloat(service.discountedPrice) :
-                parseFloat(service.price || '0');
-              const quantity = service.quantity || 1;
-              return sum + (servicePrice * quantity);
-            }, 0)
+            const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+              parseFloat(service.discountedPrice) :
+              parseFloat(service.price || '0');
+            const quantity = service.quantity || 1;
+            return sum + (servicePrice * quantity);
+          }, 0)
           : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice || 0);
 
         // Use customized services if available, otherwise use package defaults
@@ -4629,34 +4624,45 @@ function BookingPageContent() {
                             </div>
                           ) : filteredOffers.length > 0 ? (
                             <div className="py-1">
-                              {filteredOffers.map((offer: { _id: string; code: string; type: string; value: number; businessType?: string; isAdminGlobal?: boolean }) => (
-                                <div
-                                  key={offer._id}
-                                  className="px-3 py-2 hover:bg-primary/5 cursor-pointer border-b last:border-b-0 flex justify-between items-center"
-                                  onClick={() => {
-                                    handleSelectOffer(offer);
-                                    setShowOfferDropdown(false);
-                                  }}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <div className="bg-primary/5 p-1 rounded">
-                                      <Tag className="h-3 w-3 text-primary" />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="font-semibold text-xs text-primary">{offer.code}</div>
-                                      <div className="text-[10px] text-muted-foreground">
-                                        {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
-                                        {offer.businessType === 'admin' && (
-                                          <span className={`ml-1 text-[8px] px-1 rounded ${offer.isAdminGlobal ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
-                                            {offer.isAdminGlobal ? 'Global' : 'Region'}
-                                          </span>
-                                        )}
+                              {filteredOffers.map((offer: { _id: string; code: string; type: string; value: number; businessType?: string; isAdminGlobal?: boolean }) => {
+                                const isApplicable = isOfferApplicable(offer, selectedServices);
+                                return (
+                                  <div
+                                    key={offer._id}
+                                    className={`px-3 py-2 border-b last:border-b-0 flex justify-between items-center transition-colors ${
+                                      isApplicable 
+                                        ? "hover:bg-primary/5 cursor-pointer bg-white" 
+                                        : "opacity-60 bg-gray-50/50 cursor-not-allowed"
+                                    }`}
+                                    onClick={() => {
+                                      if (isApplicable) {
+                                        handleSelectOffer(offer);
+                                        setShowOfferDropdown(false);
+                                      }
+                                    }}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div className={`p-1 rounded ${isApplicable ? "bg-primary/5 text-primary" : "bg-gray-200 text-gray-400"}`}>
+                                        <Tag className="h-3 w-3" />
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className={`font-semibold text-xs ${isApplicable ? "text-primary" : "text-gray-500"}`}>{offer.code}</div>
+                                        <div className="text-[10px] text-muted-foreground">
+                                          {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
+                                          {offer.businessType === 'admin' && (
+                                            <span className={`ml-1 text-[8px] px-1 rounded ${offer.isAdminGlobal ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                                              {offer.isAdminGlobal ? 'Global' : 'Region'}
+                                            </span>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
+                                    <div className={`text-[10px] font-medium ${isApplicable ? "text-primary" : "text-gray-400"}`}>
+                                      {isApplicable ? 'Select' : 'Disabled'}
+                                    </div>
                                   </div>
-                                  <div className="text-[10px] text-primary">Select</div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           ) : null}
                         </div>

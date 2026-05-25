@@ -197,13 +197,84 @@ export default function OffersCouponsPage() {
 
   // Handle category selection
   const handleCategoryChange = (category: string, checked: boolean) => {
-    const updated = checked
+    let updated = checked
       ? [...selectedCategories, category]
       : selectedCategories.filter((c: string) => c !== category);
-    setSelectedCategories(updated);
-    setValue('applicableCategories', updated);
 
-    // Auto-select/deselect services that belong to this category
+    let updatedSpecialties = [...selectedSpecialties];
+
+    // If a target audience (gender option) is selected/deselected, also toggle its related subcategories
+    if (genderOptions.includes(category)) {
+      const matchesGender = (catName: string, gender: string) => {
+        const nameLower = catName.toLowerCase();
+        const genderLower = gender.toLowerCase();
+        
+        // Helper to check if name is classified as Men
+        const isMen = () => {
+          if (nameLower.includes('men') && !nameLower.includes('women')) return true;
+          const menKeywords = ['hair cut', 'beard', 'shave'];
+          return menKeywords.some(keyword => nameLower.includes(keyword));
+        };
+
+        // Helper to check if name is classified as Women
+        const isWomen = () => {
+          if (nameLower.includes('women')) return true;
+          const womenKeywords = ['makeup', 'hairstyling'];
+          return womenKeywords.some(keyword => nameLower.includes(keyword));
+        };
+
+        if (genderLower === 'men') {
+          return isMen();
+        } else if (genderLower === 'women') {
+          return isWomen();
+        } else if (genderLower === 'unisex') {
+          // A category is considered Unisex if:
+          // 1. It explicitly contains 'unisex'
+          // 2. OR it is NOT specifically classified as Men and is NOT specifically classified as Women!
+          return nameLower.includes('unisex') || (!isMen() && !isWomen());
+        }
+
+        return false;
+      };
+
+      const matchingSubCategories = categoryOptions.filter((cat: string) => matchesGender(cat, category));
+
+      if (checked) {
+        // Add all matching subcategories that are not already selected
+        matchingSubCategories.forEach((cat: string) => {
+          if (!updated.includes(cat)) {
+            updated.push(cat);
+          }
+        });
+      } else {
+        // Remove all matching subcategories
+        updated = updated.filter((c: string) => !matchingSubCategories.includes(c));
+      }
+
+      // Also select/deselect all services belonging to these matching subcategories
+      if (Array.isArray(servicesResponse)) {
+        matchingSubCategories.forEach((cat: string) => {
+          const servicesInCategory = servicesResponse
+            .filter((s: any) => {
+              const serviceCatName = s.category?.name || s.category;
+              return serviceCatName === cat;
+            })
+            .map((s: any) => s.name);
+
+          if (checked) {
+            servicesInCategory.forEach(sName => {
+              if (!updatedSpecialties.includes(sName)) {
+                updatedSpecialties.push(sName);
+              }
+            });
+          } else {
+            updatedSpecialties = updatedSpecialties.filter((sName: string) => !servicesInCategory.includes(sName));
+          }
+        });
+      }
+    }
+
+    // Always select/deselect services belonging to the directly toggled category/subcategory itself
     if (Array.isArray(servicesResponse)) {
       const servicesInCategory = servicesResponse
         .filter((s: any) => {
@@ -212,7 +283,6 @@ export default function OffersCouponsPage() {
         })
         .map((s: any) => s.name);
 
-      let updatedSpecialties = [...selectedSpecialties];
       if (checked) {
         // When category is checked, add all its services
         servicesInCategory.forEach(sName => {
@@ -224,10 +294,12 @@ export default function OffersCouponsPage() {
         // When category is unchecked, remove all its services
         updatedSpecialties = updatedSpecialties.filter((sName: string) => !servicesInCategory.includes(sName));
       }
-
-      setSelectedSpecialties(updatedSpecialties);
-      setValue('applicableSpecialties', updatedSpecialties);
     }
+
+    setSelectedCategories(updated);
+    setValue('applicableCategories', updated);
+    setSelectedSpecialties(updatedSpecialties);
+    setValue('applicableSpecialties', updatedSpecialties);
   };
 
   // Update form values when editing
