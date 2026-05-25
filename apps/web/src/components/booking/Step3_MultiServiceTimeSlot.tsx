@@ -93,6 +93,8 @@ interface MultiServiceSlot {
   totalDuration: number;
   serviceDuration: number;
   travelTime?: number;
+  totalTravelTime?: number;
+  travelDistance?: number;
   sequence: Array<{
     serviceId: string;
     serviceName: string;
@@ -141,10 +143,10 @@ const SlotCard = React.memo<{
 
       {/* Duration Info */}
       <div className="text-sm text-gray-600 mb-3">
-        {slot.totalDuration} min
-        {Boolean((slot.travelTime || slot.totalTravelTime) && (slot.travelTime || slot.totalTravelTime) > 0) && (
+        {slot.serviceDuration} min
+        {Boolean(((slot.travelTime ?? slot.totalTravelTime ?? 0) > 0)) && (
           <span className="text-blue-600 ml-2">
-            (+{slot.travelTime || slot.totalTravelTime} min travel)
+            (+{slot.travelTime ?? slot.totalTravelTime ?? 0} min travel)
           </span>
         )}
       </div>
@@ -210,6 +212,7 @@ export function Step3_MultiServiceTimeSlot({
 }: Step3MultiServiceTimeSlotProps) {
   // RTK Query mutation hook
   const [getMultiServiceSlots, { data: slotsData, isLoading: isLoadingSlots, error: slotsError }] = useGetMultiServiceSlotsMutation();
+  const [slotsErrorMsg, setSlotsErrorMsg] = useState<string | null>(null);
 
   // Get day name helper
   const getDayName = useCallback((date: Date): string => {
@@ -315,6 +318,7 @@ export function Step3_MultiServiceTimeSlot({
       });
 
       const newSlots = result.slots || [];
+      setSlotsErrorMsg(null);
 
       // Only update state if slots actually changed (prevents unnecessary re-renders)
       const slotsChanged = JSON.stringify(previousSlotsRef.current) !== JSON.stringify(newSlots);
@@ -332,8 +336,33 @@ export function Step3_MultiServiceTimeSlot({
       }
     } catch (error: any) {
       console.error('Error fetching multi-service slots:', error);
+      let errMsg = 'Could not load available time slots. Please try again.';
+      const data = error?.data || error;
+      if (data) {
+        if (typeof data === 'string') {
+          try {
+            const parsed = JSON.parse(data);
+            errMsg = parsed.message || parsed.error?.message || data;
+          } catch {
+            errMsg = data;
+          }
+        } else if (typeof data === 'object') {
+          errMsg = data.message || data.error?.message || error.message || errMsg;
+        }
+      } else if (error?.message) {
+        errMsg = error.message;
+      }
+
+      try {
+        if (typeof errMsg === 'string' && errMsg.startsWith('{')) {
+          const parsed = JSON.parse(errMsg);
+          errMsg = parsed.message || parsed.error?.message || errMsg;
+        }
+      } catch (e) {}
+
       if (!isBackgroundFetch) {
-        toast.error(error?.data?.message || 'Could not load available time slots. Please try again.');
+        setSlotsErrorMsg(errMsg);
+        toast.error(errMsg);
       }
       setIsBackgroundRefreshing(false);
     }
@@ -639,7 +668,10 @@ export function Step3_MultiServiceTimeSlot({
   }
 
   // Error state
-  if (parentError || slotsError) {
+  const errorMsgStr = slotsError ? getErrorMessage(slotsError) : '';
+  const isRangeError = errorMsgStr && errorMsgStr.includes('We do not reach that point');
+
+  if (parentError || (slotsError && !isRangeError)) {
     return (
       <div className="w-full">
         <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
@@ -774,6 +806,17 @@ export function Step3_MultiServiceTimeSlot({
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary mr-3" />
             <span className="text-muted-foreground">Checking availability...</span>
+          </div>
+        ) : slotsErrorMsg ? (
+          <div className="text-center py-12 bg-amber-50 rounded-xl border border-amber-200 p-8 shadow-sm max-w-lg mx-auto">
+            <div className="p-3 bg-amber-100 rounded-full text-amber-600 w-fit mx-auto mb-4">
+              <AlertCircle className="h-8 w-8" />
+            </div>
+            <h3 className="text-lg font-semibold text-amber-900 mb-2">Service Area Range</h3>
+            <p className="text-amber-700 mb-6 text-sm">{slotsErrorMsg}</p>
+            <Button onClick={() => setCurrentStep(3)} className="bg-amber-600 hover:bg-amber-700 text-white font-medium px-6 py-2 rounded-lg">
+              Select Another Location
+            </Button>
           </div>
         ) : isSalonClosedEveryDay ? (
           <div className="text-center py-12 bg-red-50 rounded-xl border border-red-100 p-8">

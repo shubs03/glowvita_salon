@@ -349,16 +349,15 @@ export function Step2_MultiService({
                             {serviceStaffAssignments.filter(a => a.staff !== null).length} of {serviceStaffAssignments.length} assigned
                         </span>
                     )}
-                    <button
-                        onClick={handleNextAssignment}
-                        className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background bg-primary text-primary-foreground hover:bg-primary/90 h-10 py-2 px-4 sm:ml-auto"
-                    >
-                        {currentAssignmentIndex === serviceStaffAssignments.length - 1 
-                            ? (bookingMode === 'home' ? 'Continue to Location' : 'Continue to Time Slot')
-                            : 'Next Service'
-                        }
-                        <ChevronRight className="h-4 w-4 ml-2" />
-                    </button>
+                    {currentAssignmentIndex !== serviceStaffAssignments.length - 1 && (
+                        <button
+                            onClick={handleNextAssignment}
+                            className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background bg-primary text-primary-foreground hover:bg-primary/90 h-10 py-2 px-4 sm:ml-auto"
+                        >
+                            Next Service
+                            <ChevronRight className="h-4 w-4 ml-2" />
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

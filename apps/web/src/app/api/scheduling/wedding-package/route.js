@@ -76,6 +76,27 @@ export async function POST(request) {
       endTime: selectedSlot.endTime
     });
 
+    let travelTime = Number(selectedSlot.totalTravelTime) || 0;
+    if (selectedSlot.location) {
+      try {
+        const { calculateVendorTravelTime } = await import('@repo/lib/modules/scheduling/EnhancedTravelUtils');
+        const travelInfo = await calculateVendorTravelTime(weddingPackage.vendorId, {
+          lat: selectedSlot.location.lat,
+          lng: selectedSlot.location.lng
+        });
+        travelTime = travelInfo.timeInMinutes;
+      } catch (err) {
+        if (err.message.includes('outside vendor travel radius')) {
+          return NextResponse.json(
+            { success: false, message: 'We do not reach that point. Select another location.' },
+            { status: 400 }
+          );
+        }
+        console.warn("Could not calculate travel time during lock phase:", err.message);
+        travelTime = 30; // fallback
+      }
+    }
+
     // Acquire lock - this just reserves the slot in Redis
     // CRITICAL: startTime must be provided to create a time-specific lock
     const lockToken = await acquireLock({
@@ -84,7 +105,7 @@ export async function POST(request) {
       date: new Date(selectedSlot.date),
       startTime: selectedSlot.startTime, // Use startTime parameter
       duration: weddingPackage.duration || 60,
-      travelTime: Number(selectedSlot.totalTravelTime) || (selectedSlot.location ? 30 : 0),
+      travelTime: travelTime,
       ttl: 30 * 60 * 1000 // 30 minutes
     });
 
@@ -239,10 +260,16 @@ export async function PUT(request) {
           lat: selectedSlot.location.lat,
           lng: selectedSlot.location.lng
         });
-        travelTime = travelInfo.timeInMinutes || 30;
-        travelDistance = travelInfo.distanceInKm || 10;
-        distanceMeters = travelInfo.distanceInMeters || 10000;
+        travelTime = travelInfo.timeInMinutes;
+        travelDistance = travelInfo.distanceInKm;
+        distanceMeters = travelInfo.distanceInMeters;
       } catch (err) {
+        if (err.message.includes('outside vendor travel radius')) {
+          return NextResponse.json({
+            success: false,
+            message: "We do not reach that point. Select another location."
+          }, { status: 400 });
+        }
         console.warn("Could not calculate travel time during confirmation fallback:", err.message);
         travelTime = 30; // fallback
       }
