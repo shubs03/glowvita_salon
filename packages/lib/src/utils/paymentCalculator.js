@@ -32,8 +32,6 @@ const roundToTwo = (num) => {
  * @returns {Boolean} - True if at least one service is eligible
  */
 export function isOfferApplicable(offer, selectedServices = [], checkEligibilityOnly = false) {
-  // DEBUG: Force all offers to be applicable to see if the dropdown populates
-  return true;
   try {
     if (!offer) return false;
 
@@ -67,7 +65,9 @@ export function isOfferApplicable(offer, selectedServices = [], checkEligibility
         const serviceIdStr = (service.id || service._id)?.toString();
         const serviceCatIdStr = (service.categoryId || service.category?._id || service.category)?.toString();
         const serviceNameStr = (service.specialty || service.name)?.toString().toLowerCase();
-        const serviceTargetStr = (service.categoryName || service.targetGender)?.toString().toLowerCase();
+        
+        const categoryName = (service.categoryName || service.category)?.toString().toLowerCase();
+        const targetGender = (service.targetGender || service.gender)?.toString().toLowerCase();
 
         // Check direct service ID match
         if (cleanServices.some(id => id === serviceIdStr)) return true;
@@ -75,48 +75,19 @@ export function isOfferApplicable(offer, selectedServices = [], checkEligibility
         if (cleanCategories.some(id => id === serviceCatIdStr)) return true;
         // Check specialty/name matches
         if (cleanSpecialties.some(specialty => specialty.toLowerCase() === serviceNameStr)) return true;
-        // Check app category matches
-        if (cleanAppCategories.some(cat => cat.toLowerCase() === serviceTargetStr)) return true;
+        // Check app category matches (either category name or gender restriction matches)
+        if (cleanAppCategories.some(cat => {
+          const catLower = cat.toLowerCase();
+          return catLower === categoryName || catLower === targetGender;
+        })) return true;
 
         return false;
       });
     } else {
-      // For overall booking applicability:
-      // 1. Services: AND logic. If an offer specifies multiple services, ALL must be selected.
-      let isServicesValid = true;
-      if (cleanServices.length > 0) {
-        isServicesValid = cleanServices.every(offerServiceId =>
-          selectedServices.some(service => (service.id || service._id)?.toString() === offerServiceId)
-        );
-      }
-
-      // 2. Categories/Specialties: OR logic. If an offer specifies multiple categories, ANY match is sufficient.
-      // However, if the offer specifies BOTH Services AND Categories, both conditions must be met.
-      let isCategoriesValid = true;
-      if (cleanCategories.length > 0) {
-        isCategoriesValid = selectedServices.some(service => {
-          const serviceCatIdStr = (service.categoryId || service.category?._id || service.category)?.toString();
-          return cleanCategories.includes(serviceCatIdStr);
-        });
-      }
-
-      let isSpecialtiesValid = true;
-      if (cleanSpecialties.length > 0) {
-        isSpecialtiesValid = selectedServices.some(service => {
-          const serviceNameStr = (service.specialty || service.name)?.toString().toLowerCase();
-          return cleanSpecialties.some(specialty => specialty.toLowerCase() === serviceNameStr);
-        });
-      }
-
-      let isAppCategoriesValid = true;
-      if (cleanAppCategories.length > 0) {
-        isAppCategoriesValid = selectedServices.some(service => {
-          const serviceTargetStr = (service.categoryName || service.targetGender)?.toString().toLowerCase();
-          return cleanAppCategories.some(cat => cat.toLowerCase() === serviceTargetStr);
-        });
-      }
-
-      return isServicesValid && isCategoriesValid && isSpecialtiesValid && isAppCategoriesValid;
+      // An offer is enabled if AT LEAST ONE selected service matches it.
+      // e.g. GSAS (SPA specialty) is enabled when SPA is in the basket,
+      // even if Hair wash is also selected (Hair wash just won't get the discount).
+      return selectedServices.some(service => isOfferApplicable(offer, [service], true));
     }
   } catch (err) {
     console.error("Error in isOfferApplicable:", err);
