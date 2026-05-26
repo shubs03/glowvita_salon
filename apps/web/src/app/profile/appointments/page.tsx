@@ -17,6 +17,7 @@ import { Label } from '@repo/ui/label';
 import { cn } from '@repo/ui/cn';
 import { useUserAppointments } from '@/hooks/useUserAppointments';
 import { useGetAppointmentInvoiceQuery } from '@repo/store/api';
+import { useGetPublicVendorServicesQuery } from '@repo/store/services/api';
 
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -364,8 +365,38 @@ interface AppointmentDetailsProps {
 
 const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: AppointmentDetailsProps) => {
     const router = useRouter();
-    console.log("AppointmentDetails received appointment:", appointment);
-    console.log("Pricing details - amount:", appointment?.amount, "platformFee:", appointment?.platformFee, "serviceTax:", appointment?.serviceTax, "discountAmount:", appointment?.discountAmount, "finalAmount:", appointment?.finalAmount);
+    const vendorId = appointment?.vendorId || '';
+    const { data: vendorServicesResponse } = useGetPublicVendorServicesQuery(vendorId, { skip: !vendorId });
+
+    const catalogPriceMap = useMemo(() => {
+        let servicesArr: any[] = [];
+        if (vendorServicesResponse?.services) servicesArr = vendorServicesResponse.services;
+        else if (vendorServicesResponse?.data?.services) servicesArr = vendorServicesResponse.data.services;
+        else if (Array.isArray(vendorServicesResponse?.data)) servicesArr = vendorServicesResponse.data;
+        else if (Array.isArray(vendorServicesResponse)) servicesArr = vendorServicesResponse;
+
+        const map: Record<string, number> = {};
+        servicesArr.forEach((s: any) => {
+            const id = s._id || s.id;
+            if (id && s.price != null) map[id] = Number(s.price);
+        });
+        return map;
+    }, [vendorServicesResponse]);
+
+    const originalSubtotal = useMemo(() => {
+        if (!appointment) return 0;
+        if (appointment.serviceItems && appointment.serviceItems.length > 0) {
+            return appointment.serviceItems.reduce((sum: number, item: any) => {
+                const catalogPrice = catalogPriceMap[item.service] ?? null;
+                const originalPrice = item.originalAmount ?? (item as any).price ?? catalogPrice;
+                return sum + (originalPrice !== null ? Number(originalPrice) : (Number(item.amount) || 0));
+            }, 0);
+        }
+        const catalogPrice = catalogPriceMap[appointment.service] ?? null;
+        const singleOriginal = (appointment as any).originalAmount ?? (appointment as any).price ?? catalogPrice;
+        return singleOriginal !== null ? Number(singleOriginal) : (Number(appointment.price) || 0);
+    }, [appointment, catalogPriceMap]);
+
     if (!appointment) return (
         <Card className="sticky top-24">
             <CardContent className="h-96 flex items-center justify-center text-muted-foreground">
@@ -615,21 +646,34 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                         <h5 className="font-semibold text-sm">Services</h5>
                         {appointment.serviceItems && appointment.serviceItems.length > 0 ? (
                             <div className="space-y-2">
-                                {appointment.serviceItems.map((item, index) => (
-                                    <div key={index} className="border rounded-lg p-3 bg-muted/30">
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <p className="font-medium">{item.serviceName}</p>
-                                                <p className="text-xs text-muted-foreground mt-1">with {item.staffName}</p>
+                                {appointment.serviceItems.map((item, index) => {
+                                    const catalogPrice = catalogPriceMap[item.service] ?? null;
+                                    const originalPrice = item.originalAmount ?? (item as any).price ?? catalogPrice;
+                                    const hasDiscount = originalPrice !== null && Number(originalPrice) > Number(item.amount);
+                                    
+                                    return (
+                                        <div key={index} className="border rounded-lg p-3 bg-muted/30">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <p className="font-medium">{item.serviceName}</p>
+                                                    <p className="text-xs text-muted-foreground mt-1">with {item.staffName}</p>
+                                                </div>
+                                                <div className="flex flex-col items-end">
+                                                    {hasDiscount && (
+                                                        <span className="text-xs text-muted-foreground line-through">₹{Number(originalPrice).toFixed(2)}</span>
+                                                    )}
+                                                    <span className={hasDiscount ? "font-medium text-green-600" : "font-medium"}>
+                                                        ₹{item.amount.toFixed(2)}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <span className="font-medium">₹{item.amount.toFixed(2)}</span>
+                                            <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                                                <span>{item.startTime} - {item.endTime}</span>
+                                                <span>{item.duration} min</span>
+                                            </div>
                                         </div>
-                                        <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                                            <span>{item.startTime} - {item.endTime}</span>
-                                            <span>{item.duration} min</span>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         ) : (
                             <div className="border rounded-lg p-3 bg-muted/30">
@@ -638,7 +682,23 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                                         <p className="font-medium">{appointment.service}</p>
                                         <p className="text-xs text-muted-foreground mt-1">with {appointment.staff}</p>
                                     </div>
-                                    <span className="font-medium">₹{appointment.price.toFixed(2)}</span>
+                                    <div className="flex flex-col items-end">
+                                        {(() => {
+                                            const catalogPrice = catalogPriceMap[appointment.service] ?? null;
+                                            const originalPrice = (appointment as any).originalAmount ?? (appointment as any).price ?? catalogPrice;
+                                            const hasDiscount = originalPrice !== null && Number(originalPrice) > Number(appointment.price);
+                                            return (
+                                                <>
+                                                    {hasDiscount && (
+                                                        <span className="text-xs text-muted-foreground line-through">₹{Number(originalPrice).toFixed(2)}</span>
+                                                    )}
+                                                    <span className={hasDiscount ? "font-medium text-green-600" : "font-medium"}>
+                                                        ₹{appointment.price.toFixed(2)}
+                                                    </span>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
                                 </div>
                                 <div className="flex justify-between text-xs text-muted-foreground mt-2">
                                     <span>{appointment.startTime} - {appointment.endTime}</span>
@@ -652,7 +712,14 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                     <div className="space-y-2 pt-4 border-t">
                         <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Subtotal</span>
-                            <span>₹{appointment.amount?.toFixed(2) || '0.00'}</span>
+                            <div className="flex items-center gap-2">
+                                {originalSubtotal > (appointment.amount || appointment.price) ? (
+                                    <span className="text-xs text-muted-foreground line-through">₹{originalSubtotal.toFixed(2)}</span>
+                                ) : null}
+                                <span className={originalSubtotal > (appointment.amount || appointment.price) ? "text-green-600 font-medium" : ""}>
+                                    ₹{appointment.amount?.toFixed(2) || appointment.price?.toFixed(2) || '0.00'}
+                                </span>
+                            </div>
                         </div>
 
                         {appointment.discountAmount != null && appointment.discountAmount > 0 && (
