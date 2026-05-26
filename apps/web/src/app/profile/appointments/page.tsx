@@ -653,7 +653,23 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                                                 <p className="font-medium">{item.serviceName}</p>
                                                 <p className="text-xs text-muted-foreground mt-1">with {item.staffName}</p>
                                             </div>
-                                            <span className="font-medium">₹{item.amount.toFixed(2)}</span>
+                                            <div className="flex flex-col items-end">
+                                                {(() => {
+                                                    const catalogPrice = catalogPriceMap[item.service] ?? null;
+                                                    const originalPrice = (item as any).originalAmount ?? (item as any).price ?? catalogPrice;
+                                                    const hasDiscount = originalPrice !== null && Number(originalPrice) > Number(item.amount);
+                                                    return (
+                                                        <>
+                                                            {hasDiscount && (
+                                                                <span className="text-xs text-muted-foreground line-through">₹{Number(originalPrice).toFixed(2)}</span>
+                                                            )}
+                                                            <span className={hasDiscount ? "font-medium text-green-600" : "font-medium"}>
+                                                                ₹{item.amount.toFixed(2)}
+                                                            </span>
+                                                        </>
+                                                    );
+                                                })()}
+                                            </div>
                                         </div>
                                         <div className="flex justify-between text-xs text-muted-foreground mt-2">
                                             <span>{item.startTime} - {item.endTime}</span>
