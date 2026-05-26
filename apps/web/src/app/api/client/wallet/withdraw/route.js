@@ -7,12 +7,6 @@ import WalletWithdrawalModel from '@repo/lib/models/Payment/WalletWithdrawal.mod
 import WalletTransactionModel from '@repo/lib/models/Payment/WalletTransaction.model';
 import WalletSettingsModel from '@repo/lib/models/admin/WalletSettings.model';
 import UserModel from '@repo/lib/models/user/User.model';
-import { 
-    createRazorpayContact, 
-    createRazorpayFundAccount, 
-    initiateRazorpayPayout 
-} from '@repo/lib/utils/razorpayPayout';
-import { RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_ACCOUNT_NUMBER } from '@repo/config/config';
 
 await _db();
 
@@ -105,8 +99,6 @@ const calculateRiskScore = async (userId, amount, user, settings) => {
   }
 };
 
-// Razorpay X Payout Helpers moved to @repo/lib/utils/razorpayPayout.js
-
 // POST: Submit withdrawal request (automated processing)
 export async function POST(req) {
   const session = await mongoose.startSession();
@@ -122,9 +114,6 @@ export async function POST(req) {
         message: 'User not authenticated'
       }, { status: 401 });
     }
-
-    // Note: Razorpay keys and account number are now only required for Admin approval/payout flow.
-    // They are not needed for submitting a pending request.
 
     // Parse request body
     const { amount, bankDetails, withdrawalMethod = 'bank_transfer' } = await req.json();
@@ -364,6 +353,7 @@ export async function POST(req) {
     const generatedTransactionId = `WTX_${timestamp}_${random}`;
 
     // Create initial withdrawal record in 'pending' status
+    // Initial withdrawal record in 'pending' status
     const withdrawal = await WalletWithdrawalModel.create([{
       userId: user._id,
       userType: 'User',
@@ -383,16 +373,17 @@ export async function POST(req) {
       status: 'pending',
       riskScore,
       riskFlags,
-      autoProcessed: false,
-      requestedAt: new Date()
+      autoProcessed: false
     }], { session });
 
-    // Deduct from user wallet to reserve the funds
+    // Deduct from user wallet to lock funds
     user.wallet = user.wallet - amount;
     await user.save({ session });
 
-    // Create transaction record for the reservation
+    // Create debit transaction record (Status: pending)
+    const txId = `WTX_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     const transaction = await WalletTransactionModel.create([{
+      transactionId: txId,
       userId: user._id,
       userType: 'User',
       regionId: user.regionId,
@@ -402,11 +393,11 @@ export async function POST(req) {
       balanceBefore: user.wallet + amount,
       balanceAfter: user.wallet,
       source: 'withdrawal',
-      status: 'pending', // Transaction is also pending
-      description: `Withdrawal Request (${generatedWithdrawalId}) - ₹${amount}`,
+      status: 'pending',
+      description: `Withdrawal Request via ${withdrawalMethod === 'upi' ? 'UPI' : 'Bank Transfer'} - ₹${amount}`,
       withdrawalId: withdrawal[0]._id,
       metadata: {
-        withdrawalId: generatedWithdrawalId,
+        withdrawalId: withdrawal[0].withdrawalId,
         withdrawalMethod,
         bankDetails: {
           ifsc: bankDetails.ifsc ? bankDetails.ifsc.toUpperCase() : null,
@@ -426,7 +417,7 @@ export async function POST(req) {
 
     return NextResponse.json({
       success: true,
-      message: 'Withdrawal request submitted successfully and is pending admin approval.',
+      message: 'Withdrawal request submitted successfully. It will be processed after admin approval.',
       data: {
         withdrawalId: withdrawal[0].withdrawalId,
         amount,
@@ -439,7 +430,7 @@ export async function POST(req) {
 
   } catch (error) {
     if (session.inTransaction()) {
-        await session.abortTransaction();
+      await session.abortTransaction();
     }
     console.error('Error processing withdrawal:', error);
     return NextResponse.json({

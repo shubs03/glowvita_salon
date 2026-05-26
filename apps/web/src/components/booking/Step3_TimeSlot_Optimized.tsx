@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, memo, useRef } from 'react';
 import { Button } from '@repo/ui/button';
 import { Card } from '@repo/ui/card';
-import { Clock, Loader2, RefreshCw, Lock, AlertCircle, ChevronRight, ChevronLeft, CalendarDays } from 'lucide-react';
+import { Clock, Loader2, RefreshCw, Lock, AlertCircle, ChevronRight, ChevronLeft, CalendarDays, Scissors } from 'lucide-react';
 import { cn } from '@repo/ui/cn';
 import { toast } from 'react-toastify';
 import { Service, StaffMember, WeddingPackage } from '@/hooks/useBookingData';
@@ -16,35 +16,27 @@ const Breadcrumb = ({ currentStep, setCurrentStep, isWeddingPackage, isHomeServi
   isWeddingPackage?: boolean;
   isHomeService?: boolean;
 }) => {
-  // Wedding packages skip step 2 (staff selection)
-  // Home services add step 3 (location selection)
-  // Step mapping: 
-  // Regular: [1, 2, 3, 4] -> ['Select Service', 'Select Professional', 'Select Date & Time', 'Confirm Booking']
-  // Home Service: [1, 2, 3, 4] -> ['Select Service', 'Select Professional', 'Select Location', 'Select Date & Time']
-  // Wedding: [1, 3, 4, 5] -> ['Select Package', 'Select Date & Time', 'Location Selection', 'Confirm Booking']
-
   const steps = isWeddingPackage
     ? [
       { name: 'Select Package', step: 1 },
-      { name: 'Select Date & Time', step: 3 },
-      { name: 'Confirm Booking', step: 4 }
+      { name: 'Select Location', step: 3 },
+      { name: 'Select Date & Time', step: 4 }
     ]
     : isHomeService
       ? [
-        { name: 'Select Service', step: 1 },
-        { name: 'Select Professional', step: 2 },
+        { name: 'Services', step: 1 },
+        { name: 'Select Professionals', step: 2 },
         { name: 'Select Location', step: 3 },
         { name: 'Select Date & Time', step: 4 }
       ]
       : [
-        { name: 'Select Service', step: 1 },
-        { name: 'Select Professional', step: 2 },
-        { name: 'Select Date & Time', step: 3 },
-        { name: 'Confirm Booking', step: 4 }
+        { name: 'Services', step: 1 },
+        { name: 'Select Professionals', step: 2 },
+        { name: 'Select Date & Time', step: 3 }
       ];
 
   return (
-    <nav className="flex items-center text-sm font-medium text-muted-foreground mb-6">
+    <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
       {steps.map((stepObj, index) => (
         <React.Fragment key={stepObj.name}>
           <button
@@ -86,6 +78,8 @@ interface TimeSlot {
   endTime: string;
   duration: number;
   travelTime?: number;
+  totalTravelTime?: number;
+  travelDistance?: number;
   distance?: number;
   score?: number;
   services?: any[];
@@ -201,7 +195,7 @@ export const Step3_TimeSlot = memo(({
 
   // Fetch slots from API
   const fetchSlots = useCallback(async (isBackgroundFetch = false) => {
-    if (!effectiveVendorId || !selectedDate || !effectiveService) return;
+    if (!effectiveVendorId || !selectedDate) return;
 
     // For background fetches, don't show loading state
     if (!isBackgroundFetch) {
@@ -213,7 +207,7 @@ export const Step3_TimeSlot = memo(({
 
     try {
       // For wedding packages, we need to send the service IDs from the package services
-      let serviceIdsParam = effectiveService.id;
+      let serviceIdsParam = effectiveService?.id || '';
       if (isWeddingPackage && weddingPackageServices && weddingPackageServices.length > 0) {
         // Extract service IDs from wedding package services
         serviceIdsParam = weddingPackageServices
@@ -252,7 +246,8 @@ export const Step3_TimeSlot = memo(({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch slots');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error?.message || 'Failed to fetch slots');
       }
 
       const data = await response.json();
@@ -269,8 +264,15 @@ export const Step3_TimeSlot = memo(({
       setLastRefresh(new Date());
     } catch (error: any) {
       console.error('Error fetching slots:', error);
-      setSlotsError(error.message || 'Failed to load available slots');
-      toast.error('Could not load available time slots. Please try again.');
+      let errMsg = error.message || 'Failed to load available slots';
+      try {
+        if (errMsg.startsWith('{')) {
+          const parsed = JSON.parse(errMsg);
+          errMsg = parsed.message || parsed.error?.message || errMsg;
+        }
+      } catch (e) {}
+      setSlotsError(errMsg);
+      toast.error(errMsg);
     } finally {
       if (!isBackgroundFetch) {
         setIsLoadingSlots(false);
@@ -356,12 +358,11 @@ export const Step3_TimeSlot = memo(({
   const handleTimeSelect = useCallback(async (slot: TimeSlot) => {
     if (isLocking) return;
 
-    // INDUSTRY BEST PRACTICE: Release existing lock before acquiring a new one
-    // This prevents one user from blocking multiple slots.
     if (lockedSlot) {
       console.log('Releasing existing lock before acquiring new one');
       try {
-        await handleReleaseLock();
+        // Wait for release lock to finish without triggering a background fetch
+        await handleReleaseLock(true);
       } catch (err) {
         console.error('Error auto-releasing lock:', err);
       }
@@ -370,36 +371,25 @@ export const Step3_TimeSlot = memo(({
     setIsLocking(true);
 
     try {
-      // Use effectiveVendorId to ensure we have a valid vendor ID
       if (!effectiveVendorId) {
         throw new Error('Vendor ID is required but not available');
       }
 
-      // Prepare lock request
-      // For wedding packages, use the package ID and get service IDs from package services
       const effectiveService = service || selectedService || (selectedServices && selectedServices[0]);
       let serviceIdForLock = effectiveService?.id;
 
-      // If it's a wedding package, we still need a serviceId for the lock
-      // Use the first service from the package or the package ID itself
       if (isWeddingPackage && weddingPackage) {
-        // Use the first service from wedding package services, or fallback to a placeholder
         if (weddingPackageServices && weddingPackageServices.length > 0) {
           serviceIdForLock = weddingPackageServices[0].serviceId || weddingPackageServices[0].id || weddingPackageServices[0]._id;
         } else if (weddingPackage.services && weddingPackage.services.length > 0) {
           const firstService = weddingPackage.services[0];
           serviceIdForLock = typeof firstService === 'object' && 'serviceId' in firstService ? firstService.serviceId : String(firstService);
         } else {
-          // Use the package ID as serviceId if no services found
           serviceIdForLock = weddingPackage.id || weddingPackage._id;
         }
       }
 
-      // For wedding packages, use the wedding-package specific lock endpoint
-      // which doesn't create a temporary appointment
       if (isWeddingPackage && weddingPackage) {
-        console.log('Using wedding package lock endpoint');
-
         const weddingLockRequest = {
           packageId: weddingPackage.id || weddingPackage._id,
           selectedSlot: {
@@ -410,15 +400,13 @@ export const Step3_TimeSlot = memo(({
             totalAmount: weddingPackage.discountedPrice || weddingPackage.totalPrice || 0,
             depositAmount: (weddingPackage as any).depositAmount || 0
           },
-          clientId: (weddingPackage as any).clientId || 'temp-client-id',
-          clientName: 'Customer',
+          clientId: user?._id || user?.id || 'temp-client-id',
+          clientName: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : 'Customer',
           customerDetails: {
-            name: 'Customer',
-            phone: null
+            name: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : 'Customer',
+            phone: user?.mobileNo || user?.phone || null
           }
         };
-
-        console.log('Sending wedding package lock request:', weddingLockRequest);
 
         const response = await fetch('/api/scheduling/wedding-package', {
           method: 'POST',
@@ -427,75 +415,48 @@ export const Step3_TimeSlot = memo(({
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Slot no longer available');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || errorData.error?.message || 'Slot no longer available');
         }
 
         const lockData = await response.json();
-        console.log('Wedding package lock response received:', lockData);
-
-        // Store lock - backend returns lockId
         setLockedSlot({
           slot,
           lockToken: lockData.lockId,
-          expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes from now
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000)
         });
 
-        console.log('Wedding package slot locked successfully');
-
-        // Notify parent component about the lock token
         if (onLockAcquired && lockData.lockId) {
           onLockAcquired(lockData.lockId, lockData.appointmentId);
         }
 
-        // Trigger the next step by calling onSelectTime
         onSelectTime(slot.startTime);
         toast.success('Slot locked! You have 30 minutes to complete booking.');
-
-        // Remove locked slot from available slots (optimistic update)
-        setSlots(prev => prev.filter(s => s.startTime !== slot.startTime));
-
+        // Fetch fresh slots from the server to ensure UI is in sync
+        await fetchSlots(true);
         return;
       }
 
-      // For regular services, use the standard booking lock endpoint
-      // Build lock request - only include location if it's actually for a home service
-      // Calculate amounts and add-ons from selectedServices state
+      // Standard Lock
       let serviceAmount = 0;
       let addOnsAmount = 0;
-      const addOns: { _id: string; name: string; price: number; duration: number; }[] = [];
+      const addOns: any[] = [];
 
       if (selectedServices && selectedServices.length > 0) {
-        selectedServices.forEach(service => {
-          const basePrice = service.discountedPrice !== null && service.discountedPrice !== undefined
-            ? Number(service.discountedPrice)
-            : Number(service.price || 0);
-          serviceAmount += basePrice;
-
-          if (service.selectedAddons) {
-            service.selectedAddons.forEach(addon => {
-              const addonPrice = Number(addon.price) || 0;
-              addOnsAmount += addonPrice;
-              addOns.push({
-                _id: addon._id || (addon as any).id,
-                name: addon.name,
-                price: addonPrice,
-                duration: addon.duration || 0
-              });
+        selectedServices.forEach(s => {
+          serviceAmount += Number(s.discountedPrice || s.price || 0);
+          if (s.selectedAddons) {
+            s.selectedAddons.forEach(a => {
+              addOnsAmount += Number(a.price || 0);
+              addOns.push({ _id: a._id, name: a.name, price: a.price, duration: a.duration });
             });
           }
         });
-      } else if (effectiveService) {
-        // Fallback for single service if selectedServices is not populated
-        const basePrice = effectiveService.discountedPrice !== null && effectiveService.discountedPrice !== undefined
-          ? Number(effectiveService.discountedPrice)
-          : Number(effectiveService.price || 0);
-        serviceAmount += basePrice;
       }
 
       const totalAmount = serviceAmount + addOnsAmount;
 
-      const lockRequest: any = {
+      const lockRequest = {
         vendorId: effectiveVendorId,
         staffId: selectedStaff?.id || 'any',
         serviceId: serviceIdForLock,
@@ -503,41 +464,23 @@ export const Step3_TimeSlot = memo(({
         date: selectedDate.toISOString(),
         startTime: slot.startTime,
         endTime: slot.endTime,
-        clientId: user?._id || user?.id || (effectiveService as any)?.clientId || 'temp-client-id',
+        clientId: user?._id || user?.id || 'temp-client-id',
         clientName: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : 'Customer',
-        clientEmail: user?.emailAddress || user?.email || '',
-        clientPhone: user?.mobileNo || user?.phone || '',
-        staffName: selectedStaff?.name || 'Any Professional',
         isHomeService,
         isWeddingService: isWeddingService,
-        duration: slot.duration || effectiveService?.duration,
+        duration: slot.duration,
         amount: Math.round(serviceAmount),
         addOnsAmount: Math.round(addOnsAmount),
         totalAmount: Math.round(totalAmount),
         finalAmount: Math.round((totalAmount + (platformFee || 0) + (serviceTax || 0)) - (discountAmount || 0)),
         platformFee: Math.round(platformFee || 0),
         serviceTax: Math.round(serviceTax || 0),
-        taxRate: taxRate,
+        taxRate,
         couponCode,
         discountAmount: Math.round(discountAmount || 0),
-        addOns: selectedService?.selectedAddons || addOns, // Ensure this is passed as well
-        addOnIds: (selectedService?.selectedAddons || addOns).map((a: any) => a._id),
-        selectedAddOns: (selectedService?.selectedAddons || addOns).map((a: any) => a._id),
+        addOns,
+        location: isHomeService ? homeServiceLocation : null
       };
-
-      // Only include location if it's actually provided and valid
-      if (isHomeService && homeServiceLocation && homeServiceLocation.lat && homeServiceLocation.lng) {
-        lockRequest.location = homeServiceLocation;
-      }
-
-      console.log('Sending lock request:', lockRequest);
-
-      // Only include location if it's actually provided and valid
-      if (isHomeService && homeServiceLocation && homeServiceLocation.lat && homeServiceLocation.lng) {
-        lockRequest.location = homeServiceLocation;
-      }
-
-      console.log('Sending lock request:', lockRequest);
 
       const response = await fetch('/api/booking/lock', {
         method: 'POST',
@@ -546,19 +489,13 @@ export const Step3_TimeSlot = memo(({
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error?.message || errorData.message || 'Slot no longer available');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error?.message || 'Slot no longer available');
       }
 
       const lockData = await response.json();
+      if (onLockAcquired && lockData.lockId) onLockAcquired(lockData.lockId, lockData.appointmentId);
 
-      console.log('Lock response received:', lockData);
-
-      if (onLockAcquired && lockData.lockId) {
-        onLockAcquired(lockData.lockId, lockData.appointmentId);
-      }
-
-      // Store lock state locally
       setLockedSlot({
         slot,
         lockToken: lockData.lockId,
@@ -568,15 +505,10 @@ export const Step3_TimeSlot = memo(({
 
       onSelectTime(slot.startTime);
       toast.success('Slot locked! You have 15 minutes to complete booking.');
-
-      // Remove locked slot from available slots (optimistic update)
-      setSlots(prev => prev.filter(s => s.startTime !== slot.startTime));
-
+      // Fetch fresh slots from the server to ensure UI is in sync
+      await fetchSlots(true);
     } catch (error: any) {
-      console.error('Slot lock error:', error);
-      toast.error(error.message || 'This slot was just booked. Please select another time.');
-
-      // Refresh slots immediately (not background) to get updated availability
+      toast.error(error.message || 'This slot was just booked.');
       await fetchSlots(false);
     } finally {
       setIsLocking(false);
@@ -584,64 +516,30 @@ export const Step3_TimeSlot = memo(({
   }, [effectiveVendorId, selectedStaff, selectedService, service, selectedServices, selectedDate, isHomeService, isWeddingService,
     isWeddingPackage, weddingPackage, weddingPackageServices, homeServiceLocation, onSelectTime, fetchSlots, isLocking]);
 
-  // Release lock manually
-  const handleReleaseLock = useCallback(async () => {
+  const handleReleaseLock = useCallback(async (skipFetch = false) => {
     if (!lockedSlot) return;
-
     try {
       await fetch('/api/booking/release-lock', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ lockToken: lockedSlot.lockToken })
       });
-
       setLockedSlot(null);
       setLockCountdown(null);
       onSelectTime(null);
-      toast.info('Slot lock released');
-      fetchSlots(false);
-    } catch (error) {
-      console.error('Error releasing lock:', error);
-    }
+      if (!skipFetch) {
+        fetchSlots(false);
+      }
+    } catch (error) {}
   }, [lockedSlot, onSelectTime, fetchSlots]);
 
-  // Manual refresh handler
   const handleRefresh = useCallback(() => {
     fetchSlots(false);
     toast.success('Slots refreshed!');
   }, [fetchSlots]);
 
-  // Memoized formatted countdown
-  const formattedCountdown = useMemo(() => {
-    if (!lockCountdown) return null;
-    const minutes = Math.floor(lockCountdown / 60);
-    const seconds = lockCountdown % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }, [lockCountdown]);
-
-  // Memoized grouped slots (for "Any Staff" view)
-  const groupedSlots = useMemo(() => {
-    return slots.reduce((acc, slot) => {
-      const key = `${slot.startTime}-${slot.endTime}`;
-      if (!acc[key]) {
-        acc[key] = { ...slot, staffCount: slot.availableStaff?.length || 1 };
-      }
-      return acc;
-    }, {} as Record<string, any>);
-  }, [slots]);
-
-  const displaySlots = useMemo(() => {
-    return selectedStaff?.id === 'any' || !selectedStaff
-      ? Object.values(groupedSlots)
-      : slots;
-  }, [selectedStaff, slots, groupedSlots]);
-
-  // Generate available dates (next 60 days)
-  const dates = useMemo(() => Array.from({ length: 60 }, (_, i) => addDays(new Date(), i)), []);
-
   const currentMonthYear = useMemo(() => format(selectedDate, 'MMMM yyyy'), [selectedDate]);
 
-  // Handle date scroll
   const handleDateScroll = (direction: 'left' | 'right') => {
     if (dateScrollerRef.current) {
       const scrollAmount = direction === 'left' ? -200 : 200;
@@ -649,71 +547,7 @@ export const Step3_TimeSlot = memo(({
     }
   };
 
-  // Scroll selected date into view
-  useEffect(() => {
-    const selectedDateElement = document.getElementById(`date-${format(selectedDate, 'yyyy-MM-dd')}`);
-    if (selectedDateElement && dateScrollerRef.current) {
-      const container = dateScrollerRef.current;
-      const scrollLeft = selectedDateElement.offsetLeft - container.offsetLeft - (container.offsetWidth / 2) + (selectedDateElement.offsetWidth / 2);
-      container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
-    }
-  }, [selectedDate]);
-
-  // Loading state
-  if (parentLoading || isLoadingSlots) {
-    return (
-      <div className="w-full">
-        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} isHomeService={isHomeService} />
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-primary/10 rounded-full text-primary">
-              <Clock className="h-6 w-6" />
-            </div>
-            <h2 className="text-3xl font-bold font-headline">Select Date & Time</h2>
-          </div>
-          <p className="text-muted-foreground">Choose a convenient time for your appointment.</p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="font-semibold mb-3">Select Date</h3>
-            <div className="h-80 bg-gray-100 animate-pulse rounded-lg" />
-          </div>
-
-          <div>
-            <h3 className="font-semibold mb-3">Available Time Slots</h3>
-            <TimeSlotSkeleton />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (parentError || slotsError) {
-    return (
-      <div className="w-full">
-        <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isWeddingPackage={isWeddingPackage} isHomeService={isHomeService} />
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-primary/10 rounded-full text-primary">
-              <Clock className="h-6 w-6" />
-            </div>
-            <h2 className="text-3xl font-bold font-headline">Select Date & Time</h2>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-center justify-center py-12">
-          <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-          <p className="text-destructive mb-4">Failed to load time slots</p>
-          <Button onClick={handleRefresh} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Try Again
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const dates = useMemo(() => Array.from({ length: 60 }, (_, i) => addDays(new Date(), i)), []);
 
   return (
     <div className="w-full">
@@ -728,187 +562,105 @@ export const Step3_TimeSlot = memo(({
         <p className="text-muted-foreground">Choose a convenient time for your appointment.</p>
       </div>
 
-      {/* Stale data warning */}
-      {isStale && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
-          <span className="text-sm text-amber-800">
-            Availability may have changed. Refresh to see latest slots.
-          </span>
-          <Button size="sm" variant="outline" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh Now
-          </Button>
-        </div>
-      )}
-
-      {/* Locked slot indicator */}
-      {lockedSlot && formattedCountdown && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between text-amber-800">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            <span className="font-medium">Slot reserved! Complete booking in:</span>
-          </div>
-          <span className="text-xl font-bold tabular-nums">
-            {formattedCountdown}
-          </span>
-        </div>
-      )}
-
-      <div className="grid md:grid-cols-1 gap-8">
-        {/* Date Selector Section */}
-        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="font-bold text-xl text-gray-900">{currentMonthYear}</h3>
-              <p className="text-xs text-muted-foreground font-medium">Select your preferred date</p>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-10 w-10 rounded-xl border-gray-100 hover:bg-gray-50 transition-colors" 
-                onClick={() => handleDateScroll('left')}
-              >
-                <ChevronLeft className="h-5 w-5 text-gray-600" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-10 w-10 rounded-xl border-gray-100 hover:bg-gray-50 transition-colors" 
-                onClick={() => handleDateScroll('right')}
-              >
-                <ChevronRight className="h-5 w-5 text-gray-600" />
-              </Button>
-            </div>
-          </div>
-
-          <div 
-            id="date-scroller" 
-            ref={dateScrollerRef} 
-            className="flex gap-3 overflow-x-auto pb-4 no-scrollbar scroll-smooth"
-          >
-            {dates.map((date: Date) => {
-              const isToday = date.toDateString() === new Date().toDateString();
-              const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
-              const isAvailable = isDateAvailable(date);
-              const isSelected = selectedDate.toDateString() === date.toDateString();
-
-              return (
-                <button
-                  key={date.toISOString()}
-                  id={`date-${format(date, 'yyyy-MM-dd')}`}
-                  disabled={isPast || !isAvailable}
-                  onClick={() => !isPast && isAvailable && onSelectDate(date)}
-                  className={cn(
-                    'flex-shrink-0 flex flex-col items-center justify-center h-24 w-20 rounded-2xl transition-all duration-300 relative group',
-                    isSelected 
-                      ? 'bg-gradient-to-br from-indigo-600 to-violet-700 text-white shadow-xl shadow-indigo-200 scale-105 z-10' 
-                      : (isPast || !isAvailable)
-                        ? 'bg-gray-50/50 text-gray-300 cursor-not-allowed border border-gray-100'
-                        : 'bg-white text-gray-600 border border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30'
-                  )}
-                >
-                  <span className={cn(
-                    "text-[10px] font-bold uppercase tracking-wider mb-1",
-                    isSelected ? "text-indigo-100" : "text-gray-400"
-                  )}>
-                    {format(date, 'EEE')}
-                  </span>
-                  <span className="text-2xl font-black">{format(date, 'd')}</span>
-                  {isToday && !isSelected && (
-                    <div className="absolute bottom-2 w-1 h-1 rounded-full bg-indigo-500" />
-                  )}
-                  {isSelected && (
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full flex items-center justify-center shadow-sm">
-                      <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full" />
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Time Slots */}
-        <div className="mt-6">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-primary/10 rounded-full text-primary">
-              <Clock className="h-5 w-5" />
-            </div>
-            <h3 className="font-semibold text-lg">Available Slots for {format(selectedDate, 'MMMM d')}</h3>
-            <Button size="sm" variant="ghost" onClick={handleRefresh} disabled={isLoadingSlots} className="ml-auto">
-              <RefreshCw className={cn("h-4 w-4", (isLoadingSlots || isBackgroundRefreshing) && "animate-spin", isBackgroundRefreshing && "opacity-50")} />
+      {/* Date Scroller (Matching Existing UI Style) */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-lg">{currentMonthYear}</h3>
+          <div className="flex gap-1">
+            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('left')}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="icon" className="h-8 w-8 rounded-full" onClick={() => handleDateScroll('right')}>
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
+        </div>
 
-          {isLoadingSlots ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-gray-50/50 rounded-3xl border border-dashed border-gray-200">
-              <RefreshCw className="h-8 w-8 animate-spin text-indigo-500 mb-4" />
-              <span className="text-sm text-gray-500 font-medium">Fetching best slots for you...</span>
-            </div>
-          ) : isSalonClosedEveryDay ? (
-            <div className="text-center py-12 bg-red-50 rounded-3xl border border-red-100 p-8">
-              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-red-800 mb-2">Salon is Currently Closed</h3>
-              <p className="text-red-600">Please check back later or contact the salon directly.</p>
-            </div>
-          ) : !isDateAvailable(selectedDate) ? (
-            <div className="text-center py-12 bg-amber-50 rounded-3xl border border-amber-100 p-8">
-              <Clock className="h-12 w-12 text-amber-500 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-amber-800 mb-2">Salon is Closed Today ({format(selectedDate, 'EEEE')})</h3>
-              <p className="text-amber-600">Please select another date from the calendar above.</p>
-            </div>
-          ) : displaySlots.length === 0 ? (
-            <div className="text-center py-16 bg-gray-50/50 rounded-3xl border border-dashed border-gray-200">
-              <CalendarDays className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-gray-700 mb-2">No available slots</h3>
-              <p className="text-gray-500 text-sm">Try selecting a different date or another professional.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 transition-all duration-500">
-              {displaySlots.map((slot) => {
-                const isSelected = selectedTime === slot.startTime;
-                const isLocked = lockedSlot?.slot.startTime === slot.startTime;
+        <div id="date-scroller" ref={dateScrollerRef} className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar scroll-smooth">
+          {dates.map((date: Date) => {
+            const isToday = date.toDateString() === new Date().toDateString();
+            const isPast = date < new Date(new Date().setHours(0, 0, 0, 0));
+            const isAvailable = isDateAvailable(date);
+            const isSelected = selectedDate.toDateString() === date.toDateString();
 
-                return (
-                  <button
-                    key={slot.startTime}
-                    onClick={() => !isLocked && handleTimeSelect(slot)}
-                    disabled={isLocking || isLocked}
-                    className={cn(
-                      "p-4 rounded-2xl transition-all duration-300 text-center border-2 flex flex-col items-center justify-center gap-1",
-                      isLocked
-                        ? "border-amber-200 bg-amber-50 cursor-not-allowed"
-                        : isSelected
-                          ? "border-indigo-600 bg-indigo-50 shadow-md shadow-indigo-100"
-                          : "border-gray-100 bg-white hover:border-indigo-300 hover:shadow-lg hover:shadow-indigo-50"
-                    )}
-                  >
-                    <span className={cn(
-                      "text-base font-bold",
-                      isSelected ? "text-indigo-700" : "text-gray-900"
-                    )}>
-                      {slot.startTime}
-                    </span>
-                    <span className="text-[10px] font-medium text-gray-400 uppercase tracking-tighter">
-                      {slot.duration} MIN
-                    </span>
-                    
-                    {isLocked && (
-                      <div className="text-[10px] text-amber-600 font-bold flex items-center gap-1 mt-1">
-                        <Lock className="h-3 w-3" />
-                        LOCKED
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+            return (
+              <Button
+                key={date.toISOString()}
+                variant={isSelected ? 'default' : 'outline'}
+                className={cn(
+                  'flex-shrink-0 flex flex-col items-center justify-center h-20 w-16 rounded-lg transition-all',
+                  isSelected && 'ring-2 ring-primary ring-offset-2',
+                  (isPast || !isAvailable) && 'opacity-50 cursor-not-allowed'
+                )}
+                onClick={() => !isPast && isAvailable && onSelectDate(date)}
+                disabled={isPast || !isAvailable}
+              >
+                <span className="text-[10px] font-medium uppercase">
+                  {isToday ? 'Today' : format(date, 'EEE')}
+                </span>
+                <span className="text-2xl font-bold">{format(date, 'd')}</span>
+                <span className="text-[10px] font-medium uppercase">{format(date, 'MMM')}</span>
+              </Button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Loading overlay during lock acquisition */}
+      {/* Time Slots */}
+      <div className="mt-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-3 bg-primary/10 rounded-full text-primary">
+            <Clock className="h-5 w-5" />
+          </div>
+          <h3 className="font-semibold text-lg">Available Slots for {format(selectedDate, 'MMMM d')}</h3>
+          <Button size="sm" variant="ghost" onClick={handleRefresh} disabled={isLoadingSlots} className="ml-auto">
+            <RefreshCw className={cn("h-4 w-4", (isLoadingSlots || isBackgroundRefreshing) && "animate-spin")} />
+          </Button>
+        </div>
+
+        {isLoadingSlots ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mr-3" />
+            <span className="text-muted-foreground">Checking availability...</span>
+          </div>
+        ) : slotsError ? (
+          <div className="text-center py-12 bg-amber-50 rounded-xl border border-amber-200 p-8 shadow-sm max-w-lg mx-auto">
+            <div className="p-3 bg-amber-100 rounded-full text-amber-600 w-fit mx-auto mb-4">
+              <AlertCircle className="h-8 w-8" />
+            </div>
+            <h3 className="text-lg font-semibold text-amber-900 mb-2">Service Area Range</h3>
+            <p className="text-amber-700 mb-6 text-sm">{slotsError}</p>
+            <Button onClick={() => setCurrentStep(3)} className="bg-amber-600 hover:bg-amber-700 text-white font-medium px-6 py-2 rounded-lg">
+              Select Another Location
+            </Button>
+          </div>
+        ) : slots.length === 0 ? (
+          <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+            <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">No available slots</h3>
+            <p className="text-muted-foreground">We couldn't find any available time slots for {format(selectedDate, 'MMMM d')}.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+            {slots.map((slot) => (
+              <Button
+                key={slot.startTime}
+                variant={selectedTime === slot.startTime ? 'default' : 'outline'}
+                className={cn(
+                  "h-14 rounded-lg flex flex-col items-center justify-center transition-all",
+                  selectedTime === slot.startTime && "ring-2 ring-primary ring-offset-2"
+                )}
+                onClick={() => handleTimeSelect(slot)}
+                disabled={isLocking}
+              >
+                <span className="text-lg font-bold">{slot.startTime}</span>
+                <span className="text-[10px] opacity-70 uppercase tracking-tighter">Available</span>
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {isLocking && (
         <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg shadow-xl flex items-center gap-3">

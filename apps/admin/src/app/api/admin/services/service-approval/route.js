@@ -74,6 +74,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
           isActive: "$services.isActive",
           vendorName: "$vendorDetails.businessName",
           vendorId: "$vendorDetails._id",
+          gender: "$services.gender",
           createdAt: "$services.createdAt",
           updatedAt: "$services.updatedAt"
         }

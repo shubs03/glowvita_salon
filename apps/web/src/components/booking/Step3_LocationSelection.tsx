@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@repo/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@repo/ui/card';
 import { MapPin, Loader2, ChevronRight, Home, Edit2, Info, CheckCircle, Trash2 } from 'lucide-react';
@@ -79,6 +79,7 @@ export function Step3_LocationSelection({
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const lastSavedLocationKeyRef = useRef<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const autocompleteInstanceRef = useRef<any>(null); // Track autocomplete instance
   const hasInitiallyLoadedAddress = useRef(false); // Track if we've loaded address on mount
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteConfirmModal, setDeleteConfirmModal] = useState<{ show: boolean; addressId: string | null; addressLabel: string }>({
@@ -201,37 +202,92 @@ export function Step3_LocationSelection({
     fetchUserAddress();
   }, [isAuthenticated, selectedWeddingPackage]);
 
-  // Initialize Google Places Autocomplete
+  // Initialize Google Places Autocomplete — keyed on showMapSelector so it
+  // re-runs every time the map panel opens. A short timeout ensures the input
+  // is actually mounted in the DOM before we attach the autocomplete.
   useEffect(() => {
-    if (!searchInputRef.current || !window.google) return;
-
-    const autocomplete = new window.google.maps.places.Autocomplete(searchInputRef.current, {
-      types: ['address'],
-      componentRestrictions: { country: 'in' }
-    });
-
-    autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace();
-
-      if (!place.geometry || !place.geometry.location) {
-        toast.error('No location details available for this place');
-        return;
+    if (!showMapSelector) {
+      // Cleanup when map is hidden
+      if (autocompleteInstanceRef.current) {
+        window.google?.maps?.event?.clearInstanceListeners(autocompleteInstanceRef.current);
+        autocompleteInstanceRef.current = null;
       }
+      return;
+    }
 
-      const lat = place.geometry.location.lat();
-      const lng = place.geometry.location.lng();
+    const timer = setTimeout(() => {
+      if (!searchInputRef.current || !window.google?.maps?.places) return;
+      if (autocompleteInstanceRef.current) return; // Already attached
 
-      // Update location form and trigger reverse geocoding
-      handleMapLocationSelect(lat, lng);
-      setSearchQuery(place.formatted_address || '');
+      const autocomplete = new window.google.maps.places.Autocomplete(
+        searchInputRef.current,
+        {
+          componentRestrictions: { country: 'in' },
+          fields: ['address_components', 'geometry', 'formatted_address']
+        }
+      );
+      autocompleteInstanceRef.current = autocomplete;
 
-      toast.success('Location found!');
-    });
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry || !place.geometry.location) {
+          toast.error('No location details available for this place');
+          return;
+        }
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+
+        // Extract address components directly from the selected Google Place
+        const addressComponents = place.address_components || [];
+        let address = '';
+        let city = '';
+        let state = '';
+        let pincode = '';
+
+        addressComponents.forEach((component: any) => {
+          if (component.types.includes('street_number') || component.types.includes('route')) {
+            address += (address ? ' ' : '') + component.long_name;
+          }
+          if (component.types.includes('sublocality_level_1') || component.types.includes('sublocality')) {
+            if (!address) {
+              address = component.long_name;
+            } else {
+              address += ', ' + component.long_name;
+            }
+          }
+          if (component.types.includes('locality')) {
+            city = component.long_name;
+          }
+          if (component.types.includes('administrative_area_level_1')) {
+            state = component.long_name;
+          }
+          if (component.types.includes('postal_code')) {
+            pincode = component.long_name;
+          }
+        });
+
+        // If the parsed address is still empty, fall back to formatted_address
+        const finalAddress = address.trim() || place.formatted_address || '';
+
+        setLocationForm({
+          address: finalAddress,
+          city,
+          state,
+          pincode,
+          landmark: '', // Clear landmark for a new search
+          lat,
+          lng
+        });
+
+        setSearchQuery(place.formatted_address || finalAddress);
+        toast.success('Address auto-filled successfully!');
+      });
+    }, 150);
 
     return () => {
-      window.google?.maps.event?.clearInstanceListeners(autocomplete);
+      clearTimeout(timer);
     };
-  }, [searchInputRef.current, showMapSelector]);
+  }, [showMapSelector]);
 
   // Handle location form field changes
   const handleLocationChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -254,53 +310,75 @@ export function Step3_LocationSelection({
     fetchAddressFromCoordinates(lat, lng);
   };
 
-  // Reverse geocoding to get address from coordinates
-  const fetchAddressFromCoordinates = async (lat: number, lng: number) => {
-    try {
-      const response = await fetch(
+  // Reverse geocoding — uses the Google Maps JS API Geocoder (avoids HTTP
+  // referrer restrictions that block the REST endpoint in production).
+  const fetchAddressFromCoordinates = useCallback((lat: number, lng: number) => {
+    const parseAndSet = (results: any[]) => {
+      const result = results[0];
+      const addressComponents: any[] = result.address_components;
+
+      let address = '';
+      let city = '';
+      let state = '';
+      let pincode = '';
+
+      addressComponents.forEach((component: any) => {
+        if (component.types.includes('street_number') || component.types.includes('route')) {
+          address += component.long_name + ' ';
+        }
+        if (component.types.includes('sublocality_level_1') || component.types.includes('sublocality')) {
+          if (!address) address = component.long_name + ' ';
+        }
+        if (component.types.includes('locality')) {
+          city = component.long_name;
+        }
+        if (component.types.includes('administrative_area_level_1')) {
+          state = component.long_name;
+        }
+        if (component.types.includes('postal_code')) {
+          pincode = component.long_name;
+        }
+      });
+
+      setLocationForm(prev => ({
+        ...prev,
+        address: address.trim() || result.formatted_address,
+        city,
+        state,
+        pincode,
+        lat,
+        lng
+      }));
+    };
+
+    // Prefer JS API Geocoder (respects the Maps JS API key restrictions properly)
+    if (window.google?.maps) {
+      const geocoder = new window.google.maps.Geocoder();
+      geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
+        if (status === 'OK' && results && results.length > 0) {
+          parseAndSet(results);
+        } else {
+          console.error('Geocoder failed:', status);
+          toast.error('Could not fetch address details. Please type manually.');
+        }
+      });
+    } else {
+      // Fallback: HTTP REST endpoint (works on localhost without key restrictions)
+      fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-      );
-      const data = await response.json();
-
-      if (data.results && data.results[0]) {
-        const result = data.results[0];
-        const addressComponents = result.address_components;
-
-        let address = '';
-        let city = '';
-        let state = '';
-        let pincode = '';
-
-        addressComponents.forEach((component: any) => {
-          if (component.types.includes('street_number') || component.types.includes('route')) {
-            address += component.long_name + ' ';
+      )
+        .then(r => r.json())
+        .then(data => {
+          if (data.results && data.results[0]) {
+            parseAndSet(data.results);
           }
-          if (component.types.includes('locality')) {
-            city = component.long_name;
-          }
-          if (component.types.includes('administrative_area_level_1')) {
-            state = component.long_name;
-          }
-          if (component.types.includes('postal_code')) {
-            pincode = component.long_name;
-          }
+        })
+        .catch(err => {
+          console.error('Error fetching address:', err);
+          toast.error('Could not fetch address details. Please type manually.');
         });
-
-        setLocationForm(prev => ({
-          ...prev,
-          address: address.trim() || result.formatted_address,
-          city,
-          state,
-          pincode,
-          lat,
-          lng
-        }));
-      }
-    } catch (error) {
-      console.error('Error fetching address:', error);
-      toast.error('Could not fetch address details');
     }
-  };
+  }, []);
 
   // Handle using registered address
   const handleUseRegisteredAddress = () => {
@@ -964,12 +1042,40 @@ export function Step3_LocationSelection({
                 </CardContent>
               </Card>
 
+              {/* Confirm address button — lets users manually confirm typed details */}
+              {locationForm.lat && locationForm.lng && locationForm.address && locationForm.city && locationForm.state && locationForm.pincode && (
+                <Button
+                  size="lg"
+                  className="w-full"
+                  onClick={() => {
+                    const locationData: HomeServiceLocation = {
+                      address: locationForm.address,
+                      city: locationForm.city,
+                      state: locationForm.state,
+                      pincode: locationForm.pincode,
+                      landmark: locationForm.landmark || '',
+                      lat: Number(locationForm.lat),
+                      lng: Number(locationForm.lng),
+                      coordinates: {
+                        lat: Number(locationForm.lat),
+                        lng: Number(locationForm.lng)
+                      }
+                    };
+                    onLocationConfirm(locationData);
+                    toast.success('Address confirmed!');
+                  }}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Confirm This Address
+                </Button>
+              )}
+
               {/* Info message about using summary button */}
               <div className="bg-muted border rounded-lg p-4">
                 <div className="flex items-start gap-3">
                   <Info className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                   <p className="text-sm text-muted-foreground">
-                    Pin your location on the map and fill in the address details. The <span className="font-semibold text-foreground">"Select Time Slot"</span> button will be enabled once completed.
+                    Pin your location on the map and fill in the address details. Then tap <span className="font-semibold text-foreground">"Confirm This Address"</span> to proceed.
                   </p>
                 </div>
               </div>

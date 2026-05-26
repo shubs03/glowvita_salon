@@ -1,14 +1,11 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@repo/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@repo/ui/dialog';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@repo/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui/select";
 import { Pagination } from "@repo/ui/pagination";
-import { Badge } from "@repo/ui/badge";
-import { Download, Eye, DollarSign, Users, UserPlus, ShoppingCart, Search, Calendar, Copy, FileText, FileSpreadsheet, Printer, Filter, Loader2, ChevronUp, ChevronDown } from 'lucide-react';
+import { Download, Search, Copy, FileText, FileSpreadsheet, Printer, Filter, CalendarCheck, Clock, TrendingUp } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/table";
 import { Input } from '@repo/ui/input';
 import { Skeleton } from "@repo/ui/skeleton";
@@ -31,15 +28,72 @@ interface SummaryByServiceTableProps {
   triggerRefresh?: any;
 }
 
+const exportToExcel = (tableRef: React.RefObject<HTMLDivElement>, fileName: string) => {
+  if (!tableRef.current) return;
+  const table = tableRef.current.querySelector('table');
+  if (!table) return;
+  const wb = XLSX.utils.table_to_book(table, { sheet: 'Sheet1' });
+  XLSX.writeFile(wb, `${fileName}.xlsx`);
+};
+
+const exportToCSV = (tableRef: React.RefObject<HTMLDivElement>, fileName: string) => {
+  if (!tableRef.current) return;
+  const table = tableRef.current.querySelector('table');
+  if (!table) return;
+  const wb = XLSX.utils.table_to_book(table, { sheet: 'Sheet1' });
+  XLSX.writeFile(wb, `${fileName}.csv`);
+};
+
+const exportToPDF = async (tableRef: React.RefObject<HTMLDivElement>, fileName: string) => {
+  if (!tableRef.current) return;
+  const table = tableRef.current.querySelector('table');
+  if (!table) return;
+  const canvas = await html2canvas(table as HTMLElement);
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jsPDF('l', 'mm', 'a4');
+  const imgWidth = pdf.internal.pageSize.getWidth() - 20;
+  const imgHeight = (canvas.height * imgWidth) / canvas.width;
+  pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+  pdf.save(`${fileName}.pdf`);
+};
+
+const copyToClipboard = (tableRef: React.RefObject<HTMLDivElement>) => {
+  if (!tableRef.current) return;
+  const table = tableRef.current.querySelector('table');
+  if (!table) return;
+  const range = document.createRange();
+  range.selectNode(table);
+  window.getSelection()?.removeAllRanges();
+  window.getSelection()?.addRange(range);
+  document.execCommand('copy');
+  window.getSelection()?.removeAllRanges();
+  alert('Table copied to clipboard!');
+};
+
+const printTable = (tableRef: React.RefObject<HTMLDivElement>) => {
+  if (!tableRef.current) return;
+  const table = tableRef.current.querySelector('table');
+  if (!table) return;
+  const printWindow = window.open('', '', 'height=600,width=800');
+  if (printWindow) {
+    printWindow.document.write('<html><head><title>Appointment Summary by Service</title>');
+    printWindow.document.write('<style>table { border-collapse: collapse; width: 100%; font-size: 10px; } th, td { border: 1px solid #ddd; padding: 4px; text-align: left; } th { background-color: #f2f2f2; }</style>');
+    printWindow.document.write('</head><body>');
+    printWindow.document.write(table.outerHTML);
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.print();
+  }
+};
+
 export const SummaryByServiceTable = ({ startDate, endDate, client, service, staff, status, bookingType, onFiltersChange, triggerRefresh }: SummaryByServiceTableProps) => {
   const [filters, setFilters] = useState<FilterParams>({});
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10); // 10 entries by default
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
   const tableRef = useRef<HTMLDivElement>(null);
 
-  // Use the RTK Query hook to fetch real data
   const { data, isLoading, isError, refetch } = useGetSummaryByServiceReportQuery({
     period: 'custom',
     startDate: startDate ? new Date(startDate) : undefined,
@@ -51,264 +105,66 @@ export const SummaryByServiceTable = ({ startDate, endDate, client, service, sta
     bookingType: bookingType && bookingType !== 'all' ? bookingType : undefined
   });
 
-  // Sync local filters state with props from parent
-  useEffect(() => {
-    setFilters({
-      startDate,
-      endDate,
-      client,
-      service,
-      staff,
-      status,
-      bookingType
-    });
-  }, [startDate, endDate, client, service, staff, status, bookingType]);
-
   const handleFilterChange = (newFilters: FilterParams) => {
     setFilters(newFilters);
-    setCurrentPage(1); // Reset to first page when filters change
-
-    // Notify parent component about filter changes
-    if (onFiltersChange) {
-      onFiltersChange(newFilters);
-    }
-  };
-
-  // Export functions
-  const exportToExcel = () => {
-    if (!tableRef.current) return;
-
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-
-    // Get table data
-    const wb = XLSX.utils.table_to_book(table, { sheet: 'Service Summary' });
-    XLSX.writeFile(wb, 'summary_by_service.xlsx');
-  };
-
-  const exportToCSV = () => {
-    if (!tableRef.current) return;
-
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-
-    // Get table data
-    const wb = XLSX.utils.table_to_book(table, { sheet: 'Service Summary' });
-    XLSX.writeFile(wb, 'summary_by_service.csv');
-  };
-
-  const exportToPDF = async () => {
-    if (!tableRef.current) return;
-
-    // Use html2canvas to capture the table
-    const canvas = await html2canvas(tableRef.current as HTMLElement);
-    const imgData = canvas.toDataURL('image/png');
-
-    // Create PDF
-    const pdf = new jsPDF();
-    const imgWidth = pdf.internal.pageSize.getWidth();
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
-    pdf.save('summary_by_service.pdf');
-  };
-
-  const copyToClipboard = () => {
-    if (!tableRef.current) return;
-
-    const table = tableRef.current.querySelector('table');
-    if (!table) return;
-
-    // Get table HTML
-    const range = document.createRange();
-    range.selectNode(table);
-    window.getSelection()?.removeAllRanges();
-    window.getSelection()?.addRange(range);
-    document.execCommand('copy');
-    window.getSelection()?.removeAllRanges();
-
-    // Show success message (you might want to implement a toast notification)
-    alert('Table copied to clipboard!');
-  };
-
-  const printTable = () => {
-    if (!tableRef.current) return;
-
-    const printWindow = window.open('', '', 'height=600,width=800');
-    if (printWindow) {
-      printWindow.document.write('<html><head><title>Appointment Summary by Service</title>');
-      printWindow.document.write('</head><body >');
-      printWindow.document.write(tableRef.current.innerHTML);
-      printWindow.document.write('</body></html>');
-      printWindow.document.close();
-      printWindow.print();
-    }
+    setCurrentPage(1);
+    if (onFiltersChange) onFiltersChange(newFilters);
   };
 
   const handleExport = (format: string) => {
+    const fileName = 'summary_by_service';
     switch (format) {
-      case 'excel':
-        exportToExcel();
-        break;
-      case 'csv':
-        exportToCSV();
-        break;
-      case 'pdf':
-        exportToPDF();
-        break;
-      case 'copy':
-        copyToClipboard();
-        break;
-      case 'print':
-        printTable();
-        break;
-      default:
-        break;
+      case 'excel': exportToExcel(tableRef, fileName); break;
+      case 'csv': exportToCSV(tableRef, fileName); break;
+      case 'pdf': exportToPDF(tableRef, fileName); break;
+      case 'copy': copyToClipboard(tableRef); break;
+      case 'print': printTable(tableRef); break;
     }
   };
 
-  // Trigger refetch when filter values change or when explicitly triggered
-  useEffect(() => {
-    refetch();
-  }, [refetch, startDate, endDate, client, service, staff, status, bookingType, triggerRefresh]);
+  useEffect(() => { refetch(); }, [refetch, startDate, endDate, client, service, staff, status, bookingType, triggerRefresh]);
 
-  // Extract services from the API response
   const services = data?.data?.summaryByService || data?.data || [];
+  const totalAppointments = services.reduce((sum: number, s: any) => sum + (s.count || 0), 0);
+  const totalRevenue = services.reduce((sum: number, s: any) => sum + (s.totalAmount || 0), 0);
+  const avgDuration = services.length > 0 ? services.reduce((sum: number, s: any) => sum + (s.totalDuration || 0), 0) / totalAppointments : 0;
+  const topService = services.length > 0 ? services[0].serviceName : 'N/A';
 
-  // Filter data based on search term and filter props
-  const filteredServices = useMemo(() => {
+  const searchedServices = useMemo(() => {
     let result = services;
-
-    // 1. Filter by specific service if selected
-    if (service && service !== 'all') {
-      result = result.filter((s: any) => 
-        (s.serviceName === service) || 
-        (s.name === service)
-      );
-    }
-
-    // 2. Only show services that have at least one appointment matching the filters
-    // This helps clean up the report when filtering by staff, client, etc.
-    result = result.filter((s: any) => {
-      const count = s.count || s.appointmentCount || 0;
-      return count > 0;
-    });
-
-    // 3. Filter by search term
     if (searchTerm) {
-      result = result.filter((service: any) =>
-        Object.values(service).some(value =>
+      result = result.filter((s: any) =>
+        Object.values(s).some(value =>
           value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
         )
       );
     }
-
     return result;
-  }, [services, searchTerm, service]);
+  }, [services, searchTerm]);
 
-  // Pagination logic
-  const totalItems = filteredServices.length;
+  const totalItems = searchedServices.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedServices = filteredServices.slice(startIndex, endIndex);
-
-  // Calculate total appointments for percentage calculation based on all filtered services
-  const totalAppointments = filteredServices.reduce((sum: number, service: any) => sum + (service.count || service.appointmentCount || 0), 0);
+  const paginatedServices = searchedServices.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   if (isLoading) {
     return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => setIsFilterModalOpen(true)}>
-              <Filter className="mr-2 h-4 w-4" />
-              Filters
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('copy')}>
-                  <Copy className="mr-2 h-4 w-4" />
-                  Copy
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('excel')}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Excel
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('print')}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+      <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+           {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
         </div>
-        <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        </div>
+        <Skeleton className="h-[400px] w-full" />
       </div>
     );
   }
 
   if (isError) {
-    return (
-      <div>
-        <div className="flex justify-between items-center mb-4 gap-2">
-          <div className="relative w-64">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1); // Reset to first page when search term changes
-              }}
-            />
-          </div>
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </Button>
-        </div>
-        <div className="text-center py-4 text-red-500">
-          Failed to load service summary data. Please try again.
-        </div>
-      </div>
-    );
+    return <div className="text-center py-4 text-red-500">Failed to load service summary data.</div>;
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4 gap-2">
+    <div className="space-y-6">
+      {/* Search and Filters */}
+      <div className="flex justify-between items-center gap-2">
         <div className="relative w-64">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
@@ -316,45 +172,23 @@ export const SummaryByServiceTable = ({ startDate, endDate, client, service, sta
             placeholder="Search..."
             className="pl-8"
             value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              setCurrentPage(1); // Reset to first page when search term changes
-            }}
+            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
           />
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setIsFilterModalOpen(true)}>
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
+          <Button variant="outline" onClick={() => setIsFilterModalOpen(true)}>
+            <Filter className="mr-2 h-4 w-4" /> Filters
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button>
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
+              <Button><Download className="mr-2 h-4 w-4" /> Export</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport('copy')}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('excel')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                <FileText className="mr-2 h-4 w-4" />
-                CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('pdf')}>
-                <FileText className="mr-2 h-4 w-4" />
-                PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('print')}>
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('copy')}><Copy className="mr-2 h-4 w-4" /> Copy</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('excel')}><FileSpreadsheet className="mr-2 h-4 w-4" /> Excel</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('csv')}><FileText className="mr-2 h-4 w-4" /> CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('pdf')}><FileText className="mr-2 h-4 w-4" /> PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('print')}><Printer className="mr-2 h-4 w-4" /> Print</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -368,71 +202,120 @@ export const SummaryByServiceTable = ({ startDate, endDate, client, service, sta
         initialFilters={filters}
       />
 
-      {paginatedServices.length === 0 ? (
-        <div className="text-center py-12 border rounded-md bg-muted/10">
-          <p className="text-muted-foreground">No data available for the selected filters.</p>
-          <Button 
-            variant="link" 
-            onClick={() => handleFilterChange({})}
-            className="mt-2"
-          >
-            Clear all filters
-          </Button>
-        </div>
-      ) : (
-        <>
-          <div ref={tableRef} className="overflow-x-auto no-scrollbar rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Service</TableHead>
-                  <TableHead>Total Appointments</TableHead>
-                  <TableHead>Total Sale</TableHead>
-                  <TableHead>Total Duration</TableHead>
-                  <TableHead>Percentage</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedServices.map((item: any, index: number) => {
-                  const count = item.count || item.appointmentCount || 0;
-                  const revenue = item.totalAmount || item.revenue || 0;
-                  const duration = item.totalDuration || item.averageDuration || 0;
-                  const percentage = totalAppointments > 0 ? (count / totalAppointments) * 100 : 0;
+      {/* Formula Display */}
+      <div className="bg-muted/30 p-4 rounded-lg border border-dashed border-primary/20">
+        <p className="text-sm font-medium text-primary">
+          Formula: <span className="text-muted-foreground italic">Service Share % = (Service Count / Total Appointments) * 100</span>
+        </p>
+      </div>
 
-                  return (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">{item.serviceName || 'Unknown Service'}</TableCell>
-                      <TableCell>{count}</TableCell>
-                      <TableCell>₹{typeof revenue === 'number' ? revenue.toFixed(2) : '0.00'}</TableCell>
-                      <TableCell>{typeof duration === 'number' ? duration.toFixed(0) : 0} mins</TableCell>
-                      <TableCell>
-                        <div className="flex items-center">
-                          <span className="mr-2">{percentage.toFixed(1)}%</span>
-                          <div className="w-16 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-blue-600 h-2 rounded-full"
-                              style={{ width: `${percentage}%` }}
-                            ></div>
-                          </div>
+      {/* Summary Cards */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Appointments</CardTitle>
+            <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalAppointments}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Estimated Revenue</CardTitle>
+            <div className="text-xs font-bold text-blue-500">Revenue</div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">₹{totalRevenue.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{avgDuration.toFixed(0)} mins</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Top Service</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold truncate" title={topService}>{topService}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-md border overflow-hidden" ref={tableRef}>
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50">
+              <TableHead>Service</TableHead>
+              <TableHead>Total Appointments</TableHead>
+              <TableHead>Total Sale</TableHead>
+              <TableHead>Total Duration</TableHead>
+              <TableHead>Percentage</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedServices.length > 0 ? (
+              paginatedServices.map((item: any, index: number) => {
+                const count = item.count || item.appointmentCount || 0;
+                const revenue = item.totalAmount || item.revenue || 0;
+                const duration = item.totalDuration || item.averageDuration || 0;
+                const percentage = totalAppointments > 0 ? (count / totalAppointments) * 100 : 0;
+
+                return (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">{item.serviceName || 'Unknown Service'}</TableCell>
+                    <TableCell>{count}</TableCell>
+                    <TableCell>₹{typeof revenue === 'number' ? revenue.toFixed(2) : '0.00'}</TableCell>
+                    <TableCell>{typeof duration === 'number' ? duration.toFixed(0) : 0} mins</TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <span className="mr-2 text-xs font-medium">{percentage.toFixed(1)}%</span>
+                        <div className="w-16 bg-gray-200 rounded-full h-1.5">
+                          <div
+                            className="bg-primary h-1.5 rounded-full"
+                            style={{ width: `${percentage}%` }}
+                          ></div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-          <Pagination
-            className="mt-4"
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            itemsPerPage={itemsPerPage}
-            onItemsPerPageChange={setItemsPerPage}
-            totalItems={totalItems}
-          />
-        </>
-      )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">No data available.</TableCell>
+              </TableRow>
+            )}
+            {paginatedServices.length > 0 && (
+              <TableRow className="bg-muted font-bold text-primary">
+                <TableCell>TOTAL</TableCell>
+                <TableCell>{paginatedServices.reduce((sum: number, s: any) => sum + (s.count || 0), 0)}</TableCell>
+                <TableCell>₹{paginatedServices.reduce((sum: number, s: any) => sum + (s.totalAmount || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>{paginatedServices.reduce((sum: number, s: any) => sum + (s.totalDuration || 0), 0).toFixed(0)} mins</TableCell>
+                <TableCell>100%</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Pagination
+        className="mt-4"
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={setCurrentPage}
+        itemsPerPage={itemsPerPage}
+        onItemsPerPageChange={setItemsPerPage}
+        totalItems={totalItems}
+      />
     </div>
   );
 };

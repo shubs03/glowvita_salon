@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
+import ClientOrderModel from '@repo/lib/models/user/ClientOrder.model';
 import VendorModel from '@repo/lib/models/Vendor.model';
 import VendorSettlementPaymentModel from '@repo/lib/models/Vendor/VendorSettlementPayment.model';
 import _db from '@repo/lib/db';
@@ -110,6 +111,18 @@ export const GET = authMiddlewareAdmin(async (req) => {
             ...regionFilter
         };
 
+        const vendorIds = vendors.map(vendor => vendor._id);
+
+        const orderMatchFilter = {
+            vendorId: { $in: vendorIds },
+            createdAt: { $gte: startDate, $lte: endDate },
+            status: { $in: ['Delivered', 'Shipped', 'Processing', 'Packed'] },
+            $or: [
+                { paymentMethod: 'pay-online' },
+                { paymentMethod: 'cash-on-delivery' }
+            ]
+        };
+
         // 2. Get Opening Balances for all vendors up to startDate
         const openingStatsArray = await AppointmentModel.aggregate([
             {
@@ -169,6 +182,51 @@ export const GET = authMiddlewareAdmin(async (req) => {
             }
         });
 
+        const openingOrderStatsArray = await ClientOrderModel.aggregate([
+            {
+                $match: {
+                    vendorId: { $in: vendorIds },
+                    createdAt: { $lt: startDate },
+                    status: { $in: ['Delivered', 'Shipped', 'Processing', 'Packed'] },
+                    $or: [
+                        { paymentMethod: 'pay-online' },
+                        { paymentMethod: 'cash-on-delivery' }
+                    ]
+                }
+            },
+            {
+                $group: {
+                    _id: '$vendorId',
+                    adminOwesVendor: {
+                        $sum: {
+                            $cond: [
+                                { $eq: ['$paymentMethod', 'pay-online'] },
+                                { $subtract: ['$totalAmount', { $add: ['$platformFeeAmount', '$gstAmount'] }] },
+                                0
+                            ]
+                        }
+                    },
+                    vendorOwesAdmin: {
+                        $sum: {
+                            $cond: [
+                                { $eq: ['$paymentMethod', 'cash-on-delivery'] },
+                                { $add: ['$platformFeeAmount', '$gstAmount'] },
+                                0
+                            ]
+                        }
+                    }
+                }
+            }
+        ]);
+
+        openingOrderStatsArray.forEach(s => {
+            if (s._id) {
+                const vId = s._id.toString();
+                const current = openingBalancesMap.get(vId) || 0;
+                openingBalancesMap.set(vId, current + (s.adminOwesVendor - s.vendorOwesAdmin));
+            }
+        });
+
         // 3. Initialize the vendorSettlementsMap with ALL relevant vendors
         const vendorSettlementsMap = new Map();
         vendors.forEach(vendor => {
@@ -179,11 +237,18 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 contactNo: vendor.contactNumber || 'N/A',
                 ownerName: vendor.ownerName || 'N/A',
                 appointments: [],
+                orders: [],
                 totalAmount: 0,
+                serviceTotalAmount: 0,
+                productTotalAmount: 0,
                 platformFeeTotal: 0,
                 serviceTaxTotal: 0,
+                productPlatformFeeTotal: 0,
+                productGstTotal: 0,
                 adminOwesVendor: 0,
                 vendorOwesAdmin: 0,
+                productAdminOwesVendor: 0,
+                productVendorOwesAdmin: 0,
                 openingBalance: openingBalancesMap.get(vId) || 0,
                 netSettlement: 0,
                 adminReceivableAmount: 0,
@@ -207,10 +272,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 date: appt.date,
                 clientName: appt.clientName || 'N/A',
                 serviceName: appt.serviceName || 'N/A',
-                totalAmount: appt.totalAmount || 0,
+                finalAmount: appt.finalAmount || 0,
                 platformFee: appt.platformFee || 0,
                 serviceTax: appt.serviceTax || 0,
-                finalAmount: appt.finalAmount || 0,
                 paymentMethod: appt.paymentMethod || 'N/A',
             };
 
@@ -220,6 +284,7 @@ export const GET = authMiddlewareAdmin(async (req) => {
             const fees = (appt.platformFee || 0) + (appt.serviceTax || 0);
 
             settlement.totalAmount += appt.finalAmount || 0;
+            settlement.serviceTotalAmount += appt.finalAmount || 0;
             settlement.platformFeeTotal += appt.platformFee || 0;
             settlement.serviceTaxTotal += appt.serviceTax || 0;
 
@@ -227,6 +292,39 @@ export const GET = authMiddlewareAdmin(async (req) => {
                 settlement.adminOwesVendor += serviceAmount;
             } else {
                 settlement.vendorOwesAdmin += fees;
+            }
+        });
+
+        const orders = await ClientOrderModel.find(orderMatchFilter).sort({ createdAt: -1 });
+
+        orders.forEach(order => {
+            const vendorId = order.vendorId?.toString();
+            if (!vendorId || !vendorSettlementsMap.has(vendorId)) return;
+
+            const settlement = vendorSettlementsMap.get(vendorId);
+            const orderData = {
+                _id: order._id.toString(),
+                date: order.createdAt,
+                clientName: order.userId?.toString() || 'N/A',
+                productNames: order.items.map(i => i.name).join(', '),
+                finalAmount: order.totalAmount || 0,
+                platformFee: order.platformFeeAmount || 0,
+                gstAmount: order.gstAmount || 0,
+                paymentMethod: order.paymentMethod || 'N/A',
+            };
+
+            settlement.orders.push(orderData);
+
+            const fees = (order.platformFeeAmount || 0) + (order.gstAmount || 0);
+            settlement.totalAmount += order.totalAmount || 0;
+            settlement.productTotalAmount += order.totalAmount || 0;
+            settlement.productPlatformFeeTotal += order.platformFeeAmount || 0;
+            settlement.productGstTotal += order.gstAmount || 0;
+
+            if (order.paymentMethod === 'pay-online') {
+                settlement.productAdminOwesVendor += ((order.totalAmount || 0) - fees);
+            } else {
+                settlement.productVendorOwesAdmin += fees;
             }
         });
 
@@ -255,7 +353,8 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
         // 6. Calculate final amounts with Ledger Logic
         const settlements = Array.from(vendorSettlementsMap.values()).map(settlement => {
-            const periodNet = settlement.adminOwesVendor - settlement.vendorOwesAdmin;
+            const periodNet = settlement.adminOwesVendor - settlement.vendorOwesAdmin
+                + (settlement.productAdminOwesVendor || 0) - (settlement.productVendorOwesAdmin || 0);
             const totalNetBalance = settlement.openingBalance + periodNet;
 
             const totalPaidToVendorInPeriod = settlement.paymentHistory
@@ -292,7 +391,9 @@ export const GET = authMiddlewareAdmin(async (req) => {
             return {
                 id: settlement.vendorId,
                 ...settlement,
-                totalVolume: settlement.totalAmount,
+                totalVolume: (settlement.serviceTotalAmount || 0) + (settlement.productTotalAmount || 0),
+                serviceTotalAmount: settlement.serviceTotalAmount || 0,
+                productTotalAmount: settlement.productTotalAmount || 0,
                 totalToSettle: Math.abs(settlement.netSettlement),
                 amountPaid: Math.abs(closingBalance - totalNetBalance), // Amount paid in THIS period
                 amountRemaining: settlement.amountPending

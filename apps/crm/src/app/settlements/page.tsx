@@ -441,26 +441,53 @@ export default function SettlementsPage() {
                 </div>
 
                 {/* Financial Summary */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
                   <div>
                     <div className="text-sm text-muted-foreground">Total Volume</div>
                     <div className="text-xl font-bold">₹{selectedSettlement.totalAmount.toFixed(2)}</div>
                   </div>
-                  <div className="border-l pl-4">
+                  <div>
                     <div className="text-sm text-green-600 font-medium">From Online Bookings</div>
                     <div className="text-xs text-muted-foreground">Service amount admin owes you</div>
-                    <div className="text-xl font-bold text-green-600">₹{selectedSettlement.adminOwesVendor.toFixed(2)}</div>
+                    <div className="text-xl font-bold text-green-600">₹{selectedSettlement.appointments.filter(a => a.paymentMethod === 'Pay Online').reduce((sum, appt) => sum + (appt.totalAmount || 0), 0).toFixed(2)}</div>
                   </div>
-                  <div className="border-l pl-4">
+                  <div>
                     <div className="text-sm text-red-600 font-medium">From Salon Bookings</div>
                     <div className="text-xs text-muted-foreground">Fees you owe admin</div>
-                    <div className="text-xl font-bold text-red-600">₹{selectedSettlement.vendorOwesAdmin.toFixed(2)}</div>
+                    <div className="text-xl font-bold text-red-600">₹{selectedSettlement.appointments.filter(a => a.paymentMethod !== 'Pay Online').reduce((sum, appt) => sum + ((appt.platformFee || 0) + (appt.serviceTax || 0)), 0).toFixed(2)}</div>
                   </div>
-                  <div className="border-l pl-4">
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 p-4 bg-muted/50 rounded-lg">
+                  <div>
+                    <div className="text-sm text-muted-foreground">Product Orders Total</div>
+                    <div className="text-xl font-bold">₹{(selectedSettlement.orders?.reduce((sum, order) => sum + (order.totalAmount || 0), 0) || 0).toFixed(2)}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-green-600 font-medium">Product amount admin owes you</div>
+                    <div className="text-xs text-muted-foreground">Pay Online product vendor share</div>
+                    <div className="text-xl font-bold text-green-600">
+                      ₹{(selectedSettlement.orders ? selectedSettlement.orders.filter(order => order.paymentMethod === 'pay-online').reduce((sum, order) => {
+                        const fees = (order.platformFee || 0) + (order.gstAmount || 0);
+                        return sum + ((order.totalAmount || 0) - fees);
+                      }, 0) : 0).toFixed(2)}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-red-600 font-medium">Product amount you owe admin</div>
+                    <div className="text-xs text-muted-foreground">COD product fees and GST</div>
+                    <div className="text-xl font-bold text-red-600">
+                      ₹{(selectedSettlement.orders ? selectedSettlement.orders.filter(order => order.paymentMethod !== 'pay-online').reduce((sum, order) => sum + ((order.platformFee || 0) + (order.gstAmount || 0)), 0) : 0).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-4 mt-4 p-4 bg-muted/50 rounded-lg">
+                  <div>
                     <div className="text-sm font-medium text-blue-600">Net Pending</div>
-                    <div className="text-xl font-bold text-blue-600">₹{selectedSettlement.amountPending.toFixed(2)}</div>
+                    <div className="text-2xl font-bold text-blue-600">₹{selectedSettlement.amountPending.toFixed(2)}</div>
                     <div className="text-[10px] text-muted-foreground">
-                      {selectedSettlement.netSettlement > 0 ? "Receivable from Admin" : "Payable to Admin"}
+                      {selectedSettlement.netSettlement > 0 ? "Receivable from Admin" : selectedSettlement.netSettlement < 0 ? "Payable to Admin" : "Balanced"}
                     </div>
                   </div>
                 </div>
@@ -628,6 +655,51 @@ export default function SettlementsPage() {
                     </table>
                   </div>
                 </div>
+
+                {/* Orders List */}
+                {selectedSettlement.orders && selectedSettlement.orders.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-3">Included Orders ({selectedSettlement.orders.length})</h3>
+                    <div className="border rounded-lg overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead className="bg-muted/50">
+                          <tr>
+                            <th className="px-3 py-2 text-left">Date</th>
+                            <th className="px-3 py-2 text-left">Client</th>
+                            <th className="px-3 py-2 text-left">Products</th>
+                            <th className="px-3 py-2 text-left">Method</th>
+                            <th className="px-3 py-2 text-right">Total Amount</th>
+                            <th className="px-3 py-2 text-right">Owner Owed</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {selectedSettlement.orders.map((order) => {
+                            const ownerOwed = order.paymentMethod === 'Pay Online'
+                              ? order.totalAmount - (order.platformFee + order.gstAmount) // What admin owes vendor
+                              : order.platformFee + order.gstAmount; // What vendor owes admin
+
+                            return (
+                              <tr key={order._id}>
+                                <td className="px-3 py-2">{new Date(order.date).toLocaleDateString()}</td>
+                                <td className="px-3 py-2">{order.clientName}</td>
+                                <td className="px-3 py-2 max-w-[200px] truncate" title={order.productNames}>{order.productNames}</td>
+                                <td className="px-3 py-2">
+                                  <span className={`text-[10px] font-bold uppercase ${order.paymentMethod === 'Pay Online' ? 'text-blue-600' : 'text-orange-600'}`}>
+                                    {order.paymentMethod}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-right">₹{order.totalAmount.toFixed(2)}</td>
+                                <td className={`px-3 py-2 text-right font-medium ${order.paymentMethod === 'Pay Online' ? 'text-green-600' : 'text-red-600'}`}>
+                                  {order.paymentMethod === 'Pay Online' ? '+' : '-'}₹{ownerOwed.toFixed(2)}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </DialogContent>
@@ -648,5 +720,3 @@ export default function SettlementsPage() {
     </div>
   );
 }
-
-// Removed the local PaymentForm component - using SettlementsPaymentModal from components instead

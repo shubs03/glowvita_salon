@@ -9,10 +9,10 @@ import { Pagination } from "@repo/ui/pagination";
 import { Badge } from "@repo/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@repo/ui/dialog";
 import { Label } from "@repo/ui/label";
-import { 
-  Search, 
-  RefreshCw, 
-  Loader2, 
+import {
+  Search,
+  RefreshCw,
+  Loader2,
   ArrowUpRight,
   Banknote,
   Eye,
@@ -23,13 +23,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { 
+import {
   useGetAdminWithdrawalsQuery,
-  useUpdateWithdrawalStatusMutation,
-  useGetRegionsQuery
+  useGetRegionsQuery,
+  useUpdateWithdrawalStatusMutation
 } from "@repo/store/services/api";
 import { useSelector } from "react-redux";
 import { selectSelectedRegion, selectCurrentAdmin } from "@repo/store/slices/adminAuthSlice";
+import { Textarea } from "@repo/ui/textarea";
 
 interface WalletWithdrawal {
   _id: string;
@@ -60,7 +61,7 @@ interface WalletWithdrawal {
 export function WalletWithdrawalsTab() {
   const selectedRegionId = useSelector(selectSelectedRegion);
   const currentAdmin = useSelector(selectCurrentAdmin);
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -71,8 +72,10 @@ export function WalletWithdrawalsTab() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [showRejectionInput, setShowRejectionInput] = useState(false);
 
-  // RTK Query hook
-  const [updateStatus, { isLoading: isUpdating }] = useUpdateWithdrawalStatusMutation();
+
+  const [adminReason, setAdminReason] = useState("");
+
+  // RTK Query hooks
   const { data: withdrawalResp, isLoading, isError, refetch } = useGetAdminWithdrawalsQuery({
     page: currentPage,
     limit: itemsPerPage,
@@ -81,6 +84,8 @@ export function WalletWithdrawalsTab() {
     search: searchQuery || undefined,
     regionId: selectedRegionId || undefined,
   });
+
+  const [updateStatus, { isLoading: isUpdating }] = useUpdateWithdrawalStatusMutation();
 
   const withdrawals = withdrawalResp?.data || [];
   const stats = withdrawalResp?.stats || {
@@ -98,6 +103,34 @@ export function WalletWithdrawalsTab() {
     refetch();
   };
 
+  const handleAction = async (action: 'approve' | 'reject') => {
+    if (!selectedWithdrawal) return;
+
+    if (action === 'reject' && !adminReason) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
+
+    try {
+      const result = await updateStatus({
+        withdrawalId: selectedWithdrawal._id,
+        action,
+        reason: adminReason
+      }).unwrap();
+
+      if (result.success) {
+        toast.success(result.message);
+        setShowDetailModal(false);
+        setAdminReason("");
+        refetch();
+      } else {
+        toast.error(result.message || `Failed to ${action} withdrawal`);
+      }
+    } catch (error: any) {
+      toast.error(error.data?.message || `Error while ${action}ing withdrawal`);
+    }
+  };
+
   // No longer need local filtering or pagination as it's done on backend
   const paginatedWithdrawals = withdrawals;
   const totalPages = pagination.totalPages;
@@ -112,7 +145,7 @@ export function WalletWithdrawalsTab() {
       rejected_by_system: { label: "Rejected", variant: "destructive", icon: <AlertTriangle className="h-3 w-3" /> },
       cancelled: { label: "Cancelled", variant: "outline", icon: <XCircle className="h-3 w-3" /> },
     };
-    
+
     const config = statusMap[status] || { label: status, variant: "outline", icon: null };
     return (
       <Badge variant={config.variant} className="flex items-center gap-1 w-fit">
@@ -524,76 +557,39 @@ export function WalletWithdrawalsTab() {
                 </div>
               )}
 
-              {/* Action Buttons for Pending Status */}
               {selectedWithdrawal.status === "pending" && (
-                <div className="space-y-4 pt-4 border-t">
-                  {showRejectionInput && (
-                    <div className="space-y-2">
-                      <Label htmlFor="rejection-reason">Rejection Reason</Label>
-                      <Input
-                        id="rejection-reason"
-                        placeholder="Enter reason for rejection..."
-                        value={rejectionReason}
-                        onChange={(e) => setRejectionReason(e.target.value)}
-                      />
-                    </div>
-                  )}
-                  
-                  <div className="flex flex-col gap-2">
-                    {showRejectionInput ? (
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                className="flex-1"
-                                onClick={() => setShowRejectionInput(false)}
-                                disabled={isUpdating}
-                            >
-                                Back
-                            </Button>
-                            <Button
-                                variant="destructive"
-                                className="flex-1"
-                                onClick={() => handleUpdateStatus("reject")}
-                                disabled={isUpdating || !rejectionReason.trim()}
-                            >
-                                {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <XCircle className="mr-2 h-4 w-4" />}
-                                Confirm Reject
-                            </Button>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="flex gap-2">
-                                <Button
-                                    variant="destructive"
-                                    className="flex-1"
-                                    onClick={() => setShowRejectionInput(true)}
-                                    disabled={isUpdating}
-                                >
-                                    <XCircle className="mr-2 h-4 w-4" />
-                                    Reject
-                                </Button>
-                                <Button
-                                    variant="default"
-                                    className="flex-1"
-                                    onClick={() => handleUpdateStatus("approve")}
-                                    disabled={isUpdating}
-                                >
-                                    {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                                    Approve & Payout
-                                </Button>
-                            </div>
-                            <Button
-                                variant="outline"
-                                className="w-full text-green-600 border-green-600 hover:bg-green-600 hover:text-white transition-colors"
-                                onClick={() => handleUpdateStatus("approve_manual")}
-                                disabled={isUpdating}
-                            >
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Mark as Paid Manually
-                            </Button>
-                        </>
-                    )}
+                <div className="border-t pt-4 space-y-4">
+                  <div>
+                    <p className="text-sm font-semibold mb-2">Processing Actions</p>
+                    <Textarea
+                      placeholder="Add notes or rejection reason..."
+                      value={adminReason}
+                      onChange={(e) => setAdminReason(e.target.value)}
+                      className="min-h-[80px]"
+                    />
                   </div>
+                  <div className="flex gap-3">
+                    <Button
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      onClick={() => handleAction('approve')}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
+                      Approve Payout
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={() => handleAction('reject')}
+                      disabled={isUpdating}
+                    >
+                      {isUpdating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
+                      Reject Request
+                    </Button>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground text-center">
+                    Note: Approving will mark it as completed. Rejecting will refund the amount to the user's wallet.
+                  </p>
                 </div>
               )}
             </div>

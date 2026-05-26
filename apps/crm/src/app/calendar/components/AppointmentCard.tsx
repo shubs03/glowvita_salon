@@ -14,7 +14,7 @@ type Appointment = {
   startTime: string;
   endTime: string;
   notes?: string;
-  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'completed without payment';
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'completed without payment' | 'partially-completed' | 'pending';
   isBlocked?: boolean;
   description?: string;
   clientPhone?: string;
@@ -114,6 +114,20 @@ const getStatusConfig = (status: Appointment['status']) => {
         icon: <Clock4 className="w-4 h-4" />,
         color: 'bg-gradient-to-r from-purple-500 to-fuchsia-600 text-white shadow-purple-200',
         dotColor: 'bg-purple-400'
+      };
+    case 'partially-completed':
+      return {
+        label: 'Partially Completed',
+        icon: <Clock4 className="w-4 h-4" />,
+        color: 'bg-gradient-to-r from-indigo-500 to-blue-600 text-white shadow-indigo-200',
+        dotColor: 'bg-indigo-400'
+      };
+    case 'pending':
+      return {
+        label: 'Pending',
+        icon: <Clock4 className="w-4 h-4" />,
+        color: 'bg-gradient-to-r from-yellow-500 to-orange-500 text-white shadow-yellow-200',
+        dotColor: 'bg-yellow-400'
       };
     default:
       return {
@@ -311,11 +325,25 @@ export default function AppointmentCard({
 
       {/* Price and Booking Mode */}
       <div className="flex items-center justify-between mb-5">
-        {appointment.price && (
-          <span className="text-lg font-extrabold text-gray-900 dark:text-white bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 rounded-lg shadow-md">
-            {appointment.price}
-          </span>
-        )}
+        {(() => {
+          const totalAmount = (appointment as any).finalAmount || (appointment as any).totalAmount || (appointment as any).price || 0;
+          const paidAmount = (appointment as any).amountPaid || (appointment as any).payment?.paid || 0;
+          const remainingAmount = Math.max(0, Number(totalAmount) - Number(paidAmount));
+          const isPartial = paidAmount > 0 && remainingAmount > 0;
+
+          return (
+            <div className="flex flex-col gap-1">
+              <span className="text-lg font-extrabold text-gray-900 dark:text-white bg-gradient-to-r from-yellow-400 to-orange-500 px-4 py-2 rounded-lg shadow-md">
+                {isPartial ? `Remaining: ₹${remainingAmount.toFixed(2)}` : `Total: ₹${Number(totalAmount).toFixed(2)}`}
+              </span>
+              {isPartial && (
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 ml-1">
+                  Total: ₹{Number(totalAmount).toFixed(2)}
+                </span>
+              )}
+            </div>
+          );
+        })()}
         {appointment.mode && (
           <div className="mt-3">
             <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium border ${appointment.mode === 'online'

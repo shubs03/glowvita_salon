@@ -94,6 +94,14 @@ type Supplier = {
   products: number;
   sales: number;
   licenseFiles?: string[];
+  profileImage?: string;
+  subscription?: {
+    plan?: any;
+    status: string;
+    startDate?: string;
+    endDate?: string;
+    history?: any[];
+  };
 };
 
 type NewSupplier = {
@@ -1567,75 +1575,174 @@ export default function SupplierManagementPage() {
 
       {/* View Supplier Modal */}
       <Dialog open={isViewModalOpen} onOpenChange={setIsViewModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              Supplier Details: {selectedSupplier?.shopName}
+            <DialogTitle className="text-2xl font-bold">
+              Supplier Details
             </DialogTitle>
+            <DialogDescription>
+              Comprehensive information for {selectedSupplier?.shopName}
+            </DialogDescription>
           </DialogHeader>
+
           {selectedSupplier && (
-            <div className="grid gap-4 py-4 text-sm">
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  First Name
-                </span>
-                <span className="col-span-2">{selectedSupplier.firstName}</span>
+            <div className="space-y-8 py-4">
+              {/* Header with Profile Image and Basic Info */}
+              <div className="flex items-start gap-6 pb-6 border-b">
+                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-primary/10 bg-muted flex-shrink-0">
+                  {selectedSupplier.profileImage ? (
+                    <img
+                      src={selectedSupplier.profileImage}
+                      alt={selectedSupplier.shopName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-primary/5">
+                      <span className="text-2xl font-bold text-primary">
+                        {selectedSupplier.shopName?.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-xl font-bold text-slate-900">
+                    {selectedSupplier.firstName} {selectedSupplier.lastName}
+                  </h3>
+                  <p className="text-slate-500 font-medium">{selectedSupplier.shopName}</p>
+                  <div className="pt-2">
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${selectedSupplier.status === "Approved"
+                        ? "bg-green-100 text-green-800"
+                        : selectedSupplier.status === "Pending"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-red-100 text-red-800"
+                        }`}
+                    >
+                      {selectedSupplier.status}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Last Name
-                </span>
-                <span className="col-span-2">{selectedSupplier.lastName}</span>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Business & Contact Information */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-primary pl-3">
+                    Business & Contact
+                  </h4>
+                  <div className="space-y-3 pl-4">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium text-slate-500">Email Address</span>
+                      <span className="text-sm font-semibold">{selectedSupplier.email}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium text-slate-500">Mobile Number</span>
+                      <span className="text-sm font-semibold">{selectedSupplier.mobile}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium text-slate-500">Supplier Type</span>
+                      <span className="text-sm font-semibold">{selectedSupplier.supplierType}</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium text-slate-500">Registration No.</span>
+                      <span className="text-sm font-semibold">{selectedSupplier.businessRegistrationNo || "N/A"}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Location Information */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-primary pl-3">
+                    Location Details
+                  </h4>
+                  <div className="space-y-3 pl-4">
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium text-slate-500">Full Address</span>
+                      <span className="text-sm font-semibold leading-relaxed">
+                        {selectedSupplier.address}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-slate-500">City</span>
+                        <span className="text-sm font-semibold">{selectedSupplier.city}</span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-slate-500">Pincode</span>
+                        <span className="text-sm font-semibold">{selectedSupplier.pincode}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-medium text-slate-500">Country</span>
+                      <span className="text-sm font-semibold">{selectedSupplier.country}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Shop Name
-                </span>
-                <span className="col-span-2">{selectedSupplier.shopName}</span>
+
+              {/* Subscription Information */}
+              <div className="space-y-4 pt-4">
+                <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-primary pl-3">
+                  Subscription
+                </h4>
+                <Card className="bg-slate-50/50 border-dashed">
+                  <CardContent className="p-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-slate-500">Current Plan</span>
+                        <span className="text-base font-bold text-primary">
+                          {typeof selectedSupplier.subscription?.plan === 'object'
+                            ? selectedSupplier.subscription.plan?.name
+                            : (selectedSupplier as any).subscription?.plan || 'No Active Plan'}
+                        </span>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-slate-500">Plan Status</span>
+                        <div className="pt-1">
+                          <Badge variant={selectedSupplier.subscription?.status === 'Active' ? 'default' : 'destructive'} className="text-[10px]">
+                            {selectedSupplier.subscription?.status || 'Inactive'}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-xs font-medium text-slate-500">Expiry Date</span>
+                        <span className="text-sm font-semibold">
+                          {selectedSupplier.subscription?.endDate
+                            ? new Date(selectedSupplier.subscription.endDate).toLocaleDateString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })
+                            : "N/A"}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Business Reg No
-                </span>
-                <span className="col-span-2">
-                  {selectedSupplier.businessRegistrationNo}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Supplier Type
-                </span>
-                <span className="col-span-2">
-                  {selectedSupplier.supplierType}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Contact
-                </span>
-                <span className="col-span-2">{selectedSupplier.email}</span>
-              </div>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <span className="font-semibold text-muted-foreground">
-                  Status
-                </span>
-                <span className="col-span-2">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${selectedSupplier.status === "Approved"
-                      ? "bg-green-100 text-green-800"
-                      : selectedSupplier.status === "Pending"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-red-100 text-red-800"
-                      }`}
-                  >
-                    {selectedSupplier.status}
-                  </span>
-                </span>
-              </div>
+
+              {/* Documents Section (if any) */}
+              {selectedSupplier.licenseFiles && selectedSupplier.licenseFiles.length > 0 && (
+                <div className="space-y-4 pt-4">
+                  <h4 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-primary pl-3">
+                    Business Documents
+                  </h4>
+                  <div className="flex flex-wrap gap-3 pl-4">
+                    {selectedSupplier.licenseFiles.map((file, idx) => (
+                      <div key={idx} className="w-20 h-20 rounded-md border overflow-hidden hover:opacity-80 transition-opacity cursor-pointer">
+                        <img src={file} alt={`Document ${idx + 1}`} className="w-full h-full object-cover" onClick={() => window.open(file, '_blank')} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
-          <DialogFooter>
-            <Button onClick={() => setIsViewModalOpen(false)}>Close</Button>
+
+          <DialogFooter className="border-t pt-4">
+            <Button onClick={() => setIsViewModalOpen(false)} className="w-full sm:w-auto font-bold">
+              Close View
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

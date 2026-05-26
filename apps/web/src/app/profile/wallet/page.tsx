@@ -260,9 +260,13 @@ export default function WalletPage() {
         try {
             const result = await withdrawFromWallet({
                 amount,
+                withdrawalMethod: method,
                 bankDetails: {
-                    ...bankDetails,
-                    withdrawalMethod: method
+                    accountNumber: bankDetails.accountNumber,
+                    ifsc: bankDetails.ifsc,
+                    accountHolderName: bankDetails.accountHolderName,
+                    bankName: bankDetails.bankName,
+                    upiId: (bankDetails as any).upiId
                 }
             }).unwrap();
 

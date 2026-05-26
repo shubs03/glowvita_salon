@@ -179,6 +179,7 @@ export const GET = authMiddlewareCrm(async (req) => {
           offers: 0,
           netSale: 0,
           tax: 0,
+          platformFee: 0,
           totalSales: 0,
           appointments: []
         };
@@ -209,9 +210,15 @@ export const GET = authMiddlewareCrm(async (req) => {
         appointmentGrossAmount = originalPrice + (appt.addOnsAmount || 0);
       }
 
-      const appointmentDiscountAmount = appt.discountAmount || 0;
+      const explicitDiscount = appt.discountAmount || appt.discount || 0;
+      let computedDiscount = appointmentGrossAmount - (appt.amount || 0);
+      if (computedDiscount < 0) computedDiscount = 0;
+      
+      const appointmentDiscountAmount = explicitDiscount > 0 ? explicitDiscount : computedDiscount;
       const appointmentTax = appt.serviceTax || 0;
-      const appointmentTotalSales = appt.totalAmount || 0; // Final amount paid
+      const appointmentPlatformFee = (appt.mode === 'online' && appt.platformFee) ? appt.platformFee : 0;
+      const appointmentNetSale = appointmentGrossAmount - appointmentDiscountAmount;
+      const appointmentTotalSales = appointmentNetSale + appointmentTax + appointmentPlatformFee; // Ensure mathematical consistency
       const isCouponUsed = !!appt.couponCode;
 
       // Add to customer's sales summary
@@ -224,8 +231,9 @@ export const GET = authMiddlewareCrm(async (req) => {
         salesByCustomer[customerName].discounts += appointmentDiscountAmount;
       }
       
-      salesByCustomer[customerName].netSale += (appointmentGrossAmount - appointmentDiscountAmount);
+      salesByCustomer[customerName].netSale += appointmentNetSale;
       salesByCustomer[customerName].tax += appointmentTax;
+      salesByCustomer[customerName].platformFee += appointmentPlatformFee;
       salesByCustomer[customerName].totalSales += appointmentTotalSales;
     });
 
@@ -238,6 +246,7 @@ export const GET = authMiddlewareCrm(async (req) => {
       offers: parseFloat(customerData.offers.toFixed(2)),
       netSale: parseFloat(customerData.netSale.toFixed(2)),
       tax: parseFloat(customerData.tax.toFixed(2)),
+      platformFee: parseFloat(customerData.platformFee.toFixed(2)),
       totalSales: parseFloat(customerData.totalSales.toFixed(2))
     })).sort((a, b) => b.totalSales - a.totalSales);
 

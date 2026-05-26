@@ -61,7 +61,8 @@ export const VendorPayoutSettlementReportProductTable = () => {
     `${item["Product Total Amount"]}`,
     `${item["Total"]}`,
     `${item["Actually Paid"] || 0}`,
-    `${item["Pending Amount"] || 0}`
+    `${item["Pending Amount"] || 0}`,
+    `${item["orderCount"] || 0}`
   ]);
 
   if (isLoading) {
@@ -329,7 +330,7 @@ export const VendorPayoutSettlementReportProductTable = () => {
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                   No vendor payout settlement product data available.
                 </TableCell>
               </TableRow>
@@ -454,13 +455,14 @@ export const VendorPayoutSettlementReportProductTable = () => {
               <TableHead>Total Payable</TableHead>
               <TableHead>Actually Paid</TableHead>
               <TableHead>Pending Amount</TableHead>
+              <TableHead>Orders</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginatedData.map((item: any, index: number) => (
               <TableRow key={startIndex + index}>
                 <TableCell>{item["Source Type"]}</TableCell>
-                <TableCell>{item["Entity Name"]}</TableCell>
+                <TableCell className="font-medium">{item["Entity Name"]}</TableCell>
                 <TableCell>₹{item["Product Gross Amount"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Product Platform Fee"]?.toFixed(2)}</TableCell>
                 <TableCell>₹{item["Product Tax (₹)"]?.toFixed(2)}</TableCell>
@@ -470,6 +472,7 @@ export const VendorPayoutSettlementReportProductTable = () => {
                 <TableCell className={`font-semibold ${(item["Pending Amount"] || 0) > 0 ? 'text-red-500' : 'text-gray-500'}`}>
                   ₹{item["Pending Amount"]?.toFixed(2) || '0.00'}
                 </TableCell>
+                <TableCell className="text-center">{item["orderCount"] || 0}</TableCell>
               </TableRow>
             ))}
             {/* Aggregated Totals Row */}
@@ -481,8 +484,9 @@ export const VendorPayoutSettlementReportProductTable = () => {
                 <TableCell>₹{aggregatedTotals.productTax?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.productTotalAmount?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.total?.toFixed(2)}</TableCell>
-                <TableCell>₹{aggregatedTotals.totalPaid?.toFixed(2)}</TableCell>
-                <TableCell>₹{aggregatedTotals.totalPending?.toFixed(2)}</TableCell>
+                <TableCell className="text-green-700">₹{aggregatedTotals.totalPaid?.toFixed(2)}</TableCell>
+                <TableCell className="text-red-700">₹{aggregatedTotals.totalPending?.toFixed(2)}</TableCell>
+                <TableCell className="text-center">{aggregatedTotals.orderCount || 0}</TableCell>
               </TableRow>
             )}
           </TableBody>

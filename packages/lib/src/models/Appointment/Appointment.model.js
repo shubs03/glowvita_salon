@@ -540,6 +540,95 @@ appointmentSchema.pre('save', async function (next) {
       }
     }
 
+    // 4. Calculate travel and blocking windows for home services if missing
+    if (this.isHomeService && this.travelTime > 0 && (!this.blockingWindows || this.blockingWindows.length === 0)) {
+      const timeToMinutes = (timeStr) => {
+        const [h, m] = timeStr.split(':').map(Number);
+        return h * 60 + m;
+      };
+
+      const minutesToTime = (totalMin) => {
+        const h = Math.floor(totalMin / 60) % 24;
+        const m = totalMin % 60;
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+      };
+
+      if (this.startTime && this.endTime) {
+        const startMin = timeToMinutes(this.startTime);
+        const endMin = timeToMinutes(this.endTime);
+        const travelTimeVal = Number(this.travelTime) || 0;
+        const bufferBeforeVal = Number(this.bufferBefore) || 0;
+        const bufferAfterVal = Number(this.bufferAfter) || 0;
+
+        const blocking = [];
+        const blockedTravel = [];
+
+        if (travelTimeVal > 0) {
+          const travelStartMin = startMin - travelTimeVal - bufferBeforeVal;
+          const travelEndMin = startMin - bufferBeforeVal;
+          
+          blocking.push({
+            startTime: minutesToTime(travelStartMin),
+            endTime: minutesToTime(travelEndMin),
+            reason: 'Travel to customer location'
+          });
+          
+          blockedTravel.push({
+            startTime: minutesToTime(travelStartMin),
+            endTime: minutesToTime(travelEndMin),
+            reason: 'Travel to customer location',
+            type: 'pre-travel'
+          });
+
+          if (bufferBeforeVal > 0) {
+            blocking.push({
+              startTime: minutesToTime(travelEndMin),
+              endTime: minutesToTime(startMin),
+              reason: 'Buffer before service'
+            });
+            blockedTravel.push({
+              startTime: minutesToTime(travelEndMin),
+              endTime: minutesToTime(startMin),
+              reason: 'Buffer before service',
+              type: 'buffer'
+            });
+          }
+
+          if (bufferAfterVal > 0) {
+            blocking.push({
+              startTime: minutesToTime(endMin),
+              endTime: minutesToTime(endMin + bufferAfterVal),
+              reason: 'Buffer after service'
+            });
+            blockedTravel.push({
+              startTime: minutesToTime(endMin),
+              endTime: minutesToTime(endMin + bufferAfterVal),
+              reason: 'Buffer after service',
+              type: 'buffer'
+            });
+          }
+
+          const returnStartMin = endMin + bufferAfterVal;
+          const returnEndMin = returnStartMin + travelTimeVal;
+
+          blocking.push({
+            startTime: minutesToTime(returnStartMin),
+            endTime: minutesToTime(returnEndMin),
+            reason: 'Travel back to salon'
+          });
+          blockedTravel.push({
+            startTime: minutesToTime(returnStartMin),
+            endTime: minutesToTime(returnEndMin),
+            reason: 'Travel back to salon',
+            type: 'post-travel'
+          });
+        }
+
+        this.blockingWindows = blocking;
+        this.blockedTravelWindows = blockedTravel;
+      }
+    }
+
     // 3. Calculate staff commission
     if (this.isModified('staff') || this.isModified('serviceItems') || this.isModified('weddingPackageDetails.teamMembers') || this.isModified('amount') || this.isModified('totalAmount') || this.isModified('finalAmount') || this.isModified('status')) {
       try {

@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useGetSalesByProductReportQuery } from "@repo/store/services/api";
 
 interface TopProductData {
@@ -33,6 +33,19 @@ const formatDateDisplay = (dateString: string): string => {
   });
 };
 
+const PRODUCT_COLORS = [
+  "#3b82f6", // blue-500
+  "#10b981", // emerald-500
+  "#f59e0b", // amber-500
+  "#ef4444", // red-500
+  "#8b5cf6", // violet-500
+  "#ec4899", // pink-500
+  "#06b6d4", // cyan-500
+  "#84cc16", // lime-500
+  "#f97316", // orange-500
+  "#14b8a6", // teal-500
+];
+
 export function TopSellingProductsChart({
   filterType = 'preset',
   presetPeriod = 'all',
@@ -42,6 +55,11 @@ export function TopSellingProductsChart({
   selectedMonth,
   selectedDay
 }: TopSellingProductsChartProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Prepare query parameters for RTK Query
   // If hierarchical filtering is active, build date range from selected values
   let queryParams: any = {
@@ -89,7 +107,7 @@ export function TopSellingProductsChart({
       .slice(0, 5);
   }
 
-  if (isLoading) {
+  if (!mounted || isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -190,8 +208,11 @@ export function TopSellingProductsChart({
               <Bar
                 dataKey="quantitySold"
                 name="Quantity Sold"
-                fill="hsl(var(--primary))"
-              />
+              >
+                {formattedData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={PRODUCT_COLORS[index % PRODUCT_COLORS.length]} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         ) : (

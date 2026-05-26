@@ -7,18 +7,20 @@ import { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { clearCrmAuth } from '@repo/store/slices/crmAuthSlice';
 
-// This hook is now specifically for the CRM panel.
+/**
+ * useCrmAuth — Hook to access CRM authentication state.
+ * Note: CrmAuthInitializer handles the initial async verification and blocks 
+ * rendering with a spinner until the auth state is definitive.
+ */
 export const useCrmAuth = () => {
   const { user, isCrmAuthenticated, token, role, permissions } = useAppSelector((state) => selectRootState(state).crmAuth);
   const dispatch = useDispatch();
   
-  // The hook is loading if the store hasn't been rehydrated from localStorage yet.
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // The loading state is finished when `isCrmAuthenticated` is no longer in its initial `undefined` state.
-    // This correctly waits for the preloaded state from the store to be applied.
-    if (isCrmAuthenticated !== undefined) {
+    // isCrmAuthenticated is definitive once CrmAuthInitializer completes.
+    if (isCrmAuthenticated === true || isCrmAuthenticated === false) {
       setIsLoading(false);
     }
   }, [isCrmAuthenticated]);

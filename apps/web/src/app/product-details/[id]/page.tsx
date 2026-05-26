@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@repo/ui/button';
@@ -11,7 +11,7 @@ import { PageContainer } from '@repo/ui/page-container';
 import { Input } from '@repo/ui/input';
 import { Label } from '@repo/ui/label';
 import { Textarea } from '@repo/ui/textarea';
-import { useGetPublicProductByIdQuery, useAddToClientCartMutation, useGetProductQuestionsQuery, useSubmitProductQuestionMutation, useGetProductReviewsQuery, useSubmitProductReviewMutation, useGetPublicVendorProductsQuery, useGetClientCartQuery } from '@repo/store/api';
+import { useGetPublicProductByIdQuery, useAddToClientCartMutation, useGetProductQuestionsQuery, useSubmitProductQuestionMutation, useGetProductReviewsQuery, useSubmitProductReviewMutation, useGetPublicVendorProductsQuery, useGetClientCartQuery, useGetPublicVendorByIdQuery } from '@repo/store/api';
 import { Skeleton } from '@repo/ui/skeleton';
 import { useAppDispatch, useAppSelector } from "@repo/store/hooks";
 import { addToCart as addToLocalCart } from "@repo/store/slices/cartSlice";
@@ -105,6 +105,34 @@ export default function ProductDetailsPage() {
   useCartSync();
 
   const product = productResponse?.product;
+  const vendorId = product?.vendorId;
+
+  // Fetch vendor data to check subscription
+  const { data: vendorResponse } = useGetPublicVendorByIdQuery(vendorId, {
+    skip: !vendorId,
+  });
+
+  const vendorData = vendorResponse?.vendor;
+
+  const isSubscriptionExpired = useMemo(() => {
+    if (!vendorData) return false;
+
+    const subscription = vendorData.subscription;
+    if (!subscription) return false;
+
+    const now = new Date();
+    const endDate = subscription.endDate ? new Date(subscription.endDate) : null;
+    const status = (subscription.status || '').toLowerCase().trim();
+
+    const isStatusActive = status === 'active';
+    const expiredStatuses = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'];
+    const isStatusExpired = expiredStatuses.includes(status);
+    const isDateExpired = endDate ? endDate < now : false;
+
+    if (isStatusActive && !isDateExpired) return false;
+    return isStatusExpired || isDateExpired;
+  }, [vendorData]);
+
   const availableStock = product?.stock || 0;
   const isOutOfStock = availableStock === 0;
 
@@ -200,6 +228,14 @@ export default function ProductDetailsPage() {
 
   // Handle add to cart with stock validation
   const handleAddToCart = async (selectedProduct?: any) => {
+    // Check if subscription is expired
+    if (isSubscriptionExpired) {
+      toast.error('Purchase Unavailable', {
+        description: 'This salon is currently not available for product purchases. Please check back later.',
+      });
+      return;
+    }
+
     const prod = selectedProduct || product;
     const qty = selectedProduct ? 1 : quantity; // Use 1 for related products
 
@@ -336,6 +372,14 @@ export default function ProductDetailsPage() {
 
   // Handle buy now with stock validation
   const handleBuyNow = (selectedProduct?: any) => {
+    // Check if subscription is expired
+    if (isSubscriptionExpired) {
+      toast.error('Purchase Unavailable', {
+        description: 'This salon is currently not available for product purchases. Please check back later.',
+      });
+      return;
+    }
+
     const prod = selectedProduct || product;
     if (!prod) {
       toast.error("Product data not available. Please try again.");
@@ -572,6 +616,21 @@ export default function ProductDetailsPage() {
         <DiscountBanner discountPercentage={Math.round(((product.price - product.salePrice) / product.price) * 100)} />
       ) : null}
 
+      {/* Subscription Expired Banner */}
+      {isSubscriptionExpired && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 my-6 flex items-center gap-3">
+          <div className="flex-shrink-0">
+            <AlertCircle className="h-6 w-6 text-red-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-red-800">Salon Currently Unavailable</h3>
+            <p className="text-sm text-red-700 mt-1">
+              This salon is not available for product purchases at the moment. Please check back later.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="lg:grid lg:grid-cols-2 lg:gap-12 lg:items-start py-12">
         {/* Left Column: Image Gallery (Sticky) */}
         <div className="lg:sticky top-24">
@@ -618,6 +677,7 @@ export default function ProductDetailsPage() {
             isOutOfStock={isOutOfStock}
             isBuyingNow={isBuyingNow}
             isAddingToCart={isAddingToCart}
+            isSubscriptionExpired={isSubscriptionExpired}
           />
 
           {/* Other Products from Same Vendor Section */}
@@ -751,7 +811,7 @@ export default function ProductDetailsPage() {
         categoryId={product.categoryId || ''}
         onBuyNow={handleBuyNow}
         onAddToCart={handleAddToCart}
-        isSubscriptionExpired={false}
+        isSubscriptionExpired={isSubscriptionExpired}
       />
     </PageContainer>
   );

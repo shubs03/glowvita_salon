@@ -31,42 +31,69 @@ const roundToTwo = (num) => {
  * @param {Array} selectedServices - Array of selected service objects
  * @returns {Boolean} - True if at least one service is eligible
  */
-export function isOfferApplicable(offer, selectedServices = []) {
-  if (!offer) return false;
-  
-  // If no specific restrictions, it's globally applicable to all services
-  const hasRestrictions = 
-    (offer.applicableServices && offer.applicableServices.length > 0) ||
-    (offer.applicableServiceCategories && offer.applicableServiceCategories.length > 0) ||
-    (offer.applicableSpecialties && offer.applicableSpecialties.length > 0) ||
-    (offer.applicableCategories && offer.applicableCategories.length > 0);
+export function isOfferApplicable(offer, selectedServices = [], checkEligibilityOnly = false) {
+  try {
+    if (!offer) return false;
 
-  if (!hasRestrictions) return true;
+    // Helper to safely convert to array and stringify
+    const safeArray = (val) => {
+      if (!val) return [];
+      const arr = Array.isArray(val) ? val : [val];
+      return arr.map(item => item?.toString().trim()).filter(Boolean);
+    };
 
-  // Check if any selected service matches the restrictions
-  return selectedServices.some(service => {
-    // Check direct service ID match
-    if (offer.applicableServices?.some(id => id.toString() === (service.id || service._id)?.toString())) {
-      return true;
+    // Clean and filter out empty/falsy values from restrictions
+    const cleanServices = safeArray(offer.applicableServices);
+    const cleanCategories = safeArray(offer.applicableServiceCategories);
+    const cleanSpecialties = safeArray(offer.applicableSpecialties);
+    const cleanAppCategories = safeArray(offer.applicableCategories);
+
+    const hasRestrictions =
+      cleanServices.length > 0 ||
+      cleanCategories.length > 0 ||
+      cleanSpecialties.length > 0 ||
+      cleanAppCategories.length > 0;
+
+    if (!hasRestrictions) return true;
+
+    // If there are no selected services but the offer has restrictions, it can't apply
+    if (!selectedServices || selectedServices.length === 0) return false;
+
+    if (checkEligibilityOnly) {
+      // Check if the services in the array match ANY of the restrictions (used for individual service eligibility)
+      return selectedServices.some(service => {
+        const serviceIdStr = (service.id || service._id)?.toString();
+        const serviceCatIdStr = (service.categoryId || service.category?._id || service.category)?.toString();
+        const serviceNameStr = (service.specialty || service.name)?.toString().toLowerCase();
+        
+        const categoryName = (service.categoryName || service.category)?.toString().toLowerCase();
+        const targetGender = (service.targetGender || service.gender)?.toString().toLowerCase();
+
+        // Check direct service ID match
+        if (cleanServices.some(id => id === serviceIdStr)) return true;
+        // Check category matches
+        if (cleanCategories.some(id => id === serviceCatIdStr)) return true;
+        // Check specialty/name matches
+        if (cleanSpecialties.some(specialty => specialty.toLowerCase() === serviceNameStr)) return true;
+        // Check app category matches (either category name or gender restriction matches)
+        if (cleanAppCategories.some(cat => {
+          const catLower = cat.toLowerCase();
+          return catLower === categoryName || catLower === targetGender;
+        })) return true;
+
+        return false;
+      });
+    } else {
+      // An offer is enabled if AT LEAST ONE selected service matches it.
+      // e.g. GSAS (SPA specialty) is enabled when SPA is in the basket,
+      // even if Hair wash is also selected (Hair wash just won't get the discount).
+      return selectedServices.some(service => isOfferApplicable(offer, [service], true));
     }
-
-    // Check category matches
-    if (offer.applicableServiceCategories?.some(id => id.toString() === (service.categoryId || service.category?._id || service.category)?.toString())) {
-      return true;
-    }
-
-    // Check specialty/name matches (Legacy or Admin offer fields)
-    if (offer.applicableSpecialties?.some(specialty => specialty.toLowerCase() === (service.specialty || service.name)?.toLowerCase())) {
-      return true;
-    }
-
-    // Check category matches (Men/Women/Unisex - Legacy or Admin offer fields)
-    if (offer.applicableCategories?.some(cat => cat.toLowerCase() === (service.categoryName || service.targetGender)?.toLowerCase())) {
-      return true;
-    }
-
-    return false;
-  });
+  } catch (err) {
+    console.error("Error in isOfferApplicable:", err);
+    // On error, default to true for safety so offers don't disappear completely
+    return true;
+  }
 }
 
 /**
@@ -107,6 +134,12 @@ export async function calculateBookingAmount(
       };
     }
 
+    // Verify applicability for the selected services as a whole first
+    if (offer && !isOfferApplicable(offer, services, false)) {
+      console.log('Offer is not applicable to the selected services as a whole');
+      offer = null;
+    }
+
     // Calculate subtotal and eligible subtotal
     let subtotal = 0;
     let eligibleSubtotal = 0;
@@ -127,7 +160,7 @@ export async function calculateBookingAmount(
       subtotal += totalServicePrice;
 
       // Check if this specific service is eligible for the offer
-      if (offer && isOfferApplicable(offer, [service])) {
+      if (offer && isOfferApplicable(offer, [service], true)) {
         eligibleSubtotal += totalServicePrice;
       } else if (!offer) {
         eligibleSubtotal = subtotal; // No offer, no restriction

@@ -372,6 +372,12 @@ export const POST = async (req) => {
                 travelTimeInfo = await calculateVendorTravelTime(body.vendorId, customerLocation);
                 console.log('Travel time calculated:', travelTimeInfo);
             } catch (error) {
+                if (error.message.includes('outside vendor travel radius')) {
+                    return NextResponse.json({
+                        success: false,
+                        message: "We do not reach that point. Select another location."
+                    }, { status: 400 });
+                }
                 console.warn('Could not calculate travel time, using fallback:', error.message);
                 // Use a conservative estimate
                 travelTimeInfo = {

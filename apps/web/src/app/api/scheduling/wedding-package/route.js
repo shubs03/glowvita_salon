@@ -76,6 +76,27 @@ export async function POST(request) {
       endTime: selectedSlot.endTime
     });
 
+    let travelTime = Number(selectedSlot.totalTravelTime) || 0;
+    if (selectedSlot.location) {
+      try {
+        const { calculateVendorTravelTime } = await import('@repo/lib/modules/scheduling/EnhancedTravelUtils');
+        const travelInfo = await calculateVendorTravelTime(weddingPackage.vendorId, {
+          lat: selectedSlot.location.lat,
+          lng: selectedSlot.location.lng
+        });
+        travelTime = travelInfo.timeInMinutes;
+      } catch (err) {
+        if (err.message.includes('outside vendor travel radius')) {
+          return NextResponse.json(
+            { success: false, message: 'We do not reach that point. Select another location.' },
+            { status: 400 }
+          );
+        }
+        console.warn("Could not calculate travel time during lock phase:", err.message);
+        travelTime = 30; // fallback
+      }
+    }
+
     // Acquire lock - this just reserves the slot in Redis
     // CRITICAL: startTime must be provided to create a time-specific lock
     const lockToken = await acquireLock({
@@ -83,6 +104,8 @@ export async function POST(request) {
       staffId: `wedding-${selectedSlot.startTime}`, // Make staffId time-specific to avoid day-wide locks
       date: new Date(selectedSlot.date),
       startTime: selectedSlot.startTime, // Use startTime parameter
+      duration: weddingPackage.duration || 60,
+      travelTime: travelTime,
       ttl: 30 * 60 * 1000 // 30 minutes
     });
 
@@ -213,6 +236,87 @@ export async function PUT(request) {
     // finalAmount = subtotal + fees + taxes - discount
     const finalAmount = selectedSlot.finalAmount || (baseAmount + platformFee + serviceTax - discountAmount);
 
+    // Helper functions for time conversion
+    const timeToMinutes = (timeStr) => {
+      const [h, m] = timeStr.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    const minutesToTime = (totalMin) => {
+      const h = Math.floor(totalMin / 60) % 24;
+      const m = totalMin % 60;
+      return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+    };
+
+    // Calculate/extract travel time and travel metadata
+    let travelTime = Number(selectedSlot.totalTravelTime) || 0;
+    let travelDistance = Number(selectedSlot.travelDistance) || 0;
+    let distanceMeters = Number(selectedSlot.distanceMeters) || 0;
+
+    if (!!selectedSlot.location && (travelTime === 0 || travelDistance === 0)) {
+      try {
+        const { calculateVendorTravelTime } = await import('@repo/lib/modules/scheduling/EnhancedTravelUtils');
+        const travelInfo = await calculateVendorTravelTime(weddingPackage.vendorId, {
+          lat: selectedSlot.location.lat,
+          lng: selectedSlot.location.lng
+        });
+        travelTime = travelInfo.timeInMinutes;
+        travelDistance = travelInfo.distanceInKm;
+        distanceMeters = travelInfo.distanceInMeters;
+      } catch (err) {
+        if (err.message.includes('outside vendor travel radius')) {
+          return NextResponse.json({
+            success: false,
+            message: "We do not reach that point. Select another location."
+          }, { status: 400 });
+        }
+        console.warn("Could not calculate travel time during confirmation fallback:", err.message);
+        travelTime = 30; // fallback
+      }
+    }
+
+    const blockingWindows = [];
+    const blockedTravelWindows = [];
+
+    if (!!selectedSlot.location && travelTime > 0) {
+      const startMin = timeToMinutes(selectedSlot.startTime);
+      const endMin = timeToMinutes(selectedSlot.endTime);
+      
+      const preTravelStart = startMin - travelTime;
+      const preTravelEnd = startMin;
+      
+      const postTravelStart = endMin;
+      const postTravelEnd = endMin + travelTime;
+
+      // Add to blockingWindows
+      blockingWindows.push({
+        startTime: minutesToTime(preTravelStart),
+        endTime: minutesToTime(preTravelEnd),
+        reason: 'Travel to customer location'
+      });
+
+      blockingWindows.push({
+        startTime: minutesToTime(postTravelStart),
+        endTime: minutesToTime(postTravelEnd),
+        reason: 'Travel back to salon'
+      });
+
+      // Add to blockedTravelWindows
+      blockedTravelWindows.push({
+        startTime: minutesToTime(preTravelStart),
+        endTime: minutesToTime(preTravelEnd),
+        reason: 'Travel to customer location',
+        type: 'pre-travel'
+      });
+
+      blockedTravelWindows.push({
+        startTime: minutesToTime(postTravelStart),
+        endTime: minutesToTime(postTravelEnd),
+        reason: 'Travel back to salon',
+        type: 'post-travel'
+      });
+    }
+
     const appointment = new AppointmentModel({
       vendorId: weddingPackage.vendorId,
       regionId: vendor?.regionId || null, // <--- Added Region ID
@@ -277,6 +381,11 @@ export async function PUT(request) {
       },
       homeServiceLocation: selectedSlot.location || null,
       isHomeService: !!selectedSlot.location,
+      travelTime: travelTime,
+      travelDistance: travelDistance,
+      distanceMeters: distanceMeters,
+      blockingWindows: blockingWindows,
+      blockedTravelWindows: blockedTravelWindows,
       lockToken: lockId,
       mode: 'online',
       createdAt: new Date(),

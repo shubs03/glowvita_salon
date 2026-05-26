@@ -278,29 +278,24 @@ function BookingPageContent() {
     };
   }, []);
 
-  // Filter offers based on search term and service applicability
+  // Filter offers based on search term
   const filteredOffers = useMemo(() => {
     if (!vendorOffers || vendorOffers.length === 0) {
       return [];
     }
 
-    // First filter by service applicability
-    const applicableOffers = vendorOffers.filter((offer: any) =>
-      isOfferApplicable(offer, selectedServices)
-    );
-
     if (!offerSearchTerm) {
-      return applicableOffers;
+      return vendorOffers;
     }
 
-    const filtered = applicableOffers.filter((offer: { code: string; type: string; value: number }) =>
+    const filtered = vendorOffers.filter((offer: { code: string; type: string; value: number }) =>
       offer.code.toLowerCase().includes(offerSearchTerm.toLowerCase()) ||
       (offer.type === 'percentage' && `${offer.value}%`.includes(offerSearchTerm)) ||
       (offer.type === 'fixed' && `₹${offer.value}`.includes(offerSearchTerm))
     );
 
     return filtered;
-  }, [vendorOffers, offerSearchTerm, selectedServices]);
+  }, [vendorOffers, offerSearchTerm]);
 
   // Fetch service-specific staff data when a service is selected
   const serviceStaffData = useBookingData(salonId as string, selectedService?.id || (selectedServices.length > 0 ? selectedServices[0]?.id : undefined));
@@ -1693,12 +1688,12 @@ function BookingPageContent() {
       // Calculate customized subtotal if applicable
       const customizedSubtotal = weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
         ? customizedPackageServices.reduce((acc, service) => {
-            const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
-              parseFloat(String(service.discountedPrice)) :
-              parseFloat(String(service.price || '0'));
-            const quantity = (service as any).quantity || 1;
-            return acc + (servicePrice * quantity);
-          }, 0)
+          const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+            parseFloat(String(service.discountedPrice)) :
+            parseFloat(String(service.price || '0'));
+          const quantity = (service as any).quantity || 1;
+          return acc + (servicePrice * quantity);
+        }, 0)
         : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice);
 
       // Create a service-like object from wedding package
@@ -2038,6 +2033,115 @@ function BookingPageContent() {
           console.log("Using existing lock token from Step3");
         }
 
+        // --- For 'Pay Online': collect payment via Razorpay BEFORE confirming ---
+        let razorpayPaymentId: string | undefined;
+        let razorpayOrderId_: string | undefined;
+
+        if (paymentMethod === 'Pay Online' && (finalPriceBreakdown?.finalTotal ?? 0) > 0) {
+          const paymentAmount = finalPriceBreakdown!.finalTotal;
+          const loaded = await loadRazorpayScript();
+          if (!loaded) {
+            toast.error('Payment gateway failed to load. Please try again.');
+            setIsConfirmingBooking(false);
+            return;
+          }
+
+          // Create Razorpay order
+          const orderRes = await fetch('/api/payments/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              amount: paymentAmount,
+              currency: 'INR',
+              receipt: `wedding_${lockId}_${Date.now()}`,
+            }),
+          });
+
+          if (!orderRes.ok) {
+            const err = await orderRes.json().catch(() => ({}));
+            throw new Error(err.message || 'Failed to create payment order');
+          }
+
+          const rzpOrder = await orderRes.json();
+          const rzpOrderId = rzpOrder.id || rzpOrder.order?.id;
+          if (!rzpOrderId) throw new Error('Invalid payment order response');
+
+          // Close parent modals to escape focus trap
+          const wasPaymentOpen = isPaymentModalOpen;
+          const wasConfirmationOpen = isConfirmationModalOpen;
+          setIsPaymentModalOpen(false);
+          setIsConfirmationModalOpen(false);
+
+          // Open Razorpay checkout
+          try {
+            await new Promise<void>((resolve, reject) => {
+              const rzp = new (window as any).Razorpay({
+                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_SLBxzQHGTzUTCO',
+                amount: Math.round(paymentAmount * 100),
+                currency: 'INR',
+                order_id: rzpOrderId,
+                name: 'GlowVita Salon',
+                description: `Wedding Booking – ${selectedWeddingPackage.name}`,
+                image: 'https://glowvita.com/logo.png',
+                theme: { color: '#7c3aed' },
+                prefill: {
+                  name: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
+                  email: user?.emailAddress || '',
+                  contact: user?.mobileNo || user?.phone || '',
+                },
+                retry: { enabled: true, max_count: 3 },
+                config: {
+                  display: {
+                    blocks: {
+                      upi: {
+                        name: 'UPI / QR',
+                        instruments: [
+                          { method: 'upi', omnichannel: true }, // UPI ID entry / VPA
+                          { method: 'upi', intent: true },      // UPI Apps (GPay, PhonePe, etc.)
+                          { method: 'upi', qr: true }          // QR Code
+                        ],
+                      },
+                    },
+                    sequence: ['block.upi', 'block.card', 'block.netbanking'],
+                  },
+                },
+                modal: {
+                  ondismiss: () => {
+                    if (wasPaymentOpen) setIsPaymentModalOpen(true);
+                    if (wasConfirmationOpen) setIsConfirmationModalOpen(true);
+                    reject(new Error('Payment cancelled by user'));
+                  },
+                  escape: true,
+                  backdropClose: false,
+                },
+                handler: async (response: any) => {
+                  try {
+                    const verifyRes = await fetch('/api/payments/verify', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(response),
+                    });
+                    const verifyData = await verifyRes.json();
+                    if (!verifyData.success) throw new Error('Payment verification failed. Contact support.');
+                    razorpayPaymentId = response.razorpay_payment_id;
+                    razorpayOrderId_ = response.razorpay_order_id;
+                    resolve();
+                  } catch (err: any) { reject(err); }
+                },
+              });
+              rzp.open();
+            });
+          } catch (payErr: any) {
+            if (payErr?.message === 'Payment cancelled by user') {
+              toast.info('Payment cancelled.');
+            } else {
+              toast.error(payErr?.message || 'Payment failed. Please try again.');
+            }
+            setIsConfirmingBooking(false);
+            return;
+          }
+        }
+
         // Now confirm the booking with the lock ID
         console.log("=== CONFIRMING WEDDING PACKAGE BOOKING ===");
         console.log("Lock ID:", lockId);
@@ -2074,7 +2178,9 @@ function BookingPageContent() {
             },
             paymentDetails: {
               method: paymentMethod,
-              status: 'pending'
+              status: paymentMethod === 'Pay at Salon' ? 'pending' : 'completed',
+              ...(razorpayPaymentId && { razorpayPaymentId }),
+              ...(razorpayOrderId_ && { razorpayOrderId: razorpayOrderId_ })
             },
             customizedPackageServices: weddingPackageMode === 'customized' ? customizedPackageServices : null
           })
@@ -2086,6 +2192,7 @@ function BookingPageContent() {
         if (confirmResult.success) {
           toast.success("Wedding package booking confirmed!");
           setIsConfirmationModalOpen(false);
+          setIsPaymentModalOpen(false);
           await persistServiceLocation(weddingVenueType === 'venue' ? serviceLocation : null);
           router.push('/profile/appointments');
         } else {
@@ -2218,8 +2325,9 @@ function BookingPageContent() {
                         upi: {
                           name: 'UPI / QR',
                           instruments: [
-                            { method: 'upi', vpa: true }, // UPI ID entry
-                            { method: 'upi', qr: true }   // QR Code
+                            { method: 'upi', omnichannel: true }, // UPI ID entry / VPA
+                            { method: 'upi', intent: true },      // UPI Apps (GPay, PhonePe, etc.)
+                            { method: 'upi', qr: true }          // QR Code
                           ],
                         },
                       },
@@ -3814,24 +3922,23 @@ function BookingPageContent() {
             // Prepare wedding package data for time slot
             const weddingPkg = selectedWeddingPackage as any;
             const packageServices = weddingPackageMode === 'customized' ? customizedPackageServices : weddingPkg.services;
-            const totalDuration = weddingPkg.duration || packageServices.reduce((total: number, service: any) => {
-              const dur = service.duration || service.serviceDuration || 0;
-              const duration = convertDurationToMinutes(dur);
-              return total + (duration || 0);
-            }, 0);
 
-            const serviceForTimeSlot = {
-              id: weddingPkg.id || weddingPkg._id || 'wedding-package',
-              name: weddingPkg.name,
-              duration: `${totalDuration} min`,
-              price: (weddingPkg.discountedPrice || weddingPkg.totalPrice).toString(),
-              category: 'Wedding Package',
-              description: weddingPkg.description
-            } as any;
+            // [NEW] Normalize services to ensure they have 'id' property and prepare assignments
+            const normalizedPackageServices = packageServices.map((s: any) => ({
+              ...s,
+              id: s.serviceId || s.id || s._id,
+              name: s.serviceName || s.name,
+              duration: s.duration || s.serviceDuration
+            }));
+
+            const weddingAssignments = normalizedPackageServices.map((s: any) => ({
+              service: s,
+              staff: selectedStaff || undefined
+            }));
 
             return (
               <TimeSlotSelector
-                selectedServices={selectedServices}
+                selectedServices={normalizedPackageServices}
                 selectedDate={selectedDate}
                 onSelectDate={setSelectedDate}
                 selectedTime={selectedTime}
@@ -3845,10 +3952,10 @@ function BookingPageContent() {
                 isLoading={false}
                 error={null}
                 salonId={salonId as string}
-                service={serviceForTimeSlot}
+                service={null}
                 isWeddingPackage={true}
                 weddingPackage={selectedWeddingPackage}
-                weddingPackageServices={weddingPackageMode === 'customized' ? customizedPackageServices : (selectedWeddingPackage as any).services}
+                weddingPackageServices={normalizedPackageServices}
                 onLockAcquired={(token, appId) => {
                   setSlotLockToken(token);
                   if (appId) setPendingAppointmentId(appId);
@@ -3908,12 +4015,12 @@ function BookingPageContent() {
         // Calculate base package price (with customization if applicable) for fallback
         const packagePrice = weddingPackageMode === 'customized' && customizedPackageServices && customizedPackageServices.length > 0
           ? customizedPackageServices.reduce((sum, service: any) => {
-              const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
-                parseFloat(service.discountedPrice) :
-                parseFloat(service.price || '0');
-              const quantity = service.quantity || 1;
-              return sum + (servicePrice * quantity);
-            }, 0)
+            const servicePrice = service.discountedPrice !== null && service.discountedPrice !== undefined ?
+              parseFloat(service.discountedPrice) :
+              parseFloat(service.price || '0');
+            const quantity = service.quantity || 1;
+            return sum + (servicePrice * quantity);
+          }, 0)
           : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice || 0);
 
         // Use customized services if available, otherwise use package defaults
@@ -4517,34 +4624,45 @@ function BookingPageContent() {
                             </div>
                           ) : filteredOffers.length > 0 ? (
                             <div className="py-1">
-                              {filteredOffers.map((offer: { _id: string; code: string; type: string; value: number; businessType?: string; isAdminGlobal?: boolean }) => (
-                                <div
-                                  key={offer._id}
-                                  className="px-3 py-2 hover:bg-primary/5 cursor-pointer border-b last:border-b-0 flex justify-between items-center"
-                                  onClick={() => {
-                                    handleSelectOffer(offer);
-                                    setShowOfferDropdown(false);
-                                  }}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <div className="bg-primary/5 p-1 rounded">
-                                      <Tag className="h-3 w-3 text-primary" />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="font-semibold text-xs text-primary">{offer.code}</div>
-                                      <div className="text-[10px] text-muted-foreground">
-                                        {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
-                                        {offer.businessType === 'admin' && (
-                                          <span className={`ml-1 text-[8px] px-1 rounded ${offer.isAdminGlobal ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
-                                            {offer.isAdminGlobal ? 'Global' : 'Region'}
-                                          </span>
-                                        )}
+                              {filteredOffers.map((offer: { _id: string; code: string; type: string; value: number; businessType?: string; isAdminGlobal?: boolean }) => {
+                                const isApplicable = isOfferApplicable(offer, selectedServices);
+                                return (
+                                  <div
+                                    key={offer._id}
+                                    className={`px-3 py-2 border-b last:border-b-0 flex justify-between items-center transition-colors ${
+                                      isApplicable 
+                                        ? "hover:bg-primary/5 cursor-pointer bg-white" 
+                                        : "opacity-60 bg-gray-50/50 cursor-not-allowed"
+                                    }`}
+                                    onClick={() => {
+                                      if (isApplicable) {
+                                        handleSelectOffer(offer);
+                                        setShowOfferDropdown(false);
+                                      }
+                                    }}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div className={`p-1 rounded ${isApplicable ? "bg-primary/5 text-primary" : "bg-gray-200 text-gray-400"}`}>
+                                        <Tag className="h-3 w-3" />
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className={`font-semibold text-xs ${isApplicable ? "text-primary" : "text-gray-500"}`}>{offer.code}</div>
+                                        <div className="text-[10px] text-muted-foreground">
+                                          {offer.type === 'percentage' ? `${offer.value}% off` : `₹${offer.value} off`}
+                                          {offer.businessType === 'admin' && (
+                                            <span className={`ml-1 text-[8px] px-1 rounded ${offer.isAdminGlobal ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'}`}>
+                                              {offer.isAdminGlobal ? 'Global' : 'Region'}
+                                            </span>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
+                                    <div className={`text-[10px] font-medium ${isApplicable ? "text-primary" : "text-gray-400"}`}>
+                                      {isApplicable ? 'Select' : 'Disabled'}
+                                    </div>
                                   </div>
-                                  <div className="text-[10px] text-primary">Select</div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           ) : null}
                         </div>

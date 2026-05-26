@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@repo/ui/card";
 import { Button } from "@repo/ui/button";
-import { Download, Eye, Search } from 'lucide-react';
+import { Download, Eye, Search, FileText } from 'lucide-react';
 import { Input } from '@repo/ui/input';
 import { Skeleton } from "@repo/ui/skeleton";
 import { Report } from '../shared/types';
@@ -18,6 +18,7 @@ import { SalesByProductTable } from './tables/SalesByProductTable';
 import { SUPPLIER_REPORTS_DATA } from './constants';
 import { useSupplierFilters } from './hooks/useSupplierFilters';
 import { ReportModal } from './modals/ReportModal';
+import { ReportDetailModal } from '../shared/ReportDetailModal';
 
 export default function SupplierReports() {
   // Use the custom hook for managing all filter states
@@ -27,6 +28,10 @@ export default function SupplierReports() {
   const [openReportTitle, setOpenReportTitle] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Detail modal state for report info
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Refresh states for each report
   const [productSummaryRefresh, setProductSummaryRefresh] = useState(0);
@@ -105,6 +110,11 @@ export default function SupplierReports() {
     setOpenReportTitle(report.title);
   };
 
+  const handleInfoClick = (report: Report) => {
+    setSelectedReport(report);
+    setShowDetailModal(true);
+  };
+
   const filteredReportsData = useMemo(() => {
     if (!searchTerm) return SUPPLIER_REPORTS_DATA;
 
@@ -135,20 +145,19 @@ export default function SupplierReports() {
           {[...Array(2)].map((_, categoryIndex) => (
             <div key={categoryIndex}>
               <Skeleton className="h-7 w-48 mb-4" />
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[...Array(3)].map((_, reportIndex) => (
                   <Card key={reportIndex}>
                     <CardHeader>
                       <Skeleton className="h-6 w-40 mb-2" />
-                      <Skeleton className="h-4 w-full mb-1" />
-                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-4 w-full" />
                     </CardHeader>
-                    <CardFooter className="pt-0">
+                    <CardContent>
                       <div className="flex gap-2 w-full">
-                        <Skeleton className="h-10 flex-1" />
-                        <Skeleton className="h-10 flex-1" />
+                        <Skeleton className="h-9 flex-1" />
+                        <Skeleton className="h-9 w-9" />
                       </div>
-                    </CardFooter>
+                    </CardContent>
                   </Card>
                 ))}
               </div>
@@ -185,38 +194,33 @@ export default function SupplierReports() {
         {filteredReportsData.length > 0 ?
           filteredReportsData.map((category) => (
             <div key={category.category}>
-              <h2 className="text-xl font-semibold font-headline mb-4 pb-2 border-b">{category.category}</h2>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <h2 className="text-xl font-semibold font-headline text-gray-800 mb-4">{category.category}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {category.reports.map((report, index) => (
-                  <Card key={index} className="flex flex-col">
+                  <Card key={index} className="hover:shadow-lg transition-shadow">
                     <CardHeader>
-                      <CardTitle>{report.title}</CardTitle>
-                      <CardDescription>{report.description}</CardDescription>
+                      <CardTitle className="text-lg">{report.title}</CardTitle>
+                      <CardDescription className="text-sm">{report.description}</CardDescription>
                     </CardHeader>
-                    <CardContent className="flex-grow">
-                      <ul className="space-y-2 text-sm text-muted-foreground">
-                        {report.points.map((point, i) => (
-                          <li key={i} className="flex items-start">
-                            <span className="mr-2 mt-1">•</span>
-                            <span>{point}</span>
-                          </li>
-                        ))}
-                      </ul>
+                    <CardContent>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleViewClick(report)}
+                          className="flex-1"
+                          size="sm"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Report
+                        </Button>
+                        <Button
+                          onClick={() => handleInfoClick(report)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </CardContent>
-                    <CardFooter className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewClick(report)}
-                      >
-                        <Eye className="mr-2 h-4 w-4" />
-                        View
-                      </Button>
-                      <Button size="sm" className='h-12 px-6 rounded-lg'>
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
-                      </Button>
-                    </CardFooter>
                   </Card>
                 ))}
               </div>
@@ -239,6 +243,13 @@ export default function SupplierReports() {
           {activeReport.component}
         </ReportModal>
       )}
+
+      {/* Report Detail Modal */}
+      <ReportDetailModal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        report={selectedReport}
+      />
     </div>
   );
 }

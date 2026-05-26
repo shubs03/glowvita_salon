@@ -1,10 +1,11 @@
 "use client";
 
 import React from "react";
-import { MapPin, ArrowRight, Star } from "lucide-react";
-import { useGetPublicProductsQuery } from "@repo/store/api";
+import { useGetPublicProductsQuery, useGetPublicVendorByIdQuery } from "@repo/store/api";
 import { useSalonFilter } from "@/components/landing/SalonFilterContext";
 import { useRouter } from "next/navigation";
+import { useMemo } from "react";
+import { AlertCircle, ArrowRight, Star, MapPin } from "lucide-react";
 import { Button } from "@repo/ui/button";
 import { Badge } from "@repo/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
@@ -43,6 +44,33 @@ const RecentlyAddedProducts = () => {
     lat: userLat || undefined,
     lng: userLng || undefined,
   });
+
+  // Get vendorId for the most recent product to check subscription
+  const vendorIdToCheck = productsData?.products?.[0]?.vendorId;
+  const { data: vendorResponse } = useGetPublicVendorByIdQuery(vendorIdToCheck, {
+    skip: !vendorIdToCheck,
+  });
+
+  const vendorData = vendorResponse?.vendor;
+
+  const isSubscriptionExpired = useMemo(() => {
+    if (!vendorData) return false;
+
+    const subscription = vendorData.subscription;
+    if (!subscription) return false;
+
+    const now = new Date();
+    const endDate = subscription.endDate ? new Date(subscription.endDate) : null;
+    const status = (subscription.status || '').toLowerCase().trim();
+
+    const isStatusActive = status === 'active';
+    const expiredStatuses = ['expired', 'expaired', 'inactive', 'suspended', 'cancelled', 'canceled'];
+    const isStatusExpired = expiredStatuses.includes(status);
+    const isDateExpired = endDate ? endDate < now : false;
+
+    if (isStatusActive && !isDateExpired) return false;
+    return isStatusExpired || isDateExpired;
+  }, [vendorData]);
 
   // Find the most recently created product
   const mostRecentProduct = React.useMemo(() => {
@@ -182,8 +210,16 @@ const RecentlyAddedProducts = () => {
 
       {/* Product Card */}
       <div
-        className="bg-card overflow-hidden duration-300 cursor-pointer"
-        onClick={() => router.push(`/product-details/${product.id}`)}
+        className={`bg-card overflow-hidden duration-300 ${isSubscriptionExpired ? "cursor-not-allowed opacity-90" : "cursor-pointer"}`}
+        onClick={() => {
+          if (isSubscriptionExpired) {
+            toast.error("Salon Unavailable", {
+              description: "This salon is temporarily closed due to subscription expiry."
+            });
+            return;
+          }
+          router.push(`/product-details/${product.id}`);
+        }}
       >
         <div className="flex flex-col lg:flex-row-reverse"> {/* Reversed for right images */}
           {/* Right - Featured Image (Properly Sized) */}
@@ -270,20 +306,24 @@ const RecentlyAddedProducts = () => {
               <div className="flex flex-wrap items-center gap-3">
                 <Button
                   className="inline-flex items-center gap-2 text-sm"
+                  disabled={isSubscriptionExpired}
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (isSubscriptionExpired) return;
                     router.push(`/product-details/${product.id}`);
                   }}
                 >
-                  View Details
+                  {isSubscriptionExpired ? "Unavailable" : "View Details"}
                   <ArrowRight className="w-4 h-4" />
                 </Button>
 
                 <Button
                   variant="outline"
                   className="inline-flex items-center gap-2 text-sm"
+                  disabled={isSubscriptionExpired}
                   onClick={(e) => {
                     e.stopPropagation();
+                    if (isSubscriptionExpired) return;
                     if (!isAuthenticated) {
                       router.push(`/client-login?redirect=${encodeURIComponent(window.location.pathname)}`);
                       return;
@@ -304,9 +344,15 @@ const RecentlyAddedProducts = () => {
                     router.push('/checkout');
                   }}
                 >
-                  Buy Now
+                  {isSubscriptionExpired ? "Temporarily Closed" : "Buy Now"}
                 </Button>
               </div>
+              {isSubscriptionExpired && (
+                <div className="flex items-center gap-1.5 mt-4 text-red-600">
+                  <AlertCircle className="h-4 w-4" />
+                  <span className="text-xs font-bold uppercase tracking-wider">This product is temporarily closed</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

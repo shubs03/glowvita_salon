@@ -20,6 +20,9 @@ export const CancellationReportDialog = ({ isOpen, onClose }: CancellationReport
           <DialogTitle>Cancellations Report</DialogTitle>
           <DialogDescription>
             Overview of cancelled appointments by vendor.
+            <div className="mt-2 p-2 bg-muted/50 rounded-md text-xs font-mono text-muted-foreground border border-border/50">
+              Formula: Cancelled Appointments = Count of appointments where status = "Cancelled"
+            </div>
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">

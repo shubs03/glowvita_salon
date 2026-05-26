@@ -27,12 +27,15 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
     confirmed: 'bg-blue-100 text-blue-800',
     in_progress: 'bg-purple-100 text-purple-800',
     completed: 'bg-green-100 text-green-800',
+    'completed without payment': 'bg-orange-100 text-orange-800',
     cancelled: 'bg-red-100 text-red-800',
     no_show: 'bg-gray-100 text-gray-800',
+    'partially-completed': 'bg-indigo-100 text-indigo-800',
+    pending: 'bg-yellow-100 text-yellow-800',
   };
 
   const formatStatus = (status: string) => {
-    return status.split('_').map(word =>
+    return status.split(/[-_]/).map(word =>
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
@@ -69,7 +72,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
     if (!appointment) return null;
 
     return {
-      invoiceNumber: (() => {
+      invoiceNumber: (appointment as any).invoiceNumber || (() => {
         const dateStr = appointment.date instanceof Date
           ? appointment.date.toISOString().split('T')[0].replace(/-/g, '')
           : String(appointment.date).split('T')[0].replace(/-/g, '');
@@ -160,7 +163,7 @@ export function AppointmentDetailCard({ appointment, onEdit, onDelete, onPayment
 
       const opt: any = {
         margin: [10, 10, 10, 10] as [number, number, number, number],
-        filename: `Invoice_${(appointment as any)._id?.substring((appointment as any)._id.length - 6).toUpperCase() || 'INV'}.pdf`,
+        filename: `Invoice_${invoiceData?.invoiceNumber || (appointment as any)._id?.substring((appointment as any)._id.length - 6).toUpperCase() || 'INV'}.pdf`,
         image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }

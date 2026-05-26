@@ -7,7 +7,8 @@ export type AppointmentStatus =
   | 'partially-completed'
   | 'completed without payment'
   | 'cancelled'
-  | 'no_show';
+  | 'no_show'
+  | 'pending';
 
 export interface ServiceItem {
   service: string;

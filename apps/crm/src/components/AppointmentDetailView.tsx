@@ -526,7 +526,7 @@ export function AppointmentDetailView({
   };
 
   // Calculate total amount - prioritize finalAmount, then totalAmount, then amount (from liveAppointment)
-  const totalAmount = (liveAppointment as any).finalAmount || (liveAppointment as any).totalAmount || payment.total || (liveAppointment as any).amount || 0;
+  const totalAmount = (liveAppointment as any).finalAmount ?? (liveAppointment as any).totalAmount ?? payment.total ?? (liveAppointment as any).amount ?? 0;
 
   // Use override first, then amountPaid from appointment, then fallback to payment.paid
   const paidAmount = overridePayment?.amountPaid !== undefined
@@ -717,18 +717,20 @@ export function AppointmentDetailView({
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case 'completed':
-      case 'completed without payment':
         return 'bg-green-100 text-green-800 border-green-200';
+      case 'completed without payment':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-200';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'partially-completed':
+        return 'bg-indigo-100 text-indigo-800 border-indigo-200';
       case 'in_progress':
         return 'bg-blue-100 text-blue-800 border-blue-200';
       case 'missed':
       case 'no_show':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
+        return 'bg-gray-100 text-gray-800 border-gray-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -748,19 +750,6 @@ export function AppointmentDetailView({
   const isPaidOnline = isOnlineBooking && isFullyPaid;
 
   const getStatusOptions = (currentStatus: string) => {
-    if (isPaidOnline) {
-      // For online paid appointments, show "Confirmed", "Completed" and "Cancelled" (restored as per user request)
-      return [
-        { value: 'confirmed', label: 'Confirm Appointment' },
-        { value: 'completed', label: 'Mark as Completed' },
-        { value: 'cancelled', label: 'Cancel Appointment' }
-      ];
-    }
-
-    const commonOptions = [
-      { value: 'cancelled', label: 'Cancel Appointment' }
-    ];
-
     const statusLabels: Record<string, string> = {
       'scheduled': 'Scheduled',
       'pending': 'Pending',
@@ -775,36 +764,49 @@ export function AppointmentDetailView({
     };
 
     const currentOption = { value: currentStatus, label: statusLabels[currentStatus] || currentStatus };
+    const commonOptions = [
+      { value: 'cancelled', label: 'Cancel Appointment' }
+    ];
 
     let options = [];
-    switch (currentStatus) {
-      case 'scheduled':
-        options = [
-          { value: 'confirmed', label: 'Confirm Appointment' },
-          { value: 'completed without payment', label: 'Completed without payment' },
-          ...commonOptions
-        ];
-        break;
-      case 'pending':
-        options = [
-          { value: 'scheduled', label: 'Mark as Scheduled' },
-          { value: 'confirmed', label: 'Confirm Appointment' },
-          { value: 'completed without payment', label: 'Completed without payment' },
-          ...commonOptions
-        ];
-        break;
-      case 'confirmed':
-        options = [
-          { value: 'completed without payment', label: 'Completed without payment' },
-          ...commonOptions
-        ];
-        break;
-      default:
-        options = [
-          { value: 'scheduled', label: 'Mark as Scheduled' },
-          { value: 'confirmed', label: 'Confirm Appointment' },
-          ...commonOptions
-        ];
+
+    if (isPaidOnline) {
+      // For online paid appointments, show "Confirmed", "Completed" and "Cancelled" (restored as per user request)
+      options = [
+        { value: 'confirmed', label: 'Confirm Appointment' },
+        { value: 'completed', label: 'Mark as Completed' },
+        { value: 'cancelled', label: 'Cancel Appointment' }
+      ];
+    } else {
+      switch (currentStatus) {
+        case 'scheduled':
+          options = [
+            { value: 'confirmed', label: 'Confirm Appointment' },
+            { value: 'completed without payment', label: 'Completed without payment' },
+            ...commonOptions
+          ];
+          break;
+        case 'pending':
+          options = [
+            { value: 'scheduled', label: 'Mark as Scheduled' },
+            { value: 'confirmed', label: 'Confirm Appointment' },
+            { value: 'completed without payment', label: 'Completed without payment' },
+            ...commonOptions
+          ];
+          break;
+        case 'confirmed':
+          options = [
+            { value: 'completed without payment', label: 'Completed without payment' },
+            ...commonOptions
+          ];
+          break;
+        default:
+          options = [
+            { value: 'scheduled', label: 'Mark as Scheduled' },
+            { value: 'confirmed', label: 'Confirm Appointment' },
+            ...commonOptions
+          ];
+      }
     }
 
     // Ensure current status is in the options list if not already there
@@ -1196,7 +1198,7 @@ export function AppointmentDetailView({
 
       const opt: any = {
         margin: [10, 10, 10, 10] as [number, number, number, number], // Top, Right, Bottom, Left margins in mm
-        filename: `Invoice_${appointment._id?.substring(appointment._id.length - 6).toUpperCase() || 'INV'}.pdf`,
+        filename: `Invoice_${invoiceData?.invoiceNumber || appointment._id?.substring(appointment._id.length - 6).toUpperCase() || 'INV'}.pdf`,
         image: { type: 'jpeg' as 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const }
@@ -1669,14 +1671,14 @@ export function AppointmentDetailView({
                               value={paymentData.amount}
                               onChange={(e) => {
                                 const value = parseFloat(e.target.value) || 0;
-                                // Allow any positive value for manual entry
                                 setPaymentData(prev => ({
                                   ...prev,
                                   amount: value >= 0 ? value : 0
                                 }));
                               }}
-                              className="pl-7 text-lg font-semibold"
+                              className={`pl-7 text-lg font-semibold ${paymentData.amount > remainingAmount ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                               min="0"
+                              max={remainingAmount}
                               step="0.01"
                               placeholder="Enter amount to collect"
                             />
@@ -1695,11 +1697,11 @@ export function AppointmentDetailView({
                             )}
                           </div>
                           {paymentData.amount > remainingAmount && (
-                            <p className="text-xs text-foreground/80 mt-1 flex items-center gap-1">
+                            <p className="text-xs text-red-600 font-medium mt-1 flex items-center gap-1">
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                               </svg>
-                              Amount exceeds remaining balance by {formatCurrency(paymentData.amount - remainingAmount)}
+                              Amount cannot exceed remaining balance (Max: {formatCurrency(remainingAmount)})
                             </p>
                           )}
                         </div>
@@ -1806,7 +1808,7 @@ export function AppointmentDetailView({
                           </Button>
                           <Button
                             onClick={handlePaymentSubmit}
-                            disabled={paymentData.amount <= 0 || isCollectingPaymentLoading}
+                            disabled={paymentData.amount <= 0 || paymentData.amount > remainingAmount || isCollectingPaymentLoading}
                             className="flex-1 bg-foreground hover:bg-foreground/90 text-background"
                           >
                             {isCollectingPaymentLoading ? (
@@ -1971,11 +1973,13 @@ export function AppointmentDetailView({
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            {((appointment.serviceItems || []).length > 1) ? 'Services' : 'Service'}
+                            {(((appointment.serviceItems || []).length > 1) || appointment.isWeddingService) ? 'Services' : 'Service'}
                           </p>
-                          {((appointment.serviceItems || []).length > 1) ? (
+                          {(((appointment.serviceItems || []).length > 1) || (appointment.isWeddingService && (appointment.weddingPackageDetails as any)?.packageServices && (appointment.weddingPackageDetails as any).packageServices.length > 1)) ? (
                             <p className="text-lg font-semibold text-foreground">
-                              Multi-Service ({(appointment.serviceItems || []).length} Services)
+                              {appointment.isWeddingService 
+                                ? `${appointment.weddingPackageDetails?.packageName || appointment.serviceName || 'Wedding Package'} (${(appointment.weddingPackageDetails as any)?.packageServices?.length || 0} Services)`
+                                : `Multi-Service (${(appointment.serviceItems || []).length} Services)`}
                             </p>
                           ) : (
                             <p className="text-lg font-semibold text-foreground">
@@ -1986,52 +1990,89 @@ export function AppointmentDetailView({
                       </div>
 
                       {/* Service Items List */}
-                      {(appointment.serviceItems || []).length > 0 && (
-                        <div className="mt-3 space-y-3">
-                          {(appointment.serviceItems || []).map((item, index) => {
-                            // Ensure addOns is always an array
-                            const itemAddOns = Array.isArray(item.addOns) ? item.addOns : [];
+                      {(() => {
+                        const servicesList = (appointment.serviceItems && appointment.serviceItems.length > 0)
+                          ? appointment.serviceItems
+                          : (appointment.isWeddingService && (appointment.weddingPackageDetails as any)?.packageServices)
+                            ? (appointment.weddingPackageDetails as any).packageServices.map((srv: any, idx: number) => {
+                                const member = (appointment.weddingPackageDetails as any)?.teamMembers?.[idx];
+                                let staffName = 'Wedding Team';
+                                if (member) {
+                                  if (typeof member === 'object') {
+                                    staffName = member.name || member.firstName || member.staffName || 'Wedding Team';
+                                  } else if (typeof member === 'string') {
+                                    if (/^[a-f\d]{24}$/i.test(member.trim())) {
+                                      const staff = staffList.find((s: any) => String(s._id) === member.trim() || String(s.id) === member.trim());
+                                      staffName = staff ? (staff.name || staff.firstName || staff.fullName) : member;
+                                    } else {
+                                      staffName = member;
+                                    }
+                                  }
+                                }
+                                return {
+                                  _id: srv._id || srv.serviceId || String(idx),
+                                  serviceName: srv.serviceName,
+                                  staffName: staffName,
+                                  startTime: appointment.startTime,
+                                  endTime: appointment.endTime,
+                                  duration: Math.round((appointment.weddingPackageDetails?.totalDuration || appointment.duration || 60) / (appointment.weddingPackageDetails as any).packageServices.length),
+                                  amount: srv.amount || 0,
+                                  addOns: []
+                                };
+                              })
+                            : [];
 
-                            return (
-                              <div key={item._id || index} className="p-3 bg-muted/20 rounded-lg border border-muted/30">
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <p className="font-medium text-foreground">{item.serviceName}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {item.staffName} • {item.startTime} - {item.endTime} ({item.duration} min)
-                                    </p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="font-medium font-mono">{formatCurrency(item.amount || 0)}</p>
-                                  </div>
-                                </div>
+                        if (servicesList.length === 0) return null;
 
-                                {/* Add-ons section */}
-                                {itemAddOns.length > 0 && (
-                                  <div className="mt-2 pt-2 border-t border-muted/30">
-                                    <p className="text-xs font-medium text-muted-foreground mb-1">Add-ons:</p>
-                                    <div className="space-y-1">
-                                      {itemAddOns.map((addOn, addOnIndex) => (
-                                        <div
-                                          key={`${item._id || 'item'}-addon-${addOnIndex}`}
-                                          className="flex justify-between items-center text-xs pl-2"
-                                        >
-                                          <span className="text-muted-foreground">
-                                            + {addOn.name} ({addOn.duration} min)
-                                          </span>
-                                          <span className="font-medium font-mono">
-                                            {formatCurrency(addOn.price || 0)}
-                                          </span>
-                                        </div>
-                                      ))}
+                        return (
+                          <div className="mt-3 space-y-3">
+                            {servicesList.map((item: any, index: number) => {
+                              // Ensure addOns is always an array
+                              const itemAddOns = Array.isArray(item.addOns) ? item.addOns : [];
+
+                              return (
+                                <div key={item._id || index} className="p-3 bg-muted/20 rounded-lg border border-muted/30">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <p className="font-medium text-foreground">{item.serviceName}</p>
+                                      <p className="text-sm text-muted-foreground">
+                                        {item.staffName} {item.startTime && item.endTime ? `• ${item.startTime} - ${item.endTime}` : ''} ({item.duration} min)
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="font-medium font-mono">
+                                        {item.amount > 0 ? formatCurrency(item.amount) : 'Bundled'}
+                                      </p>
                                     </div>
                                   </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+
+                                  {/* Add-ons section */}
+                                  {itemAddOns.length > 0 && (
+                                    <div className="mt-2 pt-2 border-t border-muted/30">
+                                      <p className="text-xs font-medium text-muted-foreground mb-1">Add-ons:</p>
+                                      <div className="space-y-1">
+                                        {itemAddOns.map((addOn: any, addOnIndex: number) => (
+                                          <div
+                                            key={`${item._id || 'item'}-addon-${addOnIndex}`}
+                                            className="flex justify-between items-center text-xs pl-2"
+                                          >
+                                            <span className="text-muted-foreground">
+                                              + {addOn.name} ({addOn.duration} min)
+                                            </span>
+                                            <span className="font-medium font-mono">
+                                              {formatCurrency(addOn.price || 0)}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
 
 

@@ -296,13 +296,13 @@ const WorkingHoursDisplay = ({
           isOpen: true,
         };
       });
-      
+
       // Check if the resulting object-based array is also "effectively empty"
       const anyOpen = result.some(d => d.isOpen === true || d.hours || d.open);
       if (!anyOpen) {
         return DEFAULT_WORKING_HOURS;
       }
-      
+
       return result;
     }
 
@@ -376,7 +376,13 @@ const defaultSalon = {
   phone: "",
   description: "",
   mission: "",
-  images: ["https://placehold.co/1200x800/png?text=Loading..."],
+  images: [
+    "/images/1 (6).png",
+    "/images/2 (6).png",
+    "/images/3 (3).png",
+    "/images/4 (2).png",
+    "/images/5 (2).png",
+  ],
 };
 
 
@@ -530,6 +536,44 @@ export default function SalonDetailsPage() {
 
   const salon = useMemo(() => {
     if (vendorData) {
+      // Filter out standard grey/placeholder images from gallery
+      const actualUploaded = (vendorData.gallery || []).filter(
+        (img: string) => img && !img.includes("placehold.co") && !img.includes("placeholder")
+      );
+
+      // Add profile image if it is uploaded and not a placeholder
+      if (
+        vendorData.profileImage &&
+        !vendorData.profileImage.includes("placehold.co") &&
+        !vendorData.profileImage.includes("placeholder")
+      ) {
+        if (!actualUploaded.includes(vendorData.profileImage)) {
+          actualUploaded.unshift(vendorData.profileImage);
+        }
+      }
+
+      // Merge with static fallbacks (direct slot mapping)
+      const STATIC_IMAGES = [
+        "/images/1 (6).png",
+        "/images/2 (6).png",
+        "/images/3 (3).png",
+        "/images/4 (2).png",
+        "/images/5 (2).png",
+      ];
+
+      const galleryImages = [];
+      for (let i = 0; i < 5; i++) {
+        if (i < actualUploaded.length) {
+          galleryImages.push(actualUploaded[i]);
+        } else {
+          galleryImages.push(STATIC_IMAGES[i]);
+        }
+      }
+
+      if (actualUploaded.length > 5) {
+        galleryImages.push(...actualUploaded.slice(5));
+      }
+
       const salonData = {
         ...defaultSalon,
         id: vendorData._id || defaultSalon.id,
@@ -544,12 +588,7 @@ export default function SalonDetailsPage() {
         mission:
           vendorData.description ||
           "To enhance beauty and wellness through personalized care and high-quality services.",
-        images:
-          vendorData.gallery && vendorData.gallery.length > 0
-            ? vendorData.gallery
-            : vendorData.profileImage
-              ? [vendorData.profileImage, ...defaultSalon.images.slice(1)]
-              : defaultSalon.images,
+        images: galleryImages,
       };
 
       return salonData;
@@ -1007,13 +1046,14 @@ export default function SalonDetailsPage() {
 
           {/* Compact Bento Grid Hero Gallery */}
           <section className="py-6">
-            <div className="grid grid-cols-6 grid-rows-2 gap-2 h-40 md:h-64 lg:h-96">
+            <div className="grid grid-cols-6 grid-rows-2 gap-2 h-80 md:h-[450px] lg:h-[520px]">
+              {/* Box 1 (Main Square) */}
               <div
-                className="col-span-4 md:col-span-3 row-span-2 rounded-md overflow-hidden group cursor-pointer"
-                onClick={() => openGalleryModal(salon.images[0])}
+                className="col-span-2 row-span-2 rounded-md overflow-hidden group cursor-pointer"
+                onClick={() => openGalleryModal(salon.images[0] || "/images/1 (6).png")}
               >
                 <Image
-                  src={salon.images[0]}
+                  src={salon.images[0] || "/images/1 (6).png"}
                   alt={salon.name}
                   width={800}
                   height={600}
@@ -1021,12 +1061,13 @@ export default function SalonDetailsPage() {
                   data-ai-hint="luxury salon interior main view"
                 />
               </div>
+              {/* Box 2 (Top Mid) */}
               <div
-                className="col-span-2 md:col-span-1 row-span-1 rounded-md overflow-hidden group cursor-pointer"
-                onClick={() => openGalleryModal(salon.images[1])}
+                className="col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer"
+                onClick={() => openGalleryModal(salon.images[1] || "/images/2 (6).png")}
               >
                 <Image
-                  src={salon.images[1]}
+                  src={salon.images[1] || "/images/2 (6).png"}
                   alt={`${salon.name} view 2`}
                   width={400}
                   height={300}
@@ -1034,12 +1075,13 @@ export default function SalonDetailsPage() {
                   data-ai-hint="salon detail photo"
                 />
               </div>
+              {/* Box 3 (Top Right) */}
               <div
-                className="hidden md:block col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative"
-                onClick={() => openGalleryModal(salon.images[2])}
+                className="col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative"
+                onClick={() => openGalleryModal(salon.images[2] || "/images/3 (3).png")}
               >
                 <Image
-                  src={salon.images[2]}
+                  src={salon.images[2] || "/images/3 (3).png"}
                   alt={`${salon.name} view 3`}
                   width={400}
                   height={300}
@@ -1047,12 +1089,13 @@ export default function SalonDetailsPage() {
                   data-ai-hint="salon treatment room"
                 />
               </div>
+              {/* Box 4 (Bottom Mid) */}
               <div
-                className="col-span-2 md:col-span-1 row-span-1 rounded-md overflow-hidden group cursor-pointer"
-                onClick={() => openGalleryModal(salon.images[3])}
+                className="col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer"
+                onClick={() => openGalleryModal(salon.images[3] || "/images/4 (2).png")}
               >
                 <Image
-                  src={salon.images[3]}
+                  src={salon.images[3] || "/images/4 (2).png"}
                   alt={`${salon.name} view 4`}
                   width={400}
                   height={300}
@@ -1060,22 +1103,23 @@ export default function SalonDetailsPage() {
                   data-ai-hint="salon product display"
                 />
               </div>
+              {/* Box 5 (Bottom Right) */}
               <div
-                className="hidden md:block col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative"
-                onClick={() => openGalleryModal(salon.images[0])}
+                className="col-span-2 row-span-1 rounded-md overflow-hidden group cursor-pointer relative"
+                onClick={() => openGalleryModal(salon.images[4] || "/images/5 (2).png")}
               >
                 <Image
-                  src={salon.images[0]}
-                  alt={`${salon.name} view 1`}
+                  src={salon.images[4] || "/images/5 (2).png"}
+                  alt={`${salon.name} view 5`}
                   width={400}
                   height={300}
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   data-ai-hint="salon reception area"
                 />
-                {salon.images.length > 4 && (
+                {salon.images.length > 5 && (
                   <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <span className="text-white font-semibold text-sm">
-                      +{salon.images.length - 4} more
+                      +{salon.images.length - 5} more
                     </span>
                   </div>
                 )}

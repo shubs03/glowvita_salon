@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { MapPin, Users, Star, ArrowRight, Filter, RotateCcw, X, Home, Heart } from "lucide-react";
 import { useGetPublicVendorsQuery, useGetLandingSalonsQuery } from "@repo/store/services/api";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { useSalonFilter } from "./SalonFilterContext";
 
@@ -213,8 +213,8 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
   const isSalonsPage = pathname === '/salons';
   const { userLat, userLng, selectedCity, setSelectedCity, locationLabel, serviceQuery } = useSalonFilter();
 
-  // Fetch params for filtering
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  // Fetch params for filtering reactively
+  const searchParams = useSearchParams();
   const qLat = searchParams?.get("lat") ? parseFloat(searchParams.get("lat")!) : userLat;
   const qLng = searchParams?.get("lng") ? parseFloat(searchParams.get("lng")!) : userLng;
   const qCityRaw = searchParams?.get("city") || searchParams?.get("locationLabel") || selectedCity;
@@ -336,7 +336,10 @@ const WhereToGo: React.FC<WhereToGoProps> = ({
                 : "Beauty Services",
         location: `${vendor.city || "Unknown City"}, ${vendor.state || "Unknown State"}`,
         rating: vendor.rating || "0.0",
-        clients: `${vendor.totalBookings || vendor.clientCount || 0}+`,
+        clients: `${vendor.dynamicClientCount || 
+                  vendor.stats?.find((s: any) => s.label === "Happy Clients")?.value ||
+                  vendor.clientCount || 
+                  0}+`,
         image: imageUrl,
         badge: hasOffer ? "Offer Available" : null,
         serviceNames: vendor.services?.map((s: any) => s.name) || [],

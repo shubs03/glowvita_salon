@@ -128,8 +128,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
   return (
     <Card
-      className="group overflow-hidden hover:shadow-lg rounded-none rounded-tr-2xl rounded-bl-2xl transition-shadow flex flex-col text-left cursor-pointer relative"
-      onClick={() => router.push(`/product-details/${product.id}`)}
+      className={cn(
+        "group overflow-hidden hover:shadow-lg rounded-none rounded-tr-2xl rounded-bl-2xl transition-shadow flex flex-col text-left relative",
+        isSubscriptionExpired ? "cursor-not-allowed opacity-90" : "cursor-pointer"
+      )}
+      onClick={() => {
+        if (isSubscriptionExpired) {
+          toast.error("Salon Unavailable", {
+            description: "This salon is currently not available. Products cannot be viewed or purchased until the subscription is renewed."
+          });
+          return;
+        }
+        router.push(`/product-details/${product.id}`);
+      }}
     >
       <div className="relative aspect-square overflow-hidden rounded-md m-2">
         <img

@@ -55,7 +55,8 @@ export async function calculateEnhancedTravelTime(origin, destination, vendor, u
     const distanceInMeters = distanceInKm * 1000;
     
     // Check if customer is within travel radius
-    if (distanceInKm > vendor.travelRadius) {
+    const maxRadius = vendor.travelRadius || 0;
+    if (distanceInKm > maxRadius) {
       throw new Error('Customer location is outside vendor travel radius');
     }
     

@@ -460,6 +460,12 @@ export async function POST(request) {
         travelTimeInfo = await calculateVendorTravelTime(vendorId, location);
         console.log('Travel time calculated:', travelTimeInfo);
       } catch (error) {
+        if (error.message.includes('outside vendor travel radius')) {
+          return NextResponse.json({
+            success: false,
+            message: "We do not reach that point. Select another location."
+          }, { status: 400 });
+        }
         console.warn('Could not calculate travel time, using fallback:', error.message);
         travelTimeInfo = {
           timeInMinutes: 30,

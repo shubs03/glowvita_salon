@@ -13,6 +13,24 @@ export interface SettlementAppointment {
     paymentStatus: string;
     paymentMethod: string;
     mode: 'online' | 'offline';
+    type?: 'appointment' | 'order';
+}
+
+// Order details for settlement
+export interface SettlementOrder {
+    _id: string;
+    orderId: string;
+    date: Date | string;
+    clientName: string;
+    productNames: string;
+    totalAmount: number;
+    platformFee: number;
+    gstAmount: number;
+    shippingAmount: number;
+    finalAmount: number;
+    status: string;
+    paymentMethod: string;
+    type: 'appointment' | 'order';
 }
 
 // Settlement data for a vendor
@@ -50,8 +68,9 @@ export interface SettlementData {
     amountPending: number;            // Amount still pending
     status: "Paid" | "Pending" | "Partially Paid";
 
-    // Appointments included in this settlement
+    // Appointments and Orders included in this settlement
     appointments: SettlementAppointment[];
+    orders?: SettlementOrder[];
 
     // Payment history
     paymentHistory: PaymentRecord[];

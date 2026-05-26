@@ -485,7 +485,7 @@ export default function NewAppointmentForm({
       _id: service._id || service.id,
       name: service.name || service.serviceName || 'Unnamed Service',  // Added serviceName fallback
       duration: service.duration || 60,
-      price: service.price || service.amount || 0,  // Added amount fallback
+      price: service.discountedPrice !== undefined && service.discountedPrice !== null ? service.discountedPrice : (service.price || service.amount || 0),
       category: service.category,
       staff: service.staff || [],
       description: service.description || '',

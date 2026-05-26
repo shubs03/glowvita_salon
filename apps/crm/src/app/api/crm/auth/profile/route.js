@@ -21,6 +21,8 @@ const getUserModel = (role) => {
   }
 };
 
+import { cookies } from 'next/headers';
+
 // Get user profile
 export const GET = authMiddlewareCrm(async (req) => {
   try {
@@ -40,10 +42,14 @@ export const GET = authMiddlewareCrm(async (req) => {
       );
     }
 
+    const cookieStore = cookies();
+    const token = cookieStore.get('crm_access_token')?.value || null;
+
     return NextResponse.json({
       success: true,
       user: userData,
-      role: userRole
+      role: userRole,
+      token: token
     });
 
   } catch (error) {

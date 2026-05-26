@@ -53,7 +53,8 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
           : "",
         image:
           offer.offerImage ||
-          "https://images.unsplash.com/photo-1562322140-8baeececf3df?w=600",
+          "/images/Offer Placeholder.png",
+        applicableServices: offer.applicableServiceNames || [],
       })) || [];
 
   // Use fetched offers
@@ -205,10 +206,10 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
         onMouseDown={handleMouseDown}
         onTouchStart={handleTouchStart}
       >
-        <div className="flex flex-col md:flex-row items-center gap-6">
+        <div className="flex flex-col md:flex-row items-stretch gap-6">
           {/* Image */}
-          <div className="flex-shrink-0">
-            <div className="w-48 h-48 rounded-2xl overflow-hidden">
+          <div className="flex-shrink-0 w-full md:w-48">
+            <div className="w-full h-full min-h-[12rem] rounded-2xl overflow-hidden">
               <img
                 src={currentOffer.image}
                 alt={currentOffer.title}
@@ -218,14 +219,14 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
           </div>
 
           {/* Description Card with discount badge */}
-          <div className="flex-1 w-full bg-card border rounded-2xl p-5 relative">
+          <div className="flex-1 w-full bg-card border rounded-2xl p-4 relative flex flex-col justify-center">
             {/* Title */}
-            <h4 className="text-2xl font-bold text-foreground mb-3">
+            <h4 className="text-xl font-bold text-foreground mb-2">
               {currentOffer.title}
             </h4>
 
             {/* Promo Code Tag */}
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-2">
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Use Code:
               </span>
@@ -240,12 +241,23 @@ const SpecialOffered = ({ vendorId, isSubscriptionExpired = false, onBookNow }: 
             </div>
 
             {/* Description */}
-            <p className="text-muted-foreground text-sm mb-4 leading-relaxed max-w-[90%]">
+            <p className="text-muted-foreground text-sm mb-2 leading-relaxed max-w-[90%]">
               {currentOffer.description}
             </p>
 
+            {/* Applicable Services */}
+            {currentOffer.applicableServices && currentOffer.applicableServices.length > 0 && (
+              <div className="mb-2">
+                <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Applicable on: </span>
+                <span className="text-sm text-muted-foreground">{currentOffer.applicableServices.join(", ")}</span>
+              </div>
+            )}
+
+            {/* Spacer to push validity to bottom if needed */}
+            <div className="flex-grow"></div>
+
             {/* Validity and Button */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-4 pt-4 border-t border-dashed">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 mt-2 pt-3 border-t border-dashed">
               <div className="space-y-1">
                 {currentOffer.validity && (
                   <p className="text-xs text-muted-foreground">

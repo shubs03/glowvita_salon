@@ -9,28 +9,44 @@ import { StaffMember, WorkingHours, Service, ServiceStaffAssignment, calculateTo
 import { useGetMultiServiceSlotsMutation } from '@repo/store/api';
 import { toast } from 'react-toastify';
 
-const Breadcrumb = ({ currentStep, setCurrentStep, isHomeService }: {
+const Breadcrumb = ({ currentStep, setCurrentStep, isHomeService, isWeddingService }: {
   currentStep: number;
   setCurrentStep: (step: number) => void;
   isHomeService?: boolean;
+  isWeddingService?: boolean;
 }) => {
-  const steps = isHomeService
-    ? ['Services', 'Select Professionals', 'Select Location', 'Select Date & Time']
-    : ['Services', 'Select Professionals', 'Select Date & Time'];
+  const steps = isWeddingService
+    ? [
+      { name: 'Select Package', step: 1 },
+      { name: 'Select Location', step: 3 },
+      { name: 'Select Date & Time', step: 4 }
+    ]
+    : isHomeService
+      ? [
+        { name: 'Services', step: 1 },
+        { name: 'Select Professionals', step: 2 },
+        { name: 'Select Location', step: 3 },
+        { name: 'Select Date & Time', step: 4 }
+      ]
+      : [
+        { name: 'Services', step: 1 },
+        { name: 'Select Professionals', step: 2 },
+        { name: 'Select Date & Time', step: 3 }
+      ];
 
   return (
     <nav className="flex items-center text-sm font-medium text-muted-foreground mb-4">
-      {steps.map((step, index) => (
-        <React.Fragment key={step}>
+      {steps.map((stepObj, index) => (
+        <React.Fragment key={stepObj.name}>
           <button
-            onClick={() => currentStep > index + 1 && setCurrentStep(index + 1)}
+            onClick={() => currentStep > stepObj.step && setCurrentStep(stepObj.step)}
             className={cn(
               "transition-colors",
-              currentStep > index + 1 ? "hover:text-primary" : "cursor-default",
-              currentStep === index + 1 && "text-primary font-semibold"
+              currentStep > stepObj.step ? "hover:text-primary" : "cursor-default",
+              currentStep === stepObj.step && "text-primary font-semibold"
             )}
           >
-            {step}
+            {stepObj.name}
           </button>
           {index < steps.length - 1 && <ChevronRight className="h-4 w-4 mx-2" />}
         </React.Fragment>
@@ -67,6 +83,8 @@ interface Step3MultiServiceTimeSlotProps {
   onLockAcquired?: (lockToken: string, appointmentId?: string) => void;
   user?: any;
   isWeddingService?: boolean;
+  packageId?: string;
+  weddingPackage?: any;
 }
 
 interface MultiServiceSlot {
@@ -75,6 +93,8 @@ interface MultiServiceSlot {
   totalDuration: number;
   serviceDuration: number;
   travelTime?: number;
+  totalTravelTime?: number;
+  travelDistance?: number;
   sequence: Array<{
     serviceId: string;
     serviceName: string;
@@ -123,10 +143,10 @@ const SlotCard = React.memo<{
 
       {/* Duration Info */}
       <div className="text-sm text-gray-600 mb-3">
-        {slot.totalDuration} min
-        {Boolean(slot.travelTime && slot.travelTime > 0) && (
+        {slot.serviceDuration} min
+        {Boolean(((slot.travelTime ?? slot.totalTravelTime ?? 0) > 0)) && (
           <span className="text-blue-600 ml-2">
-            (+{slot.travelTime} min travel)
+            (+{slot.travelTime ?? slot.totalTravelTime ?? 0} min travel)
           </span>
         )}
       </div>
@@ -144,9 +164,9 @@ const SlotCard = React.memo<{
       </div>
 
       {/* Travel Info */}
-      {slot.travelInfo && (
+      {(slot.travelInfo || (slot.travelDistance !== undefined && slot.travelDistance > 0)) && (
         <div className="mt-3 text-xs text-blue-600 border-t border-gray-100 pt-2">
-          📍 {slot.travelInfo.distanceInKm.toFixed(1)} km away
+          📍 {(slot.travelInfo?.distanceInKm ?? slot.travelDistance ?? 0).toFixed(1)} km away
         </div>
       )}
     </button>
@@ -186,10 +206,13 @@ export function Step3_MultiServiceTimeSlot({
   couponCode = null,
   discountAmount = 0,
   user,
-  isWeddingService = false
+  isWeddingService = false,
+  packageId,
+  weddingPackage
 }: Step3MultiServiceTimeSlotProps) {
   // RTK Query mutation hook
   const [getMultiServiceSlots, { data: slotsData, isLoading: isLoadingSlots, error: slotsError }] = useGetMultiServiceSlotsMutation();
+  const [slotsErrorMsg, setSlotsErrorMsg] = useState<string | null>(null);
 
   // Get day name helper
   const getDayName = useCallback((date: Date): string => {
@@ -281,6 +304,9 @@ export function Step3_MultiServiceTimeSlot({
         assignments,
         isHomeService,
         location: homeServiceLocation,
+        isWeddingService,
+        isWeddingPackage: isWeddingService,
+        packageId,
         stepMinutes: 15,
         bufferBefore: 5,
         bufferAfter: 5
@@ -292,6 +318,7 @@ export function Step3_MultiServiceTimeSlot({
       });
 
       const newSlots = result.slots || [];
+      setSlotsErrorMsg(null);
 
       // Only update state if slots actually changed (prevents unnecessary re-renders)
       const slotsChanged = JSON.stringify(previousSlotsRef.current) !== JSON.stringify(newSlots);
@@ -309,8 +336,33 @@ export function Step3_MultiServiceTimeSlot({
       }
     } catch (error: any) {
       console.error('Error fetching multi-service slots:', error);
+      let errMsg = 'Could not load available time slots. Please try again.';
+      const data = error?.data || error;
+      if (data) {
+        if (typeof data === 'string') {
+          try {
+            const parsed = JSON.parse(data);
+            errMsg = parsed.message || parsed.error?.message || data;
+          } catch {
+            errMsg = data;
+          }
+        } else if (typeof data === 'object') {
+          errMsg = data.message || data.error?.message || error.message || errMsg;
+        }
+      } else if (error?.message) {
+        errMsg = error.message;
+      }
+
+      try {
+        if (typeof errMsg === 'string' && errMsg.startsWith('{')) {
+          const parsed = JSON.parse(errMsg);
+          errMsg = parsed.message || parsed.error?.message || errMsg;
+        }
+      } catch (e) {}
+
       if (!isBackgroundFetch) {
-        toast.error(error?.data?.message || 'Could not load available time slots. Please try again.');
+        setSlotsErrorMsg(errMsg);
+        toast.error(errMsg);
       }
       setIsBackgroundRefreshing(false);
     }
@@ -388,7 +440,60 @@ export function Step3_MultiServiceTimeSlot({
       setIsLocking(true);
       console.log('Acquiring lock for multi-service slot:', slot);
 
-      // Prepare lock request
+      // For wedding packages, use the specialized lock endpoint
+      if (isWeddingService && (packageId || weddingPackage)) {
+        console.log('Using wedding package specialized lock endpoint');
+        
+        const weddingLockRequest = {
+          packageId: packageId || weddingPackage?.id || weddingPackage?._id,
+          selectedSlot: {
+            date: selectedDate.toISOString(),
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            location: isHomeService && homeServiceLocation ? homeServiceLocation : null,
+            totalAmount: weddingPackage?.discountedPrice || weddingPackage?.totalPrice || 0,
+            depositAmount: weddingPackage?.depositAmount || 0
+          },
+          clientId: user?._id || user?.id || 'temp-client-id',
+          clientName: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : 'Customer',
+          customerDetails: {
+            name: user ? (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer') : 'Customer',
+            phone: user?.mobileNo || user?.phone || null
+          }
+        };
+
+        const response = await fetch('/api/scheduling/wedding-package', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(weddingLockRequest)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Slot no longer available');
+        }
+
+        const lockData = await response.json();
+        console.log('Wedding package lock response received:', lockData);
+
+        setLockedSlot({
+          slot,
+          lockToken: lockData.lockId,
+          appointmentId: lockData.appointmentId,
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes for wedding packages
+        } as any);
+
+        if (onLockAcquired && lockData.lockId) {
+          onLockAcquired(lockData.lockId, lockData.appointmentId);
+        }
+
+        setSelectedSlot(slot);
+        onSelectTime(slot.startTime);
+        toast.success('Time slot reserved for 30 minutes');
+        return;
+      }
+
+      // Prepare standard lock request
       const lockRequest = {
         vendorId,
         serviceId: 'combo', // Multi-service identifier
@@ -563,7 +668,10 @@ export function Step3_MultiServiceTimeSlot({
   }
 
   // Error state
-  if (parentError || slotsError) {
+  const errorMsgStr = slotsError ? getErrorMessage(slotsError) : '';
+  const isRangeError = errorMsgStr && errorMsgStr.includes('We do not reach that point');
+
+  if (parentError || (slotsError && !isRangeError)) {
     return (
       <div className="w-full">
         <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} />
@@ -590,7 +698,7 @@ export function Step3_MultiServiceTimeSlot({
 
   return (
     <div className="w-full">
-      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isHomeService={isHomeService} />
+      <Breadcrumb currentStep={currentStep} setCurrentStep={setCurrentStep} isHomeService={isHomeService} isWeddingService={isWeddingService} />
 
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
@@ -616,7 +724,7 @@ export function Step3_MultiServiceTimeSlot({
         )}
       </div>
 
-      {/* Service Summary */}
+      {/* Service Summary
       <div className="mb-6 p-4 bg-gray-50 rounded-lg">
         <h3 className="font-semibold mb-2">Your Services:</h3>
         <div className="space-y-2">
@@ -635,7 +743,7 @@ export function Step3_MultiServiceTimeSlot({
             <span>{totalDuration} minutes</span>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Date Scroller */}
       <div className="mb-6">
@@ -698,6 +806,17 @@ export function Step3_MultiServiceTimeSlot({
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary mr-3" />
             <span className="text-muted-foreground">Checking availability...</span>
+          </div>
+        ) : slotsErrorMsg ? (
+          <div className="text-center py-12 bg-amber-50 rounded-xl border border-amber-200 p-8 shadow-sm max-w-lg mx-auto">
+            <div className="p-3 bg-amber-100 rounded-full text-amber-600 w-fit mx-auto mb-4">
+              <AlertCircle className="h-8 w-8" />
+            </div>
+            <h3 className="text-lg font-semibold text-amber-900 mb-2">Service Area Range</h3>
+            <p className="text-amber-700 mb-6 text-sm">{slotsErrorMsg}</p>
+            <Button onClick={() => setCurrentStep(3)} className="bg-amber-600 hover:bg-amber-700 text-white font-medium px-6 py-2 rounded-lg">
+              Select Another Location
+            </Button>
           </div>
         ) : isSalonClosedEveryDay ? (
           <div className="text-center py-12 bg-red-50 rounded-xl border border-red-100 p-8">
