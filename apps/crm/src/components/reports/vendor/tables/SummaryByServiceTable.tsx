@@ -297,9 +297,9 @@ export const SummaryByServiceTable = ({ startDate, endDate, client, service, sta
             {paginatedServices.length > 0 && (
               <TableRow className="bg-muted font-bold text-primary">
                 <TableCell>TOTAL</TableCell>
-                <TableCell>{paginatedServices.reduce((sum, s: any) => sum + (s.count || 0), 0)}</TableCell>
-                <TableCell>₹{paginatedServices.reduce((sum, s: any) => sum + (s.totalAmount || 0), 0).toFixed(2)}</TableCell>
-                <TableCell>{paginatedServices.reduce((sum, s: any) => sum + (s.totalDuration || 0), 0).toFixed(0)} mins</TableCell>
+                <TableCell>{paginatedServices.reduce((sum: number, s: any) => sum + (s.count || 0), 0)}</TableCell>
+                <TableCell>₹{paginatedServices.reduce((sum: number, s: any) => sum + (s.totalAmount || 0), 0).toFixed(2)}</TableCell>
+                <TableCell>{paginatedServices.reduce((sum: number, s: any) => sum + (s.totalDuration || 0), 0).toFixed(0)} mins</TableCell>
                 <TableCell>100%</TableCell>
               </TableRow>
             )}

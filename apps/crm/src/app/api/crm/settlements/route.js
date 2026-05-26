@@ -194,7 +194,7 @@ export const GET = authMiddlewareCrm(async (req) => {
         // Initialize with default or previous balance data
         const initialSettlement = {
             vendorId: vendorObjectId.toString(),
-            vendorName: 'N/A', 
+            vendorName: 'N/A',
             contactNo: 'N/A',
             ownerName: 'N/A',
             appointments: [],
@@ -299,7 +299,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 
             settlement.totalAmount += order.totalAmount || 0;
             settlement.platformFeeTotal += order.platformFeeAmount || 0;
-            settlement.serviceTaxTotal += order.gstAmount || 0; 
+            settlement.serviceTaxTotal += order.gstAmount || 0;
 
             if (order.paymentMethod === 'pay-online') {
                 settlement.adminOwesVendor += vendorShare;
@@ -329,7 +329,7 @@ export const GET = authMiddlewareCrm(async (req) => {
 
             const closingBalance = totalNetBalance - totalPaidToVendorInPeriod + totalPaidToAdminInPeriod;
 
-            settlement.netSettlement = totalNetBalance; 
+            settlement.netSettlement = totalNetBalance;
 
             if (closingBalance > 0) {
                 settlement.adminReceivableAmount = 0;

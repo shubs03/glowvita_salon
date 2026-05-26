@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { BarChart, Bar, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { useGetSalesByProductReportQuery } from "@repo/store/services/api";
@@ -55,6 +55,11 @@ export function TopSellingProductsChart({
   selectedMonth,
   selectedDay
 }: TopSellingProductsChartProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Prepare query parameters for RTK Query
   // If hierarchical filtering is active, build date range from selected values
   let queryParams: any = {
@@ -102,7 +107,7 @@ export function TopSellingProductsChart({
       .slice(0, 5);
   }
 
-  if (isLoading) {
+  if (!mounted || isLoading) {
     return (
       <Card>
         <CardHeader>

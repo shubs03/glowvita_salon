@@ -246,8 +246,8 @@ const ServiceSelectionStep = ({
             <Card
               key={service.id}
               className={`cursor-pointer transition-all duration-300 border-2 ${isSelected
-                  ? 'border-primary bg-primary/5 shadow-lg'
-                  : 'border-border hover:border-primary/50 hover:shadow-md'
+                ? 'border-primary bg-primary/5 shadow-lg'
+                : 'border-border hover:border-primary/50 hover:shadow-md'
                 }`}
               onClick={() => toggleService(service)}
             >
@@ -302,8 +302,8 @@ const StaffSelectionStep = ({
         {/* Any Professional Option */}
         <Card
           className={`cursor-pointer transition-all duration-300 border-2 ${!selectedStaff
-              ? 'border-primary bg-primary/5 shadow-lg'
-              : 'border-border hover:border-primary/50 hover:shadow-md'
+            ? 'border-primary bg-primary/5 shadow-lg'
+            : 'border-border hover:border-primary/50 hover:shadow-md'
             }`}
           onClick={() => setSelectedStaff(null)}
         >
@@ -326,8 +326,8 @@ const StaffSelectionStep = ({
           <Card
             key={staff.id}
             className={`cursor-pointer transition-all duration-300 border-2 ${selectedStaff?.id === staff.id
-                ? 'border-primary bg-primary/5 shadow-lg'
-                : 'border-border hover:border-primary/50 hover:shadow-md'
+              ? 'border-primary bg-primary/5 shadow-lg'
+              : 'border-border hover:border-primary/50 hover:shadow-md'
               }`}
             onClick={() => setSelectedStaff(staff)}
           >
@@ -403,8 +403,8 @@ const DateTimeSelectionStep = ({
                 <Card
                   key={index}
                   className={`cursor-pointer transition-all duration-300 transform hover:scale-105 flex-shrink-0 ${isSelected
-                      ? 'border-primary bg-primary/10 shadow-lg ring-2 ring-primary/30'
-                      : 'border-border hover:border-primary/50 hover:shadow-md hover:bg-primary/5'
+                    ? 'border-primary bg-primary/10 shadow-lg ring-2 ring-primary/30'
+                    : 'border-border hover:border-primary/50 hover:shadow-md hover:bg-primary/5'
                     } ${isToday ? 'ring-2 ring-accent' : ''}`}
                   onClick={() => setSelectedDate(date)}
                 >
@@ -438,8 +438,8 @@ const DateTimeSelectionStep = ({
               key={time}
               variant={selectedTime === time ? 'default' : 'outline'}
               className={`h-12 rounded-lg transition-all duration-200 transform hover:scale-105 ${selectedTime === time
-                  ? 'bg-primary hover:bg-primary/90 shadow-lg'
-                  : 'hover:bg-primary/10 border-2 border-primary/30'
+                ? 'bg-primary hover:bg-primary/90 shadow-lg'
+                : 'hover:bg-primary/10 border-2 border-primary/30'
                 }`}
               onClick={() => setSelectedTime(time)}
             >

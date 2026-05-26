@@ -646,34 +646,21 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                         <h5 className="font-semibold text-sm">Services</h5>
                         {appointment.serviceItems && appointment.serviceItems.length > 0 ? (
                             <div className="space-y-2">
-                                {appointment.serviceItems.map((item, index) => {
-                                    const catalogPrice = catalogPriceMap[item.service] ?? null;
-                                    const originalPrice = item.originalAmount ?? (item as any).price ?? catalogPrice;
-                                    const hasDiscount = originalPrice !== null && Number(originalPrice) > Number(item.amount);
-                                    
-                                    return (
-                                        <div key={index} className="border rounded-lg p-3 bg-muted/30">
-                                            <div className="flex justify-between items-start">
-                                                <div>
-                                                    <p className="font-medium">{item.serviceName}</p>
-                                                    <p className="text-xs text-muted-foreground mt-1">with {item.staffName}</p>
-                                                </div>
-                                                <div className="flex flex-col items-end">
-                                                    {hasDiscount && (
-                                                        <span className="text-xs text-muted-foreground line-through">₹{Number(originalPrice).toFixed(2)}</span>
-                                                    )}
-                                                    <span className={hasDiscount ? "font-medium text-green-600" : "font-medium"}>
-                                                        ₹{item.amount.toFixed(2)}
-                                                    </span>
-                                                </div>
+                                {appointment.serviceItems.map((item, index) => (
+                                    <div key={index} className="border rounded-lg p-3 bg-muted/30">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className="font-medium">{item.serviceName}</p>
+                                                <p className="text-xs text-muted-foreground mt-1">with {item.staffName}</p>
                                             </div>
-                                            <div className="flex justify-between text-xs text-muted-foreground mt-2">
-                                                <span>{item.startTime} - {item.endTime}</span>
-                                                <span>{item.duration} min</span>
-                                            </div>
+                                            <span className="font-medium">₹{item.amount.toFixed(2)}</span>
                                         </div>
-                                    );
-                                })}
+                                        <div className="flex justify-between text-xs text-muted-foreground mt-2">
+                                            <span>{item.startTime} - {item.endTime}</span>
+                                            <span>{item.duration} min</span>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         ) : (
                             <div className="border rounded-lg p-3 bg-muted/30">
@@ -830,7 +817,7 @@ export default function AppointmentsPage() {
                             const [h, m] = timeStr.split(':').map(Number);
                             return date + (h || 0) * 60 * 60 * 1000 + (m || 0) * 60 * 1000;
                         };
-                        
+
                         const groupA = statusGroupOrder[a.status] ?? 99;
                         const groupB = statusGroupOrder[b.status] ?? 99;
                         if (groupA !== groupB) return groupA - groupB;

@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts"
 import { useGetSummaryByServiceReportQuery } from "@repo/store/api";
@@ -52,6 +52,11 @@ export function TopServicesChart({
   startDate = '', 
   endDate = '' 
 }: TopServicesChartProps) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Use RTK Query to fetch summary by service report
   const { data: reportData, isLoading, isError, error } = useGetSummaryByServiceReportQuery({
     period: filterType === 'preset' ? presetPeriod : 'custom',
@@ -82,7 +87,7 @@ export function TopServicesChart({
     })
     .slice(0, 5);
 
-  if (isLoading) {
+  if (!mounted || isLoading) {
     return (
       <Card>
         <CardHeader>
@@ -187,7 +192,6 @@ export function TopServicesChart({
                 cy="50%"
                 labelLine={false}
                 outerRadius={100}
-                fill="hsl(var(--primary))"
                 dataKey="chartValue"
                 nameKey="normalizedService"
                 label={({ normalizedService, percentage }) => `${normalizedService}: ${percentage.toFixed(0)}%`}

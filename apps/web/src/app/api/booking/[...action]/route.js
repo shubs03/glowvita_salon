@@ -762,6 +762,15 @@ async function handleSlotDiscovery(searchParams) {
     } catch (error) {
       console.error('Error generating slots:', error);
       console.error('Error stack:', error.stack);
+      if (error.message.includes('outside vendor travel radius')) {
+        const err = formatErrorResponse(new AppError(
+          "We do not reach that point. Select another location.",
+          'LOCATION_OUT_OF_RANGE',
+          'CLIENT_ERROR',
+          400
+        ));
+        return Response.json(err, { status: 400 });
+      }
       const err = formatErrorResponse(new AppError(
         `Failed to generate slots: ${error.message}`,
         'SLOT_GENERATION_ERROR',
@@ -1233,6 +1242,15 @@ async function handleSlotLock(body) {
         calculatedTravelTime = await calculateVendorTravelTime(vendorId, customerLocation);
         console.log('Lock travel time calculated:', calculatedTravelTime);
       } catch (error) {
+        if (error.message.includes('outside vendor travel radius')) {
+          const errorRes = formatErrorResponse(new AppError(
+            "We do not reach that point. Select another location.",
+            'LOCATION_OUT_OF_RANGE',
+            'CLIENT_ERROR',
+            400
+          ));
+          return Response.json(errorRes, { status: 400 });
+        }
         console.warn('Could not calculate travel time, using fallback:', error.message);
         calculatedTravelTime = {
           timeInMinutes: 30,
@@ -1282,6 +1300,15 @@ async function handleSlotLock(body) {
         }
       } catch (err) {
         console.error("Availability re-check error:", err.message);
+        if (err.message.includes('outside vendor travel radius')) {
+          const errorRes = formatErrorResponse(new AppError(
+            "We do not reach that point. Select another location.",
+            'LOCATION_OUT_OF_RANGE',
+            'CLIENT_ERROR',
+            400
+          ));
+          return Response.json(errorRes, { status: 400 });
+        }
       }
     }
 

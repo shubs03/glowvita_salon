@@ -159,6 +159,9 @@ export async function generateFreshaLikeSlots({
       try {
         travelTimeInfo = await calculateVendorTravelTime(vendorId, customerLocation);
       } catch (error) {
+        if (error.message.includes('outside vendor travel radius')) {
+          throw error;
+        }
         console.warn('Could not calculate travel time, using fallback:', error.message);
         // Use a conservative estimate
         travelTimeInfo = {
@@ -720,6 +723,9 @@ export async function generateWeddingPackageSlots({
         travelDistance = travelInfo.distanceInKm;
         distanceMeters = travelInfo.distanceInMeters;
       } catch (error) {
+        if (error.message.includes('outside vendor travel radius')) {
+          throw error;
+        }
         console.warn('Could not calculate travel time, using fallback:', error.message);
         travelTime = 30; // Fallback estimate
         travelDistance = 10; // Fallback estimate

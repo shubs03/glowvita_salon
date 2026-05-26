@@ -246,7 +246,8 @@ export const Step3_TimeSlot = memo(({
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch slots');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error?.message || 'Failed to fetch slots');
       }
 
       const data = await response.json();
@@ -263,8 +264,15 @@ export const Step3_TimeSlot = memo(({
       setLastRefresh(new Date());
     } catch (error: any) {
       console.error('Error fetching slots:', error);
-      setSlotsError(error.message || 'Failed to load available slots');
-      toast.error('Could not load available time slots. Please try again.');
+      let errMsg = error.message || 'Failed to load available slots';
+      try {
+        if (errMsg.startsWith('{')) {
+          const parsed = JSON.parse(errMsg);
+          errMsg = parsed.message || parsed.error?.message || errMsg;
+        }
+      } catch (e) {}
+      setSlotsError(errMsg);
+      toast.error(errMsg);
     } finally {
       if (!isBackgroundFetch) {
         setIsLoadingSlots(false);
@@ -407,8 +415,8 @@ export const Step3_TimeSlot = memo(({
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Slot no longer available');
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || errorData.error?.message || 'Slot no longer available');
         }
 
         const lockData = await response.json();
@@ -480,7 +488,10 @@ export const Step3_TimeSlot = memo(({
         body: JSON.stringify(lockRequest)
       });
 
-      if (!response.ok) throw new Error('Slot no longer available');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error?.message || 'Slot no longer available');
+      }
 
       const lockData = await response.json();
       if (onLockAcquired && lockData.lockId) onLockAcquired(lockData.lockId, lockData.appointmentId);
@@ -611,6 +622,17 @@ export const Step3_TimeSlot = memo(({
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary mr-3" />
             <span className="text-muted-foreground">Checking availability...</span>
+          </div>
+        ) : slotsError ? (
+          <div className="text-center py-12 bg-amber-50 rounded-xl border border-amber-200 p-8 shadow-sm max-w-lg mx-auto">
+            <div className="p-3 bg-amber-100 rounded-full text-amber-600 w-fit mx-auto mb-4">
+              <AlertCircle className="h-8 w-8" />
+            </div>
+            <h3 className="text-lg font-semibold text-amber-900 mb-2">Service Area Range</h3>
+            <p className="text-amber-700 mb-6 text-sm">{slotsError}</p>
+            <Button onClick={() => setCurrentStep(3)} className="bg-amber-600 hover:bg-amber-700 text-white font-medium px-6 py-2 rounded-lg">
+              Select Another Location
+            </Button>
           </div>
         ) : slots.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-xl border border-dashed border-gray-200">

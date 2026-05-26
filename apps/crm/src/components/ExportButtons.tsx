@@ -13,11 +13,14 @@ import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import { jsPDF } from 'jspdf';
+import { autoTable } from 'jspdf-autotable';
 
 interface Column {
     header: string;
     key: string;
     transform?: (value: any, item: any) => string;
+    width?: number;
+    align?: 'left' | 'center' | 'right';
 }
 
 interface ExportButtonsProps {
@@ -35,16 +38,33 @@ export function ExportButtons({
     title = 'Export Data',
     className = '',
 }: ExportButtonsProps) {
+    const getNestedValue = (item: any, key: string) => {
+        return key.split('.').reduce((value, path) => value?.[path], item);
+    };
+
+    const formatCellValue = (value: any) => {
+        if (value === null || value === undefined || value === '') return '-';
+        return String(value);
+    };
+
+    const escapeHtml = (value: any) => {
+        return formatCellValue(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    };
 
     const getExportData = () => {
         return data.map(item => {
             const row: any = {};
             columns.forEach(col => {
-                let value = item[col.key];
+                let value = getNestedValue(item, col.key);
                 if (col.transform) {
                     value = col.transform(value, item);
                 }
-                row[col.header] = value;
+                row[col.header] = formatCellValue(value);
             });
             return row;
         });
@@ -120,46 +140,32 @@ export function ExportButtons({
         doc.setFontSize(11);
         doc.setTextColor(100);
 
-        // Simple table rendering manually if autoTable is missing
-        // We'll try to use a basic approach
-        let y = 30;
-        const margin = 14;
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const cellWidth = (pageWidth - margin * 2) / columns.length;
-
-        // Headers
-        doc.setFont('helvetica', 'bold');
-        columns.forEach((col, i) => {
-            doc.text(col.header, margin + (i * cellWidth), y);
-        });
-
-        y += 7;
-        doc.line(margin, y - 5, pageWidth - margin, y - 5);
-
-        // Rows
-        doc.setFont('helvetica', 'normal');
-        exportData.forEach((row, rowIndex) => {
-            if (y > 280) {
-                doc.addPage();
-                y = 20;
-                // Redraw headers on new page
-                doc.setFont('helvetica', 'bold');
-                columns.forEach((col, i) => {
-                    doc.text(col.header, margin + (i * cellWidth), y);
-                });
-                y += 7;
-                doc.line(margin, y - 5, pageWidth - margin, y - 5);
-                doc.setFont('helvetica', 'normal');
-            }
-
-            columns.forEach((col, i) => {
-                const text = String(row[col.header] || '');
-                // Proper text truncation using splitTextToSize
-                const lines = doc.splitTextToSize(text, cellWidth - 2);
-                const truncatedText = lines[0] + (lines.length > 1 ? '...' : '');
-                doc.text(truncatedText, margin + (i * cellWidth), y);
-            });
-            y += 7;
+        autoTable(doc, {
+            startY: 30,
+            head: [columns.map(col => col.header)],
+            body: exportData.map(row => columns.map(col => row[col.header])),
+            margin: { left: 8, right: 8 },
+            tableWidth: 'auto',
+            styles: {
+                fontSize: 7,
+                cellPadding: 1.5,
+                overflow: 'linebreak',
+                valign: 'top',
+                lineColor: [220, 220, 220],
+                lineWidth: 0.1,
+            },
+            headStyles: {
+                fillColor: [244, 244, 244],
+                textColor: [30, 30, 30],
+                fontStyle: 'bold',
+            },
+            columnStyles: columns.reduce((styles, col, index) => {
+                styles[index] = {
+                    cellWidth: col.width || 'auto',
+                    halign: col.align || 'left',
+                };
+                return styles;
+            }, {} as Record<number, any>),
         });
 
         doc.save(`${filename}_${new Date().getTime()}.pdf`);
@@ -184,14 +190,16 @@ export function ExportButtons({
             <head>
                 <title>${title}</title>
                 <style>
-                    body { font-family: sans-serif; padding: 20px; }
+                    body { font-family: sans-serif; padding: 20px; color: #111; }
                     h1 { color: #333; font-size: 24px; margin-bottom: 20px; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                    th, td { border: 1px solid #ddd; padding: 12px 8px; text-align: left; font-size: 12px; }
-                    th { background-color: #f4f4f4; font-weight: bold; }
+                    table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-top: 10px; }
+                    th, td { border: 1px solid #ddd; padding: 8px 6px; text-align: left; font-size: 11px; overflow-wrap: anywhere; vertical-align: top; }
+                    th { background-color: #f4f4f4; font-weight: bold; white-space: pre-line; }
                     tr:nth-child(even) { background-color: #fafafa; }
+                    ${columns.map((col, index) => col.width ? `th:nth-child(${index + 1}), td:nth-child(${index + 1}) { width: ${col.width}mm; }` : '').join('\n')}
                     @media print {
                         body { padding: 0; }
+                        @page { margin: 8mm; }
                     }
                 </style>
             </head>
@@ -200,13 +208,13 @@ export function ExportButtons({
                 <table>
                     <thead>
                         <tr>
-                            ${columns.map(col => `<th>${col.header}</th>`).join('')}
+                            ${columns.map(col => `<th>${escapeHtml(col.header)}</th>`).join('')}
                         </tr>
                     </thead>
                     <tbody>
                         ${exportData.map(row => `
                             <tr>
-                                ${columns.map(col => `<td>${row[col.header] || ''}</td>`).join('')}
+                                ${columns.map(col => `<td>${escapeHtml(row[col.header])}</td>`).join('')}
                             </tr>
                         `).join('')}
                     </tbody>

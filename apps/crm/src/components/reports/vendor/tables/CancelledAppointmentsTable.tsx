@@ -119,7 +119,7 @@ export const CancelledAppointmentsTable = ({ startDate, endDate, client, service
       case 'excel': exportToExcel(tableRef, fileName); break;
       case 'csv': exportToCSV(tableRef, fileName); break;
       case 'pdf': exportToPDF(tableRef, fileName); break;
-      case 'print': printTable(tableRef, fileName); break;
+      case 'print': printTable(tableRef); break;
     }
   };
 
@@ -301,9 +301,9 @@ export const CancelledAppointmentsTable = ({ startDate, endDate, client, service
             {paginatedAppointments.length > 0 && (
               <TableRow className="bg-muted font-bold">
                 <TableCell colSpan={5}>TOTAL LOSS</TableCell>
-                <TableCell className="text-xs">₹{paginatedAppointments.reduce((sum, a: any) => sum + (a.amount || 0), 0).toFixed(2)}</TableCell>
+                <TableCell className="text-xs">₹{paginatedAppointments.reduce((sum: number, a: any) => sum + (a.amount || 0), 0).toFixed(2)}</TableCell>
                 <TableCell colSpan={2}></TableCell>
-                <TableCell className="text-xs text-red-600">₹{paginatedAppointments.reduce((sum, a: any) => sum + (a.finalAmount || a.totalAmount || 0), 0).toFixed(2)}</TableCell>
+                <TableCell className="text-xs text-red-600">₹{paginatedAppointments.reduce((sum: number, a: any) => sum + (a.finalAmount || a.totalAmount || 0), 0).toFixed(2)}</TableCell>
               </TableRow>
             )}
           </TableBody>
