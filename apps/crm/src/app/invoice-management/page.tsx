@@ -30,6 +30,52 @@ if (typeof window !== 'undefined') {
   html2pdf = lib.default || lib;
 }
 
+const PDF_PAGE_WIDTH_PX = 794;
+
+const waitForPdfLayout = async (element: HTMLElement) => {
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+  const images = Array.from(element.querySelectorAll('img'));
+  await Promise.all(
+    images.map((image) => {
+      if (image.complete) return Promise.resolve();
+
+      return new Promise<void>((resolve) => {
+        image.onload = () => resolve();
+        image.onerror = () => resolve();
+      });
+    })
+  );
+};
+
+const downloadElementAsPdf = async (element: HTMLElement, filename: string) => {
+  const pdfOptions = {
+    margin: 0,
+    filename,
+    image: { type: 'jpeg' as const, quality: 0.98 },
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+      windowWidth: PDF_PAGE_WIDTH_PX,
+      scrollX: 0,
+      scrollY: 0,
+      logging: false,
+    },
+    jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
+    pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.pdf-avoid-break'] },
+  };
+
+  element.classList.add('pdf-export-mode');
+
+  try {
+    await waitForPdfLayout(element);
+    await html2pdf().set(pdfOptions).from(element).save();
+  } finally {
+    element.classList.remove('pdf-export-mode');
+  }
+};
+
 export default function InvoiceManagementPage() {
   const { user, role: authRole } = useCrmAuth();
   const VENDOR_ID = user?._id || "";
@@ -226,19 +272,12 @@ export default function InvoiceManagementPage() {
 
         if (invoiceElement) {
           const invoiceNumberStr = invoiceData.invoiceNumber.toString();
-          const pdfOptions = {
-            margin: 5,
-            filename: `Invoice_${invoiceNumberStr}.pdf`,
-            image: { type: 'jpeg' as const, quality: 0.8 },
-            html2canvas: { scale: 1.5, useCORS: true },
-            jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
-          };
 
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 60000);
 
           try {
-            await html2pdf().set(pdfOptions).from(invoiceElement).save();
+            await downloadElementAsPdf(invoiceElement, `Invoice_${invoiceNumberStr}.pdf`);
             toast.success(`Invoice ${invoiceNumberStr} downloaded successfully`);
           } catch (error: any) {
             if (controller.signal.aborted) {
@@ -272,19 +311,12 @@ export default function InvoiceManagementPage() {
 
         if (invoiceElement) {
           const invoiceNumberStr = invoiceData.invoiceNumber.toString();
-          const pdfOptions = {
-            margin: 5,
-            filename: `Invoice_${invoiceNumberStr}.pdf`,
-            image: { type: 'jpeg' as const, quality: 0.8 },
-            html2canvas: { scale: 1.5, useCORS: true },
-            jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
-          };
 
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 60000);
 
           try {
-            await html2pdf().set(pdfOptions).from(invoiceElement).save();
+            await downloadElementAsPdf(invoiceElement, `Invoice_${invoiceNumberStr}.pdf`);
             toast.success(`Invoice ${invoiceNumberStr} downloaded successfully`);
           } catch (error: any) {
             if (controller.signal.aborted) {
@@ -439,7 +471,7 @@ export default function InvoiceManagementPage() {
       />
 
       {/* Hidden PDF generation area */}
-      <div className="print-area-container" style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+      <div className="print-area-container pdf-render-root" aria-hidden="true">
         {selectedBilling && (
           <div id="invoice-to-pdf">
             <InvoiceUI
@@ -472,6 +504,122 @@ export default function InvoiceManagementPage() {
 
       {/* Print Styles */}
       <style>{`
+        .pdf-render-root {
+          position: fixed;
+          left: 0;
+          top: 0;
+          width: ${PDF_PAGE_WIDTH_PX}px;
+          height: auto;
+          overflow: visible;
+          background: white;
+          pointer-events: none;
+          z-index: -1;
+        }
+
+        .pdf-render-root > div,
+        .pdf-export-mode,
+        .pdf-export-mode #invoice-content {
+          width: ${PDF_PAGE_WIDTH_PX}px !important;
+          max-width: none !important;
+          min-width: 0 !important;
+          margin: 0 !important;
+          box-sizing: border-box !important;
+          background: white !important;
+        }
+
+        .pdf-export-mode #invoice-content {
+          padding: 24px !important;
+          border-radius: 0 !important;
+          box-shadow: none !important;
+          color: #000 !important;
+        }
+
+        .pdf-export-mode .print\\:hidden {
+          display: none !important;
+        }
+
+        .pdf-export-mode .sm\\:flex-row {
+          flex-direction: row !important;
+        }
+
+        .pdf-export-mode .sm\\:items-center {
+          align-items: center !important;
+        }
+
+        .pdf-export-mode .sm\\:text-right {
+          text-align: right !important;
+        }
+
+        .pdf-export-mode .sm\\:w-auto {
+          width: auto !important;
+        }
+
+        .pdf-export-mode .sm\\:mx-0,
+        .pdf-export-mode .print\\:mx-0 {
+          margin-left: 0 !important;
+          margin-right: 0 !important;
+        }
+
+        .pdf-export-mode .sm\\:px-0,
+        .pdf-export-mode .print\\:px-0 {
+          padding-left: 0 !important;
+          padding-right: 0 !important;
+        }
+
+        .pdf-export-mode .sm\\:p-2 {
+          padding: 8px !important;
+        }
+
+        .pdf-export-mode .sm\\:text-sm {
+          font-size: 14px !important;
+          line-height: 20px !important;
+        }
+
+        .pdf-export-mode .sm\\:text-xl {
+          font-size: 20px !important;
+          line-height: 28px !important;
+        }
+
+        .pdf-export-mode .sm\\:text-2xl {
+          font-size: 24px !important;
+          line-height: 32px !important;
+        }
+
+        .pdf-export-mode .sm\\:min-w-0 {
+          min-width: 0 !important;
+        }
+
+        .pdf-export-mode table {
+          width: 100% !important;
+          table-layout: fixed !important;
+          border-collapse: collapse !important;
+        }
+
+        .pdf-export-mode th,
+        .pdf-export-mode td {
+          vertical-align: top !important;
+          word-break: break-word !important;
+        }
+
+        .pdf-export-mode th:nth-child(1),
+        .pdf-export-mode td:nth-child(1) {
+          width: 42% !important;
+        }
+
+        .pdf-export-mode th:nth-child(2),
+        .pdf-export-mode td:nth-child(2),
+        .pdf-export-mode th:nth-child(4),
+        .pdf-export-mode td:nth-child(4),
+        .pdf-export-mode th:nth-child(5),
+        .pdf-export-mode td:nth-child(5) {
+          width: 17% !important;
+        }
+
+        .pdf-export-mode th:nth-child(3),
+        .pdf-export-mode td:nth-child(3) {
+          width: 7% !important;
+        }
+
         @media print {
           /* Hide everything first */
           body * {
