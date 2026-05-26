@@ -57,6 +57,10 @@ const RecentlyJoinedSalon = () => {
   const qCityRaw = searchParams?.get("city") || searchParams?.get("locationLabel") || selectedCity;
   const qCity = qCityRaw?.split(',')[0].trim();
   const qServiceName = searchParams?.get("serviceName") || serviceQuery;
+  const qOfferCode = searchParams?.get("offerCode") || "";
+
+  // If searching by offerCode, hide this block to focus on offer results
+  if (qOfferCode) return null;
 
 
   const {

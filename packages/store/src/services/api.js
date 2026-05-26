@@ -3234,6 +3234,23 @@ export const glowvitaApi = createApi({
       },
       providesTags: ["CrmReports"]
     }),
+    
+    // Consolidated Sales Report (CRM)
+    getVendorConsolidatedSalesReport: builder.query({
+      query: (filters) => {
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            params.append(key, value.toString());
+          }
+        });
+        return {
+          url: `/crm/vendor/reports/salesreport?${params.toString()}`,
+          method: 'GET'
+        };
+      },
+      providesTags: ["CrmReports"]
+    }),
   }),
 });
 
@@ -3602,6 +3619,7 @@ export const {
   useGetUniqueBrandsQuery,
   useGetUniqueCategoriesQuery,
   useGetSettlementSummaryReportQuery,
+  useGetVendorConsolidatedSalesReportQuery,
 
   // Staff Earnings Hooks
   useGetStaffEarningsQuery,

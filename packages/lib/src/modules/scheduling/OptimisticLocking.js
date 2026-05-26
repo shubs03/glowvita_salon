@@ -90,7 +90,7 @@ export async function acquireLock(params) {
     let conflict = null;
     if (params.serviceItems && params.serviceItems.length > 0) {
       conflict = await checkMultiServiceConflict(vendorId, date, params.serviceItems);
-    } else if (staffId && staffId !== 'any') {
+    } else if (staffId && typeof staffId === 'string' && staffId !== 'any' && !staffId.startsWith('wedding-')) {
       // Calculate endTime if not provided
       let endTime = params.endTime;
       if (!endTime && duration) {
@@ -142,6 +142,10 @@ export async function acquireLock(params) {
       staffId,
       date: date instanceof Date ? date.toISOString().split('T')[0] : new Date(date).toISOString().split('T')[0],
       timeSlot: startTime,
+      duration: duration || 60, // Default to 60 if not provided
+      travelTime: params.travelTime || (params.travelTimeInfo ? params.travelTimeInfo.timeInMinutes : 0),
+      bufferBefore: params.bufferBefore || 0,
+      bufferAfter: params.bufferAfter || 0,
       clientId: params.clientId || 'temp-client-id'
     });
 
@@ -164,6 +168,23 @@ export async function acquireLock(params) {
  */
 export async function releaseLock(vendorId, staffId, date, timeSlot, lockToken) {
   try {
+    // Check if called with only one argument (lockToken)
+    if (arguments.length === 1 && typeof vendorId === 'string') {
+      const tokenToFind = vendorId;
+      console.log('Releasing lock by token only:', tokenToFind);
+      
+      for (const [key, lock] of locks.entries()) {
+        if (lock.token === tokenToFind) {
+          locks.delete(key);
+          console.log(`Lock released by token: ${key}`);
+          return true;
+        }
+      }
+      
+      console.log(`Lock token not found: ${tokenToFind}`);
+      return false;
+    }
+
     const lockKey = generateLockKey(vendorId, staffId, date, timeSlot);
 
     console.log('Releasing lock with key:', lockKey);
@@ -190,6 +211,26 @@ export async function releaseLock(vendorId, staffId, date, timeSlot, lockToken) 
     console.error('Error releasing lock:', error);
     throw error;
   }
+}
+
+/**
+ * Get all active locks for a vendor and date
+ * @param {string} vendorId - Vendor ID
+ * @param {Date|string} date - Appointment date
+ * @returns {Array} - Array of active locks
+ */
+export function getActiveLocks(vendorId, date) {
+  const activeLocks = [];
+  const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : new Date(date).toISOString().split('T')[0];
+  const now = Date.now();
+  
+  for (const [key, lock] of locks.entries()) {
+    if (lock.vendorId === vendorId && lock.date === dateStr && lock.expiration > now) {
+      activeLocks.push(lock);
+    }
+  }
+  
+  return activeLocks;
 }
 
 /**
@@ -320,8 +361,8 @@ export async function createTemporaryAppointment(appointmentData, lockToken) {
       clientName: cleanAppointmentData.clientName || 'Temporary Client',
       clientEmail: cleanAppointmentData.clientEmail || '',
       clientPhone: cleanAppointmentData.clientPhone || '',
-      service: cleanAppointmentData.serviceId,
-      serviceName: cleanAppointmentData.serviceName || 'Temporary Service',
+      service: cleanAppointmentData.serviceId || cleanAppointmentData.packageId || new mongoose.Types.ObjectId().toString(),
+      serviceName: cleanAppointmentData.serviceName || cleanAppointmentData.packageName || 'Temporary Service',
       staffName: cleanAppointmentData.staffName || 'Any Professional',
       date: cleanAppointmentData.date || new Date(),
       startTime: cleanAppointmentData.startTime || '00:00',

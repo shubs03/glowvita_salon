@@ -84,6 +84,10 @@ interface FilterState {
     endDate: string;
     staff: string;
   };
+  consolidatedSales: {
+    startDate: string;
+    endDate: string;
+  };
 }
 
 export const useVendorFilters = () => {
@@ -170,6 +174,10 @@ export const useVendorFilters = () => {
       startDate: '',
       endDate: '',
       staff: ''
+    },
+    consolidatedSales: {
+      startDate: '',
+      endDate: ''
     }
   });
 
