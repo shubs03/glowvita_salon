@@ -720,5 +720,3 @@ export default function SettlementsPage() {
     </div>
   );
 }
-
-// Removed the local PaymentForm component - using SettlementsPaymentModal from components instead

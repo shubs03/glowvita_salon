@@ -1973,11 +1973,13 @@ export function AppointmentDetailView({
                         </div>
                         <div className="min-w-0">
                           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                            {((appointment.serviceItems || []).length > 1) ? 'Services' : 'Service'}
+                            {(((appointment.serviceItems || []).length > 1) || appointment.isWeddingService) ? 'Services' : 'Service'}
                           </p>
-                          {((appointment.serviceItems || []).length > 1) ? (
+                          {(((appointment.serviceItems || []).length > 1) || (appointment.isWeddingService && (appointment.weddingPackageDetails as any)?.packageServices && (appointment.weddingPackageDetails as any).packageServices.length > 1)) ? (
                             <p className="text-lg font-semibold text-foreground">
-                              Multi-Service ({(appointment.serviceItems || []).length} Services)
+                              {appointment.isWeddingService 
+                                ? `${appointment.weddingPackageDetails?.packageName || appointment.serviceName || 'Wedding Package'} (${(appointment.weddingPackageDetails as any)?.packageServices?.length || 0} Services)`
+                                : `Multi-Service (${(appointment.serviceItems || []).length} Services)`}
                             </p>
                           ) : (
                             <p className="text-lg font-semibold text-foreground">
@@ -1988,52 +1990,89 @@ export function AppointmentDetailView({
                       </div>
 
                       {/* Service Items List */}
-                      {(appointment.serviceItems || []).length > 0 && (
-                        <div className="mt-3 space-y-3">
-                          {(appointment.serviceItems || []).map((item, index) => {
-                            // Ensure addOns is always an array
-                            const itemAddOns = Array.isArray(item.addOns) ? item.addOns : [];
+                      {(() => {
+                        const servicesList = (appointment.serviceItems && appointment.serviceItems.length > 0)
+                          ? appointment.serviceItems
+                          : (appointment.isWeddingService && (appointment.weddingPackageDetails as any)?.packageServices)
+                            ? (appointment.weddingPackageDetails as any).packageServices.map((srv: any, idx: number) => {
+                                const member = (appointment.weddingPackageDetails as any)?.teamMembers?.[idx];
+                                let staffName = 'Wedding Team';
+                                if (member) {
+                                  if (typeof member === 'object') {
+                                    staffName = member.name || member.firstName || member.staffName || 'Wedding Team';
+                                  } else if (typeof member === 'string') {
+                                    if (/^[a-f\d]{24}$/i.test(member.trim())) {
+                                      const staff = staffList.find((s: any) => String(s._id) === member.trim() || String(s.id) === member.trim());
+                                      staffName = staff ? (staff.name || staff.firstName || staff.fullName) : member;
+                                    } else {
+                                      staffName = member;
+                                    }
+                                  }
+                                }
+                                return {
+                                  _id: srv._id || srv.serviceId || String(idx),
+                                  serviceName: srv.serviceName,
+                                  staffName: staffName,
+                                  startTime: appointment.startTime,
+                                  endTime: appointment.endTime,
+                                  duration: Math.round((appointment.weddingPackageDetails?.totalDuration || appointment.duration || 60) / (appointment.weddingPackageDetails as any).packageServices.length),
+                                  amount: srv.amount || 0,
+                                  addOns: []
+                                };
+                              })
+                            : [];
 
-                            return (
-                              <div key={item._id || index} className="p-3 bg-muted/20 rounded-lg border border-muted/30">
-                                <div className="flex justify-between items-start">
-                                  <div>
-                                    <p className="font-medium text-foreground">{item.serviceName}</p>
-                                    <p className="text-sm text-muted-foreground">
-                                      {item.staffName} • {item.startTime} - {item.endTime} ({item.duration} min)
-                                    </p>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="font-medium font-mono">{formatCurrency(item.amount || 0)}</p>
-                                  </div>
-                                </div>
+                        if (servicesList.length === 0) return null;
 
-                                {/* Add-ons section */}
-                                {itemAddOns.length > 0 && (
-                                  <div className="mt-2 pt-2 border-t border-muted/30">
-                                    <p className="text-xs font-medium text-muted-foreground mb-1">Add-ons:</p>
-                                    <div className="space-y-1">
-                                      {itemAddOns.map((addOn, addOnIndex) => (
-                                        <div
-                                          key={`${item._id || 'item'}-addon-${addOnIndex}`}
-                                          className="flex justify-between items-center text-xs pl-2"
-                                        >
-                                          <span className="text-muted-foreground">
-                                            + {addOn.name} ({addOn.duration} min)
-                                          </span>
-                                          <span className="font-medium font-mono">
-                                            {formatCurrency(addOn.price || 0)}
-                                          </span>
-                                        </div>
-                                      ))}
+                        return (
+                          <div className="mt-3 space-y-3">
+                            {servicesList.map((item: any, index: number) => {
+                              // Ensure addOns is always an array
+                              const itemAddOns = Array.isArray(item.addOns) ? item.addOns : [];
+
+                              return (
+                                <div key={item._id || index} className="p-3 bg-muted/20 rounded-lg border border-muted/30">
+                                  <div className="flex justify-between items-start">
+                                    <div>
+                                      <p className="font-medium text-foreground">{item.serviceName}</p>
+                                      <p className="text-sm text-muted-foreground">
+                                        {item.staffName} {item.startTime && item.endTime ? `• ${item.startTime} - ${item.endTime}` : ''} ({item.duration} min)
+                                      </p>
+                                    </div>
+                                    <div className="text-right">
+                                      <p className="font-medium font-mono">
+                                        {item.amount > 0 ? formatCurrency(item.amount) : 'Bundled'}
+                                      </p>
                                     </div>
                                   </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+
+                                  {/* Add-ons section */}
+                                  {itemAddOns.length > 0 && (
+                                    <div className="mt-2 pt-2 border-t border-muted/30">
+                                      <p className="text-xs font-medium text-muted-foreground mb-1">Add-ons:</p>
+                                      <div className="space-y-1">
+                                        {itemAddOns.map((addOn: any, addOnIndex: number) => (
+                                          <div
+                                            key={`${item._id || 'item'}-addon-${addOnIndex}`}
+                                            className="flex justify-between items-center text-xs pl-2"
+                                          >
+                                            <span className="text-muted-foreground">
+                                              + {addOn.name} ({addOn.duration} min)
+                                            </span>
+                                            <span className="font-medium font-mono">
+                                              {formatCurrency(addOn.price || 0)}
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
                     </div>
 
 

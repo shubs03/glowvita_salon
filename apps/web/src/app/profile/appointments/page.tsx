@@ -622,7 +622,13 @@ const AppointmentDetails = ({ appointment, onCancelClick, onViewInvoice }: Appoi
                                                 <p className="font-medium">{item.serviceName}</p>
                                                 <p className="text-xs text-muted-foreground mt-1">with {item.staffName}</p>
                                             </div>
-                                            <span className="font-medium">₹{item.amount.toFixed(2)}</span>
+                                            <span className="font-medium">
+                                                {Number(item.amount || 0) > 0 
+                                                  ? `₹${Number(item.amount).toFixed(2)}` 
+                                                  : (appointment.finalAmount || appointment.totalAmount || appointment.amount || 0) > 0 
+                                                    ? `₹${((appointment.finalAmount || appointment.totalAmount || appointment.amount || 0) / (appointment.serviceItems?.length || 1)).toFixed(2)}`
+                                                    : 'Bundled'}
+                                            </span>
                                         </div>
                                         <div className="flex justify-between text-xs text-muted-foreground mt-2">
                                             <span>{item.startTime} - {item.endTime}</span>
@@ -763,7 +769,7 @@ export default function AppointmentsPage() {
                             const [h, m] = timeStr.split(':').map(Number);
                             return date + (h || 0) * 60 * 60 * 1000 + (m || 0) * 60 * 1000;
                         };
-                        
+
                         const groupA = statusGroupOrder[a.status] ?? 99;
                         const groupB = statusGroupOrder[b.status] ?? 99;
                         if (groupA !== groupB) return groupA - groupB;

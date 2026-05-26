@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import _db from '@repo/lib/db';
 import AppointmentModel from '@repo/lib/models/Appointment/Appointment.model';
 import VendorSettlementPaymentModel from '@repo/lib/models/Vendor/VendorSettlementPayment.model';
+import VendorModel from '@repo/lib/models/Vendor/Vendor.model';
 import { authMiddlewareAdmin } from '../../../../../../middlewareAdmin';
 import { getRegionQuery } from "@repo/lib/utils/regionQuery";
 
@@ -86,74 +87,89 @@ export const GET = authMiddlewareAdmin(async (req) => {
     // Removed strict status filter to show everything (even scheduled/cancelled for visibility)
     // Admin can then see what's pending
     const regionQuery = getRegionQuery(req.user, regionId);
-    const mainFilter = {
-      ...dateFilter,
-      ...regionQuery,
-      paymentMethod: 'Pay Online',
-      status: { $nin: ['cancelled', 'temp-locked'] }, // Show all except cancelled/temp-locked
-    };
-
-    // Apply city filter if provided
+    
+    const vendorMatch = { ...regionQuery };
     if (city && city !== 'all') {
-      mainFilter.city = city;
+      vendorMatch.city = city;
+    }
+    if (vendorName && vendorName !== 'all') {
+      vendorMatch.businessName = vendorName;
     }
 
-    console.log("Main filter for appointments:", mainFilter);
+    console.log("Vendor match query:", vendorMatch);
 
-    // Build aggregation pipeline
+    // Build aggregation pipeline starting from VendorModel
     const pipeline = [
-      { $match: mainFilter },
-      // Lookup vendor information to get city and business name
+      { $match: vendorMatch },
       {
         $lookup: {
-          from: "vendors",
-          localField: "vendorId",
-          foreignField: "_id",
-          as: "vendorInfo"
+          from: "appointments",
+          let: { vId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: { $eq: ["$vendorId", "$$vId"] },
+                ...dateFilter,
+                paymentMethod: 'Pay Online',
+                status: { $ne: 'temp-locked' }
+              }
+            }
+          ],
+          as: "appointments"
         }
       },
-      { $unwind: "$vendorInfo" },
-      // Apply vendor name filter if provided
-      ...(vendorName && vendorName !== 'all' ? [{ $match: { "vendorInfo.businessName": vendorName } }] : []),
-      // Group by vendor to calculate totals
+      {
+        $unwind: {
+          path: "$appointments",
+          preserveNullAndEmptyArrays: true
+        }
+      },
       {
         $group: {
           _id: {
-            vendorId: "$vendorId",
-            businessName: "$vendorInfo.businessName",
-            city: "$vendorInfo.city"
+            vendorId: "$_id",
+            businessName: "$businessName",
+            city: "$city"
           },
-          serviceGrossAmount: { $sum: "$totalAmount" },
-          servicePlatformFee: { $sum: "$platformFee" },
-          serviceTax: { $sum: "$serviceTax" },
-          serviceTotalAmount: { $sum: "$finalAmount" },
-          appointmentCount: { $sum: 1 },
-          completedAppointments: { $sum: { $cond: [{ $eq: ["$status", "completed"] }, 1, 0] } },
-          confirmedAppointments: { $sum: { $cond: [{ $eq: ["$status", "confirmed"] }, 1, 0] } },
-          scheduledAppointments: { $sum: { $cond: [{ $eq: ["$status", "scheduled"] }, 1, 0] } }
+          serviceGrossAmount: { $sum: { $ifNull: ["$appointments.totalAmount", 0] } },
+          servicePlatformFee: { $sum: { $ifNull: ["$appointments.platformFee", 0] } },
+          serviceTax: { $sum: { $ifNull: ["$appointments.serviceTax", 0] } },
+          serviceTotalAmount: { $sum: { $ifNull: ["$appointments.finalAmount", 0] } },
+          completedTotal: { $sum: { $cond: [{ $eq: ["$appointments.status", "completed"] }, "$appointments.totalAmount", 0] } },
+          pendingTotal: { $sum: { $cond: [{ $or: [{ $eq: ["$appointments.status", "confirmed"] }, { $eq: ["$appointments.status", "scheduled"] }] }, "$appointments.totalAmount", 0] } },
+          refundableTotal: { $sum: { $cond: [{ $eq: ["$appointments.status", "cancelled"] }, "$appointments.finalAmount", 0] } },
+          appointmentCount: { $sum: { $cond: [{ $ifNull: ["$appointments._id", false] }, 1, 0] } },
+          completedAppointments: { $sum: { $cond: [{ $eq: ["$appointments.status", "completed"] }, 1, 0] } },
+          pendingAppointments: { $sum: { $cond: [{ $or: [{ $eq: ["$appointments.status", "confirmed"] }, { $eq: ["$appointments.status", "scheduled"] }] }, 1, 0] } },
+          cancelledAppointments: { $sum: { $cond: [{ $eq: ["$appointments.status", "cancelled"] }, 1, 0] } }
         }
       },
-      // Project the final structure with required fields
       {
         $project: {
           _id: 0,
           vendorId: "$_id.vendorId",
-          "Source Type": { $literal: "Service" }, // Fixed source type for service-based payouts
-          "Entity Name": "$_id.businessName", // Business name of the vendor
+          "Source Type": { $literal: "Service" },
+          "Entity Name": "$_id.businessName",
           "Service Gross Amount": "$serviceGrossAmount",
           "Service Platform Fee": "$servicePlatformFee",
           "Service Tax (₹)": "$serviceTax",
           "Service Total Amount": "$serviceTotalAmount",
-          "Total": { $subtract: ["$serviceTotalAmount", "$servicePlatformFee"] }, // Amount paid to vendor after platform fee deduction
+          "Total": "$completedTotal",
+          "Completed Total": "$completedTotal",
+          "Pending Total": "$pendingTotal",
+          "Refundable Total": "$refundableTotal",
           city: "$_id.city",
           appointmentCount: 1,
-          completedAppointments: 1
+          completedAppointments: 1,
+          pendingAppointments: 1,
+          cancelledAppointments: 1
         }
-      }
+      },
+      { $sort: { "Entity Name": 1 } }
     ];
 
     // Execute aggregation
-    const results = await AppointmentModel.aggregate(pipeline);
+    const results = await VendorModel.aggregate(pipeline);
 
     // Also fetch actual payments for these vendors in the same period
     const paymentFilter = {
@@ -190,43 +206,23 @@ export const GET = authMiddlewareAdmin(async (req) => {
 
     console.log("Vendor payout settlement report results with payments:", resultsWithPayments);
 
-    // Get unique cities for filter dropdown
+    // Get unique cities for filter dropdown from VendorModel
     const cityPipeline = [
-      { $match: { ...regionQuery, paymentMethod: 'Pay Online', status: { $nin: ['cancelled', 'temp-locked'] } } },
-      {
-        $lookup: {
-          from: "vendors",
-          localField: "vendorId",
-          foreignField: "_id",
-          as: "vendorInfo"
-        }
-      },
-      { $unwind: "$vendorInfo" },
-      { $group: { _id: "$vendorInfo.city" } },
+      { $match: { ...regionQuery } },
+      { $group: { _id: "$city" } },
       { $sort: { _id: 1 } }
     ];
+    const citiesResult = await VendorModel.aggregate(cityPipeline);
+    const cities = citiesResult.map(item => item._id).filter(Boolean);
 
-    const citiesResult = await AppointmentModel.aggregate(cityPipeline);
-    const cities = citiesResult.map(item => item._id).filter(city => city); // Filter out null/undefined cities
-
-    // Get unique vendors for filter dropdown
+    // Get unique vendors for filter dropdown from VendorModel
     const vendorPipeline = [
-      { $match: { ...regionQuery, paymentMethod: 'Pay Online', status: { $nin: ['cancelled', 'temp-locked'] } } },
-      {
-        $lookup: {
-          from: "vendors",
-          localField: "vendorId",
-          foreignField: "_id",
-          as: "vendorInfo"
-        }
-      },
-      { $unwind: "$vendorInfo" },
-      { $group: { _id: "$vendorInfo.businessName" } },
+      { $match: { ...regionQuery } },
+      { $group: { _id: "$businessName" } },
       { $sort: { _id: 1 } }
     ];
-
-    const vendorsResult = await AppointmentModel.aggregate(vendorPipeline);
-    const vendorNames = vendorsResult.map(item => item._id).filter(vendor => vendor); // Filter out null/undefined vendors
+    const vendorsResult = await VendorModel.aggregate(vendorPipeline);
+    const vendorNames = vendorsResult.map(item => item._id).filter(Boolean);
 
     // Calculate aggregated totals from resultsWithPayments (which includes Actually Paid + Pending Amount)
     const aggregatedTotals = resultsWithPayments.reduce((totals, vendor) => {
@@ -239,6 +235,11 @@ export const GET = authMiddlewareAdmin(async (req) => {
       totals.totalPending += vendor["Pending Amount"] || 0;
       totals.appointmentCount += vendor.appointmentCount || 0;
       totals.completedAppointments += vendor.completedAppointments || 0;
+      totals.pendingAppointments += vendor.pendingAppointments || 0;
+      totals.cancelledAppointments += vendor.cancelledAppointments || 0;
+      totals.completedTotal += vendor["Completed Total"] || 0;
+      totals.pendingTotal += vendor["Pending Total"] || 0;
+      totals.refundableTotal += vendor["Refundable Total"] || 0;
       return totals;
     }, {
       serviceGrossAmount: 0,
@@ -249,7 +250,12 @@ export const GET = authMiddlewareAdmin(async (req) => {
       totalPaid: 0,
       totalPending: 0,
       appointmentCount: 0,
-      completedAppointments: 0
+      completedAppointments: 0,
+      pendingAppointments: 0,
+      cancelledAppointments: 0,
+      completedTotal: 0,
+      pendingTotal: 0,
+      refundableTotal: 0
     });
 
     // total is already correctly summed above (no need to recalculate)

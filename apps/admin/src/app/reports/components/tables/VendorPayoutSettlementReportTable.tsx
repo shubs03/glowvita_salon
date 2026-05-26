@@ -150,15 +150,28 @@ export const VendorPayoutSettlementReportTable = () => {
                 <TableHead>Service Platform Fee</TableHead>
                 <TableHead>Service Tax (₹)</TableHead>
                 <TableHead>Service Total Amount</TableHead>
-                <TableHead>Total Payable</TableHead>
+                <TableHead>Completed Appt Amount</TableHead>
+                <TableHead>Cancelled Appt Amount</TableHead>
+                <TableHead>Pending Appt Amount</TableHead>
                 <TableHead>Actually Paid</TableHead>
-                <TableHead>Pending</TableHead>
+                <TableHead>Pending Payout</TableHead>
                 <TableHead>Appointments</TableHead>
+                <TableHead>Completed Appts</TableHead>
+                <TableHead>Pending Appts</TableHead>
+                <TableHead>Cancelled Appts</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {[...Array(5)].map((_, index) => (
                 <TableRow key={index}>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-full" /></TableCell>
@@ -308,15 +321,20 @@ export const VendorPayoutSettlementReportTable = () => {
                 <TableHead>Service Platform Fee</TableHead>
                 <TableHead>Service Tax (₹)</TableHead>
                 <TableHead>Service Total Amount</TableHead>
-                <TableHead>Total Payable</TableHead>
+                <TableHead>Completed Appt Amount</TableHead>
+                <TableHead>Cancelled Appt Amount</TableHead>
+                <TableHead>Pending Appt Amount</TableHead>
                 <TableHead>Actually Paid</TableHead>
-                <TableHead>Pending</TableHead>
+                <TableHead>Pending Payout</TableHead>
                 <TableHead>Appointments</TableHead>
+                <TableHead>Completed Appts</TableHead>
+                <TableHead>Pending Appts</TableHead>
+                <TableHead>Cancelled Appts</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={14} className="text-center text-muted-foreground py-8">
                   No vendor payout settlement data available.
                 </TableCell>
               </TableRow>
@@ -433,14 +451,18 @@ export const VendorPayoutSettlementReportTable = () => {
             <TableRow>
               <TableHead>Source Type</TableHead>
               <TableHead>Entity Name</TableHead>
-              <TableHead>Service Gross Amount</TableHead>
               <TableHead>Service Platform Fee</TableHead>
               <TableHead>Service Tax (₹)</TableHead>
               <TableHead>Service Total Amount</TableHead>
-              <TableHead>Total Payable</TableHead>
+              <TableHead>Completed Appt Amount</TableHead>
+              <TableHead>Cancelled Appt Amount</TableHead>
+              <TableHead>Pending Appt Amount</TableHead>
               <TableHead>Actually Paid</TableHead>
-              <TableHead>Pending</TableHead>
+              <TableHead>Pending Payout</TableHead>
               <TableHead>Appointments</TableHead>
+              <TableHead>Completed Appts</TableHead>
+              <TableHead>Pending Appts</TableHead>
+              <TableHead>Cancelled Appts</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -448,28 +470,36 @@ export const VendorPayoutSettlementReportTable = () => {
               <TableRow key={startIndex + index}>
                 <TableCell>{item["Source Type"]}</TableCell>
                 <TableCell className="font-medium">{item["Entity Name"]}</TableCell>
-                <TableCell>₹{item["Service Gross Amount"]?.toFixed(2)}</TableCell>
-                <TableCell>₹{item["Service Platform Fee"]?.toFixed(2)}</TableCell>
-                <TableCell>₹{item["Service Tax (₹)"]?.toFixed(2)}</TableCell>
-                <TableCell>₹{item["Service Total Amount"]?.toFixed(2)}</TableCell>
-                <TableCell>₹{item["Total"]?.toFixed(2)}</TableCell>
+                <TableCell>₹{item["Service Platform Fee"]?.toFixed(2) || '0.00'}</TableCell>
+                <TableCell>₹{item["Service Tax (₹)"]?.toFixed(2) || '0.00'}</TableCell>
+                <TableCell>₹{item["Service Total Amount"]?.toFixed(2) || '0.00'}</TableCell>
+                <TableCell>₹{item["Completed Total"]?.toFixed(2)}</TableCell>
+                <TableCell>₹{item["Refundable Total"]?.toFixed(2)}</TableCell>
+                <TableCell>₹{item["Pending Total"]?.toFixed(2)}</TableCell>
                 <TableCell className="text-green-700 font-medium">₹{item["Actually Paid"]?.toFixed(2)}</TableCell>
                 <TableCell className={`font-semibold ${(item["Pending Amount"] || 0) > 0 ? 'text-red-700' : 'text-gray-500'}`}>₹{item["Pending Amount"]?.toFixed(2)}</TableCell>
                 <TableCell className="text-center">{item["appointmentCount"] || 0}</TableCell>
+                <TableCell className="text-center">{item["completedAppointments"] || 0}</TableCell>
+                <TableCell className="text-center">{item["pendingAppointments"] || 0}</TableCell>
+                <TableCell className="text-center">{item["cancelledAppointments"] || 0}</TableCell>
               </TableRow>
             ))}
             {/* Aggregated Totals Row */}
             {vendorPayoutSettlementData.length > 0 && aggregatedTotals && (
               <TableRow className="bg-muted font-semibold">
                 <TableCell colSpan={2}>TOTAL</TableCell>
-                <TableCell>₹{aggregatedTotals.serviceGrossAmount?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.servicePlatformFee?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.serviceTax?.toFixed(2)}</TableCell>
                 <TableCell>₹{aggregatedTotals.serviceTotalAmount?.toFixed(2)}</TableCell>
-                <TableCell>₹{aggregatedTotals.total?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.completedTotal?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.refundableTotal?.toFixed(2)}</TableCell>
+                <TableCell>₹{aggregatedTotals.pendingTotal?.toFixed(2)}</TableCell>
                 <TableCell className="text-green-700">₹{aggregatedTotals.totalPaid?.toFixed(2)}</TableCell>
                 <TableCell className="text-red-700">₹{aggregatedTotals.totalPending?.toFixed(2)}</TableCell>
                 <TableCell className="text-center">{aggregatedTotals.appointmentCount || 0}</TableCell>
+                <TableCell className="text-center">{aggregatedTotals.completedAppointments || 0}</TableCell>
+                <TableCell className="text-center">{aggregatedTotals.pendingAppointments || 0}</TableCell>
+                <TableCell className="text-center">{aggregatedTotals.cancelledAppointments || 0}</TableCell>
               </TableRow>
             )}
           </TableBody>
