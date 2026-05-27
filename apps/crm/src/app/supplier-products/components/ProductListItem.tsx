@@ -6,6 +6,8 @@ import { Edit, Trash2, Eye } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import { Switch } from '@repo/ui/switch';
 import { Label } from '@repo/ui/label';
+import { useEffect, useState } from 'react';
+import { getSupplierProductImage, SUPPLIER_PRODUCT_PLACEHOLDER_IMAGE } from './productImage';
 
 interface Product {
   _id: string;
@@ -40,6 +42,12 @@ interface ProductListItemProps {
 }
 
 const ProductListItem = ({ product, onEdit, onDelete, onView, onToggleActive }: ProductListItemProps) => {
+  const [productImageSrc, setProductImageSrc] = useState(getSupplierProductImage(product.productImages?.[0]));
+
+  useEffect(() => {
+    setProductImageSrc(getSupplierProductImage(product.productImages?.[0]));
+  }, [product.productImages]);
+
   const calculateDiscountPercentage = () => {
     if (product.salePrice > 0 && product.price > product.salePrice) {
       return Math.round(((product.price - product.salePrice) / product.price) * 100);
@@ -59,10 +67,11 @@ const ProductListItem = ({ product, onEdit, onDelete, onView, onToggleActive }: 
           {/* Product Image */}
           <div className="relative w-16 h-16 rounded-md overflow-hidden border border-border/30 flex-shrink-0">
             <Image
-              src={product.productImages?.[0] || 'https://placehold.co/80x80.png'}
+              src={productImageSrc}
               alt={product.productName}
               fill
               className="object-cover"
+              onError={() => setProductImageSrc(SUPPLIER_PRODUCT_PLACEHOLDER_IMAGE)}
             />
             {discountPercentage > 0 && product.stock > 0 && (
               <div className="absolute -top-1 -right-1">

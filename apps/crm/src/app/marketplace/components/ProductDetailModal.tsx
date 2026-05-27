@@ -5,7 +5,8 @@ import { Label } from '@repo/ui/label';
 import { Input } from '@repo/ui/input';
 import { Star, Building, ShoppingCart, Zap, Minus, Plus, Package, Tag } from 'lucide-react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { getMarketplaceProductImage, MARKETPLACE_PRODUCT_PLACEHOLDER_IMAGE } from './productImage';
 
 interface Product {
   _id: string;
@@ -44,6 +45,12 @@ export const ProductDetailModal = ({
   isAddingToCart,
   onBuyNow
 }: ProductDetailModalProps) => {
+  const [productImageSrc, setProductImageSrc] = useState(MARKETPLACE_PRODUCT_PLACEHOLDER_IMAGE);
+
+  useEffect(() => {
+    setProductImageSrc(getMarketplaceProductImage(product?.productImage));
+  }, [product?.productImage]);
+
   if (!product) return null;
 
   const finalPrice = product.salePrice || product.price;
@@ -63,11 +70,12 @@ export const ProductDetailModal = ({
           {/* Product Image */}
           <div>
             <div className="relative aspect-square rounded-lg overflow-hidden border border-border">
-              <Image 
-                src={product.productImage || 'https://placehold.co/500x500.png'} 
-                alt={product.productName} 
+              <Image
+                src={productImageSrc}
+                alt={product.productName}
                 fill
-                className="object-cover" 
+                className="object-cover"
+                onError={() => setProductImageSrc(MARKETPLACE_PRODUCT_PLACEHOLDER_IMAGE)}
               />
               {/* Stock Badge */}
               <div className="absolute top-3 left-3">

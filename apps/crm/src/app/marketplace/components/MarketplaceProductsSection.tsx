@@ -4,6 +4,8 @@ import { Button } from "@repo/ui/button";
 import { Search, Package, X, ShoppingCart, Star } from 'lucide-react';
 import NextImage from 'next/image';
 import { ProductCard } from '@/components/marketplace/ProductCard';
+import { useEffect, useState } from 'react';
+import { getMarketplaceProductImage, MARKETPLACE_PRODUCT_PLACEHOLDER_IMAGE } from './productImage';
 
 
 
@@ -35,6 +37,24 @@ interface MarketplaceProductsSectionProps {
   onBuyNow: (product: Product, e: React.MouseEvent) => void;
   onViewSupplier: (e: React.MouseEvent, supplierId: string) => void;
 }
+
+const ProductListImage = ({ product }: { product: Product }) => {
+  const [imageSrc, setImageSrc] = useState(getMarketplaceProductImage(product.productImage));
+
+  useEffect(() => {
+    setImageSrc(getMarketplaceProductImage(product.productImage));
+  }, [product.productImage]);
+
+  return (
+    <NextImage
+      src={imageSrc}
+      alt={product.productName}
+      fill
+      className="object-cover"
+      onError={() => setImageSrc(MARKETPLACE_PRODUCT_PLACEHOLDER_IMAGE)}
+    />
+  );
+};
 
 export const MarketplaceProductsSection = ({
   filteredProducts,
@@ -80,12 +100,7 @@ export const MarketplaceProductsSection = ({
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
                     <div className="relative w-16 h-16 rounded-md overflow-hidden border border-border/30 flex-shrink-0">
-                      <NextImage
-                        src={product.productImage || 'https://placehold.co/80x80.png'}
-                        alt={product.productName}
-                        fill
-                        className="object-cover"
-                      />
+                      <ProductListImage product={product} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">

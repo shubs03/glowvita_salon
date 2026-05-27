@@ -7,6 +7,7 @@ import { Truck, ShoppingCart, Minus, Plus, Package, MapPin, CheckCircle2, Chevro
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { getMarketplaceProductImage, MARKETPLACE_PRODUCT_PLACEHOLDER_IMAGE } from './productImage';
 
 interface Product {
   _id: string;
@@ -52,6 +53,7 @@ export const BuyNowModal = ({
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [isAddressesCollapsed, setIsAddressesCollapsed] = useState(false);
+  const [productImageSrc, setProductImageSrc] = useState(MARKETPLACE_PRODUCT_PLACEHOLDER_IMAGE);
 
   // New Address Form State
   const [newAddress, setNewAddress] = useState({
@@ -88,6 +90,10 @@ export const BuyNowModal = ({
       fetchAddresses();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    setProductImageSrc(getMarketplaceProductImage(product?.productImage));
+  }, [product?.productImage]);
 
   const handleAddressSelect = (addr: any) => {
     setSelectedAddressId(addr._id);
@@ -420,11 +426,12 @@ export const BuyNowModal = ({
             {/* Product Info */}
             <div className="flex items-start gap-3 p-3 border border-border rounded-lg">
               <div className="relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 border border-border">
-                <Image 
-                  src={product.productImage || 'https://placehold.co/80x80.png'} 
-                  alt={product.productName} 
+                <Image
+                  src={productImageSrc}
+                  alt={product.productName}
                   fill
-                  className="object-cover" 
+                  className="object-cover"
+                  onError={() => setProductImageSrc(MARKETPLACE_PRODUCT_PLACEHOLDER_IMAGE)}
                 />
               </div>
               <div className="flex-1 min-w-0 space-y-1">

@@ -6,6 +6,8 @@ import StatusBadge from './StatusBadge';
 import { Badge } from '@repo/ui/badge';
 import { Switch } from '@repo/ui/switch';
 import { Label } from '@repo/ui/label';
+import { useEffect, useState } from 'react';
+import { getSupplierProductImage, SUPPLIER_PRODUCT_PLACEHOLDER_IMAGE } from './productImage';
 
 interface Product {
   _id: string;
@@ -39,6 +41,12 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, onEdit, onDelete, onView, onToggleActive }: ProductCardProps) => {
+  const [productImageSrc, setProductImageSrc] = useState(getSupplierProductImage(product.productImages?.[0]));
+
+  useEffect(() => {
+    setProductImageSrc(getSupplierProductImage(product.productImages?.[0]));
+  }, [product.productImages]);
+
   const calculateDiscountPercentage = () => {
     if (product.salePrice > 0 && product.price > product.salePrice) {
       return Math.round(((product.price - product.salePrice) / product.price) * 100);
@@ -55,10 +63,11 @@ const ProductCard = ({ product, onEdit, onDelete, onView, onToggleActive }: Prod
     >
       <div className="relative aspect-square overflow-hidden rounded-md m-3">
         <Image
-          src={product.productImages?.[0] || 'https://placehold.co/300x300.png'}
+          src={productImageSrc}
           alt={product.productName}
           fill
           className="group-hover:scale-105 transition-transform duration-300 object-cover"
+          onError={() => setProductImageSrc(SUPPLIER_PRODUCT_PLACEHOLDER_IMAGE)}
         />
         {/* Status Badge - Top Left */}
         <div className="absolute top-2 left-2 text-xs">

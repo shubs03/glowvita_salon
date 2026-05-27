@@ -9,6 +9,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@repo/ui/cn";
 import { useAddToCartMutation } from "@repo/store/api";
 import { toast } from "sonner";
+import { getMarketplaceProductImage, MARKETPLACE_PRODUCT_PLACEHOLDER_IMAGE } from "@/app/marketplace/components/productImage";
 
 interface ProductCardProps {
   product: {
@@ -44,6 +45,11 @@ export function ProductCard({
   
   const rating = product.rating || 0;
   const reviewCount = product.reviewCount || 0;
+  const [productImageSrc, setProductImageSrc] = useState(getMarketplaceProductImage(product.productImage));
+
+  useEffect(() => {
+    setProductImageSrc(getMarketplaceProductImage(product.productImage));
+  }, [product.productImage]);
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -76,10 +82,11 @@ export function ProductCard({
     >
       <div className="relative aspect-square overflow-hidden rounded-md m-3">
         <Image
-          src={product.productImage || 'https://placehold.co/300x300.png'}
+          src={productImageSrc}
           alt={product.productName}
           fill
           className="group-hover:scale-105 transition-transform duration-300 object-cover"
+          onError={() => setProductImageSrc(MARKETPLACE_PRODUCT_PLACEHOLDER_IMAGE)}
         />
         
         {/* Out of Stock Badge - only show when stock is 0 */}
