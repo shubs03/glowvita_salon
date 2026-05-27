@@ -3680,7 +3680,7 @@ function BookingPageContent() {
 
             serviceForTimeSlot = {
               id: 'multi-service',
-              name: `${selectedServices.length} Services`,
+              name: selectedServices.map(s => s.name).join(', '),
               duration: `${totalDuration} min`,
               price: selectedServices.reduce((total, s) => total + Number(s.discountedPrice || s.price || 0), 0).toString(),
               category: 'Multi-Service',
@@ -3809,7 +3809,7 @@ function BookingPageContent() {
 
               serviceForTimeSlot = {
                 id: 'multi-service',
-                name: `${selectedServices.length} Services`,
+                name: selectedServices.map(s => s.name).join(', '),
                 duration: `${totalDuration} min`,
                 price: selectedServices.reduce((total, s) => total + Number(s.discountedPrice || s.price || 0), 0).toString(),
                 category: 'Multi-Service',
@@ -4538,55 +4538,120 @@ function BookingPageContent() {
               <Card className="border">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <List className="h-4 w-4 text-primary" />
-                    Selected Services
-                    <span className="text-xs font-normal text-muted-foreground">({selectedServices.length})</span>
+                    {selectedWeddingPackage ? <Store className="h-4 w-4 text-primary" /> : <List className="h-4 w-4 text-primary" />}
+                    {selectedWeddingPackage ? 'Selected Package' : 'Selected Services'}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      ({selectedWeddingPackage ? (weddingPackageMode === 'customized' ? customizedPackageServices.length : (selectedWeddingPackage.services?.length || 0)) : selectedServices.length})
+                    </span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-3">
                   <div className="space-y-2">
-                    {selectedServices.map((service) => (
-                      <div key={service.id} className="space-y-2">
+                    {selectedWeddingPackage ? (
+                      <div className="space-y-2">
                         <div className="flex items-center justify-between p-2 border-b">
                           <div className="flex-1 min-w-0">
                             <div className="font-semibold text-sm flex items-center gap-2">
-                              <Scissors className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-                              <span className="truncate">{service.name}</span>
+                              <Store className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                              <span className="truncate">{selectedWeddingPackage.name}</span>
+                              {weddingPackageMode === 'customized' && (
+                                <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded ml-1">Customized</span>
+                              )}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
                               <Clock className="h-3 w-3 flex-shrink-0" />
-                              <span>{service.duration}</span>
+                              <span>{selectedWeddingPackage.duration || 'Variable duration'}</span>
                             </div>
                           </div>
-                          <div className="font-semibold text-sm text-primary ml-2 flex-shrink-0">₹{service.discountedPrice || service.price}</div>
+                          <div className="font-semibold text-sm text-primary ml-2 flex-shrink-0">
+                            ₹{weddingPackageMode === 'customized' 
+                               ? Math.round(totalAmount)
+                               : (selectedWeddingPackage.discountedPrice || selectedWeddingPackage.totalPrice)}
+                          </div>
                         </div>
-
-                        {/* Display Add-ons */}
-                        {service.selectedAddons && service.selectedAddons.length > 0 && (
+                        
+                        {/* Display services inside the package */}
+                        {weddingPackageMode === 'customized' ? (
                           <div className="pl-4 ml-2 border-l-2 border-primary/20 space-y-1.5">
-                            {service.selectedAddons.map((addon) => (
-                              <div key={addon._id} className="flex items-center justify-between p-2 border-b">
+                            {customizedPackageServices.map((service: any) => (
+                              <div key={service.id} className="flex items-center justify-between p-2 border-b">
                                 <div className="flex items-center gap-2 text-xs flex-1 min-w-0">
-                                  <Plus className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                  <span className="truncate">{addon.name}</span>
+                                  <Check className="h-3 w-3 text-primary flex-shrink-0" />
+                                  <span className="truncate">{service.name}</span>
+                                  {service.quantity && service.quantity > 1 && (
+                                    <span className="text-[10px] bg-gray-100 px-1 py-0.5 rounded">x{service.quantity}</span>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                                  <div className="text-xs text-muted-foreground">₹{addon.price}</div>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                    onClick={() => handleRemoveAddon(service.id, addon._id)}
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </Button>
+                                  <div className="text-xs text-muted-foreground">
+                                    ₹{service.discountedPrice || service.price}
+                                  </div>
                                 </div>
                               </div>
                             ))}
                           </div>
+                        ) : (
+                          selectedWeddingPackage.services && selectedWeddingPackage.services.length > 0 && (
+                            <div className="pl-4 ml-2 border-l-2 border-primary/20 space-y-1.5">
+                              {selectedWeddingPackage.services.map((ps: any, idx: number) => {
+                                const matchedService = services?.find((s: any) => s.id === ps.serviceId || s._id === ps.serviceId);
+                                return (
+                                  <div key={ps.service?._id || ps.serviceId || idx} className="flex items-center justify-between p-2 border-b">
+                                    <div className="flex items-center gap-2 text-xs flex-1 min-w-0">
+                                      <Check className="h-3 w-3 text-primary flex-shrink-0" />
+                                      <span className="truncate">{matchedService?.name || ps.serviceName || ps.name || ps.service?.name || 'Service'}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )
                         )}
                       </div>
-                    ))}
+                    ) : (
+                      selectedServices.map((service) => (
+                        <div key={service.id} className="space-y-2">
+                          <div className="flex items-center justify-between p-2 border-b">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-semibold text-sm flex items-center gap-2">
+                                <Scissors className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                                <span className="truncate">{service.name}</span>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
+                                <Clock className="h-3 w-3 flex-shrink-0" />
+                                <span>{service.duration}</span>
+                              </div>
+                            </div>
+                            <div className="font-semibold text-sm text-primary ml-2 flex-shrink-0">₹{service.discountedPrice || service.price}</div>
+                          </div>
+  
+                          {/* Display Add-ons */}
+                          {service.selectedAddons && service.selectedAddons.length > 0 && (
+                            <div className="pl-4 ml-2 border-l-2 border-primary/20 space-y-1.5">
+                              {service.selectedAddons.map((addon) => (
+                                <div key={addon._id} className="flex items-center justify-between p-2 border-b">
+                                  <div className="flex items-center gap-2 text-xs flex-1 min-w-0">
+                                    <Plus className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                    <span className="truncate">{addon.name}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                                    <div className="text-xs text-muted-foreground">₹{addon.price}</div>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-5 w-5 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                      onClick={() => handleRemoveAddon(service.id, addon._id)}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>

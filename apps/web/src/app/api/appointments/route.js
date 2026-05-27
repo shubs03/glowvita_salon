@@ -564,14 +564,14 @@ export const POST = async (req) => {
             try {
                 console.log(`[DEBUG] Attempting to increment redemption for code: ${appointmentData.couponCode}, amount: ${appointmentData.discountAmount}`);
                 const crmResult = await CRMOfferModel.incrementRedemption(appointmentData.couponCode, appointmentData.discountAmount || 0);
-                
+
                 if (crmResult) {
                     console.log(`[DEBUG] CRMOffer incremented successfully: ${crmResult.code}`);
                 } else {
                     console.log(`[DEBUG] Code not found in CRMOffer, attempting AdminOfferFallback`);
                     const AdminOfferModel = (await import('@repo/lib/models/admin/AdminOffers.model.js')).default;
                     const adminResult = await AdminOfferModel.incrementRedemption(appointmentData.couponCode, appointmentData.discountAmount || 0);
-                    
+
                     if (adminResult) {
                         console.log(`[DEBUG] AdminOffer incremented successfully: ${adminResult.code}`);
                     } else {
@@ -642,4 +642,5 @@ export const OPTIONS = async () => {
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
     return response;
+}; return response;
 };
