@@ -642,5 +642,4 @@ export const OPTIONS = async () => {
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
     return response;
-}; return response;
 };
